@@ -21,8 +21,8 @@
 #include "game/materials.h"
 #include "brushes/brush.h"
 #include "game/creatures.h"
-#include "brushes/creature/creature_brush.h"
 #include <algorithm>
+#include <format>
 
 CreatureDatabase g_creatures;
 
@@ -330,15 +330,10 @@ bool CreatureDatabase::loadFromXML(const FileName& filename, bool standard, wxSt
 	return true;
 }
 
-static void ensureCreatureBrush(CreatureType* creatureType) {
-	if (creatureType->brush) {
-		return;
+static void registerImportedCreature(CreatureType* creatureType, std::vector<std::string>& warnings) {
+	if (g_materials.registerImportedCreature(*creatureType) == PaletteBrushRegistrationResult::TargetUnavailable) {
+		warnings.push_back(std::format("creature_import_registration: creature=\"{}\" target={} unavailable", creatureType->name, creatureType->isNpc ? "npc" : "monster"));
 	}
-
-	auto brush = std::make_unique<CreatureBrush>(creatureType);
-	creatureType->brush = brush.get();
-	creatureType->brush->flagAsVisible();
-	g_brushes.addBrush(std::move(brush));
 }
 
 bool CreatureDatabase::importXMLFromOT(const FileName& filename, wxString& error, std::vector<std::string>& warnings) {
@@ -376,11 +371,11 @@ bool CreatureDatabase::importXMLFromOT(const FileName& filename, wxString& error
 				if (current) {
 					CreatureType::preserve_assign_creature_fields(current, *creatureType);
 					delete creatureType;
+					creatureType = current;
 				} else {
 					creature_map[as_lower_str(creatureType->name)] = creatureType;
-
-					ensureCreatureBrush(creatureType);
 				}
+				registerImportedCreature(creatureType, warnings);
 			}
 		}
 	} else if ((node = doc.child("monster")) || (node = doc.child("npc"))) {
@@ -391,11 +386,11 @@ bool CreatureDatabase::importXMLFromOT(const FileName& filename, wxString& error
 			if (current) {
 				CreatureType::preserve_assign_creature_fields(current, *creatureType);
 				delete creatureType;
+				creatureType = current;
 			} else {
 				creature_map[as_lower_str(creatureType->name)] = creatureType;
-
-				ensureCreatureBrush(creatureType);
 			}
+			registerImportedCreature(creatureType, warnings);
 		}
 	} else {
 		error = "This is not valid OT npc/monster data file.";

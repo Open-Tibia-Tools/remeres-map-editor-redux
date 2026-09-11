@@ -35,6 +35,7 @@ VirtualBrushGrid::VirtualBrushGrid(wxWindow* parent, const DynamicTilesetDefinit
 	columns(1),
 	item_size(0),
 	padding(4),
+	observed_tileset_size(_tileset->size()),
 	m_animTimer(this) {
 
 	item_size = icon_size_px + 2 * ICON_OFFSET;
@@ -81,6 +82,11 @@ wxSize VirtualBrushGrid::DoGetBestClientSize() const {
 }
 
 void VirtualBrushGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
+	if (observed_tileset_size != tileset->size()) {
+		observed_tileset_size = tileset->size();
+		UpdateLayout();
+	}
+
 	// Calculate visible range
 	int scrollPos = GetScrollPosition();
 	int rowHeight = (display_mode == DisplayMode::List) ? LIST_ROW_HEIGHT : (item_size + padding);

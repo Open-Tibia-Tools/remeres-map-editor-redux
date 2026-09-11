@@ -4,6 +4,12 @@
 
 #include <algorithm>
 
+namespace {
+	constexpr std::string_view CREATURE_PALETTE_NAME = "Creature";
+	constexpr std::string_view MONSTER_IMPORT_TILESET_NAME = "Others";
+	constexpr std::string_view NPC_IMPORT_TILESET_NAME = "NPCs";
+}
+
 bool DynamicTilesetDefinition::containsBrush(const Brush* brush) const {
 	return brush && std::ranges::find(brushes, brush) != brushes.end();
 }
@@ -20,6 +26,51 @@ void PaletteCatalog::clear() {
 
 void PaletteCatalog::addDynamicPalette(DynamicPaletteDefinition palette) {
 	palettes.push_back(std::move(palette));
+}
+
+void PaletteCatalog::prepareCreatureImportTargets() {
+	auto paletteIt = std::ranges::find_if(palettes, [](const auto& palette) {
+		return palette.name == CREATURE_PALETTE_NAME;
+	});
+	if (paletteIt == palettes.end()) {
+		return;
+	}
+
+	auto prepareTarget = [&paletteIt](std::string_view name, CreatureImportTarget target) {
+		auto tilesetIt = std::ranges::find_if(paletteIt->tilesets, [name](const auto& tileset) {
+			return tileset.name == name;
+		});
+		if (tilesetIt == paletteIt->tilesets.end()) {
+			DynamicTilesetDefinition tileset;
+			tileset.name = name;
+			paletteIt->tilesets.push_back(std::move(tileset));
+			tilesetIt = std::prev(paletteIt->tilesets.end());
+		}
+		tilesetIt->creatureImportTarget = target;
+	};
+
+	prepareTarget(MONSTER_IMPORT_TILESET_NAME, CreatureImportTarget::Monster);
+	prepareTarget(NPC_IMPORT_TILESET_NAME, CreatureImportTarget::Npc);
+}
+
+PaletteBrushRegistrationResult PaletteCatalog::registerImportedCreatureBrush(Brush* brush, bool isNpc) {
+	if (!brush) {
+		return PaletteBrushRegistrationResult::TargetUnavailable;
+	}
+	if (findPaletteContainingBrush(brush)) {
+		return PaletteBrushRegistrationResult::AlreadyRegistered;
+	}
+
+	const CreatureImportTarget target = isNpc ? CreatureImportTarget::Npc : CreatureImportTarget::Monster;
+	for (auto& palette : palettes) {
+		for (auto& tileset : palette.tilesets) {
+			if (tileset.creatureImportTarget == target) {
+				tileset.brushes.push_back(brush);
+				return PaletteBrushRegistrationResult::Added;
+			}
+		}
+	}
+	return PaletteBrushRegistrationResult::TargetUnavailable;
 }
 
 const DynamicPaletteDefinition* PaletteCatalog::findPalette(std::string_view name) const {
