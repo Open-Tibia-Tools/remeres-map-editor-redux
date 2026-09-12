@@ -106,13 +106,46 @@ jobs:
           mkdir -p dist/rme-linux
           cp build/rme dist/rme-linux/
           chmod +x dist/rme-linux/rme
-          cp -r build/data dist/rme-linux/data
-          cp -r build/assets dist/rme-linux/assets
-          if [ -d extensions ]; then
-            cp -r extensions dist/rme-linux/extensions
+          if [ -d build/data ]; then
+            cp -r build/data dist/rme-linux/data
+          elif [ -d data ]; then
+            cp -r data dist/rme-linux/data
+          fi
+          if [ -d build/assets ]; then
+            cp -r build/assets dist/rme-linux/assets
+          elif [ -d source/assets ]; then
+            cp -r source/assets dist/rme-linux/assets
           fi
           if [ -d brushes ]; then
             cp -r brushes dist/rme-linux/brushes
+          fi
+          if [ -d ext/nanovg ]; then
+            mkdir -p dist/rme-linux/ext
+            cp -r ext/nanovg dist/rme-linux/ext/nanovg
+          fi
+          if [ -d extensions ]; then
+            cp -r extensions dist/rme-linux/extensions
+          fi
+          if [ -d icons ]; then
+            cp -r icons dist/rme-linux/icons
+          fi
+          if [ -d lua_tests ]; then
+            cp -r lua_tests dist/rme-linux/lua_tests
+          fi
+          if [ -d scripts ]; then
+            cp -r scripts dist/rme-linux/scripts
+          fi
+          if [ -d tools ]; then
+            cp -r tools dist/rme-linux/tools
+          fi
+          if [ -f README.md ]; then
+            cp README.md dist/rme-linux/
+          fi
+          if [ -f LICENSE ]; then
+            cp LICENSE dist/rme-linux/
+          fi
+          if [ -f LICENSE.rtf ]; then
+            cp LICENSE.rtf dist/rme-linux/
           fi
           if [ -d build/vcpkg_installed/x64-linux/lib ]; then
             mkdir -p dist/rme-linux/lib
@@ -193,18 +226,55 @@ jobs:
       - name: Package Windows distribution
         run: |
           New-Item -ItemType Directory -Force -Path dist/rme-windows | Out-Null
-          Copy-Item build/rme.exe dist/rme-windows/
-          Get-ChildItem -Path build -Filter "*.dll" | Copy-Item -Destination dist/rme-windows/
+          if (Test-Path build/rme.exe) {
+            Copy-Item build/rme.exe dist/rme-windows/
+          } elseif (Test-Path build/Release/rme.exe) {
+            Copy-Item build/Release/rme.exe dist/rme-windows/
+          }
+          Get-ChildItem -Path build -Filter "*.dll" | Copy-Item -Destination dist/rme-windows/ -Force
           if (Test-Path build/vcpkg_installed/x64-windows/bin) {
             Get-ChildItem -Path build/vcpkg_installed/x64-windows/bin -Filter "*.dll" | Copy-Item -Destination dist/rme-windows/ -Force
           }
-          Copy-Item -Recurse build/data dist/rme-windows/data
-          Copy-Item -Recurse build/assets dist/rme-windows/assets
-          if (Test-Path extensions) {
-            Copy-Item -Recurse extensions dist/rme-windows/extensions
+          if (Test-Path build/data) {
+            Copy-Item -Recurse build/data dist/rme-windows/data
+          } elseif (Test-Path data) {
+            Copy-Item -Recurse data dist/rme-windows/data
+          }
+          if (Test-Path build/assets) {
+            Copy-Item -Recurse build/assets dist/rme-windows/assets
+          } elseif (Test-Path source/assets) {
+            Copy-Item -Recurse source/assets dist/rme-windows/assets
           }
           if (Test-Path brushes) {
             Copy-Item -Recurse brushes dist/rme-windows/brushes
+          }
+          if (Test-Path ext/nanovg) {
+            New-Item -ItemType Directory -Force -Path dist/rme-windows/ext | Out-Null
+            Copy-Item -Recurse ext/nanovg dist/rme-windows/ext/nanovg
+          }
+          if (Test-Path extensions) {
+            Copy-Item -Recurse extensions dist/rme-windows/extensions
+          }
+          if (Test-Path icons) {
+            Copy-Item -Recurse icons dist/rme-windows/icons
+          }
+          if (Test-Path lua_tests) {
+            Copy-Item -Recurse lua_tests dist/rme-windows/lua_tests
+          }
+          if (Test-Path scripts) {
+            Copy-Item -Recurse scripts dist/rme-windows/scripts
+          }
+          if (Test-Path tools) {
+            Copy-Item -Recurse tools dist/rme-windows/tools
+          }
+          if (Test-Path README.md) {
+            Copy-Item README.md dist/rme-windows/
+          }
+          if (Test-Path LICENSE) {
+            Copy-Item LICENSE dist/rme-windows/
+          }
+          if (Test-Path LICENSE.rtf) {
+            Copy-Item LICENSE.rtf dist/rme-windows/
           }
           Compress-Archive -Path dist/rme-windows/* -DestinationPath rme-windows-x64-alpha.zip -Force
 
@@ -262,6 +332,6 @@ jobs:
             This is an automated alpha pre-release built from commit `${{ github.sha }}`.
 
             #### Included Packages:
-            - **Windows (x64)**: `rme-windows-x64-alpha.zip` (includes `rme.exe`, required DLLs, and `data/` folder)
-            - **Linux (x64)**: `rme-linux-x64-alpha.tar.gz` (includes `rme` binary and `data/` folder)
+            - **Windows (x64)**: `rme-windows-x64-alpha.zip` (includes `rme.exe`, required DLLs, assets, brushes, data, ext/nanovg, extensions, icons, lua_tests, scripts, tools, README, and licenses)
+            - **Linux (x64)**: `rme-linux-x64-alpha.tar.gz` (includes `rme` binary, required libraries, assets, brushes, data, ext/nanovg, extensions, icons, lua_tests, scripts, tools, README, and licenses)
             - **Checksums**: `SHA256SUMS.txt`
