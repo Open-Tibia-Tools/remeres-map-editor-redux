@@ -49,6 +49,7 @@ public:
 	void SetSort(TilesetSortKey key, TilesetSortDirection dir) override;
 	void SetShowLabels(bool show) override;
 	void SetTileSize(int sizePx) override;
+	void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr) override;
 
 	static constexpr int LABEL_HEIGHT = 32;
 
@@ -90,6 +91,9 @@ protected:
 	TilesetSortDirection m_sortDir = TilesetSortDirection::Ascending;
 	bool m_hasSort = false;
 	bool m_showLabels = false;
+	std::string m_filterQuery;
+	std::vector<Brush*> m_overrideBrushes;
+	bool m_hasOverrideBrushes = false;
 
 	// Optimization: UTF8 name cache and truncated label cache
 	struct CachedLabel {

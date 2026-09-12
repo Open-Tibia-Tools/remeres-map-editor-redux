@@ -6,6 +6,7 @@
 #include "ui/theme.h"
 #include <spdlog/spdlog.h>
 #include <wx/menu.h>
+#include <wx/srchctrl.h>
 
 TilesetSortKey BrushPalettePanel::s_defaultSortKey = TilesetSortKey::Name;
 TilesetSortDirection BrushPalettePanel::s_defaultSortDir = TilesetSortDirection::Ascending;
@@ -20,8 +21,13 @@ int BrushPalettePanel::s_defaultTileSize = 32;
 BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefinition& palette, wxWindowID id) :
 	PalettePanel(parent, id),
 	palette_name(palette.name),
+	m_paletteDef(&palette),
 	choicebook(nullptr),
 	toolbar(nullptr),
+	m_searchCtrl(nullptr),
+	m_searchToolbar(nullptr),
+	m_filterQuery(),
+	m_filterAll(false),
 	m_sortKey(s_defaultSortKey),
 	m_sortDir(s_defaultSortDir),
 	m_hasSort(s_defaultHasSort),
@@ -58,11 +64,55 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 
 	toolbar->ToggleTool(TOOL_TOGGLE_LABELS, m_showLabels);
 	toolbar->Realize();
-
 	toolbar->Bind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
 
-	if (auto* ctrlSizer = tmp_choicebook->GetControlSizer()) {
-		ctrlSizer->Add(toolbar, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
+	m_searchToolbar = newd wxAuiToolBar(tmp_choicebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, toolbarStyle);
+	m_searchToolbar->SetToolBitmapSize(iconSize);
+	m_searchToolbar->SetMargins(1, 1, 1, 1);
+	m_searchToolbar->SetToolBorderPadding(2);
+	m_searchToolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
+	m_searchToolbar->AddTool(TOOL_FILTER_ALL, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_FILTER, iconSize, iconColor), "Filter all tilesets", wxITEM_CHECK);
+	m_searchToolbar->ToggleTool(TOOL_FILTER_ALL, false);
+	m_searchToolbar->Realize();
+	m_searchToolbar->Bind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
+
+	m_searchCtrl = newd wxSearchCtrl(tmp_choicebook, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+	m_searchCtrl->SetDescriptiveText("Search...");
+	m_searchCtrl->ShowCancelButton(true);
+	m_searchCtrl->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
+	m_searchCtrl->SetForegroundColour(Theme::Get(Theme::Role::Text));
+
+	m_searchCtrl->Bind(wxEVT_TEXT, &BrushPalettePanel::OnSearchText, this);
+	m_searchCtrl->Bind(wxEVT_SEARCHCTRL_CANCEL_BTN, &BrushPalettePanel::OnSearchCancel, this);
+	m_searchCtrl->Bind(wxEVT_SEARCHCTRL_SEARCH_BTN, &BrushPalettePanel::OnSearchText, this);
+	m_searchCtrl->Bind(wxEVT_TEXT_ENTER, &BrushPalettePanel::OnSearchText, this);
+	m_searchCtrl->Bind(wxEVT_CHAR_HOOK, [this](wxKeyEvent& evt) {
+		if (evt.GetKeyCode() == WXK_ESCAPE) {
+			if (m_searchCtrl && !m_searchCtrl->GetValue().empty()) {
+				m_searchCtrl->ChangeValue(wxEmptyString);
+				m_filterQuery.clear();
+				ApplyFilter();
+				return;
+			}
+		}
+		evt.Skip();
+	});
+
+	wxChoice* choice = tmp_choicebook->GetChoiceCtrl();
+	auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(tmp_choicebook->GetControlSizer());
+	if (ctrlSizer && choice) {
+		ctrlSizer->Detach(choice);
+		ctrlSizer->SetOrientation(wxVERTICAL);
+
+		wxBoxSizer* topRowSizer = newd wxBoxSizer(wxHORIZONTAL);
+		topRowSizer->Add(choice, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+		topRowSizer->Add(toolbar, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
+		ctrlSizer->Add(topRowSizer, 0, wxEXPAND | wxBOTTOM, 2);
+
+		wxBoxSizer* searchRowSizer = newd wxBoxSizer(wxHORIZONTAL);
+		searchRowSizer->Add(m_searchCtrl, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+		searchRowSizer->Add(m_searchToolbar, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
+		ctrlSizer->Add(searchRowSizer, 0, wxEXPAND | wxBOTTOM, 2);
 	}
 
 	for (const auto& tileset : palette.tilesets) {
@@ -88,7 +138,11 @@ BrushPalettePanel::~BrushPalettePanel() {
 	if (toolbar) {
 		toolbar->Unbind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
 	}
+	if (m_searchToolbar) {
+		m_searchToolbar->Unbind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
+	}
 }
+
 
 void BrushPalettePanel::InvalidateContents() {
 	for (size_t iz = 0; iz < choicebook->GetPageCount(); ++iz) {
@@ -241,6 +295,7 @@ void BrushPalettePanel::OnPageChanged(wxChoicebookEvent& event) {
 
 	if (panel) {
 		panel->OnSwitchIn();
+		ApplyFilter();
 		new_brush = panel->GetSelectedBrush();
 	}
 
@@ -268,7 +323,9 @@ void BrushPalettePanel::OnSwitchIn() {
 	}
 
 	LoadCurrentContents();
+	ApplyFilter();
 }
+
 
 void BrushPalettePanel::SetSort(TilesetSortKey key, TilesetSortDirection dir) {
 	m_hasSort = true;
@@ -324,18 +381,28 @@ void BrushPalettePanel::SetTileSize(int sizePx) {
 }
 
 void BrushPalettePanel::ApplyTheme() {
-	if (!toolbar) {
-		return;
-	}
 	const wxSize iconSize = wxWindow::FromDIP(wxSize(16, 16), this);
 	const wxColour iconColor = Theme::Get(Theme::Role::Text);
-	toolbar->SetToolBitmap(TOOL_SORT_AZ, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_DOWN, iconSize, iconColor));
-	toolbar->SetToolBitmap(TOOL_SORT_ZA, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_UP, iconSize, iconColor));
-	toolbar->SetToolBitmap(TOOL_TOGGLE_LABELS, IMAGE_MANAGER.GetBitmap(ICON_TAG, iconSize, iconColor));
-	toolbar->SetToolBitmap(TOOL_CHANGE_SIZE, IMAGE_MANAGER.GetBitmap(ICON_MAXIMIZE, iconSize, iconColor));
-	toolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
-	toolbar->SetForegroundColour(Theme::Get(Theme::Role::Text));
-	toolbar->Refresh();
+	if (toolbar) {
+		toolbar->SetToolBitmap(TOOL_SORT_AZ, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_DOWN, iconSize, iconColor));
+		toolbar->SetToolBitmap(TOOL_SORT_ZA, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_UP, iconSize, iconColor));
+		toolbar->SetToolBitmap(TOOL_TOGGLE_LABELS, IMAGE_MANAGER.GetBitmap(ICON_TAG, iconSize, iconColor));
+		toolbar->SetToolBitmap(TOOL_CHANGE_SIZE, IMAGE_MANAGER.GetBitmap(ICON_MAXIMIZE, iconSize, iconColor));
+		toolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
+		toolbar->SetForegroundColour(Theme::Get(Theme::Role::Text));
+		toolbar->Refresh();
+	}
+	if (m_searchToolbar) {
+		m_searchToolbar->SetToolBitmap(TOOL_FILTER_ALL, IMAGE_MANAGER.GetBitmap(ICON_FILTER, iconSize, iconColor));
+		m_searchToolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
+		m_searchToolbar->SetForegroundColour(Theme::Get(Theme::Role::Text));
+		m_searchToolbar->Refresh();
+	}
+	if (m_searchCtrl) {
+		m_searchCtrl->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
+		m_searchCtrl->SetForegroundColour(Theme::Get(Theme::Role::Text));
+		m_searchCtrl->Refresh();
+	}
 }
 
 void BrushPalettePanel::OnToolClick(wxCommandEvent& event) {
@@ -348,6 +415,12 @@ void BrushPalettePanel::OnToolClick(wxCommandEvent& event) {
 		SetShowLabels(toolbar ? toolbar->GetToolToggled(TOOL_TOGGLE_LABELS) : event.IsChecked());
 	} else if (id == TOOL_CHANGE_SIZE) {
 		OnSizeButtonClick(id);
+	} else if (id == TOOL_FILTER_ALL) {
+		m_filterAll = m_searchToolbar ? m_searchToolbar->GetToolToggled(TOOL_FILTER_ALL) : event.IsChecked();
+		if (choicebook && choicebook->GetChoiceCtrl()) {
+			choicebook->GetChoiceCtrl()->Enable(!m_filterAll);
+		}
+		ApplyFilter();
 	}
 }
 
@@ -396,4 +469,67 @@ void BrushPalettePanel::OnSizeButtonClick(int toolId) {
 		SetTileSize(128);
 	}
 }
+
+void BrushPalettePanel::OnSearchText(wxCommandEvent& event) {
+	if (m_searchCtrl) {
+		m_filterQuery = m_searchCtrl->GetValue().ToStdString();
+		ApplyFilter();
+
+		const auto eventType = event.GetEventType();
+		if ((eventType == wxEVT_TEXT_ENTER || eventType == wxEVT_SEARCHCTRL_SEARCH_BTN) && choicebook) {
+			wxWindow* w = GetParent();
+			while (w) {
+				PaletteWindow* pw = dynamic_cast<PaletteWindow*>(w);
+				if (pw) {
+					g_gui.ActivatePalette(pw);
+					break;
+				}
+				w = w->GetParent();
+			}
+
+			BrushPanel* panel = dynamic_cast<BrushPanel*>(choicebook->GetCurrentPage());
+			if (panel) {
+				panel->SelectFirstBrush();
+				Brush* brush = panel->GetSelectedBrush();
+				if (brush) {
+					g_gui.SelectBrushInternal(brush);
+				}
+			}
+		}
+	}
+}
+
+void BrushPalettePanel::OnSearchCancel(wxCommandEvent& event) {
+	if (m_searchCtrl) {
+		m_searchCtrl->ChangeValue(wxEmptyString);
+		m_filterQuery.clear();
+		ApplyFilter();
+	}
+}
+
+void BrushPalettePanel::ApplyFilter() {
+	if (!choicebook) {
+		return;
+	}
+	BrushPanel* panel = dynamic_cast<BrushPanel*>(choicebook->GetCurrentPage());
+	if (!panel) {
+		return;
+	}
+
+	if (m_filterAll && m_paletteDef) {
+		std::vector<Brush*> allBrushes;
+		std::unordered_set<const Brush*> seen;
+		for (const auto& ts : m_paletteDef->tilesets) {
+			for (Brush* b : ts.brushes) {
+				if (b && seen.insert(b).second) {
+					allBrushes.push_back(b);
+				}
+			}
+		}
+		panel->SetFilterQuery(m_filterQuery, &allBrushes);
+	} else {
+		panel->SetFilterQuery(m_filterQuery, nullptr);
+	}
+}
+
 

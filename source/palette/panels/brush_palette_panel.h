@@ -8,6 +8,8 @@
 #include <wx/aui/auibar.h>
 #include <unordered_map>
 
+class wxSearchCtrl;
+
 class BrushPalettePanel : public PalettePanel {
 public:
 	enum ToolID {
@@ -15,6 +17,7 @@ public:
 		TOOL_SORT_ZA,
 		TOOL_TOGGLE_LABELS,
 		TOOL_CHANGE_SIZE,
+		TOOL_FILTER_ALL,
 	};
 
 	enum MenuID {
@@ -66,10 +69,18 @@ protected:
 	void OnToolClick(wxCommandEvent& event);
 	void OnSortButtonClick(TilesetSortDirection dir, int toolId);
 	void OnSizeButtonClick(int toolId);
+	void OnSearchText(wxCommandEvent& event);
+	void OnSearchCancel(wxCommandEvent& event);
+	void ApplyFilter();
 
 	std::string palette_name;
+	const DynamicPaletteDefinition* m_paletteDef;
 	wxChoicebook* choicebook;
 	wxAuiToolBar* toolbar;
+	wxSearchCtrl* m_searchCtrl;
+	wxAuiToolBar* m_searchToolbar;
+	std::string m_filterQuery;
+	bool m_filterAll;
 
 	TilesetSortKey m_sortKey;
 	TilesetSortDirection m_sortDir;
@@ -89,3 +100,4 @@ protected:
 };
 
 #endif
+

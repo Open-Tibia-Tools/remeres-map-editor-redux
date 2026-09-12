@@ -185,8 +185,8 @@ void NanoVGCanvas::SetScrollPosition(int pos) {
 
 int NanoVGCanvas::GetOrCreateItemImage(uint16_t itemId) {
 	int tex = GetCachedImage(itemId);
-	if (tex > 0) {
-		return tex;
+	if (tex != 0) {
+		return (tex > 0) ? tex : 0;
 	}
 
 	NVGcontext* vg = GetNVGContext();
@@ -197,8 +197,10 @@ int NanoVGCanvas::GetOrCreateItemImage(uint16_t itemId) {
 	tex = NvgUtils::CreateItemTexture(vg, itemId);
 	if (tex > 0) {
 		AddCachedImage(static_cast<uint64_t>(itemId), tex);
+	} else {
+		AddCachedImage(static_cast<uint64_t>(itemId), -1);
 	}
-	return tex;
+	return (tex > 0) ? tex : 0;
 }
 
 int NanoVGCanvas::GetOrCreateStaticImage(const std::string& assetPath) {
@@ -220,18 +222,26 @@ int NanoVGCanvas::GetOrCreateSpriteTexture(NVGcontext* vg, Sprite* sprite) {
 
 	// Check cache first
 	int existingTex = GetCachedImage(spriteId);
-	if (existingTex > 0) {
-		return existingTex;
+	if (existingTex != 0) {
+		return (existingTex > 0) ? existingTex : 0;
 	}
 
+	int tex = 0;
 	// Try to get as GameSprite for RGBA access (Fast Path)
 	GameSprite* gs = dynamic_cast<GameSprite*>(sprite);
 	if (gs && !gs->spriteList.empty()) {
-		return CreateGameSpriteTexture(vg, gs, spriteId);
+		tex = CreateGameSpriteTexture(vg, gs, spriteId);
+	} else {
+		// Generic Fallback (Slow Path via wxDC)
+		tex = CreateGenericSpriteTexture(vg, sprite, spriteId);
 	}
 
-	// Generic Fallback (Slow Path via wxDC)
-	return CreateGenericSpriteTexture(vg, sprite, spriteId);
+	if (tex <= 0) {
+		AddCachedImage(spriteId, -1);
+		return 0;
+	}
+
+	return tex;
 }
 
 int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64_t spriteId) {
@@ -247,6 +257,7 @@ int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64
 	// Create composite RGBA buffer
 	size_t bufferSize = static_cast<size_t>(w) * h * 4;
 	std::vector<uint8_t> composite(bufferSize, 0);
+	bool hasVisiblePixels = false;
 
 	// Composite all layers
 	for (int l = 0; l < gs->layers; ++l) {
@@ -292,6 +303,8 @@ int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64
 							continue;
 						}
 
+						hasVisiblePixels = true;
+
 						if (sa == 255) {
 							composite[di + 0] = data[si + 0];
 							composite[di + 1] = data[si + 1];
@@ -309,6 +322,10 @@ int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64
 				}
 			}
 		}
+	}
+
+	if (!hasVisiblePixels) {
+		return 0;
 	}
 
 	// Create NanoVG image
@@ -353,12 +370,16 @@ int NanoVGCanvas::CreateGenericSpriteTexture(NVGcontext* vg, Sprite* sprite, uin
 	std::span<uint8_t> dest(rgba);
 	std::span<const uint8_t> src(data, w * h * 3);
 
+	bool hasVisiblePixels = false;
 	if (hasAlpha && alpha) {
 		for (int i : std::views::iota(0, w * h)) {
 			dest[i * 4 + 0] = src[i * 3 + 0];
 			dest[i * 4 + 1] = src[i * 3 + 1];
 			dest[i * 4 + 2] = src[i * 3 + 2];
 			dest[i * 4 + 3] = alpha[i];
+			if (alpha[i] > 0) {
+				hasVisiblePixels = true;
+			}
 		}
 	} else {
 		for (int i : std::views::iota(0, w * h)) {
@@ -367,6 +388,11 @@ int NanoVGCanvas::CreateGenericSpriteTexture(NVGcontext* vg, Sprite* sprite, uin
 			dest[i * 4 + 2] = src[i * 3 + 2];
 			dest[i * 4 + 3] = 255;
 		}
+		hasVisiblePixels = (w > 0 && h > 0);
+	}
+
+	if (!hasVisiblePixels) {
+		return 0;
 	}
 
 	return GetOrCreateImage(spriteId, rgba.data(), w, h);
@@ -375,6 +401,8 @@ int NanoVGCanvas::CreateGenericSpriteTexture(NVGcontext* vg, Sprite* sprite, uin
 void NanoVGCanvas::UpdateScrollbar(int contentHeight) {
 	m_contentHeight = contentHeight;
 	int h = GetClientSize().y;
+	int maxScroll = std::max(0, contentHeight - h);
+	m_scrollPos = std::clamp(m_scrollPos, 0, maxScroll);
 	SetScrollbar(wxVERTICAL, m_scrollPos, h, contentHeight);
 }
 
@@ -407,7 +435,9 @@ void NanoVGCanvas::DeleteCachedImage(uint64_t id) {
 
 	auto it = m_imageCache.find(id);
 	if (it != m_imageCache.end()) {
-		nvgDeleteImage(m_nvg.get(), it->second);
+		if (it->second > 0) {
+			nvgDeleteImage(m_nvg.get(), it->second);
+		}
 		m_imageCache.erase(it);
 		m_lruList.remove(id);
 	}
@@ -418,7 +448,7 @@ void NanoVGCanvas::AddCachedImage(uint64_t id, int imageHandle) {
 		ScopedGLContext ctx(this);
 		auto it = m_imageCache.find(id);
 		if (it != m_imageCache.end()) {
-			if (m_nvg) {
+			if (it->second > 0 && m_nvg) {
 				nvgDeleteImage(m_nvg.get(), it->second);
 			}
 			m_lruList.remove(id);
@@ -429,7 +459,7 @@ void NanoVGCanvas::AddCachedImage(uint64_t id, int imageHandle) {
 			uint64_t last = m_lruList.back();
 			auto lastIt = m_imageCache.find(last);
 			if (lastIt != m_imageCache.end()) {
-				if (m_nvg) {
+				if (lastIt->second > 0 && m_nvg) {
 					nvgDeleteImage(m_nvg.get(), lastIt->second);
 				}
 				m_imageCache.erase(lastIt);
@@ -449,7 +479,9 @@ void NanoVGCanvas::ClearImageCache() {
 	}
 
 	for (const auto& [id, tex] : m_imageCache) {
-		nvgDeleteImage(m_nvg.get(), tex);
+		if (tex > 0) {
+			nvgDeleteImage(m_nvg.get(), tex);
+		}
 	}
 	m_imageCache.clear();
 	m_lruList.clear();

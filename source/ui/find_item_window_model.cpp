@@ -558,3 +558,116 @@ bool AdvancedFinderSelectionMatches(const AdvancedFinderCatalogRow& row, const A
 
 	return row.lower_label == selection.creature_name;
 }
+
+std::vector<Brush*> FilterBrushesWithAdvancedFinder(const std::vector<Brush*>& brushes, const std::string& queryText) {
+	AdvancedFinderQuery query;
+	query.text = queryText;
+	const auto parsed_query = parseFinderQuery(query);
+
+	if (parsed_query.tokens.empty()) {
+		return brushes;
+	}
+
+	struct BrushMatch {
+		Brush* brush = nullptr;
+		int score = 0;
+		size_t token_count = 0;
+		std::string lower_label;
+		ServerItemId server_id = 0;
+		ClientItemId client_id = 0;
+	};
+
+	std::vector<BrushMatch> matches;
+	matches.reserve(brushes.size());
+
+	for (Brush* brush : brushes) {
+		if (!brush) {
+			continue;
+		}
+
+		AdvancedFinderCatalogRow row;
+		row.brush = brush;
+
+		if (const auto* raw = dynamic_cast<const RAWBrush*>(brush)) {
+			row.kind = AdvancedFinderCatalogKind::Item;
+			row.raw_brush = const_cast<RAWBrush*>(raw);
+			row.server_id = raw->getItemID();
+			const auto def = g_item_definitions.get(row.server_id);
+			if (def) {
+				row.client_id = def.clientId();
+				row.label = std::string(def.name());
+			}
+
+			if (row.label.empty()) {
+				row.label = raw->getName();
+			}
+		} else if (const auto* cb = dynamic_cast<const CreatureBrush*>(brush)) {
+			row.kind = AdvancedFinderCatalogKind::Creature;
+			row.creature_brush = const_cast<CreatureBrush*>(cb);
+			if (cb->getType()) {
+				row.label = cb->getType()->name;
+				if (cb->getType()->outfit.lookType != 0) {
+					row.server_id = static_cast<ServerItemId>(cb->getType()->outfit.lookType);
+				}
+			} else {
+				row.label = cb->getName();
+			}
+		} else {
+			row.kind = AdvancedFinderCatalogKind::Item;
+			row.label = brush->getName();
+			row.server_id = static_cast<ServerItemId>(brush->getID());
+			if (brush->getLookID() != 0) {
+				row.client_id = static_cast<ClientItemId>(brush->getLookID());
+			}
+		}
+
+		row.lower_label = as_lower_str(row.label);
+		row.name_tokens = tokenizeLower(row.lower_label);
+		row.search_terms = row.name_tokens;
+		if (row.isCreature()) {
+			row.search_terms.push_back("creature");
+		}
+		if (row.server_id != 0) {
+			row.search_terms.push_back(std::to_string(row.server_id));
+		}
+		if (row.client_id != 0 && row.client_id != row.server_id) {
+			row.search_terms.push_back(std::to_string(row.client_id));
+		}
+
+		// Also index any additional tokens from the brush full display name (e.g. RAWBrush suffixes like Hook South)
+		const std::string brushFullName = as_lower_str(brush->getName());
+		if (brushFullName != row.lower_label) {
+			const auto extra_tokens = tokenizeLower(brushFullName);
+			for (const auto& token : extra_tokens) {
+				if (std::ranges::find(row.search_terms, token) == row.search_terms.end()) {
+					row.search_terms.push_back(token);
+				}
+			}
+		}
+
+		const int score = fuzzyMatchScore(row, parsed_query);
+		if (score >= 0) {
+			matches.push_back(BrushMatch {
+				.brush = brush,
+				.score = score,
+				.token_count = row.name_tokens.size(),
+				.lower_label = std::move(row.lower_label),
+				.server_id = row.server_id,
+				.client_id = row.client_id
+			});
+		}
+	}
+
+	std::ranges::sort(matches, [](const BrushMatch& lhs, const BrushMatch& rhs) {
+		return std::tie(lhs.score, lhs.token_count, lhs.lower_label, lhs.server_id, lhs.client_id) <
+		       std::tie(rhs.score, rhs.token_count, rhs.lower_label, rhs.server_id, rhs.client_id);
+	});
+
+	std::vector<Brush*> result;
+	result.reserve(matches.size());
+	for (const auto& match : matches) {
+		result.push_back(match.brush);
+	}
+	return result;
+}
+

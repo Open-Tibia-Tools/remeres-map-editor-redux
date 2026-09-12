@@ -141,5 +141,7 @@ std::vector<AdvancedFinderCatalogRow> BuildAdvancedFinderCatalog(bool include_cr
 std::vector<size_t> FilterAdvancedFinderCatalog(const std::vector<AdvancedFinderCatalogRow>& catalog, const AdvancedFinderQuery& query);
 AdvancedFinderSelectionKey MakeAdvancedFinderSelectionKey(const AdvancedFinderCatalogRow& row);
 bool AdvancedFinderSelectionMatches(const AdvancedFinderCatalogRow& row, const AdvancedFinderSelectionKey& selection);
+std::vector<Brush*> FilterBrushesWithAdvancedFinder(const std::vector<Brush*>& brushes, const std::string& queryText);
 
 #endif
+

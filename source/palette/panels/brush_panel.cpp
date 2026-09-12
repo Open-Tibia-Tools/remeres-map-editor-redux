@@ -100,6 +100,9 @@ void BrushPanel::LoadContents() {
 	}
 	brushbox->SetShowLabels(show_labels);
 	brushbox->SetTileSize(tile_size_px);
+	if (!filter_query.empty() || has_override_brushes) {
+		brushbox->SetFilterQuery(filter_query, has_override_brushes ? &override_brushes : nullptr);
+	}
 
 	loaded = true;
 	sizer->Add(brushbox->GetSelfWindow(), 1, wxEXPAND);
@@ -128,6 +131,20 @@ void BrushPanel::SetTileSize(int sizePx) {
 	tile_size_px = sizePx;
 	if (brushbox) {
 		brushbox->SetTileSize(sizePx);
+	}
+}
+
+void BrushPanel::SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource) {
+	filter_query = query;
+	if (overrideSource) {
+		override_brushes = *overrideSource;
+		has_override_brushes = true;
+	} else {
+		override_brushes.clear();
+		has_override_brushes = false;
+	}
+	if (brushbox) {
+		brushbox->SetFilterQuery(filter_query, has_override_brushes ? &override_brushes : nullptr);
 	}
 }
 

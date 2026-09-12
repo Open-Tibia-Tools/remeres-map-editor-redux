@@ -37,6 +37,8 @@ namespace NvgUtils {
 		int pattern_z = 0;
 		int frame = 0;
 
+		bool hasVisiblePixels = false;
+
 		for (int l = 0; l < gs.layers; ++l) {
 			for (int w = 0; w < gs.width; ++w) {
 				for (int h = 0; h < gs.height; ++h) {
@@ -77,6 +79,8 @@ namespace NvgUtils {
 								continue;
 							}
 
+							hasVisiblePixels = true;
+
 							if (sa == 255) {
 								composite[dst_idx + 0] = spriteData[src_idx + 0];
 								composite[dst_idx + 1] = spriteData[src_idx + 1];
@@ -94,6 +98,9 @@ namespace NvgUtils {
 					}
 				}
 			}
+		}
+		if (!hasVisiblePixels) {
+			return nullptr;
 		}
 		return composite;
 	}

@@ -43,6 +43,7 @@ public:
 	virtual void SetSort(TilesetSortKey key, TilesetSortDirection dir) { }
 	virtual void SetShowLabels(bool show) { }
 	virtual void SetTileSize(int sizePx) { }
+	virtual void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr) { }
 
 protected:
 	const DynamicTilesetDefinition* const tileset;
@@ -66,6 +67,7 @@ public:
 	void SetSort(TilesetSortKey key, TilesetSortDirection dir);
 	void SetShowLabels(bool show);
 	void SetTileSize(int sizePx);
+	void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr);
 	// Assigns a tileset to this list
 	void AssignTileset(const DynamicTilesetDefinition* tileset);
 
@@ -92,6 +94,10 @@ protected:
 	TilesetSortDirection sort_dir = TilesetSortDirection::Ascending;
 	bool show_labels = false;
 	int tile_size_px = 32;
+	std::string filter_query;
+	std::vector<Brush*> override_brushes;
+	bool has_override_brushes = false;
 };
 
 #endif
+

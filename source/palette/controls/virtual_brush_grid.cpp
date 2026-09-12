@@ -13,6 +13,7 @@
 #include "brushes/raw/raw_brush.h"
 #include "brushes/creature/creature_brush.h"
 #include "game/creatures.h"
+#include "ui/find_item_window_model.h"
 
 #include <algorithm>
 #include <unordered_set>
@@ -92,18 +93,31 @@ void VirtualBrushGrid::RefreshBrushList() {
 	m_truncatedLabelCache.clear();
 	Brush* selectedBrush = GetSelectedBrush();
 	m_display_brushes.clear();
-	if (tileset) {
-		m_display_brushes.reserve(tileset->brushes.size());
-		std::unordered_set<const Brush*> seen;
-		for (Brush* b : tileset->brushes) {
-			if (b && seen.insert(b).second) {
-				m_display_brushes.push_back(b);
-			}
+
+	static const std::vector<Brush*> s_emptyBrushes;
+	const std::vector<Brush*>& sourceBrushes = m_hasOverrideBrushes ? m_overrideBrushes : (tileset ? tileset->brushes : s_emptyBrushes);
+
+	std::vector<Brush*> uniqueSource;
+	uniqueSource.reserve(sourceBrushes.size());
+	std::unordered_set<const Brush*> seen;
+	for (Brush* b : sourceBrushes) {
+		if (b && seen.insert(b).second) {
+			uniqueSource.push_back(b);
 		}
 	}
-	if (m_hasSort) {
-		ApplySort();
+
+	if (!m_filterQuery.empty()) {
+		m_display_brushes = FilterBrushesWithAdvancedFinder(uniqueSource, m_filterQuery);
+		if (m_hasSort) {
+			ApplySort();
+		}
+	} else {
+		m_display_brushes = std::move(uniqueSource);
+		if (m_hasSort) {
+			ApplySort();
+		}
 	}
+
 	selected_index = -1;
 	if (selectedBrush) {
 		for (size_t i = 0; i < m_display_brushes.size(); ++i) {
@@ -183,6 +197,24 @@ void VirtualBrushGrid::SetTileSize(int sizePx) {
 	}
 }
 
+void VirtualBrushGrid::SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource) {
+	bool filterChanged = (m_filterQuery != query) || (m_hasOverrideBrushes != (overrideSource != nullptr));
+	m_filterQuery = query;
+	if (overrideSource) {
+		m_overrideBrushes = *overrideSource;
+		m_hasOverrideBrushes = true;
+	} else {
+		m_overrideBrushes.clear();
+		m_hasOverrideBrushes = false;
+	}
+	RefreshBrushList();
+	if (filterChanged) {
+		SetScrollPosition(0);
+	}
+	UpdateLayout();
+	Refresh();
+}
+
 void VirtualBrushGrid::UpdateLayout() {
 	int width = GetClientSize().x;
 	if (width <= 0) {
@@ -209,8 +241,8 @@ wxSize VirtualBrushGrid::DoGetBestClientSize() const {
 }
 
 void VirtualBrushGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
-	if (observed_tileset_size != tileset->size()) {
-		observed_tileset_size = tileset->size();
+	if (!m_hasOverrideBrushes && observed_tileset_size != (tileset ? tileset->size() : 0)) {
+		observed_tileset_size = tileset ? tileset->size() : 0;
 		RefreshBrushList();
 		UpdateLayout();
 	}
@@ -314,7 +346,7 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 			nvgFillPaint(vg, imgPaint);
 			nvgFill(vg);
 		} else {
-			// Placeholder box for entries without sprite (e.g. creature without look)
+			// Placeholder box for entries without sprite (e.g. completely transparent tile or missing sprite)
 			nvgBeginPath(vg);
 			nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
 			nvgFillColor(vg, nvgRGBA(255, 255, 255, 12));
@@ -343,7 +375,7 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 			}
 			nvgText(vg, rect.x + 40, rect.y + rect.height / 2.0f, it->second.c_str(), nullptr);
 		} else if (m_showLabels) {
-			nvgFontSize(vg, 9.0f);
+			nvgFontSize(vg, 11.0f);
 			nvgFontFace(vg, "sans");
 			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 			if (i == selected_index) {
