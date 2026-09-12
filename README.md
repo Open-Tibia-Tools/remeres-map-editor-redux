@@ -56,6 +56,73 @@ After ~900 commits, here is a brief summary of what has been achieved:
 - Native Tibia assets/Protobuf loading.
 - CipSoft format support (items.srv, map.sec, etc.).
 
+## How to migrate brushes from RME to Redux?
+
+RME Redux replaces the legacy monolithic XML format (where brushes, grounds, walls, doodads, and tilesets were mixed together across multiple files like `grounds.xml`, `walls.xml`, and `tilesets.xml`) with a **modular XML architecture**:
+
+```text
+<client_version>/
+├── borders/
+│   └── borders.xml
+├── brushes/
+│   └── brushes.xml
+├── creatures/
+│   └── creatures.xml
+├── items/
+│   └── items.xml
+├── tilesets/
+│   ├── terrain/
+│   ├── doodad/
+│   ├── creatures/
+│   ├── items/
+│   └── raw/
+├── materials.xml
+├── palettes.xml
+├── items.otb
+└── conversion_report.json
+```
+
+To migrate your custom brushes, tilesets, and client data from legacy RME into the Redux format, use the **Legacy Data XML Converter** located in `tools/`.
+
+### 1. Using the Graphical User Interface (GUI)
+
+A cross-platform (Windows & Linux) graphical tool is available:
+
+```powershell
+python tools/convert_legacy_data_gui.py
+```
+
+*(If `wxPython` is not installed on your system, the tool will automatically offer to install it for you on startup).*
+
+<!-- PLACEHOLDER: Paste GUI screenshot here -->
+<!-- Example: <img src="docs/images/legacy_converter_gui.png" alt="RME Legacy Converter GUI" width="800" /> -->
+
+#### Step-by-Step Guide:
+1. **Choose Source Path**: Click **Browse...** to select your legacy client folder (e.g. `800` containing `materials.xml`) or a directory containing multiple client versions.
+2. **Choose Target Output Directory**: Select where you want the converted modular folders to be saved.
+3. **Set Output Folder Name**: If converting an individual version, choose the subfolder name (defaults to the version name, e.g. `800`).
+4. **Review Before & After**:
+   - **Before**: Inspects your legacy files, detected `<border>`, `<brush>`, `<tileset>`, `<creature>`, and item counts, and flags any legacy XML issues (like NUL bytes or unescaped ampersands).
+   - **After**: Previews the modular layout and palette mappings that will be generated.
+5. **Start Conversion**: Click **Start Conversion**. The tool runs in the background while real-time progress and XML smoke-test validation stream to the **Conversion Log** tab.
+6. **Open Output Folder**: Click **Open Output Folder** to view the converted files.
+
+---
+
+### 2. Using the Command-Line Interface (CLI)
+
+For headless environments or automation, use `tools/convert_legacy_data.py` (requires only standard Python 3.8+, no external libraries needed):
+
+```powershell
+# Convert a specific client version:
+python tools/convert_legacy_data.py --base-dir C:\path\to\legacy\800 --output-dir C:\path\to\output --output-name 800
+
+# Batch convert all versions in a legacy data folder:
+python tools/convert_legacy_data.py --base-dir C:\path\to\legacy_data --output-dir C:\path\to\output --versions 740 800 1098
+```
+
+For complete documentation and technical details, see [`tools/convert_legacy_data_README.md`](tools/convert_legacy_data_README.md).
+
 ## Why did I start this?
 
 As a casual map maker, many things bothered me about the original RME for years. AI technology finally allowed me to implement the changes I wanted to see. Building a map editor with ImGui (which is not abandoned) taught me a lot, and I wanted to bring that level of modernization to RME.

@@ -1,0 +1,2 @@
+# Dependencies for Remere's Map Editor Legacy Data XML Converter
+wxPython>=4.2.0

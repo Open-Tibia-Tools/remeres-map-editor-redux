@@ -1,8 +1,8 @@
 # Legacy Data XML Converter
 
-`convert_legacy_data.py` converts legacy Remere's Map Editor client data folders into the modular XML layout used by `new_data/`.
+`convert_legacy_data.py` and `convert_legacy_data_gui.py` convert legacy Remere's Map Editor client data folders into the modern modular XML layout used by RME Redux.
 
-The script is intended to run from this `data/` directory. It scans numeric client folders such as `740`, `800`, `860`, and `1098`, then writes converted output to `new_data/<client_version>/`.
+The scripts are located in the `tools/` directory. They can convert an individual client folder (such as `800` or `1098`) or scan a directory containing multiple numeric version folders, generating clean, modular XML packages.
 
 ## Old XML Structure
 
@@ -212,42 +212,67 @@ tilesets/raw/Others.xml
 
 for raw item ids from `items.xml` that were not assigned to any explicit raw-capable legacy tileset.
 
-## Script Usage
+## Prerequisites & Fresh System Setup
 
-Run from `data/`:
+- **CLI Tool (`convert_legacy_data.py`)**:
+  - Requires only **standard Python 3.8+** (no external libraries or packages needed).
+- **GUI Application (`convert_legacy_data_gui.py`)**:
+  - Requires `wxPython`.
+  - **Auto-Installation**: If `wxPython` is not found, the GUI will prompt you and offer to install it automatically via `pip`.
+  - **Manual Installation**:
+    ```powershell
+    # Windows / macOS / Linux via pip:
+    pip install -r tools/requirements.txt
+    # or
+    pip install wxPython
+    ```
+    On Debian / Ubuntu systems:
+    ```bash
+    sudo apt install python3-wxgtk4.0
+    ```
 
-```powershell
-python .\convert_legacy_data.py
-```
+## GUI & Script Usage
 
-This converts every numeric client folder and writes output to:
+### Graphical User Interface (wxPython)
 
-```text
-data/new_data/
-```
-
-Convert only selected versions:
-
-```powershell
-python .\convert_legacy_data.py --versions 740 800 1098
-```
-
-Use a custom source directory:
-
-```powershell
-python .\convert_legacy_data.py --base-dir C:\path\to\data
-```
-
-Use a custom output directory:
+A graphical interface is available in `tools/convert_legacy_data_gui.py` (or by running `convert_legacy_data.py --gui` or executing without arguments).
 
 ```powershell
-python .\convert_legacy_data.py --output-dir C:\path\to\new_data
+# From the repository root:
+python tools/convert_legacy_data_gui.py
+
+# Or via the CLI launcher:
+python tools/convert_legacy_data.py --gui
 ```
 
-Combine options:
+#### GUI Preview:
+
+<!-- PLACEHOLDER: Paste GUI screenshot here -->
+<!-- Example: ![RME Legacy Converter GUI](screenshot.png) -->
+
+#### GUI Features:
+- **Source Path Selection**: Choose either a base directory containing multiple client version folders (e.g. `data/`) or directly select an individual legacy client folder (e.g. `data/800`).
+- **Discovered Versions Checklist**: When scanning a folder containing multiple versions, choose all or specific versions to convert.
+- **Target Output Directory & Folder Name**: Select the destination folder and customize the output folder name for single-version conversions.
+- **Before & After View**:
+  - **Before (Legacy Data)**: Lists all discovered legacy files (`materials.xml`, `items.xml`, `creatures.xml`, `grounds.xml`, `walls.xml`, etc.) with file sizes, plus element counts (`<border>`, `<brush>`, `<tileset>`, `<creature>`, item coverage, metaitem IDs, and detected XML sanitization fixes).
+  - **After (Modular Layout)**: Previews the expected modular folder tree (`borders/`, `brushes/`, `creatures/`, `items/`, `tilesets/<category>/...`, `materials.xml`, `palettes.xml`), palette mappings, fallback tilesets, and smoke-test validation results.
+- **Conversion Log**: Live scrolling log window with timestamps, progress gauge, step status messages, and options to copy or save the log.
+- **Diagnostics Tab**: Summarizes unresolved legacy references (missing brush names, creature references, border references) and XML sanitization repairs.
+- **Open Output Folder**: One-click button to open the converted folder in Windows Explorer / system file manager upon completion.
+
+---
+
+### Command-Line Usage
+
+From repository root:
 
 ```powershell
-python .\convert_legacy_data.py --base-dir C:\path\to\data --output-dir C:\path\to\converted --versions 800 1098
+# Convert specific versions from legacy data directory:
+python tools/convert_legacy_data.py --base-dir C:\path\to\legacy_data --output-dir C:\path\to\output --versions 740 800 1098
+
+# Convert a single client folder with custom output subfolder name:
+python tools/convert_legacy_data.py --base-dir C:\path\to\legacy\800 --output-dir C:\path\to\output --output-name 800_modular
 ```
 
 ## Validation
