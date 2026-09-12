@@ -120,6 +120,13 @@ void BrushPanel::SetSort(TilesetSortKey key, TilesetSortDirection dir) {
 	}
 }
 
+void BrushPanel::ClearSort() {
+	has_sort = false;
+	if (brushbox) {
+		brushbox->ClearSort();
+	}
+}
+
 void BrushPanel::SetShowLabels(bool show) {
 	show_labels = show;
 	if (brushbox) {

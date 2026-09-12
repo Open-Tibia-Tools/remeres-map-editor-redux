@@ -23,6 +23,7 @@ public:
 	enum MenuID {
 		MENU_SORT_BY_ID = wxID_HIGHEST + 6011,
 		MENU_SORT_BY_NAME,
+		MENU_SORT_DEFAULT,
 		MENU_SIZE_32,
 		MENU_SIZE_64,
 		MENU_SIZE_128,
@@ -61,6 +62,7 @@ public:
 
 	// Toolbar operations
 	void SetSort(TilesetSortKey key, TilesetSortDirection dir);
+	void ClearSort();
 	void SetShowLabels(bool show);
 	void SetTileSize(int sizePx);
 	void ApplyTheme();
@@ -72,6 +74,10 @@ protected:
 	void OnSearchText(wxCommandEvent& event);
 	void OnSearchCancel(wxCommandEvent& event);
 	void ApplyFilter();
+
+	static void EnsureDefaultsLoaded();
+	void LoadPaletteFilters();
+	void SavePaletteFilters();
 
 	std::string palette_name;
 	const DynamicPaletteDefinition* m_paletteDef;
@@ -93,6 +99,8 @@ protected:
 	static bool s_defaultHasSort;
 	static bool s_defaultShowLabels;
 	static int s_defaultTileSize;
+	static bool s_defaultFilterAll;
+	static bool s_defaultsLoaded;
 
 	// No size_panel, it was unused
 

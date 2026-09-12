@@ -177,6 +177,13 @@ void VirtualBrushGrid::SetSort(TilesetSortKey key, TilesetSortDirection dir) {
 	Refresh();
 }
 
+void VirtualBrushGrid::ClearSort() {
+	m_hasSort = false;
+	RefreshBrushList();
+	UpdateLayout();
+	Refresh();
+}
+
 void VirtualBrushGrid::SetShowLabels(bool show) {
 	if (m_showLabels != show) {
 		m_showLabels = show;

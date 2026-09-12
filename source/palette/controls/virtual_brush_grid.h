@@ -47,6 +47,7 @@ public:
 
 	// Toolbar support
 	void SetSort(TilesetSortKey key, TilesetSortDirection dir) override;
+	void ClearSort() override;
 	void SetShowLabels(bool show) override;
 	void SetTileSize(int sizePx) override;
 	void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr) override;

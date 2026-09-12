@@ -476,8 +476,37 @@ void Settings::IO(IOMode mode) {
 	Int(FLOOR_VISIBILITY_MODE, 0);
 	section("UI");
 	String(PALETTE_DYNAMIC_STYLE, "32x32 px");
+	Int(PALETTE_SORT_KEY, 0);
+	Int(PALETTE_SORT_DIR, 0);
+	Bool(PALETTE_HAS_SORT, false);
+	Bool(PALETTE_SHOW_LABELS, false);
+	Int(PALETTE_TILE_SIZE, 32);
+	Bool(PALETTE_FILTER_ALL, false);
+	String(PALETTE_FILTER_QUERY, "");
+
+	if (mode == LOAD) {
+		int tileSize = getInteger(PALETTE_TILE_SIZE);
+		std::string style = getString(PALETTE_DYNAMIC_STYLE);
+		if (tileSize == 32 || tileSize == 64 || tileSize == 128) {
+			setString(PALETTE_DYNAMIC_STYLE, std::to_string(tileSize) + "x" + std::to_string(tileSize) + " px");
+		} else if (style == "64x64 px") {
+			setInteger(PALETTE_TILE_SIZE, 64);
+		} else if (style == "128x128 px") {
+			setInteger(PALETTE_TILE_SIZE, 128);
+		} else if (style == "32x32 px" || style == "small icons" || style == "large icons") {
+			setInteger(PALETTE_TILE_SIZE, 32);
+			setString(PALETTE_DYNAMIC_STYLE, "32x32 px");
+		} else {
+			setInteger(PALETTE_TILE_SIZE, 32);
+		}
+	}
 
 	if (mode == SAVE) {
+		int tileSize = getInteger(PALETTE_TILE_SIZE);
+		if (tileSize == 32 || tileSize == 64 || tileSize == 128) {
+			setString(PALETTE_DYNAMIC_STYLE, std::to_string(tileSize) + "x" + std::to_string(tileSize) + " px");
+			cur_sec->insert_or_assign("palette_dynamic_style", getString(PALETTE_DYNAMIC_STYLE));
+		}
 		std::ofstream file("config.toml");
 		if (file.is_open()) {
 			file << g_settings_table;

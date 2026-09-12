@@ -41,6 +41,7 @@ public:
 	virtual bool SelectBrush(const Brush* brush) = 0;
 
 	virtual void SetSort(TilesetSortKey key, TilesetSortDirection dir) { }
+	virtual void ClearSort() { }
 	virtual void SetShowLabels(bool show) { }
 	virtual void SetTileSize(int sizePx) { }
 	virtual void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr) { }
@@ -65,6 +66,7 @@ public:
 	void SetListType(BrushListType ltype);
 	void SetListType(wxString ltype);
 	void SetSort(TilesetSortKey key, TilesetSortDirection dir);
+	void ClearSort();
 	void SetShowLabels(bool show);
 	void SetTileSize(int sizePx);
 	void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr);

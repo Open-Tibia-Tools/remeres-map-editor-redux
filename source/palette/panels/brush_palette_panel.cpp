@@ -13,6 +13,95 @@ TilesetSortDirection BrushPalettePanel::s_defaultSortDir = TilesetSortDirection:
 bool BrushPalettePanel::s_defaultHasSort = false;
 bool BrushPalettePanel::s_defaultShowLabels = false;
 int BrushPalettePanel::s_defaultTileSize = 32;
+bool BrushPalettePanel::s_defaultFilterAll = false;
+bool BrushPalettePanel::s_defaultsLoaded = false;
+
+namespace {
+std::string toLowerString(std::string_view s) {
+	std::string res;
+	res.reserve(s.size());
+	for (char c : s) {
+		res.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+	}
+	return res;
+}
+}
+
+void BrushPalettePanel::EnsureDefaultsLoaded() {
+	if (s_defaultsLoaded) {
+		return;
+	}
+	s_defaultsLoaded = true;
+
+	s_defaultHasSort = g_settings.getBoolean(Config::PALETTE_HAS_SORT);
+	s_defaultSortKey = static_cast<TilesetSortKey>(g_settings.getInteger(Config::PALETTE_SORT_KEY));
+	s_defaultSortDir = static_cast<TilesetSortDirection>(g_settings.getInteger(Config::PALETTE_SORT_DIR));
+	s_defaultShowLabels = g_settings.getBoolean(Config::PALETTE_SHOW_LABELS);
+
+	int loadedSize = g_settings.getInteger(Config::PALETTE_TILE_SIZE);
+	if (loadedSize == 32 || loadedSize == 64 || loadedSize == 128) {
+		s_defaultTileSize = loadedSize;
+	} else {
+		std::string dynStyle = g_settings.getString(Config::PALETTE_DYNAMIC_STYLE);
+		if (dynStyle == "64x64 px") {
+			s_defaultTileSize = 64;
+		} else if (dynStyle == "128x128 px") {
+			s_defaultTileSize = 128;
+		} else {
+			s_defaultTileSize = 32;
+		}
+	}
+	s_defaultFilterAll = g_settings.getBoolean(Config::PALETTE_FILTER_ALL);
+}
+
+void BrushPalettePanel::LoadPaletteFilters() {
+	EnsureDefaultsLoaded();
+	m_filterAll = s_defaultFilterAll;
+	m_filterQuery.clear();
+
+	std::string keyName = toLowerString(palette_name);
+	auto& root = g_settings.getTable();
+	if (auto* pTable = root.get_as<toml::table>("palette_filters")) {
+		if (auto* sub = pTable->get_as<toml::table>(keyName)) {
+			m_filterQuery = (*sub)["query"].value_or(std::string{});
+			m_filterAll = (*sub)["all"].value_or(s_defaultFilterAll);
+		} else {
+			m_filterQuery = (*pTable)[keyName + "_query"].value_or(std::string{});
+			m_filterAll = (*pTable)[keyName + "_all"].value_or(s_defaultFilterAll);
+		}
+	} else {
+		m_filterQuery = g_settings.getString(Config::PALETTE_FILTER_QUERY);
+	}
+}
+
+void BrushPalettePanel::SavePaletteFilters() {
+	std::string keyName = toLowerString(palette_name);
+	if (keyName.empty()) {
+		return;
+	}
+	auto& root = g_settings.getTable();
+	auto* pTable = root.get_as<toml::table>("palette_filters");
+	if (!pTable) {
+		root.insert_or_assign("palette_filters", toml::table{});
+		pTable = root.get_as<toml::table>("palette_filters");
+	}
+	if (pTable) {
+		auto* sub = pTable->get_as<toml::table>(keyName);
+		if (!sub) {
+			pTable->insert_or_assign(keyName, toml::table{});
+			sub = pTable->get_as<toml::table>(keyName);
+		}
+		if (sub) {
+			sub->insert_or_assign("query", m_filterQuery);
+			sub->insert_or_assign("all", m_filterAll);
+		}
+	}
+	if (!m_filterQuery.empty()) {
+		g_settings.setString(Config::PALETTE_FILTER_QUERY, m_filterQuery);
+		g_settings.setInteger(Config::PALETTE_FILTER_ALL, m_filterAll ? 1 : 0);
+	}
+	g_settings.save();
+}
 
 // ============================================================================
 // Brush Palette Panel
@@ -25,14 +114,14 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	choicebook(nullptr),
 	toolbar(nullptr),
 	m_searchCtrl(nullptr),
-	m_searchToolbar(nullptr),
-	m_filterQuery(),
-	m_filterAll(false),
-	m_sortKey(s_defaultSortKey),
-	m_sortDir(s_defaultSortDir),
-	m_hasSort(s_defaultHasSort),
-	m_showLabels(s_defaultShowLabels),
-	m_tileSize(s_defaultTileSize) {
+	m_searchToolbar(nullptr) {
+	EnsureDefaultsLoaded();
+	LoadPaletteFilters();
+	m_sortKey = s_defaultSortKey;
+	m_sortDir = s_defaultSortDir;
+	m_hasSort = s_defaultHasSort;
+	m_showLabels = s_defaultShowLabels;
+	m_tileSize = s_defaultTileSize;
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGING, &BrushPalettePanel::OnSwitchingPage, this);
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGED, &BrushPalettePanel::OnPageChanged, this);
 	Bind(wxEVT_SYS_COLOUR_CHANGED, [this](wxSysColourChangedEvent& event) {
@@ -72,7 +161,7 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	m_searchToolbar->SetToolBorderPadding(2);
 	m_searchToolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 	m_searchToolbar->AddTool(TOOL_FILTER_ALL, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_FILTER, iconSize, iconColor), "Filter all tilesets", wxITEM_CHECK);
-	m_searchToolbar->ToggleTool(TOOL_FILTER_ALL, false);
+	m_searchToolbar->ToggleTool(TOOL_FILTER_ALL, m_filterAll);
 	m_searchToolbar->Realize();
 	m_searchToolbar->Bind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
 
@@ -81,6 +170,9 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	m_searchCtrl->ShowCancelButton(true);
 	m_searchCtrl->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 	m_searchCtrl->SetForegroundColour(Theme::Get(Theme::Role::Text));
+	if (!m_filterQuery.empty()) {
+		m_searchCtrl->ChangeValue(wxstr(m_filterQuery));
+	}
 
 	m_searchCtrl->Bind(wxEVT_TEXT, &BrushPalettePanel::OnSearchText, this);
 	m_searchCtrl->Bind(wxEVT_SEARCHCTRL_CANCEL_BTN, &BrushPalettePanel::OnSearchCancel, this);
@@ -91,6 +183,7 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 			if (m_searchCtrl && !m_searchCtrl->GetValue().empty()) {
 				m_searchCtrl->ChangeValue(wxEmptyString);
 				m_filterQuery.clear();
+				SavePaletteFilters();
 				ApplyFilter();
 				return;
 			}
@@ -105,14 +198,18 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 		ctrlSizer->SetOrientation(wxVERTICAL);
 
 		wxBoxSizer* topRowSizer = newd wxBoxSizer(wxHORIZONTAL);
-		topRowSizer->Add(choice, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+		topRowSizer->Add(choice, 1, wxALIGN_CENTER_VERTICAL);
 		topRowSizer->Add(toolbar, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
 		ctrlSizer->Add(topRowSizer, 0, wxEXPAND | wxBOTTOM, 2);
 
 		wxBoxSizer* searchRowSizer = newd wxBoxSizer(wxHORIZONTAL);
-		searchRowSizer->Add(m_searchCtrl, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+		searchRowSizer->Add(m_searchCtrl, 1, wxALIGN_CENTER_VERTICAL);
 		searchRowSizer->Add(m_searchToolbar, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
 		ctrlSizer->Add(searchRowSizer, 0, wxEXPAND | wxBOTTOM, 2);
+
+		if (m_filterAll) {
+			choice->Enable(false);
+		}
 	}
 
 	for (const auto& tileset : palette.tilesets) {
@@ -132,9 +229,11 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	SetSizerAndFit(topsizer);
 
 	choicebook = tmp_choicebook;
+	ApplyFilter();
 }
 
 BrushPalettePanel::~BrushPalettePanel() {
+	SavePaletteFilters();
 	if (toolbar) {
 		toolbar->Unbind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
 	}
@@ -160,6 +259,7 @@ void BrushPalettePanel::LoadCurrentContents() {
 	BrushPanel* panel = dynamic_cast<BrushPanel*>(page);
 	if (panel) {
 		panel->OnSwitchIn();
+		ApplyFilter();
 	}
 	PalettePanel::LoadCurrentContents();
 }
@@ -186,6 +286,10 @@ void BrushPalettePanel::SetListType(BrushListType ltype) {
 	}
 	s_defaultTileSize = m_tileSize;
 
+	g_settings.setInteger(Config::PALETTE_TILE_SIZE, m_tileSize);
+	std::string style = std::to_string(m_tileSize) + "x" + std::to_string(m_tileSize) + " px";
+	g_settings.setString(Config::PALETTE_DYNAMIC_STYLE, style);
+
 	if (!choicebook) {
 		return;
 	}
@@ -198,12 +302,16 @@ void BrushPalettePanel::SetListType(BrushListType ltype) {
 }
 
 void BrushPalettePanel::SetListType(wxString ltype) {
-	if (!choicebook) {
-		return;
-	}
-	for (size_t iz = 0; iz < choicebook->GetPageCount(); ++iz) {
-		BrushPanel* panel = dynamic_cast<BrushPanel*>(choicebook->GetPage(iz));
-		panel->SetListType(ltype);
+	if (ltype == "32x32 px" || ltype == "small icons" || ltype == "large icons") {
+		SetListType(BRUSHLIST_ICONS_32);
+	} else if (ltype == "64x64 px") {
+		SetListType(BRUSHLIST_ICONS_64);
+	} else if (ltype == "128x128 px") {
+		SetListType(BRUSHLIST_ICONS_128);
+	} else if (ltype == "listbox" || ltype == "List style") {
+		SetListType(BRUSHLIST_LISTBOX);
+	} else if (ltype == "textlistbox") {
+		SetListType(BRUSHLIST_TEXT_LISTBOX);
 	}
 }
 
@@ -318,8 +426,23 @@ void BrushPalettePanel::OnSwitchIn() {
 	if (m_tileSize != s_defaultTileSize) {
 		SetTileSize(s_defaultTileSize);
 	}
-	if (s_defaultHasSort && (!m_hasSort || m_sortKey != s_defaultSortKey || m_sortDir != s_defaultSortDir)) {
-		SetSort(s_defaultSortKey, s_defaultSortDir);
+	if (s_defaultHasSort) {
+		if (!m_hasSort || m_sortKey != s_defaultSortKey || m_sortDir != s_defaultSortDir) {
+			SetSort(s_defaultSortKey, s_defaultSortDir);
+		}
+	} else if (m_hasSort) {
+		ClearSort();
+	}
+
+	if (m_searchToolbar && m_searchToolbar->GetToolToggled(TOOL_FILTER_ALL) != m_filterAll) {
+		m_searchToolbar->ToggleTool(TOOL_FILTER_ALL, m_filterAll);
+		m_searchToolbar->Refresh();
+	}
+	if (choicebook && choicebook->GetChoiceCtrl()) {
+		choicebook->GetChoiceCtrl()->Enable(!m_filterAll);
+	}
+	if (m_searchCtrl && m_searchCtrl->GetValue().ToStdString() != m_filterQuery) {
+		m_searchCtrl->ChangeValue(wxstr(m_filterQuery));
 	}
 
 	LoadCurrentContents();
@@ -335,6 +458,11 @@ void BrushPalettePanel::SetSort(TilesetSortKey key, TilesetSortDirection dir) {
 	s_defaultSortKey = key;
 	s_defaultSortDir = dir;
 
+	g_settings.setInteger(Config::PALETTE_HAS_SORT, 1);
+	g_settings.setInteger(Config::PALETTE_SORT_KEY, static_cast<int>(key));
+	g_settings.setInteger(Config::PALETTE_SORT_DIR, static_cast<int>(dir));
+	g_settings.save();
+
 	if (!choicebook) {
 		return;
 	}
@@ -346,9 +474,31 @@ void BrushPalettePanel::SetSort(TilesetSortKey key, TilesetSortDirection dir) {
 	}
 }
 
+void BrushPalettePanel::ClearSort() {
+	m_hasSort = false;
+	s_defaultHasSort = false;
+
+	g_settings.setInteger(Config::PALETTE_HAS_SORT, 0);
+	g_settings.save();
+
+	if (!choicebook) {
+		return;
+	}
+	for (size_t iz = 0; iz < choicebook->GetPageCount(); ++iz) {
+		BrushPanel* panel = dynamic_cast<BrushPanel*>(choicebook->GetPage(iz));
+		if (panel) {
+			panel->ClearSort();
+		}
+	}
+}
+
 void BrushPalettePanel::SetShowLabels(bool show) {
 	m_showLabels = show;
 	s_defaultShowLabels = show;
+
+	g_settings.setInteger(Config::PALETTE_SHOW_LABELS, show ? 1 : 0);
+	g_settings.save();
+
 	if (toolbar && toolbar->GetToolToggled(TOOL_TOGGLE_LABELS) != show) {
 		toolbar->ToggleTool(TOOL_TOGGLE_LABELS, show);
 		toolbar->Refresh();
@@ -368,6 +518,11 @@ void BrushPalettePanel::SetShowLabels(bool show) {
 void BrushPalettePanel::SetTileSize(int sizePx) {
 	m_tileSize = sizePx;
 	s_defaultTileSize = sizePx;
+
+	g_settings.setInteger(Config::PALETTE_TILE_SIZE, sizePx);
+	std::string style = std::to_string(sizePx) + "x" + std::to_string(sizePx) + " px";
+	g_settings.setString(Config::PALETTE_DYNAMIC_STYLE, style);
+	g_settings.save();
 
 	if (!choicebook) {
 		return;
@@ -417,6 +572,9 @@ void BrushPalettePanel::OnToolClick(wxCommandEvent& event) {
 		OnSizeButtonClick(id);
 	} else if (id == TOOL_FILTER_ALL) {
 		m_filterAll = m_searchToolbar ? m_searchToolbar->GetToolToggled(TOOL_FILTER_ALL) : event.IsChecked();
+		s_defaultFilterAll = m_filterAll;
+		g_settings.setInteger(Config::PALETTE_FILTER_ALL, m_filterAll ? 1 : 0);
+		SavePaletteFilters();
 		if (choicebook && choicebook->GetChoiceCtrl()) {
 			choicebook->GetChoiceCtrl()->Enable(!m_filterAll);
 		}
@@ -428,7 +586,10 @@ void BrushPalettePanel::OnSortButtonClick(TilesetSortDirection dir, int toolId) 
 	wxMenu menu;
 	auto* itemID = menu.AppendCheckItem(MENU_SORT_BY_ID, "By ID");
 	auto* itemName = menu.AppendCheckItem(MENU_SORT_BY_NAME, "By Name");
-	if (m_sortKey == TilesetSortKey::ID) {
+	auto* itemDefault = menu.AppendCheckItem(MENU_SORT_DEFAULT, "Default");
+	if (!m_hasSort) {
+		itemDefault->Check(true);
+	} else if (m_sortKey == TilesetSortKey::ID) {
 		itemID->Check(true);
 	} else {
 		itemName->Check(true);
@@ -441,6 +602,8 @@ void BrushPalettePanel::OnSortButtonClick(TilesetSortDirection dir, int toolId) 
 		SetSort(TilesetSortKey::ID, dir);
 	} else if (selected == MENU_SORT_BY_NAME) {
 		SetSort(TilesetSortKey::Name, dir);
+	} else if (selected == MENU_SORT_DEFAULT) {
+		ClearSort();
 	}
 }
 
@@ -473,6 +636,7 @@ void BrushPalettePanel::OnSizeButtonClick(int toolId) {
 void BrushPalettePanel::OnSearchText(wxCommandEvent& event) {
 	if (m_searchCtrl) {
 		m_filterQuery = m_searchCtrl->GetValue().ToStdString();
+		SavePaletteFilters();
 		ApplyFilter();
 
 		const auto eventType = event.GetEventType();
@@ -503,6 +667,7 @@ void BrushPalettePanel::OnSearchCancel(wxCommandEvent& event) {
 	if (m_searchCtrl) {
 		m_searchCtrl->ChangeValue(wxEmptyString);
 		m_filterQuery.clear();
+		SavePaletteFilters();
 		ApplyFilter();
 	}
 }
