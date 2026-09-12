@@ -37,6 +37,13 @@ void BrushPanel::SetListType(BrushListType ltype) {
 	if (list_type != ltype) {
 		InvalidateContents();
 		list_type = ltype;
+		if (ltype == BRUSHLIST_ICONS_32) {
+			tile_size_px = 32;
+		} else if (ltype == BRUSHLIST_ICONS_64) {
+			tile_size_px = 64;
+		} else if (ltype == BRUSHLIST_ICONS_128) {
+			tile_size_px = 128;
+		}
 	}
 }
 
@@ -67,20 +74,15 @@ void BrushPanel::LoadContents() {
 
 	ASSERT(tileset != nullptr);
 
-	int initialSize = tile_size_px;
 	switch (list_type) {
 		case BRUSHLIST_ICONS_32:
-			brushbox = newd VirtualBrushGrid(this, tileset, initialSize);
-			break;
 		case BRUSHLIST_ICONS_64:
-			brushbox = newd VirtualBrushGrid(this, tileset, initialSize > 32 ? initialSize : 64);
-			break;
 		case BRUSHLIST_ICONS_128:
-			brushbox = newd VirtualBrushGrid(this, tileset, initialSize > 32 ? initialSize : 128);
+			brushbox = newd VirtualBrushGrid(this, tileset, tile_size_px);
 			break;
 		case BRUSHLIST_LISTBOX:
 		case BRUSHLIST_TEXT_LISTBOX: {
-			auto vbg = newd VirtualBrushGrid(this, tileset, initialSize);
+			auto vbg = newd VirtualBrushGrid(this, tileset, tile_size_px);
 			vbg->SetDisplayMode(VirtualBrushGrid::DisplayMode::List);
 			brushbox = vbg;
 			break;

@@ -37,7 +37,12 @@ namespace {
 		}
 		if (const auto* cb = dynamic_cast<const CreatureBrush*>(brush)) {
 			if (cb->getType()) {
-				return static_cast<uint32_t>(cb->getType()->outfit.lookType);
+				if (cb->getType()->outfit.lookType != 0) {
+					return static_cast<uint32_t>(cb->getType()->outfit.lookType);
+				}
+				if (cb->getType()->outfit.lookItem != 0) {
+					return static_cast<uint32_t>(cb->getType()->outfit.lookItem);
+				}
 			}
 		}
 		if (brush->getLookID() != 0) {
@@ -75,12 +80,14 @@ VirtualBrushGrid::~VirtualBrushGrid() = default;
 void VirtualBrushGrid::SetDisplayMode(DisplayMode mode) {
 	if (display_mode != mode) {
 		display_mode = mode;
+		m_truncatedLabelCache.clear();
 		UpdateLayout();
 		Refresh();
 	}
 }
 
 void VirtualBrushGrid::RefreshBrushList() {
+	m_truncatedLabelCache.clear();
 	Brush* selectedBrush = GetSelectedBrush();
 	m_display_brushes = tileset->brushes;
 	if (m_hasSort) {
@@ -121,7 +128,7 @@ void VirtualBrushGrid::ApplySort() {
 				return m_sortDir == TilesetSortDirection::Ascending ? (cmp < 0) : (cmp > 0);
 			}
 		}
-		return a->getID() < b->getID();
+		return false;
 	};
 
 	std::stable_sort(m_display_brushes.begin(), m_display_brushes.end(), compare);
@@ -139,6 +146,7 @@ void VirtualBrushGrid::SetSort(TilesetSortKey key, TilesetSortDirection dir) {
 void VirtualBrushGrid::SetShowLabels(bool show) {
 	if (m_showLabels != show) {
 		m_showLabels = show;
+		m_truncatedLabelCache.clear();
 		UpdateLayout();
 		Refresh();
 	}
@@ -149,6 +157,7 @@ void VirtualBrushGrid::SetTileSize(int sizePx) {
 	if (icon_size_px != sizePx) {
 		icon_size_px = sizePx;
 		item_size = icon_size_px + 2 * ICON_OFFSET;
+		m_truncatedLabelCache.clear();
 		UpdateLayout();
 		Refresh();
 	}
@@ -312,29 +321,35 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 				nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::Text)));
 			}
 
-			auto it = m_utf8NameCache.find(brush);
-			if (it == m_utf8NameCache.end()) {
-				m_utf8NameCache[brush] = std::string(wxstr(brush->getName()).ToUTF8());
-				it = m_utf8NameCache.find(brush);
-			}
+			std::string displayName;
+			auto it = m_truncatedLabelCache.find(brush);
+			if (it != m_truncatedLabelCache.end()) {
+				displayName = it->second;
+			} else {
+				wxString wxName = wxstr(brush->getName());
+				const float maxTextWidth = static_cast<float>(rect.width - 4);
+				float bounds[4];
+				std::string utf8Full = wxName.ToStdString();
+				nvgTextBounds(vg, 0, 0, utf8Full.c_str(), nullptr, bounds);
+				float textWidth = bounds[2] - bounds[0];
 
-			std::string displayName = it->second;
-			float maxTextWidth = static_cast<float>(rect.width - 4);
-			float bounds[4];
-			nvgTextBounds(vg, 0, 0, displayName.c_str(), nullptr, bounds);
-			float textWidth = bounds[2] - bounds[0];
-
-			if (textWidth > maxTextWidth && displayName.length() > 3) {
-				std::string truncated = displayName;
-				while (truncated.length() > 1) {
-					truncated.pop_back();
-					std::string candidate = truncated + "...";
-					nvgTextBounds(vg, 0, 0, candidate.c_str(), nullptr, bounds);
-					if ((bounds[2] - bounds[0]) <= maxTextWidth) {
-						displayName = candidate;
-						break;
+				if (textWidth <= maxTextWidth) {
+					displayName = std::move(utf8Full);
+				} else {
+					displayName = "...";
+					wxString truncated = wxName;
+					while (truncated.length() > 1) {
+						truncated.RemoveLast();
+						wxString candidate = truncated + "...";
+						std::string utf8Candidate = candidate.ToStdString();
+						nvgTextBounds(vg, 0, 0, utf8Candidate.c_str(), nullptr, bounds);
+						if ((bounds[2] - bounds[0]) <= maxTextWidth) {
+							displayName = std::move(utf8Candidate);
+							break;
+						}
 					}
 				}
+				m_truncatedLabelCache[brush] = displayName;
 			}
 
 			float labelX = rect.x + rect.width / 2.0f;

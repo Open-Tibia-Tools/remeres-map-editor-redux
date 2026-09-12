@@ -11,14 +11,14 @@
 class BrushPalettePanel : public PalettePanel {
 public:
 	enum ToolID {
-		TOOL_SORT_AZ = wxID_HIGHEST + 201,
+		TOOL_SORT_AZ = wxID_HIGHEST + 6001,
 		TOOL_SORT_ZA,
 		TOOL_TOGGLE_LABELS,
 		TOOL_CHANGE_SIZE,
 	};
 
 	enum MenuID {
-		MENU_SORT_BY_ID = wxID_HIGHEST + 211,
+		MENU_SORT_BY_ID = wxID_HIGHEST + 6011,
 		MENU_SORT_BY_NAME,
 		MENU_SIZE_32,
 		MENU_SIZE_64,

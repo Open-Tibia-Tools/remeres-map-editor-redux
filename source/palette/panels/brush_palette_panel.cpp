@@ -123,12 +123,23 @@ wxString BrushPalettePanel::GetName() const {
 }
 
 void BrushPalettePanel::SetListType(BrushListType ltype) {
+	if (ltype == BRUSHLIST_ICONS_32) {
+		m_tileSize = 32;
+	} else if (ltype == BRUSHLIST_ICONS_64) {
+		m_tileSize = 64;
+	} else if (ltype == BRUSHLIST_ICONS_128) {
+		m_tileSize = 128;
+	}
+	s_defaultTileSize = m_tileSize;
+
 	if (!choicebook) {
 		return;
 	}
 	for (size_t iz = 0; iz < choicebook->GetPageCount(); ++iz) {
 		BrushPanel* panel = dynamic_cast<BrushPanel*>(choicebook->GetPage(iz));
-		panel->SetListType(ltype);
+		if (panel) {
+			panel->SetListType(ltype);
+		}
 	}
 }
 
@@ -245,6 +256,17 @@ void BrushPalettePanel::OnPageChanged(wxChoicebookEvent& event) {
 void BrushPalettePanel::OnSwitchIn() {
 	g_palettes.ActivatePalette(GetParentPalette());
 	g_gui.RestoreBrushSizeState(last_brush_size_state);
+
+	if (m_showLabels != s_defaultShowLabels) {
+		SetShowLabels(s_defaultShowLabels);
+	}
+	if (m_tileSize != s_defaultTileSize) {
+		SetTileSize(s_defaultTileSize);
+	}
+	if (s_defaultHasSort && (!m_hasSort || m_sortKey != s_defaultSortKey || m_sortDir != s_defaultSortDir)) {
+		SetSort(s_defaultSortKey, s_defaultSortDir);
+	}
+
 	LoadCurrentContents();
 }
 
@@ -312,6 +334,7 @@ void BrushPalettePanel::ApplyTheme() {
 	toolbar->SetToolBitmap(TOOL_TOGGLE_LABELS, IMAGE_MANAGER.GetBitmap(ICON_TAG, iconSize, iconColor));
 	toolbar->SetToolBitmap(TOOL_CHANGE_SIZE, IMAGE_MANAGER.GetBitmap(ICON_MAXIMIZE, iconSize, iconColor));
 	toolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
+	toolbar->SetForegroundColour(Theme::Get(Theme::Role::Text));
 	toolbar->Refresh();
 }
 
@@ -322,7 +345,7 @@ void BrushPalettePanel::OnToolClick(wxCommandEvent& event) {
 	} else if (id == TOOL_SORT_ZA) {
 		OnSortButtonClick(TilesetSortDirection::Descending, id);
 	} else if (id == TOOL_TOGGLE_LABELS) {
-		SetShowLabels(event.IsChecked());
+		SetShowLabels(toolbar ? toolbar->GetToolToggled(TOOL_TOGGLE_LABELS) : event.IsChecked());
 	} else if (id == TOOL_CHANGE_SIZE) {
 		OnSizeButtonClick(id);
 	}

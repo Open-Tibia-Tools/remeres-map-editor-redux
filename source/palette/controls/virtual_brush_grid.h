@@ -91,8 +91,9 @@ protected:
 	bool m_hasSort = false;
 	bool m_showLabels = false;
 
-	// Optimization: UTF8 name cache
+	// Optimization: UTF8 name cache and truncated label cache
 	mutable std::unordered_map<const Brush*, std::string> m_utf8NameCache;
+	mutable std::unordered_map<const Brush*, std::string> m_truncatedLabelCache;
 
 	// Animation state
 	wxTimer m_animTimer;
