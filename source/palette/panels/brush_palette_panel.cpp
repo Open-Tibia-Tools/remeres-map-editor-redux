@@ -220,7 +220,7 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	m_searchToolbar->SetMargins(1, 1, 1, 1);
 	m_searchToolbar->SetToolBorderPadding(2);
 	m_searchToolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
-	m_searchToolbar->AddTool(TOOL_FILTER_ALL, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_FILTER, iconSize, iconColor), "Filter all tilesets", wxITEM_CHECK);
+	m_searchToolbar->AddTool(TOOL_FILTER_ALL, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_FILTER, iconSize, iconColor), "Filter all tilesets and palettes", wxITEM_CHECK);
 	m_searchToolbar->ToggleTool(TOOL_FILTER_ALL, m_filterAll);
 	m_searchToolbar->Realize();
 	m_searchToolbar->Bind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
@@ -247,10 +247,7 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 		w->Bind(wxEVT_CHAR_HOOK, [this](wxKeyEvent& evt) {
 			if (evt.GetKeyCode() == WXK_ESCAPE) {
 				if (m_searchCtrl && !m_searchCtrl->GetValue().empty()) {
-					m_searchCtrl->ChangeValue(wxEmptyString);
-					m_filterQuery.clear();
-					SavePaletteFilters();
-					ApplyFilter();
+					ResetFilter();
 					return;
 				}
 			}
@@ -278,7 +275,7 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 		searchRowSizer->Add(m_searchToolbar, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
 		ctrlSizer->Add(searchRowSizer, 0, wxEXPAND | wxBOTTOM, 2);
 
-		if (m_filterAll) {
+		if (m_filterAll && !m_filterQuery.empty()) {
 			choice->Enable(false);
 		}
 		tmp_choicebook->Layout();
@@ -506,12 +503,15 @@ void BrushPalettePanel::OnSwitchIn() {
 		ClearSort();
 	}
 
+	if (m_filterAll != s_defaultFilterAll) {
+		m_filterAll = s_defaultFilterAll;
+	}
 	if (m_searchToolbar && m_searchToolbar->GetToolToggled(TOOL_FILTER_ALL) != m_filterAll) {
 		m_searchToolbar->ToggleTool(TOOL_FILTER_ALL, m_filterAll);
 		m_searchToolbar->Refresh();
 	}
 	if (choicebook && choicebook->GetChoiceCtrl()) {
-		choicebook->GetChoiceCtrl()->Enable(!m_filterAll);
+		choicebook->GetChoiceCtrl()->Enable(!m_filterAll || m_filterQuery.empty());
 	}
 	if (m_searchCtrl && m_searchCtrl->GetValue().ToStdString() != m_filterQuery) {
 		m_searchCtrl->ChangeValue(wxstr(m_filterQuery));
@@ -655,7 +655,7 @@ void BrushPalettePanel::OnToolClick(wxCommandEvent& event) {
 		g_settings.setInteger(Config::PALETTE_FILTER_ALL, m_filterAll ? 1 : 0);
 		SavePaletteFilters();
 		if (choicebook && choicebook->GetChoiceCtrl()) {
-			choicebook->GetChoiceCtrl()->Enable(!m_filterAll);
+			choicebook->GetChoiceCtrl()->Enable(!m_filterAll || m_filterQuery.empty());
 		}
 		ApplyFilter();
 	}
@@ -721,8 +721,9 @@ void BrushPalettePanel::OnSearchText(wxCommandEvent& event) {
 		const auto eventType = event.GetEventType();
 		if ((eventType == wxEVT_TEXT_ENTER || eventType == wxEVT_SEARCHCTRL_SEARCH_BTN) && choicebook) {
 			wxWindow* w = GetParent();
+			PaletteWindow* pw = nullptr;
 			while (w) {
-				PaletteWindow* pw = dynamic_cast<PaletteWindow*>(w);
+				pw = dynamic_cast<PaletteWindow*>(w);
 				if (pw) {
 					g_gui.ActivatePalette(pw);
 					break;
@@ -735,7 +736,11 @@ void BrushPalettePanel::OnSearchText(wxCommandEvent& event) {
 				panel->SelectFirstBrush();
 				Brush* brush = panel->GetSelectedBrush();
 				if (brush) {
-					g_gui.SelectBrushInternal(brush);
+					if (m_filterAll && pw) {
+						pw->JumpToBrush(brush, palette_name);
+					} else {
+						g_gui.SelectBrushInternal(brush);
+					}
 				}
 			}
 		}
@@ -743,12 +748,7 @@ void BrushPalettePanel::OnSearchText(wxCommandEvent& event) {
 }
 
 void BrushPalettePanel::OnSearchCancel(wxCommandEvent& event) {
-	if (m_searchCtrl) {
-		m_searchCtrl->ChangeValue(wxEmptyString);
-		m_filterQuery.clear();
-		SavePaletteFilters();
-		ApplyFilter();
-	}
+	ResetFilter();
 }
 
 void BrushPalettePanel::ApplyFilter() {
@@ -760,20 +760,103 @@ void BrushPalettePanel::ApplyFilter() {
 		return;
 	}
 
-	if (m_filterAll && m_paletteDef) {
+	if (m_filterAll && !m_filterQuery.empty()) {
 		std::vector<Brush*> allBrushes;
 		std::unordered_set<const Brush*> seen;
-		for (const auto& ts : m_paletteDef->tilesets) {
-			for (Brush* b : ts.brushes) {
-				if (b && seen.insert(b).second) {
-					allBrushes.push_back(b);
+		const auto& palettes = g_materials.paletteCatalog().dynamicPalettes();
+		for (const auto& pal : palettes) {
+			for (const auto& ts : pal.tilesets) {
+				for (Brush* b : ts.brushes) {
+					if (b && seen.insert(b).second) {
+						allBrushes.push_back(b);
+					}
 				}
 			}
 		}
 		panel->SetFilterQuery(m_filterQuery, &allBrushes);
+		if (choicebook && choicebook->GetChoiceCtrl()) {
+			choicebook->GetChoiceCtrl()->Enable(false);
+		}
 	} else {
 		panel->SetFilterQuery(m_filterQuery, nullptr);
+		if (choicebook && choicebook->GetChoiceCtrl()) {
+			choicebook->GetChoiceCtrl()->Enable(true);
+		}
 	}
+}
+
+void BrushPalettePanel::ResetFilter() {
+	if (m_searchCtrl) {
+		m_searchCtrl->ChangeValue(wxEmptyString);
+	}
+	m_filterQuery.clear();
+	SavePaletteFilters();
+	ApplyFilter();
+}
+
+bool BrushPalettePanel::JumpToTilesetAndBrush(std::string_view tilesetName, const Brush* brush) {
+	if (!choicebook || !brush) {
+		return false;
+	}
+
+	// 1. Clear active filter on this panel
+	if (m_searchCtrl) {
+		m_searchCtrl->ChangeValue(wxEmptyString);
+	}
+	m_filterQuery.clear();
+	SavePaletteFilters();
+
+	// 2. Find target tileset page
+	int targetIndex = wxNOT_FOUND;
+	for (size_t iz = 0; iz < choicebook->GetPageCount(); ++iz) {
+		auto* panel = dynamic_cast<BrushPanel*>(choicebook->GetPage(iz));
+		if (panel) {
+			if (panel->GetTileset() && panel->GetTileset()->name == tilesetName) {
+				targetIndex = static_cast<int>(iz);
+				break;
+			} else if (nstr(choicebook->GetPageText(iz)) == tilesetName) {
+				targetIndex = static_cast<int>(iz);
+				break;
+			}
+		}
+	}
+
+	// 3. Switch to target tileset page if found
+	if (targetIndex != wxNOT_FOUND) {
+		if (choicebook->GetSelection() != targetIndex) {
+			choicebook->SetSelection(targetIndex);
+		}
+	}
+
+	// 4. Ensure filter is cleared and choice control is enabled on current page
+	ApplyFilter();
+
+	// 5. Select the brush in the current page
+	auto* currentPanel = dynamic_cast<BrushPanel*>(choicebook->GetCurrentPage());
+	bool selected = false;
+	if (currentPanel) {
+		selected = currentPanel->SelectBrush(brush);
+	}
+
+	// If not found in current page, search across other pages in this choicebook
+	if (!selected) {
+		for (size_t iz = 0; iz < choicebook->GetPageCount(); ++iz) {
+			auto* panel = dynamic_cast<BrushPanel*>(choicebook->GetPage(iz));
+			if (panel && panel->SelectBrush(brush)) {
+				choicebook->SetSelection(iz);
+				selected = true;
+				break;
+			}
+		}
+	}
+
+	// 6. Activate in GUI
+	g_gui.ActivatePalette(GetParentPalette());
+	g_gui.SelectBrushInternal(const_cast<Brush*>(brush));
+	Layout();
+	Refresh();
+
+	return selected;
 }
 
 

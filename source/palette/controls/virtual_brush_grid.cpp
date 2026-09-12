@@ -1,5 +1,7 @@
 #include "app/main.h"
 #include "palette/controls/virtual_brush_grid.h"
+#include "palette/palette_window.h"
+#include "palette/panels/brush_palette_panel.h"
 #include "ui/gui.h"
 #include "rendering/core/graphics.h"
 
@@ -586,22 +588,51 @@ int VirtualBrushGrid::HitTest(int x, int y) const {
 
 void VirtualBrushGrid::OnMouseDown(wxMouseEvent& event) {
 	int index = HitTest(event.GetX(), event.GetY());
-	if (index != -1 && index != selected_index) {
-		selected_index = index;
-
-		// Notify GUI - find PaletteWindow parent
-		wxWindow* w = GetParent();
-		while (w) {
-			PaletteWindow* pw = dynamic_cast<PaletteWindow*>(w);
-			if (pw) {
-				g_gui.ActivatePalette(pw);
-				break;
+	if (index != -1) {
+		if (m_hasOverrideBrushes && index >= 0 && static_cast<size_t>(index) < m_display_brushes.size()) {
+			Brush* clickedBrush = m_display_brushes[index];
+			if (clickedBrush) {
+				PaletteWindow* pw = nullptr;
+				BrushPalettePanel* currentBrushPalettePanel = nullptr;
+				wxWindow* w = GetParent();
+				while (w) {
+					if (!currentBrushPalettePanel) {
+						currentBrushPalettePanel = dynamic_cast<BrushPalettePanel*>(w);
+					}
+					if (!pw) {
+						pw = dynamic_cast<PaletteWindow*>(w);
+					}
+					if (pw && currentBrushPalettePanel) {
+						break;
+					}
+					w = w->GetParent();
+				}
+				if (pw) {
+					std::string preferredPal = currentBrushPalettePanel ? currentBrushPalettePanel->GetName().ToStdString() : "";
+					if (pw->JumpToBrush(clickedBrush, preferredPal)) {
+						return;
+					}
+				}
 			}
-			w = w->GetParent();
 		}
 
-		g_gui.SelectBrushInternal(m_display_brushes[selected_index]);
-		Refresh();
+		if (index != selected_index) {
+			selected_index = index;
+
+			// Notify GUI - find PaletteWindow parent
+			wxWindow* w = GetParent();
+			while (w) {
+				PaletteWindow* pw = dynamic_cast<PaletteWindow*>(w);
+				if (pw) {
+					g_gui.ActivatePalette(pw);
+					break;
+				}
+				w = w->GetParent();
+			}
+
+			g_gui.SelectBrushInternal(m_display_brushes[selected_index]);
+			Refresh();
+		}
 	}
 }
 

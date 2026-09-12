@@ -72,6 +72,9 @@ public:
 	void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr);
 	// Assigns a tileset to this list
 	void AssignTileset(const DynamicTilesetDefinition* tileset);
+	[[nodiscard]] const DynamicTilesetDefinition* GetTileset() const {
+		return tileset;
+	}
 
 	// Select the first brush
 	void SelectFirstBrush();

@@ -67,6 +67,10 @@ public:
 	void SetTileSize(int sizePx);
 	void ApplyTheme();
 
+	// Search and filter operations
+	void ResetFilter();
+	bool JumpToTilesetAndBrush(std::string_view tilesetName, const Brush* brush);
+
 protected:
 	void OnToolClick(wxCommandEvent& event);
 	void OnSortButtonClick(TilesetSortDirection dir, int toolId);
