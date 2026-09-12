@@ -356,18 +356,19 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 			nvgFill(vg);
 		} else {
 			// Placeholder box for entries without sprite (e.g. completely transparent tile or missing sprite)
+			const wxColour textCol = Theme::Get(Theme::Role::Text);
 			nvgBeginPath(vg);
 			nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
-			nvgFillColor(vg, nvgRGBA(255, 255, 255, 12));
+			nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 12));
 			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(255, 255, 255, 40));
+			nvgStrokeColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 40));
 			nvgStrokeWidth(vg, 1.0f);
 			nvgStroke(vg);
 
 			nvgFontSize(vg, static_cast<float>(iconSize) * 0.45f);
 			nvgFontFace(vg, "sans");
 			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-			nvgFillColor(vg, nvgRGBA(255, 255, 255, 120));
+			nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 120));
 			nvgText(vg, iconX + iconSize / 2.0f, iconY + iconSize / 2.0f, "?", nullptr);
 		}
 
@@ -397,7 +398,10 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 			if (it == m_truncatedLabelCache.end()) {
 				CachedLabel cachedLabel;
 				wxString wxName = wxstr(brush->getName());
-				std::string utf8Full = wxName.ToStdString();
+				auto toUtf8 = [](const wxString& s) -> std::string {
+					return std::string(s.ToUTF8());
+				};
+				std::string utf8Full = toUtf8(wxName);
 				const float maxTextWidth = static_cast<float>(rect.width - 4);
 				float bounds[4];
 				nvgTextBounds(vg, 0, 0, utf8Full.c_str(), nullptr, bounds);
@@ -414,7 +418,7 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 					int dashPos = wxName.Find(" - ");
 					if (dashPos != wxNOT_FOUND && dashPos > 0) {
 						wxString prefix = wxName.substr(0, dashPos);
-						std::string utf8Prefix = prefix.ToStdString();
+						std::string utf8Prefix = toUtf8(prefix);
 						nvgTextBounds(vg, 0, 0, utf8Prefix.c_str(), nullptr, bounds);
 						if ((bounds[2] - bounds[0]) <= maxTextWidth) {
 							wxLine1 = prefix;
@@ -430,7 +434,7 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 							wxChar ch = wxName[idx];
 							if (ch == ' ' || ch == '-') {
 								wxString cand1 = wxName.substr(0, (ch == '-') ? (idx + 1) : idx);
-								std::string utf8Cand1 = cand1.ToStdString();
+								std::string utf8Cand1 = toUtf8(cand1);
 								nvgTextBounds(vg, 0, 0, utf8Cand1.c_str(), nullptr, bounds);
 								if ((bounds[2] - bounds[0]) <= maxTextWidth) {
 									bestSplit = idx;
@@ -453,7 +457,7 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 							wxString cand1 = wxName;
 							while (cand1.length() > 1) {
 								cand1.RemoveLast();
-								std::string utf8Cand1 = cand1.ToStdString();
+								std::string utf8Cand1 = toUtf8(cand1);
 								nvgTextBounds(vg, 0, 0, utf8Cand1.c_str(), nullptr, bounds);
 								if ((bounds[2] - bounds[0]) <= maxTextWidth) {
 									wxLine1 = cand1;
@@ -476,12 +480,12 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 						wxLine2.Remove(0, 1);
 					}
 
-					cachedLabel.line1 = wxLine1.ToStdString();
+					cachedLabel.line1 = toUtf8(wxLine1);
 
 					if (wxLine2.empty()) {
 						cachedLabel.line2 = "";
 					} else {
-						std::string utf8Line2 = wxLine2.ToStdString();
+						std::string utf8Line2 = toUtf8(wxLine2);
 						nvgTextBounds(vg, 0, 0, utf8Line2.c_str(), nullptr, bounds);
 						if ((bounds[2] - bounds[0]) <= maxTextWidth) {
 							cachedLabel.line2 = std::move(utf8Line2);
@@ -491,7 +495,7 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 							while (truncated2.length() > 1) {
 								truncated2.RemoveLast();
 								wxString cand2 = truncated2 + "...";
-								std::string utf8Cand2 = cand2.ToStdString();
+								std::string utf8Cand2 = toUtf8(cand2);
 								nvgTextBounds(vg, 0, 0, utf8Cand2.c_str(), nullptr, bounds);
 								if ((bounds[2] - bounds[0]) <= maxTextWidth) {
 									cachedLabel.line2 = std::move(utf8Cand2);
@@ -610,6 +614,10 @@ void VirtualBrushGrid::OnMouseDown(wxMouseEvent& event) {
 				if (pw) {
 					std::string preferredPal = currentBrushPalettePanel ? currentBrushPalettePanel->GetName().ToStdString() : "";
 					if (pw->JumpToBrush(clickedBrush, preferredPal)) {
+						return;
+					}
+					// JumpToBrush may have rebuilt m_display_brushes before failing.
+					if (static_cast<size_t>(index) >= m_display_brushes.size()) {
 						return;
 					}
 				}

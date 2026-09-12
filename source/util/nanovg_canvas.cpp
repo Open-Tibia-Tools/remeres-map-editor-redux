@@ -444,7 +444,7 @@ void NanoVGCanvas::DeleteCachedImage(uint64_t id) {
 }
 
 void NanoVGCanvas::AddCachedImage(uint64_t id, int imageHandle) {
-	if (imageHandle > 0) {
+	if (imageHandle != 0) {
 		ScopedGLContext ctx(this);
 		auto it = m_imageCache.find(id);
 		if (it != m_imageCache.end()) {
@@ -455,7 +455,7 @@ void NanoVGCanvas::AddCachedImage(uint64_t id, int imageHandle) {
 		}
 
 		// Evict if over limit
-		if (m_imageCache.size() >= m_maxCacheSize) {
+		if (m_imageCache.size() >= m_maxCacheSize && !m_lruList.empty()) {
 			uint64_t last = m_lruList.back();
 			auto lastIt = m_imageCache.find(last);
 			if (lastIt != m_imageCache.end()) {

@@ -485,19 +485,22 @@ void Settings::IO(IOMode mode) {
 	String(PALETTE_FILTER_QUERY, "");
 
 	if (mode == LOAD) {
-		int tileSize = getInteger(PALETTE_TILE_SIZE);
+		const bool hasExplicitTileSize = cur_sec && cur_sec->contains("palette_tile_size");
 		std::string style = getString(PALETTE_DYNAMIC_STYLE);
-		if (tileSize == 32 || tileSize == 64 || tileSize == 128) {
+		int tileSize = getInteger(PALETTE_TILE_SIZE);
+		if (!hasExplicitTileSize) {
+			if (style == "64x64 px") {
+				setInteger(PALETTE_TILE_SIZE, 64);
+			} else if (style == "128x128 px") {
+				setInteger(PALETTE_TILE_SIZE, 128);
+			} else if (style == "32x32 px" || style == "small icons" || style == "large icons") {
+				setInteger(PALETTE_TILE_SIZE, 32);
+				setString(PALETTE_DYNAMIC_STYLE, "32x32 px");
+			} else {
+				setInteger(PALETTE_TILE_SIZE, 32);
+			}
+		} else if (tileSize == 32 || tileSize == 64 || tileSize == 128) {
 			setString(PALETTE_DYNAMIC_STYLE, std::to_string(tileSize) + "x" + std::to_string(tileSize) + " px");
-		} else if (style == "64x64 px") {
-			setInteger(PALETTE_TILE_SIZE, 64);
-		} else if (style == "128x128 px") {
-			setInteger(PALETTE_TILE_SIZE, 128);
-		} else if (style == "32x32 px" || style == "small icons" || style == "large icons") {
-			setInteger(PALETTE_TILE_SIZE, 32);
-			setString(PALETTE_DYNAMIC_STYLE, "32x32 px");
-		} else {
-			setInteger(PALETTE_TILE_SIZE, 32);
 		}
 	}
 

@@ -112,13 +112,16 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		}
 	} else {
 		// get outfit sprite
-		GameSprite* spr = g_gui.gfx.getCreatureSprite(outfit.lookType);
 		const Outfit* drawOutfit = &outfit;
-		if (!spr && outfit.lookType != DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) {
-			spr = g_gui.gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
+		if (drawOutfit->lookType == 0) {
 			drawOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 		}
-		if (!spr || drawOutfit->lookType == 0) {
+		GameSprite* spr = g_gui.gfx.getCreatureSprite(drawOutfit->lookType);
+		if (!spr && drawOutfit->lookType != DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) {
+			drawOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+			spr = g_gui.gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
+		}
+		if (!spr) {
 			return;
 		}
 

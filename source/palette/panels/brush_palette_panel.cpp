@@ -240,7 +240,7 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	m_searchCtrl->Bind(wxEVT_SEARCHCTRL_SEARCH_BTN, &BrushPalettePanel::OnSearchText, this);
 	m_searchCtrl->Bind(wxEVT_TEXT_ENTER, &BrushPalettePanel::OnSearchText, this);
 
-	auto bindCharHook = [this](wxWindow* w) {
+	auto bindEvents = [this](wxWindow* w) {
 		if (!w) {
 			return;
 		}
@@ -253,10 +253,14 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 			}
 			evt.Skip();
 		});
+		w->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& evt) {
+			SavePaletteFilters();
+			evt.Skip();
+		});
 	};
-	bindCharHook(m_searchCtrl);
+	bindEvents(m_searchCtrl);
 	for (wxWindow* child : m_searchCtrl->GetChildren()) {
-		bindCharHook(child);
+		bindEvents(child);
 	}
 
 	wxChoice* choice = tmp_choicebook->GetChoiceCtrl();
@@ -503,9 +507,6 @@ void BrushPalettePanel::OnSwitchIn() {
 		ClearSort();
 	}
 
-	if (m_filterAll != s_defaultFilterAll) {
-		m_filterAll = s_defaultFilterAll;
-	}
 	if (m_searchToolbar && m_searchToolbar->GetToolToggled(TOOL_FILTER_ALL) != m_filterAll) {
 		m_searchToolbar->ToggleTool(TOOL_FILTER_ALL, m_filterAll);
 		m_searchToolbar->Refresh();
@@ -715,11 +716,11 @@ void BrushPalettePanel::OnSizeButtonClick(int toolId) {
 void BrushPalettePanel::OnSearchText(wxCommandEvent& event) {
 	if (m_searchCtrl) {
 		m_filterQuery = m_searchCtrl->GetValue().ToStdString();
-		SavePaletteFilters();
 		ApplyFilter();
 
 		const auto eventType = event.GetEventType();
 		if ((eventType == wxEVT_TEXT_ENTER || eventType == wxEVT_SEARCHCTRL_SEARCH_BTN) && choicebook) {
+			SavePaletteFilters();
 			wxWindow* w = GetParent();
 			PaletteWindow* pw = nullptr;
 			while (w) {
@@ -851,10 +852,12 @@ bool BrushPalettePanel::JumpToTilesetAndBrush(std::string_view tilesetName, cons
 	}
 
 	// 6. Activate in GUI
-	g_gui.ActivatePalette(GetParentPalette());
-	g_gui.SelectBrushInternal(const_cast<Brush*>(brush));
-	Layout();
-	Refresh();
+	if (selected) {
+		g_gui.ActivatePalette(GetParentPalette());
+		g_gui.SelectBrushInternal(const_cast<Brush*>(brush));
+		Layout();
+		Refresh();
+	}
 
 	return selected;
 }
