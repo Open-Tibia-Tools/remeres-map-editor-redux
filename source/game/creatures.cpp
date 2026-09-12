@@ -96,16 +96,9 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 	ct->name = attribute.as_string();
 	ct->isNpc = tmpType == "npc";
 
-	bool invalidLookType = false;
-	if ((attribute = node.attribute("looktype"))) {
-		ct->outfit.lookType = attribute.as_int();
-
-		if (g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
-			warnings.push_back((wxString("Invalid creature \"") + wxstr(ct->name) + "\" look type #" + std::to_string(ct->outfit.lookType)).ToStdString());
-			invalidLookType = true;
-		}
-	} else {
-		// Log if no looktype is present (defaulting to 0)
+	pugi::xml_attribute lookTypeAttr = node.attribute("looktype");
+	if (lookTypeAttr) {
+		ct->outfit.lookType = lookTypeAttr.as_int();
 	}
 
 	if ((attribute = node.attribute("lookitem"))) {
@@ -152,8 +145,15 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 		ct->outfit.lookMountFeet = attribute.as_int();
 	}
 
-	if (invalidLookType) {
-		ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+	if (ct->outfit.lookItem == 0) {
+		if (lookTypeAttr) {
+			if (g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
+				warnings.push_back((wxString("Invalid creature \"") + wxstr(ct->name) + "\" look type #" + std::to_string(ct->outfit.lookType)).ToStdString());
+				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+			}
+		} else if (ct->outfit.lookType == 0) {
+			ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+		}
 	}
 
 	return ct;
@@ -241,9 +241,15 @@ CreatureType* CreatureType::loadFromOTXML(const FileName& filename, pugi::xml_do
 		}
 	}
 
-	if (ct->outfit.lookType != 0 && ct->outfit.lookItem == 0 && g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
-		warnings.push_back((wxString("Invalid creature \"") + wxstr(ct->name) + "\" look type #" + std::to_string(ct->outfit.lookType)).ToStdString());
-		ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+	if (ct->outfit.lookItem == 0) {
+		if (ct->outfit.lookType != 0) {
+			if (g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
+				warnings.push_back((wxString("Invalid creature \"") + wxstr(ct->name) + "\" look type #" + std::to_string(ct->outfit.lookType)).ToStdString());
+				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+			}
+		} else {
+			ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+		}
 	}
 
 	return ct;

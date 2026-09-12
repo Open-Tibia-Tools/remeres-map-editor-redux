@@ -137,15 +137,15 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		// mount colors by Zbizu
 		int pattern_z = 0;
 		GameSprite* mountSpr = nullptr;
-		if (outfit.lookMount != 0) {
-			if ((mountSpr = g_gui.gfx.getCreatureSprite(outfit.lookMount))) {
+		if (drawOutfit->lookMount != 0) {
+			if ((mountSpr = g_gui.gfx.getCreatureSprite(drawOutfit->lookMount))) {
 				// Generate mount colors and metrics once so rendering and light placement stay aligned.
 				Outfit mountOutfit;
-				mountOutfit.lookType = outfit.lookMount;
-				mountOutfit.lookHead = outfit.lookMountHead;
-				mountOutfit.lookBody = outfit.lookMountBody;
-				mountOutfit.lookLegs = outfit.lookMountLegs;
-				mountOutfit.lookFeet = outfit.lookMountFeet;
+				mountOutfit.lookType = drawOutfit->lookMount;
+				mountOutfit.lookHead = drawOutfit->lookMountHead;
+				mountOutfit.lookBody = drawOutfit->lookMountBody;
+				mountOutfit.lookLegs = drawOutfit->lookMountLegs;
+				mountOutfit.lookFeet = drawOutfit->lookMountFeet;
 				const auto mount_draw_offset = mountSpr->getDrawOffset();
 				const auto mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, resolvedFrame);
 
