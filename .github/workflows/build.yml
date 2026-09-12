@@ -68,6 +68,7 @@ jobs:
           key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-
+            vcpkg-installed-${{ runner.os }}-
 
       - name: Setup ccache
         run: |
@@ -151,6 +152,7 @@ jobs:
           key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-
+            vcpkg-installed-${{ runner.os }}-
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
