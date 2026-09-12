@@ -9,6 +9,13 @@ on:
     branches:
       - main
       - master
+  workflow_dispatch:
+    inputs:
+      number:
+        description: 'Issue or PR number to triage'
+        required: true
+        default: '1034'
+        type: string
 
 permissions:
   issues: write

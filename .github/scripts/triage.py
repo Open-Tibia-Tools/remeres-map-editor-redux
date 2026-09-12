@@ -213,6 +213,14 @@ def main():
         title = pr_info.get("title", "")
         body = pr_info.get("body", "") or ""
         is_pr = True
+    elif event_name == "workflow_dispatch":
+        inputs = event_data.get("inputs", {})
+        input_num = inputs.get("number")
+        if input_num:
+            try:
+                number = int(input_num)
+            except ValueError:
+                print(f"Invalid input number: {input_num}")
     else:
         # Fallback inspection for manual or simulation runs
         if "issue" in event_data:
@@ -225,12 +233,6 @@ def main():
             title = event_data["pull_request"].get("title", "")
             body = event_data["pull_request"].get("body", "") or ""
             is_pr = True
-
-    if not number or not title:
-        print("No active Issue or PR detected in event context. Exiting.")
-        return 0
-
-    print(f"Processing {'Pull Request' if is_pr else 'Issue'} #{number}: {title}")
 
     # 4. Initialize GitHub client and retrieve repo information
     gh = None
@@ -247,6 +249,23 @@ def main():
             print(f"Retrieved {len(repo_labels)} valid labels from repository.")
         except Exception as e:
             print(f"Warning: Failed to connect to GitHub API: {e}")
+
+    # If title is missing (e.g. workflow_dispatch), fetch details from GitHub API
+    if gh_repo and number and not title:
+        try:
+            target_item = gh_repo.get_issue(number)
+            title = target_item.title
+            body = target_item.body or ""
+            is_pr = target_item.pull_request is not None
+            print(f"Fetched details for {'PR' if is_pr else 'Issue'} #{number} from API.")
+        except Exception as err:
+            print(f"Error fetching issue/PR #{number}: {err}")
+
+    if not number or not title:
+        print("No active Issue or PR detected in event context. Exiting.")
+        return 0
+
+    print(f"Processing {'Pull Request' if is_pr else 'Issue'} #{number}: {title}")
 
     # Fallback to local default labels if API unavailable (e.g. local offline test)
     if not repo_labels:
