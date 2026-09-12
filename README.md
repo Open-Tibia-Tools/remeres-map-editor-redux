@@ -97,8 +97,8 @@ python tools/convert_legacy_data_gui.py
 
 *(If `wxPython` is not installed on your system, the tool will automatically offer to install it for you on startup).*
 
-<!-- PLACEHOLDER: Paste GUI screenshot here -->
-<!-- Example: <img src="docs/images/legacy_converter_gui.png" alt="RME Legacy Converter GUI" width="800" /> -->
+<img width="1208" height="838" alt="obraz" src="https://github.com/user-attachments/assets/68df076d-b3c1-4c67-a33e-a15e5de5c882" />
+
 
 #### Step-by-Step Guide:
 1. **Choose Source Path**: Click **Browse...** to select your legacy client folder (e.g. `800` containing `materials.xml`) or a directory containing multiple client versions.
