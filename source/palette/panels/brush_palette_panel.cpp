@@ -51,10 +51,10 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	toolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 
 	const wxColour iconColor = Theme::Get(Theme::Role::Text);
-	toolbar->AddTool(TOOL_SORT_AZ, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_DOWN, iconSize, iconColor), wxString::FromUTF8("Sortuj rosnąco (A->Z)"), wxITEM_NORMAL);
-	toolbar->AddTool(TOOL_SORT_ZA, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_UP, iconSize, iconColor), wxString::FromUTF8("Sortuj malejąco (Z->A)"), wxITEM_NORMAL);
-	toolbar->AddTool(TOOL_TOGGLE_LABELS, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_TAG, iconSize, iconColor), wxString::FromUTF8("Pokaż/ukryj etykiety"), wxITEM_CHECK);
-	toolbar->AddTool(TOOL_CHANGE_SIZE, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_MAXIMIZE, iconSize, iconColor), wxString::FromUTF8("Rozmiar kafelków"), wxITEM_NORMAL);
+	toolbar->AddTool(TOOL_SORT_AZ, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_DOWN, iconSize, iconColor), "Sort ascending (A-Z)", wxITEM_NORMAL);
+	toolbar->AddTool(TOOL_SORT_ZA, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_UP, iconSize, iconColor), "Sort descending (Z-A)", wxITEM_NORMAL);
+	toolbar->AddTool(TOOL_TOGGLE_LABELS, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_TAG, iconSize, iconColor), "Toggle labels", wxITEM_CHECK);
+	toolbar->AddTool(TOOL_CHANGE_SIZE, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_MAXIMIZE, iconSize, iconColor), "Tile size", wxITEM_NORMAL);
 
 	toolbar->ToggleTool(TOOL_TOGGLE_LABELS, m_showLabels);
 	toolbar->Realize();
@@ -353,8 +353,8 @@ void BrushPalettePanel::OnToolClick(wxCommandEvent& event) {
 
 void BrushPalettePanel::OnSortButtonClick(TilesetSortDirection dir, int toolId) {
 	wxMenu menu;
-	auto* itemID = menu.AppendRadioItem(MENU_SORT_BY_ID, wxString::FromUTF8("Po ID"));
-	auto* itemName = menu.AppendRadioItem(MENU_SORT_BY_NAME, wxString::FromUTF8("Po nazwie"));
+	auto* itemID = menu.AppendCheckItem(MENU_SORT_BY_ID, "By ID");
+	auto* itemName = menu.AppendCheckItem(MENU_SORT_BY_NAME, "By Name");
 	if (m_sortKey == TilesetSortKey::ID) {
 		itemID->Check(true);
 	} else {
@@ -373,9 +373,9 @@ void BrushPalettePanel::OnSortButtonClick(TilesetSortDirection dir, int toolId) 
 
 void BrushPalettePanel::OnSizeButtonClick(int toolId) {
 	wxMenu menu;
-	auto* item32 = menu.AppendRadioItem(MENU_SIZE_32, "32x32");
-	auto* item64 = menu.AppendRadioItem(MENU_SIZE_64, "64x64");
-	auto* item128 = menu.AppendRadioItem(MENU_SIZE_128, "128x128");
+	auto* item32 = menu.AppendCheckItem(MENU_SIZE_32, "32x32");
+	auto* item64 = menu.AppendCheckItem(MENU_SIZE_64, "64x64");
+	auto* item128 = menu.AppendCheckItem(MENU_SIZE_128, "128x128");
 
 	if (m_tileSize == 64) {
 		item64->Check(true);

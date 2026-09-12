@@ -15,6 +15,7 @@
 #include "game/creatures.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 #include <spdlog/spdlog.h>
 
@@ -61,8 +62,8 @@ VirtualBrushGrid::VirtualBrushGrid(wxWindow* parent, const DynamicTilesetDefinit
 	columns(1),
 	item_size(0),
 	padding(4),
-	observed_tileset_size(_tileset->size()),
-	m_display_brushes(_tileset->brushes),
+	observed_tileset_size(_tileset ? _tileset->size() : 0),
+	m_display_brushes(),
 	m_animTimer(this) {
 
 	item_size = icon_size_px + 2 * ICON_OFFSET;
@@ -72,6 +73,7 @@ VirtualBrushGrid::VirtualBrushGrid(wxWindow* parent, const DynamicTilesetDefinit
 	Bind(wxEVT_SIZE, &VirtualBrushGrid::OnSize, this);
 	Bind(wxEVT_TIMER, &VirtualBrushGrid::OnTimer, this);
 
+	RefreshBrushList();
 	UpdateLayout();
 }
 
@@ -89,7 +91,16 @@ void VirtualBrushGrid::SetDisplayMode(DisplayMode mode) {
 void VirtualBrushGrid::RefreshBrushList() {
 	m_truncatedLabelCache.clear();
 	Brush* selectedBrush = GetSelectedBrush();
-	m_display_brushes = tileset->brushes;
+	m_display_brushes.clear();
+	if (tileset) {
+		m_display_brushes.reserve(tileset->brushes.size());
+		std::unordered_set<const Brush*> seen;
+		for (Brush* b : tileset->brushes) {
+			if (b && seen.insert(b).second) {
+				m_display_brushes.push_back(b);
+			}
+		}
+	}
 	if (m_hasSort) {
 		ApplySort();
 	}
@@ -120,12 +131,21 @@ void VirtualBrushGrid::ApplySort() {
 			if (idA != idB) {
 				return m_sortDir == TilesetSortDirection::Ascending ? (idA < idB) : (idA > idB);
 			}
+			int cmp = wxStricmp(wxstr(a->getName()), wxstr(b->getName()));
+			if (cmp != 0) {
+				return m_sortDir == TilesetSortDirection::Ascending ? (cmp < 0) : (cmp > 0);
+			}
 		} else {
 			std::string nameA = a->getName();
 			std::string nameB = b->getName();
 			int cmp = wxStricmp(wxstr(nameA), wxstr(nameB));
 			if (cmp != 0) {
 				return m_sortDir == TilesetSortDirection::Ascending ? (cmp < 0) : (cmp > 0);
+			}
+			uint32_t idA = GetBrushSortID(a);
+			uint32_t idB = GetBrushSortID(b);
+			if (idA != idB) {
+				return m_sortDir == TilesetSortDirection::Ascending ? (idA < idB) : (idA > idB);
 			}
 		}
 		return false;
@@ -281,22 +301,33 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 			spr = g_gui.gfx.getSprite(brush->getLookID());
 		}
 
-		if (!spr) {
-			return; // Safety check
-		}
+		int tex = spr ? GetOrCreateSpriteTexture(vg, spr) : 0;
+		int iconSize = (display_mode == DisplayMode::List) ? GRID_ITEM_SIZE_BASE : (item_size - 2 * ICON_OFFSET);
+		int iconX = (display_mode == DisplayMode::List) ? (rect.x + ICON_OFFSET) : (rect.x + (rect.width - iconSize) / 2);
+		int iconY = rect.y + ICON_OFFSET;
 
-		int tex = GetOrCreateSpriteTexture(vg, spr);
 		if (tex > 0) {
-			int iconSize = (display_mode == DisplayMode::List) ? GRID_ITEM_SIZE_BASE : (item_size - 2 * ICON_OFFSET);
-			int iconX = rect.x + (rect.width - iconSize) / 2;
-			int iconY = rect.y + ICON_OFFSET;
-
 			NVGpaint imgPaint = nvgImagePattern(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 0.0f, tex, 1.0f);
 
 			nvgBeginPath(vg);
 			nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
 			nvgFillPaint(vg, imgPaint);
 			nvgFill(vg);
+		} else {
+			// Placeholder box for entries without sprite (e.g. creature without look)
+			nvgBeginPath(vg);
+			nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
+			nvgFillColor(vg, nvgRGBA(255, 255, 255, 12));
+			nvgFill(vg);
+			nvgStrokeColor(vg, nvgRGBA(255, 255, 255, 40));
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStroke(vg);
+
+			nvgFontSize(vg, static_cast<float>(iconSize) * 0.45f);
+			nvgFontFace(vg, "sans");
+			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+			nvgFillColor(vg, nvgRGBA(255, 255, 255, 120));
+			nvgText(vg, iconX + iconSize / 2.0f, iconY + iconSize / 2.0f, "?", nullptr);
 		}
 
 		if (display_mode == DisplayMode::List) {
@@ -312,7 +343,7 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 			}
 			nvgText(vg, rect.x + 40, rect.y + rect.height / 2.0f, it->second.c_str(), nullptr);
 		} else if (m_showLabels) {
-			nvgFontSize(vg, 10.0f);
+			nvgFontSize(vg, 9.0f);
 			nvgFontFace(vg, "sans");
 			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 			if (i == selected_index) {
@@ -321,40 +352,128 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 				nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::Text)));
 			}
 
-			std::string displayName;
 			auto it = m_truncatedLabelCache.find(brush);
-			if (it != m_truncatedLabelCache.end()) {
-				displayName = it->second;
-			} else {
+			if (it == m_truncatedLabelCache.end()) {
+				CachedLabel cachedLabel;
 				wxString wxName = wxstr(brush->getName());
+				std::string utf8Full = wxName.ToStdString();
 				const float maxTextWidth = static_cast<float>(rect.width - 4);
 				float bounds[4];
-				std::string utf8Full = wxName.ToStdString();
 				nvgTextBounds(vg, 0, 0, utf8Full.c_str(), nullptr, bounds);
 				float textWidth = bounds[2] - bounds[0];
 
 				if (textWidth <= maxTextWidth) {
-					displayName = std::move(utf8Full);
+					cachedLabel.line1 = std::move(utf8Full);
+					cachedLabel.line2 = "";
 				} else {
-					displayName = "...";
-					wxString truncated = wxName;
-					while (truncated.length() > 1) {
-						truncated.RemoveLast();
-						wxString candidate = truncated + "...";
-						std::string utf8Candidate = candidate.ToStdString();
-						nvgTextBounds(vg, 0, 0, utf8Candidate.c_str(), nullptr, bounds);
+					wxString wxLine1;
+					wxString wxLine2;
+
+					// Prefer splitting on " - " delimiter (e.g. "3263 - jungle grass")
+					int dashPos = wxName.Find(" - ");
+					if (dashPos != wxNOT_FOUND && dashPos > 0) {
+						wxString prefix = wxName.substr(0, dashPos);
+						std::string utf8Prefix = prefix.ToStdString();
+						nvgTextBounds(vg, 0, 0, utf8Prefix.c_str(), nullptr, bounds);
 						if ((bounds[2] - bounds[0]) <= maxTextWidth) {
-							displayName = std::move(utf8Candidate);
-							break;
+							wxLine1 = prefix;
+							wxLine2 = wxName.substr(dashPos + 3);
+						}
+					}
+
+					if (wxLine1.empty()) {
+						// Split by word boundary (' ', '-') if possible
+						int bestSplit = -1;
+						int len = static_cast<int>(wxName.length());
+						for (int idx = 1; idx < len; ++idx) {
+							wxChar ch = wxName[idx];
+							if (ch == ' ' || ch == '-') {
+								wxString cand1 = wxName.substr(0, (ch == '-') ? (idx + 1) : idx);
+								std::string utf8Cand1 = cand1.ToStdString();
+								nvgTextBounds(vg, 0, 0, utf8Cand1.c_str(), nullptr, bounds);
+								if ((bounds[2] - bounds[0]) <= maxTextWidth) {
+									bestSplit = idx;
+								} else {
+									break;
+								}
+							}
+						}
+
+						if (bestSplit != -1) {
+							wxChar splitChar = wxName[bestSplit];
+							if (splitChar == '-') {
+								wxLine1 = wxName.substr(0, bestSplit + 1);
+								wxLine2 = wxName.substr(bestSplit + 1);
+							} else {
+								wxLine1 = wxName.substr(0, bestSplit);
+								wxLine2 = wxName.substr(bestSplit + 1);
+							}
+						} else {
+							wxString cand1 = wxName;
+							while (cand1.length() > 1) {
+								cand1.RemoveLast();
+								std::string utf8Cand1 = cand1.ToStdString();
+								nvgTextBounds(vg, 0, 0, utf8Cand1.c_str(), nullptr, bounds);
+								if ((bounds[2] - bounds[0]) <= maxTextWidth) {
+									wxLine1 = cand1;
+									wxLine2 = wxName.substr(cand1.length());
+									break;
+								}
+							}
+							if (wxLine1.empty()) {
+								wxLine1 = wxName.substr(0, 1);
+								wxLine2 = wxName.substr(1);
+							}
+						}
+					}
+
+					// Clean up delimiters and whitespace on boundary
+					while (!wxLine1.empty() && (wxLine1.Last() == ' ' || wxLine1.Last() == '-' || wxLine1.Last() == '\t')) {
+						wxLine1.RemoveLast();
+					}
+					while (!wxLine2.empty() && (wxLine2[0] == ' ' || wxLine2[0] == '-' || wxLine2[0] == '\t')) {
+						wxLine2.Remove(0, 1);
+					}
+
+					cachedLabel.line1 = wxLine1.ToStdString();
+
+					if (wxLine2.empty()) {
+						cachedLabel.line2 = "";
+					} else {
+						std::string utf8Line2 = wxLine2.ToStdString();
+						nvgTextBounds(vg, 0, 0, utf8Line2.c_str(), nullptr, bounds);
+						if ((bounds[2] - bounds[0]) <= maxTextWidth) {
+							cachedLabel.line2 = std::move(utf8Line2);
+						} else {
+							cachedLabel.line2 = "...";
+							wxString truncated2 = wxLine2;
+							while (truncated2.length() > 1) {
+								truncated2.RemoveLast();
+								wxString cand2 = truncated2 + "...";
+								std::string utf8Cand2 = cand2.ToStdString();
+								nvgTextBounds(vg, 0, 0, utf8Cand2.c_str(), nullptr, bounds);
+								if ((bounds[2] - bounds[0]) <= maxTextWidth) {
+									cachedLabel.line2 = std::move(utf8Cand2);
+									break;
+								}
+							}
 						}
 					}
 				}
-				m_truncatedLabelCache[brush] = displayName;
+				it = m_truncatedLabelCache.emplace(brush, std::move(cachedLabel)).first;
 			}
 
+			const CachedLabel& label = it->second;
 			float labelX = rect.x + rect.width / 2.0f;
-			float labelY = rect.y + item_size + (LABEL_HEIGHT / 2.0f);
-			nvgText(vg, labelX, labelY, displayName.c_str(), nullptr);
+			if (label.line2.empty()) {
+				float labelY = rect.y + item_size + (LABEL_HEIGHT / 2.0f);
+				nvgText(vg, labelX, labelY, label.line1.c_str(), nullptr);
+			} else {
+				float line1Y = rect.y + item_size + 9.0f;
+				float line2Y = rect.y + item_size + 23.0f;
+				nvgText(vg, labelX, line1Y, label.line1.c_str(), nullptr);
+				nvgText(vg, labelX, line2Y, label.line2.c_str(), nullptr);
+			}
 		}
 	}
 }

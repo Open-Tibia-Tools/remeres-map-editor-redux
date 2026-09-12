@@ -50,7 +50,7 @@ public:
 	void SetShowLabels(bool show) override;
 	void SetTileSize(int sizePx) override;
 
-	static constexpr int LABEL_HEIGHT = 16;
+	static constexpr int LABEL_HEIGHT = 32;
 
 protected:
 	/**
@@ -92,8 +92,12 @@ protected:
 	bool m_showLabels = false;
 
 	// Optimization: UTF8 name cache and truncated label cache
+	struct CachedLabel {
+		std::string line1;
+		std::string line2;
+	};
 	mutable std::unordered_map<const Brush*, std::string> m_utf8NameCache;
-	mutable std::unordered_map<const Brush*, std::string> m_truncatedLabelCache;
+	mutable std::unordered_map<const Brush*, CachedLabel> m_truncatedLabelCache;
 
 	// Animation state
 	wxTimer m_animTimer;
