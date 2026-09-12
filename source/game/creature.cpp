@@ -80,6 +80,5 @@ const Outfit& Creature::getLookType() const {
 	if (type) {
 		return type->outfit;
 	}
-	static const Outfit otfi; // Empty outfit
-	return otfi;
+	return DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 }

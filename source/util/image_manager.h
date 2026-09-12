@@ -96,6 +96,9 @@ constexpr std::string_view ICON_ACCOUNT = "svg/solid/circle-user.svg";
 constexpr std::string_view ICON_MINUS = "svg/solid/circle-minus.svg";
 constexpr std::string_view ICON_PLUS = "svg/solid/circle-plus.svg";
 constexpr std::string_view ICON_LOCATION_ARROW = "svg/solid/location-arrow.svg";
+constexpr std::string_view ICON_SORT_ALPHA_DOWN = "svg/solid/sort-alpha-down.svg";
+constexpr std::string_view ICON_SORT_ALPHA_UP = "svg/solid/sort-alpha-up.svg";
+constexpr std::string_view ICON_MAXIMIZE = "svg/solid/maximize.svg";
 
 // Standard Actions
 constexpr std::string_view ICON_NEW = "svg/regular/file.svg";

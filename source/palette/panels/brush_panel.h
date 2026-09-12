@@ -13,6 +13,16 @@ enum BrushListType {
 	BRUSHLIST_TEXT_LISTBOX,
 };
 
+enum class TilesetSortKey {
+	ID,
+	Name
+};
+
+enum class TilesetSortDirection {
+	Ascending,
+	Descending
+};
+
 class BrushBoxInterface {
 public:
 	BrushBoxInterface(const DynamicTilesetDefinition* _tileset) :
@@ -29,6 +39,12 @@ public:
 	virtual Brush* GetSelectedBrush() const = 0;
 	// Select the brush in the parameter, this only changes the look of the panel
 	virtual bool SelectBrush(const Brush* brush) = 0;
+
+	virtual void SetSort(TilesetSortKey key, TilesetSortDirection dir) { }
+	virtual void ClearSort() { }
+	virtual void SetShowLabels(bool show) { }
+	virtual void SetTileSize(int sizePx) { }
+	virtual void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr) { }
 
 protected:
 	const DynamicTilesetDefinition* const tileset;
@@ -49,8 +65,16 @@ public:
 	// Sets the display type (list or icons)
 	void SetListType(BrushListType ltype);
 	void SetListType(wxString ltype);
+	void SetSort(TilesetSortKey key, TilesetSortDirection dir);
+	void ClearSort();
+	void SetShowLabels(bool show);
+	void SetTileSize(int sizePx);
+	void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr);
 	// Assigns a tileset to this list
 	void AssignTileset(const DynamicTilesetDefinition* tileset);
+	[[nodiscard]] const DynamicTilesetDefinition* GetTileset() const {
+		return tileset;
+	}
 
 	// Select the first brush
 	void SelectFirstBrush();
@@ -70,6 +94,15 @@ protected:
 	BrushBoxInterface* brushbox;
 	bool loaded;
 	BrushListType list_type;
+	bool has_sort = false;
+	TilesetSortKey sort_key = TilesetSortKey::Name;
+	TilesetSortDirection sort_dir = TilesetSortDirection::Ascending;
+	bool show_labels = false;
+	int tile_size_px = 32;
+	std::string filter_query;
+	std::vector<Brush*> override_brushes;
+	bool has_override_brushes = false;
 };
 
 #endif
+

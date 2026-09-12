@@ -45,6 +45,15 @@ public:
 
 	void SetDisplayMode(DisplayMode mode);
 
+	// Toolbar support
+	void SetSort(TilesetSortKey key, TilesetSortDirection dir) override;
+	void ClearSort() override;
+	void SetShowLabels(bool show) override;
+	void SetTileSize(int sizePx) override;
+	void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr) override;
+
+	static constexpr int LABEL_HEIGHT = 32;
+
 protected:
 	/**
 	 * @brief Performs NanoVG rendering of the brush grid.
@@ -63,6 +72,8 @@ protected:
 
 	// Internal helpers
 	void UpdateLayout();
+	void RefreshBrushList();
+	void ApplySort();
 	int HitTest(int x, int y) const;
 	wxRect GetItemRect(int index) const;
 	void DrawBrushItem(NVGcontext* vg, int index, const wxRect& rect);
@@ -76,8 +87,22 @@ protected:
 	int padding;
 	size_t observed_tileset_size;
 
-	// Optimization: UTF8 name cache
+	std::vector<Brush*> m_display_brushes;
+	TilesetSortKey m_sortKey = TilesetSortKey::Name;
+	TilesetSortDirection m_sortDir = TilesetSortDirection::Ascending;
+	bool m_hasSort = false;
+	bool m_showLabels = false;
+	std::string m_filterQuery;
+	std::vector<Brush*> m_overrideBrushes;
+	bool m_hasOverrideBrushes = false;
+
+	// Optimization: UTF8 name cache and truncated label cache
+	struct CachedLabel {
+		std::string line1;
+		std::string line2;
+	};
 	mutable std::unordered_map<const Brush*, std::string> m_utf8NameCache;
+	mutable std::unordered_map<const Brush*, CachedLabel> m_truncatedLabelCache;
 
 	// Animation state
 	wxTimer m_animTimer;

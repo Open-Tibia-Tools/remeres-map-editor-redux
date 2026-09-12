@@ -112,8 +112,16 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		}
 	} else {
 		// get outfit sprite
-		GameSprite* spr = g_gui.gfx.getCreatureSprite(outfit.lookType);
-		if (!spr || outfit.lookType == 0) {
+		const Outfit* drawOutfit = &outfit;
+		if (drawOutfit->lookType == 0) {
+			drawOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+		}
+		GameSprite* spr = g_gui.gfx.getCreatureSprite(drawOutfit->lookType);
+		if (!spr && drawOutfit->lookType != DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) {
+			drawOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+			spr = g_gui.gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
+		}
+		if (!spr) {
 			return;
 		}
 
@@ -132,15 +140,15 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		// mount colors by Zbizu
 		int pattern_z = 0;
 		GameSprite* mountSpr = nullptr;
-		if (outfit.lookMount != 0) {
-			if ((mountSpr = g_gui.gfx.getCreatureSprite(outfit.lookMount))) {
+		if (drawOutfit->lookMount != 0) {
+			if ((mountSpr = g_gui.gfx.getCreatureSprite(drawOutfit->lookMount))) {
 				// Generate mount colors and metrics once so rendering and light placement stay aligned.
 				Outfit mountOutfit;
-				mountOutfit.lookType = outfit.lookMount;
-				mountOutfit.lookHead = outfit.lookMountHead;
-				mountOutfit.lookBody = outfit.lookMountBody;
-				mountOutfit.lookLegs = outfit.lookMountLegs;
-				mountOutfit.lookFeet = outfit.lookMountFeet;
+				mountOutfit.lookType = drawOutfit->lookMount;
+				mountOutfit.lookHead = drawOutfit->lookMountHead;
+				mountOutfit.lookBody = drawOutfit->lookMountBody;
+				mountOutfit.lookLegs = drawOutfit->lookMountLegs;
+				mountOutfit.lookFeet = drawOutfit->lookMountFeet;
 				const auto mount_draw_offset = mountSpr->getDrawOffset();
 				const auto mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, resolvedFrame);
 
@@ -180,7 +188,7 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 
 				// continue if we dont have this addon
 				if (pattern_y > 0) {
-					if ((pattern_y - 1 >= 31) || !(outfit.lookAddon & (1 << (pattern_y - 1)))) {
+					if ((pattern_y - 1 >= 31) || !(drawOutfit->lookAddon & (1 << (pattern_y - 1)))) {
 						continue;
 					}
 				}
@@ -191,7 +199,7 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 				for (int cx = 0; cx != spr->width; ++cx) {
 					int sprite_y_offset = 0;
 					for (int cy = 0; cy != spr->height; ++cy) {
-						const AtlasRegion* region = spr->getAtlasRegion(cx, cy, static_cast<int>(dir), pattern_y, pattern_z, outfit, resolvedFrame);
+						const AtlasRegion* region = spr->getAtlasRegion(cx, cy, static_cast<int>(dir), pattern_y, pattern_z, *drawOutfit, resolvedFrame);
 						if (region) {
 							sprite_drawer->glBlitAtlasQuad(
 								sprite_batch,

@@ -14,6 +14,7 @@
 #include "palette/palette_waypoints.h"
 #include "palette/panels/brush_palette_panel.h"
 #include "rendering/ui/map_display.h"
+#include "game/materials.h"
 #include "ui/gui.h"
 
 #include <algorithm>
@@ -182,6 +183,78 @@ bool PaletteWindow::OnSelectBrush(const Brush* whatbrush) {
 	}
 
 	return false;
+}
+
+bool PaletteWindow::JumpToBrush(const Brush* brush, std::string_view preferredPalette) {
+	if (!brush || !choicebook) {
+		return false;
+	}
+
+	const DynamicPaletteDefinition* targetPalette = nullptr;
+	const DynamicTilesetDefinition* targetTileset = nullptr;
+
+	const auto& palettes = g_materials.paletteCatalog().dynamicPalettes();
+
+	if (!preferredPalette.empty()) {
+		for (const auto& pal : palettes) {
+			if (pal.name == preferredPalette) {
+				for (const auto& ts : pal.tilesets) {
+					if (ts.containsBrush(brush)) {
+						targetPalette = &pal;
+						targetTileset = &ts;
+						break;
+					}
+				}
+				break;
+			}
+		}
+	}
+
+	if (!targetPalette) {
+		for (const auto& pal : palettes) {
+			for (const auto& ts : pal.tilesets) {
+				if (ts.containsBrush(brush)) {
+					targetPalette = &pal;
+					targetTileset = &ts;
+					break;
+				}
+			}
+			if (targetPalette) {
+				break;
+			}
+		}
+	}
+
+	if (!targetPalette || !targetTileset) {
+		return OnSelectBrush(brush);
+	}
+
+	int targetPageIndex = wxNOT_FOUND;
+	BrushPalettePanel* targetBrushPalettePanel = nullptr;
+
+	for (size_t i = 0; i < choicebook->GetPageCount(); ++i) {
+		auto* p = dynamic_cast<BrushPalettePanel*>(choicebook->GetPage(i));
+		if (p && p->GetName() == targetPalette->name) {
+			targetPageIndex = static_cast<int>(i);
+			targetBrushPalettePanel = p;
+			break;
+		}
+	}
+
+	if (!targetBrushPalettePanel || targetPageIndex == wxNOT_FOUND) {
+		return false;
+	}
+
+	auto* currentPanel = dynamic_cast<BrushPalettePanel*>(choicebook->GetCurrentPage());
+	if (currentPanel && currentPanel != targetBrushPalettePanel) {
+		currentPanel->ResetFilter();
+	}
+
+	if (choicebook->GetSelection() != targetPageIndex) {
+		choicebook->SetSelection(targetPageIndex);
+	}
+
+	return targetBrushPalettePanel->JumpToTilesetAndBrush(targetTileset->name, brush);
 }
 
 void PaletteWindow::OnSwitchingPage(wxChoicebookEvent& event) {

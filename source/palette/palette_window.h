@@ -52,6 +52,8 @@ public:
 	// Finds the brush pointed to by whatbrush and selects it as the current brush (also changes page)
 	// Returns if the brush was found in this palette
 	virtual bool OnSelectBrush(const Brush* whatbrush);
+	// Finds the brush, jumps to its dynamic palette and tileset, and selects it
+	bool JumpToBrush(const Brush* brush, std::string_view preferredPalette = {});
 	// Updates the palette window to use the current brush size
 	virtual void OnUpdateBrushSize(BrushShape shape, int size);
 	// Updates the content of the palette (eg. houses, creatures)

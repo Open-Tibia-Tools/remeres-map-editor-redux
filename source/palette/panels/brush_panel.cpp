@@ -37,6 +37,13 @@ void BrushPanel::SetListType(BrushListType ltype) {
 	if (list_type != ltype) {
 		InvalidateContents();
 		list_type = ltype;
+		if (ltype == BRUSHLIST_ICONS_32) {
+			tile_size_px = 32;
+		} else if (ltype == BRUSHLIST_ICONS_64) {
+			tile_size_px = 64;
+		} else if (ltype == BRUSHLIST_ICONS_128) {
+			tile_size_px = 128;
+		}
 	}
 }
 
@@ -69,17 +76,13 @@ void BrushPanel::LoadContents() {
 
 	switch (list_type) {
 		case BRUSHLIST_ICONS_32:
-			brushbox = newd VirtualBrushGrid(this, tileset, 32);
-			break;
 		case BRUSHLIST_ICONS_64:
-			brushbox = newd VirtualBrushGrid(this, tileset, 64);
-			break;
 		case BRUSHLIST_ICONS_128:
-			brushbox = newd VirtualBrushGrid(this, tileset, 128);
+			brushbox = newd VirtualBrushGrid(this, tileset, tile_size_px);
 			break;
 		case BRUSHLIST_LISTBOX:
 		case BRUSHLIST_TEXT_LISTBOX: {
-			auto vbg = newd VirtualBrushGrid(this, tileset, 32);
+			auto vbg = newd VirtualBrushGrid(this, tileset, tile_size_px);
 			vbg->SetDisplayMode(VirtualBrushGrid::DisplayMode::List);
 			brushbox = vbg;
 			break;
@@ -92,11 +95,64 @@ void BrushPanel::LoadContents() {
 		return;
 	}
 
+	if (has_sort) {
+		brushbox->SetSort(sort_key, sort_dir);
+	}
+	brushbox->SetShowLabels(show_labels);
+	brushbox->SetTileSize(tile_size_px);
+	if (!filter_query.empty() || has_override_brushes) {
+		brushbox->SetFilterQuery(filter_query, has_override_brushes ? &override_brushes : nullptr);
+	}
+
 	loaded = true;
 	sizer->Add(brushbox->GetSelfWindow(), 1, wxEXPAND);
 	Layout();
 	Fit();
 	brushbox->SelectFirstBrush();
+}
+
+void BrushPanel::SetSort(TilesetSortKey key, TilesetSortDirection dir) {
+	has_sort = true;
+	sort_key = key;
+	sort_dir = dir;
+	if (brushbox) {
+		brushbox->SetSort(key, dir);
+	}
+}
+
+void BrushPanel::ClearSort() {
+	has_sort = false;
+	if (brushbox) {
+		brushbox->ClearSort();
+	}
+}
+
+void BrushPanel::SetShowLabels(bool show) {
+	show_labels = show;
+	if (brushbox) {
+		brushbox->SetShowLabels(show);
+	}
+}
+
+void BrushPanel::SetTileSize(int sizePx) {
+	tile_size_px = sizePx;
+	if (brushbox) {
+		brushbox->SetTileSize(sizePx);
+	}
+}
+
+void BrushPanel::SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource) {
+	filter_query = query;
+	if (overrideSource) {
+		override_brushes = *overrideSource;
+		has_override_brushes = true;
+	} else {
+		override_brushes.clear();
+		has_override_brushes = false;
+	}
+	if (brushbox) {
+		brushbox->SetFilterQuery(filter_query, has_override_brushes ? &override_brushes : nullptr);
+	}
 }
 
 void BrushPanel::SelectFirstBrush() {

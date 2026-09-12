@@ -53,15 +53,20 @@ Sprite* CreatureBrush::getSprite() const {
 			return nullptr;
 		}
 
-		if (outfit.lookType != 0) {
-			if (!creature_sprite_wrapper) {
-				GameSprite* gs = g_gui.gfx.getCreatureSprite(outfit.lookType);
-				if (gs) {
-					creature_sprite_wrapper = std::make_unique<CreatureSprite>(gs, outfit);
-				}
+		int lookType = (outfit.lookType != 0) ? outfit.lookType : DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType;
+		const Outfit* useOutfit = (outfit.lookType != 0) ? &outfit : &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+
+		if (!creature_sprite_wrapper) {
+			GameSprite* gs = g_gui.gfx.getCreatureSprite(lookType);
+			if (!gs && lookType != DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) {
+				gs = g_gui.gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
+				useOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			}
-			return creature_sprite_wrapper.get();
+			if (gs) {
+				creature_sprite_wrapper = std::make_unique<CreatureSprite>(gs, *useOutfit);
+			}
 		}
+		return creature_sprite_wrapper.get();
 	}
 	return nullptr;
 }
