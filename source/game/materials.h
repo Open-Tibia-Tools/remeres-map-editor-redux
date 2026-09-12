@@ -21,6 +21,8 @@
 #include "app/extension.h"
 #include "game/material_database.h"
 
+class CreatureType;
+
 class Materials {
 public:
 	Materials();
@@ -38,6 +40,8 @@ public:
 	[[nodiscard]] const PaletteCatalog& paletteCatalog() const {
 		return database.paletteCatalog();
 	}
+
+	[[nodiscard]] PaletteBrushRegistrationResult registerImportedCreature(CreatureType& creature);
 
 	bool loadMaterials(const FileName& identifier, wxString& error, std::vector<std::string>& warnings);
 	bool needSave() const {

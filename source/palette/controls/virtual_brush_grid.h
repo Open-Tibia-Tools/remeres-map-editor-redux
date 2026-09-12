@@ -74,6 +74,7 @@ protected:
 	int columns;
 	int item_size;
 	int padding;
+	size_t observed_tileset_size;
 
 	// Optimization: UTF8 name cache
 	mutable std::unordered_map<const Brush*, std::string> m_utf8NameCache;

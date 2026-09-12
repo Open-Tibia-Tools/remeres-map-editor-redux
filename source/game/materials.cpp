@@ -89,6 +89,7 @@ bool Materials::loadMaterials(const FileName& identifier, wxString& error, std::
 	if (!unserializeMaterials(identifier, node, error, warnings)) {
 		return false;
 	}
+	database.paletteCatalog().prepareCreatureImportTargets();
 	return true;
 }
 
@@ -277,6 +278,12 @@ static CreatureBrush* ensureCreatureBrush(CreatureType* type) {
 	CreatureBrush* brush = creature_brush.get();
 	g_brushes.addBrush(std::move(creature_brush));
 	return brush;
+}
+
+PaletteBrushRegistrationResult Materials::registerImportedCreature(CreatureType& creature) {
+	CreatureBrush* brush = ensureCreatureBrush(&creature);
+	brush->flagAsVisible();
+	return database.paletteCatalog().registerImportedCreatureBrush(brush, creature.isNpc);
 }
 
 static void loadTilesetBrushEntry(pugi::xml_node node, DynamicTilesetDefinition& tileset, std::vector<std::string>& warnings) {

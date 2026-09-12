@@ -9,9 +9,22 @@ class Brushes;
 class CreatureDatabase;
 class ItemDefinitionStore;
 
+enum class CreatureImportTarget {
+	None,
+	Monster,
+	Npc,
+};
+
+enum class PaletteBrushRegistrationResult {
+	Added,
+	AlreadyRegistered,
+	TargetUnavailable,
+};
+
 struct DynamicTilesetDefinition {
 	std::string name;
 	std::vector<Brush*> brushes;
+	CreatureImportTarget creatureImportTarget = CreatureImportTarget::None;
 
 	[[nodiscard]] size_t size() const {
 		return brushes.size();
@@ -22,7 +35,8 @@ struct DynamicTilesetDefinition {
 
 struct DynamicPaletteDefinition {
 	std::string name;
-	// Palette UI panels keep pointers to elements in this vector; treat loaded tilesets as immutable until the catalog is rebuilt.
+	// Palette UI panels keep pointers to elements in this vector. Tileset objects stay fixed after publication;
+	// their brush membership may grow through PaletteCatalog runtime registration.
 	std::vector<DynamicTilesetDefinition> tilesets;
 
 	[[nodiscard]] bool containsBrush(const Brush* brush) const;
@@ -32,6 +46,8 @@ class PaletteCatalog {
 public:
 	void clear();
 	void addDynamicPalette(DynamicPaletteDefinition palette);
+	void prepareCreatureImportTargets();
+	[[nodiscard]] PaletteBrushRegistrationResult registerImportedCreatureBrush(Brush* brush, bool isNpc);
 
 	[[nodiscard]] const std::vector<DynamicPaletteDefinition>& dynamicPalettes() const {
 		return palettes;
