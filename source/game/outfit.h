@@ -21,9 +21,11 @@
 #include <cstdint>
 
 struct Outfit {
-	Outfit() :
+	constexpr Outfit() :
 		lookType(0), lookItem(0), lookMount(0), lookAddon(0), lookHead(0), lookBody(0), lookLegs(0), lookFeet(0), lookMountHead(0), lookMountBody(0), lookMountLegs(0), lookMountFeet(0) { }
-	~Outfit() { }
+	constexpr Outfit(int type, int head, int body, int legs, int feet, int addon) :
+		lookType(type), lookItem(0), lookMount(0), lookAddon(addon), lookHead(head), lookBody(body), lookLegs(legs), lookFeet(feet), lookMountHead(0), lookMountBody(0), lookMountLegs(0), lookMountFeet(0) { }
+	constexpr ~Outfit() = default;
 	int lookType;
 	int lookItem;
 	int lookMount;
@@ -45,5 +47,7 @@ struct Outfit {
 		return lookMountHead << 24 | lookMountBody << 16 | lookMountLegs << 8 | lookMountFeet;
 	}
 };
+
+inline constexpr Outfit DEFAULT_UNKNOWN_CREATURE_OUTFIT(128, 78, 69, 58, 76, 0);
 
 #endif

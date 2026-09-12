@@ -113,7 +113,12 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 	} else {
 		// get outfit sprite
 		GameSprite* spr = g_gui.gfx.getCreatureSprite(outfit.lookType);
-		if (!spr || outfit.lookType == 0) {
+		const Outfit* drawOutfit = &outfit;
+		if (!spr && outfit.lookType != DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) {
+			spr = g_gui.gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
+			drawOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+		}
+		if (!spr || drawOutfit->lookType == 0) {
 			return;
 		}
 
@@ -180,7 +185,7 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 
 				// continue if we dont have this addon
 				if (pattern_y > 0) {
-					if ((pattern_y - 1 >= 31) || !(outfit.lookAddon & (1 << (pattern_y - 1)))) {
+					if ((pattern_y - 1 >= 31) || !(drawOutfit->lookAddon & (1 << (pattern_y - 1)))) {
 						continue;
 					}
 				}
@@ -191,7 +196,7 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 				for (int cx = 0; cx != spr->width; ++cx) {
 					int sprite_y_offset = 0;
 					for (int cy = 0; cy != spr->height; ++cy) {
-						const AtlasRegion* region = spr->getAtlasRegion(cx, cy, static_cast<int>(dir), pattern_y, pattern_z, outfit, resolvedFrame);
+						const AtlasRegion* region = spr->getAtlasRegion(cx, cy, static_cast<int>(dir), pattern_y, pattern_z, *drawOutfit, resolvedFrame);
 						if (region) {
 							sprite_drawer->glBlitAtlasQuad(
 								sprite_batch,

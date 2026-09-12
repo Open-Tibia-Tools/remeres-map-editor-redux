@@ -96,11 +96,13 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 	ct->name = attribute.as_string();
 	ct->isNpc = tmpType == "npc";
 
+	bool invalidLookType = false;
 	if ((attribute = node.attribute("looktype"))) {
 		ct->outfit.lookType = attribute.as_int();
 
 		if (g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
 			warnings.push_back((wxString("Invalid creature \"") + wxstr(ct->name) + "\" look type #" + std::to_string(ct->outfit.lookType)).ToStdString());
+			invalidLookType = true;
 		}
 	} else {
 		// Log if no looktype is present (defaulting to 0)
@@ -148,6 +150,10 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 
 	if ((attribute = node.attribute("lookmountfeet"))) {
 		ct->outfit.lookMountFeet = attribute.as_int();
+	}
+
+	if (invalidLookType) {
+		ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 	}
 
 	return ct;
@@ -234,6 +240,12 @@ CreatureType* CreatureType::loadFromOTXML(const FileName& filename, pugi::xml_do
 			ct->outfit.lookMountFeet = attribute.as_int();
 		}
 	}
+
+	if (ct->outfit.lookType != 0 && ct->outfit.lookItem == 0 && g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
+		warnings.push_back((wxString("Invalid creature \"") + wxstr(ct->name) + "\" look type #" + std::to_string(ct->outfit.lookType)).ToStdString());
+		ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+	}
+
 	return ct;
 }
 
@@ -267,12 +279,7 @@ CreatureType* CreatureDatabase::addMissingCreatureType(const std::string& name, 
 	ct->name = name;
 	ct->isNpc = isNpc;
 	ct->missing = true;
-	ct->outfit.lookType = 128;
-	ct->outfit.lookHead = 78;
-	ct->outfit.lookBody = 69;
-	ct->outfit.lookLegs = 58;
-	ct->outfit.lookFeet = 76;
-	ct->outfit.lookAddon = 0;
+	ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 
 	creature_map.insert(std::make_pair(as_lower_str(name), ct));
 	return ct;
