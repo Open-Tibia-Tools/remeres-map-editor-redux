@@ -4,17 +4,24 @@ on:
   push:
     branches:
       - master
+      - main
+    tags:
+      - 'v*'
+      - 'alpha*'
   pull_request:
-    branches:
-      - master
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build-linux:
+    name: Build Linux
     runs-on: ubuntu-24.04
 
     env:
       VCPKG_DEFAULT_TRIPLET: x64-linux
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg_cache
 
     steps:
       - name: Checkout repository
@@ -55,12 +62,15 @@ jobs:
         with:
           vcpkgGitCommitId: '1940ee77e81573713c0d364c42f5990172198be1'
 
-      - name: Cache vcpkg installed packages
+      - name: Cache vcpkg installed packages and binary cache
         uses: actions/cache@v4
         with:
-          path: build/vcpkg_installed
-          key: vcpkg-installed-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          path: |
+            build/vcpkg_installed
+            .vcpkg_cache
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
           restore-keys: |
+            vcpkg-${{ runner.os }}-
             vcpkg-installed-${{ runner.os }}-
 
       - name: Setup ccache
@@ -83,15 +93,175 @@ jobs:
           cmake -B build -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_RPATH="\$ORIGIN:\$ORIGIN/lib" \
+            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
           cmake --build build --parallel
 
       - name: Show ccache stats
         run: ccache --show-stats
 
-      - name: Upload RME binary
+      - name: Package Linux distribution
+        run: |
+          mkdir -p dist/rme-linux
+          cp build/rme dist/rme-linux/
+          chmod +x dist/rme-linux/rme
+          cp -r build/data dist/rme-linux/data
+          cp -r build/assets dist/rme-linux/assets
+          if [ -d extensions ]; then
+            cp -r extensions dist/rme-linux/extensions
+          fi
+          if [ -d brushes ]; then
+            cp -r brushes dist/rme-linux/brushes
+          fi
+          if [ -d build/vcpkg_installed/x64-linux/lib ]; then
+            mkdir -p dist/rme-linux/lib
+            cp -P build/vcpkg_installed/x64-linux/lib/*.so* dist/rme-linux/lib/ 2>/dev/null || true
+          fi
+          cat << 'EOF' > dist/rme-linux/run.sh
+          #!/bin/sh
+          SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+          export LD_LIBRARY_PATH="$SCRIPT_DIR:$SCRIPT_DIR/lib:$LD_LIBRARY_PATH"
+          exec "$SCRIPT_DIR/rme" "$@"
+          EOF
+          chmod +x dist/rme-linux/run.sh
+          tar -czvf rme-linux-x64-alpha.tar.gz -C dist/rme-linux .
+
+      - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rme-linux
-          path: build/rme
+          name: rme-linux-alpha
+          path: rme-linux-x64-alpha.tar.gz
           retention-days: 30
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-2022
+
+    env:
+      VCPKG_DEFAULT_TRIPLET: x64-windows
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg_cache
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: '1940ee77e81573713c0d364c42f5990172198be1'
+
+      - name: Cache vcpkg installed packages and binary cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/vcpkg_installed
+            .vcpkg_cache
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
+            vcpkg-installed-${{ runner.os }}-
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ccache-${{ runner.os }}
+          max-size: 500M
+
+      - name: Configure CMake
+        run: >-
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
+
+      - name: Build RME
+        run: |
+          cmake --build build --parallel
+
+      - name: Package Windows distribution
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/rme-windows | Out-Null
+          Copy-Item build/rme.exe dist/rme-windows/
+          Get-ChildItem -Path build -Filter "*.dll" | Copy-Item -Destination dist/rme-windows/
+          if (Test-Path build/vcpkg_installed/x64-windows/bin) {
+            Get-ChildItem -Path build/vcpkg_installed/x64-windows/bin -Filter "*.dll" | Copy-Item -Destination dist/rme-windows/ -Force
+          }
+          Copy-Item -Recurse build/data dist/rme-windows/data
+          Copy-Item -Recurse build/assets dist/rme-windows/assets
+          if (Test-Path extensions) {
+            Copy-Item -Recurse extensions dist/rme-windows/extensions
+          }
+          if (Test-Path brushes) {
+            Copy-Item -Recurse brushes dist/rme-windows/brushes
+          }
+          Compress-Archive -Path dist/rme-windows/* -DestinationPath rme-windows-x64-alpha.zip -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rme-windows-alpha
+          path: rme-windows-x64-alpha.zip
+          retention-days: 30
+
+  release:
+    name: Publish Alpha Release
+    needs: [build-linux, build-windows]
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rme-linux-alpha
+          path: artifacts/linux
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rme-windows-alpha
+          path: artifacts/windows
+
+      - name: Prepare Release Files and Checksums
+        run: |
+          mkdir -p release-files
+          cp artifacts/windows/rme-windows-x64-alpha.zip release-files/
+          cp artifacts/linux/rme-linux-x64-alpha.tar.gz release-files/
+          cd release-files
+          sha256sum rme-windows-x64-alpha.zip rme-linux-x64-alpha.tar.gz > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('alpha-{0}', github.run_number) }}"
+          name: "${{ startsWith(github.ref, 'refs/tags/') && format('RME {0}', github.ref_name) || format('RME Alpha #{0}', github.run_number) }}"
+          prerelease: true
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          files: |
+            release-files/rme-windows-x64-alpha.zip
+            release-files/rme-linux-x64-alpha.tar.gz
+            release-files/SHA256SUMS.txt
+          body: |
+            ### Automated Alpha Build
+            This is an automated alpha pre-release built from commit `${{ github.sha }}`.
+
+            #### Included Packages:
+            - **Windows (x64)**: `rme-windows-x64-alpha.zip` (includes `rme.exe`, required DLLs, and `data/` folder)
+            - **Linux (x64)**: `rme-linux-x64-alpha.tar.gz` (includes `rme` binary and `data/` folder)
+            - **Checksums**: `SHA256SUMS.txt`
