@@ -9,14 +9,6 @@
 
 **Note: This is an active work-in-progress. There is no final stable release yet, only experimental alpha builds.**
 
-Hi everyone,
-
-Building a map editor from scratch taught me a ton about optimizing tile engines and refactoring legacy code. I wanted to take those lessons and apply them to the gold standard of the Open Tibia community: Remere's Map Editor (RME).
-
-RME: Redux is an ongoing project to overhaul RME's aging backend with modern tech, fix long-standing engine bottlenecks, and make mapping smoother and faster for everyone.
-
-After nearly 1,500 commits, here is what has changed and what works today.
-
 ---
 
 ## What is new in Redux?
@@ -24,14 +16,10 @@ After nearly 1,500 commits, here is what has changed and what works today.
 ### Rendering & Performance
 - Rewrote the map renderer with modern OpenGL (Core Profile), async sprite loading, sprite batching, and ring buffers. Runs easily at 160+ FPS without stuttering.
 - Switched the lighting system to a GPU-based tile lighting engine with support for server light colors.
-- Added visual shaders: Anti-aliasing, Retro-CRT, and 4xBRZ.
-- Added configurable floor visibility modes so you can control how upper and lower floors look while editing.
 - Replaced legacy UI overlay drawing with NanoVG (smoother tooltips, selection boxes, etc.).
 
-### Modern Client & Asset Support
-- Native Protobuf support: can load `appearances.protobuf` and modern sprite files directly (Canary / Tibia 11+) alongside classic `.dat`/`.spr` and `.otb`.
-- Support for multiple asset modes: OTB+DAT, Protobuf+OTB, or Protobuf-only.
-- Invalid OTBM tile safety: unrecognized or custom items on the map are preserved and marked instead of being silently deleted when saving.
+### Support
+- Support for multiple asset modes: OTB+DAT, DAT ONLYm even SRV. 
 
 ### Palettes & Quality of Life
 - Completely modular dynamic palettes: tilesets are no longer hardcoded into the binary. They are split into clean folders (`terrain`, `doodad`, `creatures`, `items`, `raw`).
@@ -44,7 +32,6 @@ After nearly 1,500 commits, here is what has changed and what works today.
 - Minimap exporter: export your map (or multiple floors) to OTMM, JPG, or WebP with adjustable scale and screenshot capture.
 - In-game walking preview: simulate player movement with walk animations right on the canvas.
 - Autoborder preview: see border transitions live before clicking.
-- Legacy XML converter: CLI and GUI tools to convert old RME data into the new modular format.
 
 ### Built-in Lua Scripting
 - Integrated Lua 5.4 scripting engine with Sol2 bindings.
@@ -109,7 +96,9 @@ python tools/convert_legacy_data_gui.py
 ```
 
 *(If `wxPython` is not installed on your system, the tool will automatically offer to install it for you on startup).*
-<img width="1208" height="838" alt="obraz" src="https://github.com/user-attachments/assets/32e030db-84ff-40e3-9289-c7ddbb9a1bba" />
+
+<!-- PLACEHOLDER: Paste GUI screenshot here -->
+<!-- Example: <img src="docs/images/legacy_converter_gui.png" alt="RME Legacy Converter GUI" width="800" /> -->
 
 #### Step-by-Step Guide:
 1. **Choose Source Path**: Click **Browse...** to select your legacy client folder (e.g. `800` containing `materials.xml`) or a directory containing multiple client versions.
@@ -120,22 +109,6 @@ python tools/convert_legacy_data_gui.py
    - **After**: Previews the modular layout and palette mappings that will be generated.
 5. **Start Conversion**: Click **Start Conversion**. The tool runs in the background while real-time progress and XML smoke-test validation stream to the **Conversion Log** tab.
 6. **Open Output Folder**: Click **Open Output Folder** to view the converted files.
-
----
-
-### 2. Using the Command-Line Interface (CLI)
-
-For headless environments or automation, use `tools/convert_legacy_data.py` (requires only standard Python 3.8+, no external libraries needed):
-
-```powershell
-# Convert a specific client version:
-python tools/convert_legacy_data.py --base-dir C:\path\to\legacy\800 --output-dir C:\path\to\output --output-name 800
-
-# Batch convert all versions in a legacy data folder:
-python tools/convert_legacy_data.py --base-dir C:\path\to\legacy_data --output-dir C:\path\to\output --versions 740 800 1098
-```
-
-For complete documentation and technical details, see [`tools/convert_legacy_data_README.md`](tools/convert_legacy_data_README.md).
 
 ---
 
@@ -155,18 +128,6 @@ Check `BUILDING.md` for complete step-by-step instructions.
 
 ---
 
-## Current Status & Roadmap
-
-### What is done:
-- Modern OpenGL core renderer with batching and high FPS.
-- Tile-based lighting with server light colors.
-- Dynamic modular palettes with search and sorting.
-- Native Protobuf appearances and asset bundles.
-- Minimap export (OTMM, JPG, WebP).
-- Lua 5.4 scripting engine with procedural noise tools.
-- Invalid OTBM item protection.
-- Legacy data conversion tools (GUI and CLI).
-
 ### Still being worked on:
 - Unified properties and browser window.
 - Right-click WYSIWYG editor for palettes, tilesets, brushes, and borders.
@@ -176,11 +137,6 @@ Check `BUILDING.md` for complete step-by-step instructions.
 
 ---
 
-## Why did I start this?
-
-As a casual map maker, many things bothered me about the original RME for years. AI tools finally gave me a way to implement the improvements I wanted to see without getting stuck in 15-year-old legacy roadblocks.
-
-The project is 100% open source under the GPLv3 license.
 
 ## Disclaimers
 
