@@ -25,6 +25,66 @@ std::string toLowerString(std::string_view s) {
 	}
 	return res;
 }
+
+class PaletteSearchCtrl final : public wxSearchCtrl {
+public:
+	using wxSearchCtrl::wxSearchCtrl;
+
+	bool IsTopNavigationDomain(NavigationKind kind) const override {
+		if (kind == Navigation_Accel) {
+			return true;
+		}
+		return wxSearchCtrl::IsTopNavigationDomain(kind);
+	}
+
+#ifdef __WXMSW__
+	bool MSWTranslateMessage(WXMSG* msg) override {
+		return false;
+	}
+
+	bool MSWShouldPreProcessMessage(WXMSG* msg) override {
+		return false;
+	}
+#endif
+};
+
+class PaletteChoicebook final : public wxChoicebook {
+public:
+	PaletteChoicebook(wxWindow* parent, wxWindowID id, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0) :
+		wxChoicebook(parent, id, pos, size, style) {
+	}
+
+	wxRect GetPageRect() const override {
+		wxRect rectPage(wxPoint(0, 0), GetClientSize());
+		int controllerHeight = 0;
+		if (auto* ctrlSizer = GetControlSizer()) {
+			const int sizerY = std::max(0, ctrlSizer->GetPosition().y);
+			const int sizerH = std::max(ctrlSizer->GetSize().y, ctrlSizer->GetMinSize().y);
+			controllerHeight = sizerY + sizerH;
+		} else if (const auto* choice = GetChoiceCtrl()) {
+			controllerHeight = choice->GetPosition().y + choice->GetSize().y;
+		}
+		const int topOffset = controllerHeight + static_cast<int>(GetInternalBorder());
+		rectPage.y = topOffset;
+		rectPage.height = std::max(0, rectPage.height - topOffset);
+		return rectPage;
+	}
+
+	wxSize CalcSizeFromPage(const wxSize& sizePage) const override {
+		if (!GetChoiceCtrl() || !GetChoiceCtrl()->IsShown()) {
+			return sizePage;
+		}
+		wxSize size = sizePage;
+		int controllerHeight = 0;
+		if (auto* ctrlSizer = GetControlSizer()) {
+			controllerHeight = std::max(ctrlSizer->GetSize().y, ctrlSizer->GetMinSize().y);
+		} else if (const auto* choice = GetChoiceCtrl()) {
+			controllerHeight = choice->GetBestHeight(sizePage.x);
+		}
+		size.y += controllerHeight + static_cast<int>(GetInternalBorder());
+		return size;
+	}
+};
 }
 
 void BrushPalettePanel::EnsureDefaultsLoaded() {
@@ -133,7 +193,7 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 
 	// Create the tileset panel
 	wxSizer* ts_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Tileset");
-	wxChoicebook* tmp_choicebook = newd wxChoicebook(static_cast<wxStaticBoxSizer*>(ts_sizer)->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize(180, 250));
+	PaletteChoicebook* tmp_choicebook = newd PaletteChoicebook(static_cast<wxStaticBoxSizer*>(ts_sizer)->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize(180, 250));
 	ts_sizer->Add(tmp_choicebook, 1, wxEXPAND);
 	topsizer->Add(ts_sizer, 1, wxEXPAND);
 
@@ -165,11 +225,12 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	m_searchToolbar->Realize();
 	m_searchToolbar->Bind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
 
-	m_searchCtrl = newd wxSearchCtrl(tmp_choicebook, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+	m_searchCtrl = newd PaletteSearchCtrl(tmp_choicebook, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 	m_searchCtrl->SetDescriptiveText("Search...");
 	m_searchCtrl->ShowCancelButton(true);
 	m_searchCtrl->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 	m_searchCtrl->SetForegroundColour(Theme::Get(Theme::Role::Text));
+	m_searchCtrl->SetMinSize(wxSize(60, -1));
 	if (!m_filterQuery.empty()) {
 		m_searchCtrl->ChangeValue(wxstr(m_filterQuery));
 	}
@@ -178,18 +239,28 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	m_searchCtrl->Bind(wxEVT_SEARCHCTRL_CANCEL_BTN, &BrushPalettePanel::OnSearchCancel, this);
 	m_searchCtrl->Bind(wxEVT_SEARCHCTRL_SEARCH_BTN, &BrushPalettePanel::OnSearchText, this);
 	m_searchCtrl->Bind(wxEVT_TEXT_ENTER, &BrushPalettePanel::OnSearchText, this);
-	m_searchCtrl->Bind(wxEVT_CHAR_HOOK, [this](wxKeyEvent& evt) {
-		if (evt.GetKeyCode() == WXK_ESCAPE) {
-			if (m_searchCtrl && !m_searchCtrl->GetValue().empty()) {
-				m_searchCtrl->ChangeValue(wxEmptyString);
-				m_filterQuery.clear();
-				SavePaletteFilters();
-				ApplyFilter();
-				return;
-			}
+
+	auto bindCharHook = [this](wxWindow* w) {
+		if (!w) {
+			return;
 		}
-		evt.Skip();
-	});
+		w->Bind(wxEVT_CHAR_HOOK, [this](wxKeyEvent& evt) {
+			if (evt.GetKeyCode() == WXK_ESCAPE) {
+				if (m_searchCtrl && !m_searchCtrl->GetValue().empty()) {
+					m_searchCtrl->ChangeValue(wxEmptyString);
+					m_filterQuery.clear();
+					SavePaletteFilters();
+					ApplyFilter();
+					return;
+				}
+			}
+			evt.Skip();
+		});
+	};
+	bindCharHook(m_searchCtrl);
+	for (wxWindow* child : m_searchCtrl->GetChildren()) {
+		bindCharHook(child);
+	}
 
 	wxChoice* choice = tmp_choicebook->GetChoiceCtrl();
 	auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(tmp_choicebook->GetControlSizer());
@@ -210,6 +281,7 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 		if (m_filterAll) {
 			choice->Enable(false);
 		}
+		tmp_choicebook->Layout();
 	}
 
 	for (const auto& tileset : palette.tilesets) {
@@ -556,6 +628,13 @@ void BrushPalettePanel::ApplyTheme() {
 	if (m_searchCtrl) {
 		m_searchCtrl->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 		m_searchCtrl->SetForegroundColour(Theme::Get(Theme::Role::Text));
+		for (wxWindow* child : m_searchCtrl->GetChildren()) {
+			if (child) {
+				child->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
+				child->SetForegroundColour(Theme::Get(Theme::Role::Text));
+				child->Refresh();
+			}
+		}
 		m_searchCtrl->Refresh();
 	}
 }
