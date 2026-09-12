@@ -1,0 +1,57 @@
+name: AI Issue & PR Triage
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+concurrency:
+  group: triage-${{ github.event_name }}-${{ github.event.issue.number || github.event.pull_request.number || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    name: AI Triage (Qwen3.5-0.8B)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: .github/scripts/requirements.txt
+
+      - name: Cache Qwen Model
+        uses: actions/cache@v4
+        id: model-cache
+        with:
+          path: ~/.cache/models
+          key: qwen3.5-0.8b-gguf-v1
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r .github/scripts/requirements.txt --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+
+      - name: Run AI Triage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_CONTEXT: ${{ toJson(github.event) }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python .github/scripts/triage.py
