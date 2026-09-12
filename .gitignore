@@ -120,3 +120,8 @@ compile_commands.json
 /data/canary
 /data — kopia
 /assets
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
