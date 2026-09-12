@@ -25,7 +25,30 @@ void PaletteCatalog::clear() {
 }
 
 void PaletteCatalog::addDynamicPalette(DynamicPaletteDefinition palette) {
-	palettes.push_back(std::move(palette));
+	auto it = std::ranges::find_if(palettes, [&palette](const auto& existing) {
+		return existing.name == palette.name;
+	});
+	if (it != palettes.end()) {
+		for (auto& newTileset : palette.tilesets) {
+			auto tilesetIt = std::ranges::find_if(it->tilesets, [&newTileset](const auto& existingTileset) {
+				return existingTileset.name == newTileset.name;
+			});
+			if (tilesetIt != it->tilesets.end()) {
+				for (Brush* b : newTileset.brushes) {
+					if (!tilesetIt->containsBrush(b)) {
+						tilesetIt->brushes.push_back(b);
+					}
+				}
+				if (tilesetIt->creatureImportTarget == CreatureImportTarget::None) {
+					tilesetIt->creatureImportTarget = newTileset.creatureImportTarget;
+				}
+			} else {
+				it->tilesets.push_back(std::move(newTileset));
+			}
+		}
+	} else {
+		palettes.push_back(std::move(palette));
+	}
 }
 
 void PaletteCatalog::prepareCreatureImportTargets() {
@@ -65,6 +88,9 @@ PaletteBrushRegistrationResult PaletteCatalog::registerImportedCreatureBrush(Bru
 	for (auto& palette : palettes) {
 		for (auto& tileset : palette.tilesets) {
 			if (tileset.creatureImportTarget == target) {
+				if (tileset.containsBrush(brush)) {
+					return PaletteBrushRegistrationResult::AlreadyRegistered;
+				}
 				tileset.brushes.push_back(brush);
 				return PaletteBrushRegistrationResult::Added;
 			}

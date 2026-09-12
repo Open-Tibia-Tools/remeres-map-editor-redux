@@ -146,13 +146,10 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 	}
 
 	if (ct->outfit.lookItem == 0) {
-		if (lookTypeAttr) {
+		if (lookTypeAttr && ct->outfit.lookType != 0) {
 			if (g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
 				warnings.push_back((wxString("Invalid creature \"") + wxstr(ct->name) + "\" look type #" + std::to_string(ct->outfit.lookType)).ToStdString());
-				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			}
-		} else if (ct->outfit.lookType == 0) {
-			ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 		}
 	}
 
@@ -245,10 +242,7 @@ CreatureType* CreatureType::loadFromOTXML(const FileName& filename, pugi::xml_do
 		if (ct->outfit.lookType != 0) {
 			if (g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
 				warnings.push_back((wxString("Invalid creature \"") + wxstr(ct->name) + "\" look type #" + std::to_string(ct->outfit.lookType)).ToStdString());
-				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			}
-		} else {
-			ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 		}
 	}
 

@@ -53,12 +53,14 @@ Sprite* CreatureBrush::getSprite() const {
 			return nullptr;
 		}
 
-		int lookType = outfit.lookType != 0 ? outfit.lookType : DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType;
-		const Outfit* useOutfit = outfit.lookType != 0 ? &outfit : &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+		if (outfit.lookType == 0) {
+			return nullptr;
+		}
 
 		if (!creature_sprite_wrapper) {
-			GameSprite* gs = g_gui.gfx.getCreatureSprite(lookType);
-			if (!gs && lookType != DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) {
+			GameSprite* gs = g_gui.gfx.getCreatureSprite(outfit.lookType);
+			const Outfit* useOutfit = &outfit;
+			if (!gs && outfit.lookType != DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) {
 				gs = g_gui.gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
 				useOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			}

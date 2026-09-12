@@ -293,7 +293,9 @@ static void loadTilesetBrushEntry(pugi::xml_node node, DynamicTilesetDefinition&
 	}
 	if (Brush* brush = g_brushes.getBrush(brushName.as_string())) {
 		brush->flagAsVisible();
-		tileset.brushes.push_back(brush);
+		if (!tileset.containsBrush(brush)) {
+			tileset.brushes.push_back(brush);
+		}
 	} else {
 		warnings.push_back(std::format("tileset_brush_references: tileset=\"{}\" brush=\"{}\"", tileset.name, brushName.as_string()));
 	}
@@ -334,7 +336,9 @@ static void loadTilesetItemEntry(pugi::xml_node node, DynamicTilesetDefinition& 
 		}
 		RAWBrush* brush = ensureRawBrush(static_cast<ServerItemId>(id));
 		brush->flagAsVisible();
-		tileset.brushes.push_back(brush);
+		if (!tileset.containsBrush(brush)) {
+			tileset.brushes.push_back(brush);
+		}
 	}
 }
 
@@ -350,7 +354,9 @@ static void loadTilesetCreatureEntry(pugi::xml_node node, DynamicTilesetDefiniti
 	}
 	CreatureBrush* brush = ensureCreatureBrush(type);
 	brush->flagAsVisible();
-	tileset.brushes.push_back(brush);
+	if (!tileset.containsBrush(brush)) {
+		tileset.brushes.push_back(brush);
+	}
 }
 
 bool Materials::loadPaletteFile(const FileName& filename, wxString& error, std::vector<std::string>& warnings) {
@@ -448,20 +454,29 @@ bool Materials::loadDynamicTilesetFile(const FileName& filename, DynamicPaletteD
 		return false;
 	}
 
-	DynamicTilesetDefinition tileset;
-	tileset.name = nameAttribute.as_string();
+	const std::string tilesetName = nameAttribute.as_string();
+	auto it = std::ranges::find_if(palette.tilesets, [&](const DynamicTilesetDefinition& existing) {
+		return existing.name == tilesetName;
+	});
+	DynamicTilesetDefinition* targetTileset = nullptr;
+	if (it != palette.tilesets.end()) {
+		targetTileset = &(*it);
+	} else {
+		palette.tilesets.emplace_back();
+		targetTileset = &palette.tilesets.back();
+		targetTileset->name = tilesetName;
+	}
 
 	for (pugi::xml_node childNode = root.first_child(); childNode; childNode = childNode.next_sibling()) {
 		const std::string childName = as_lower_str(childNode.name());
 		if (childName == "brush") {
-			loadTilesetBrushEntry(childNode, tileset, warnings);
+			loadTilesetBrushEntry(childNode, *targetTileset, warnings);
 		} else if (childName == "item") {
-			loadTilesetItemEntry(childNode, tileset, warnings);
+			loadTilesetItemEntry(childNode, *targetTileset, warnings);
 		} else if (childName == "creature") {
-			loadTilesetCreatureEntry(childNode, tileset, warnings);
+			loadTilesetCreatureEntry(childNode, *targetTileset, warnings);
 		}
 	}
 
-	palette.tilesets.push_back(std::move(tileset));
 	return true;
 }
