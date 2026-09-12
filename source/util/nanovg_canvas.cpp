@@ -392,7 +392,7 @@ int NanoVGCanvas::GetOrCreateImage(uint64_t id, const uint8_t* data, int width, 
 		return it->second;
 	}
 
-	int tex = nvgCreateImageRGBA(m_nvg.get(), width, height, 0, data);
+	int tex = nvgCreateImageRGBA(m_nvg.get(), width, height, NVG_IMAGE_NEAREST, data);
 	if (tex > 0) {
 		AddCachedImage(id, tex);
 	}

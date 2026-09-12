@@ -45,6 +45,13 @@ public:
 
 	void SetDisplayMode(DisplayMode mode);
 
+	// Toolbar support
+	void SetSort(TilesetSortKey key, TilesetSortDirection dir) override;
+	void SetShowLabels(bool show) override;
+	void SetTileSize(int sizePx) override;
+
+	static constexpr int LABEL_HEIGHT = 16;
+
 protected:
 	/**
 	 * @brief Performs NanoVG rendering of the brush grid.
@@ -63,6 +70,8 @@ protected:
 
 	// Internal helpers
 	void UpdateLayout();
+	void RefreshBrushList();
+	void ApplySort();
 	int HitTest(int x, int y) const;
 	wxRect GetItemRect(int index) const;
 	void DrawBrushItem(NVGcontext* vg, int index, const wxRect& rect);
@@ -75,6 +84,12 @@ protected:
 	int item_size;
 	int padding;
 	size_t observed_tileset_size;
+
+	std::vector<Brush*> m_display_brushes;
+	TilesetSortKey m_sortKey = TilesetSortKey::Name;
+	TilesetSortDirection m_sortDir = TilesetSortDirection::Ascending;
+	bool m_hasSort = false;
+	bool m_showLabels = false;
 
 	// Optimization: UTF8 name cache
 	mutable std::unordered_map<const Brush*, std::string> m_utf8NameCache;

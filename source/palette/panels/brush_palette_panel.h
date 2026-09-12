@@ -5,10 +5,26 @@
 #include "palette/panels/brush_panel.h"
 #include "app/settings.h"
 
+#include <wx/aui/auibar.h>
 #include <unordered_map>
 
 class BrushPalettePanel : public PalettePanel {
 public:
+	enum ToolID {
+		TOOL_SORT_AZ = wxID_HIGHEST + 201,
+		TOOL_SORT_ZA,
+		TOOL_TOGGLE_LABELS,
+		TOOL_CHANGE_SIZE,
+	};
+
+	enum MenuID {
+		MENU_SORT_BY_ID = wxID_HIGHEST + 211,
+		MENU_SORT_BY_NAME,
+		MENU_SIZE_32,
+		MENU_SIZE_64,
+		MENU_SIZE_128,
+	};
+
 	BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefinition& palette, wxWindowID id = wxID_ANY);
 	~BrushPalettePanel() override;
 
@@ -40,9 +56,32 @@ public:
 	void OnSwitchingPage(wxChoicebookEvent& event);
 	void OnPageChanged(wxChoicebookEvent& event);
 
+	// Toolbar operations
+	void SetSort(TilesetSortKey key, TilesetSortDirection dir);
+	void SetShowLabels(bool show);
+	void SetTileSize(int sizePx);
+	void ApplyTheme();
+
 protected:
+	void OnToolClick(wxCommandEvent& event);
+	void OnSortButtonClick(TilesetSortDirection dir, int toolId);
+	void OnSizeButtonClick(int toolId);
+
 	std::string palette_name;
 	wxChoicebook* choicebook;
+	wxAuiToolBar* toolbar;
+
+	TilesetSortKey m_sortKey;
+	TilesetSortDirection m_sortDir;
+	bool m_hasSort;
+	bool m_showLabels;
+	int m_tileSize;
+
+	static TilesetSortKey s_defaultSortKey;
+	static TilesetSortDirection s_defaultSortDir;
+	static bool s_defaultHasSort;
+	static bool s_defaultShowLabels;
+	static int s_defaultTileSize;
 
 	// No size_panel, it was unused
 

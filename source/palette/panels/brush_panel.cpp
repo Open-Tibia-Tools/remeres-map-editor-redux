@@ -67,19 +67,20 @@ void BrushPanel::LoadContents() {
 
 	ASSERT(tileset != nullptr);
 
+	int initialSize = tile_size_px;
 	switch (list_type) {
 		case BRUSHLIST_ICONS_32:
-			brushbox = newd VirtualBrushGrid(this, tileset, 32);
+			brushbox = newd VirtualBrushGrid(this, tileset, initialSize);
 			break;
 		case BRUSHLIST_ICONS_64:
-			brushbox = newd VirtualBrushGrid(this, tileset, 64);
+			brushbox = newd VirtualBrushGrid(this, tileset, initialSize > 32 ? initialSize : 64);
 			break;
 		case BRUSHLIST_ICONS_128:
-			brushbox = newd VirtualBrushGrid(this, tileset, 128);
+			brushbox = newd VirtualBrushGrid(this, tileset, initialSize > 32 ? initialSize : 128);
 			break;
 		case BRUSHLIST_LISTBOX:
 		case BRUSHLIST_TEXT_LISTBOX: {
-			auto vbg = newd VirtualBrushGrid(this, tileset, 32);
+			auto vbg = newd VirtualBrushGrid(this, tileset, initialSize);
 			vbg->SetDisplayMode(VirtualBrushGrid::DisplayMode::List);
 			brushbox = vbg;
 			break;
@@ -92,11 +93,40 @@ void BrushPanel::LoadContents() {
 		return;
 	}
 
+	if (has_sort) {
+		brushbox->SetSort(sort_key, sort_dir);
+	}
+	brushbox->SetShowLabels(show_labels);
+	brushbox->SetTileSize(tile_size_px);
+
 	loaded = true;
 	sizer->Add(brushbox->GetSelfWindow(), 1, wxEXPAND);
 	Layout();
 	Fit();
 	brushbox->SelectFirstBrush();
+}
+
+void BrushPanel::SetSort(TilesetSortKey key, TilesetSortDirection dir) {
+	has_sort = true;
+	sort_key = key;
+	sort_dir = dir;
+	if (brushbox) {
+		brushbox->SetSort(key, dir);
+	}
+}
+
+void BrushPanel::SetShowLabels(bool show) {
+	show_labels = show;
+	if (brushbox) {
+		brushbox->SetShowLabels(show);
+	}
+}
+
+void BrushPanel::SetTileSize(int sizePx) {
+	tile_size_px = sizePx;
+	if (brushbox) {
+		brushbox->SetTileSize(sizePx);
+	}
 }
 
 void BrushPanel::SelectFirstBrush() {
