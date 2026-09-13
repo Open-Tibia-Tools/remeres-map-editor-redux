@@ -65,6 +65,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/draw_operations.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/selection_operations.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/map_version_changer.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/unreachable_cleaner.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/editor_persistence.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_load_options.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/minimap_exporter.h
@@ -254,6 +255,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/modern_button.h
 
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/goto_position_dialog.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/object_properties_base.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/property_validator.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/property_applier.h
@@ -460,6 +462,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/draw_operations.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/selection_operations.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/map_version_changer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/unreachable_cleaner.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/editor_persistence.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/minimap_exporter.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/minimap_exporter_images.cpp
@@ -636,6 +639,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/modern_button.cpp
 
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/goto_position_dialog.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/object_properties_base.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/property_validator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/property_applier.cpp

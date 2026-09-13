@@ -57,6 +57,13 @@ public:
 	// Returns a snapshot of cells sorted by key, for external iteration (search, serialization)
 	std::vector<SortedGridCell> getSortedCells() const;
 	static void getCellCoordsFromKey(uint64_t key, int& cx, int& cy);
+	static uint64_t makeKeyFromCell(int cx, int cy) {
+		static_assert(sizeof(int) == 4, "Key packing assumes exactly 32-bit integers");
+		return (static_cast<uint64_t>(static_cast<uint32_t>(cy) ^ 0x80000000u) << 32) | (static_cast<uint32_t>(cx) ^ 0x80000000u);
+	}
+	static uint64_t makeKey(int x, int y) {
+		return makeKeyFromCell(x >> CELL_SHIFT, y >> CELL_SHIFT);
+	}
 
 	// Cell count for strategy decisions
 	[[nodiscard]] size_t cellCount() const {
@@ -269,15 +276,6 @@ protected:
 				}
 			}
 		}
-	}
-
-	static uint64_t makeKeyFromCell(int cx, int cy) {
-		static_assert(sizeof(int) == 4, "Key packing assumes exactly 32-bit integers");
-		return (static_cast<uint64_t>(static_cast<uint32_t>(cy) ^ 0x80000000u) << 32) | (static_cast<uint32_t>(cx) ^ 0x80000000u);
-	}
-
-	static uint64_t makeKey(int x, int y) {
-		return makeKeyFromCell(x >> CELL_SHIFT, y >> CELL_SHIFT);
 	}
 
 	friend class BaseMap;

@@ -5,6 +5,8 @@
 #include "editor/editor.h"
 #include "editor/operations/clean_operations.h"
 #include "editor/operations/search_operations.h"
+#include "editor/operations/unreachable_cleaner.h"
+#include "ui/dialogs/remove_unreachable_dialog.h"
 #include "map/map.h"
 #include "editor/action_queue.h"
 
@@ -46,25 +48,15 @@ void MapActionsHandler::OnMapRemoveUnreachable(wxCommandEvent& WXUNUSED(event)) 
 		return;
 	}
 
-	int ok = DialogUtil::PopupDialog("Remove Unreachable Tiles", "Do you want to remove all unreachable items from the map?", wxYES | wxNO);
+	Editor* editor = g_gui.GetCurrentEditor();
+	if (!editor) {
+		return;
+	}
 
-	if (ok == wxID_YES) {
-		g_gui.GetCurrentEditor()->selection.clear();
-		g_gui.GetCurrentEditor()->actionQueue->clear();
-
-		EditorOperations::RemoveUnreachableCondition func;
-		g_gui.CreateLoadBar("Searching map for tiles to remove...");
-
-		long long removed = remove_if_TileOnMap(g_gui.GetCurrentMap(), func);
-
-		g_gui.DestroyLoadBar();
-
-		wxString msg;
-		msg << removed << " tiles deleted.";
-
-		g_gui.SetStatusText(msg);
-
-		g_gui.GetCurrentMap().doChange();
+	RemoveUnreachableDialog dialog(frame);
+	if (dialog.ShowModal() == wxID_OK) {
+		const auto settings = dialog.GetSettings();
+		EditorOperations::UnreachableCleaner::Clean(*editor, settings);
 	}
 }
 

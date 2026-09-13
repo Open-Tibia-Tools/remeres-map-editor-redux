@@ -72,7 +72,6 @@
 		</menu>
 		<menu name="Other Options">
 			<item name="Remove Items by ID..." hotkey="Ctrl+Shift+R" action="MAP_REMOVE_ITEMS" help="Removes all items with the selected ID from the map."/>
-			<item name="Remove all Unreachable Tiles..." action="MAP_REMOVE_UNREACHABLE_TILES" help="Removes all tiles that cannot be reached (or seen) by the player from the map."/>
 			<item name="Clear Invalid Houses" action="CLEAR_INVALID_HOUSES" help="Clears house tiles not belonging to any house."/>
 			<item name="Clear Modified State" action="CLEAR_MODIFIED_STATE" help="Clears the modified state from all tiles."/>
 		</menu>
@@ -111,6 +110,7 @@
 		<separator/>
 		<item name="Cleanup invalid tiles..." action="MAP_CLEANUP" help="Removes all invalid or unresolved items from the map."/>
 		<item name="Cleanup invalid zones..." action="MAP_CLEAN_INVALID_ZONES" help="Removes preserved invalid tile flags and opaque OTBM tile fragments from the map."/>
+		<item name="Remove unreachable tiles..." action="MAP_REMOVE_UNREACHABLE_TILES" help="Removes unreachable and invisible tiles from the map."/>
 		<item name="Properties..." hotkey="Ctrl+P" action="MAP_PROPERTIES" help="Show and change the map properties."/>
 		<item name="Statistics" hotkey="F8" action="MAP_STATISTICS" help="Show map statistics."/>
 	</menu>
