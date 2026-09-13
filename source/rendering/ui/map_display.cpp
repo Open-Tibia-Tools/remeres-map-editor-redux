@@ -322,7 +322,7 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 		if (screenshot_controller->IsCapturing()) {
 			options.SetIngame();
 		} else {
-			options.Update();
+			options.UpdateIfNeeded();
 		}
 
 		options.dragging = selection_controller->IsDragging();
@@ -345,6 +345,7 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 
 		if (screenshot_controller->IsCapturing()) {
 			drawer->TakeScreenshot(screenshot_controller->GetBuffer());
+			options.MarkDirty();
 		}
 
 		drawer->Release();
@@ -365,11 +366,6 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 
 void MapCanvas::OnIdle(wxIdleEvent& event) {
 	PerformGarbageCollection();
-
-	if (editor.live_manager.GetClient()) {
-		editor.live_manager.GetClient()->sendNodeRequests();
-	}
-
 	event.Skip();
 }
 

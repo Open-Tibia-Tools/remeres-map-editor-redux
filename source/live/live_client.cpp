@@ -32,12 +32,16 @@
 LiveClient::LiveClient() :
 	LiveSocket(),
 	readMessage(), queryNodeList(), currentOperation(),
-	resolver(nullptr), socket(nullptr), editor(nullptr), stopped(false) {
+	resolver(nullptr), socket(nullptr), editor(nullptr), stopped(false),
+	node_requests_pending_(false),
+	alive_token_(std::make_shared<bool>(true)) {
 	//
 }
 
 LiveClient::~LiveClient() {
-	//
+	if (alive_token_) {
+		*alive_token_ = false;
+	}
 }
 
 bool LiveClient::connect(const std::string& address, uint16_t port) {
@@ -147,6 +151,7 @@ void LiveClient::close() {
 	}
 
 	stopped = true;
+	node_requests_pending_ = false;
 }
 
 bool LiveClient::handleError(const boost::system::error_code& error) {
@@ -327,6 +332,24 @@ void LiveClient::queryNode(int32_t ndx, int32_t ndy, bool underground) {
 	nd |= (static_cast<uint32_t>(ndy >> 2) << 4);
 	nd |= (underground ? 1 : 0);
 	queryNodeList.insert(nd);
+	scheduleNodeRequestsFlush();
+}
+
+void LiveClient::scheduleNodeRequestsFlush() {
+	if (node_requests_pending_ || stopped) {
+		return;
+	}
+	node_requests_pending_ = true;
+	auto token = alive_token_;
+	if (wxTheApp) {
+		wxTheApp->CallAfter([this, token]() {
+			if (!*token || stopped) {
+				return;
+			}
+			node_requests_pending_ = false;
+			sendNodeRequests();
+		});
+	}
 }
 
 void LiveClient::parsePacket(NetworkMessage message) {

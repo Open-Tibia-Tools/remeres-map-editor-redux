@@ -30,6 +30,7 @@ class DoorIndicatorDrawer;
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/light_buffer.h"
 #include "app/definitions.h"
+#include "app/settings.h"
 #include "game/outfit.h"
 #include "game/creature.h"
 
@@ -166,6 +167,7 @@ private:
 	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, bool light_collection_only = false);
 	void DrawMapLayer(SpriteBatch& batch, const RenderView& draw_view, int map_z, bool live_client, bool light_collection_only = false);
 	bool renderers_initialized = false;
+	Settings::ObserverId settings_observer_id_ = 0;
 };
 
 #endif

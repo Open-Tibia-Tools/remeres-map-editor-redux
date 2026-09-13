@@ -123,10 +123,18 @@ MapDrawer::MapDrawer(MapCanvas* canvas) :
 
 	item_drawer->SetHookIndicatorDrawer(hook_indicator_drawer.get());
 	item_drawer->SetDoorIndicatorDrawer(door_indicator_drawer.get());
+
+	options.Update();
+	settings_observer_id_ = g_settings.addObserver([this](uint32_t) {
+		options.MarkDirty();
+	});
 }
 
 MapDrawer::~MapDrawer() {
-
+	if (settings_observer_id_ != 0) {
+		g_settings.removeObserver(settings_observer_id_);
+		settings_observer_id_ = 0;
+	}
 	Release();
 }
 

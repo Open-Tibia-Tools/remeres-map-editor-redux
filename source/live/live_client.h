@@ -88,6 +88,10 @@ protected:
 	std::unique_ptr<Editor> editor;
 
 	bool stopped;
+	bool node_requests_pending_ = false;
+	std::shared_ptr<bool> alive_token_;
+
+	void scheduleNodeRequestsFlush();
 };
 
 #endif

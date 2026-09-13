@@ -112,7 +112,11 @@ void Settings::setInteger(uint32_t key, int newval) {
 	}
 	DynamicValue& dv = store[key];
 	if (std::holds_alternative<int>(dv.val) || std::holds_alternative<std::monostate>(dv.val)) {
-		dv.val = newval;
+		const auto old_val = std::get_if<int>(&dv.val);
+		if (!old_val || *old_val != newval) {
+			dv.val = newval;
+			notifyObservers(key);
+		}
 	}
 }
 
@@ -122,7 +126,11 @@ void Settings::setUnsignedInteger(uint32_t key, uint32_t newval) {
 	}
 	DynamicValue& dv = store[key];
 	if (std::holds_alternative<uint32_t>(dv.val) || std::holds_alternative<std::monostate>(dv.val)) {
-		dv.val = newval;
+		const auto old_val = std::get_if<uint32_t>(&dv.val);
+		if (!old_val || *old_val != newval) {
+			dv.val = newval;
+			notifyObservers(key);
+		}
 	}
 }
 
@@ -132,7 +140,11 @@ void Settings::setFloat(uint32_t key, float newval) {
 	}
 	DynamicValue& dv = store[key];
 	if (std::holds_alternative<float>(dv.val) || std::holds_alternative<std::monostate>(dv.val)) {
-		dv.val = newval;
+		const auto old_val = std::get_if<float>(&dv.val);
+		if (!old_val || *old_val != newval) {
+			dv.val = newval;
+			notifyObservers(key);
+		}
 	}
 }
 
@@ -142,7 +154,32 @@ void Settings::setString(uint32_t key, std::string newval) {
 	}
 	DynamicValue& dv = store[key];
 	if (std::holds_alternative<std::string>(dv.val) || std::holds_alternative<std::monostate>(dv.val)) {
-		dv.val = std::move(newval);
+		const auto old_val = std::get_if<std::string>(&dv.val);
+		if (!old_val || *old_val != newval) {
+			dv.val = std::move(newval);
+			notifyObservers(key);
+		}
+	}
+}
+
+Settings::ObserverId Settings::addObserver(ObserverCallback callback) {
+	ObserverId id = next_observer_id_++;
+	observers_.push_back({ id, std::move(callback) });
+	return id;
+}
+
+void Settings::removeObserver(ObserverId id) {
+	std::erase_if(observers_, [id](const ObserverEntry& entry) {
+		return entry.id == id;
+	});
+}
+
+void Settings::notifyObservers(uint32_t key) {
+	const auto observers_copy = observers_;
+	for (const auto& entry : observers_copy) {
+		if (entry.callback) {
+			entry.callback(key);
+		}
 	}
 }
 
