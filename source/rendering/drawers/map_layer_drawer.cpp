@@ -167,13 +167,9 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 	};
 
 	// OTClient floor-aware light occlusion: capture light count at START of each floor,
-	// then mark opaque ground tiles with that index so they block light from floors below
+	// so opaque ground tiles can record it during DrawTile to block light from floors below
 	if (draw_lights && !light_collection_only) {
-		ASSERT(light_buffer.lights.size() <= std::numeric_limits<uint32_t>::max());
-		const uint32_t floor_light_start = static_cast<uint32_t>(light_buffer.lights.size());
-		visitAllVisibleNodes([&](const TileLocation* location, int, int, const Tile*) {
-			tile_renderer->RegisterGroundLightOcclusion(location, view, light_buffer, floor_light_start);
-		});
+		light_buffer.SetFloorLightStart();
 	}
 
 	auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {

@@ -267,6 +267,10 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 	const auto& position = location->getPosition();
 	const auto [projected_tile_x, projected_tile_y] = projectedTilePosition(view, position);
 
+	if (light_buffer && !light_collection_only && tile->ground && tile->ground->blocksLightFromBelow()) {
+		light_buffer->SetFieldBrightness(projected_tile_x, projected_tile_y, light_buffer->current_floor_light_start);
+	}
+
 	ItemDefinitionView ground_it;
 	if (tile->ground) {
 		ground_it = tile->ground->getDefinition();

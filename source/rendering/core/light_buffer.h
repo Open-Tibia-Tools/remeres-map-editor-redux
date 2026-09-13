@@ -27,8 +27,12 @@ struct LightBuffer {
 	int origin_y = 0;
 	int width = 0;
 	int height = 0;
+	uint32_t current_floor_light_start = 0;
 
 	void Prepare(const RenderView& view);
+	void SetFloorLightStart() noexcept {
+		current_floor_light_start = static_cast<uint32_t>(lights.size());
+	}
 	void AddLight(int pixel_x, int pixel_y, const SpriteLight& light);
 	void AddTileLight(int tile_x, int tile_y, const SpriteLight& light);
 	void AddScreenLight(int screen_x, int screen_y, const RenderView& view, const SpriteLight& light);

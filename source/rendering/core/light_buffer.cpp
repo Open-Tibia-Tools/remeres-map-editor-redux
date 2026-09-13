@@ -88,6 +88,7 @@ void LightBuffer::Clear() {
 	origin_y = 0;
 	width = 0;
 	height = 0;
+	current_floor_light_start = 0;
 }
 
 bool LightBuffer::ContainsTile(int tile_x, int tile_y) const noexcept {
