@@ -24,17 +24,24 @@
 #include "game/complexitem.h"
 #include "game/sprites.h"
 #include "ui/gui.h"
+#include "rendering/core/render_frame_context.h"
 
 namespace {
-	GameSprite* resolveSprite(const ItemDefinitionView& definition) {
+	GameSprite* resolveSprite(const ItemDefinitionView& definition, const RenderFrameContext* ctx = nullptr) {
 		if (!definition) {
 			return nullptr;
+		}
+		if (ctx) {
+			return ctx->gfx.getGameSprite(definition.clientId());
 		}
 		return g_gui.gfx.getGameSprite(definition.clientId());
 	}
 
-	GameSprite* resolveSprite(ServerItemId item_id) {
-		return resolveSprite(g_item_definitions.get(item_id));
+	GameSprite* resolveSprite(ServerItemId item_id, const RenderFrameContext* ctx = nullptr) {
+		if (ctx) {
+			return resolveSprite(ctx->item_definitions.get(item_id), ctx);
+		}
+		return resolveSprite(g_item_definitions.get(item_id), ctx);
 	}
 
 	void registerSpriteLight(LightBuffer& light_buffer, const RenderView& view, int screen_x, int screen_y, const GameSprite::SpriteLayoutMetrics& metrics, const SpriteLight& light) {
@@ -79,8 +86,8 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	const ItemDefinitionView it = params.item_definition ? params.item_definition : item->getDefinition();
 
-	// Locked door indicator
-	if (!options.ingame && options.highlight_locked_doors && it.isDoor()) {
+	// Locked door indicator (only if highlight_locked_doors enabled and not ingame)
+	if (options.highlight_locked_doors && !options.ingame && it.isDoor()) {
 		bool locked = item->isLocked();
 
 		// Door orientation: horizontal wall -> West border (south=true), vertical wall -> North border (east=true)
@@ -94,47 +101,54 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		}
 	}
 
-	bool is_transient_selected = !ephemeral && options.transient_selection_bounds && options.transient_selection_bounds->contains(pos.x, pos.y);
-	if (!options.ingame && (item->isSelected() || is_transient_selected)) {
-		red /= 2;
-		blue /= 2;
-		green /= 2;
+	if (!options.ingame) {
+		bool is_selected = item->isSelected();
+		if (!is_selected && !ephemeral && options.transient_selection_bounds) {
+			is_selected = options.transient_selection_bounds->contains(pos.x, pos.y);
+		}
+		if (is_selected) {
+			red >>= 1;
+			blue >>= 1;
+			green >>= 1;
+		}
 	}
 
 	// item sprite
-	GameSprite* spr = resolveSprite(it);
+	GameSprite* spr = params.sprite ? params.sprite : resolveSprite(it, params.ctx);
+	const GameSprite* const original_spr = spr;
 
 	if (item->isInvalidOTBMItem() && !options.show_invalid_tiles) {
 		// Invalid OTBM placeholders are controlled exclusively by SHOW_INVALID_TILES.
 		return;
 	}
 
+	const AtlasManager* atlas = params.ctx ? &params.ctx->atlas : nullptr;
+
 	// Display invisible and invalid items
 	// Ugly hacks. :)
-	if (!options.ingame && options.show_tech_items) {
+	if (options.show_tech_items && !options.ingame) {
 		// Red invalid client id
 		if (!it) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, alpha));
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, alpha), 0, atlas);
 			return;
 		}
 
 		switch (it.clientId()) {
 			// Yellow invisible stairs tile (459)
 			case 469:
-				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, green, 0, (alpha * 171) >> 8));
+				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, green, 0, (alpha * 171) >> 8), 0, atlas);
 				return;
-
 			// Red invisible walkable tile (460)
 			case 470:
 			case 17970:
 			case 20028:
 			case 34168:
-				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, (alpha * 171) >> 8));
+				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, (alpha * 171) >> 8), 0, atlas);
 				return;
 
 			// Cyan invisible wall (1548)
 			case 2187:
-				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(0, green, blue, 80));
+				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(0, green, blue, 80), 0, atlas);
 				return;
 
 			default:
@@ -143,7 +157,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 		// primal light
 		if (it.clientId() >= 39092 && it.clientId() <= 39100 || it.clientId() == 39236 || it.clientId() == 39367 || it.clientId() == 39368) {
-			spr = resolveSprite(SPRITE_LIGHTSOURCE);
+			spr = resolveSprite(SPRITE_LIGHTSOURCE, params.ctx);
 			red = 0;
 			alpha = 180;
 		}
@@ -163,10 +177,11 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	draw_y -= spr->draw_height;
 
 	SpritePatterns patterns;
-	if (cached_patterns && spr == resolveSprite(it)) {
+	if (cached_patterns && spr == original_spr) {
 		patterns = *cached_patterns;
 	} else {
-		patterns = PatternCalculator::Calculate(spr, it, item, tile, pos);
+		const long elapsed_time = params.ctx ? params.ctx->elapsed_time : -1;
+		patterns = PatternCalculator::Calculate(spr, it, item, tile, pos, elapsed_time);
 	}
 
 	int subtype = patterns.subtype;
@@ -174,24 +189,26 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	int pattern_y = patterns.y;
 	int pattern_z = patterns.z;
 	int frame = patterns.frame;
-		const auto composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
+
+	const bool is_simple_sprite = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
+	GameSprite::SpriteLayoutMetrics composite_metrics {};
+	bool has_composite_metrics = false;
 
 	if (light_buffer && view && item->hasLight()) {
+		composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
+		has_composite_metrics = true;
 		registerSpriteLight(*light_buffer, *view, screenx, screeny, composite_metrics, item->getLight());
 	}
 
-	if (!ephemeral && options.transparent_items && (!it.isGroundTile() || spr->width > 1 || spr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || spr->width > 1 || spr->height > 1)) {
-		alpha /= 2;
+	if (options.transparent_items && !ephemeral && (!it.isGroundTile() || spr->width > 1 || spr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || spr->width > 1 || spr->height > 1)) {
+		alpha >>= 1;
 	}
 
-	if (it.isPodium()) {
+	const bool is_podium = it.isPodium();
+	if (is_podium) {
 		Podium* podium = static_cast<Podium*>(item);
 		if (!podium->hasShowPlatform() && !options.ingame) {
-			if (options.show_tech_items) {
-				alpha /= 2;
-			} else {
-				alpha = 0;
-			}
+			alpha = options.show_tech_items ? (alpha >> 1) : 0;
 		}
 	}
 
@@ -200,14 +217,14 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		// g_gui.gfx.ensureAtlasManager();
 		// BatchRenderer::SetAtlasManager(g_gui.gfx.getAtlasManager());
 
-		if (spr->width == 1 && spr->height == 1 && spr->layers == 1) {
-			const AtlasRegion* region;
-			if (subtype == -1 && pattern_x == 0 && pattern_y == 0 && pattern_z == 0 && frame == 0) {
-				region = spr->getAtlasRegion(0, 0, 0, -1, 0, 0, 0, 0);
-			} else {
+		if (is_simple_sprite) {
+			const AtlasRegion* region = nullptr;
+			if (spr->is_simple && subtype == -1 && pattern_x == 0 && pattern_y == 0 && pattern_z == 0 && frame == 0) {
+				region = spr->getCachedDefaultRegion();
+			}
+			if (!region) {
 				region = spr->getAtlasRegion(0, 0, 0, subtype, pattern_x, pattern_y, pattern_z, frame);
 			}
-
 			if (region) {
 #ifdef DEBUG
 				// DEBUG: Check for mismatch on Item 369 using PRECISE sub-sprite ID
@@ -222,10 +239,13 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 				sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx, screeny, region, DrawColor(red, green, blue, alpha));
 			}
 		} else {
+			if (!has_composite_metrics) {
+				composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
+			}
 			int x_offset = 0;
-			for (int cx = 0; cx != spr->width; cx++) {
+			for (int cx = 0; cx < composite_metrics.num_columns; cx++) {
 				int y_offset = 0;
-				for (int cy = 0; cy != spr->height; cy++) {
+				for (int cy = 0; cy < composite_metrics.num_rows; cy++) {
 					for (int cf = 0; cf != spr->layers; cf++) {
 						const AtlasRegion* region = spr->getAtlasRegion(cx, cy, cf, subtype, pattern_x, pattern_y, pattern_z, frame);
 						if (region) {
@@ -239,7 +259,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		}
 	}
 
-	if (it.isPodium()) {
+	if (is_podium) {
 		Podium* podium = static_cast<Podium*>(item);
 		Outfit outfit = podium->getOutfit();
 		if (!podium->hasShowOutfit()) {
@@ -263,7 +283,8 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 			.color = DrawColor(red, green, blue, alpha),
 			.light_buffer = light_buffer,
 			.view = view,
-			.light_collection_only = params.light_collection_only
+			.light_collection_only = params.light_collection_only,
+			.ctx = params.ctx
 		});
 	}
 
@@ -289,8 +310,8 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 			// SpriteDrawer::glBlitSquare internally uses BatchRenderer::DrawQuad which sets blank texture if needed.
 			// So we don't need manual enable/disable here anymore.
 
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 2, draw_y + startOffset - 2, DrawColor(0, 0, 0, byteA), sqSize + 2);
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 1, draw_y + startOffset - 1, DrawColor(byteR, byteG, byteB, byteA), sqSize);
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 2, draw_y + startOffset - 2, DrawColor(0, 0, 0, byteA), sqSize + 2, atlas);
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 1, draw_y + startOffset - 1, DrawColor(byteR, byteG, byteB, byteA), sqSize, atlas);
 		}
 	}
 }

@@ -15,6 +15,9 @@ struct DrawingOptions {
 	void SetIngame();
 	void SetDefault();
 	void Update();
+	void UpdateIfNeeded();
+	void MarkDirty() noexcept { dirty_ = true; }
+	[[nodiscard]] bool isDirty() const noexcept { return dirty_; }
 	bool isDrawLight() const noexcept;
 
 	bool transparent_floors;
@@ -67,6 +70,13 @@ struct DrawingOptions {
 	bool anti_aliasing;
 
 	std::string screen_shader_name;
+
+	[[nodiscard]] bool hasTileColorModifiers() const noexcept {
+		return show_blocking || highlight_items || show_spawns || show_houses || show_special_tiles || show_only_colors;
+	}
+
+private:
+	bool dirty_ = true;
 };
 
 #endif

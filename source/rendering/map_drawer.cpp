@@ -30,6 +30,8 @@
 #include "editor/copybuffer.h"
 #include "live/live_socket.h"
 #include "rendering/core/graphics.h"
+#include "rendering/core/render_frame_context.h"
+#include "item_definitions/core/item_definition_store.h"
 
 #include "brushes/doodad/doodad_brush.h"
 #include "brushes/creature/creature_brush.h"
@@ -71,6 +73,7 @@
 #include "rendering/core/gl_resources.h"
 #include "rendering/core/shader_program.h"
 #include "rendering/postprocess/post_process_manager.h"
+#include "ui/map_tab.h"
 
 // Shader Sources
 const char* screen_vert = R"(
@@ -121,10 +124,18 @@ MapDrawer::MapDrawer(MapCanvas* canvas) :
 
 	item_drawer->SetHookIndicatorDrawer(hook_indicator_drawer.get());
 	item_drawer->SetDoorIndicatorDrawer(door_indicator_drawer.get());
+
+	options.Update();
+	settings_observer_id_ = g_settings.addObserver([this](uint32_t) {
+		options.MarkDirty();
+	});
 }
 
 MapDrawer::~MapDrawer() {
-
+	if (settings_observer_id_ != 0) {
+		g_settings.removeObserver(settings_observer_id_);
+		settings_observer_id_ = 0;
+	}
 	Release();
 }
 
@@ -306,6 +317,16 @@ void MapDrawer::Draw() {
 	}
 	auto* atlas = g_gui.gfx.getAtlasManager();
 
+	const RenderFrameContext ctx {
+		*atlas,
+		g_gui.gfx,
+		g_item_definitions,
+		options,
+		view,
+		g_gui.gfx.getElapsedTime(),
+		static_cast<uint32_t>(options.current_house_id)
+	};
+
 	// Begin Batches
 	sprite_batch->begin(view.projectionMatrix, *atlas);
 	primitive_renderer->setProjectionMatrix(view.projectionMatrix);
@@ -329,7 +350,7 @@ void MapDrawer::Draw() {
 	// Save original view bounds before DrawMap modifies them per-floor
 	const ViewBounds original_bounds { view.start_x, view.start_y, view.end_x, view.end_y };
 
-	DrawMap();
+	DrawMap(ctx);
 
 	// Flush Map for Light Pass
 	sprite_batch->end(*atlas);
@@ -352,7 +373,7 @@ void MapDrawer::Draw() {
 	sprite_batch->begin(view.projectionMatrix, *atlas);
 
 	if (drag_shadow_drawer) {
-		drag_shadow_drawer->draw(*sprite_batch, this, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options);
+		drag_shadow_drawer->draw(*sprite_batch, this, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options, &ctx);
 	}
 
 	live_cursor_drawer->draw(*sprite_batch, view, editor, options);
@@ -383,10 +404,17 @@ void MapDrawer::DrawBackground() {
 	view.Clear();
 }
 
-void MapDrawer::DrawMap() {
+void MapDrawer::DrawMap(const RenderFrameContext& ctx) {
 	bool live_client = editor.live_manager.IsClient();
 
-	// Enable texture mode
+	BaseMap* secondary_map = nullptr;
+	if (!options.ingame && canvas) {
+		if (auto* map_tab = dynamic_cast<MapTab*>(canvas->GetMapWindow())) {
+			if (auto* session = map_tab->GetSession()) {
+				secondary_map = session->secondary_map;
+			}
+		}
+	}
 
 	for (int map_z = view.start_z; map_z >= view.superend_z; map_z--) {
 		RenderView floor_view = view;
@@ -396,23 +424,33 @@ void MapDrawer::DrawMap() {
 		floor_view.end_x = floor_bounds.end_x;
 		floor_view.end_y = floor_bounds.end_y;
 
+		RenderFrameContext floor_ctx {
+			ctx.atlas,
+			ctx.gfx,
+			ctx.item_definitions,
+			ctx.options,
+			floor_view,
+			ctx.elapsed_time,
+			ctx.current_house_id
+		};
+
 		if (options.isDrawLight() && options.draw_floor_shadow && view.end_z >= GROUND_LAYER + 1 && map_z == view.end_z) {
-			if (g_gui.gfx.ensureAtlasManager()) {
-				sprite_batch->drawRect(0.0f, 0.0f, floor_view.screensize_x * floor_view.zoom, floor_view.screensize_y * floor_view.zoom, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f), *g_gui.gfx.getAtlasManager());
-			}
+			sprite_batch->drawRect(0.0f, 0.0f, floor_view.screensize_x * floor_view.zoom, floor_view.screensize_y * floor_view.zoom, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f), ctx.atlas);
 		}
 
 		if (!options.isDrawLight() && map_z == view.end_z && view.start_z != view.end_z) {
-			shade_drawer->draw(*sprite_batch, floor_view, options);
+			shade_drawer->draw(*sprite_batch, floor_view, options, ctx.atlas);
 		}
 
 		if (view.draw_all_visited_floors || map_z >= view.end_z) {
-			DrawMapLayer(*sprite_batch, floor_view, map_z, live_client);
+			DrawMapLayer(*sprite_batch, floor_ctx, map_z, live_client);
 		} else if (options.isDrawLight()) {
-			DrawMapLayer(hidden_floor_light_batch, floor_view, map_z, live_client, true);
+			DrawMapLayer(*sprite_batch, floor_ctx, map_z, live_client, true);
 		}
 
-		preview_drawer->draw(*sprite_batch, canvas, floor_view, map_z, options, editor, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), options.current_house_id);
+		if (secondary_map) {
+			preview_drawer->draw(*sprite_batch, canvas, secondary_map, floor_view, map_z, options, editor, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), options.current_house_id, &ctx);
+		}
 	}
 }
 
@@ -442,8 +480,27 @@ void MapDrawer::DrawCreatureNames(NVGcontext* vg) {
 	creature_name_drawer->draw(vg, view);
 }
 
-void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderView& draw_view, int map_z, bool live_client, bool light_collection_only) {
-	map_layer_drawer->Draw(batch, map_z, live_client, draw_view, options, light_buffer, light_collection_only);
+bool MapDrawer::hasOverlays() const {
+	if (options.show_creatures && creature_name_drawer && !creature_name_drawer->empty()) {
+		return true;
+	}
+	if (options.show_tooltips && tooltip_drawer && !tooltip_drawer->empty()) {
+		return true;
+	}
+	if (options.show_hooks && hook_indicator_drawer && !hook_indicator_drawer->empty()) {
+		return true;
+	}
+	if (options.highlight_locked_doors && door_indicator_drawer && !door_indicator_drawer->empty()) {
+		return true;
+	}
+	if (lua_overlay_drawer && lua_overlay_drawer->hasUIElements(view)) {
+		return true;
+	}
+	return false;
+}
+
+void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, bool light_collection_only) {
+	map_layer_drawer->Draw(batch, map_z, live_client, floor_ctx, light_buffer, light_collection_only);
 }
 
 void MapDrawer::DrawLight() {

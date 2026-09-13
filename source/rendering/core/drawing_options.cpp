@@ -143,6 +143,13 @@ void DrawingOptions::Update() {
 
 	anti_aliasing = g_settings.getBoolean(Config::ANTI_ALIASING);
 	screen_shader_name = g_settings.getString(Config::SCREEN_SHADER);
+	dirty_ = false;
+}
+
+void DrawingOptions::UpdateIfNeeded() {
+	if (dirty_) {
+		Update();
+	}
 }
 
 bool DrawingOptions::isDrawLight() const noexcept {

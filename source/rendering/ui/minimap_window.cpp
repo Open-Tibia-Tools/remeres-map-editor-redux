@@ -477,6 +477,7 @@ bool MinimapCanvas::SaveCleanScreenshot(const wxFileName& file) {
 	drawer->Draw(size, *editor, *active_canvas, *state, {
 		.drawCameraBox = false,
 		.drawBoundsBorder = false,
+		.floor_visibility_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE)),
 	});
 
 	std::vector<uint8_t> pixels(static_cast<size_t>(width) * height * PixelFormatRGB);
@@ -533,7 +534,11 @@ void MinimapCanvas::OnPaint(wxPaintEvent& event) {
 	}
 
 	ClampViewportState(*state);
-	drawer->Draw(GetClientSize(), *editor, *active_canvas, *state);
+	drawer->Draw(GetClientSize(), *editor, *active_canvas, *state, {
+		.drawCameraBox = g_settings.getBoolean(Config::MINIMAP_VIEW_BOX),
+		.drawBoundsBorder = true,
+		.floor_visibility_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE)),
+	});
 	SwapBuffers();
 }
 

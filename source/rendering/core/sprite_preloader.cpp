@@ -51,16 +51,63 @@ void SpritePreloader::shutdown() {
 		worker.request_stop(); // Correctly signaled transition for jthread's stop_token
 	}
 	cv.notify_all();
+	clear();
 }
 
 void SpritePreloader::clear() {
-	std::lock_guard<std::mutex> lock(queue_mutex);
-	// Bump the epoch so any in-flight worker result becomes stale.
-	++active_epoch;
-	task_queue = std::queue<Task>();
-	result_queue = std::queue<Result>();
-	pending_ids.clear();
-	queued_result_bytes = 0;
+	std::vector<Task> dropped_tasks;
+	std::vector<Result> dropped_results;
+	std::vector<PendingSpriteKey> local_discarded;
+	{
+		std::lock_guard<std::mutex> lock(queue_mutex);
+		// Bump the epoch so any in-flight worker result becomes stale.
+		++active_epoch;
+		while (!task_queue.empty()) {
+			dropped_tasks.push_back(std::move(task_queue.front()));
+			task_queue.pop();
+		}
+		while (!result_queue.empty()) {
+			dropped_results.push_back(std::move(result_queue.front()));
+			result_queue.pop();
+		}
+		local_discarded = std::move(discarded_keys);
+		discarded_keys.clear();
+		pending_ids.clear();
+		queued_result_bytes = 0;
+	}
+
+	if (wxIsMainThread()) {
+		for (const auto& task : dropped_tasks) {
+			resetPreloadingFlag(task.pending, task.archive.get());
+		}
+		for (const auto& res : dropped_results) {
+			resetPreloadingFlag(res.pending, res.archive.get());
+		}
+		for (const auto& pending : local_discarded) {
+			resetPreloadingFlag(pending, pending.key.archive);
+		}
+	}
+}
+
+void SpritePreloader::resetPreloadingFlag(const PendingSpriteKey& pending, const SpriteArchive* archive) {
+	if (!archive || pending.key.archive != archive) {
+		return;
+	}
+	const auto current_archive = g_gui.gfx.getSpriteArchive();
+	if (g_gui.gfx.isUnloaded() || current_archive.get() != archive) {
+		return;
+	}
+	const uint32_t id = pending.key.id;
+	if (id >= g_gui.gfx.image_space.size()) {
+		return;
+	}
+	auto& img_ptr = g_gui.gfx.image_space[id];
+	if (img_ptr && img_ptr->isNormalImage()) {
+		auto* img = static_cast<NormalImage*>(img_ptr.get());
+		if (img->id == id && img->generation_id == pending.generation_id) {
+			img->is_preloading = false;
+		}
+	}
 }
 
 void SpritePreloader::preload(GameSprite* spr, int pattern_x, int pattern_y, int pattern_z, int frame) {
@@ -75,6 +122,7 @@ void SpritePreloader::preload(GameSprite* spr, int pattern_x, int pattern_y, int
 	}
 
 	struct PendingTask {
+		NormalImage* img = nullptr;
 		ArchiveSpriteKey key;
 		uint32_t generation_id = 0;
 	};
@@ -87,8 +135,11 @@ void SpritePreloader::preload(GameSprite* spr, int pattern_x, int pattern_y, int
 		ids_to_enqueue.reserve(64);
 	}
 
-	for (int cx = 0; cx < spr->width; ++cx) {
-		for (int cy = 0; cy < spr->height; ++cy) {
+	const int max_cx = std::min<int>(spr->width, GameSprite::MAX_SPRITE_PARTS);
+	const int max_cy = std::min<int>(spr->height, GameSprite::MAX_SPRITE_PARTS);
+
+	for (int cx = 0; cx < max_cx; ++cx) {
+		for (int cy = 0; cy < max_cy; ++cy) {
 			for (int cf = 0; cf < spr->layers; ++cf) {
 				int idx = spr->getIndex(cx, cy, cf, pattern_x, pattern_y, pattern_z, frame);
 
@@ -105,11 +156,11 @@ void SpritePreloader::preload(GameSprite* spr, int pattern_x, int pattern_y, int
 				}
 
 				NormalImage* img = spr->spriteList[idx];
-				if (img && !img->isGLLoaded) {
+				if (img && !img->isGLLoaded && !img->is_preloading) {
 					// Ensure parent is set so GC can invalidate cached_default_region
 					// when evicting this sprite later (prevents stale cache -> wrong sprite)
 					img->addParent(spr);
-					ids_to_enqueue.push_back({ { archive.get(), img->id }, img->generation_id });
+					ids_to_enqueue.push_back({ img, { archive.get(), img->id }, img->generation_id });
 				}
 			}
 		}
@@ -132,6 +183,9 @@ void SpritePreloader::preload(GameSprite* spr, int pattern_x, int pattern_y, int
 			};
 			if (pending_ids.insert(pending_key).second) {
 				task_queue.push({ pending_key, archive, has_transparency });
+				if (pending.img) {
+					pending.img->is_preloading = true;
+				}
 			}
 		}
 		cv.notify_all();
@@ -167,6 +221,7 @@ void SpritePreloader::workerLoop(std::stop_token stop_token) {
 				queued_result_bytes += result_bytes;
 				result_queue.push({ task.pending, std::move(rgba), dimensions, std::move(task.archive) });
 			} else {
+				discarded_keys.push_back(task.pending);
 				pending_ids.erase(task.pending);
 			}
 		}
@@ -179,27 +234,34 @@ void SpritePreloader::update() {
 
 	// Move results to a local queue under lock to minimize holding time.
 	std::queue<Result> results;
+	std::vector<PendingSpriteKey> local_discarded;
 	uint64_t current_epoch = 0;
 	size_t result_count = 0;
 	size_t upload_bytes = 0;
 	{
 		std::lock_guard<std::mutex> lock(queue_mutex);
-		if (result_queue.empty()) {
-			return;
-		}
-		current_epoch = active_epoch;
-		while (!result_queue.empty() && result_count < MAX_UPLOADS_PER_FRAME) {
-			const size_t next_result_bytes = resultByteSize(result_queue.front().dimensions);
-			if (result_count > 0 && upload_bytes + next_result_bytes > MAX_UPLOAD_BYTES_PER_FRAME) {
-				break;
-			}
+		local_discarded = std::move(discarded_keys);
+		discarded_keys.clear();
 
-			upload_bytes += next_result_bytes;
-			queued_result_bytes = queued_result_bytes > next_result_bytes ? queued_result_bytes - next_result_bytes : 0;
-			results.push(std::move(result_queue.front()));
-			result_queue.pop();
-			++result_count;
+		if (!result_queue.empty()) {
+			current_epoch = active_epoch;
+			while (!result_queue.empty() && result_count < MAX_UPLOADS_PER_FRAME) {
+				const size_t next_result_bytes = resultByteSize(result_queue.front().dimensions);
+				if (result_count > 0 && upload_bytes + next_result_bytes > MAX_UPLOAD_BYTES_PER_FRAME) {
+					break;
+				}
+
+				upload_bytes += next_result_bytes;
+				queued_result_bytes = queued_result_bytes > next_result_bytes ? queued_result_bytes - next_result_bytes : 0;
+				results.push(std::move(result_queue.front()));
+				result_queue.pop();
+				++result_count;
+			}
 		}
+	}
+
+	for (const auto& pending : local_discarded) {
+		resetPreloadingFlag(pending, pending.key.archive);
 	}
 
 	thread_local std::vector<PendingSpriteKey> keys_processed;
@@ -218,6 +280,7 @@ void SpritePreloader::update() {
 		keys_processed.push_back(pending);
 
 		if (pending.epoch != current_epoch) {
+			resetPreloadingFlag(pending, res.archive.get());
 			continue;
 		}
 
@@ -241,8 +304,12 @@ void SpritePreloader::update() {
 						}
 					}
 					img->fulfillPreload(std::move(res.data));
+				} else {
+					img->is_preloading = false;
 				}
 			}
+		} else {
+			resetPreloadingFlag(pending, res.archive.get());
 		}
 	}
 

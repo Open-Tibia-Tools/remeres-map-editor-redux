@@ -21,6 +21,9 @@ public:
 
 	void addDoor(const Position& pos, bool locked, bool south, bool east);
 	void clear();
+	bool empty() const noexcept {
+		return requests.empty();
+	}
 	void draw(NVGcontext* vg, const RenderView& view);
 
 private:

@@ -7,6 +7,7 @@
 
 #include "rendering/ui/minimap_viewport.h"
 #include "rendering/drawers/minimap_renderer.h"
+#include "rendering/core/floor_visibility_mode.h"
 
 #include <memory>
 
@@ -17,6 +18,7 @@ class PrimitiveRenderer;
 struct MinimapDrawOptions {
 	bool drawCameraBox = true;
 	bool drawBoundsBorder = true;
+	FloorVisibilityMode floor_visibility_mode = FloorVisibilityMode::ClientVisible;
 };
 
 class MinimapDrawer {

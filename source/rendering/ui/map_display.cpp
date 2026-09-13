@@ -150,6 +150,7 @@ MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
 
 	Bind(wxEVT_PAINT, &MapCanvas::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, &MapCanvas::OnEraseBackground, this);
+	Bind(wxEVT_IDLE, &MapCanvas::OnIdle, this);
 }
 
 MapCanvas::~MapCanvas() {
@@ -256,7 +257,7 @@ void MapCanvas::EnsureNanoVG() {
 }
 
 void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
-	if (!vg) {
+	if (!vg || (drawer && !drawer->hasOverlays())) {
 		return;
 	}
 
@@ -321,7 +322,7 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 		if (screenshot_controller->IsCapturing()) {
 			options.SetIngame();
 		} else {
-			options.Update();
+			options.UpdateIfNeeded();
 		}
 
 		options.dragging = selection_controller->IsDragging();
@@ -344,6 +345,7 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 
 		if (screenshot_controller->IsCapturing()) {
 			drawer->TakeScreenshot(screenshot_controller->GetBuffer());
+			options.MarkDirty();
 		}
 
 		drawer->Release();
@@ -354,19 +356,17 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 		drawer->ClearFrameOverlays();
 	}
 
-	PerformGarbageCollection();
-
 	SwapBuffers();
 
 	fps_counter.Update();
 	if (g_settings.getBoolean(Config::SHOW_FPS_COUNTER) && fps_counter.HasChanged()) {
 		MapStatusUpdater::UpdateFPS(fps_counter.GetStatusString());
 	}
+}
 
-	// Send newd node requests
-	if (editor.live_manager.GetClient()) {
-		editor.live_manager.GetClient()->sendNodeRequests();
-	}
+void MapCanvas::OnIdle(wxIdleEvent& event) {
+	PerformGarbageCollection();
+	event.Skip();
 }
 
 void MapCanvas::TakeScreenshot(wxFileName path, wxString format) {

@@ -142,6 +142,10 @@ public:
 	// Clear all tooltips
 	void clear();
 
+	bool empty() const noexcept {
+		return active_count == 0;
+	}
+
 protected:
 	struct FieldLine {
 		std::string_view label;

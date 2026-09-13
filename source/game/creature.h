@@ -62,7 +62,7 @@ public:
 
 	bool isNpc() const;
 
-	std::string getName() const;
+	const std::string& getName() const;
 	CreatureBrush* getBrush() const;
 
 	int getSpawnTime() const {
@@ -107,12 +107,13 @@ inline bool Creature::isNpc() const {
 	return false;
 }
 
-inline std::string Creature::getName() const {
+inline const std::string& Creature::getName() const {
+	static const std::string empty_string;
 	CreatureType* type = g_creatures[type_name];
 	if (type) {
 		return type->name;
 	}
-	return "";
+	return empty_string;
 }
 inline CreatureBrush* Creature::getBrush() const {
 	CreatureType* type = g_creatures[type_name];

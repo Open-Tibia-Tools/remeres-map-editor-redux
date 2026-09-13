@@ -32,6 +32,8 @@ void HookIndicatorDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	const float zoomFactor = 1.0f / view.zoom;
 	const float iconSize = 24.0f * zoomFactor;
 	const float outlineOffset = 1.0f * zoomFactor;
+	const float tileSize = 32.0f * zoomFactor;
+	const float halfTileSize = tileSize * 0.5f;
 
 	for (const auto& request : requests) {
 		// Only render hooks on the current floor
@@ -44,19 +46,17 @@ void HookIndicatorDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			continue;
 		}
 
-		const float zoom = view.zoom;
-		const float x = unscaled_x / zoom;
-		const float y = unscaled_y / zoom;
-		const float TILE_SIZE = 32.0f / zoom;
+		const float x = static_cast<float>(unscaled_x) * zoomFactor;
+		const float y = static_cast<float>(unscaled_y) * zoomFactor;
 
 		if (request.south) {
 			// Center of WEST border, pointing NORTH (towards corner)
-			IconRenderer::DrawIconWithBorder(vg, x, y + TILE_SIZE / 2.0f, iconSize, outlineOffset, ICON_ANGLE_UP, tintColor);
+			IconRenderer::DrawIconWithBorder(vg, x, y + halfTileSize, iconSize, outlineOffset, ICON_ANGLE_UP, tintColor);
 		}
 
 		if (request.east) {
 			// Center of NORTH border, pointing WEST (towards corner)
-			IconRenderer::DrawIconWithBorder(vg, x + TILE_SIZE / 2.0f, y, iconSize, outlineOffset, ICON_ANGLE_LEFT, tintColor);
+			IconRenderer::DrawIconWithBorder(vg, x + halfTileSize, y, iconSize, outlineOffset, ICON_ANGLE_LEFT, tintColor);
 		}
 	}
 

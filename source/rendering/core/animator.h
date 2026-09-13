@@ -62,7 +62,7 @@ public:
 
 	FrameDuration* getFrameDuration(int frame);
 
-	int getFrame();
+	int getFrame(long elapsed_time = -1);
 	void setFrame(int frame);
 
 	void reset();
@@ -71,7 +71,7 @@ private:
 	int getDuration(int frame) const;
 	int getPingPongFrame();
 	int getLoopFrame();
-	void calculateSynchronous();
+	void calculateSynchronous(long current_time = -1);
 
 	int frame_count;
 	int start_frame;

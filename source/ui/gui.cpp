@@ -423,18 +423,21 @@ void GUI::SetSpawnTime(int time) {
 }
 void GUI::SetLightIntensity(int v) {
 	g_brush_manager.SetLightIntensity(std::clamp(v, 0, 255));
+	g_settings.notifyObservers(Config::SHOW_LIGHTS);
 }
 int GUI::GetLightIntensity() const {
 	return g_brush_manager.GetLightIntensity();
 }
 void GUI::SetAmbientLightLevel(float v) {
 	g_brush_manager.SetAmbientLightLevel(std::clamp(v, 0.0f, 1.0f));
+	g_settings.notifyObservers(Config::SHOW_LIGHTS);
 }
 float GUI::GetAmbientLightLevel() const {
 	return g_brush_manager.GetAmbientLightLevel();
 }
 void GUI::SetServerLightColor(int v) {
 	g_brush_manager.SetServerLightColor(std::clamp(v, 0, 255));
+	g_settings.notifyObservers(Config::SHOW_LIGHTS);
 }
 int GUI::GetServerLightColor() const {
 	return g_brush_manager.GetServerLightColor();

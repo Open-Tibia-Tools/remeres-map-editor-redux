@@ -14,13 +14,14 @@ class SpriteDrawer;
 class CreatureDrawer;
 class SpriteBatch;
 class PrimitiveRenderer;
+struct RenderFrameContext;
 
 class DragShadowDrawer {
 public:
 	DragShadowDrawer();
 	~DragShadowDrawer();
 
-	void draw(SpriteBatch& sprite_batch, MapDrawer* drawer, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options);
+	void draw(SpriteBatch& sprite_batch, MapDrawer* drawer, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options, const RenderFrameContext* ctx = nullptr);
 };
 
 #endif

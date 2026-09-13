@@ -16,6 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
+#include "ui/gui.h"
 #include "app/definitions.h"
 #include "rendering/drawers/map_layer_drawer.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
@@ -30,6 +31,8 @@
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/core/sprite_preloader.h"
+#include "rendering/core/render_frame_context.h"
+#include "item_definitions/core/item_definition_store.h"
 
 #include <cmath>
 #include <limits>
@@ -43,7 +46,10 @@ MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_dra
 MapLayerDrawer::~MapLayerDrawer() {
 }
 
-void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderView& view, const DrawingOptions& options, LightBuffer& light_buffer, bool light_collection_only) {
+void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderFrameContext& ctx, LightBuffer& light_buffer, bool light_collection_only) {
+	const RenderView& view = ctx.view;
+	const DrawingOptions& options = ctx.options;
+
 	// Optimization: Pre-calculate offset and base coordinates
 	// IsTileVisible does this for every tile, but it's constant per layer/frame.
 	// We also skip IsTileVisible because visitLeaves already bounds us to the visible area (with 4-tile alignment),
@@ -57,10 +63,10 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 	int nd_end_x = 0;
 	int nd_end_y = 0;
 	int visibility_margin_pixels = PAINTERS_ALGORITHM_SAFETY_MARGIN_PIXELS;
-	int visibility_margin_tiles = std::max(1, (visibility_margin_pixels + TILE_SIZE - 1) / TILE_SIZE);
 
 	if (light_collection_only) {
 		constexpr int light_collection_margin_pixels = TILE_SIZE * 16;
+		visibility_margin_pixels = light_collection_margin_pixels;
 		const int camera_offset = (view.floor <= GROUND_LAYER)
 			? (GROUND_LAYER - view.floor) * TILE_SIZE
 			: 0;
@@ -81,17 +87,27 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		nd_end_y = (view.end_y & ~3) + 4;
 	}
 
+	const int visibility_margin_tiles = std::max(1, (visibility_margin_pixels + TILE_SIZE - 1) / TILE_SIZE);
+
 	const int base_screen_x = -view.view_scroll_x - offset;
 	const int base_screen_y = -view.view_scroll_y - offset;
 
 	bool draw_lights = options.isDrawLight() && view.zoom <= 10.0;
 
+	const int max_logical_w = static_cast<int>(view.logical_width);
+	const int max_logical_h = static_cast<int>(view.logical_height);
+	const int min_visible_draw_x = -TILE_SIZE - visibility_margin_pixels;
+	const int max_visible_draw_x = max_logical_w + visibility_margin_pixels;
+	const int min_visible_draw_y = -TILE_SIZE - visibility_margin_pixels;
+	const int max_visible_draw_y = max_logical_h + visibility_margin_pixels;
+
 	auto visitNodeTiles = [&](MapNode* nd, int nd_map_x, int nd_map_y, bool live, auto&& visitor) {
 		int node_draw_x = nd_map_x * TILE_SIZE + base_screen_x;
 		int node_draw_y = nd_map_y * TILE_SIZE + base_screen_y;
 
-		// Node level culling
-		if (!view.IsRectVisible(node_draw_x, node_draw_y, 4 * TILE_SIZE, 4 * TILE_SIZE, visibility_margin_pixels)) {
+		// Node level culling (integer AABB)
+		if (node_draw_x + 4 * TILE_SIZE + visibility_margin_pixels < 0 || node_draw_x - visibility_margin_pixels > max_logical_w ||
+			node_draw_y + 4 * TILE_SIZE + visibility_margin_pixels < 0 || node_draw_y - visibility_margin_pixels > max_logical_h) {
 			return;
 		}
 
@@ -107,24 +123,34 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 			return;
 		}
 
-		bool fully_inside = view.IsRectFullyInside(node_draw_x, node_draw_y, 4 * TILE_SIZE, 4 * TILE_SIZE);
+		const bool fully_inside = (node_draw_x >= 0 && node_draw_x + 4 * TILE_SIZE <= max_logical_w &&
+			node_draw_y >= 0 && node_draw_y + 4 * TILE_SIZE <= max_logical_h);
 
 		Floor* floor = nd->getFloor(map_z);
 		if (!floor) {
 			return;
 		}
 
+		Floor* floor_above = (map_z == GROUND_LAYER + 1) ? nd->getFloor(GROUND_LAYER) : nullptr;
 		TileLocation* location = floor->locs.data();
+		TileLocation* loc_above = floor_above ? floor_above->locs.data() : nullptr;
 		int draw_x_base = node_draw_x;
 		for (int map_x = 0; map_x < 4; ++map_x, draw_x_base += TILE_SIZE) {
 			int draw_y = node_draw_y;
 			for (int map_y = 0; map_y < 4; ++map_y, ++location, draw_y += TILE_SIZE) {
-				// Culling: Skip tiles that are far outside the viewport.
-				if (!fully_inside && !view.IsPixelVisible(draw_x_base, draw_y, visibility_margin_pixels)) {
+				const Tile* tile_above = loc_above ? (loc_above++)->get() : nullptr;
+
+				if (!location->get()) {
 					continue;
 				}
 
-				visitor(location, draw_x_base, draw_y);
+				// Culling: Skip tiles that are far outside the viewport (fast integer AABB).
+				if (!fully_inside && (draw_x_base < min_visible_draw_x || draw_x_base > max_visible_draw_x ||
+					draw_y < min_visible_draw_y || draw_y > max_visible_draw_y)) {
+					continue;
+				}
+
+				visitor(location, draw_x_base, draw_y, tile_above);
 			}
 		}
 	};
@@ -155,17 +181,14 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 	};
 
 	// OTClient floor-aware light occlusion: capture light count at START of each floor,
-	// then mark opaque ground tiles with that index so they block light from floors below
+	// so opaque ground tiles can record it during DrawTile to block light from floors below
 	if (draw_lights && !light_collection_only) {
-		ASSERT(light_buffer.lights.size() <= std::numeric_limits<uint32_t>::max());
-		const uint32_t floor_light_start = static_cast<uint32_t>(light_buffer.lights.size());
-		visitAllVisibleNodes([&](const TileLocation* location, int, int) {
-			tile_renderer->RegisterGroundLightOcclusion(location, view, light_buffer, floor_light_start);
-		});
+		light_buffer.SetFloorLightStart();
 	}
 
-	auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y) {
-		tile_renderer->DrawTile(sprite_batch, location, view, options, options.current_house_id, draw_x, draw_y, draw_lights ? &light_buffer : nullptr, light_collection_only);
+	LightBuffer* active_light_buffer = draw_lights ? &light_buffer : nullptr;
+	auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
+		tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, active_light_buffer, light_collection_only, tile_above);
 	};
 
 	visitAllVisibleNodes(drawVisibleTiles);

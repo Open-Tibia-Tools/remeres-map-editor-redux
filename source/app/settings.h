@@ -22,6 +22,8 @@
 
 #include <toml++/toml.h>
 #include <variant>
+#include <functional>
+#include <vector>
 
 namespace Config {
 	enum Key {
@@ -254,6 +256,13 @@ public:
 	void setFloat(uint32_t key, float newval);
 	void setString(uint32_t key, std::string newval);
 
+	using ObserverId = uint64_t;
+	using ObserverCallback = std::function<void(uint32_t key)>;
+
+	ObserverId addObserver(ObserverCallback callback);
+	void removeObserver(ObserverId id);
+	void notifyObservers(uint32_t key);
+
 	toml::table& getTable();
 	void setDefaults() {
 		IO(DEFAULT);
@@ -282,6 +291,13 @@ private:
 	};
 	void IO(IOMode mode);
 	std::vector<DynamicValue> store;
+
+	struct ObserverEntry {
+		ObserverId id;
+		ObserverCallback callback;
+	};
+	std::vector<ObserverEntry> observers_;
+	ObserverId next_observer_id_ = 1;
 };
 
 extern Settings g_settings;

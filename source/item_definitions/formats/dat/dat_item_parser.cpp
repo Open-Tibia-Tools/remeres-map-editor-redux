@@ -377,6 +377,16 @@ namespace {
 			return false;
 		}
 
+		if (width > MAX_SPRITE_PARTS || height > MAX_SPRITE_PARTS) {
+			warnings.push_back(std::format(
+				"DAT catalog: sprite group for client id {} has dimension(s) exceeding MAX_SPRITE_PARTS={}: width={}, height={}.",
+				entry.client_id,
+				MAX_SPRITE_PARTS,
+				width,
+				height));
+			return false;
+		}
+
 		const uint64_t sprite_count_64 = static_cast<uint64_t>(width) * static_cast<uint64_t>(height) * static_cast<uint64_t>(layers) *
 			static_cast<uint64_t>(pattern_x) * static_cast<uint64_t>(pattern_y) * static_cast<uint64_t>(pattern_z) * static_cast<uint64_t>(frames);
 		if (sprite_count_64 > static_cast<uint64_t>(MAX_SPRITES)) {

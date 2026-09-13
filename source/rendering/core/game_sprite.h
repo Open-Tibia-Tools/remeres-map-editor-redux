@@ -12,11 +12,12 @@
 #include "rendering/core/texture_garbage_collector.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/core/render_timer.h"
+#include "rendering/core/normal_image.h"
 #include <atomic>
 #include <cstdint>
 #include <span>
 
-#include <deque>
+#include <array>
 #include <memory>
 #include <map>
 #include <unordered_map>
@@ -67,14 +68,17 @@ public:
 };
 
 class Image;
-class NormalImage;
 class TemplateImage;
 
 class GameSprite : public Sprite {
 public:
+	static constexpr size_t MAX_SPRITE_PARTS = 16;
+
 	struct SpriteLayoutMetrics {
-		std::vector<int> column_widths;
-		std::vector<int> row_heights;
+		std::array<int, MAX_SPRITE_PARTS> column_widths {};
+		std::array<int, MAX_SPRITE_PARTS> row_heights {};
+		uint8_t num_columns = 1;
+		uint8_t num_rows = 1;
 		int total_width = TILE_SIZE;
 		int total_height = TILE_SIZE;
 		int left_offset = 0;
@@ -100,7 +104,12 @@ public:
 	void clean(time_t time, int longevity = -1);
 
 	int getDrawHeight() const;
-	std::pair<int, int> getDrawOffset() const;
+	[[nodiscard]] const std::pair<int, int>& getDrawOffset() const {
+		if (geometry_cache_dirty) {
+			rebuildGeometryCache();
+		}
+		return cached_draw_offset;
+	}
 	uint8_t getMiniMapColor() const;
 	SpriteLayoutMetrics getPlainLayoutMetrics(int subtype, int pattern_x, int pattern_y, int pattern_z, int frame);
 	SpriteLayoutMetrics getOutfitLayoutMetrics(int dir, int addon, int pattern_z, int frame);
@@ -237,7 +246,9 @@ public:
 	// DEBUG: Get the actual image ID that would be rendered for these coordinates
 	uint32_t getSpriteId(int frameIndex, int pattern_x, int pattern_y) const;
 
-	bool isSimpleAndLoaded() const;
+	[[nodiscard]] bool isSimpleAndLoaded() const noexcept {
+		return is_simple && !spriteList.empty() && spriteList[0] && spriteList[0]->isGLLoaded;
+	}
 
 	bool is_simple = false;
 	void updateSimpleStatus() {
@@ -252,8 +263,11 @@ protected:
 	mutable bool geometry_cache_dirty = true;
 	mutable wxSize cached_composite_size;
 	mutable std::pair<int, int> cached_draw_offset;
-	mutable std::deque<PlainLayoutCacheEntry> plain_layout_cache_entries_;
-	mutable std::deque<OutfitLayoutCacheEntry> outfit_layout_cache_entries_;
+	static constexpr size_t LAYOUT_CACHE_CAPACITY = 8;
+	mutable std::array<PlainLayoutCacheEntry, LAYOUT_CACHE_CAPACITY> plain_layout_cache_entries_ {};
+	mutable uint8_t plain_layout_cache_count_ = 0;
+	mutable std::array<OutfitLayoutCacheEntry, LAYOUT_CACHE_CAPACITY> outfit_layout_cache_entries_ {};
+	mutable uint8_t outfit_layout_cache_count_ = 0;
 };
 
 #endif

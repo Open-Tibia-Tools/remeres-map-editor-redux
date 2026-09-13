@@ -14,10 +14,12 @@ class SpriteDrawer;
 class CreatureDrawer;
 class Tile;
 class Item;
+class GameSprite;
 class HookIndicatorDrawer;
 class DoorIndicatorDrawer;
 struct LightBuffer;
 struct RenderView;
+struct RenderFrameContext;
 
 struct DrawingOptions;
 class SpriteBatch;
@@ -28,6 +30,7 @@ struct BlitItemParams {
 	Position pos;
 	Item* item = nullptr;
 	ItemDefinitionView item_definition;
+	GameSprite* sprite = nullptr;
 	const DrawingOptions* options = nullptr;
 	const SpritePatterns* patterns = nullptr;
 	bool ephemeral = false;
@@ -38,6 +41,7 @@ struct BlitItemParams {
 	bool light_collection_only = false;
 	LightBuffer* light_buffer = nullptr;
 	const RenderView* view = nullptr;
+	const RenderFrameContext* ctx = nullptr;
 
 	BlitItemParams(const Tile* t, Item* i, const DrawingOptions& o);
 	BlitItemParams(const Position& p, Item* i, const DrawingOptions& o);

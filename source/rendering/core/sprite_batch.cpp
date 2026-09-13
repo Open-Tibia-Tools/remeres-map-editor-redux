@@ -203,14 +203,23 @@ void SpriteBatch::drawRect(float x, float y, float w, float h, const glm::vec4& 
 }
 
 void SpriteBatch::drawRectLines(float x, float y, float w, float h, const glm::vec4& color, const AtlasManager& atlas_manager) {
+	const AtlasRegion* region = atlas_manager.getWhitePixel();
+	if (!region || !in_batch_) {
+		return;
+	}
+
+	if (pending_sprites_.size() + 4 > MAX_SPRITES_PER_BATCH && current_atlas_manager_) {
+		flush(*current_atlas_manager_);
+	}
+
 	// Top
-	drawRect(x, y, w, 1.0f, color, atlas_manager);
+	draw(x, y, w, 1.0f, *region, color.r, color.g, color.b, color.a);
 	// Bottom
-	drawRect(x, y + h - 1.0f, w, 1.0f, color, atlas_manager);
+	draw(x, y + h - 1.0f, w, 1.0f, *region, color.r, color.g, color.b, color.a);
 	// Left
-	drawRect(x, y + 1.0f, 1.0f, h - 2.0f, color, atlas_manager);
+	draw(x, y + 1.0f, 1.0f, h - 2.0f, *region, color.r, color.g, color.b, color.a);
 	// Right
-	drawRect(x + w - 1.0f, y + 1.0f, 1.0f, h - 2.0f, color, atlas_manager);
+	draw(x + w - 1.0f, y + 1.0f, 1.0f, h - 2.0f, *region, color.r, color.g, color.b, color.a);
 }
 
 void SpriteBatch::flush(const AtlasManager& atlas_manager) {

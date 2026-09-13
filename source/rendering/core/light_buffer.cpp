@@ -39,7 +39,9 @@ void LightBuffer::Prepare(const RenderView& view) {
 	origin_y = floorDiv(view.view_scroll_y, TILE_SIZE) - buffer_padding_tiles;
 	width = std::max(1, right_edge - origin_x);
 	height = std::max(1, bottom_edge - origin_y);
-	tiles.assign(static_cast<size_t>(width * height), TileLight {});
+	const size_t total_tiles = static_cast<size_t>(width * height);
+	tiles.resize(total_tiles);
+	std::fill(tiles.begin(), tiles.end(), TileLight {});
 }
 
 void LightBuffer::AddLight(int pixel_x, int pixel_y, const SpriteLight& light) {
@@ -69,18 +71,6 @@ void LightBuffer::AddScreenLight(int screen_x, int screen_y, const RenderView& v
 	AddLight(screen_x + view.view_scroll_x, screen_y + view.view_scroll_y, light);
 }
 
-void LightBuffer::SetFieldBrightness(int tile_x, int tile_y, uint32_t start, uint8_t color) {
-	const int index = IndexOf(tile_x, tile_y);
-	if (index < 0) {
-		return;
-	}
-
-	tiles[static_cast<size_t>(index)] = TileLight {
-		.start = start,
-		.color = color
-	};
-}
-
 void LightBuffer::Clear() {
 	lights.clear();
 	tiles.clear();
@@ -88,15 +78,5 @@ void LightBuffer::Clear() {
 	origin_y = 0;
 	width = 0;
 	height = 0;
-}
-
-bool LightBuffer::ContainsTile(int tile_x, int tile_y) const noexcept {
-	return tile_x >= origin_x && tile_y >= origin_y && tile_x < origin_x + width && tile_y < origin_y + height;
-}
-
-int LightBuffer::IndexOf(int tile_x, int tile_y) const noexcept {
-	if (!ContainsTile(tile_x, tile_y)) {
-		return -1;
-	}
-	return (tile_y - origin_y) * width + (tile_x - origin_x);
+	current_floor_light_start = 0;
 }

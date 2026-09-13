@@ -322,7 +322,7 @@ void Application::MacOpenFiles(const wxArrayString& fileNames) {
 
 void Application::FixVersionDiscrapencies() {
 	// Here the registry should be fixed, if the version has been changed
-	if (g_settings.getInteger(Config::VERSION_ID) < MAKE_VERSION_ID(1, 0, 5)) {
+	if (g_settings.getInteger(Config::VERSION_ID) != 0 && g_settings.getInteger(Config::VERSION_ID) < MAKE_VERSION_ID(1, 0, 5)) {
 		g_settings.setInteger(Config::USE_MEMCACHED_SPRITES_TO_SAVE, 0);
 	}
 

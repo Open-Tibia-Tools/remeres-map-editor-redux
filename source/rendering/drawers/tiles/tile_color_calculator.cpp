@@ -9,14 +9,14 @@
 void TileColorCalculator::Calculate(const Tile* tile, const DrawingOptions& options, uint32_t current_house_id, int spawn_count, uint8_t& r, uint8_t& g, uint8_t& b) {
 	bool showspecial = options.show_only_colors || options.show_special_tiles;
 
-	if (options.show_blocking && tile->isBlocking() && tile->size() > 0) {
+	if (options.show_blocking && tile->isBlocking() && (tile->ground || !tile->items.empty())) {
 		// g * 2/3 approx g * 171 / 256
 		g = (g * 171) >> 8;
 		b = (b * 171) >> 8;
 	}
 
-	int item_count = tile->items.size();
-	if (options.highlight_items && item_count > 0 && !tile->items.back()->isBorder()) {
+	if (options.highlight_items && !tile->items.empty() && !tile->items.back()->isBorder()) {
+		int item_count = static_cast<int>(tile->items.size());
 		// Fixed point factors (x/256)
 		// 0.75 -> 192, 0.6 -> 154, 0.48 -> 123, 0.40 -> 102, 0.33 -> 84
 		static constexpr std::array<int, 5> factor = { 192, 154, 123, 102, 84 };

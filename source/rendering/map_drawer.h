@@ -21,6 +21,7 @@
 class GameSprite;
 
 struct NVGcontext;
+struct RenderFrameContext;
 class TooltipDrawer;
 class HookIndicatorDrawer;
 class DoorIndicatorDrawer;
@@ -29,6 +30,7 @@ class DoorIndicatorDrawer;
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/light_buffer.h"
 #include "app/definitions.h"
+#include "app/settings.h"
 #include "game/outfit.h"
 #include "game/creature.h"
 
@@ -89,7 +91,6 @@ class MapDrawer {
 	std::unique_ptr<DoorIndicatorDrawer> door_indicator_drawer;
 	std::unique_ptr<LuaOverlayDrawer> lua_overlay_drawer;
 	std::unique_ptr<SpriteBatch> sprite_batch;
-	SpriteBatch hidden_floor_light_batch;
 	std::unique_ptr<PrimitiveRenderer> primitive_renderer;
 
 	// Post-processing
@@ -122,8 +123,7 @@ public:
 
 	void Draw();
 	void DrawBackground();
-	void DrawMap();
-	void DrawLiveCursors();
+	void DrawMap(const RenderFrameContext& ctx);
 	void DrawIngameBox(const ViewBounds& bounds);
 
 	void DrawGrid(const ViewBounds& bounds);
@@ -132,6 +132,7 @@ public:
 	void DrawDoorIndicators(NVGcontext* vg);
 	void ClearFrameOverlays();
 	void DrawCreatureNames(NVGcontext* vg);
+	bool hasOverlays() const;
 
 	void DrawLight();
 
@@ -161,8 +162,9 @@ public:
 	}
 
 private:
-	void DrawMapLayer(SpriteBatch& batch, const RenderView& draw_view, int map_z, bool live_client, bool light_collection_only = false);
+	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, bool light_collection_only = false);
 	bool renderers_initialized = false;
+	Settings::ObserverId settings_observer_id_ = 0;
 };
 
 #endif

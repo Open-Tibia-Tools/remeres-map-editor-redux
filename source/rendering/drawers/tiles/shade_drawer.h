@@ -5,13 +5,14 @@
 #include "rendering/core/drawing_options.h"
 
 class SpriteBatch;
+class AtlasManager;
 
 class ShadeDrawer {
 public:
 	ShadeDrawer();
 	~ShadeDrawer();
 
-	void draw(SpriteBatch& sprite_batch, const RenderView& view, const DrawingOptions& options);
+	void draw(SpriteBatch& sprite_batch, const RenderView& view, const DrawingOptions& options, const AtlasManager& atlas);
 };
 
 #endif

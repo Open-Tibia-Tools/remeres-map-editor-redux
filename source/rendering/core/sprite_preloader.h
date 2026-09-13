@@ -90,6 +90,7 @@ private:
 	};
 
 	void workerLoop(std::stop_token stop_token);
+	void resetPreloadingFlag(const PendingSpriteKey& pending, const SpriteArchive* archive);
 
 	static constexpr unsigned int MIN_WORKER_THREADS = 2u;
 	static constexpr unsigned int MAX_WORKER_THREADS = 8u;
@@ -107,6 +108,7 @@ private:
 
 	std::queue<Task> task_queue;
 	std::queue<Result> result_queue;
+	std::vector<PendingSpriteKey> discarded_keys;
 	std::unordered_set<PendingSpriteKey, PendingSpriteKeyHash> pending_ids; // To avoid duplicate tasks for the same archive/id/generation/epoch
 	size_t queued_result_bytes = 0;
 	uint64_t active_epoch = 0;

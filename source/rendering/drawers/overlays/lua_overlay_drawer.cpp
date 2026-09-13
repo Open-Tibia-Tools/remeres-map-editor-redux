@@ -194,3 +194,13 @@ void LuaOverlayDrawer::DrawUI(NVGcontext* vg, const RenderView& view, const Draw
 		TextRenderer::DrawText(vg, static_cast<int>(screenX), static_cast<int>(screenY), cmd.text, color, 14.0f);
 	}
 }
+
+bool LuaOverlayDrawer::hasUIElements(const RenderView& view) {
+	refreshCache(view);
+	for (const auto& cmd : cachedCommands) {
+		if (cmd.type == MapOverlayCommand::Type::Text) {
+			return true;
+		}
+	}
+	return false;
+}
