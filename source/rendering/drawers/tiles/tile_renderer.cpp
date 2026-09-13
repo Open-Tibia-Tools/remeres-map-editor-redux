@@ -265,10 +265,31 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 	const int tile_draw_y = draw_y;
 
 	const auto& position = location->getPosition();
-	const auto [projected_tile_x, projected_tile_y] = projectedTilePosition(view, position);
 
-	if (light_buffer && !light_collection_only && tile->ground && tile->ground->blocksLightFromBelow()) {
-		light_buffer->SetFieldBrightness(projected_tile_x, projected_tile_y, light_buffer->current_floor_light_start);
+	if (light_buffer) {
+		const auto [projected_tile_x, projected_tile_y] = projectedTilePosition(view, position);
+
+		if (!light_collection_only && tile->ground && tile->ground->blocksLightFromBelow()) {
+			light_buffer->SetFieldBrightness(projected_tile_x, projected_tile_y, light_buffer->current_floor_light_start);
+		}
+
+		// Translucent light: when on floor 8 (GROUND_LAYER + 1), check if floor 7 above has translucent items
+		// OTClient: light seeps through translucent ground (grates, windows) from floor 7 to floor 8
+		if (position.z == GROUND_LAYER + 1) {
+			const Tile* above_tile = tile_above;
+			if (!above_tile && editor) {
+				Position above_position = position;
+				--above_position.z;
+				above_tile = editor->map.getTile(above_position);
+			}
+			if (tileCarriesTranslucentLight(above_tile)) {
+				// Emit faint warm white light (intensity=1, color=215) matching OTClient
+				light_buffer->AddTileLight(projected_tile_x, projected_tile_y, SpriteLight {
+					.intensity = 1,
+					.color = 215
+				});
+			}
+		}
 	}
 
 	ItemDefinitionView ground_it;
@@ -279,26 +300,8 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 	const bool hidden_invalid_ground = tile->ground && tile->ground->isInvalidOTBMItem() && !options.show_invalid_tiles;
 	const bool unresolved_invalid_ground = tile->ground && tile->ground->isInvalidOTBMItem() && !ground_it;
 
-	// Translucent light: when on floor 8 (GROUND_LAYER + 1), check if floor 7 above has translucent items
-	// OTClient: light seeps through translucent ground (grates, windows) from floor 7 to floor 8
-	if (light_buffer && position.z == GROUND_LAYER + 1) {
-		const Tile* above_tile = tile_above;
-		if (!above_tile && editor) {
-			Position above_position = position;
-			--above_position.z;
-			above_tile = editor->map.getTile(above_position);
-		}
-		if (tileCarriesTranslucentLight(above_tile)) {
-			// Emit faint warm white light (intensity=1, color=215) matching OTClient
-			light_buffer->AddTileLight(projected_tile_x, projected_tile_y, SpriteLight {
-				.intensity = 1,
-				.color = 215
-			});
-		}
-	}
-
 	if (light_collection_only) {
-		if (light_buffer && tile->ground && ground_it && !hidden_invalid_ground && !unresolved_invalid_ground) {
+		if (light_buffer && tile->ground && ground_it && !hidden_invalid_ground && !unresolved_invalid_ground && tile->ground->hasLight()) {
 			int ground_draw_x = draw_x;
 			int ground_draw_y = draw_y;
 			BlitItemParams params(position, tile->ground.get(), options);
@@ -311,8 +314,18 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 			item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, ground_draw_x, ground_draw_y, params);
 		}
 
-		if (light_buffer) {
+		if (light_buffer && !tile->items.empty()) {
+			BlitItemParams params(position, nullptr, options);
+			params.tile = tile;
+			params.light_collection_only = true;
+			params.light_buffer = light_buffer;
+			params.view = &view;
+			params.ctx = &ctx;
+
 			for (const auto& item : tile->items) {
+				if (!item->hasLight()) {
+					continue;
+				}
 				const ItemDefinitionView it = item->getDefinition();
 				if (item->isInvalidOTBMItem() && (!options.show_invalid_tiles || !it)) {
 					continue;
@@ -320,26 +333,21 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 
 				int item_draw_x = draw_x;
 				int item_draw_y = draw_y;
-				BlitItemParams params(position, item.get(), options);
-				params.tile = tile;
+				params.item = item.get();
 				params.item_definition = it;
-				params.light_collection_only = true;
-				params.light_buffer = light_buffer;
-				params.view = &view;
-				params.ctx = &ctx;
 				item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, item_draw_x, item_draw_y, params);
 			}
+		}
 
-			if (tile->creature && options.show_creatures) {
-				creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
-					.map_pos = position,
-					.transient_selection_bounds = options.transient_selection_bounds,
-					.light_buffer = light_buffer,
-					.view = &view,
-					.light_collection_only = true,
-					.ctx = &ctx
-				});
-			}
+		if (light_buffer && tile->creature && options.show_creatures) {
+			creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
+				.map_pos = position,
+				.transient_selection_bounds = options.transient_selection_bounds,
+				.light_buffer = light_buffer,
+				.view = &view,
+				.light_collection_only = true,
+				.ctx = &ctx
+			});
 		}
 
 		return;
@@ -385,7 +393,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 		if (tile->ground && ground_it && !hidden_invalid_ground) {
 			GameSprite* ground_sprite = ctx.gfx.getGameSprite(ground_it.clientId());
 			if (ground_sprite) {
-				SpritePatterns patterns = PatternCalculator::Calculate(ground_sprite, ground_it, tile->ground.get(), tile, position);
+				SpritePatterns patterns = PatternCalculator::Calculate(ground_sprite, ground_it, tile->ground.get(), tile, position, ctx.elapsed_time);
 
 				// Inline preload check — skip function call when sprite is simple and loaded (95%+ case)
 				if (!ground_sprite->isSimpleAndLoaded()) {
@@ -474,6 +482,12 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 			bool process_tooltips = options.show_tooltips && map_z == view.floor;
 
 			// items on tile
+			BlitItemParams item_params(position, nullptr, options);
+			item_params.tile = tile;
+			item_params.ctx = &ctx;
+			item_params.light_buffer = light_buffer;
+			item_params.view = &view;
+
 			for (const auto& item : tile->items) {
 				if (item->isInvalidOTBMItem() && options.show_invalid_tiles) {
 					if (invalid_tile_marker_color != InvalidOTBMItemMarkerColor::Red) {
@@ -500,33 +514,29 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 
 				GameSprite* sprite = it ? ctx.gfx.getGameSprite(it.clientId()) : nullptr;
 				if (sprite) {
-					SpritePatterns patterns = PatternCalculator::Calculate(sprite, it, item.get(), tile, position);
+					SpritePatterns patterns = PatternCalculator::Calculate(sprite, it, item.get(), tile, position, ctx.elapsed_time);
 
 					// Inline preload check — skip function call when sprite is simple and loaded
 					if (!sprite->isSimpleAndLoaded()) {
 						rme::collectTileSprites(sprite, patterns.x, patterns.y, patterns.z, patterns.frame);
 					}
 
-					BlitItemParams params(position, item.get(), options);
-					params.tile = tile;
-					params.item_definition = it;
-					params.sprite = sprite;
-					params.patterns = &patterns;
-					params.ctx = &ctx;
-					params.light_buffer = light_buffer;
-					params.view = &view;
+					item_params.item = item.get();
+					item_params.item_definition = it;
+					item_params.sprite = sprite;
+					item_params.patterns = &patterns;
 
 					if (item->isBorder()) {
-						params.red = r;
-						params.green = g;
-						params.blue = b;
+						item_params.red = r;
+						item_params.green = g;
+						item_params.blue = b;
 					} else {
-						params.red = default_ir;
-						params.green = default_ig;
-						params.blue = default_ib;
+						item_params.red = default_ir;
+						item_params.green = default_ig;
+						item_params.blue = default_ib;
 					}
 
-					item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
+					item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, item_params);
 				} else if (item->isInvalidOTBMItem()) {
 					// Missing-definition placeholders are represented by the tile-level invalid overlay.
 				}

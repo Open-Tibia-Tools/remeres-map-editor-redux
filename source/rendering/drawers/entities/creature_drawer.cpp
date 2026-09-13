@@ -109,7 +109,7 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 				registerCreatureSpriteLight(*options.light_buffer, *options.view, *spr, screenx, screeny, spr->getLight(), false);
 			}
 			if (draw_visuals) {
-				sprite_drawer->BlitSprite(sprite_batch, screenx, screeny, spr, options.color);
+				sprite_drawer->BlitSprite(sprite_batch, screenx, screeny, spr, options.color, options.ctx);
 			}
 			if (spr && options.light_buffer && options.view && options.preview_local_player) {
 				registerCreatureCenterLight(*options.light_buffer, *options.view, screenx, screeny, spr, spr->hasLight() ? spr->getLight() : SpriteLight {}, options.preview_local_player);
@@ -156,32 +156,52 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 				mountOutfit.lookLegs = drawOutfit->lookMountLegs;
 				mountOutfit.lookFeet = drawOutfit->lookMountFeet;
 				const auto mount_draw_offset = mountSpr->getDrawOffset();
-				const auto mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, resolvedFrame);
+				const bool is_simple_mount = (mountSpr->width == 1 && mountSpr->height == 1);
+				GameSprite::SpriteLayoutMetrics mount_metrics {};
+				bool has_mount_metrics = false;
 
 				if (options.light_buffer && options.view && mountSpr->hasLight()) {
+					mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, resolvedFrame);
+					has_mount_metrics = true;
 					registerCreatureSpriteLight(*options.light_buffer, *options.view, screenx, screeny, mount_draw_offset, mount_metrics, mountSpr->getLight(), false);
 				}
 
 				if (draw_visuals) {
 					const int mount_base_x = screenx - mount_draw_offset.first;
 					const int mount_base_y = screeny - mount_draw_offset.second;
-					int mount_x_offset = 0;
-					for (int cx = 0; cx != mountSpr->width; ++cx) {
-						int mount_y_offset = 0;
-						for (int cy = 0; cy != mountSpr->height; ++cy) {
-							const AtlasRegion* region = mountSpr->getAtlasRegion(cx, cy, static_cast<int>(dir), 0, 0, mountOutfit, resolvedFrame);
-							if (region) {
-								sprite_drawer->glBlitAtlasQuad(
-									sprite_batch,
-									mount_base_x - mount_x_offset,
-									mount_base_y - mount_y_offset,
-									region,
-									options.color
-								);
-							}
-							mount_y_offset += mount_metrics.row_heights[cy];
+					if (is_simple_mount) {
+						const AtlasRegion* region = mountSpr->getAtlasRegion(0, 0, static_cast<int>(dir), 0, 0, mountOutfit, resolvedFrame);
+						if (region) {
+							sprite_drawer->glBlitAtlasQuad(
+								sprite_batch,
+								mount_base_x,
+								mount_base_y,
+								region,
+								options.color
+							);
 						}
-						mount_x_offset += mount_metrics.column_widths[cx];
+					} else {
+						if (!has_mount_metrics) {
+							mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, resolvedFrame);
+						}
+						int mount_x_offset = 0;
+						for (int cx = 0; cx != mountSpr->width; ++cx) {
+							int mount_y_offset = 0;
+							for (int cy = 0; cy != mountSpr->height; ++cy) {
+								const AtlasRegion* region = mountSpr->getAtlasRegion(cx, cy, static_cast<int>(dir), 0, 0, mountOutfit, resolvedFrame);
+								if (region) {
+									sprite_drawer->glBlitAtlasQuad(
+										sprite_batch,
+										mount_base_x - mount_x_offset,
+										mount_base_y - mount_y_offset,
+										region,
+										options.color
+									);
+								}
+								mount_y_offset += mount_metrics.row_heights[cy];
+							}
+							mount_x_offset += mount_metrics.column_widths[cx];
+						}
 					}
 				}
 
@@ -201,6 +221,20 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 					if ((pattern_y - 1 >= 31) || !(drawOutfit->lookAddon & (1 << (pattern_y - 1)))) {
 						continue;
 					}
+				}
+
+				if (spr->width == 1 && spr->height == 1) {
+					const AtlasRegion* region = spr->getAtlasRegion(0, 0, static_cast<int>(dir), pattern_y, pattern_z, *drawOutfit, resolvedFrame);
+					if (region) {
+						sprite_drawer->glBlitAtlasQuad(
+							sprite_batch,
+							base_x,
+							base_y,
+							region,
+							options.color
+						);
+					}
+					continue;
 				}
 
 				const auto sprite_metrics = spr->getOutfitLayoutMetrics(static_cast<int>(dir), pattern_y, pattern_z, resolvedFrame);

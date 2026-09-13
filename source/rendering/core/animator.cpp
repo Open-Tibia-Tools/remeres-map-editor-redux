@@ -54,8 +54,8 @@ FrameDuration* Animator::getFrameDuration(int frame) {
 	return &durations[frame];
 }
 
-int Animator::getFrame() {
-	long time = g_gui.gfx.getElapsedTime();
+int Animator::getFrame(long elapsed_time) {
+	long time = (elapsed_time >= 0) ? elapsed_time : g_gui.gfx.getElapsedTime();
 	if (time != last_time && !is_complete) {
 		long elapsed = time - last_time;
 		if (elapsed >= current_duration) {
@@ -69,7 +69,7 @@ int Animator::getFrame() {
 			if (current_frame != frame) {
 				int duration = getDuration(frame) - (elapsed - current_duration);
 				if (duration < 0 && !async) {
-					calculateSynchronous();
+					calculateSynchronous(time);
 				} else {
 					current_frame = frame;
 					current_duration = std::max<int>(0, duration);
@@ -158,8 +158,8 @@ int Animator::getLoopFrame() {
 	return current_frame;
 }
 
-void Animator::calculateSynchronous() {
-	long time = g_gui.gfx.getElapsedTime();
+void Animator::calculateSynchronous(long current_time) {
+	long time = (current_time >= 0) ? current_time : g_gui.gfx.getElapsedTime();
 	if (time > 0 && total_duration > 0) {
 		long elapsed = time % total_duration;
 		int total_time = 0;

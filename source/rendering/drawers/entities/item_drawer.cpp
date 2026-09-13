@@ -180,7 +180,8 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	if (cached_patterns) {
 		patterns = *cached_patterns;
 	} else {
-		patterns = PatternCalculator::Calculate(spr, it, item, tile, pos);
+		const long elapsed_time = params.ctx ? params.ctx->elapsed_time : -1;
+		patterns = PatternCalculator::Calculate(spr, it, item, tile, pos, elapsed_time);
 	}
 
 	int subtype = patterns.subtype;
@@ -188,9 +189,14 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	int pattern_y = patterns.y;
 	int pattern_z = patterns.z;
 	int frame = patterns.frame;
-		const auto composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
+
+	const bool is_simple_sprite = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
+	GameSprite::SpriteLayoutMetrics composite_metrics {};
+	bool has_composite_metrics = false;
 
 	if (light_buffer && view && item->hasLight()) {
+		composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
+		has_composite_metrics = true;
 		registerSpriteLight(*light_buffer, *view, screenx, screeny, composite_metrics, item->getLight());
 	}
 
@@ -211,7 +217,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		// g_gui.gfx.ensureAtlasManager();
 		// BatchRenderer::SetAtlasManager(g_gui.gfx.getAtlasManager());
 
-		if (spr->width == 1 && spr->height == 1 && spr->layers == 1) {
+		if (is_simple_sprite) {
 			const AtlasRegion* region = spr->getAtlasRegion(0, 0, 0, subtype, pattern_x, pattern_y, pattern_z, frame);
 			if (region) {
 #ifdef DEBUG
@@ -227,6 +233,9 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 				sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx, screeny, region, DrawColor(red, green, blue, alpha));
 			}
 		} else {
+			if (!has_composite_metrics) {
+				composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
+			}
 			int x_offset = 0;
 			for (int cx = 0; cx != spr->width; cx++) {
 				int y_offset = 0;

@@ -85,10 +85,10 @@ void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screen
 		return;
 	}
 	// Call the pointer overload
-	BlitSprite(sprite_batch, screenx, screeny, spr, color);
+	BlitSprite(sprite_batch, screenx, screeny, spr, color, ctx);
 }
 
-void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, GameSprite* spr, DrawColor color) {
+void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, GameSprite* spr, DrawColor color, const RenderFrameContext* ctx) {
 	if (spr == nullptr) {
 		return;
 	}
@@ -96,11 +96,17 @@ void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screen
 	screenx -= draw_offset.first;
 	screeny -= draw_offset.second;
 
-	const int tme = spr->animator ? spr->animator->getFrame() : 0;
+	const long elapsed_time = ctx ? ctx->elapsed_time : -1;
+	const int tme = spr->animator ? spr->animator->getFrame(elapsed_time) : 0;
 
-	// Atlas-only rendering - ensure atlas is available
-	// Note: ensureAtlasManager is called by MapDrawer at frame start usually, but we check here too if needed?
-	// BatchRenderer::SetAtlasManager call removed. Use sprite_batch.
+	// Fast path for single 1x1x1 sprites (waypoints, markers, simple items) — skip metric cache
+	if (spr->width == 1 && spr->height == 1 && spr->layers == 1) {
+		const AtlasRegion* region = spr->getAtlasRegion(0, 0, 0, -1, 0, 0, 0, tme);
+		if (region) {
+			glBlitAtlasQuad(sprite_batch, screenx, screeny, region, color);
+		}
+		return;
+	}
 
 	const auto layout_metrics = spr->getPlainLayoutMetrics(-1, 0, 0, 0, tme);
 	int x_offset = 0;

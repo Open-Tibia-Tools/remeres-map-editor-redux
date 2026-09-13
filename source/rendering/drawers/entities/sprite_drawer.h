@@ -30,7 +30,7 @@ public:
 	void glSetColor(wxColor color);
 
 	void BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, ServerItemId server_item_id, DrawColor color = {}, const RenderFrameContext* ctx = nullptr);
-	void BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, GameSprite* spr, DrawColor color = {});
+	void BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, GameSprite* spr, DrawColor color = {}, const RenderFrameContext* ctx = nullptr);
 };
 
 #endif

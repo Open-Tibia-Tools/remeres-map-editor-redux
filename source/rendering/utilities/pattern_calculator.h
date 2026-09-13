@@ -29,7 +29,7 @@ private:
 	}
 
 public:
-	static SpritePatterns Calculate(const GameSprite* spr, const ItemDefinitionView& it, const Item* item, const Tile* tile, const Position& pos) {
+	static SpritePatterns Calculate(const GameSprite* spr, const ItemDefinitionView& it, const Item* item, const Tile* tile, const Position& pos, long elapsed_time = -1) {
 		SpritePatterns patterns;
 
 		if (!spr) {
@@ -40,7 +40,7 @@ public:
 		patterns.y = calculatePatternOffset(pos.y, spr->pattern_y);
 		patterns.z = calculatePatternOffset(pos.z, spr->pattern_z);
 
-		patterns.frame = (spr->animator) ? spr->animator->getFrame() : 0;
+		patterns.frame = (spr->animator) ? spr->animator->getFrame(elapsed_time) : 0;
 
 		if (it.isSplash() || it.isFluidContainer()) {
 			patterns.subtype = item->getSubtype();
