@@ -150,6 +150,7 @@ MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
 
 	Bind(wxEVT_PAINT, &MapCanvas::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, &MapCanvas::OnEraseBackground, this);
+	Bind(wxEVT_IDLE, &MapCanvas::OnIdle, this);
 }
 
 MapCanvas::~MapCanvas() {
@@ -354,19 +355,22 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 		drawer->ClearFrameOverlays();
 	}
 
-	PerformGarbageCollection();
-
 	SwapBuffers();
 
 	fps_counter.Update();
 	if (g_settings.getBoolean(Config::SHOW_FPS_COUNTER) && fps_counter.HasChanged()) {
 		MapStatusUpdater::UpdateFPS(fps_counter.GetStatusString());
 	}
+}
 
-	// Send newd node requests
+void MapCanvas::OnIdle(wxIdleEvent& event) {
+	PerformGarbageCollection();
+
 	if (editor.live_manager.GetClient()) {
 		editor.live_manager.GetClient()->sendNodeRequests();
 	}
+
+	event.Skip();
 }
 
 void MapCanvas::TakeScreenshot(wxFileName path, wxString format) {

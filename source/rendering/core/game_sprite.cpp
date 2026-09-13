@@ -57,13 +57,19 @@ namespace {
 	}
 
 	void finalizeLayoutMetrics(GameSprite::SpriteLayoutMetrics& metrics) {
-		if (!metrics.column_widths.empty()) {
-			metrics.total_width = std::accumulate(metrics.column_widths.begin(), metrics.column_widths.end(), 0);
-			metrics.left_offset = metrics.total_width - metrics.column_widths.back();
+		if (metrics.num_columns > 0) {
+			metrics.total_width = 0;
+			for (size_t i = 0; i < metrics.num_columns; ++i) {
+				metrics.total_width += metrics.column_widths[i];
+			}
+			metrics.left_offset = metrics.total_width - metrics.column_widths[metrics.num_columns - 1];
 		}
-		if (!metrics.row_heights.empty()) {
-			metrics.total_height = std::accumulate(metrics.row_heights.begin(), metrics.row_heights.end(), 0);
-			metrics.top_offset = metrics.total_height - metrics.row_heights.back();
+		if (metrics.num_rows > 0) {
+			metrics.total_height = 0;
+			for (size_t i = 0; i < metrics.num_rows; ++i) {
+				metrics.total_height += metrics.row_heights[i];
+			}
+			metrics.top_offset = metrics.total_height - metrics.row_heights[metrics.num_rows - 1];
 		}
 	}
 }
@@ -140,8 +146,8 @@ void GameSprite::invalidateCache(const AtlasRegion* region) {
 
 void GameSprite::invalidateMetricCaches() {
 	geometry_cache_dirty = true;
-	plain_layout_cache_entries_.clear();
-	outfit_layout_cache_entries_.clear();
+	plain_layout_cache_count_ = 0;
+	outfit_layout_cache_count_ = 0;
 }
 
 void GameSprite::ColorizeTemplatePixels(uint8_t* dest, const uint8_t* mask, size_t pixelCount, int lookHead, int lookBody, int lookLegs, int lookFeet, bool destHasAlpha) {
@@ -279,36 +285,44 @@ GameSprite::SpriteLayoutMetrics GameSprite::getPlainLayoutMetrics(int subtype, i
 		.frame = frame,
 	};
 
-	auto cached = std::ranges::find_if(plain_layout_cache_entries_, [&](const PlainLayoutCacheEntry& entry) {
-		return entry.key == key;
-	});
-	if (cached != plain_layout_cache_entries_.end()) {
-		if (cached != plain_layout_cache_entries_.begin()) {
-			PlainLayoutCacheEntry entry = std::move(*cached);
-			plain_layout_cache_entries_.erase(cached);
-			plain_layout_cache_entries_.push_front(std::move(entry));
+	for (uint8_t i = 0; i < plain_layout_cache_count_; ++i) {
+		if (plain_layout_cache_entries_[i].key == key) {
+			if (i > 0) {
+				PlainLayoutCacheEntry hit = plain_layout_cache_entries_[i];
+				for (uint8_t j = i; j > 0; --j) {
+					plain_layout_cache_entries_[j] = plain_layout_cache_entries_[j - 1];
+				}
+				plain_layout_cache_entries_[0] = hit;
+			}
+			return plain_layout_cache_entries_[0].metrics;
 		}
-		return plain_layout_cache_entries_.front().metrics;
 	}
 
-	if (plain_layout_cache_entries_.size() >= LAYOUT_CACHE_ENTRY_LIMIT) {
-		plain_layout_cache_entries_.pop_back();
+	SpriteLayoutMetrics metrics = buildPlainLayoutMetrics(key);
+	const uint8_t insert_limit = std::min<uint8_t>(plain_layout_cache_count_ + 1, static_cast<uint8_t>(LAYOUT_CACHE_CAPACITY));
+	for (uint8_t j = insert_limit - 1; j > 0; --j) {
+		plain_layout_cache_entries_[j] = plain_layout_cache_entries_[j - 1];
 	}
-
-	plain_layout_cache_entries_.push_front(PlainLayoutCacheEntry {
-		.key = key,
-		.metrics = buildPlainLayoutMetrics(key),
-	});
-	return plain_layout_cache_entries_.front().metrics;
+	plain_layout_cache_entries_[0] = PlainLayoutCacheEntry { .key = key, .metrics = metrics };
+	plain_layout_cache_count_ = insert_limit;
+	return metrics;
 }
 
 GameSprite::SpriteLayoutMetrics GameSprite::buildPlainLayoutMetrics(const PlainLayoutCacheKey& key) const {
 	SpriteLayoutMetrics metrics;
-	metrics.column_widths.assign(width, TILE_SIZE);
-	metrics.row_heights.assign(height, TILE_SIZE);
+	const uint8_t cols = std::min<uint8_t>(width, static_cast<uint8_t>(MAX_SPRITE_PARTS));
+	const uint8_t rows = std::min<uint8_t>(height, static_cast<uint8_t>(MAX_SPRITE_PARTS));
+	metrics.num_columns = cols;
+	metrics.num_rows = rows;
+	for (size_t i = 0; i < cols; ++i) {
+		metrics.column_widths[i] = TILE_SIZE;
+	}
+	for (size_t i = 0; i < rows; ++i) {
+		metrics.row_heights[i] = TILE_SIZE;
+	}
 
-	for (int cx = 0; cx < width; ++cx) {
-		for (int cy = 0; cy < height; ++cy) {
+	for (int cx = 0; cx < cols; ++cx) {
+		for (int cy = 0; cy < rows; ++cy) {
 			for (int layer = 0; layer < layers; ++layer) {
 				const size_t index = resolvePlainSpriteIndex(*this, cx, cy, layer, key.subtype, key.pattern_x, key.pattern_y, key.pattern_z, key.frame);
 				if (index >= spriteList.size() || !spriteList[index]) {
@@ -316,8 +330,8 @@ GameSprite::SpriteLayoutMetrics GameSprite::buildPlainLayoutMetrics(const PlainL
 				}
 
 				const auto dimensions = spriteList[index]->getDimensions();
-				metrics.column_widths[cx] = std::max(metrics.column_widths[cx], static_cast<int>(dimensions.width));
-				metrics.row_heights[cy] = std::max(metrics.row_heights[cy], static_cast<int>(dimensions.height));
+				metrics.column_widths[cx] = std::max<int>(metrics.column_widths[cx], static_cast<int>(dimensions.width));
+				metrics.row_heights[cy] = std::max<int>(metrics.row_heights[cy], static_cast<int>(dimensions.height));
 			}
 		}
 	}
@@ -334,44 +348,52 @@ GameSprite::SpriteLayoutMetrics GameSprite::getOutfitLayoutMetrics(int dir, int 
 		.frame = frame,
 	};
 
-	auto cached = std::ranges::find_if(outfit_layout_cache_entries_, [&](const OutfitLayoutCacheEntry& entry) {
-		return entry.key == key;
-	});
-	if (cached != outfit_layout_cache_entries_.end()) {
-		if (cached != outfit_layout_cache_entries_.begin()) {
-			OutfitLayoutCacheEntry entry = std::move(*cached);
-			outfit_layout_cache_entries_.erase(cached);
-			outfit_layout_cache_entries_.push_front(std::move(entry));
+	for (uint8_t i = 0; i < outfit_layout_cache_count_; ++i) {
+		if (outfit_layout_cache_entries_[i].key == key) {
+			if (i > 0) {
+				OutfitLayoutCacheEntry hit = outfit_layout_cache_entries_[i];
+				for (uint8_t j = i; j > 0; --j) {
+					outfit_layout_cache_entries_[j] = outfit_layout_cache_entries_[j - 1];
+				}
+				outfit_layout_cache_entries_[0] = hit;
+			}
+			return outfit_layout_cache_entries_[0].metrics;
 		}
-		return outfit_layout_cache_entries_.front().metrics;
 	}
 
-	if (outfit_layout_cache_entries_.size() >= LAYOUT_CACHE_ENTRY_LIMIT) {
-		outfit_layout_cache_entries_.pop_back();
+	SpriteLayoutMetrics metrics = buildOutfitLayoutMetrics(key);
+	const uint8_t insert_limit = std::min<uint8_t>(outfit_layout_cache_count_ + 1, static_cast<uint8_t>(LAYOUT_CACHE_CAPACITY));
+	for (uint8_t j = insert_limit - 1; j > 0; --j) {
+		outfit_layout_cache_entries_[j] = outfit_layout_cache_entries_[j - 1];
 	}
-
-	outfit_layout_cache_entries_.push_front(OutfitLayoutCacheEntry {
-		.key = key,
-		.metrics = buildOutfitLayoutMetrics(key),
-	});
-	return outfit_layout_cache_entries_.front().metrics;
+	outfit_layout_cache_entries_[0] = OutfitLayoutCacheEntry { .key = key, .metrics = metrics };
+	outfit_layout_cache_count_ = insert_limit;
+	return metrics;
 }
 
 GameSprite::SpriteLayoutMetrics GameSprite::buildOutfitLayoutMetrics(const OutfitLayoutCacheKey& key) const {
 	SpriteLayoutMetrics metrics;
-	metrics.column_widths.assign(width, TILE_SIZE);
-	metrics.row_heights.assign(height, TILE_SIZE);
+	const uint8_t cols = std::min<uint8_t>(width, static_cast<uint8_t>(MAX_SPRITE_PARTS));
+	const uint8_t rows = std::min<uint8_t>(height, static_cast<uint8_t>(MAX_SPRITE_PARTS));
+	metrics.num_columns = cols;
+	metrics.num_rows = rows;
+	for (size_t i = 0; i < cols; ++i) {
+		metrics.column_widths[i] = TILE_SIZE;
+	}
+	for (size_t i = 0; i < rows; ++i) {
+		metrics.row_heights[i] = TILE_SIZE;
+	}
 
-	for (int cx = 0; cx < width; ++cx) {
-		for (int cy = 0; cy < height; ++cy) {
+	for (int cx = 0; cx < cols; ++cx) {
+		for (int cy = 0; cy < rows; ++cy) {
 			const size_t index = resolveOutfitSpriteIndex(*this, cx, cy, key.dir, key.addon, key.pattern_z, key.frame);
 			if (index >= spriteList.size() || !spriteList[index]) {
 				continue;
 			}
 
 			const auto dimensions = spriteList[index]->getDimensions();
-			metrics.column_widths[cx] = std::max(metrics.column_widths[cx], static_cast<int>(dimensions.width));
-			metrics.row_heights[cy] = std::max(metrics.row_heights[cy], static_cast<int>(dimensions.height));
+			metrics.column_widths[cx] = std::max<int>(metrics.column_widths[cx], static_cast<int>(dimensions.width));
+			metrics.row_heights[cy] = std::max<int>(metrics.row_heights[cy], static_cast<int>(dimensions.height));
 		}
 	}
 

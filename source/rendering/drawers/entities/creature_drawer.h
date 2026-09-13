@@ -19,6 +19,7 @@ class SpriteBatch;
 
 struct LightBuffer;
 struct RenderView;
+struct RenderFrameContext;
 
 struct CreatureDrawOptions {
 	DrawColor color;
@@ -30,6 +31,7 @@ struct CreatureDrawOptions {
 	const RenderView* view = nullptr;
 	bool preview_local_player = false;
 	bool light_collection_only = false;
+	const RenderFrameContext* ctx = nullptr;
 };
 
 class CreatureDrawer {

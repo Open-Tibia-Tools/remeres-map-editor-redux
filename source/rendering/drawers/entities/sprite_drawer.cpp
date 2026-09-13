@@ -30,7 +30,9 @@ void SpriteDrawer::glBlitAtlasQuad(SpriteBatch& sprite_batch, int sx, int sy, co
 	}
 }
 
-void SpriteDrawer::glBlitSquare(SpriteBatch& sprite_batch, int sx, int sy, DrawColor color, int size) {
+#include "rendering/core/render_frame_context.h"
+
+void SpriteDrawer::glBlitSquare(SpriteBatch& sprite_batch, int sx, int sy, DrawColor color, int size, const AtlasManager* atlas) {
 	if (size == 0) {
 		size = TILE_SIZE;
 	}
@@ -40,21 +42,27 @@ void SpriteDrawer::glBlitSquare(SpriteBatch& sprite_batch, int sx, int sy, DrawC
 	float normalizedB = color.b / 255.0f;
 	float normalizedA = color.a / 255.0f;
 
-	// Use Graphics::getAtlasManager() to get the atlas manager for white pixel access
-	// This assumes Graphics and AtlasManager are available
-	if (g_gui.gfx.hasAtlasManager()) {
-		sprite_batch.drawRect(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(size), static_cast<float>(size), glm::vec4(normalizedR, normalizedG, normalizedB, normalizedA), *g_gui.gfx.getAtlasManager());
+	const AtlasManager* atlas_mgr = atlas;
+	if (!atlas_mgr && g_gui.gfx.hasAtlasManager()) {
+		atlas_mgr = g_gui.gfx.getAtlasManager();
+	}
+	if (atlas_mgr) {
+		sprite_batch.drawRect(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(size), static_cast<float>(size), glm::vec4(normalizedR, normalizedG, normalizedB, normalizedA), *atlas_mgr);
 	}
 }
 
-void SpriteDrawer::glDrawBox(SpriteBatch& sprite_batch, int sx, int sy, int width, int height, DrawColor color) {
+void SpriteDrawer::glDrawBox(SpriteBatch& sprite_batch, int sx, int sy, int width, int height, DrawColor color, const AtlasManager* atlas) {
 	float normalizedR = color.r / 255.0f;
 	float normalizedG = color.g / 255.0f;
 	float normalizedB = color.b / 255.0f;
 	float normalizedA = color.a / 255.0f;
 
-	if (g_gui.gfx.hasAtlasManager()) {
-		sprite_batch.drawRectLines(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(width), static_cast<float>(height), glm::vec4(normalizedR, normalizedG, normalizedB, normalizedA), *g_gui.gfx.getAtlasManager());
+	const AtlasManager* atlas_mgr = atlas;
+	if (!atlas_mgr && g_gui.gfx.hasAtlasManager()) {
+		atlas_mgr = g_gui.gfx.getAtlasManager();
+	}
+	if (atlas_mgr) {
+		sprite_batch.drawRectLines(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(width), static_cast<float>(height), glm::vec4(normalizedR, normalizedG, normalizedB, normalizedA), *atlas_mgr);
 	}
 }
 
@@ -64,9 +72,15 @@ void SpriteDrawer::glSetColor(wxColor color) {
 	// For now, ignoring as glBlitTexture/Square takes explicit color.
 }
 
-void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, ServerItemId server_item_id, DrawColor color) {
-	const auto definition = g_item_definitions.get(server_item_id);
-	GameSprite* spr = definition ? g_gui.gfx.getGameSprite(definition.clientId()) : nullptr;
+void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, ServerItemId server_item_id, DrawColor color, const RenderFrameContext* ctx) {
+	GameSprite* spr = nullptr;
+	if (ctx) {
+		const auto definition = ctx->item_definitions.get(server_item_id);
+		spr = definition ? ctx->gfx.getGameSprite(definition.clientId()) : nullptr;
+	} else {
+		const auto definition = g_item_definitions.get(server_item_id);
+		spr = definition ? g_gui.gfx.getGameSprite(definition.clientId()) : nullptr;
+	}
 	if (spr == nullptr) {
 		return;
 	}

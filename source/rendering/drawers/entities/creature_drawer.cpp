@@ -16,6 +16,8 @@
 #include "rendering/core/animator.h"
 #include "rendering/core/light_buffer.h"
 #include "rendering/core/render_view.h"
+#include "rendering/core/render_frame_context.h"
+#include "item_definitions/core/item_definition_store.h"
 #include <spdlog/spdlog.h>
 
 CreatureDrawer::CreatureDrawer() {
@@ -98,8 +100,9 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 	const bool draw_visuals = !options.light_collection_only;
 
 	if (outfit.lookItem != 0) {
-		if (const auto definition = g_item_definitions.get(outfit.lookItem)) {
-			GameSprite* spr = g_gui.gfx.getGameSprite(definition.clientId());
+		const auto definition = options.ctx ? options.ctx->item_definitions.get(outfit.lookItem) : g_item_definitions.get(outfit.lookItem);
+		if (definition) {
+			GameSprite* spr = options.ctx ? options.ctx->gfx.getGameSprite(definition.clientId()) : g_gui.gfx.getGameSprite(definition.clientId());
 			if (spr && options.light_buffer && options.view && spr->hasLight()) {
 				registerCreatureSpriteLight(*options.light_buffer, *options.view, *spr, screenx, screeny, spr->getLight(), false);
 			}
@@ -116,10 +119,10 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		if (drawOutfit->lookType == 0) {
 			drawOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 		}
-		GameSprite* spr = g_gui.gfx.getCreatureSprite(drawOutfit->lookType);
+		GameSprite* spr = options.ctx ? options.ctx->gfx.getCreatureSprite(drawOutfit->lookType) : g_gui.gfx.getCreatureSprite(drawOutfit->lookType);
 		if (!spr && drawOutfit->lookType != DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) {
 			drawOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
-			spr = g_gui.gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
+			spr = options.ctx ? options.ctx->gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) : g_gui.gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
 		}
 		if (!spr) {
 			return;
@@ -141,7 +144,7 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		int pattern_z = 0;
 		GameSprite* mountSpr = nullptr;
 		if (drawOutfit->lookMount != 0) {
-			if ((mountSpr = g_gui.gfx.getCreatureSprite(drawOutfit->lookMount))) {
+			if ((mountSpr = options.ctx ? options.ctx->gfx.getCreatureSprite(drawOutfit->lookMount) : g_gui.gfx.getCreatureSprite(drawOutfit->lookMount))) {
 				// Generate mount colors and metrics once so rendering and light placement stay aligned.
 				Outfit mountOutfit;
 				mountOutfit.lookType = drawOutfit->lookMount;

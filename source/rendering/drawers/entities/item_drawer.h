@@ -18,6 +18,7 @@ class HookIndicatorDrawer;
 class DoorIndicatorDrawer;
 struct LightBuffer;
 struct RenderView;
+struct RenderFrameContext;
 
 struct DrawingOptions;
 class SpriteBatch;
@@ -38,6 +39,7 @@ struct BlitItemParams {
 	bool light_collection_only = false;
 	LightBuffer* light_buffer = nullptr;
 	const RenderView* view = nullptr;
+	const RenderFrameContext* ctx = nullptr;
 
 	BlitItemParams(const Tile* t, Item* i, const DrawingOptions& o);
 	BlitItemParams(const Position& p, Item* i, const DrawingOptions& o);

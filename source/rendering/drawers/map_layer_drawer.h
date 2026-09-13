@@ -26,6 +26,7 @@ class GridDrawer;
 struct RenderView;
 struct DrawingOptions;
 struct LightBuffer;
+struct RenderFrameContext;
 class SpriteBatch;
 class PrimitiveRenderer;
 
@@ -34,6 +35,7 @@ public:
 	MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Editor* editor);
 	~MapLayerDrawer();
 
+	void Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderFrameContext& ctx, LightBuffer& light_buffer, bool light_collection_only = false);
 	void Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderView& view, const DrawingOptions& options, LightBuffer& light_buffer, bool light_collection_only = false);
 
 private:

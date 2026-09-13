@@ -55,6 +55,7 @@ public:
 	// All events
 	void OnPaint(wxPaintEvent& event);
 	void OnEraseBackground(wxEraseEvent& event) { }
+	void OnIdle(wxIdleEvent& event);
 
 	void OnMouseMove(wxMouseEvent& event);
 	void OnMouseLeftRelease(wxMouseEvent& event);

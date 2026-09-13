@@ -24,17 +24,24 @@
 #include "game/complexitem.h"
 #include "game/sprites.h"
 #include "ui/gui.h"
+#include "rendering/core/render_frame_context.h"
 
 namespace {
-	GameSprite* resolveSprite(const ItemDefinitionView& definition) {
+	GameSprite* resolveSprite(const ItemDefinitionView& definition, const RenderFrameContext* ctx = nullptr) {
 		if (!definition) {
 			return nullptr;
+		}
+		if (ctx) {
+			return ctx->gfx.getGameSprite(definition.clientId());
 		}
 		return g_gui.gfx.getGameSprite(definition.clientId());
 	}
 
-	GameSprite* resolveSprite(ServerItemId item_id) {
-		return resolveSprite(g_item_definitions.get(item_id));
+	GameSprite* resolveSprite(ServerItemId item_id, const RenderFrameContext* ctx = nullptr) {
+		if (ctx) {
+			return resolveSprite(ctx->item_definitions.get(item_id), ctx);
+		}
+		return resolveSprite(g_item_definitions.get(item_id), ctx);
 	}
 
 	void registerSpriteLight(LightBuffer& light_buffer, const RenderView& view, int screen_x, int screen_y, const GameSprite::SpriteLayoutMetrics& metrics, const SpriteLight& light) {
@@ -102,26 +109,28 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	}
 
 	// item sprite
-	GameSprite* spr = resolveSprite(it);
+	GameSprite* spr = resolveSprite(it, params.ctx);
 
 	if (item->isInvalidOTBMItem() && !options.show_invalid_tiles) {
 		// Invalid OTBM placeholders are controlled exclusively by SHOW_INVALID_TILES.
 		return;
 	}
 
+	const AtlasManager* atlas = params.ctx ? &params.ctx->atlas : nullptr;
+
 	// Display invisible and invalid items
 	// Ugly hacks. :)
 	if (!options.ingame && options.show_tech_items) {
 		// Red invalid client id
 		if (!it) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, alpha));
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, alpha), 0, atlas);
 			return;
 		}
 
 		switch (it.clientId()) {
 			// Yellow invisible stairs tile (459)
 			case 469:
-				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, green, 0, (alpha * 171) >> 8));
+				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, green, 0, (alpha * 171) >> 8), 0, atlas);
 				return;
 
 			// Red invisible walkable tile (460)
@@ -129,12 +138,12 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 			case 17970:
 			case 20028:
 			case 34168:
-				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, (alpha * 171) >> 8));
+				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, (alpha * 171) >> 8), 0, atlas);
 				return;
 
 			// Cyan invisible wall (1548)
 			case 2187:
-				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(0, green, blue, 80));
+				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(0, green, blue, 80), 0, atlas);
 				return;
 
 			default:
@@ -143,7 +152,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 		// primal light
 		if (it.clientId() >= 39092 && it.clientId() <= 39100 || it.clientId() == 39236 || it.clientId() == 39367 || it.clientId() == 39368) {
-			spr = resolveSprite(SPRITE_LIGHTSOURCE);
+			spr = resolveSprite(SPRITE_LIGHTSOURCE, params.ctx);
 			red = 0;
 			alpha = 180;
 		}
@@ -163,7 +172,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	draw_y -= spr->draw_height;
 
 	SpritePatterns patterns;
-	if (cached_patterns && spr == resolveSprite(it)) {
+	if (cached_patterns && spr == resolveSprite(it, params.ctx)) {
 		patterns = *cached_patterns;
 	} else {
 		patterns = PatternCalculator::Calculate(spr, it, item, tile, pos);

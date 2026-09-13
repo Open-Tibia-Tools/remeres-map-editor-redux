@@ -16,7 +16,7 @@
 #include <cstdint>
 #include <span>
 
-#include <deque>
+#include <array>
 #include <memory>
 #include <map>
 #include <unordered_map>
@@ -72,9 +72,13 @@ class TemplateImage;
 
 class GameSprite : public Sprite {
 public:
+	static constexpr size_t MAX_SPRITE_PARTS = 16;
+
 	struct SpriteLayoutMetrics {
-		std::vector<int> column_widths;
-		std::vector<int> row_heights;
+		std::array<int, MAX_SPRITE_PARTS> column_widths {};
+		std::array<int, MAX_SPRITE_PARTS> row_heights {};
+		uint8_t num_columns = 1;
+		uint8_t num_rows = 1;
 		int total_width = TILE_SIZE;
 		int total_height = TILE_SIZE;
 		int left_offset = 0;
@@ -252,8 +256,11 @@ protected:
 	mutable bool geometry_cache_dirty = true;
 	mutable wxSize cached_composite_size;
 	mutable std::pair<int, int> cached_draw_offset;
-	mutable std::deque<PlainLayoutCacheEntry> plain_layout_cache_entries_;
-	mutable std::deque<OutfitLayoutCacheEntry> outfit_layout_cache_entries_;
+	static constexpr size_t LAYOUT_CACHE_CAPACITY = 8;
+	mutable std::array<PlainLayoutCacheEntry, LAYOUT_CACHE_CAPACITY> plain_layout_cache_entries_ {};
+	mutable uint8_t plain_layout_cache_count_ = 0;
+	mutable std::array<OutfitLayoutCacheEntry, LAYOUT_CACHE_CAPACITY> outfit_layout_cache_entries_ {};
+	mutable uint8_t outfit_layout_cache_count_ = 0;
 };
 
 #endif

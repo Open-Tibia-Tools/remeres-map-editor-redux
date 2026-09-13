@@ -16,6 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
+#include "ui/gui.h"
 #include "app/definitions.h"
 #include "rendering/drawers/map_layer_drawer.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
@@ -30,6 +31,8 @@
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/core/sprite_preloader.h"
+#include "rendering/core/render_frame_context.h"
+#include "item_definitions/core/item_definition_store.h"
 
 #include <cmath>
 #include <limits>
@@ -43,7 +46,10 @@ MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_dra
 MapLayerDrawer::~MapLayerDrawer() {
 }
 
-void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderView& view, const DrawingOptions& options, LightBuffer& light_buffer, bool light_collection_only) {
+void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderFrameContext& ctx, LightBuffer& light_buffer, bool light_collection_only) {
+	const RenderView& view = ctx.view;
+	const DrawingOptions& options = ctx.options;
+
 	// Optimization: Pre-calculate offset and base coordinates
 	// IsTileVisible does this for every tile, but it's constant per layer/frame.
 	// We also skip IsTileVisible because visitLeaves already bounds us to the visible area (with 4-tile alignment),
@@ -165,8 +171,24 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 	}
 
 	auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y) {
-		tile_renderer->DrawTile(sprite_batch, location, view, options, options.current_house_id, draw_x, draw_y, draw_lights ? &light_buffer : nullptr, light_collection_only);
+		tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, draw_lights ? &light_buffer : nullptr, light_collection_only);
 	};
 
 	visitAllVisibleNodes(drawVisibleTiles);
+}
+
+void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderView& view, const DrawingOptions& options, LightBuffer& light_buffer, bool light_collection_only) {
+	if (!g_gui.gfx.ensureAtlasManager()) {
+		return;
+	}
+	RenderFrameContext ctx {
+		.atlas = *g_gui.gfx.getAtlasManager(),
+		.gfx = g_gui.gfx,
+		.item_definitions = g_item_definitions,
+		.options = options,
+		.view = view,
+		.elapsed_time = g_gui.gfx.getElapsedTime(),
+		.current_house_id = static_cast<uint32_t>(options.current_house_id)
+	};
+	Draw(sprite_batch, map_z, live_client, ctx, light_buffer, light_collection_only);
 }
