@@ -45,6 +45,16 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	nvgFontFace(vg, "sans");
 	nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
 
+	struct VisibleLabel {
+		float x;
+		float y;
+		float width;
+		float height;
+		const char* text;
+	};
+	static thread_local std::vector<VisibleLabel> visible_labels;
+	visible_labels.clear();
+
 	for (const auto& label : labels) {
 		if (label.pos.z != view.camera_pos.z) {
 			continue;
@@ -53,13 +63,11 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		int unscaled_x, unscaled_y;
 		view.getScreenPosition(label.pos.x, label.pos.y, label.pos.z, unscaled_x, unscaled_y);
 
-		float screen_x = (float)unscaled_x / zoom;
-		float screen_y = (float)unscaled_y / zoom;
+		float screen_x = static_cast<float>(unscaled_x) / zoom;
+		float screen_y = static_cast<float>(unscaled_y) / zoom;
 
 		// Center on tile, position slightly above the creature head
-		// Standard creature is 32x32, but might be tall.
-		// Safest is to anchor to the tile top.
-		float labelX = screen_x + tile_size_screen / 2.0f;
+		float labelX = screen_x + tile_size_screen * 0.5f;
 		float labelY = screen_y - 2.0f; // slight gap above tile top
 
 		float textBounds[4];
@@ -67,17 +75,33 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		float textWidth = textBounds[2] - textBounds[0];
 		float textHeight = textBounds[3] - textBounds[1];
 
-		float paddingX = 4.0f;
-		float paddingY = 2.0f;
+		visible_labels.push_back(VisibleLabel {
+			.x = labelX,
+			.y = labelY,
+			.width = textWidth,
+			.height = textHeight,
+			.text = label.name.c_str()
+		});
+	}
 
-		// Draw background (Black transparent)
-		nvgBeginPath(vg);
-		nvgRoundedRect(vg, labelX - textWidth / 2.0f - paddingX, labelY - textHeight - paddingY * 2.0f, textWidth + paddingX * 2.0f, textHeight + paddingY * 2.0f, 3.0f);
-		nvgFillColor(vg, nvgRGBA(0, 0, 0, 160)); // Transparent black
-		nvgFill(vg);
+	if (visible_labels.empty()) {
+		return;
+	}
 
-		// Draw Text (White)
-		nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
-		nvgText(vg, labelX, labelY - paddingY, label.name.c_str(), nullptr);
+	constexpr float paddingX = 4.0f;
+	constexpr float paddingY = 2.0f;
+
+	// Pass 1: Draw all backgrounds in a single batched path
+	nvgBeginPath(vg);
+	for (const auto& vl : visible_labels) {
+		nvgRoundedRect(vg, vl.x - vl.width * 0.5f - paddingX, vl.y - vl.height - paddingY * 2.0f, vl.width + paddingX * 2.0f, vl.height + paddingY * 2.0f, 3.0f);
+	}
+	nvgFillColor(vg, nvgRGBA(0, 0, 0, 160)); // Transparent black
+	nvgFill(vg);
+
+	// Pass 2: Draw all text labels with single color state
+	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255)); // White text
+	for (const auto& vl : visible_labels) {
+		nvgText(vg, vl.x, vl.y - paddingY, vl.text, nullptr);
 	}
 }

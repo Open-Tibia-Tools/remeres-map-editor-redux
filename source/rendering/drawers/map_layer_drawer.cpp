@@ -92,12 +92,20 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 
 	bool draw_lights = options.isDrawLight() && view.zoom <= 10.0;
 
+	const int max_logical_w = static_cast<int>(view.logical_width);
+	const int max_logical_h = static_cast<int>(view.logical_height);
+	const int min_visible_draw_x = -TILE_SIZE - visibility_margin_pixels;
+	const int max_visible_draw_x = max_logical_w + visibility_margin_pixels;
+	const int min_visible_draw_y = -TILE_SIZE - visibility_margin_pixels;
+	const int max_visible_draw_y = max_logical_h + visibility_margin_pixels;
+
 	auto visitNodeTiles = [&](MapNode* nd, int nd_map_x, int nd_map_y, bool live, auto&& visitor) {
 		int node_draw_x = nd_map_x * TILE_SIZE + base_screen_x;
 		int node_draw_y = nd_map_y * TILE_SIZE + base_screen_y;
 
-		// Node level culling
-		if (!view.IsRectVisible(node_draw_x, node_draw_y, 4 * TILE_SIZE, 4 * TILE_SIZE, visibility_margin_pixels)) {
+		// Node level culling (integer AABB)
+		if (node_draw_x + 4 * TILE_SIZE + visibility_margin_pixels < 0 || node_draw_x - visibility_margin_pixels > max_logical_w ||
+			node_draw_y + 4 * TILE_SIZE + visibility_margin_pixels < 0 || node_draw_y - visibility_margin_pixels > max_logical_h) {
 			return;
 		}
 
@@ -113,7 +121,8 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 			return;
 		}
 
-		bool fully_inside = view.IsRectFullyInside(node_draw_x, node_draw_y, 4 * TILE_SIZE, 4 * TILE_SIZE);
+		const bool fully_inside = (node_draw_x >= 0 && node_draw_x + 4 * TILE_SIZE <= max_logical_w &&
+			node_draw_y >= 0 && node_draw_y + 4 * TILE_SIZE <= max_logical_h);
 
 		Floor* floor = nd->getFloor(map_z);
 		if (!floor) {
@@ -130,8 +139,9 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 					continue;
 				}
 
-				// Culling: Skip tiles that are far outside the viewport.
-				if (!fully_inside && !view.IsPixelVisible(draw_x_base, draw_y, visibility_margin_pixels)) {
+				// Culling: Skip tiles that are far outside the viewport (fast integer AABB).
+				if (!fully_inside && (draw_x_base < min_visible_draw_x || draw_x_base > max_visible_draw_x ||
+					draw_y < min_visible_draw_y || draw_y > max_visible_draw_y)) {
 					continue;
 				}
 

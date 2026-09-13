@@ -455,15 +455,19 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 	if (!only_colors) {
 		if (view.zoom < 10.0 || !options.hide_items_when_zoomed) {
 			// Hoist house color calculation out of item loop
-			uint8_t house_r = 255, house_g = 255, house_b = 255;
+			uint8_t default_ir = 255, default_ig = 255, default_ib = 255;
 			bool calculate_house_color = options.extended_house_shader && options.show_houses && is_house_tile;
-			bool should_pulse = calculate_house_color && (static_cast<int>(tile->getHouseID()) == current_house_id) && (options.highlight_pulse > 0.0f);
-			float boost = 0.0f;
-
 			if (calculate_house_color) {
+				uint8_t house_r = 255, house_g = 255, house_b = 255;
 				TileColorCalculator::GetHouseColor(tile->getHouseID(), house_r, house_g, house_b);
-				if (should_pulse) {
-					boost = options.highlight_pulse * 0.6f;
+				default_ir = house_r;
+				default_ig = house_g;
+				default_ib = house_b;
+				if ((static_cast<int>(tile->getHouseID()) == current_house_id) && (options.highlight_pulse > 0.0f)) {
+					float boost = options.highlight_pulse * 0.6f;
+					default_ir = static_cast<uint8_t>(std::min(255, static_cast<int>(default_ir + (255 - default_ir) * boost)));
+					default_ig = static_cast<uint8_t>(std::min(255, static_cast<int>(default_ig + (255 - default_ig) * boost)));
+					default_ib = static_cast<uint8_t>(std::min(255, static_cast<int>(default_ib + (255 - default_ib) * boost)));
 				}
 			}
 
@@ -509,38 +513,20 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 					params.sprite = sprite;
 					params.patterns = &patterns;
 					params.ctx = &ctx;
+					params.light_buffer = light_buffer;
+					params.view = &view;
 
-					// item sprite
 					if (item->isBorder()) {
 						params.red = r;
 						params.green = g;
 						params.blue = b;
-						params.light_buffer = light_buffer;
-						params.view = &view;
-						item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 					} else {
-						uint8_t ir = 255, ig = 255, ib = 255;
-
-						if (calculate_house_color) {
-							// Apply house color tint
-							ir = static_cast<uint8_t>(ir * house_r / 255);
-							ig = static_cast<uint8_t>(ig * house_g / 255);
-							ib = static_cast<uint8_t>(ib * house_b / 255);
-
-							if (should_pulse) {
-								// Pulse effect matching the tile pulse
-								ir = static_cast<uint8_t>(std::min(255, static_cast<int>(ir + (255 - ir) * boost)));
-								ig = static_cast<uint8_t>(std::min(255, static_cast<int>(ig + (255 - ig) * boost)));
-								ib = static_cast<uint8_t>(std::min(255, static_cast<int>(ib + (255 - ib) * boost)));
-							}
-						}
-						params.red = ir;
-						params.green = ig;
-						params.blue = ib;
-						params.light_buffer = light_buffer;
-						params.view = &view;
-						item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
+						params.red = default_ir;
+						params.green = default_ig;
+						params.blue = default_ib;
 					}
+
+					item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 				} else if (item->isInvalidOTBMItem()) {
 					// Missing-definition placeholders are represented by the tile-level invalid overlay.
 				}
