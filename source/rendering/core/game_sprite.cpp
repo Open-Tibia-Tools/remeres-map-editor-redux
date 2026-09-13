@@ -198,10 +198,6 @@ int GameSprite::getDrawHeight() const {
 	return draw_height;
 }
 
-bool GameSprite::isSimpleAndLoaded() const {
-	return is_simple && !spriteList.empty() && spriteList[0] && spriteList[0]->isGLLoaded;
-}
-
 uint32_t GameSprite::getDebugImageId(size_t index) const {
 	if (index < spriteList.size() && spriteList[index]->isNormalImage()) {
 		return static_cast<const NormalImage*>(spriteList[index])->id;
@@ -263,13 +259,6 @@ uint32_t GameSprite::getSpriteId(int frameIndex, int pattern_x, int pattern_y) c
 		return static_cast<const NormalImage*>(spriteList[idx])->id;
 	}
 	return 0;
-}
-
-std::pair<int, int> GameSprite::getDrawOffset() const {
-	if (geometry_cache_dirty) {
-		rebuildGeometryCache();
-	}
-	return cached_draw_offset;
 }
 
 uint8_t GameSprite::getMiniMapColor() const {

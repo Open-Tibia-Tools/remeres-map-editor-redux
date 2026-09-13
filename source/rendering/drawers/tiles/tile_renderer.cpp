@@ -392,7 +392,10 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 		if (tile->ground && ground_it && !hidden_invalid_ground) {
 			GameSprite* ground_sprite = ctx.gfx.getGameSprite(ground_it.clientId());
 			if (ground_sprite) {
-				SpritePatterns patterns = PatternCalculator::Calculate(ground_sprite, ground_it, tile->ground.get(), tile, position, ctx.elapsed_time);
+				SpritePatterns patterns;
+				if (!ground_sprite->is_simple) {
+					patterns = PatternCalculator::Calculate(ground_sprite, ground_it, tile->ground.get(), tile, position, ctx.elapsed_time);
+				}
 
 				// Inline preload check — skip function call when sprite is simple and loaded (95%+ case)
 				if (!ground_sprite->isSimpleAndLoaded()) {
@@ -447,7 +450,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 
 	// Draw helper border for selected house tiles
 	// Only draw on the current floor (grid)
-	if (options.show_houses && is_house_tile && static_cast<int>(tile->getHouseID()) == current_house_id && map_z == view.floor) {
+	if (options.show_houses && map_z == view.floor && is_house_tile && static_cast<int>(tile->getHouseID()) == current_house_id) {
 
 		uint8_t hr, hg, hb;
 		TileColorCalculator::GetHouseColor(tile->getHouseID(), hr, hg, hb);

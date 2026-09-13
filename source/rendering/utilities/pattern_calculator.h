@@ -36,6 +36,10 @@ public:
 			return patterns;
 		}
 
+		if (spr->is_simple && !it.hasFlag(ItemFlag::Stackable) && !it.hasFlag(ItemFlag::IsHangable) && !it.isSplash() && !it.isFluidContainer()) {
+			return patterns;
+		}
+
 		patterns.x = calculatePatternOffset(pos.x, spr->pattern_x);
 		patterns.y = calculatePatternOffset(pos.y, spr->pattern_y);
 		patterns.z = calculatePatternOffset(pos.z, spr->pattern_z);

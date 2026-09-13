@@ -12,6 +12,7 @@
 #include "rendering/core/texture_garbage_collector.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/core/render_timer.h"
+#include "rendering/core/normal_image.h"
 #include <atomic>
 #include <cstdint>
 #include <span>
@@ -104,7 +105,12 @@ public:
 	void clean(time_t time, int longevity = -1);
 
 	int getDrawHeight() const;
-	std::pair<int, int> getDrawOffset() const;
+	[[nodiscard]] const std::pair<int, int>& getDrawOffset() const {
+		if (geometry_cache_dirty) {
+			rebuildGeometryCache();
+		}
+		return cached_draw_offset;
+	}
 	uint8_t getMiniMapColor() const;
 	SpriteLayoutMetrics getPlainLayoutMetrics(int subtype, int pattern_x, int pattern_y, int pattern_z, int frame);
 	SpriteLayoutMetrics getOutfitLayoutMetrics(int dir, int addon, int pattern_z, int frame);
@@ -241,7 +247,9 @@ public:
 	// DEBUG: Get the actual image ID that would be rendered for these coordinates
 	uint32_t getSpriteId(int frameIndex, int pattern_x, int pattern_y) const;
 
-	bool isSimpleAndLoaded() const;
+	[[nodiscard]] bool isSimpleAndLoaded() const noexcept {
+		return is_simple && !spriteList.empty() && spriteList[0] && spriteList[0]->isGLLoaded;
+	}
 
 	bool is_simple = false;
 	void updateSimpleStatus() {

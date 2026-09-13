@@ -184,8 +184,9 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		light_buffer.SetFloorLightStart();
 	}
 
+	LightBuffer* active_light_buffer = draw_lights ? &light_buffer : nullptr;
 	auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
-		tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, draw_lights ? &light_buffer : nullptr, light_collection_only, tile_above);
+		tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, active_light_buffer, light_collection_only, tile_above);
 	};
 
 	visitAllVisibleNodes(drawVisibleTiles);

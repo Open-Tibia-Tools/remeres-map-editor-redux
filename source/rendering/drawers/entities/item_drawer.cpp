@@ -218,7 +218,13 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		// BatchRenderer::SetAtlasManager(g_gui.gfx.getAtlasManager());
 
 		if (is_simple_sprite) {
-			const AtlasRegion* region = spr->getAtlasRegion(0, 0, 0, subtype, pattern_x, pattern_y, pattern_z, frame);
+			const AtlasRegion* region = nullptr;
+			if (spr->is_simple && subtype == -1 && pattern_x == 0 && pattern_y == 0 && pattern_z == 0 && frame == 0) {
+				region = spr->getCachedDefaultRegion();
+			}
+			if (!region) {
+				region = spr->getAtlasRegion(0, 0, 0, subtype, pattern_x, pattern_y, pattern_z, frame);
+			}
 			if (region) {
 #ifdef DEBUG
 				// DEBUG: Check for mismatch on Item 369 using PRECISE sub-sprite ID
