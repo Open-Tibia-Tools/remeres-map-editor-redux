@@ -30,18 +30,10 @@ struct RenderFrameContext;
 class SpriteBatch;
 class PrimitiveRenderer;
 
-namespace rme::rendering {
-class RenderChunkCache;
-}
-
 class MapLayerDrawer {
 public:
-	MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Editor* editor, rme::rendering::RenderChunkCache* chunk_cache = nullptr);
+	MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Editor* editor);
 	~MapLayerDrawer();
-
-	void SetChunkCache(rme::rendering::RenderChunkCache* chunk_cache) {
-		chunk_cache_ = chunk_cache;
-	}
 
 	void Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderFrameContext& ctx, LightBuffer& light_buffer, bool light_collection_only = false);
 	void Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderView& view, const DrawingOptions& options, LightBuffer& light_buffer, bool light_collection_only = false);
@@ -50,7 +42,6 @@ private:
 	TileRenderer* tile_renderer;
 	GridDrawer* grid_drawer;
 	Editor* editor;
-	rme::rendering::RenderChunkCache* chunk_cache_ = nullptr;
 };
 
 #endif

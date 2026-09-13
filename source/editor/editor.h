@@ -63,13 +63,6 @@ public:
 	std::function<void()> onStateChange;
 	void notifyStateChange();
 
-	std::function<void(const Position&)> onTileDirty;
-	void markRenderDirty(const Position& pos) {
-		if (onTileDirty) {
-			onTileDirty(pos);
-		}
-	}
-
 public: // Functions
 	// Map handling
 

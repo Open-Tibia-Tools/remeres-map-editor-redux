@@ -185,9 +185,6 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colors.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/pixel_buffer_object.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/primitive_renderer.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_chunk.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_chunk_cache.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_frame_context.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_timer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_view.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/ring_buffer.h
@@ -223,7 +220,6 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/floor_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/shade_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_color_calculator.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_extractor.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_renderer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/editor_sprite_loader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/screen_capture.h
@@ -570,7 +566,6 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colors.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/pixel_buffer_object.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/primitive_renderer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_chunk_cache.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_timer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_view.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/ring_buffer.cpp
@@ -603,7 +598,6 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/floor_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/shade_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_color_calculator.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_extractor.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/editor_sprite_loader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/screen_capture.cpp

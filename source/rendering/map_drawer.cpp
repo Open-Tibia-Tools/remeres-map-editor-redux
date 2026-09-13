@@ -31,7 +31,6 @@
 #include "live/live_socket.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
-#include "rendering/core/render_chunk_cache.h"
 #include "item_definitions/core/item_definition_store.h"
 
 #include "brushes/doodad/doodad_brush.h"
@@ -105,9 +104,8 @@ MapDrawer::MapDrawer(MapCanvas* canvas) :
 
 	tile_renderer = std::make_unique<TileRenderer>(item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), creature_name_drawer.get(), floor_drawer.get(), marker_drawer.get(), tooltip_drawer.get(), &editor);
 
-	chunk_cache_ = std::make_unique<rme::rendering::RenderChunkCache>();
 	grid_drawer = std::make_unique<GridDrawer>();
-	map_layer_drawer = std::make_unique<MapLayerDrawer>(tile_renderer.get(), grid_drawer.get(), &editor, chunk_cache_.get());
+	map_layer_drawer = std::make_unique<MapLayerDrawer>(tile_renderer.get(), grid_drawer.get(), &editor); // Initialized map_layer_drawer
 	live_cursor_drawer = std::make_unique<LiveCursorDrawer>();
 	selection_drawer = std::make_unique<SelectionDrawer>();
 	brush_cursor_drawer = std::make_unique<BrushCursorDrawer>();
@@ -126,23 +124,13 @@ MapDrawer::MapDrawer(MapCanvas* canvas) :
 	item_drawer->SetHookIndicatorDrawer(hook_indicator_drawer.get());
 	item_drawer->SetDoorIndicatorDrawer(door_indicator_drawer.get());
 
-	editor.onTileDirty = [this](const Position& pos) {
-		if (chunk_cache_) {
-			chunk_cache_->markDirty(pos.x, pos.y, pos.z);
-		}
-	};
-
 	options.Update();
 	settings_observer_id_ = g_settings.addObserver([this](uint32_t) {
 		options.MarkDirty();
-		if (chunk_cache_) {
-			chunk_cache_->markAllDirty();
-		}
 	});
 }
 
 MapDrawer::~MapDrawer() {
-	editor.onTileDirty = nullptr;
 	if (settings_observer_id_ != 0) {
 		g_settings.removeObserver(settings_observer_id_);
 		settings_observer_id_ = 0;

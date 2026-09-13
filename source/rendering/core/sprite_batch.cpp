@@ -160,44 +160,6 @@ void SpriteBatch::setGlobalTint(float r, float g, float b, float a, const AtlasM
 	shader_->SetVec4("uGlobalTint", global_tint_);
 }
 
-void SpriteBatch::beginExtraction(const AtlasManager& atlas_manager) {
-	current_atlas_manager_ = &atlas_manager;
-	pending_sprites_.clear();
-	in_batch_ = true;
-	draw_call_count_ = 0;
-	sprite_count_ = 0;
-	global_tint_ = glm::vec4(1.0f);
-}
-
-void SpriteBatch::appendTranslated(const SpriteInstance* src, size_t count, float offset_x, float offset_y) {
-	if (!in_batch_ || !src || count == 0) {
-		return;
-	}
-
-	size_t remaining = count;
-	const SpriteInstance* current_src = src;
-
-	while (remaining > 0) {
-		if (pending_sprites_.size() >= MAX_SPRITES_PER_BATCH && current_atlas_manager_) {
-			flush(*current_atlas_manager_);
-		}
-
-		size_t to_add = std::min(remaining, MAX_SPRITES_PER_BATCH - pending_sprites_.size());
-		size_t start_idx = pending_sprites_.size();
-		pending_sprites_.resize(start_idx + to_add);
-
-		for (size_t i = 0; i < to_add; ++i) {
-			SpriteInstance& dst = pending_sprites_[start_idx + i];
-			dst = current_src[i];
-			dst.x += offset_x;
-			dst.y += offset_y;
-		}
-
-		current_src += to_add;
-		remaining -= to_add;
-	}
-}
-
 void SpriteBatch::ensureCapacity(size_t capacity) {
 	if (pending_sprites_.capacity() < capacity) {
 		pending_sprites_.reserve(capacity);

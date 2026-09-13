@@ -31,11 +31,8 @@ class TileRenderer {
 public:
 	TileRenderer(ItemDrawer* id, SpriteDrawer* sd, CreatureDrawer* cd, CreatureNameDrawer* cnd, FloorDrawer* fd, MarkerDrawer* md, TooltipDrawer* td, Editor* ed);
 
-	void DrawTile(SpriteBatch& ground_batch, SpriteBatch& item_batch, const TileLocation* location, const RenderFrameContext& ctx, int in_draw_x = -1, int in_draw_y = -1, LightBuffer* light_buffer = nullptr, bool light_collection_only = false) const;
 	void DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int in_draw_x = -1, int in_draw_y = -1, LightBuffer* light_buffer = nullptr, bool light_collection_only = false) const;
 	void DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderView& view, const DrawingOptions& options, uint32_t current_house_id, int in_draw_x = -1, int in_draw_y = -1, LightBuffer* light_buffer = nullptr, bool light_collection_only = false) const;
-	void CollectTooltips(const TileLocation* location, const RenderFrameContext& ctx) const;
-	void DrawCreature(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, LightBuffer* light_buffer = nullptr) const;
 	void RegisterGroundLightOcclusion(const TileLocation* location, const RenderView& view, LightBuffer& light_buffer, uint32_t floor_light_start) const;
 
 private:
