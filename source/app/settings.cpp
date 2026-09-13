@@ -285,8 +285,13 @@ void Settings::IO(IOMode mode) {
 		} else if (mode == SAVE) {                                   \
 			cur_sec->insert_or_assign(k, getInteger(key##_TO_SAVE)); \
 		} else if (mode == LOAD) {                                   \
-			setInteger(key, (int)(*cur_sec)[k].value_or((int)dflt)); \
-			setInteger(key##_TO_SAVE, getInteger(key));              \
+			const auto bool_val = (*cur_sec)[k].value<bool>();       \
+			const auto int_val = (*cur_sec)[k].value<int64_t>();     \
+			const int val = bool_val.has_value()                     \
+				? (*bool_val ? 1 : 0)                                \
+				: (int_val.has_value() ? static_cast<int>(*int_val) : (int)dflt); \
+			setInteger(key, val);                                    \
+			setInteger(key##_TO_SAVE, val);                          \
 		}                                                            \
 	} while (false)
 
@@ -424,7 +429,7 @@ void Settings::IO(IOMode mode) {
 	Bool(HIDE_ITEMS_WHEN_ZOOMED, true);
 	String(SCREENSHOT_DIRECTORY, "");
 	String(SCREENSHOT_FORMAT, "png");
-	IntToSave(USE_MEMCACHED_SPRITES, 0); // This is special, keeping as IntToSave for now
+	IntToSave(USE_MEMCACHED_SPRITES, 1); // Default to enabled (true)
 	Int(MINIMAP_UPDATE_DELAY, 333);
 	Bool(MINIMAP_VIEW_BOX, true);
 	String(MINIMAP_EXPORT_DIR, "");
