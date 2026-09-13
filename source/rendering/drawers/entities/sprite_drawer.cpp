@@ -8,6 +8,19 @@
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/atlas_manager.h"
 
+#include <array>
+
+namespace {
+	constexpr auto make_color_lut() {
+		std::array<float, 256> lut {};
+		for (int i = 0; i < 256; ++i) {
+			lut[i] = static_cast<float>(i) * (1.0f / 255.0f);
+		}
+		return lut;
+	}
+	constexpr auto COLOR_LUT = make_color_lut();
+}
+
 SpriteDrawer::SpriteDrawer() {
 }
 
@@ -16,16 +29,11 @@ SpriteDrawer::~SpriteDrawer() {
 
 void SpriteDrawer::glBlitAtlasQuad(SpriteBatch& sprite_batch, int sx, int sy, const AtlasRegion* region, DrawColor color) {
 	if (region) {
-		float normalizedR = color.r / 255.0f;
-		float normalizedG = color.g / 255.0f;
-		float normalizedB = color.b / 255.0f;
-		float normalizedA = color.a / 255.0f;
-
 		sprite_batch.draw(
 			static_cast<float>(sx), static_cast<float>(sy),
 			static_cast<float>(region->pixel_width), static_cast<float>(region->pixel_height),
 			*region,
-			normalizedR, normalizedG, normalizedB, normalizedA
+			COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]
 		);
 	}
 }
@@ -37,32 +45,22 @@ void SpriteDrawer::glBlitSquare(SpriteBatch& sprite_batch, int sx, int sy, DrawC
 		size = TILE_SIZE;
 	}
 
-	float normalizedR = color.r / 255.0f;
-	float normalizedG = color.g / 255.0f;
-	float normalizedB = color.b / 255.0f;
-	float normalizedA = color.a / 255.0f;
-
 	const AtlasManager* atlas_mgr = atlas;
 	if (!atlas_mgr && g_gui.gfx.hasAtlasManager()) {
 		atlas_mgr = g_gui.gfx.getAtlasManager();
 	}
 	if (atlas_mgr) {
-		sprite_batch.drawRect(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(size), static_cast<float>(size), glm::vec4(normalizedR, normalizedG, normalizedB, normalizedA), *atlas_mgr);
+		sprite_batch.drawRect(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(size), static_cast<float>(size), glm::vec4(COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]), *atlas_mgr);
 	}
 }
 
 void SpriteDrawer::glDrawBox(SpriteBatch& sprite_batch, int sx, int sy, int width, int height, DrawColor color, const AtlasManager* atlas) {
-	float normalizedR = color.r / 255.0f;
-	float normalizedG = color.g / 255.0f;
-	float normalizedB = color.b / 255.0f;
-	float normalizedA = color.a / 255.0f;
-
 	const AtlasManager* atlas_mgr = atlas;
 	if (!atlas_mgr && g_gui.gfx.hasAtlasManager()) {
 		atlas_mgr = g_gui.gfx.getAtlasManager();
 	}
 	if (atlas_mgr) {
-		sprite_batch.drawRectLines(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(width), static_cast<float>(height), glm::vec4(normalizedR, normalizedG, normalizedB, normalizedA), *atlas_mgr);
+		sprite_batch.drawRectLines(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(width), static_cast<float>(height), glm::vec4(COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]), *atlas_mgr);
 	}
 }
 

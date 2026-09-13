@@ -20,6 +20,7 @@ public:
 
 	void Draw(const RenderView& view, const DrawingOptions& options);
 	void DrawUI(NVGcontext* vg, const RenderView& view, const DrawingOptions& options);
+	bool hasUIElements(const RenderView& view);
 
 private:
 	struct CacheKey {

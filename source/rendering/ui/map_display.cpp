@@ -257,7 +257,7 @@ void MapCanvas::EnsureNanoVG() {
 }
 
 void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
-	if (!vg) {
+	if (!vg || (drawer && !drawer->hasOverlays())) {
 		return;
 	}
 

@@ -91,7 +91,6 @@ class MapDrawer {
 	std::unique_ptr<DoorIndicatorDrawer> door_indicator_drawer;
 	std::unique_ptr<LuaOverlayDrawer> lua_overlay_drawer;
 	std::unique_ptr<SpriteBatch> sprite_batch;
-	SpriteBatch hidden_floor_light_batch;
 	std::unique_ptr<PrimitiveRenderer> primitive_renderer;
 
 	// Post-processing
@@ -135,6 +134,7 @@ public:
 	void DrawDoorIndicators(NVGcontext* vg);
 	void ClearFrameOverlays();
 	void DrawCreatureNames(NVGcontext* vg);
+	bool hasOverlays() const;
 
 	void DrawLight();
 

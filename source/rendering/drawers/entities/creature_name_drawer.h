@@ -24,6 +24,9 @@ public:
 	~CreatureNameDrawer();
 
 	void clear();
+	bool empty() const noexcept {
+		return labels.empty();
+	}
 	void addLabel(const Position& pos, std::string_view name, const Creature* c);
 	void draw(NVGcontext* vg, const RenderView& view);
 

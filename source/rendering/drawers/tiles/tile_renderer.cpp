@@ -246,9 +246,10 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 		return;
 	}
 
-	int map_x = location->getX();
-	int map_y = location->getY();
-	int map_z = location->getZ();
+	const auto& position = location->getPosition();
+	const int map_x = position.x;
+	const int map_y = position.y;
+	const int map_z = position.z;
 
 	int draw_x, draw_y;
 	if (in_draw_x != -1 && in_draw_y != -1) {
@@ -263,8 +264,6 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 
 	const int tile_draw_x = draw_x;
 	const int tile_draw_y = draw_y;
-
-	const auto& position = location->getPosition();
 
 	if (light_buffer) {
 		const auto [projected_tile_x, projected_tile_y] = projectedTilePosition(view, position);

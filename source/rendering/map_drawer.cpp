@@ -73,6 +73,7 @@
 #include "rendering/core/gl_resources.h"
 #include "rendering/core/shader_program.h"
 #include "rendering/postprocess/post_process_manager.h"
+#include "ui/map_tab.h"
 
 // Shader Sources
 const char* screen_vert = R"(
@@ -406,7 +407,14 @@ void MapDrawer::DrawBackground() {
 void MapDrawer::DrawMap(const RenderFrameContext& ctx) {
 	bool live_client = editor.live_manager.IsClient();
 
-	// Enable texture mode
+	BaseMap* secondary_map = nullptr;
+	if (!options.ingame && canvas) {
+		if (auto* map_tab = dynamic_cast<MapTab*>(canvas->GetMapWindow())) {
+			if (auto* session = map_tab->GetSession()) {
+				secondary_map = session->secondary_map;
+			}
+		}
+	}
 
 	for (int map_z = view.start_z; map_z >= view.superend_z; map_z--) {
 		RenderView floor_view = view;
@@ -437,10 +445,12 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx) {
 		if (view.draw_all_visited_floors || map_z >= view.end_z) {
 			DrawMapLayer(*sprite_batch, floor_ctx, map_z, live_client);
 		} else if (options.isDrawLight()) {
-			DrawMapLayer(hidden_floor_light_batch, floor_ctx, map_z, live_client, true);
+			DrawMapLayer(*sprite_batch, floor_ctx, map_z, live_client, true);
 		}
 
-		preview_drawer->draw(*sprite_batch, canvas, floor_view, map_z, options, editor, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), options.current_house_id, &ctx);
+		if (secondary_map) {
+			preview_drawer->draw(*sprite_batch, canvas, secondary_map, floor_view, map_z, options, editor, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), options.current_house_id, &ctx);
+		}
 	}
 }
 
@@ -484,6 +494,25 @@ void MapDrawer::DrawDoorIndicators(NVGcontext* vg) {
 
 void MapDrawer::DrawCreatureNames(NVGcontext* vg) {
 	creature_name_drawer->draw(vg, view);
+}
+
+bool MapDrawer::hasOverlays() const {
+	if (options.show_creatures && creature_name_drawer && !creature_name_drawer->empty()) {
+		return true;
+	}
+	if (options.show_tooltips && tooltip_drawer && !tooltip_drawer->empty()) {
+		return true;
+	}
+	if (options.show_hooks && hook_indicator_drawer && !hook_indicator_drawer->empty()) {
+		return true;
+	}
+	if (options.highlight_locked_doors && door_indicator_drawer && !door_indicator_drawer->empty()) {
+		return true;
+	}
+	if (lua_overlay_drawer && lua_overlay_drawer->hasUIElements(view)) {
+		return true;
+	}
+	return false;
 }
 
 void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, bool light_collection_only) {

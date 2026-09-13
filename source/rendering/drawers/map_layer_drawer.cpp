@@ -131,10 +131,13 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 
 		Floor* floor_above = (map_z == GROUND_LAYER + 1) ? nd->getFloor(GROUND_LAYER) : nullptr;
 		TileLocation* location = floor->locs.data();
+		TileLocation* loc_above = floor_above ? floor_above->locs.data() : nullptr;
 		int draw_x_base = node_draw_x;
 		for (int map_x = 0; map_x < 4; ++map_x, draw_x_base += TILE_SIZE) {
 			int draw_y = node_draw_y;
 			for (int map_y = 0; map_y < 4; ++map_y, ++location, draw_y += TILE_SIZE) {
+				const Tile* tile_above = loc_above ? (loc_above++)->get() : nullptr;
+
 				if (!location->get()) {
 					continue;
 				}
@@ -145,7 +148,6 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 					continue;
 				}
 
-				const Tile* tile_above = floor_above ? floor_above->locs[map_x * 4 + map_y].get() : nullptr;
 				visitor(location, draw_x_base, draw_y, tile_above);
 			}
 		}

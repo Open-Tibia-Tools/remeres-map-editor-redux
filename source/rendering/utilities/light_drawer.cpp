@@ -105,15 +105,20 @@ void LightDrawer::computeBrightness(const RenderView& view, const LightBuffer& l
 			}
 
 			const size_t row_base_index = static_cast<size_t>(ty) * static_cast<size_t>(tw);
+			const float dx_start = static_cast<float>((light_buffer.origin_x + min_tx) * TILE_SIZE + TILE_SIZE / 2 - light.pixel_x);
+			constexpr float tile_step = static_cast<float>(TILE_SIZE);
 
-			for (int tx = min_tx; tx <= max_tx; ++tx) {
-				const size_t tile_index = row_base_index + static_cast<size_t>(tx);
-				if (light_index < light_buffer.tiles[tile_index].start) {
+			const LightBuffer::TileLight* tile_light_row = &light_buffer.tiles[row_base_index + min_tx];
+			uint8_t* brightness_row = &tile_brightness_[(row_base_index + min_tx) * 4];
+
+			float dx = dx_start;
+			const int tx_count = max_tx - min_tx;
+
+			for (int offset = 0; offset <= tx_count; ++offset, dx += tile_step) {
+				if (light_index < tile_light_row[offset].start) {
 					continue;
 				}
 
-				const int tile_center_x = (light_buffer.origin_x + tx) * TILE_SIZE + TILE_SIZE / 2;
-				const float dx = static_cast<float>(tile_center_x - light.pixel_x);
 				const float dist_sq = dx * dx + dy2;
 				if (dist_sq >= max_dist_sq) {
 					continue;
@@ -131,10 +136,10 @@ void LightDrawer::computeBrightness(const RenderView& view, const LightBuffer& l
 				const uint8_t light_g = static_cast<uint8_t>((light_g_base * factor_256) >> 8);
 				const uint8_t light_b = static_cast<uint8_t>((light_b_base * factor_256) >> 8);
 
-				const size_t base = tile_index * 4;
-				tile_brightness_[base + 0] = std::max(tile_brightness_[base + 0], light_r);
-				tile_brightness_[base + 1] = std::max(tile_brightness_[base + 1], light_g);
-				tile_brightness_[base + 2] = std::max(tile_brightness_[base + 2], light_b);
+				uint8_t* px = brightness_row + (offset * 4);
+				px[0] = std::max(px[0], light_r);
+				px[1] = std::max(px[1], light_g);
+				px[2] = std::max(px[2], light_b);
 			}
 		}
 	}
