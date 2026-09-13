@@ -71,6 +71,10 @@ struct DrawingOptions {
 
 	std::string screen_shader_name;
 
+	[[nodiscard]] bool hasTileColorModifiers() const noexcept {
+		return show_blocking || highlight_items || show_spawns || show_houses || show_special_tiles || show_only_colors;
+	}
+
 private:
 	bool dirty_ = true;
 };

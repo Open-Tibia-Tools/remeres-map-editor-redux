@@ -75,6 +75,7 @@ void SpritePreloader::preload(GameSprite* spr, int pattern_x, int pattern_y, int
 	}
 
 	struct PendingTask {
+		NormalImage* img = nullptr;
 		ArchiveSpriteKey key;
 		uint32_t generation_id = 0;
 	};
@@ -105,11 +106,11 @@ void SpritePreloader::preload(GameSprite* spr, int pattern_x, int pattern_y, int
 				}
 
 				NormalImage* img = spr->spriteList[idx];
-				if (img && !img->isGLLoaded) {
+				if (img && !img->isGLLoaded && !img->is_preloading) {
 					// Ensure parent is set so GC can invalidate cached_default_region
 					// when evicting this sprite later (prevents stale cache -> wrong sprite)
 					img->addParent(spr);
-					ids_to_enqueue.push_back({ { archive.get(), img->id }, img->generation_id });
+					ids_to_enqueue.push_back({ img, { archive.get(), img->id }, img->generation_id });
 				}
 			}
 		}
@@ -132,6 +133,9 @@ void SpritePreloader::preload(GameSprite* spr, int pattern_x, int pattern_y, int
 			};
 			if (pending_ids.insert(pending_key).second) {
 				task_queue.push({ pending_key, archive, has_transparency });
+				if (pending.img) {
+					pending.img->is_preloading = true;
+				}
 			}
 		}
 		cv.notify_all();
@@ -241,6 +245,8 @@ void SpritePreloader::update() {
 						}
 					}
 					img->fulfillPreload(std::move(res.data));
+				} else {
+					img->is_preloading = false;
 				}
 			}
 		}

@@ -60,6 +60,7 @@ void NormalImage::addParent(GameSprite* sprite) {
 
 void NormalImage::fulfillPreload(std::unique_ptr<uint8_t[]> data) {
 	atlas_region = EnsureAtlasSprite(id, std::move(data), getDimensions());
+	is_preloading = false;
 }
 
 void NormalImage::clean(time_t time, int longevity) {
@@ -79,6 +80,7 @@ void NormalImage::clean(time_t time, int longevity) {
 
 		isGLLoaded = false;
 		atlas_region = nullptr;
+		is_preloading = false;
 
 		// Invalidate any pending preloads for this sprite ID
 		generation_id++;

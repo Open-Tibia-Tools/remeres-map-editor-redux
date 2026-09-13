@@ -126,7 +126,7 @@ void Item::setID(uint16_t newid) {
 }
 
 GameSprite* Item::getSprite() const {
-	return dynamic_cast<GameSprite*>(g_gui.gfx.getSprite(getClientID()));
+	return g_gui.gfx.getGameSprite(getClientID());
 }
 
 void Item::setSubtype(uint16_t n) {

@@ -21,6 +21,7 @@ public:
 	// We use the sprite id as key
 	uint32_t id;
 	const AtlasRegion* atlas_region;
+	bool is_preloading = false;
 
 	// This contains the pixel data
 	uint16_t size;

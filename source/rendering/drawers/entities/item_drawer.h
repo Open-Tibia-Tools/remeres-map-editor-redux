@@ -14,6 +14,7 @@ class SpriteDrawer;
 class CreatureDrawer;
 class Tile;
 class Item;
+class GameSprite;
 class HookIndicatorDrawer;
 class DoorIndicatorDrawer;
 struct LightBuffer;
@@ -29,6 +30,7 @@ struct BlitItemParams {
 	Position pos;
 	Item* item = nullptr;
 	ItemDefinitionView item_definition;
+	GameSprite* sprite = nullptr;
 	const DrawingOptions* options = nullptr;
 	const SpritePatterns* patterns = nullptr;
 	bool ephemeral = false;

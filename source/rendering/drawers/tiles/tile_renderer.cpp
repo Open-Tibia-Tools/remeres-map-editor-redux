@@ -212,7 +212,7 @@ void TileRenderer::RegisterGroundLightOcclusion(const TileLocation* location, co
 	light_buffer.SetFieldBrightness(tile_x, tile_y, floor_light_start);
 }
 
-void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderView& view, const DrawingOptions& options, uint32_t current_house_id, int in_draw_x, int in_draw_y, LightBuffer* light_buffer, bool light_collection_only) const {
+void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderView& view, const DrawingOptions& options, uint32_t current_house_id, int in_draw_x, int in_draw_y, LightBuffer* light_buffer, bool light_collection_only, const Tile* tile_above) const {
 	if (!g_gui.gfx.ensureAtlasManager()) {
 		return;
 	}
@@ -225,10 +225,10 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 		.elapsed_time = g_gui.gfx.getElapsedTime(),
 		.current_house_id = current_house_id,
 	};
-	DrawTile(sprite_batch, location, ctx, in_draw_x, in_draw_y, light_buffer, light_collection_only);
+	DrawTile(sprite_batch, location, ctx, in_draw_x, in_draw_y, light_buffer, light_collection_only, tile_above);
 }
 
-void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int in_draw_x, int in_draw_y, LightBuffer* light_buffer, bool light_collection_only) const {
+void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int in_draw_x, int in_draw_y, LightBuffer* light_buffer, bool light_collection_only, const Tile* tile_above) const {
 	if (!location) {
 		return;
 	}
@@ -278,9 +278,13 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 	// Translucent light: when on floor 8 (GROUND_LAYER + 1), check if floor 7 above has translucent items
 	// OTClient: light seeps through translucent ground (grates, windows) from floor 7 to floor 8
 	if (light_buffer && position.z == GROUND_LAYER + 1) {
-		Position above_position = position;
-		--above_position.z;
-		if (const Tile* tile_above = editor ? editor->map.getTile(above_position) : nullptr; tileCarriesTranslucentLight(tile_above)) {
+		const Tile* above_tile = tile_above;
+		if (!above_tile && editor) {
+			Position above_position = position;
+			--above_position.z;
+			above_tile = editor->map.getTile(above_position);
+		}
+		if (tileCarriesTranslucentLight(above_tile)) {
 			// Emit faint warm white light (intensity=1, color=215) matching OTClient
 			light_buffer->AddTileLight(projected_tile_x, projected_tile_y, SpriteLight {
 				.intensity = 1,
@@ -337,8 +341,9 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 		return;
 	}
 
+	const bool need_waypoint = (options.show_tooltips && map_z == view.floor) || (view.zoom < 10.0 && !options.ingame && options.show_waypoints);
 	const Waypoint* waypoint = nullptr;
-	if (location->getWaypointCount() > 0) {
+	if (need_waypoint && location->getWaypointCount() > 0) {
 		waypoint = editor->map.waypoints.getWaypoint(location);
 	}
 
@@ -353,7 +358,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 	uint8_t r = 255, g = 255, b = 255;
 
 	// begin filters for ground tile
-	if (!as_minimap) {
+	if (!as_minimap && (options.hasTileColorModifiers() || location->getSpawnCount() > 0)) {
 		TileColorCalculator::Calculate(tile, options, current_house_id, location->getSpawnCount(), r, g, b);
 	}
 
@@ -374,10 +379,11 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 		}
 	} else {
 		if (tile->ground && ground_it && !hidden_invalid_ground) {
-			if (GameSprite* ground_sprite = tile->ground->getSprite()) {
+			GameSprite* ground_sprite = ctx.gfx.getGameSprite(ground_it.clientId());
+			if (ground_sprite) {
 				SpritePatterns patterns = PatternCalculator::Calculate(ground_sprite, ground_it, tile->ground.get(), tile, position);
 
-				// Inline preload check â€” skip function call when sprite is simple and loaded (95%+ case)
+				// Inline preload check — skip function call when sprite is simple and loaded (95%+ case)
 				if (!ground_sprite->isSimpleAndLoaded()) {
 					rme::collectTileSprites(ground_sprite, patterns.x, patterns.y, patterns.z, patterns.frame);
 				}
@@ -385,6 +391,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 				BlitItemParams params(position, tile->ground.get(), options);
 				params.tile = tile;
 				params.item_definition = ground_it;
+				params.sprite = ground_sprite;
 				params.red = r;
 				params.green = g;
 				params.blue = b;
@@ -483,10 +490,11 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 					}
 				}
 
-				if (GameSprite* sprite = item->getSprite()) {
+				GameSprite* sprite = it ? ctx.gfx.getGameSprite(it.clientId()) : nullptr;
+				if (sprite) {
 					SpritePatterns patterns = PatternCalculator::Calculate(sprite, it, item.get(), tile, position);
 
-					// Inline preload check â€” skip function call when sprite is simple and loaded
+					// Inline preload check — skip function call when sprite is simple and loaded
 					if (!sprite->isSimpleAndLoaded()) {
 						rme::collectTileSprites(sprite, patterns.x, patterns.y, patterns.z, patterns.frame);
 					}
@@ -494,6 +502,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 					BlitItemParams params(position, item.get(), options);
 					params.tile = tile;
 					params.item_definition = it;
+					params.sprite = sprite;
 					params.patterns = &patterns;
 					params.ctx = &ctx;
 
@@ -568,7 +577,7 @@ void TileRenderer::PreloadItem(const Tile* tile, Item* item, const ItemDefinitio
 		return;
 	}
 
-	GameSprite* spr = item->getSprite();
+	GameSprite* spr = it ? g_gui.gfx.getGameSprite(it.clientId()) : item->getSprite();
 	if (spr && !spr->isSimpleAndLoaded()) {
 		SpritePatterns patterns;
 		if (cached_patterns) {

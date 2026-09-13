@@ -120,17 +120,23 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 			return;
 		}
 
+		Floor* floor_above = (map_z == GROUND_LAYER + 1) ? nd->getFloor(GROUND_LAYER) : nullptr;
 		TileLocation* location = floor->locs.data();
 		int draw_x_base = node_draw_x;
 		for (int map_x = 0; map_x < 4; ++map_x, draw_x_base += TILE_SIZE) {
 			int draw_y = node_draw_y;
 			for (int map_y = 0; map_y < 4; ++map_y, ++location, draw_y += TILE_SIZE) {
+				if (!location->get()) {
+					continue;
+				}
+
 				// Culling: Skip tiles that are far outside the viewport.
 				if (!fully_inside && !view.IsPixelVisible(draw_x_base, draw_y, visibility_margin_pixels)) {
 					continue;
 				}
 
-				visitor(location, draw_x_base, draw_y);
+				const Tile* tile_above = floor_above ? floor_above->locs[map_x * 4 + map_y].get() : nullptr;
+				visitor(location, draw_x_base, draw_y, tile_above);
 			}
 		}
 	};
@@ -165,13 +171,13 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 	if (draw_lights && !light_collection_only) {
 		ASSERT(light_buffer.lights.size() <= std::numeric_limits<uint32_t>::max());
 		const uint32_t floor_light_start = static_cast<uint32_t>(light_buffer.lights.size());
-		visitAllVisibleNodes([&](const TileLocation* location, int, int) {
+		visitAllVisibleNodes([&](const TileLocation* location, int, int, const Tile*) {
 			tile_renderer->RegisterGroundLightOcclusion(location, view, light_buffer, floor_light_start);
 		});
 	}
 
-	auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y) {
-		tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, draw_lights ? &light_buffer : nullptr, light_collection_only);
+	auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
+		tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, draw_lights ? &light_buffer : nullptr, light_collection_only, tile_above);
 	};
 
 	visitAllVisibleNodes(drawVisibleTiles);

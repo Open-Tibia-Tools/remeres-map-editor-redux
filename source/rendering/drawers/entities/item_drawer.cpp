@@ -109,7 +109,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	}
 
 	// item sprite
-	GameSprite* spr = resolveSprite(it, params.ctx);
+	GameSprite* spr = params.sprite ? params.sprite : resolveSprite(it, params.ctx);
 
 	if (item->isInvalidOTBMItem() && !options.show_invalid_tiles) {
 		// Invalid OTBM placeholders are controlled exclusively by SHOW_INVALID_TILES.
@@ -172,7 +172,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	draw_y -= spr->draw_height;
 
 	SpritePatterns patterns;
-	if (cached_patterns && spr == resolveSprite(it, params.ctx)) {
+	if (cached_patterns) {
 		patterns = *cached_patterns;
 	} else {
 		patterns = PatternCalculator::Calculate(spr, it, item, tile, pos);
