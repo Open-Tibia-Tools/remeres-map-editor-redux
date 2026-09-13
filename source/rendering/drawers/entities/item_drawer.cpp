@@ -86,8 +86,8 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	const ItemDefinitionView it = params.item_definition ? params.item_definition : item->getDefinition();
 
-	// Locked door indicator
-	if (!options.ingame && options.highlight_locked_doors && it.isDoor()) {
+	// Locked door indicator (only if highlight_locked_doors enabled and not ingame)
+	if (options.highlight_locked_doors && !options.ingame && it.isDoor()) {
 		bool locked = item->isLocked();
 
 		// Door orientation: horizontal wall -> West border (south=true), vertical wall -> North border (east=true)
@@ -101,11 +101,16 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		}
 	}
 
-	bool is_transient_selected = !ephemeral && options.transient_selection_bounds && options.transient_selection_bounds->contains(pos.x, pos.y);
-	if (!options.ingame && (item->isSelected() || is_transient_selected)) {
-		red /= 2;
-		blue /= 2;
-		green /= 2;
+	if (!options.ingame) {
+		bool is_selected = item->isSelected();
+		if (!is_selected && !ephemeral && options.transient_selection_bounds) {
+			is_selected = options.transient_selection_bounds->contains(pos.x, pos.y);
+		}
+		if (is_selected) {
+			red >>= 1;
+			blue >>= 1;
+			green >>= 1;
+		}
 	}
 
 	// item sprite
@@ -120,7 +125,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	// Display invisible and invalid items
 	// Ugly hacks. :)
-	if (!options.ingame && options.show_tech_items) {
+	if (options.show_tech_items && !options.ingame) {
 		// Red invalid client id
 		if (!it) {
 			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, alpha), 0, atlas);
@@ -189,18 +194,15 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		registerSpriteLight(*light_buffer, *view, screenx, screeny, composite_metrics, item->getLight());
 	}
 
-	if (!ephemeral && options.transparent_items && (!it.isGroundTile() || spr->width > 1 || spr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || spr->width > 1 || spr->height > 1)) {
-		alpha /= 2;
+	if (options.transparent_items && !ephemeral && (!it.isGroundTile() || spr->width > 1 || spr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || spr->width > 1 || spr->height > 1)) {
+		alpha >>= 1;
 	}
 
-	if (it.isPodium()) {
+	const bool is_podium = it.isPodium();
+	if (is_podium) {
 		Podium* podium = static_cast<Podium*>(item);
 		if (!podium->hasShowPlatform() && !options.ingame) {
-			if (options.show_tech_items) {
-				alpha /= 2;
-			} else {
-				alpha = 0;
-			}
+			alpha = options.show_tech_items ? (alpha >> 1) : 0;
 		}
 	}
 
@@ -242,7 +244,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		}
 	}
 
-	if (it.isPodium()) {
+	if (is_podium) {
 		Podium* podium = static_cast<Podium*>(item);
 		Outfit outfit = podium->getOutfit();
 		if (!podium->hasShowOutfit()) {
