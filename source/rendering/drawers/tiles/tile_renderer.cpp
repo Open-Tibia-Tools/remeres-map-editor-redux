@@ -229,6 +229,10 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 }
 
 void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int in_draw_x, int in_draw_y, LightBuffer* light_buffer, bool light_collection_only) const {
+	DrawTile(sprite_batch, sprite_batch, location, ctx, in_draw_x, in_draw_y, light_buffer, light_collection_only);
+}
+
+void TileRenderer::DrawTile(SpriteBatch& ground_batch, SpriteBatch& item_batch, const TileLocation* location, const RenderFrameContext& ctx, int in_draw_x, int in_draw_y, LightBuffer* light_buffer, bool light_collection_only) const {
 	if (!location) {
 		return;
 	}
@@ -300,7 +304,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 			params.light_buffer = light_buffer;
 			params.view = &view;
 			params.ctx = &ctx;
-			item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, ground_draw_x, ground_draw_y, params);
+			item_drawer->BlitItem(ground_batch, sprite_drawer, creature_drawer, ground_draw_x, ground_draw_y, params);
 		}
 
 		if (light_buffer) {
@@ -319,11 +323,11 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 				params.light_buffer = light_buffer;
 				params.view = &view;
 				params.ctx = &ctx;
-				item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, item_draw_x, item_draw_y, params);
+				item_drawer->BlitItem(item_batch, sprite_drawer, creature_drawer, item_draw_x, item_draw_y, params);
 			}
 
 			if (tile->creature && options.show_creatures) {
-				creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
+				creature_drawer->BlitCreature(item_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
 					.map_pos = position,
 					.transient_selection_bounds = options.transient_selection_bounds,
 					.light_buffer = light_buffer,
@@ -368,16 +372,16 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 	if (only_colors) {
 		if (as_minimap) {
 			TileColorCalculator::GetMinimapColor(tile, r, g, b);
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(r, g, b, 255), 0, &ctx.atlas);
+			sprite_drawer->glBlitSquare(ground_batch, draw_x, draw_y, DrawColor(r, g, b, 255), 0, &ctx.atlas);
 		} else if (r != 255 || g != 255 || b != 255) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(r, g, b, 128), 0, &ctx.atlas);
+			sprite_drawer->glBlitSquare(ground_batch, draw_x, draw_y, DrawColor(r, g, b, 128), 0, &ctx.atlas);
 		}
 	} else {
 		if (tile->ground && ground_it && !hidden_invalid_ground) {
 			if (GameSprite* ground_sprite = tile->ground->getSprite()) {
 				SpritePatterns patterns = PatternCalculator::Calculate(ground_sprite, ground_it, tile->ground.get(), tile, position);
 
-				// Inline preload check â€” skip function call when sprite is simple and loaded (95%+ case)
+				// Inline preload check — skip function call when sprite is simple and loaded (95%+ case)
 				if (!ground_sprite->isSimpleAndLoaded()) {
 					rme::collectTileSprites(ground_sprite, patterns.x, patterns.y, patterns.z, patterns.frame);
 				}
@@ -392,7 +396,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 				params.light_buffer = light_buffer;
 				params.view = &view;
 				params.ctx = &ctx;
-				item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
+				item_drawer->BlitItem(ground_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 			} else if (!unresolved_invalid_ground) {
 				BlitItemParams params(position, tile->ground.get(), options);
 				params.tile = tile;
@@ -403,19 +407,19 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 				params.light_buffer = light_buffer;
 				params.view = &view;
 				params.ctx = &ctx;
-				item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
+				item_drawer->BlitItem(ground_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 			}
 		} else if (unresolved_invalid_ground) {
 			// Missing-definition ground placeholders are represented by the tile-level invalid overlay.
 		} else if (options.always_show_zones && (r != 255 || g != 255 || b != 255)) {
-			item_drawer->DrawRawBrush(sprite_batch, sprite_drawer, draw_x, draw_y, SPRITE_ZONE, r, g, b, 60);
+			item_drawer->DrawRawBrush(ground_batch, sprite_drawer, draw_x, draw_y, SPRITE_ZONE, r, g, b, 60);
 		}
 	}
 
-	// Cache isHouseTile â€” used multiple times below
+	// Cache isHouseTile — used multiple times below
 	const bool is_house_tile = tile->isHouseTile();
 
-	// Ground tooltip (one per item)
+	// Ground tooltip (one per tile)
 	if (options.show_tooltips && map_z == view.floor && tile->ground && ground_it) {
 		TooltipData& groundData = tooltip_drawer->requestTooltipData();
 		if (FillItemTooltipData(groundData, tile->ground.get(), ground_it, position, is_house_tile, view.zoom)) {
@@ -424,8 +428,6 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 			}
 		}
 	}
-
-	// end filters for ground tile
 
 	// Draw helper border for selected house tiles
 	// Only draw on the current floor (grid)
@@ -438,7 +440,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 		// Optimization: Use integer math for border color to avoid vec4 construction and casting
 		int ba = static_cast<int>(intensity * 255.0f);
 		// hr, hg, hb are already uint8_t
-		sprite_drawer->glDrawBox(sprite_batch, draw_x, draw_y, 32, 32, DrawColor(hr, hg, hb, ba), &ctx.atlas);
+		sprite_drawer->glDrawBox(ground_batch, draw_x, draw_y, 32, 32, DrawColor(hr, hg, hb, ba), &ctx.atlas);
 	}
 
 	if (!only_colors) {
@@ -504,7 +506,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 						params.blue = b;
 						params.light_buffer = light_buffer;
 						params.view = &view;
-						item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
+						item_drawer->BlitItem(item_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 					} else {
 						uint8_t ir = 255, ig = 255, ib = 255;
 
@@ -526,7 +528,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 						params.blue = ib;
 						params.light_buffer = light_buffer;
 						params.view = &view;
-						item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
+						item_drawer->BlitItem(item_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 					}
 				} else if (item->isInvalidOTBMItem()) {
 					// Missing-definition placeholders are represented by the tile-level invalid overlay.
@@ -534,7 +536,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 			}
 			// monster/npc on tile
 			if (tile->creature && options.show_creatures) {
-				creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
+				creature_drawer->BlitCreature(item_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
 					.map_pos = position,
 					.transient_selection_bounds = options.transient_selection_bounds,
 					.light_buffer = light_buffer,
@@ -548,17 +550,17 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 		}
 
 		if (options.show_invalid_zones && !as_minimap && tile->hasInvalidZones()) {
-			sprite_drawer->glBlitSquare(sprite_batch, tile_draw_x, tile_draw_y, DrawColor(255, 0, 255, 171), 0, &ctx.atlas);
+			sprite_drawer->glBlitSquare(item_batch, tile_draw_x, tile_draw_y, DrawColor(255, 0, 255, 171), 0, &ctx.atlas);
 		}
 
 		if (options.show_invalid_tiles && !as_minimap && invalid_tile_marker_color != InvalidOTBMItemMarkerColor::None) {
 			const DrawColor overlay = invalidTileOverlayColor(invalid_tile_marker_color, has_selected_invalid_item);
-			sprite_drawer->glBlitSquare(sprite_batch, tile_draw_x, tile_draw_y, overlay, 0, &ctx.atlas);
+			sprite_drawer->glBlitSquare(item_batch, tile_draw_x, tile_draw_y, overlay, 0, &ctx.atlas);
 		}
 
 		if (view.zoom < 10.0) {
 			// markers (waypoint, house exit, town temple, spawn)
-			marker_drawer->draw(sprite_batch, sprite_drawer, draw_x, draw_y, tile, waypoint, current_house_id, *editor, options);
+			marker_drawer->draw(item_batch, sprite_drawer, draw_x, draw_y, tile, waypoint, current_house_id, *editor, options);
 		}
 	}
 }
@@ -577,5 +579,73 @@ void TileRenderer::PreloadItem(const Tile* tile, Item* item, const ItemDefinitio
 			patterns = PatternCalculator::Calculate(spr, it, item, tile, tile->getPosition());
 		}
 		rme::collectTileSprites(spr, patterns.x, patterns.y, patterns.z, patterns.frame);
+	}
+}
+
+void TileRenderer::CollectTooltips(const TileLocation* location, const RenderFrameContext& ctx) const {
+	if (!location || !tooltip_drawer) {
+		return;
+	}
+	const Tile* tile = const_cast<Tile*>(location->get());
+	if (!tile) {
+		return;
+	}
+
+	const auto& options = ctx.options;
+	const auto& view = ctx.view;
+	const Position& position = location->getPosition();
+
+	if (location->getWaypointCount() > 0 && editor) {
+		if (const Waypoint* waypoint = editor->map.waypoints.getWaypoint(location)) {
+			tooltip_drawer->addWaypointTooltip(position, waypoint->name);
+		}
+	}
+
+	const bool is_house_tile = tile->isHouseTile();
+	if (tile->ground) {
+		const ItemDefinitionView ground_it = tile->ground->getDefinition();
+		if (ground_it) {
+			TooltipData& groundData = tooltip_drawer->requestTooltipData();
+			if (FillItemTooltipData(groundData, tile->ground.get(), ground_it, position, is_house_tile, view.zoom)) {
+				if (groundData.hasVisibleFields()) {
+					tooltip_drawer->commitTooltip();
+				}
+			}
+		}
+	}
+
+	for (const auto& item : tile->items) {
+		const ItemDefinitionView it = item->getDefinition();
+		if (item->isInvalidOTBMItem() && (!options.show_invalid_tiles || !it)) {
+			continue;
+		}
+		TooltipData& itemData = tooltip_drawer->requestTooltipData();
+		if (FillItemTooltipData(itemData, item.get(), it, position, is_house_tile, view.zoom)) {
+			if (itemData.hasVisibleFields()) {
+				tooltip_drawer->commitTooltip();
+			}
+		}
+	}
+}
+
+void TileRenderer::DrawCreature(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, LightBuffer* light_buffer) const {
+	if (!location || !creature_drawer || !sprite_drawer) {
+		return;
+	}
+	const Tile* tile = location->get();
+	if (!tile || !tile->creature || !ctx.options.show_creatures) {
+		return;
+	}
+
+	const auto& position = location->getPosition();
+	creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
+		.map_pos = position,
+		.transient_selection_bounds = ctx.options.transient_selection_bounds,
+		.light_buffer = light_buffer,
+		.view = &ctx.view,
+		.ctx = &ctx
+	});
+	if (creature_name_drawer) {
+		creature_name_drawer->addLabel(position, tile->creature->getName(), tile->creature.get());
 	}
 }

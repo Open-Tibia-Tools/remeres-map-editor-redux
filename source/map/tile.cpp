@@ -391,6 +391,7 @@ void Tile::modify() {
 			const Position position = getPosition();
 			if (editor->map.getTile(position) == this) {
 				g_minimap.MarkTileDirty(editor->map, position);
+				editor->markRenderDirty(position);
 			}
 		}
 	}

@@ -32,15 +32,18 @@
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/core/sprite_preloader.h"
 #include "rendering/core/render_frame_context.h"
+#include "rendering/core/render_chunk_cache.h"
+#include "rendering/drawers/tiles/tile_extractor.h"
 #include "item_definitions/core/item_definition_store.h"
 
 #include <cmath>
 #include <limits>
 
-MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Editor* editor) :
+MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Editor* editor, rme::rendering::RenderChunkCache* chunk_cache) :
 	tile_renderer(tile_renderer),
 	grid_drawer(grid_drawer),
-	editor(editor) {
+	editor(editor),
+	chunk_cache_(chunk_cache) {
 }
 
 MapLayerDrawer::~MapLayerDrawer() {
@@ -160,8 +163,84 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		});
 	};
 
-	// OTClient floor-aware light occlusion: capture light count at START of each floor,
-	// then mark opaque ground tiles with that index so they block light from floors below
+	// Chunk Cache & Sequential Batching (Data-Oriented Design)
+	if (chunk_cache_ && !live_client && !light_collection_only) {
+		const int start_cx = (nd_start_x - visibility_margin_tiles) >> 4;
+		const int end_cx = (nd_end_x + visibility_margin_tiles) >> 4;
+		const int start_cy = (nd_start_y - visibility_margin_tiles) >> 4;
+		const int end_cy = (nd_end_y + visibility_margin_tiles) >> 4;
+
+		std::vector<rme::rendering::RenderChunk*> visible_chunks;
+		visible_chunks.reserve((end_cx - start_cx + 1) * (end_cy - start_cy + 1));
+
+		for (int cy = start_cy; cy <= end_cy; ++cy) {
+			for (int cx = start_cx; cx <= end_cx; ++cx) {
+				rme::rendering::RenderChunk& chunk = chunk_cache_->getOrCreateChunk(cx, cy, map_z);
+				if (chunk.dirty) {
+					rme::rendering::TileExtractor::ExtractChunk(chunk, editor->map, ctx, *tile_renderer);
+				}
+				if (!chunk.empty()) {
+					visible_chunks.push_back(&chunk);
+				}
+			}
+		}
+
+		const float f_screen_x = static_cast<float>(base_screen_x);
+		const float f_screen_y = static_cast<float>(base_screen_y);
+
+		// Pass 1: Sequential batch of all ground sprites across visible chunks
+		for (const auto* chunk : visible_chunks) {
+			if (!chunk->ground_sprites.empty()) {
+				sprite_batch.appendTranslated(
+					chunk->ground_sprites.data(),
+					chunk->ground_sprites.size(),
+					f_screen_x,
+					f_screen_y
+				);
+			}
+		}
+
+		// Pass 2: Sequential batch of all item sprites across visible chunks
+		for (const auto* chunk : visible_chunks) {
+			if (!chunk->item_sprites.empty()) {
+				sprite_batch.appendTranslated(
+					chunk->item_sprites.data(),
+					chunk->item_sprites.size(),
+					f_screen_x,
+					f_screen_y
+				);
+			}
+		}
+
+		// Dynamic Pass: Tooltips, Creatures, and Lights
+		const bool collect_tooltips = options.show_tooltips && (map_z == view.floor);
+		const bool draw_creatures = options.show_creatures;
+
+		if (collect_tooltips || draw_creatures || draw_lights) {
+			uint32_t floor_light_start = 0;
+			if (draw_lights) {
+				ASSERT(light_buffer.lights.size() <= std::numeric_limits<uint32_t>::max());
+				floor_light_start = static_cast<uint32_t>(light_buffer.lights.size());
+			}
+
+			visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y) {
+				if (draw_lights) {
+					tile_renderer->RegisterGroundLightOcclusion(location, view, light_buffer, floor_light_start);
+					tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, &light_buffer, true);
+				}
+				if (draw_creatures) {
+					tile_renderer->DrawCreature(sprite_batch, location, ctx, draw_x, draw_y, draw_lights ? &light_buffer : nullptr);
+				}
+				if (collect_tooltips) {
+					tile_renderer->CollectTooltips(location, ctx);
+				}
+			});
+		}
+
+		return;
+	}
+
+	// Fallback path: un-cached rendering (live client or light collection)
 	if (draw_lights && !light_collection_only) {
 		ASSERT(light_buffer.lights.size() <= std::numeric_limits<uint32_t>::max());
 		const uint32_t floor_light_start = static_cast<uint32_t>(light_buffer.lights.size());

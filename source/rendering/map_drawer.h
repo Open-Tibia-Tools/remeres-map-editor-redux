@@ -26,6 +26,10 @@ class TooltipDrawer;
 class HookIndicatorDrawer;
 class DoorIndicatorDrawer;
 
+namespace rme::rendering {
+class RenderChunkCache;
+}
+
 // Storage during drawing, for option caching
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/light_buffer.h"
@@ -80,6 +84,7 @@ class MapDrawer {
 	std::unique_ptr<FloorDrawer> floor_drawer;
 	std::unique_ptr<SpriteDrawer> sprite_drawer;
 	std::unique_ptr<MapLayerDrawer> map_layer_drawer;
+	std::unique_ptr<rme::rendering::RenderChunkCache> chunk_cache_;
 	std::unique_ptr<CreatureDrawer> creature_drawer;
 	std::unique_ptr<ItemDrawer> item_drawer;
 	std::unique_ptr<MarkerDrawer> marker_drawer;
@@ -152,6 +157,9 @@ public:
 	}
 	TileRenderer* getTileRenderer() {
 		return tile_renderer.get();
+	}
+	rme::rendering::RenderChunkCache* getChunkCache() {
+		return chunk_cache_.get();
 	}
 	DoorIndicatorDrawer* getDoorIndicatorDrawer() {
 		return door_indicator_drawer.get();

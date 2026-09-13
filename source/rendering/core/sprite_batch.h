@@ -94,6 +94,29 @@ public:
 	 */
 	void ensureCapacity(size_t capacity);
 
+	/**
+	 * Append pre-translated instances directly to the pending batch.
+	 */
+	void appendTranslated(const SpriteInstance* src, size_t count, float offset_x, float offset_y);
+
+	/**
+	 * Begin an extraction batch for CPU-side packing (no GL state changes).
+	 */
+	void beginExtraction(const AtlasManager& atlas_manager);
+
+	/**
+	 * Extract pending sprites and clear internal buffer.
+	 */
+	[[nodiscard]] std::vector<SpriteInstance> takePendingSprites() {
+		std::vector<SpriteInstance> result = std::move(pending_sprites_);
+		pending_sprites_.clear();
+		return result;
+	}
+
+	[[nodiscard]] const std::vector<SpriteInstance>& getPendingSprites() const noexcept {
+		return pending_sprites_;
+	}
+
 	int getDrawCallCount() const {
 		return draw_call_count_;
 	}
