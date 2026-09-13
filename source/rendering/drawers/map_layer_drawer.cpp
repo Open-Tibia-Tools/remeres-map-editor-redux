@@ -191,19 +191,3 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 
 	visitAllVisibleNodes(drawVisibleTiles);
 }
-
-void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderView& view, const DrawingOptions& options, LightBuffer& light_buffer, bool light_collection_only) {
-	if (!g_gui.gfx.ensureAtlasManager()) {
-		return;
-	}
-	RenderFrameContext ctx {
-		.atlas = *g_gui.gfx.getAtlasManager(),
-		.gfx = g_gui.gfx,
-		.item_definitions = g_item_definitions,
-		.options = options,
-		.view = view,
-		.elapsed_time = g_gui.gfx.getElapsedTime(),
-		.current_house_id = static_cast<uint32_t>(options.current_house_id)
-	};
-	Draw(sprite_batch, map_z, live_client, ctx, light_buffer, light_collection_only);
-}

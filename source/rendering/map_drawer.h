@@ -123,9 +123,7 @@ public:
 
 	void Draw();
 	void DrawBackground();
-	void DrawMap();
 	void DrawMap(const RenderFrameContext& ctx);
-	void DrawLiveCursors();
 	void DrawIngameBox(const ViewBounds& bounds);
 
 	void DrawGrid(const ViewBounds& bounds);
@@ -165,7 +163,6 @@ public:
 
 private:
 	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, bool light_collection_only = false);
-	void DrawMapLayer(SpriteBatch& batch, const RenderView& draw_view, int map_z, bool live_client, bool light_collection_only = false);
 	bool renderers_initialized = false;
 	Settings::ObserverId settings_observer_id_ = 0;
 };

@@ -68,7 +68,6 @@ public:
 };
 
 class Image;
-class NormalImage;
 class TemplateImage;
 
 class GameSprite : public Sprite {

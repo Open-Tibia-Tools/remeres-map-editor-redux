@@ -212,22 +212,6 @@ void TileRenderer::RegisterGroundLightOcclusion(const TileLocation* location, co
 	light_buffer.SetFieldBrightness(tile_x, tile_y, floor_light_start);
 }
 
-void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderView& view, const DrawingOptions& options, uint32_t current_house_id, int in_draw_x, int in_draw_y, LightBuffer* light_buffer, bool light_collection_only, const Tile* tile_above) const {
-	if (!g_gui.gfx.ensureAtlasManager()) {
-		return;
-	}
-	const RenderFrameContext ctx {
-		.atlas = *g_gui.gfx.getAtlasManager(),
-		.gfx = g_gui.gfx,
-		.item_definitions = g_item_definitions,
-		.options = options,
-		.view = view,
-		.elapsed_time = g_gui.gfx.getElapsedTime(),
-		.current_house_id = current_house_id,
-	};
-	DrawTile(sprite_batch, location, ctx, in_draw_x, in_draw_y, light_buffer, light_collection_only, tile_above);
-}
-
 void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int in_draw_x, int in_draw_y, LightBuffer* light_buffer, bool light_collection_only, const Tile* tile_above) const {
 	if (!location) {
 		return;
@@ -571,22 +555,5 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 			// markers (waypoint, house exit, town temple, spawn)
 			marker_drawer->draw(sprite_batch, sprite_drawer, draw_x, draw_y, tile, waypoint, current_house_id, *editor, options, &ctx);
 		}
-	}
-}
-
-void TileRenderer::PreloadItem(const Tile* tile, Item* item, const ItemDefinitionView& it, const SpritePatterns* cached_patterns) {
-	if (!item) {
-		return;
-	}
-
-	GameSprite* spr = it ? g_gui.gfx.getGameSprite(it.clientId()) : item->getSprite();
-	if (spr && !spr->isSimpleAndLoaded()) {
-		SpritePatterns patterns;
-		if (cached_patterns) {
-			patterns = *cached_patterns;
-		} else {
-			patterns = PatternCalculator::Calculate(spr, it, item, tile, tile->getPosition());
-		}
-		rme::collectTileSprites(spr, patterns.x, patterns.y, patterns.z, patterns.frame);
 	}
 }

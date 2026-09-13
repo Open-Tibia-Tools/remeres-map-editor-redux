@@ -454,22 +454,6 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx) {
 	}
 }
 
-void MapDrawer::DrawMap() {
-	if (!g_gui.gfx.ensureAtlasManager()) {
-		return;
-	}
-	const RenderFrameContext ctx {
-		*g_gui.gfx.getAtlasManager(),
-		g_gui.gfx,
-		g_item_definitions,
-		options,
-		view,
-		g_gui.gfx.getElapsedTime(),
-		static_cast<uint32_t>(options.current_house_id)
-	};
-	DrawMap(ctx);
-}
-
 void MapDrawer::DrawIngameBox(const ViewBounds& bounds) {
 	grid_drawer->DrawIngameBox(*sprite_batch, view, options, bounds);
 }
@@ -517,22 +501,6 @@ bool MapDrawer::hasOverlays() const {
 
 void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, bool light_collection_only) {
 	map_layer_drawer->Draw(batch, map_z, live_client, floor_ctx, light_buffer, light_collection_only);
-}
-
-void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderView& draw_view, int map_z, bool live_client, bool light_collection_only) {
-	if (!g_gui.gfx.ensureAtlasManager()) {
-		return;
-	}
-	const RenderFrameContext ctx {
-		*g_gui.gfx.getAtlasManager(),
-		g_gui.gfx,
-		g_item_definitions,
-		options,
-		draw_view,
-		g_gui.gfx.getElapsedTime(),
-		static_cast<uint32_t>(options.current_house_id)
-	};
-	DrawMapLayer(batch, ctx, map_z, live_client, light_collection_only);
 }
 
 void MapDrawer::DrawLight() {

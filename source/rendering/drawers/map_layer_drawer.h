@@ -36,7 +36,6 @@ public:
 	~MapLayerDrawer();
 
 	void Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderFrameContext& ctx, LightBuffer& light_buffer, bool light_collection_only = false);
-	void Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderView& view, const DrawingOptions& options, LightBuffer& light_buffer, bool light_collection_only = false);
 
 private:
 	TileRenderer* tile_renderer;
