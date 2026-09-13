@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Food">
+    <item fromid="2666" toid="2696" />
+    <item fromid="2787" toid="2798" />
+    <item fromid="6393" toid="6394" />
+    <item fromid="6541" toid="6545" />
+    <item fromid="7372" toid="7377" />
+    <item fromid="6125" />
+    <item fromid="6569" />
+    <item fromid="7158" toid="7159" />
+    <item fromid="6277" toid="6280" />
+    <item fromid="7909" toid="7910" />
+    <item fromid="8208" />
+    <item fromid="8194" />
+    <item fromid="5097" />
+    <item fromid="7966" />
+    <item fromid="6574" />
+    <item fromid="8838" toid="8848" />
+</tileset>

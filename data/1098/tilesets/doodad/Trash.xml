@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Trash">
+    <brush name="broken bottles" />
+    <brush name="rotten food" />
+    <brush name="rubbish" />
+    <brush name="bones" />
+    <brush name="skeletons" />
+    <item id="2236" />
+    <item id="2237" />
+    <item id="2238" />
+    <brush name="leaves" />
+    <item id="2246" />
+    <brush name="bamboo garbage" />
+    <brush name="wooden trash" />
+    <brush name="metal trash" />
+    <brush name="all trash" />
+    <brush name="bottles" />
+</tileset>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Stairs / Ramps / Ladders">
+    <item fromid="383" toid="385" />
+    <item fromid="392" />
+    <item fromid="418" />
+    <item fromid="468" toid="470" />
+    <item fromid="481" toid="485" />
+    <item fromid="489" />
+    <item fromid="5731" />
+    <item fromid="369" toid="370" />
+    <item fromid="408" />
+    <item fromid="409" />
+    <item fromid="410" toid="411" />
+    <item fromid="423" />
+    <item fromid="427" toid="429" />
+    <item fromid="432" toid="433" />
+    <item fromid="3135" toid="3138" />
+    <item fromid="3219" toid="3220" />
+    <item fromid="4834" toid="4837" />
+    <item fromid="8276" toid="8277" />
+    <item fromid="8279" toid="8286" />
+    <item fromid="9574" />
+    <item fromid="9606" />
+    <item fromid="9846" />
+    <item fromid="430" />
+    <item fromid="461" toid="462" />
+    <item fromid="475" toid="476" />
+    <item fromid="479" toid="480" />
+    <item fromid="924" />
+    <item fromid="5081" />
+    <item fromid="6127" toid="6130" />
+    <item fromid="6173" toid="6174" />
+    <item fromid="6917" toid="6924" />
+    <item fromid="8559" toid="8566" />
+    <item fromid="8288" />
+    <item fromid="1386" />
+    <item fromid="3678" />
+    <item fromid="5543" />
+    <item fromid="8599" />
+    <item fromid="1385" />
+    <item fromid="1396" />
+    <item fromid="7924" toid="7925" />
+    <item fromid="5258" toid="5260" />
+    <item fromid="3687" toid="3688" />
+    <item fromid="9573" />
+    <item fromid="1388" toid="1395" />
+    <item fromid="1398" toid="1405" />
+    <item fromid="3679" toid="3686" />
+    <item fromid="6909" toid="6916" />
+    <item fromid="8372" toid="8379" />
+</tileset>

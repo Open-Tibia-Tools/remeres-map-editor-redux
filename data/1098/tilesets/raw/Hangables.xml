@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Hangables">
+    <item fromid="1809" toid="1902" />
+    <item fromid="2037" toid="2040" />
+    <item fromid="2058" toid="2061" />
+    <item fromid="2066" toid="2069" />
+    <item fromid="9415" toid="9416" />
+    <item fromid="9424" toid="9433" />
+    <item fromid="9449" toid="9459" />
+    <item fromid="9495" toid="9520" />
+    <item fromid="9583" toid="9585" />
+    <item fromid="9605" />
+    <item fromid="9637" toid="9638" />
+    <item fromid="9656" toid="9657" />
+    <item fromid="9669" toid="9670" />
+    <item fromid="9835" toid="9836" />
+    <item fromid="9838" toid="9845" />
+</tileset>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Corpses">
+    <item id="2317" />
+    <item id="6560" />
+    <item fromid="2806" toid="3134" />
+    <item fromid="4251" toid="4327" />
+    <item fromid="5522" toid="5538" />
+    <item fromid="6302" toid="6351" />
+    <item fromid="6354" toid="6355" />
+    <item fromid="6364" toid="6367" />
+    <item fromid="5540" toid="5542" />
+    <item fromid="5565" toid="5568" />
+    <item fromid="5625" toid="5630" />
+    <item fromid="5666" toid="5668" />
+    <item fromid="5688" toid="5690" />
+    <item fromid="5727" toid="5729" />
+    <item id="5762" />
+    <item fromid="5765" toid="5767" />
+    <item fromid="5931" toid="5936" />
+    <item fromid="5960" toid="6084" />
+    <item fromid="6520" toid="6522" />
+    <item fromid="7091" toid="7094" />
+    <item fromid="7256" toid="7258" />
+    <item id="7260" />
+    <item fromid="7282" toid="7285" />
+    <item fromid="7316" toid="7341" />
+    <item fromid="7344" toid="7347" />
+    <item fromid="7740" toid="7743" />
+    <item id="7621" />
+    <item id="7623" />
+    <item id="7626" />
+    <item id="7622" />
+    <item id="7624" />
+    <item id="7625" />
+    <item id="7627" />
+    <item fromid="7969" toid="7971" />
+    <item fromid="7628" toid="7631" />
+    <item fromid="7637" toid="7640" />
+    <item fromid="7926" toid="7931" />
+    <item id="7908" />
+    <item fromid="7847" toid="7849" />
+    <item fromid="8269" />
+    <item fromid="8307" toid="8308" />
+    <item fromid="8311" toid="8312" />
+    <item fromid="8271" toid="8274" />
+    <item fromid="8933" toid="8944" />
+    <item fromid="8946" toid="8958" />
+    <item fromid="8960" toid="8969" />
+    <item fromid="8271" toid="8274" />
+    <item fromid="9654" />
+    <item fromid="9656" toid="9660" />
+    <item fromid="9780" toid="9783" />
+    <item fromid="9801" toid="9804" />
+    <item fromid="9823" toid="9824" />
+    <item fromid="9829" toid="9832" />
+    <item fromid="9867" toid="9882" />
+    <item fromid="9909" toid="9926" />
+    <item fromid="9935" toid="9938" />
+    <item fromid="9960" toid="9968" />
+    <item fromid="10002" toid="10005" />
+    <item fromid="10007" toid="10009" />
+</tileset>

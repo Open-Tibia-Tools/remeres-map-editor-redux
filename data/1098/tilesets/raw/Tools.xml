@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Tools">
+    <item fromid="8822" toid="8823" />
+    <item fromid="8613" />
+</tileset>

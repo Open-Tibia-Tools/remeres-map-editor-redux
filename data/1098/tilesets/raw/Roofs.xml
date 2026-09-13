@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Roofs">
+    <item fromid="9092" toid="9099" />
+    <item fromid="9100" toid="9106" />
+    <item fromid="9400" toid="9404" />
+    <item fromid="9537" toid="9560" />
+    <item fromid="9759" toid="9766" />
+</tileset>

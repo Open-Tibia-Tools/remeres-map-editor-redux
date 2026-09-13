@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Statues">
+    <item fromid="1444" toid="1445" />
+    <item fromid="1448" toid="1449" />
+    <brush name="knight statue" />
+    <brush name="mage statue" />
+    <brush name="king statue" />
+    <brush name="dwarven king statue" />
+    <brush name="amazon statue" />
+    <brush name="bitter dwarf statue" />
+    <brush name="angry dwarf statue" />
+    <brush name="minotaur statue" />
+    <brush name="goblin statue" />
+    <brush name="gargoyle statue" />
+    <brush name="gargoyle statue pedestal" />
+    <brush name="cobra statue" />
+    <brush name="cobra statue pedestal" />
+    <brush name="female statue" />
+    <brush name="female statue with flame" />
+    <brush name="hunter statue" />
+    <brush name="hydra fight statue" />
+    <brush name="snake charmer statue" />
+    <brush name="lizard statue" />
+    <brush name="broken lizard statue" />
+    <brush name="giant snake head statue" />
+    <brush name="giant snake head statue (open)" />
+    <brush name="giant hand statue" />
+    <item fromid="1450" toid="1451" />
+    <item fromid="7823" toid="7826" />
+    <brush name="statue1" />
+    <brush name="stone monkey" />
+</tileset>

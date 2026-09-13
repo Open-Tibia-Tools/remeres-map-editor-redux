@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Splash">
+    <item id="2016" />
+    <item id="2017" />
+    <item id="2018" />
+    <item id="2019" />
+    <item id="2020" />
+    <item id="2021" />
+    <item id="1903" />
+    <item id="1904" />
+    <item id="1905" />
+    <item fromid="2025" toid="2030" />
+</tileset>

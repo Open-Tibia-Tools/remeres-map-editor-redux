@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature">
+    <item fromid="386" toid="391" />
+    <item fromid="5750" toid="5754" />
+    <item fromid="5866" toid="5868" />
+    <item fromid="8633" toid="8640" />
+    <item fromid="1499" />
+    <item fromid="1285" toid="1359" />
+    <item fromid="6423" toid="6432" />
+    <item fromid="8139" toid="8159" />
+    <item fromid="8166" toid="8167" />
+    <item id="7024" />
+    <item fromid="5092" toid="5096" />
+    <item fromid="8785" toid="8791" />
+    <item fromid="8792" toid="8796" />
+    <item fromid="5156" toid="5157" />
+    <item fromid="2697" toid="2786" />
+    <item fromid="3311" toid="3347" />
+    <item fromid="2569" toid="2574" />
+    <item fromid="2798" toid="2805" />
+    <item fromid="3603" toid="3677" />
+    <item fromid="3984" toid="4250" />
+    <item fromid="3569" toid="3574" />
+    <item fromid="4468" toid="4513" />
+    <item fromid="4826" toid="4827" />
+    <item fromid="873" toid="878" />
+    <item fromid="903" toid="917" />
+    <item fromid="8632" />
+    <item id="6094" />
+    <item fromid="4875" />
+    <item fromid="5677" />
+    <item id="4995" />
+    <item fromid="7020" toid="7023" />
+    <item fromid="4876" toid="4882" />
+    <item fromid="6999" toid="7019" />
+    <item fromid="6610" toid="6611" />
+    <item fromid="6707" toid="6727" />
+    <item fromid="7536" toid="7550" />
+    <item id="7551" />
+    <item id="7552" />
+    <item id="7553" />
+    <item fromid="7554" toid="7557" />
+    <item fromid="7566" />
+    <item fromid="7585" toid="7586" />
+    <item fromid="6216" toid="6233" />
+    <item fromid="6271" toid="6276" />
+    <item fromid="6180" toid="6191" />
+    <item fromid="5390" toid="5399" />
+    <item fromid="8797" toid="8818" />
+    <item fromid="8288" toid="8291" />
+    <item fromid="8770" toid="8776" />
+    <item fromid="8324" toid="8325" />
+    <item fromid="8416" toid="8417" />
+    <item fromid="8214" toid="8240" />
+</tileset>

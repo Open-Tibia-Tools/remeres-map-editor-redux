@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Beds">
+    <brush name="normal bed" />
+    <brush name="normal bed with sleeper" />
+    <brush name="cot" />
+    <brush name="cot with sleeper" />
+    <brush name="hammock" />
+    <brush name="hammock with sleeper" />
+    <brush name="hay bed" />
+    <brush name="hay bed with sleeper" />
+</tileset>

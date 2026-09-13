@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Walls">
+    <brush name="rope wall" />
+    <brush name="fence" />
+    <brush name="dark fence" />
+    <brush name="steel bars" />
+    <brush name="steel rebar" />
+    <brush name="plaster wall" />
+    <brush name="damaged plaster wall" />
+    <brush name="plaster wall arch" />
+    <brush name="wooden archway" />
+    <brush name="wood wall" />
+    <brush name="croft wall" />
+    <brush name="wooden wall" />
+    <brush name="ornamented wooden wall" />
+    <brush name="low stone-wooden wall" />
+    <brush name="ornamented low stone-wooden wall" />
+    <brush name="high stone-wooden wall" />
+    <brush name="ornamented high stone-wooden wall" />
+    <brush name="stone wall" />
+    <brush name="brick wall" />
+    <brush name="brick wall arch" />
+    <brush name="egypt stone wall" />
+    <brush name="egypt wall" />
+    <brush name="alabaster wall" />
+    <brush name="marble wall" />
+    <brush name="ruin wall" />
+    <brush name="rock wall" />
+</tileset>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Exterior">
+    <item id="1387" />
+    <item id="1945" />
+    <item id="2334" />
+    <item id="2555" />
+    <item id="6972" />
+    <item id="6973" />
+    <item id="2320" />
+    <item id="3981" />
+    <brush name="skeletons" />
+    <brush name="big footprint" />
+    <brush name="draw well" />
+    <brush name="vertical mill" />
+    <brush name="horizontal mill" />
+    <brush name="cobweb" />
+    <brush name="gray cloth wall" />
+    <brush name="brown cloth wall" />
+    <brush name="tanned tiger fur" />
+    <brush name="brown mammoth fur" />
+    <brush name="stone altar" />
+    <brush name="decorative altar" />
+    <brush name="railways" />
+    <brush name="railway cart" />
+    <brush name="dwarven machine" />
+    <item id="7919" />
+    <brush name="fishing net" />
+    <brush name="cracks" />
+    <brush name="lumberjack stuff" />
+    <brush name="leaning planks" />
+    <brush name="planks" />
+    <brush name="ballista" />
+    <brush name="catapult" />
+    <brush name="torture machine" />
+    <brush name="torture locker" />
+    <brush name="turtle" />
+    <brush name="archery target" />
+    <brush name="archery target totem" />
+    <brush name="stuck arrow" />
+    <brush name="stuck axe" />
+    <brush name="pillory" />
+    <item fromid="1406" toid="1409" />
+    <brush name="stone coffin (no rose)" />
+    <brush name="stone coffin (yellow rose)" />
+    <brush name="stone coffin (blue rose)" />
+    <brush name="stone coffin (red rose)" />
+    <brush name="buried stone coffin" />
+    <brush name="sarcophagus" />
+    <item fromid="1421" toid="1428" />
+    <item fromid="1481" toid="1486" />
+    <item fromid="2601" toid="2605" />
+    <brush name="large cauldron" />
+    <brush name="large cauldron with fire" />
+    <brush name="ancient fountain - off" />
+    <brush name="ancient fountain - on" />
+    <brush name="water well" />
+    <brush name="lava fountain" />
+    <brush name="marble fountain - on" />
+    <brush name="marble fountain - off" />
+    <item id="1378" />
+    <brush name="normal fountain - on" />
+    <brush name="normal fountain - off" />
+    <brush name="wall fountain" />
+    <brush name="gray striped tent" />
+    <brush name="red striped tent" />
+    <brush name="garish striped tent" />
+    <brush name="white caravan wagon" />
+    <brush name="caravan wagon chassis" />
+    <brush name="orc wagon" />
+    <item fromid="8388" toid="8415" />
+</tileset>

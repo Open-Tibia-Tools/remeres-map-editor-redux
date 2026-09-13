@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Equipment">
+    <item fromid="2128" />
+    <item fromid="2342" toid="2343" />
+    <item fromid="5924" />
+    <item fromid="2457" toid="2462" />
+    <item fromid="2471" />
+    <item fromid="2473" toid="2475" />
+    <item fromid="2479" toid="2482" />
+    <item fromid="2490" toid="2491" />
+    <item fromid="2493" />
+    <item fromid="2496" toid="2499" />
+    <item fromid="2501" toid="2502" />
+    <item fromid="2506" />
+    <item fromid="2323" />
+    <item fromid="2662" toid="2663" />
+    <item fromid="2665" />
+    <item fromid="3967" />
+    <item fromid="3969" toid="3972" />
+    <item fromid="5461" />
+    <item fromid="6531" />
+    <item fromid="5741" />
+    <item fromid="6096" />
+    <item fromid="7461" toid="7462" />
+    <item fromid="7458" />
+    <item fromid="7459" />
+    <item fromid="7885" />
+    <item fromid="7903" />
+    <item fromid="7901" />
+    <item fromid="7902" />
+    <item fromid="7900" />
+    <item fromid="7939" />
+    <item fromid="7957" />
+    <item fromid="5917" />
+    <item fromid="6578" />
+    <item fromid="8820" />
+    <item fromid="9778" />
+    <item fromid="9820" toid="9822" />
+    <item fromid="9927" />
+    <item fromid="2463" toid="2467" />
+    <item fromid="2472" />
+    <item fromid="2476" />
+    <item fromid="2483" toid="2487" />
+    <item fromid="2489" />
+    <item fromid="2492" />
+    <item fromid="2494" />
+    <item fromid="2500" />
+    <item fromid="2503" />
+    <item fromid="2505" />
+    <item fromid="2508" />
+    <item fromid="4847" />
+    <item fromid="2650" toid="2660" />
+    <item fromid="2664" />
+    <item fromid="3968" />
+    <item fromid="6095" />
+    <item fromid="7463" />
+    <item fromid="7884" />
+    <item fromid="7897" />
+    <item fromid="7898" />
+    <item fromid="7899" />
+    <item fromid="8865" toid="8892" />
+    <item fromid="8819" />
+    <item fromid="8821" />
+    <item fromid="9776" />
+    <item fromid="9808" toid="9810" />
+    <item fromid="9928" />
+    <item fromid="2468" toid="2470" />
+    <item fromid="2477" toid="2478" />
+    <item fromid="2488" />
+    <item fromid="2495" />
+    <item fromid="2504" />
+    <item fromid="2507" />
+    <item fromid="2647" toid="2649" />
+    <item fromid="7464" />
+    <item fromid="7885" />
+    <item fromid="7894" />
+    <item fromid="7895" />
+    <item fromid="7896" />
+    <item fromid="5918" />
+    <item fromid="3983" />
+    <item fromid="7730" />
+    <item fromid="8923" />
+    <item fromid="9777" />
+    <item fromid="9811" toid="9813" />
+    <item fromid="9929" />
+    <item fromid="2195" />
+    <item fromid="6530" />
+    <item fromid="6132" />
+    <item fromid="2358" />
+    <item fromid="2640" toid="2646" />
+    <item fromid="3982" />
+    <item fromid="5462" />
+    <item fromid="7457" />
+    <item fromid="7886" />
+    <item fromid="7891" />
+    <item fromid="7892" />
+    <item fromid="7893" />
+    <item fromid="9817" toid="9819" />
+    <item fromid="9930" toid="9933" />
+</tileset>

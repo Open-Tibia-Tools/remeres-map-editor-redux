@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Architecture">
+    <item id="1514" />
+    <item id="1515" />
+    <item id="3766" />
+    <item id="3767" />
+    <item id="1549" />
+    <item id="1551" />
+    <item fromid="8538" toid="8540" />
+    <item fromid="3792" toid="3793" />
+    <item id="6972" />
+    <item id="6973" />
+    <item id="1479" />
+    <item id="1480" />
+</tileset>

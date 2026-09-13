@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Writeables">
+    <item fromid="1947" toid="1986" />
+    <item id="2345" />
+    <item id="2347" />
+    <item id="2597" />
+    <item id="2325" />
+    <item id="2333" />
+    <item id="2329" />
+    <item id="6387" />
+    <item id="6388" />
+    <item id="2598" />
+    <item id="2599" />
+    <item id="2175" />
+    <item id="6533" />
+    <item id="2217" />
+    <item id="4853" />
+    <item id="6113" />
+    <item id="6118" />
+    <item id="6119" />
+    <item id="8267" />
+    <item id="4854" />
+    <item id="4855" />
+    <item id="4842" />
+    <item id="5091" />
+    <item id="5706" />
+    <item id="5958" />
+    <item id="7696" />
+    <item id="6086" />
+    <item id="6124" />
+    <item fromid="7702" toid="7705" />
+    <item fromid="7720" toid="7727" />
+    <item fromid="7844" toid="7846" />
+    <item fromid="7528" toid="7535" />
+</tileset>

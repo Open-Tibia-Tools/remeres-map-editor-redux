@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Runes">
+    <item fromid="2260" toid="2316" />
+    <item fromid="8919" />
+</tileset>

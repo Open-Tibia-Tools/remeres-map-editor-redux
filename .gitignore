@@ -114,12 +114,6 @@ data/user/
 /.agents/rules
 compile_commands.json
 /.cache
-/data/1098_test
-/data/1098dat
-/data/1098
-/data/canary
-/data — kopia
-/assets
 
 # Python
 __pycache__/

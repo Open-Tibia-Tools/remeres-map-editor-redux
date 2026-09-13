@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Snow">
+    <brush name="sea" />
+    <brush name="walkable sea" />
+    <brush name="mountain" />
+    <brush name="snowy mountain" />
+    <brush name="icy mountain" />
+    <brush name="icy earth" />
+    <brush name="snowy ramp" />
+    <brush name="ramp" />
+    <brush name="snow" />
+    <brush name="ice" />
+    <brush name="ice floe" />
+    <brush name="white gravel" />
+    <brush name="ice stone floor" />
+    <brush name="mountain ground" />
+    <brush name="mountain top ground" />
+    <brush name="rocky ground" />
+    <brush name="frozen mud" />
+    <brush name="frozen mud (thick border)" />
+    <brush name="fur carpet" />
+</tileset>

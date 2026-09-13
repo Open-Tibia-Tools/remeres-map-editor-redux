@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Boats">
+    <item fromid="4883" toid="4947" />
+    <item fromid="4403" />
+    <item fromid="3601" toid="3602" />
+    <item fromid="4948" toid="4991" />
+    <item fromid="4998" toid="5008" />
+    <item fromid="5082" toid="5085" />
+    <item fromid="1277" toid="1284" />
+    <item fromid="3587" toid="3600" />
+</tileset>

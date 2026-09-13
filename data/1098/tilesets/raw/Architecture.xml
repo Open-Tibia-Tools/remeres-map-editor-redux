@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Architecture">
+    <item fromid="1516" toid="1523" />
+    <item fromid="1533" toid="1547" />
+    <item fromid="1909" toid="1933" />
+    <item fromid="1935" toid="1937" />
+    <item fromid="1939" toid="1944" />
+    <item id="1514" />
+    <item id="1515" />
+    <item id="3766" />
+    <item id="3767" />
+    <item id="1549" />
+    <item id="1551" />
+    <item fromid="8538" toid="8540" />
+    <item fromid="3792" toid="3793" />
+    <item id="6972" />
+    <item id="6973" />
+    <item fromid="7095" toid="7101" />
+    <item id="463" />
+    <item id="1479" />
+    <item id="1480" />
+    <item id="1486" />
+    <item id="3743" />
+    <item id="3744" />
+    <item fromid="5315" toid="5331" />
+    <item fromid="5158" toid="5253" />
+    <item fromid="6961" toid="6965" />
+    <item fromid="6981" toid="6983" />
+    <item fromid="6986" />
+    <item fromid="7592" toid="7604" />
+    <item fromid="7617" />
+    <item fromid="7619" />
+    <item fromid="1550" toid="1581" />
+    <item fromid="1510" toid="1513" />
+    <item id="463" />
+    <item fromid="9084" toid="9091" />
+    <item id="9434" />
+    <item fromid="9779" />
+    <item fromid="9784" toid="9791" />
+</tileset>

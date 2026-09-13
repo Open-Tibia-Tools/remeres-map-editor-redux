@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Sea">
+    <item fromid="2226" />
+    <item fromid="2240" />
+    <item fromid="5405" toid="5410" />
+    <item fromid="5427" toid="5438" />
+    <item fromid="5743" toid="5744" />
+    <item fromid="5763" toid="5764" />
+    <item fromid="5554" />
+    <item fromid="5411" toid="5426" />
+    <item fromid="5439" toid="5460" />
+    <item fromid="5678" toid="5682" />
+    <item fromid="5811" />
+    <item fromid="3607" toid="3616" />
+    <item fromid="5631" toid="5654" />
+</tileset>

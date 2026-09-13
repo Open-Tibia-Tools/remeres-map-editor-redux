@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Ornaments">
+    <item fromid="2661" />
+    <item fromid="2161" />
+    <item fromid="2170" />
+    <item fromid="2171" />
+    <item fromid="2172" />
+    <item fromid="2173" />
+    <item fromid="2174" />
+    <item fromid="2196" toid="2201" />
+    <item fromid="2218" />
+    <item fromid="2125" />
+    <item fromid="2126" />
+    <item fromid="2129" />
+    <item fromid="2130" />
+    <item fromid="2131" />
+    <item fromid="2132" />
+    <item fromid="2133" />
+    <item fromid="2135" />
+    <item fromid="2136" />
+    <item fromid="2138" />
+    <item fromid="2142" />
+    <item fromid="7887" toid="7890" />
+    <item id="5785" />
+    <item fromid="2207" toid="2209" />
+    <item fromid="2213" />
+    <item fromid="2214" />
+    <item fromid="2121" />
+    <item fromid="2122" />
+    <item fromid="2123" />
+    <item fromid="2124" />
+    <item fromid="2127" />
+    <item fromid="6093" />
+    <item fromid="6300" toid="6301" />
+    <item fromid="8752" />
+    <item fromid="2164" toid="2169" />
+    <item fromid="2179" />
+    <item fromid="2202" toid="2206" />
+    <item fromid="2210" toid="2216" />
+</tileset>

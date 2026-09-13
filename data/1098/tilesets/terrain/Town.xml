@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Town">
+    <brush name="stone floor" />
+    <brush name="cobblestone" />
+    <brush name="dark cobblestone" />
+    <brush name="ugly cobblestone" />
+    <brush name="grassy cobblestone" />
+    <brush name="lawn" />
+    <brush name="wooden floor" />
+    <brush name="wooden floor (with border)" />
+    <brush name="pavement" />
+    <brush name="drawbridge" />
+    <brush name="dark wooden floor" />
+    <brush name="drab tiled stone floor" />
+    <brush name="dark tiled sandstone" />
+    <brush name="tiled sandstone floor" />
+    <brush name="tiled sandstone floor pressed" />
+    <brush name="tiled sandstone floor depressed" />
+    <brush name="light tiled stone floor" />
+    <brush name="dark tiled stone floor" />
+    <brush name="orange tiled floor" />
+    <brush name="dark sandstone" />
+    <brush name="sandstone" />
+    <brush name="white marble floor" />
+    <brush name="black marble floor" />
+    <brush name="gray stone tiles" />
+    <brush name="gray stone tiles pressed" />
+    <brush name="gray stone tiles depressed" />
+</tileset>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Containers">
+    <item fromid="1987" toid="1989" />
+    <item fromid="1990" toid="1997" />
+    <item fromid="7737" toid="7739" />
+    <item fromid="1998" toid="2004" />
+    <item fromid="5949" toid="5950" />
+    <item fromid="3939" toid="3940" />
+    <item fromid="5926" toid="5927" />
+    <item fromid="7342" toid="7343" />
+    <item fromid="2365" />
+    <item fromid="2330" toid="2331" />
+    <item fromid="2595" toid="2596" />
+    <item fromid="5801" />
+    <item fromid="6085" />
+    <item fromid="6104" />
+    <item fromid="6109" toid="6112" />
+    <item fromid="6506" toid="6511" />
+    <item fromid="3901" toid="3938" />
+    <item fromid="5086" toid="5088" />
+    <item fromid="6114" toid="6115" />
+    <item fromid="7904" toid="7907" />
+    <item fromid="7955" />
+    <item fromid="7960" toid="7962" />
+    <item fromid="6372" toid="6373" />
+    <item fromid="7700" />
+    <item fromid="9774" toid="9775" />
+</tileset>

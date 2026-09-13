@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Borders">
+    <item fromid="434" toid="445" />
+    <item fromid="921" toid="964" />
+    <item fromid="3188" toid="3189" />
+    <item fromid="3218" />
+    <item fromid="3221" toid="3222" />
+    <item fromid="3298" toid="3309" />
+    <item fromid="4456" toid="4467" />
+    <item fromid="4514" toid="4225" />
+    <item fromid="4542" toid="4565" />
+    <item fromid="4596" toid="4607" />
+    <item fromid="4644" toid="4663" />
+    <item fromid="4667" toid="4690" />
+    <item fromid="4713" toid="4748" />
+    <item fromid="4760" toid="4819" />
+    <item fromid="4828" toid="4831" />
+    <item fromid="3226" toid="3241" />
+    <item fromid="4514" toid="4525" />
+    <item fromid="4632" toid="4643" />
+    <item fromid="5045" />
+    <item fromid="5047" toid="5054" />
+    <item fromid="5816" toid="5851" />
+    <item fromid="6160" toid="6171" />
+    <item fromid="6627" toid="6706" />
+    <item fromid="6627" toid="6682" />
+    <item fromid="6687" toid="6694" />
+    <item fromid="6870" toid="6881" />
+    <item fromid="6926" toid="6937" />
+    <item fromid="6939" toid="6950" />
+    <item fromid="7067" toid="7090" />
+    <item fromid="7107" />
+    <item fromid="7110" toid="7120" />
+    <item fromid="4630" toid="4631" />
+    <item fromid="4841" />
+    <item fromid="4844" />
+    <item fromid="5090" />
+    <item fromid="5730" />
+    <item fromid="5742" />
+    <item fromid="5775" />
+    <item fromid="5776" />
+    <item fromid="5864" />
+    <item fromid="5923" />
+    <item fromid="5955" />
+    <item id="6288" />
+    <item id="7287" />
+    <item id="7182" />
+    <item id="6352" />
+    <item id="6554" />
+    <item id="6555" />
+    <item id="6559" />
+    <item id="6868" />
+    <item id="6938" />
+    <item id="7179" />
+    <item id="7180" />
+    <item id="7181" />
+    <item fromid="5771" toid="5774" />
+    <item fromid="6211" toid="6212" />
+    <item fromid="6214" toid="6215" />
+    <item fromid="5631" toid="5632" />
+    <item fromid="5637" toid="5638" />
+    <item fromid="5633" toid="5636" />
+    <item fromid="5647" />
+    <item fromid="5650" />
+    <item fromid="5649" />
+    <item fromid="5651" />
+    <item fromid="5639" toid="5642" />
+    <item fromid="5643" toid="5646" />
+    <item fromid="5648" />
+    <item fromid="5654" />
+    <item fromid="5653" />
+    <item fromid="5652" />
+    <item fromid="5683" toid="5686" />
+    <item fromid="891" toid="902" />
+    <item fromid="1072" toid="1083" />
+    <item fromid="3394" toid="3360" />
+    <item fromid="6810" toid="6821" />
+    <item fromid="6622" toid="6637" />
+    <item fromid="7187" toid="7188" />
+    <item fromid="7190" toid="7199" />
+    <item fromid="7201" toid="7212" />
+    <item fromid="7641" toid="7652" />
+    <item fromid="7653" />
+    <item fromid="7709" toid="7710" />
+    <item fromid="7656" toid="7664" />
+    <item fromid="7654" />
+    <item fromid="7833" toid="7834" />
+    <item fromid="7666" toid="7669" />
+    <item fromid="7835" />
+    <item fromid="7671" toid="7672" />
+    <item fromid="7836" toid="7837" />
+    <item fromid="477" toid="478" />
+    <item fromid="487" toid="488" />
+    <item fromid="356" toid="367" />
+    <item fromid="371" toid="382" />
+    <item fromid="8053" toid="8057" />
+    <item fromid="8117" toid="8120" />
+    <item fromid="8021" toid="8028" />
+    <item fromid="8365" />
+    <item fromid="8030" toid="8032" />
+    <item fromid="7943" toid="7954" />
+    <item fromid="6822" toid="6833" />
+    <item fromid="6834" toid="6837" />
+    <item fromid="7102" toid="7105" />
+    <item fromid="3349" toid="3360" />
+    <item fromid="3225" />
+    <item fromid="3242" toid="3245" />
+    <item fromid="3140" toid="3151" />
+    <item fromid="8349" toid="8360" />
+    <item fromid="8435" toid="8446" />
+    <item fromid="8447" toid="8458" />
+    <item fromid="8460" toid="8471" />
+    <item fromid="8335" toid="8346" />
+    <item fromid="9100" toid="9106" />
+    <item fromid="9233" toid="9234" />
+    <item fromid="9537" toid="9560" />
+    <item fromid="9569" toid="9570" />
+    <item fromid="9792" toid="9799" />
+</tileset>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Jewelry">
+    <item fromid="2143" toid="2160" />
+    <item fromid="2134" />
+    <item fromid="2318" />
+    <item fromid="2319" />
+    <item fromid="2139" toid="2141" />
+</tileset>

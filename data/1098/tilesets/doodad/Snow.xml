@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Snow">
+    <brush name="snowy dead trees" />
+    <brush name="snowy alive trees" />
+    <brush name="dead trees" />
+    <brush name="snowy trees" />
+    <brush name="snowy rocks" />
+    <brush name="small snowy rocks" />
+    <brush name="ice floe" />
+    <brush name="snow drift" />
+    <brush name="iceberg" />
+    <brush name="floating ice" />
+</tileset>

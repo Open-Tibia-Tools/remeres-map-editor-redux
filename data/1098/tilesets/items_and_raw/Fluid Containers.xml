@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Fluid Containers">
+    <item fromid="3941" toid="3942" />
+    <item fromid="5928" toid="5929" />
+    <item fromid="2005" toid="2015" />
+    <item id="2023" />
+    <item id="2031" />
+    <item id="3941" />
+    <item id="3942" />
+    <item id="7590" />
+    <item id="7589" />
+    <item id="7620" />
+    <item id="7591" />
+    <item id="7588" />
+    <item id="7618" />
+    <item id="7635" />
+    <item id="7634" />
+    <item id="7636" />
+</tileset>

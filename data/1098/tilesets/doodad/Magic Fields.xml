@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Magic Fields">
+    <item id="1387" />
+    <brush name="fire field (not decaying)" />
+    <brush name="poison field (not decaying)" />
+    <brush name="energy field (not decaying)" />
+    <brush name="fire field (decaying)" />
+    <brush name="poison field (decaying)" />
+    <brush name="energy field (decaying)" />
+    <brush name="magic wall (not decaying)" />
+    <brush name="magic wall (decaying)" />
+    <brush name="wild growth (decaying)" />
+    <brush name="yellow fire field (decaying)" />
+    <brush name="poison gas (decaying)" />
+    <brush name="yellow energy field (decaying)" />
+    <brush name="smoke field (not decaying)" />
+    <brush name="searing fire field (decaying)" />
+</tileset>

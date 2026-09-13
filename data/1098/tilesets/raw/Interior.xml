@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Interior">
+    <item fromid="1602" toid="1808" />
+    <item fromid="2034" />
+    <item fromid="2064" toid="2065" />
+    <item fromid="2070" toid="2079" />
+    <item fromid="2108" toid="2119" />
+    <item fromid="2080" toid="2085" />
+    <item fromid="2093" toid="2099" />
+    <item fromid="1947" toid="1986" />
+    <item fromid="2100" toid="2107" />
+    <item fromid="2180" />
+    <item fromid="2192" />
+    <item fromid="2556" toid="2577" />
+    <item fromid="2581" toid="2588" />
+    <item fromid="2589" toid="2592" />
+    <item fromid="2594" />
+    <item fromid="2606" toid="2609" />
+    <item fromid="2614" toid="2615" />
+    <item fromid="3805" toid="3843" />
+    <item fromid="4394" toid="4402" />
+    <item fromid="7778" toid="7822" />
+    <item fromid="7841" toid="7843" />
+    <item fromid="5496" toid="5503" />
+    <item fromid="5854" toid="5863" />
+    <item fromid="5915" toid="5916" />
+    <item fromid="5869" toid="5874" />
+    <item fromid="6356" toid="6363" />
+    <item fromid="6368" toid="6371" />
+    <item fromid="5569" toid="5595" />
+    <item fromid="4394" toid="4402" />
+    <item fromid="7160" toid="7170" />
+    <item fromid="9435" toid="9440" />
+    <item fromid="9443" toid="9447" />
+    <item fromid="9611" toid="9623" />
+    <item fromid="9626" toid="9630" />
+    <item fromid="9837" />
+    <item fromid="9941" toid="9942" />
+    <item fromid="9956" toid="9959" />
+    <item fromid="9972" toid="9973" />
+    <item fromid="9975" toid="9979" />
+    <item fromid="6502" />
+    <item fromid="7655" />
+    <item fromid="7665" />
+    <item fromid="7670" />
+    <item fromid="7674" toid="7695" />
+    <item fromid="9982" toid="9991" />
+</tileset>

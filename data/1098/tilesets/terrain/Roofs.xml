@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Roofs">
+    <brush name="flat roof" />
+    <brush name="scale roof" />
+    <brush name="brown bamboo roof" />
+    <brush name="green bamboo roof" />
+    <brush name="stiff bamboo roof, horizontal" />
+    <brush name="stiff bamboo roof, vertical" />
+    <brush name="brick roof, left" />
+    <brush name="brick roof, vertical" />
+    <brush name="brick roof, right" />
+    <brush name="brick roof, up" />
+    <brush name="brick roof, horizontal" />
+    <brush name="brick roof, down" />
+    <brush name="wooden roof, up" />
+    <brush name="wooden roof, horizontal" />
+    <brush name="wooden roof, down" />
+    <brush name="wooden roof, left" />
+    <brush name="wooden roof, vertical" />
+    <brush name="wooden roof, right" />
+    <brush name="striped marquee red white, vertical" />
+    <brush name="striped marquee red white, horizontal" />
+    <brush name="striped marquee blue yellow, vertical" />
+    <brush name="striped marquee blue yellow, horizontal" />
+    <brush name="marquee green, vertical" />
+    <brush name="marquee green, horizontal" />
+    <brush name="marquee blue, vertical" />
+    <brush name="marquee blue, horizontal" />
+</tileset>

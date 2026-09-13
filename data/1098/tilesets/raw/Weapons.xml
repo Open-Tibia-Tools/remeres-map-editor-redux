@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Weapons">
+    <item fromid="2181" toid="2186" />
+    <item fromid="2187" toid="2191" />
+    <item fromid="7958" />
+    <item fromid="2433" />
+    <item fromid="8910" />
+    <item fromid="8911" />
+    <item fromid="8912" />
+    <item fromid="8920" />
+    <item fromid="8921" />
+    <item fromid="8922" />
+    <item fromid="8900" toid="8904" />
+    <item fromid="8918" />
+    <item fromid="7854" toid="7858" />
+    <item fromid="7869" toid="7873" />
+    <item fromid="7744" toid="7748" />
+    <item fromid="7763" toid="7767" />
+    <item fromid="7864" toid="7868" />
+    <item fromid="7879" toid="7883" />
+    <item fromid="7754" toid="7758" />
+    <item fromid="7773" toid="7777" />
+    <item fromid="7859" toid="7863" />
+    <item fromid="7874" toid="7878" />
+    <item fromid="7749" toid="7753" />
+    <item fromid="7768" toid="7772" />
+    <item fromid="7850" />
+    <item fromid="7838" toid="7840" />
+</tileset>

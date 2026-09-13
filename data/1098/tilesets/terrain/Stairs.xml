@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Stairs">
+    <brush name="snowy ramp" />
+    <brush name="ramp" />
+    <brush name="bamboo ramp" />
+    <item fromid="459" />
+    <item fromid="1386" />
+    <item fromid="3678" />
+    <item fromid="5543" />
+    <item fromid="1385" />
+    <item fromid="1396" />
+    <item fromid="5258" toid="5260" />
+    <item fromid="3687" toid="3688" />
+    <item fromid="7924" toid="7925" />
+    <brush name="wooden ladder hole" />
+    <brush name="wooden trapdoor" />
+    <brush name="stairs down" />
+    <brush name="trapdoor down" />
+    <brush name="trapdoor ladder down" />
+    <brush name="trapdoor ladder down" />
+    <brush name="stone stairway" />
+    <brush name="black stone stairs" />
+    <brush name="black stone trapdoor" />
+    <brush name="gray stone stairs" />
+    <brush name="gray stone trapdoor" />
+    <brush name="pyramid ramp" />
+</tileset>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Shields">
+    <item fromid="2509" toid="2542" />
+    <item fromid="3973" toid="3975" />
+    <item fromid="6131" />
+    <item fromid="6391" />
+    <item fromid="6433" />
+    <item fromid="7460" />
+    <item fromid="8905" toid="8909" />
+    <item fromid="9814" toid="9816" />
+</tileset>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Addon and Quest Items">
+    <item fromid="2344" toid="2349" />
+    <item fromid="8976" toid="8985" />
+    <item fromid="9002" toid="9004" />
+    <item fromid="4863" toid="4872" />
+    <item fromid="5089" />
+    <item fromid="5875" toid="5906" />
+    <item fromid="5919" toid="5922" />
+    <item fromid="5925" />
+    <item fromid="5930" />
+    <item fromid="6097" toid="6102" />
+    <item fromid="3960" />
+    <item fromid="2335" toid="2341" />
+    <item fromid="4848" />
+    <item fromid="4856" />
+    <item fromid="7314" />
+    <item fromid="7140" toid="7142" />
+    <item fromid="5468" />
+    <item fromid="5909" toid="5914" />
+    <item fromid="5941" toid="5945" />
+    <item fromid="5947" toid="5954" />
+    <item fromid="5956" toid="5957" />
+    <item fromid="6103" />
+    <item fromid="6107" />
+    <item fromid="6125" />
+    <item fromid="4850" />
+    <item fromid="4852" />
+    <item fromid="6087" toid="6090" />
+    <item fromid="6105" />
+    <item fromid="6126" />
+    <item id="4843" />
+    <item fromid="6500" />
+    <item fromid="2328" />
+    <item fromid="6546" toid="6552" />
+    <item fromid="8204" />
+    <item fromid="8262" toid="8266" />
+    <item fromid="5791" />
+    <item fromid="5799" toid="5800" />
+    <item id="6120" />
+    <item fromid="2350" />
+    <item fromid="5802" />
+    <item fromid="5804" toid="5810" />
+    <item fromid="5937" />
+    <item fromid="5940" />
+</tileset>

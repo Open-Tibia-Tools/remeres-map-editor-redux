@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Blank">
+    <item fromid="1934" />
+    <item fromid="1938" />
+    <item fromid="4328" toid="4393" />
+    <item fromid="4626" toid="4631" />
+    <item fromid="4841" />
+    <item fromid="4844" />
+    <item fromid="5090" />
+    <item fromid="5742" />
+    <item fromid="5730" />
+    <item fromid="5775" toid="5776" />
+    <item fromid="5864" />
+    <item fromid="5923" />
+    <item fromid="5959" />
+    <item fromid="5955" />
+    <item fromid="6554" toid="6555" />
+    <item fromid="7287" toid="7288" />
+    <item fromid="7972" toid="7974" />
+    <item fromid="8060" toid="8061" />
+    <item fromid="8063" toid="8071" />
+    <item fromid="8073" toid="8074" />
+    <item fromid="8079" toid="8108" />
+    <item fromid="8113" toid="8116" />
+    <item fromid="8134" />
+    <item fromid="8160" toid="8165" />
+    <item fromid="8171" toid="8173" />
+    <item fromid="8177" toid="8181" />
+    <item fromid="8183" toid="8185" />
+    <item fromid="8191" toid="8193" />
+    <item fromid="8195" toid="8200" />
+    <item fromid="8206" toid="8207" />
+    <item fromid="8259" />
+    <item fromid="8270" />
+    <item fromid="8893" />
+    <item fromid="9726" />
+</tileset>
