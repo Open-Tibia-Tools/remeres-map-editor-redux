@@ -336,20 +336,18 @@ void LiveClient::queryNode(int32_t ndx, int32_t ndy, bool underground) {
 }
 
 void LiveClient::scheduleNodeRequestsFlush() {
-	if (node_requests_pending_ || stopped) {
+	if (node_requests_pending_ || stopped || !wxTheApp) {
 		return;
 	}
 	node_requests_pending_ = true;
 	auto token = alive_token_;
-	if (wxTheApp) {
-		wxTheApp->CallAfter([this, token]() {
-			if (!*token || stopped) {
-				return;
-			}
-			node_requests_pending_ = false;
-			sendNodeRequests();
-		});
-	}
+	wxTheApp->CallAfter([this, token]() {
+		if (!*token || stopped) {
+			return;
+		}
+		node_requests_pending_ = false;
+		sendNodeRequests();
+	});
 }
 
 void LiveClient::parsePacket(NetworkMessage message) {

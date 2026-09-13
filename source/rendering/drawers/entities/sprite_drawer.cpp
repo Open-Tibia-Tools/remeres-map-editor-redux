@@ -108,9 +108,9 @@ void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screen
 
 	const auto layout_metrics = spr->getPlainLayoutMetrics(-1, 0, 0, 0, tme);
 	int x_offset = 0;
-	for (int cx = 0; cx != spr->width; ++cx) {
+	for (int cx = 0; cx < layout_metrics.num_columns; ++cx) {
 		int y_offset = 0;
-		for (int cy = 0; cy != spr->height; ++cy) {
+		for (int cy = 0; cy < layout_metrics.num_rows; ++cy) {
 			for (int cf = 0; cf != spr->layers; ++cf) {
 				const AtlasRegion* region = spr->getAtlasRegion(cx, cy, cf, -1, 0, 0, 0, tme);
 				if (region) {

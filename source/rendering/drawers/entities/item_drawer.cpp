@@ -115,6 +115,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	// item sprite
 	GameSprite* spr = params.sprite ? params.sprite : resolveSprite(it, params.ctx);
+	const GameSprite* const original_spr = spr;
 
 	if (item->isInvalidOTBMItem() && !options.show_invalid_tiles) {
 		// Invalid OTBM placeholders are controlled exclusively by SHOW_INVALID_TILES.
@@ -137,7 +138,6 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 			case 469:
 				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, green, 0, (alpha * 171) >> 8), 0, atlas);
 				return;
-
 			// Red invisible walkable tile (460)
 			case 470:
 			case 17970:
@@ -177,7 +177,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	draw_y -= spr->draw_height;
 
 	SpritePatterns patterns;
-	if (cached_patterns) {
+	if (cached_patterns && spr == original_spr) {
 		patterns = *cached_patterns;
 	} else {
 		const long elapsed_time = params.ctx ? params.ctx->elapsed_time : -1;
@@ -243,9 +243,9 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 				composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
 			}
 			int x_offset = 0;
-			for (int cx = 0; cx != spr->width; cx++) {
+			for (int cx = 0; cx < composite_metrics.num_columns; cx++) {
 				int y_offset = 0;
-				for (int cy = 0; cy != spr->height; cy++) {
+				for (int cy = 0; cy < composite_metrics.num_rows; cy++) {
 					for (int cf = 0; cf != spr->layers; cf++) {
 						const AtlasRegion* region = spr->getAtlasRegion(cx, cy, cf, subtype, pattern_x, pattern_y, pattern_z, frame);
 						if (region) {

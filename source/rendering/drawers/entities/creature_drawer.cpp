@@ -185,9 +185,9 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 							mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, resolvedFrame);
 						}
 						int mount_x_offset = 0;
-						for (int cx = 0; cx != mountSpr->width; ++cx) {
+						for (int cx = 0; cx < mount_metrics.num_columns; ++cx) {
 							int mount_y_offset = 0;
-							for (int cy = 0; cy != mountSpr->height; ++cy) {
+							for (int cy = 0; cy < mount_metrics.num_rows; ++cy) {
 								const AtlasRegion* region = mountSpr->getAtlasRegion(cx, cy, static_cast<int>(dir), 0, 0, mountOutfit, resolvedFrame);
 								if (region) {
 									sprite_drawer->glBlitAtlasQuad(
@@ -240,9 +240,9 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 				const auto sprite_metrics = spr->getOutfitLayoutMetrics(static_cast<int>(dir), pattern_y, pattern_z, resolvedFrame);
 
 				int sprite_x_offset = 0;
-				for (int cx = 0; cx != spr->width; ++cx) {
+				for (int cx = 0; cx < sprite_metrics.num_columns; ++cx) {
 					int sprite_y_offset = 0;
-					for (int cy = 0; cy != spr->height; ++cy) {
+					for (int cy = 0; cy < sprite_metrics.num_rows; ++cy) {
 						const AtlasRegion* region = spr->getAtlasRegion(cx, cy, static_cast<int>(dir), pattern_y, pattern_z, *drawOutfit, resolvedFrame);
 						if (region) {
 							sprite_drawer->glBlitAtlasQuad(

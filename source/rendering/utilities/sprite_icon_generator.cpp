@@ -48,11 +48,11 @@ wxBitmap SpriteIconGenerator::Generate(GameSprite* sprite, SpriteSize size, bool
 					wxImage img(dimensions.width, dimensions.height, data.get(), true);
 					img.SetMaskColour(0xFF, 0x00, 0xFF);
 					int x_offset = 0;
-					for (int column = w + 1; column < sprite->width; ++column) {
+					for (int column = w + 1; column < layout_metrics.num_columns; ++column) {
 						x_offset += layout_metrics.column_widths[column];
 					}
 					int y_offset = 0;
-					for (int row = h + 1; row < sprite->height; ++row) {
+					for (int row = h + 1; row < layout_metrics.num_rows; ++row) {
 						y_offset += layout_metrics.row_heights[row];
 					}
 					image.Paste(img, x_offset, y_offset);
@@ -182,11 +182,11 @@ wxBitmap SpriteIconGenerator::Generate(GameSprite* sprite, SpriteSize size, cons
 							// Mount offset
 							const auto mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(direction), 0, 0, mount_frame_index);
 							int mount_x = 0;
-							for (int column = w + 1; column < mountSpr->width; ++column) {
+							for (int column = w + 1; column < mount_metrics.num_columns; ++column) {
 								mount_x += mount_metrics.column_widths[column];
 							}
 							int mount_y = 0;
-							for (int row = h + 1; row < mountSpr->height; ++row) {
+							for (int row = h + 1; row < mount_metrics.num_rows; ++row) {
 								mount_y += mount_metrics.row_heights[row];
 							}
 							mount_x -= mountSpr->getDrawOffset().first;
@@ -246,11 +246,11 @@ wxBitmap SpriteIconGenerator::Generate(GameSprite* sprite, SpriteSize size, cons
 						img.SetMaskColour(0xFF, 0x00, 0xFF);
 						const auto pattern_metrics = sprite->getOutfitLayoutMetrics(static_cast<int>(direction), pattern_y, pattern_z, 0);
 						int x_offset = 0;
-						for (int column = w + 1; column < sprite->width; ++column) {
+						for (int column = w + 1; column < pattern_metrics.num_columns; ++column) {
 							x_offset += pattern_metrics.column_widths[column];
 						}
 						int y_offset = 0;
-						for (int row = h + 1; row < sprite->height; ++row) {
+						for (int row = h + 1; row < pattern_metrics.num_rows; ++row) {
 							y_offset += pattern_metrics.row_heights[row];
 						}
 						image.Paste(img, x_offset - min_x, y_offset - min_y);

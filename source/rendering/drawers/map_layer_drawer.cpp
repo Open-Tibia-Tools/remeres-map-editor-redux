@@ -63,10 +63,10 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 	int nd_end_x = 0;
 	int nd_end_y = 0;
 	int visibility_margin_pixels = PAINTERS_ALGORITHM_SAFETY_MARGIN_PIXELS;
-	int visibility_margin_tiles = std::max(1, (visibility_margin_pixels + TILE_SIZE - 1) / TILE_SIZE);
 
 	if (light_collection_only) {
 		constexpr int light_collection_margin_pixels = TILE_SIZE * 16;
+		visibility_margin_pixels = light_collection_margin_pixels;
 		const int camera_offset = (view.floor <= GROUND_LAYER)
 			? (GROUND_LAYER - view.floor) * TILE_SIZE
 			: 0;
@@ -86,6 +86,8 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		nd_end_x = (view.end_x & ~3) + 4;
 		nd_end_y = (view.end_y & ~3) + 4;
 	}
+
+	const int visibility_margin_tiles = std::max(1, (visibility_margin_pixels + TILE_SIZE - 1) / TILE_SIZE);
 
 	const int base_screen_x = -view.view_scroll_x - offset;
 	const int base_screen_y = -view.view_scroll_y - offset;

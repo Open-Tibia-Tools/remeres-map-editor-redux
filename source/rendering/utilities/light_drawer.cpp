@@ -59,11 +59,13 @@ void LightDrawer::computeBrightness(const RenderView& view, const LightBuffer& l
 	const uint8_t ambient_g = static_cast<uint8_t>(std::clamp(std::lround(ambient.g * 255.0f), 0l, 255l));
 	const uint8_t ambient_b = static_cast<uint8_t>(std::clamp(std::lround(ambient.b * 255.0f), 0l, 255l));
 
-	const uint32_t ambient_pixel = static_cast<uint32_t>(ambient_r)
-		| (static_cast<uint32_t>(ambient_g) << 8)
-		| (static_cast<uint32_t>(ambient_b) << 16)
-		| (0xFFu << 24);
-	std::fill_n(reinterpret_cast<uint32_t*>(tile_brightness_.data()), tile_count, ambient_pixel);
+	for (size_t index = 0; index < tile_count; ++index) {
+		uint8_t* pixel = tile_brightness_.data() + index * 4;
+		pixel[0] = ambient_r;
+		pixel[1] = ambient_g;
+		pixel[2] = ambient_b;
+		pixel[3] = 0xFF;
+	}
 
 	constexpr float inv_tile_size = 1.0f / static_cast<float>(TILE_SIZE);
 

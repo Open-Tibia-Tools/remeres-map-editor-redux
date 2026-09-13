@@ -128,6 +128,7 @@ constexpr double RAD2DEG = 180.0 / PI;
 
 // Sanity limit for sprite counts
 constexpr std::uint32_t MAX_SPRITES = 3000000;
+constexpr std::size_t MAX_SPRITE_PARTS = 16;
 
 // The size of the tile in pixels
 constexpr int TILE_SIZE = 32;
