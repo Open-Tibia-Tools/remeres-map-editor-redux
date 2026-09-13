@@ -3,6 +3,7 @@
 
 #include "app/definitions.h"
 #include <string>
+#include <string_view>
 #include <vector>
 
 struct RenderView;
@@ -13,7 +14,7 @@ class Creature;
 
 struct CreatureLabel {
 	Position pos;
-	std::string name;
+	std::string_view name;
 	const Creature* creature;
 };
 
@@ -23,7 +24,7 @@ public:
 	~CreatureNameDrawer();
 
 	void clear();
-	void addLabel(const Position& pos, const std::string& name, const Creature* c);
+	void addLabel(const Position& pos, std::string_view name, const Creature* c);
 	void draw(NVGcontext* vg, const RenderView& view);
 
 private:

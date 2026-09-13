@@ -5,6 +5,7 @@
 #include "rendering/drawers/overlays/preview_drawer.h"
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/primitive_renderer.h"
+#include "rendering/core/render_frame_context.h"
 #include "rendering/ui/map_display.h"
 #include "rendering/drawers/entities/item_drawer.h"
 #include "rendering/drawers/entities/creature_drawer.h"
@@ -21,7 +22,7 @@ PreviewDrawer::PreviewDrawer() {
 PreviewDrawer::~PreviewDrawer() {
 }
 
-void PreviewDrawer::draw(SpriteBatch& sprite_batch, MapCanvas* canvas, const RenderView& view, int map_z, const DrawingOptions& options, Editor& editor, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, uint32_t current_house_id) {
+void PreviewDrawer::draw(SpriteBatch& sprite_batch, MapCanvas* canvas, const RenderView& view, int map_z, const DrawingOptions& options, Editor& editor, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, uint32_t current_house_id, const RenderFrameContext* ctx) {
 	MapTab* mapTab = dynamic_cast<MapTab*>(canvas->GetMapWindow());
 	BaseMap* secondary_map = mapTab ? mapTab->GetSession()->secondary_map : nullptr;
 
@@ -90,6 +91,7 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, MapCanvas* canvas, const Ren
 					params.green = g;
 					params.blue = b;
 					params.alpha = base_alpha;
+					params.ctx = ctx;
 					item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 				}
 
@@ -98,6 +100,7 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, MapCanvas* canvas, const Ren
 						BlitItemParams params(tile, item.get(), options);
 						params.ephemeral = true;
 						params.alpha = base_alpha;
+						params.ctx = ctx;
 						if (item->isBorder()) {
 							params.red = 255;
 							params.green = r;
@@ -107,7 +110,7 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, MapCanvas* canvas, const Ren
 						item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 					}
 					if (tile->creature && options.show_creatures) {
-						creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get());
+						creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions { .ctx = ctx });
 					}
 				}
 			};
@@ -152,10 +155,11 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, MapCanvas* canvas, const Ren
 			int draw_x = ((mousePos.x * TILE_SIZE) - view.view_scroll_x) - offset;
 			int draw_y = ((mousePos.y * TILE_SIZE) - view.view_scroll_y) - offset;
 
-			if (g_gui.gfx.ensureAtlasManager()) {
+			const AtlasManager* atlas = ctx ? &ctx->atlas : (g_gui.gfx.hasAtlasManager() ? g_gui.gfx.getAtlasManager() : nullptr);
+			if (atlas) {
 				// Draw a semi-transparent white box over the tile
-				glm::vec4 highlightColor(1.0f, 1.0f, 1.0f, 0.25f); // 25% white
-				sprite_batch.drawRect((float)draw_x, (float)draw_y, (float)TILE_SIZE, (float)TILE_SIZE, highlightColor, *g_gui.gfx.getAtlasManager());
+				const glm::vec4 highlightColor(1.0f, 1.0f, 1.0f, 0.25f); // 25% white
+				sprite_batch.drawRect(static_cast<float>(draw_x), static_cast<float>(draw_y), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), highlightColor, *atlas);
 			}
 		}
 	}

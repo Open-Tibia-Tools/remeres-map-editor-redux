@@ -372,7 +372,7 @@ void MapDrawer::Draw() {
 	sprite_batch->begin(view.projectionMatrix, *atlas);
 
 	if (drag_shadow_drawer) {
-		drag_shadow_drawer->draw(*sprite_batch, this, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options);
+		drag_shadow_drawer->draw(*sprite_batch, this, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options, &ctx);
 	}
 
 	live_cursor_drawer->draw(*sprite_batch, view, editor, options);
@@ -431,7 +431,7 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx) {
 		}
 
 		if (!options.isDrawLight() && map_z == view.end_z && view.start_z != view.end_z) {
-			shade_drawer->draw(*sprite_batch, floor_view, options);
+			shade_drawer->draw(*sprite_batch, floor_view, options, ctx.atlas);
 		}
 
 		if (view.draw_all_visited_floors || map_z >= view.end_z) {
@@ -440,7 +440,7 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx) {
 			DrawMapLayer(hidden_floor_light_batch, floor_ctx, map_z, live_client, true);
 		}
 
-		preview_drawer->draw(*sprite_batch, canvas, floor_view, map_z, options, editor, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), options.current_house_id);
+		preview_drawer->draw(*sprite_batch, canvas, floor_view, map_z, options, editor, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), options.current_house_id, &ctx);
 	}
 }
 

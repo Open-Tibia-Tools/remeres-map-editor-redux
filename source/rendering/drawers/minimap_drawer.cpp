@@ -31,8 +31,7 @@ struct MinimapFloorRenderRange {
 	bool draw_all_visited_floors = false;
 };
 
-[[nodiscard]] MinimapFloorRenderRange getFloorRenderRange(const MinimapViewportState& viewport_state) {
-	const auto mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
+[[nodiscard]] MinimapFloorRenderRange getFloorRenderRange(const MinimapViewportState& viewport_state, FloorVisibilityMode mode) {
 	const auto range = BuildFloorVisibilityRange(viewport_state.floor, viewport_state.show_all_floors, mode);
 	return {
 		.start_floor = range.start_floor,
@@ -85,10 +84,6 @@ MinimapDrawer::VisibleWorldRect MinimapDrawer::BuildVisibleWorldRect(const wxSiz
 }
 
 void MinimapDrawer::DrawMainCameraBox(const glm::mat4& projection, const wxSize& size, MapCanvas& canvas, const VisibleWorldRect& visible_rect) {
-	if (!g_settings.getInteger(Config::MINIMAP_VIEW_BOX)) {
-		return;
-	}
-
 	int view_scroll_x = 0;
 	int view_scroll_y = 0;
 	int screensize_x = 0;
@@ -204,7 +199,7 @@ void MinimapDrawer::Draw(const wxSize& size, Editor& editor, MapCanvas& canvas, 
 		return;
 	}
 
-	const auto floor_range = getFloorRenderRange(viewport_state);
+	const auto floor_range = getFloorRenderRange(viewport_state, options.floor_visibility_mode);
 	const MinimapDirtyRect visible_rect_pixels = {
 		.x = static_cast<int>(std::floor(visible_rect.start_x)),
 		.y = static_cast<int>(std::floor(visible_rect.start_y)),

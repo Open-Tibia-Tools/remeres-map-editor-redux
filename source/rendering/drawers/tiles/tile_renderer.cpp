@@ -557,7 +557,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 
 		if (view.zoom < 10.0) {
 			// markers (waypoint, house exit, town temple, spawn)
-			marker_drawer->draw(sprite_batch, sprite_drawer, draw_x, draw_y, tile, waypoint, current_house_id, *editor, options);
+			marker_drawer->draw(sprite_batch, sprite_drawer, draw_x, draw_y, tile, waypoint, current_house_id, *editor, options, &ctx);
 		}
 	}
 }

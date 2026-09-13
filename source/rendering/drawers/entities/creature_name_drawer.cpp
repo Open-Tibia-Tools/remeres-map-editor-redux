@@ -21,7 +21,7 @@ void CreatureNameDrawer::clear() {
 	labels.clear();
 }
 
-void CreatureNameDrawer::addLabel(const Position& pos, const std::string& name, const Creature* c) {
+void CreatureNameDrawer::addLabel(const Position& pos, std::string_view name, const Creature* c) {
 	if (name.empty()) {
 		return;
 	}
@@ -37,9 +37,10 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		return;
 	}
 
-	float zoom = view.zoom;
-	float tile_size_screen = 32.0f / zoom;
-	float fontSize = 11.0f; // Original size or slightly larger if preferred, reverting to 11.0f
+	const float zoom = view.zoom;
+	const float inv_zoom = 1.0f / zoom;
+	const float tile_size_screen = 32.0f * inv_zoom;
+	constexpr float fontSize = 11.0f;
 
 	nvgFontSize(vg, fontSize);
 	nvgFontFace(vg, "sans");
@@ -51,6 +52,7 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		float width;
 		float height;
 		const char* text;
+		const char* text_end;
 	};
 	static thread_local std::vector<VisibleLabel> visible_labels;
 	visible_labels.clear();
@@ -63,24 +65,27 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		int unscaled_x, unscaled_y;
 		view.getScreenPosition(label.pos.x, label.pos.y, label.pos.z, unscaled_x, unscaled_y);
 
-		float screen_x = static_cast<float>(unscaled_x) / zoom;
-		float screen_y = static_cast<float>(unscaled_y) / zoom;
+		const float screen_x = static_cast<float>(unscaled_x) * inv_zoom;
+		const float screen_y = static_cast<float>(unscaled_y) * inv_zoom;
 
 		// Center on tile, position slightly above the creature head
-		float labelX = screen_x + tile_size_screen * 0.5f;
-		float labelY = screen_y - 2.0f; // slight gap above tile top
+		const float labelX = screen_x + tile_size_screen * 0.5f;
+		const float labelY = screen_y - 2.0f; // slight gap above tile top
 
 		float textBounds[4];
-		nvgTextBounds(vg, 0, 0, label.name.c_str(), nullptr, textBounds);
-		float textWidth = textBounds[2] - textBounds[0];
-		float textHeight = textBounds[3] - textBounds[1];
+		const char* text_start = label.name.data();
+		const char* text_end = text_start + label.name.size();
+		nvgTextBounds(vg, 0, 0, text_start, text_end, textBounds);
+		const float textWidth = textBounds[2] - textBounds[0];
+		const float textHeight = textBounds[3] - textBounds[1];
 
 		visible_labels.push_back(VisibleLabel {
 			.x = labelX,
 			.y = labelY,
 			.width = textWidth,
 			.height = textHeight,
-			.text = label.name.c_str()
+			.text = text_start,
+			.text_end = text_end
 		});
 	}
 
@@ -102,6 +107,6 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	// Pass 2: Draw all text labels with single color state
 	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255)); // White text
 	for (const auto& vl : visible_labels) {
-		nvgText(vg, vl.x, vl.y - paddingY, vl.text, nullptr);
+		nvgText(vg, vl.x, vl.y - paddingY, vl.text, vl.text_end);
 	}
 }

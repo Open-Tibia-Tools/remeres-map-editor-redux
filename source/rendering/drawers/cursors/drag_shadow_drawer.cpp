@@ -15,6 +15,7 @@
 #include "rendering/drawers/entities/creature_drawer.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
+#include "rendering/core/render_frame_context.h"
 #include "editor/editor.h"
 #include "rendering/ui/map_display.h"
 #include "map/tile.h"
@@ -33,7 +34,7 @@ DragShadowDrawer::~DragShadowDrawer() {
 
 #include "rendering/core/primitive_renderer.h"
 
-void DragShadowDrawer::draw(SpriteBatch& sprite_batch, MapDrawer* drawer, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options) {
+void DragShadowDrawer::draw(SpriteBatch& sprite_batch, MapDrawer* drawer, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options, const RenderFrameContext* ctx) {
 	if (!drawer || !drawer->canvas) {
 		return;
 	}
@@ -81,6 +82,7 @@ void DragShadowDrawer::draw(SpriteBatch& sprite_batch, MapDrawer* drawer, ItemDr
 						params.green = 160;
 						params.blue = 160;
 						params.alpha = 160;
+						params.ctx = ctx;
 						item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 					} else {
 						BlitItemParams params(pos, item, options);
@@ -89,6 +91,7 @@ void DragShadowDrawer::draw(SpriteBatch& sprite_batch, MapDrawer* drawer, ItemDr
 						params.green = 160;
 						params.blue = 160;
 						params.alpha = 160;
+						params.ctx = ctx;
 						item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 					}
 				}
@@ -96,10 +99,13 @@ void DragShadowDrawer::draw(SpriteBatch& sprite_batch, MapDrawer* drawer, ItemDr
 				// save performance when moving large chunks unzoomed
 				if (view.zoom <= 3.0) {
 					if (tile->creature && tile->creature->isSelected() && options.show_creatures) {
-						creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions { .color = DrawColor(160, 160, 160, 160) });
+						creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
+							.color = DrawColor(160, 160, 160, 160),
+							.ctx = ctx
+						});
 					}
 					if (tile->spawn && tile->spawn->isSelected()) {
-						sprite_drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_SPAWN, DrawColor(160, 160, 160, 160));
+						sprite_drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_SPAWN, DrawColor(160, 160, 160, 160), ctx);
 					}
 				}
 			}

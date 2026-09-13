@@ -533,7 +533,11 @@ void MinimapCanvas::OnPaint(wxPaintEvent& event) {
 	}
 
 	ClampViewportState(*state);
-	drawer->Draw(GetClientSize(), *editor, *active_canvas, *state);
+	drawer->Draw(GetClientSize(), *editor, *active_canvas, *state, {
+		.drawCameraBox = g_settings.getBoolean(Config::MINIMAP_VIEW_BOX),
+		.drawBoundsBorder = true,
+		.floor_visibility_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE)),
+	});
 	SwapBuffers();
 }
 

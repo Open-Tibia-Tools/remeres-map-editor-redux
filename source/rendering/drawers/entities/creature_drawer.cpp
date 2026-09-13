@@ -98,11 +98,13 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 
 void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, int screenx, int screeny, const Outfit& outfit, Direction dir, const CreatureDrawOptions& options) {
 	const bool draw_visuals = !options.light_collection_only;
+	GraphicManager& gfx = options.ctx ? options.ctx->gfx : g_gui.gfx;
+	const ItemDefinitionStore& item_defs = options.ctx ? options.ctx->item_definitions : g_item_definitions;
 
 	if (outfit.lookItem != 0) {
-		const auto definition = options.ctx ? options.ctx->item_definitions.get(outfit.lookItem) : g_item_definitions.get(outfit.lookItem);
+		const auto definition = item_defs.get(outfit.lookItem);
 		if (definition) {
-			GameSprite* spr = options.ctx ? options.ctx->gfx.getGameSprite(definition.clientId()) : g_gui.gfx.getGameSprite(definition.clientId());
+			GameSprite* spr = gfx.getGameSprite(definition.clientId());
 			if (spr && options.light_buffer && options.view && spr->hasLight()) {
 				registerCreatureSpriteLight(*options.light_buffer, *options.view, *spr, screenx, screeny, spr->getLight(), false);
 			}
@@ -119,10 +121,10 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		if (drawOutfit->lookType == 0) {
 			drawOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 		}
-		GameSprite* spr = options.ctx ? options.ctx->gfx.getCreatureSprite(drawOutfit->lookType) : g_gui.gfx.getCreatureSprite(drawOutfit->lookType);
+		GameSprite* spr = gfx.getCreatureSprite(drawOutfit->lookType);
 		if (!spr && drawOutfit->lookType != DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) {
 			drawOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
-			spr = options.ctx ? options.ctx->gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) : g_gui.gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
+			spr = gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
 		}
 		if (!spr) {
 			return;
@@ -144,10 +146,11 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		int pattern_z = 0;
 		GameSprite* mountSpr = nullptr;
 		if (drawOutfit->lookMount != 0) {
-			if ((mountSpr = options.ctx ? options.ctx->gfx.getCreatureSprite(drawOutfit->lookMount) : g_gui.gfx.getCreatureSprite(drawOutfit->lookMount))) {
+			if ((mountSpr = gfx.getCreatureSprite(drawOutfit->lookMount))) {
 				// Generate mount colors and metrics once so rendering and light placement stay aligned.
 				Outfit mountOutfit;
 				mountOutfit.lookType = drawOutfit->lookMount;
+				mountOutfit.lookMount = 0;
 				mountOutfit.lookHead = drawOutfit->lookMountHead;
 				mountOutfit.lookBody = drawOutfit->lookMountBody;
 				mountOutfit.lookLegs = drawOutfit->lookMountLegs;
@@ -160,6 +163,8 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 				}
 
 				if (draw_visuals) {
+					const int mount_base_x = screenx - mount_draw_offset.first;
+					const int mount_base_y = screeny - mount_draw_offset.second;
 					int mount_x_offset = 0;
 					for (int cx = 0; cx != mountSpr->width; ++cx) {
 						int mount_y_offset = 0;
@@ -168,8 +173,8 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 							if (region) {
 								sprite_drawer->glBlitAtlasQuad(
 									sprite_batch,
-									screenx - mount_x_offset - mount_draw_offset.first,
-									screeny - mount_y_offset - mount_draw_offset.second,
+									mount_base_x - mount_x_offset,
+									mount_base_y - mount_y_offset,
 									region,
 									options.color
 								);
@@ -187,6 +192,8 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		// pattern_y => creature addon
 		if (draw_visuals) {
 			const auto sprite_draw_offset = spr->getDrawOffset();
+			const int base_x = screenx - sprite_draw_offset.first;
+			const int base_y = screeny - sprite_draw_offset.second;
 			for (int pattern_y = 0; pattern_y < spr->pattern_y; pattern_y++) {
 
 				// continue if we dont have this addon
@@ -206,8 +213,8 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 						if (region) {
 							sprite_drawer->glBlitAtlasQuad(
 								sprite_batch,
-								screenx - sprite_x_offset - sprite_draw_offset.first,
-								screeny - sprite_y_offset - sprite_draw_offset.second,
+								base_x - sprite_x_offset,
+								base_y - sprite_y_offset,
 								region,
 								options.color
 							);

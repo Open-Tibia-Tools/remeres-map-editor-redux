@@ -16,6 +16,8 @@
 #include "ui/gui.h"
 #include "app/settings.h"
 #include "rendering/core/text_renderer.h"
+#include "rendering/core/render_frame_context.h"
+#include "item_definitions/core/item_definition_store.h"
 #include <glad/glad.h>
 #include <nanovg.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -108,6 +110,16 @@ namespace IngamePreview {
 		}
 		auto* atlas = g_gui.gfx.getAtlasManager();
 
+		const RenderFrameContext ctx {
+			.atlas = *atlas,
+			.gfx = g_gui.gfx,
+			.item_definitions = g_item_definitions,
+			.options = options,
+			.view = view,
+			.elapsed_time = g_gui.gfx.getElapsedTime(),
+			.current_house_id = 0
+		};
+
 		sprite_batch->begin(view.projectionMatrix, *atlas);
 
 		for (int z = last_visible; z >= first_visible; --z) {
@@ -123,7 +135,7 @@ namespace IngamePreview {
 				? (GROUND_LAYER - camera_pos.z) * TILE_SIZE
 				: 0;
 
-			// Dynamic viewport culling â€” adjusted per floor
+			// Dynamic viewport culling — adjusted per floor
 			constexpr int margin = TILE_SIZE * 16;
 			int max_floor_offset = std::max(
 				std::abs(floor_offset - camera_offset),
@@ -181,7 +193,7 @@ namespace IngamePreview {
 			}
 
 			visitVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y) {
-				tile_renderer->DrawTile(*sprite_batch, location, view, options, 0, draw_x, draw_y, draw_lights ? light_buffer.get() : nullptr);
+				tile_renderer->DrawTile(*sprite_batch, location, ctx, draw_x, draw_y, draw_lights ? light_buffer.get() : nullptr);
 
 				if (creature_name_drawer && z == camera_pos.z) {
 					if (const Tile* tile = location->get(); tile && tile->creature) {
@@ -202,7 +214,8 @@ namespace IngamePreview {
 					.animationPhase = animation_phase,
 					.light_buffer = draw_lights ? light_buffer.get() : nullptr,
 					.view = &view,
-					.preview_local_player = true
+					.preview_local_player = true,
+					.ctx = &ctx
 				});
 			}
 		}

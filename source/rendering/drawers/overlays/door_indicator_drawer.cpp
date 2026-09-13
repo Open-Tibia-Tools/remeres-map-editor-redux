@@ -31,6 +31,8 @@ void DoorIndicatorDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	const float zoomFactor = 1.0f / view.zoom;
 	const float iconSize = 12.0f * zoomFactor;
 	const float outlineOffset = 1.0f * zoomFactor;
+	const float tileSize = 32.0f * zoomFactor;
+	const float halfTileSize = tileSize * 0.5f;
 
 	for (const auto& request : requests) {
 		// Only render doors on the current floor
@@ -43,26 +45,24 @@ void DoorIndicatorDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			continue;
 		}
 
-		const float zoom = view.zoom;
-		const float x = unscaled_x / zoom;
-		const float y = unscaled_y / zoom;
-		const float TILE_SIZE = 32.0f / zoom;
+		const float x = static_cast<float>(unscaled_x) * zoomFactor;
+		const float y = static_cast<float>(unscaled_y) * zoomFactor;
 
 		const std::string_view icon = request.locked ? ICON_LOCK : ICON_LOCK_OPEN;
 		const NVGcolor color = request.locked ? colorLocked : colorUnlocked;
 
 		if (request.south) {
 			// Center of WEST border
-			IconRenderer::DrawIconWithBorder(vg, x, y + TILE_SIZE / 2.0f, iconSize, outlineOffset, icon, color);
+			IconRenderer::DrawIconWithBorder(vg, x, y + halfTileSize, iconSize, outlineOffset, icon, color);
 		}
 		if (request.east) {
 			// Center of NORTH border
-			IconRenderer::DrawIconWithBorder(vg, x + TILE_SIZE / 2.0f, y, iconSize, outlineOffset, icon, color);
+			IconRenderer::DrawIconWithBorder(vg, x + halfTileSize, y, iconSize, outlineOffset, icon, color);
 		}
 
 		if (!request.south && !request.east) {
 			// Center of TILE
-			IconRenderer::DrawIconWithBorder(vg, x + TILE_SIZE / 2.0f, y + TILE_SIZE / 2.0f, iconSize, outlineOffset, icon, color);
+			IconRenderer::DrawIconWithBorder(vg, x + halfTileSize, y + halfTileSize, iconSize, outlineOffset, icon, color);
 		}
 	}
 
