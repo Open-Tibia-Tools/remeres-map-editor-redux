@@ -134,6 +134,14 @@ public:
 		return generation;
 	}
 
+	bool isUnnamed() const {
+		return unnamed;
+	}
+
+	void setUnnamed(bool u) {
+		unnamed = u;
+	}
+
 	void flagAsNamed() {
 		unnamed = false;
 	}
@@ -175,6 +183,7 @@ protected:
 	friend class SelectionOperations;
 	friend class MapProcessor;
 	friend class EditorPersistence;
+	friend class MapBackupService;
 	friend class MapXMLIO;
 	friend class HeaderSerializationOTBM;
 	friend class MapConverter;
