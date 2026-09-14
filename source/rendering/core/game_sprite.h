@@ -61,23 +61,15 @@ public:
 	Outfit outfit;
 };
 
+#include "rendering/core/sprite_layout_calculator.h"
+
 class Image;
 class TemplateImage;
 
 class GameSprite : public Sprite {
 public:
-	static constexpr size_t MAX_SPRITE_PARTS = 16;
-
-	struct SpriteLayoutMetrics {
-		std::array<int, MAX_SPRITE_PARTS> column_widths {};
-		std::array<int, MAX_SPRITE_PARTS> row_heights {};
-		uint8_t num_columns = 1;
-		uint8_t num_rows = 1;
-		int total_width = TILE_SIZE;
-		int total_height = TILE_SIZE;
-		int left_offset = 0;
-		int top_offset = 0;
-	};
+	static constexpr size_t MAX_SPRITE_PARTS = ::MAX_SPRITE_PARTS;
+	using SpriteLayoutMetrics = ::SpriteLayoutMetrics;
 
 	GameSprite();
 	~GameSprite() override;
@@ -120,24 +112,8 @@ public:
 	void invalidateCache(const AtlasRegion* region);
 
 private:
-	struct PlainLayoutCacheKey {
-		int subtype = 0;
-		int pattern_x = 0;
-		int pattern_y = 0;
-		int pattern_z = 0;
-		int frame = 0;
-
-		bool operator==(const PlainLayoutCacheKey& other) const = default;
-	};
-
-	struct OutfitLayoutCacheKey {
-		int dir = 0;
-		int addon = 0;
-		int pattern_z = 0;
-		int frame = 0;
-
-		bool operator==(const OutfitLayoutCacheKey& other) const = default;
-	};
+	using PlainLayoutCacheKey = ::PlainLayoutCacheKey;
+	using OutfitLayoutCacheKey = ::OutfitLayoutCacheKey;
 
 	void rebuildGeometryCache() const;
 	SpriteLayoutMetrics buildPlainLayoutMetrics(const PlainLayoutCacheKey& key) const;

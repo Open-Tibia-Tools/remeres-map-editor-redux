@@ -2,7 +2,7 @@
 
 #include "app/definitions.h"
 #include "io/filehandle.h"
-#include "rendering/core/game_sprite.h"
+#include "rendering/core/sprite_decoder.h"
 #include "rendering/core/image.h"
 #include "util/json.h"
 
@@ -244,7 +244,7 @@ bool SpriteArchive::readLegacyRgba(uint32_t sprite_id, bool use_alpha, std::uniq
 		return true;
 	}
 
-	target = GameSprite::Decompress(std::span { compressed.get(), compressed_size }, use_alpha, static_cast<int>(sprite_id));
+	target = SpriteDecoder::DecodeRle(std::span { compressed.get(), compressed_size }, use_alpha, static_cast<int>(sprite_id));
 	return target != nullptr;
 }
 

@@ -178,6 +178,8 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/image.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/normal_image.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_archive.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_decoder.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_layout_calculator.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/template_image.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_preloader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_buffer.h
@@ -562,6 +564,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/image.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/normal_image.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_archive.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_decoder.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_layout_calculator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/template_image.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_preloader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_buffer.cpp

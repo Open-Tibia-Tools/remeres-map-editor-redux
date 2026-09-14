@@ -62,12 +62,6 @@ void SpriteDrawer::glDrawBox(SpriteBatch& sprite_batch, int sx, int sy, int widt
 	}
 }
 
-void SpriteDrawer::glSetColor(wxColor color) {
-	// Not needed with BatchRenderer automatic color handling in DrawQuad,
-	// but if used for stateful drawing elsewhere, we might need a state setter.
-	// For now, ignoring as glBlitTexture/Square takes explicit color.
-}
-
 void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, ServerItemId server_item_id, DrawColor color, const RenderFrameContext* ctx) {
 	GameSprite* spr = nullptr;
 	if (ctx) {

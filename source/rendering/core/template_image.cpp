@@ -1,6 +1,7 @@
 #include "rendering/core/template_image.h"
 #include "rendering/core/game_sprite.h"
 #include "rendering/core/normal_image.h"
+#include "rendering/core/outfit_colorizer.h"
 #include "rendering/core/outfit_colors.h"
 #include "app/settings.h"
 #include "rendering/core/graphics.h"
@@ -131,7 +132,7 @@ std::unique_ptr<uint8_t[]> TemplateImage::getRGBData() {
 
 	clampTemplateLookValues(this);
 
-	GameSprite::ColorizeTemplatePixels(rgbdata.get(), template_rgbdata.get(), base_dimensions.pixelCount(), lookHead, lookBody, lookLegs, lookFeet, false);
+	OutfitColorizer::ColorizeTemplatePixels(rgbdata.get(), template_rgbdata.get(), base_dimensions.pixelCount(), lookHead, lookBody, lookLegs, lookFeet, false);
 
 	return rgbdata;
 }
@@ -170,7 +171,7 @@ std::unique_ptr<uint8_t[]> TemplateImage::getRGBAData() {
 	clampTemplateLookValues(this);
 
 	// Note: the base data is RGBA (4 channels) while the mask data is RGB (3 channels).
-	GameSprite::ColorizeTemplatePixels(rgbadata.get(), template_rgbdata.get(), base_dimensions.pixelCount(), lookHead, lookBody, lookLegs, lookFeet, true);
+	OutfitColorizer::ColorizeTemplatePixels(rgbadata.get(), template_rgbdata.get(), base_dimensions.pixelCount(), lookHead, lookBody, lookLegs, lookFeet, true);
 
 	return rgbadata;
 }
