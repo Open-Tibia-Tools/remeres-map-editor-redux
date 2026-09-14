@@ -24,7 +24,7 @@ enum class CleanerFloorScope : uint8_t {
 };
 
 struct UnreachableCleanerSettings {
-	int viewport_width = 26;
+	int viewport_width = 15;
 	int viewport_height = 11;
 	int safety_margin = 2;
 	CleanerFloorScope floor_scope = CleanerFloorScope::All;

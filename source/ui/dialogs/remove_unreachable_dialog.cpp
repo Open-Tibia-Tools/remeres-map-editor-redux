@@ -102,8 +102,8 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	radio_custom->Bind(wxEVT_RADIOBUTTON, &RemoveUnreachableDialog::OnViewportModeChanged, this);
 	multi_floor_checkbox->Bind(wxEVT_CHECKBOX, &RemoveUnreachableDialog::OnMultiFloorChanged, this);
 
-	// Default to custom (26x11) as requested by user
-	radio_custom->SetValue(true);
+	// Default to standard client (15x11)
+	radio_standard->SetValue(true);
 	UpdateControlStates();
 
 	wxIcon icon;
