@@ -12,18 +12,12 @@
 #include "map/map_region.h"
 #include "map/spatial_hash_grid.h"
 #include "game/item.h"
-#include "io/iomap_otbm.h"
 #include "ui/gui.h"
 #include "ui/dialog_util.h"
 #include "app/definitions.h"
-#include "util/file_system.h"
 #include "util/common.h"
 
 #include <algorithm>
-#include <chrono>
-#include <ctime>
-#include <iomanip>
-#include <sstream>
 #include <vector>
 #include <unordered_map>
 #include <utility>
