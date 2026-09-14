@@ -2,7 +2,6 @@
 #define RME_RENDERING_DRAWING_OPTIONS_H_
 
 #include <cstdint>
-#include <wx/wx.h>
 #include <string>
 #include <optional>
 #include "map/position.h"

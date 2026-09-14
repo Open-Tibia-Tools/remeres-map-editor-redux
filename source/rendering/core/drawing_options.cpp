@@ -1,4 +1,4 @@
-#include "app/main.h"
+#include "app/definitions.h"
 #include "brushes/managers/brush_manager.h"
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/light_defaults.h"

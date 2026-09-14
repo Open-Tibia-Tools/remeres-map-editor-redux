@@ -1,7 +1,7 @@
 #ifndef RME_RENDERING_CORE_SPRITE_BATCH_H_
 #define RME_RENDERING_CORE_SPRITE_BATCH_H_
 
-#include "app/main.h"
+#include <glad/glad.h>
 #include "rendering/core/ring_buffer.h"
 #include "rendering/core/multi_draw_indirect_renderer.h"
 #include "rendering/core/sprite_instance.h"
