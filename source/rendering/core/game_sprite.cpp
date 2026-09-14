@@ -71,6 +71,9 @@ int GameSprite::getDrawHeight() const {
 }
 
 uint32_t GameSprite::getDebugImageId(size_t index) const {
+	if (index < sprite_ids.size()) {
+		return sprite_ids[index];
+	}
 	if (index < spriteList.size() && spriteList[index]->isNormalImage()) {
 		return static_cast<const NormalImage*>(spriteList[index])->id;
 	}
@@ -130,6 +133,9 @@ void GameSprite::rebuildGeometryCache() const {
 
 uint32_t GameSprite::getSpriteId(int frameIndex, int pattern_x, int pattern_y) const {
 	auto idx = getIndex(width, height, 0, pattern_x, pattern_y, 0, frameIndex); // Assuming layer, pattern_z are 0 for this context
+	if (idx >= 0 && static_cast<size_t>(idx) < sprite_ids.size()) {
+		return sprite_ids[idx];
+	}
 	if (idx >= 0 && static_cast<size_t>(idx) < spriteList.size() && spriteList[idx]->isNormalImage()) {
 		return static_cast<const NormalImage*>(spriteList[idx])->id;
 	}
@@ -260,8 +266,6 @@ const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _layer, int _c
 				cached_sprite_id = 0;
 			}
 
-			// Lazy set parent for cache invalidation (legacy path, kept for safety)
-			spriteList[0]->parent = this;
 			return valid_region;
 		}
 	}
@@ -280,9 +284,7 @@ const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _layer, int _c
 		}
 	}
 
-	// Ensure parent is set for invalidation (even in slow path)
 	if (spriteList[v]) {
-		spriteList[v]->parent = this;
 		return spriteList[v]->getAtlasRegion();
 	}
 	return nullptr;
@@ -332,7 +334,6 @@ const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _dir, int _add
 		return img->getAtlasRegion();
 	}
 	if (spriteList[v]) {
-		spriteList[v]->parent = this;
 		return spriteList[v]->getAtlasRegion();
 	}
 	return nullptr;

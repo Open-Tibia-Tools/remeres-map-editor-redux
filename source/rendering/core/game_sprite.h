@@ -161,6 +161,7 @@ public:
 	bool has_light = false;
 	SpriteLight light;
 
+	std::vector<uint32_t> sprite_ids;
 	std::vector<NormalImage*> spriteList;
 	std::vector<std::unique_ptr<TemplateImage>> instanced_templates; // Templates that use this sprite
 	bool is_resident = false; // Tracks if this GameSprite is in resident_game_sprites

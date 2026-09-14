@@ -15,7 +15,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
 #include "rendering/core/texture_garbage_collector.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/image.h"

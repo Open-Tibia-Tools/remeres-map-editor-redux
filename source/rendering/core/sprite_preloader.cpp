@@ -156,9 +156,6 @@ void SpritePreloader::preload(GameSprite* spr, int pattern_x, int pattern_y, int
 
 				NormalImage* img = spr->spriteList[idx];
 				if (img && !img->isGLLoaded && !img->is_preloading) {
-					// Ensure parent is set so GC can invalidate cached_default_region
-					// when evicting this sprite later (prevents stale cache -> wrong sprite)
-					img->addParent(spr);
 					ids_to_enqueue.push_back({ img, { archive.get(), img->id }, img->generation_id });
 				}
 			}
@@ -296,11 +293,6 @@ void SpritePreloader::update() {
 					if (img->pixel_width != res.dimensions.width || img->pixel_height != res.dimensions.height) {
 						img->pixel_width = res.dimensions.width;
 						img->pixel_height = res.dimensions.height;
-						for (GameSprite* parent : img->parents) {
-							if (parent) {
-								parent->invalidateMetricCaches();
-							}
-						}
 					}
 					img->fulfillPreload(std::move(res.data));
 				} else {

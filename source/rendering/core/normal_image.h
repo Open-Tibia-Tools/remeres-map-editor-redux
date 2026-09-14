@@ -3,10 +3,6 @@
 
 #include "rendering/core/image.h"
 
-#include <vector>
-
-class GameSprite;
-
 class NormalImage : public Image {
 public:
 	NormalImage();
@@ -23,9 +19,6 @@ public:
 	const AtlasRegion* atlas_region;
 	bool is_preloading = false;
 
-	// This contains the pixel data
-	uint16_t size;
-	std::unique_ptr<uint8_t[]> dump;
 	uint16_t pixel_width = TextureAtlas::BASE_SLOT_SIZE;
 	uint16_t pixel_height = TextureAtlas::BASE_SLOT_SIZE;
 
@@ -38,10 +31,6 @@ public:
 	}
 
 	void fulfillPreload(std::unique_ptr<uint8_t[]> preloaded_data);
-	void addParent(GameSprite* sprite);
-
-	GameSprite* parent = nullptr;
-	std::vector<GameSprite*> parents;
 };
 
 #endif
