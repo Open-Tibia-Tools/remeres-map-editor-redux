@@ -134,6 +134,14 @@ public:
 		return generation;
 	}
 
+	bool isUnnamed() const {
+		return unnamed;
+	}
+
+	void setUnnamed(bool u) {
+		unnamed = u;
+	}
+
 	void flagAsNamed() {
 		unnamed = false;
 	}

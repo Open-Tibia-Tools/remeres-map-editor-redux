@@ -482,12 +482,14 @@ bool UnreachableCleaner::CreateBackup(Editor& editor, std::string& out_backup_pa
 
 	const std::string original_waypointfile = editor.map.getWaypointFilename();
 	const bool original_changed = editor.map.hasChanged();
+	const bool original_unnamed = editor.map.isUnnamed();
 
 	IOMapOTBM mapsaver(editor.map.getVersion());
 	const bool save_ok = mapsaver.saveMap(editor.map, target_file);
 
-	// Restore waypointfile and preserve dirty state on both success and failure paths
+	// Restore waypointfile, unnamed state, and preserve dirty state on both success and failure paths
 	editor.map.setWaypointFilename(original_waypointfile);
+	editor.map.setUnnamed(original_unnamed);
 	if (!original_changed && editor.map.hasChanged()) {
 		editor.map.clearChanges();
 	}
