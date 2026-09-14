@@ -2,7 +2,7 @@
 #include "rendering/core/game_sprite.h"
 #include "app/settings.h"
 #include "rendering/core/sprite_archive.h"
-#include "ui/gui.h"
+#include "rendering/core/graphics.h"
 #include <spdlog/spdlog.h>
 #include <cstring>
 #include <ranges>
@@ -11,8 +11,8 @@ constexpr int RGB_COMPONENTS = 3;
 
 namespace {
 	bool loadRgbaFromArchive(uint32_t id, std::unique_ptr<uint8_t[]>& rgba, ImageDimensions& dimensions) {
-		const auto archive = g_gui.gfx.getSpriteArchive();
-		return archive && archive->readRGBA(id, g_gui.gfx.hasTransparency(), rgba, dimensions);
+		const auto archive = g_graphics.getSpriteArchive();
+		return archive && archive->readRGBA(id, g_graphics.hasTransparency(), rgba, dimensions);
 	}
 
 	void updateDimensions(NormalImage& image, const ImageDimensions& dimensions) {
@@ -40,8 +40,8 @@ NormalImage::NormalImage() :
 NormalImage::~NormalImage() {
 	// dump auto-deleted
 	if (isGLLoaded) {
-		if (g_gui.gfx.hasAtlasManager()) {
-			g_gui.gfx.getAtlasManager()->removeSprite(id);
+		if (g_graphics.hasAtlasManager()) {
+			g_graphics.getAtlasManager()->removeSprite(id);
 		}
 	}
 }
@@ -69,8 +69,8 @@ void NormalImage::clean(time_t time, int longevity) {
 		longevity = g_settings.getInteger(Config::TEXTURE_LONGEVITY);
 	}
 	if (isGLLoaded && time - static_cast<time_t>(lastaccess.load(std::memory_order_relaxed)) > longevity) {
-		if (g_gui.gfx.hasAtlasManager()) {
-			g_gui.gfx.getAtlasManager()->removeSprite(id);
+		if (g_graphics.hasAtlasManager()) {
+			g_graphics.getAtlasManager()->removeSprite(id);
 		}
 		for (GameSprite* sprite : parents) {
 			if (sprite) {
@@ -85,7 +85,7 @@ void NormalImage::clean(time_t time, int longevity) {
 		// Invalidate any pending preloads for this sprite ID
 		generation_id++;
 
-		g_gui.gfx.collector.NotifyTextureUnloaded();
+		g_graphics.collector.NotifyTextureUnloaded();
 	}
 
 	if (time - static_cast<time_t>(lastaccess.load(std::memory_order_relaxed)) > 5 && !g_settings.getInteger(Config::USE_MEMCACHED_SPRITES)) { // We keep dumps around for 5 seconds.

@@ -7,7 +7,6 @@
 #include "rendering/core/floor_visibility_mode.h"
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/ui/map_display.h"
-#include "ui/gui.h"
 #include "ui/managers/minimap_manager.h"
 
 #include <algorithm>
@@ -193,10 +192,6 @@ void MinimapDrawer::Draw(const wxSize& size, Editor& editor, MapCanvas& canvas, 
 		if (pending.floor_rects[floor].has_value()) {
 			renderer->markDirty(floor, *pending.floor_rects[floor]);
 		}
-	}
-
-	if (!g_gui.IsRenderingEnabled()) {
-		return;
 	}
 
 	const auto floor_range = getFloorRenderRange(viewport_state, options.floor_visibility_mode);

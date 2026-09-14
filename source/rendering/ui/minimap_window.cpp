@@ -516,7 +516,7 @@ void MinimapCanvas::OnPaint(wxPaintEvent& event) {
 		glad_initialized = true;
 	}
 
-	if (g_gui.IsLoading() || !g_gui.IsEditorOpen()) {
+	if (g_gui.IsLoading() || !g_gui.IsEditorOpen() || !g_gui.IsRenderingEnabled()) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		SwapBuffers();

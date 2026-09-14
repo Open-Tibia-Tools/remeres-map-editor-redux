@@ -327,6 +327,7 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 
 		options.dragging = selection_controller->IsDragging();
 		options.boundbox_selection = selection_controller->IsBoundboxSelection();
+		options.is_drawing_mode = g_gui.IsDrawingMode();
 
 		if (options.show_preview) {
 			animation_timer->Start();

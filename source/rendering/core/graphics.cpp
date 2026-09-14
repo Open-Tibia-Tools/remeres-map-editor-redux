@@ -25,7 +25,6 @@
 #include <nanovg_gl.h>
 #include "io/filehandle.h"
 #include "app/settings.h"
-#include "ui/gui.h"
 
 #include "rendering/io/editor_sprite_loader.h"
 
@@ -36,7 +35,7 @@
 #include "rendering/core/outfit_colors.h"
 #include "rendering/core/outfit_colorizer.h"
 #include <atomic>
-#include <functional>
+GraphicManager g_graphics;
 
 GraphicManager::GraphicManager() :
 	client_version(nullptr),

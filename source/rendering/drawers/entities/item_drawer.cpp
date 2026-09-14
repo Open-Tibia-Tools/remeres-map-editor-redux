@@ -23,7 +23,7 @@
 #include "game/item.h"
 #include "game/complexitem.h"
 #include "game/sprites.h"
-#include "ui/gui.h"
+#include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
 
 namespace {
@@ -34,7 +34,7 @@ namespace {
 		if (ctx) {
 			return ctx->gfx.getGameSprite(definition.clientId());
 		}
-		return g_gui.gfx.getGameSprite(definition.clientId());
+		return g_graphics.getGameSprite(definition.clientId());
 	}
 
 	GameSprite* resolveSprite(ServerItemId item_id, const RenderFrameContext* ctx = nullptr) {
@@ -213,10 +213,6 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	}
 
 	if (draw_visuals) {
-		// Atlas-only rendering
-		// g_gui.gfx.ensureAtlasManager();
-		// BatchRenderer::SetAtlasManager(g_gui.gfx.getAtlasManager());
-
 		if (is_simple_sprite) {
 			const AtlasRegion* region = nullptr;
 			if (spr->is_simple && subtype == -1 && pattern_x == 0 && pattern_y == 0 && pattern_z == 0 && frame == 0) {

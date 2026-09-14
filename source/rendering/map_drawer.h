@@ -109,9 +109,9 @@ public:
 	void Draw();
 	void DrawBackground();
 	void DrawMap(const RenderFrameContext& ctx);
-	void DrawIngameBox(const ViewBounds& bounds);
+	void DrawIngameBox(const ViewBounds& bounds, const AtlasManager& atlas);
 
-	void DrawGrid(const ViewBounds& bounds);
+	void DrawGrid(const ViewBounds& bounds, const AtlasManager& atlas);
 	void DrawTooltips(NVGcontext* vg);
 	void DrawHookIndicators(NVGcontext* vg);
 	void DrawDoorIndicators(NVGcontext* vg);
@@ -125,6 +125,10 @@ public:
 
 	DrawingOptions& getOptions() {
 		return options;
+	}
+
+	Editor& getEditor() {
+		return editor;
 	}
 
 	SpriteBatch* getSpriteBatch() {

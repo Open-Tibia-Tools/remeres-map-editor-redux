@@ -25,8 +25,7 @@
 #include "rendering/core/coordinate_mapper.h"
 #include <wx/wx.h>
 #include "item_definitions/core/item_definition_store.h"
-#include "game/sprites.h"
-#include "ui/gui.h"
+
 
 TooltipDrawer::TooltipDrawer() {
 }
@@ -137,7 +136,7 @@ int TooltipDrawer::getSpriteImage(NVGcontext* vg, uint16_t itemId) {
 
 	// Resolve Item ID
 	const auto definition = g_item_definitions.get(itemId);
-	GameSprite* gameSprite = definition ? g_gui.gfx.getGameSprite(definition.clientId()) : nullptr;
+	GameSprite* gameSprite = definition ? g_graphics.getGameSprite(definition.clientId()) : nullptr;
 	if (!gameSprite) {
 		return 0;
 	}
@@ -157,7 +156,7 @@ int TooltipDrawer::getSpriteImage(NVGcontext* vg, uint16_t itemId) {
 
 			// For legacy sprites (no transparency), use getRGBData + Magenta Masking
 			// This matches how WxWidgets/SpriteIconGenerator renders icons
-			if (!g_gui.gfx.hasTransparency()) {
+			if (!g_graphics.hasTransparency()) {
 				std::unique_ptr<uint8_t[]> rgb = img->getRGBData();
 				if (rgb) {
 					rgba = std::make_unique<uint8_t[]>(dimensions.pixelCount() * 4);

@@ -16,7 +16,6 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "ui/gui.h"
 #include "app/definitions.h"
 #include "rendering/drawers/map_layer_drawer.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
@@ -119,7 +118,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 				}
 				nd->setRequested(map_z > GROUND_LAYER, true);
 			}
-			grid_drawer->DrawNodeLoadingPlaceholder(sprite_batch, nd_map_x, nd_map_y, view);
+			grid_drawer->DrawNodeLoadingPlaceholder(sprite_batch, nd_map_x, nd_map_y, view, ctx.atlas);
 			return;
 		}
 

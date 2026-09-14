@@ -10,6 +10,7 @@
 
 class MapDrawer;
 class CoordinateMapper;
+class AtlasManager;
 
 struct NVGcontext;
 
@@ -18,7 +19,7 @@ public:
 	LuaOverlayDrawer(MapDrawer* mapDrawer);
 	~LuaOverlayDrawer();
 
-	void Draw(const RenderView& view, const DrawingOptions& options);
+	void Draw(const RenderView& view, const DrawingOptions& options, const AtlasManager& atlas);
 	void DrawUI(NVGcontext* vg, const RenderView& view, const DrawingOptions& options);
 	bool hasUIElements(const RenderView& view);
 

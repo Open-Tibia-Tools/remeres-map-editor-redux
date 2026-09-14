@@ -5,7 +5,7 @@
 #include "app/main.h"
 #include "rendering/utilities/sprite_icon_generator.h"
 #include "app/settings.h"
-#include "ui/gui.h"
+#include "rendering/core/graphics.h"
 #include <algorithm>
 #include <ranges>
 #include <span>
@@ -86,7 +86,7 @@ wxBitmap SpriteIconGenerator::Generate(GameSprite* sprite, SpriteSize size, cons
 	}
 
 	int pattern_z = 0;
-	GameSprite* mountSpr = outfit.lookMount != 0 ? g_gui.gfx.getCreatureSprite(outfit.lookMount) : nullptr;
+	GameSprite* mountSpr = outfit.lookMount != 0 ? g_graphics.getCreatureSprite(outfit.lookMount) : nullptr;
 	if (mountSpr) {
 		pattern_z = std::min<int>(1, sprite->pattern_z - 1);
 	}

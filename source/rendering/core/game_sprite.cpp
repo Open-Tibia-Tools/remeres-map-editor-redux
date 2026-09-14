@@ -5,7 +5,6 @@
 #include "app/main.h"
 #include "rendering/core/game_sprite.h"
 #include "rendering/core/graphics.h"
-#include "ui/gui.h"
 #include "app/settings.h"
 #include "rendering/utilities/sprite_icon_generator.h"
 #include "rendering/core/outfit_colorizer.h"
@@ -526,7 +525,7 @@ wxMemoryDC* GameSprite::getDC(SpriteSize size) {
 			bm[size] = std::make_unique<wxBitmap>(bmp);
 			dc[size] = std::make_unique<wxMemoryDC>(*bm[size]);
 		}
-		g_gui.gfx.addSpriteToCleanup(this);
+		g_graphics.addSpriteToCleanup(this);
 	}
 	return dc[size].get();
 }
@@ -554,7 +553,7 @@ wxMemoryDC* GameSprite::getDC(SpriteSize size, const Outfit& outfit) {
 			cache->dc = std::make_unique<wxMemoryDC>(*cache->bm);
 
 			auto res = colored_dc.insert(std::make_pair(key, std::move(cache)));
-			g_gui.gfx.addSpriteToCleanup(this);
+			g_graphics.addSpriteToCleanup(this);
 			return res.first->second->dc.get();
 		}
 		return nullptr;

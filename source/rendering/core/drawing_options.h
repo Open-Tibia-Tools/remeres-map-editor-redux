@@ -30,6 +30,7 @@ struct DrawingOptions {
 	bool show_invalid_zones;
 	bool show_waypoints;
 	bool ingame;
+	bool is_drawing_mode;
 	bool dragging;
 	bool boundbox_selection;
 

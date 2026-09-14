@@ -9,7 +9,6 @@
 #include "editor/selection.h"
 #include "map/tile.h"
 #include "lua/lua_script_manager.h"
-#include "ui/gui.h"
 
 #include <functional>
 
@@ -39,7 +38,7 @@ LuaOverlayDrawer::~LuaOverlayDrawer() {
 }
 
 LuaOverlayDrawer::CacheKey LuaOverlayDrawer::makeCacheKey(const RenderView& view) const {
-	Editor* editor = g_gui.GetCurrentEditor();
+	Editor* editor = mapDrawer ? &mapDrawer->getEditor() : nullptr;
 	const Selection* selection = editor ? &editor->selection : nullptr;
 	const ActionQueue* actionQueue = editor && editor->actionQueue ? editor->actionQueue.get() : nullptr;
 
@@ -100,12 +99,11 @@ void LuaOverlayDrawer::refreshCache(const RenderView& view) {
 	cacheValid = true;
 }
 
-void LuaOverlayDrawer::Draw(const RenderView& view, const DrawingOptions& options) {
+void LuaOverlayDrawer::Draw(const RenderView& view, const DrawingOptions& options, const AtlasManager& atlas) {
 	auto* primitives = mapDrawer->getPrimitiveRenderer();
 	auto* spriteBatch = mapDrawer->getSpriteBatch();
-	auto* atlas = g_gui.gfx.getAtlasManager();
 
-	if (!primitives || !spriteBatch || !atlas) return;
+	if (!primitives || !spriteBatch) return;
 
 	refreshCache(view);
 
@@ -152,7 +150,7 @@ void LuaOverlayDrawer::Draw(const RenderView& view, const DrawingOptions& option
 				break;
 			}
 			case MapOverlayCommand::Type::Sprite: {
-				const AtlasRegion* region = atlas->getRegion(cmd.sprite_id);
+				const AtlasRegion* region = atlas.getRegion(cmd.sprite_id);
 				if (region) {
 					float sizeX = cmd.screen_space ? cmd.w : view.tile_size * view.zoom;
 					float sizeY = cmd.screen_space ? cmd.h : view.tile_size * view.zoom;

@@ -1,5 +1,5 @@
 #include "app/main.h"
-#include "ui/gui.h"
+#include "brushes/managers/brush_manager.h"
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/light_defaults.h"
 
@@ -21,6 +21,7 @@ void DrawingOptions::SetDefault() {
 	show_invalid_zones = true;
 	show_waypoints = true;
 	ingame = false;
+	is_drawing_mode = false;
 	dragging = false;
 	boundbox_selection = false;
 
@@ -134,10 +135,10 @@ void DrawingOptions::Update() {
 	always_show_zones = g_settings.getBoolean(Config::ALWAYS_SHOW_ZONES);
 	extended_house_shader = g_settings.getBoolean(Config::EXT_HOUSE_SHADER);
 	server_light = SpriteLight {
-		.intensity = static_cast<uint8_t>(std::clamp(g_gui.GetLightIntensity(), 0, 255)),
-		.color = static_cast<uint8_t>(std::clamp(g_gui.GetServerLightColor(), 0, 255))
+		.intensity = static_cast<uint8_t>(std::clamp(g_brush_manager.GetLightIntensity(), 0, 255)),
+		.color = static_cast<uint8_t>(std::clamp(g_brush_manager.GetServerLightColor(), 0, 255))
 	};
-	minimum_ambient_light = std::clamp(g_gui.GetAmbientLightLevel(), 0.0f, 1.0f);
+	minimum_ambient_light = std::clamp(g_brush_manager.GetAmbientLightLevel(), 0.0f, 1.0f);
 	draw_floor_shadow = show_shade;
 
 	anti_aliasing = g_settings.getBoolean(Config::ANTI_ALIASING);

@@ -8,9 +8,11 @@ class SpriteBatch;
 
 struct DrawingOptions;
 
+class AtlasManager;
+
 class LiveCursorDrawer {
 public:
-	void draw(SpriteBatch& sprite_batch, const RenderView& view, Editor& editor, const DrawingOptions& options);
+	void draw(SpriteBatch& sprite_batch, const RenderView& view, Editor& editor, const DrawingOptions& options, const AtlasManager& atlas);
 };
 
 #endif

@@ -21,13 +21,14 @@ class SpriteDrawer;
 class CreatureDrawer;
 class SpriteBatch;
 class PrimitiveRenderer;
+class AtlasManager;
 
 class BrushOverlayDrawer {
 public:
 	BrushOverlayDrawer();
 	~BrushOverlayDrawer();
 
-	void draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primitive_renderer, MapDrawer* drawer, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options, Editor& editor);
+	void draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primitive_renderer, MapDrawer* drawer, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options, Editor& editor, const AtlasManager& atlas);
 
 private:
 	enum BrushColor {

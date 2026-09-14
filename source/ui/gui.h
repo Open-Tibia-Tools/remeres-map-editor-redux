@@ -359,7 +359,7 @@ public:
 	MainFrame* root; // The main frame
 	CopyBuffer copybuffer;
 
-	GraphicManager gfx;
+	GraphicManager& gfx = g_graphics;
 
 	HousePalette* house_palette;
 

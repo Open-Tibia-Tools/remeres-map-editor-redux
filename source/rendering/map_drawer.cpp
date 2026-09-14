@@ -20,7 +20,7 @@
 #include <algorithm>
 
 #include "editor/editor.h"
-#include "ui/gui.h"
+#include "brushes/managers/brush_manager.h"
 #include "game/sprites.h"
 
 #include "rendering/map_drawer.h"
@@ -126,7 +126,7 @@ MapDrawer::~MapDrawer() {
 
 void MapDrawer::SetupVars() {
 	options.current_house_id = 0;
-	Brush* brush = g_gui.GetCurrentBrush();
+	Brush* brush = g_brush_manager.GetCurrentBrush();
 	if (brush) {
 		if (brush->is<HouseBrush>()) {
 			options.current_house_id = brush->as<HouseBrush>()->getHouseID();
@@ -164,8 +164,6 @@ void MapDrawer::Release() {
 }
 
 void MapDrawer::Draw() {
-	//g_gui.gfx.updateTime();
-
 	light_buffer.Clear();
 	creature_name_drawer->clear();
 	options.transient_selection_bounds = std::nullopt;
@@ -179,18 +177,18 @@ void MapDrawer::Draw() {
 		};
 	}
 
-	if (!g_gui.gfx.ensureAtlasManager()) {
+	if (!g_graphics.ensureAtlasManager()) {
 		return;
 	}
-	auto* atlas = g_gui.gfx.getAtlasManager();
+	auto* atlas = g_graphics.getAtlasManager();
 
 	const RenderFrameContext ctx {
 		*atlas,
-		g_gui.gfx,
+		g_graphics,
 		g_item_definitions,
 		options,
 		view,
-		g_gui.gfx.getElapsedTime(),
+		g_graphics.getElapsedTime(),
 		static_cast<uint32_t>(options.current_house_id)
 	};
 
@@ -223,20 +221,20 @@ void MapDrawer::Draw() {
 		drag_shadow_drawer->draw(*sprite_batch, this, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options, &ctx);
 	}
 
-	live_cursor_drawer->draw(*sprite_batch, view, editor, options);
+	live_cursor_drawer->draw(*sprite_batch, view, editor, options, *atlas);
 
-	brush_overlay_drawer->draw(*sprite_batch, *primitive_renderer, this, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options, editor);
+	brush_overlay_drawer->draw(*sprite_batch, *primitive_renderer, this, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options, editor, *atlas);
 	selection_drawer->draw(*primitive_renderer, view, canvas, options);
 
 	if (options.show_grid) {
-		DrawGrid(original_bounds);
+		DrawGrid(original_bounds, *atlas);
 	}
 	if (options.show_ingame_box) {
-		DrawIngameBox(original_bounds);
+		DrawIngameBox(original_bounds, *atlas);
 	}
 
 	// Draw Lua Overlays (sprites, lines, rects, etc.)
-	lua_overlay_drawer->Draw(view, options);
+	lua_overlay_drawer->Draw(view, options, *atlas);
 
 	// Draw creature names (Overlay) moved to DrawCreatureNames()
 
@@ -301,12 +299,12 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx) {
 	}
 }
 
-void MapDrawer::DrawIngameBox(const ViewBounds& bounds) {
-	grid_drawer->DrawIngameBox(*sprite_batch, view, options, bounds);
+void MapDrawer::DrawIngameBox(const ViewBounds& bounds, const AtlasManager& atlas) {
+	grid_drawer->DrawIngameBox(*sprite_batch, view, options, bounds, atlas);
 }
 
-void MapDrawer::DrawGrid(const ViewBounds& bounds) {
-	grid_drawer->DrawGrid(*sprite_batch, view, options, bounds);
+void MapDrawer::DrawGrid(const ViewBounds& bounds, const AtlasManager& atlas) {
+	grid_drawer->DrawGrid(*sprite_batch, view, options, bounds, atlas);
 }
 
 void MapDrawer::DrawTooltips(NVGcontext* vg) {

@@ -170,4 +170,6 @@ private:
 
 #include "minimap_colors.h"
 
+extern GraphicManager g_graphics;
+
 #endif

@@ -3,7 +3,7 @@
 #include "rendering/core/normal_image.h"
 #include "rendering/core/outfit_colors.h"
 #include "app/settings.h"
-#include "ui/gui.h"
+#include "rendering/core/graphics.h"
 #include <atomic>
 #include <spdlog/spdlog.h>
 
@@ -22,8 +22,8 @@ TemplateImage::TemplateImage(GameSprite* parent, int v, const Outfit& outfit) :
 
 TemplateImage::~TemplateImage() {
 	if (isGLLoaded) {
-		if (g_gui.gfx.hasAtlasManager()) {
-			g_gui.gfx.getAtlasManager()->removeSprite(texture_id);
+		if (g_graphics.hasAtlasManager()) {
+			g_graphics.getAtlasManager()->removeSprite(texture_id);
 		}
 	}
 }
@@ -34,13 +34,13 @@ void TemplateImage::clean(time_t time, int longevity) {
 		longevity = g_settings.getInteger(Config::TEXTURE_LONGEVITY);
 	}
 	if (isGLLoaded && time - static_cast<time_t>(lastaccess.load(std::memory_order_relaxed)) > longevity) {
-		if (g_gui.gfx.hasAtlasManager()) {
-			g_gui.gfx.getAtlasManager()->removeSprite(texture_id);
+		if (g_graphics.hasAtlasManager()) {
+			g_graphics.getAtlasManager()->removeSprite(texture_id);
 		}
 		isGLLoaded = false;
 		atlas_region = nullptr;
 		generation_id++;
-		g_gui.gfx.collector.NotifyTextureUnloaded();
+		g_graphics.collector.NotifyTextureUnloaded();
 	}
 }
 

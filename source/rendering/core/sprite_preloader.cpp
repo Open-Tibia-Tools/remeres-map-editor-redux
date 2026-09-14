@@ -6,7 +6,6 @@
 #include "rendering/core/graphics.h"
 #include "rendering/core/normal_image.h"
 #include "rendering/core/sprite_archive.h"
-#include "ui/gui.h"
 
 #include <algorithm>
 #include <cassert>
@@ -93,15 +92,15 @@ void SpritePreloader::resetPreloadingFlag(const PendingSpriteKey& pending, const
 	if (!archive || pending.key.archive != archive) {
 		return;
 	}
-	const auto current_archive = g_gui.gfx.getSpriteArchive();
-	if (g_gui.gfx.isUnloaded() || current_archive.get() != archive) {
+	const auto current_archive = g_graphics.getSpriteArchive();
+	if (g_graphics.isUnloaded() || current_archive.get() != archive) {
 		return;
 	}
 	const uint32_t id = pending.key.id;
-	if (id >= g_gui.gfx.image_space.size()) {
+	if (id >= g_graphics.image_space.size()) {
 		return;
 	}
-	auto& img_ptr = g_gui.gfx.image_space[id];
+	auto& img_ptr = g_graphics.image_space[id];
 	if (img_ptr && img_ptr->isNormalImage()) {
 		auto* img = static_cast<NormalImage*>(img_ptr.get());
 		if (img->id == id && img->generation_id == pending.generation_id) {
@@ -115,8 +114,8 @@ void SpritePreloader::preload(GameSprite* spr, int pattern_x, int pattern_y, int
 		return;
 	}
 
-	const auto archive = g_gui.gfx.getSpriteArchive();
-	const bool has_transparency = g_gui.gfx.hasTransparency();
+	const auto archive = g_graphics.getSpriteArchive();
+	const bool has_transparency = g_graphics.hasTransparency();
 	if (!archive) {
 		return;
 	}
@@ -268,8 +267,8 @@ void SpritePreloader::update() {
 	keys_processed.clear();
 	keys_processed.reserve(result_count);
 
-	const auto current_archive = g_gui.gfx.getSpriteArchive();
-	const bool graphics_unloaded = g_gui.gfx.isUnloaded();
+	const auto current_archive = g_graphics.getSpriteArchive();
+	const bool graphics_unloaded = g_graphics.isUnloaded();
 
 	while (!results.empty()) {
 		Result res = std::move(results.front());
@@ -285,8 +284,8 @@ void SpritePreloader::update() {
 		}
 
 		// Check if GraphicManager is loaded, for the correct sprite file, and ID is valid
-		if (res.archive == current_archive && !graphics_unloaded && id < g_gui.gfx.image_space.size()) {
-			auto& img_ptr = g_gui.gfx.image_space[id];
+		if (res.archive == current_archive && !graphics_unloaded && id < g_graphics.image_space.size()) {
+			auto& img_ptr = g_graphics.image_space[id];
 			if (img_ptr && img_ptr->isNormalImage()) {
 				// Use static_cast for performance, as we know the type from loaders
 				auto* img = static_cast<NormalImage*>(img_ptr.get());
