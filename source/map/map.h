@@ -183,6 +183,7 @@ protected:
 	friend class SelectionOperations;
 	friend class MapProcessor;
 	friend class EditorPersistence;
+	friend class MapBackupService;
 	friend class MapXMLIO;
 	friend class HeaderSerializationOTBM;
 	friend class MapConverter;

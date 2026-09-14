@@ -15,7 +15,11 @@ class Editor;
 class Map;
 class Tile;
 
+#include <functional>
+
 namespace EditorOperations {
+
+using ProgressCallback = std::function<void(int percent)>;
 
 enum class CleanerFloorScope : uint8_t {
 	All = 0,        // Floors 0 - 15
@@ -44,8 +48,12 @@ struct UnreachableCleanerResult {
 class UnreachableCleaner {
 public:
 	static bool IsWalkable(const Tile* tile);
-	static std::vector<Position> FindUnreachableTiles(Map& map, const UnreachableCleanerSettings& settings, uint64_t* out_total_tiles = nullptr);
-	static bool CreateBackup(Editor& editor, std::string& out_backup_path, std::string& out_error);
+	static std::vector<Position> FindUnreachableTiles(
+		Map& map,
+		const UnreachableCleanerSettings& settings,
+		ProgressCallback on_progress = nullptr,
+		uint64_t* out_total_tiles = nullptr
+	);
 	static UnreachableCleanerResult Clean(Editor& editor, const UnreachableCleanerSettings& settings);
 };
 

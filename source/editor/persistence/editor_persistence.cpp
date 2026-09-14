@@ -7,6 +7,7 @@
 #include "ui/dialog_util.h"
 #include "util/file_system.h"
 #include "editor/persistence/editor_persistence.h"
+#include "editor/persistence/map_backup_service.h"
 #include "editor/editor.h"
 #include "editor/action.h"
 #include "editor/action_queue.h"
@@ -106,14 +107,7 @@ void EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	}
 
 	// Save the map
-	{
-		std::string n = nstr(FileSystem::GetLocalDataDirectory()) + ".saving.txt";
-		std::ofstream f(n.c_str(), std::ios::trunc | std::ios::out);
-		f << backup_otbm << '\n'
-		  << backup_house << '\n'
-		  << backup_spawn << '\n'
-		  << backup_waypoint << '\n';
-	}
+	MapBackupService::WriteCrashMarker({backup_otbm, backup_house, backup_spawn, backup_waypoint});
 
 	{
 
@@ -166,10 +160,7 @@ void EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 		}
 
 		// Remove temporary save runfile
-		{
-			std::string n = nstr(FileSystem::GetLocalDataDirectory()) + ".saving.txt";
-			std::remove(n.c_str());
-		}
+		MapBackupService::ClearCrashMarker();
 
 		// If failure, don't run the rest of the function
 		if (!success) {
@@ -180,45 +171,30 @@ void EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	// Move to permanent backup
 	if (!save_as && g_settings.getInteger(Config::ALWAYS_MAKE_BACKUP)) {
 		// Move temporary backups to their proper files
-		time_t t = time(nullptr);
-		tm* current_time = localtime(&t);
-		ASSERT(current_time);
-
-		std::ostringstream date;
-		date << (1900 + current_time->tm_year);
-		if (current_time->tm_mon < 9) {
-			date << "-"
-				 << "0" << current_time->tm_mon + 1;
-		} else {
-			date << "-" << current_time->tm_mon + 1;
-		}
-		date << "-" << current_time->tm_mday;
-		date << "-" << current_time->tm_hour;
-		date << "-" << current_time->tm_min;
-		date << "-" << current_time->tm_sec;
+		const std::string date_str = MapBackupService::GenerateTimestampString(false);
 
 		if (!backup_otbm.empty()) {
 			converter.SetFullName(wxstr(savefile));
 			std::string otbm_filename = map_path + nstr(converter.GetName());
-			std::rename(backup_otbm.c_str(), std::string(otbm_filename + "." + date.str() + ".otbm").c_str());
+			std::rename(backup_otbm.c_str(), std::string(otbm_filename + "." + date_str + ".otbm").c_str());
 		}
 
 		if (!backup_house.empty()) {
 			converter.SetFullName(wxstr(editor.map.getHouseFilename()));
 			std::string house_filename = map_path + nstr(converter.GetName());
-			std::rename(backup_house.c_str(), std::string(house_filename + "." + date.str() + ".xml").c_str());
+			std::rename(backup_house.c_str(), std::string(house_filename + "." + date_str + ".xml").c_str());
 		}
 
 		if (!backup_spawn.empty()) {
 			converter.SetFullName(wxstr(editor.map.getSpawnFilename()));
 			std::string spawn_filename = map_path + nstr(converter.GetName());
-			std::rename(backup_spawn.c_str(), std::string(spawn_filename + "." + date.str() + ".xml").c_str());
+			std::rename(backup_spawn.c_str(), std::string(spawn_filename + "." + date_str + ".xml").c_str());
 		}
 
 		if (!backup_waypoint.empty()) {
 			converter.SetFullName(wxstr(editor.map.getWaypointFilename()));
 			std::string waypoint_filename = map_path + nstr(converter.GetName());
-			std::rename(backup_waypoint.c_str(), std::string(waypoint_filename + "." + date.str() + ".xml").c_str());
+			std::rename(backup_waypoint.c_str(), std::string(waypoint_filename + "." + date_str + ".xml").c_str());
 		}
 	} else {
 		// Delete the temporary files

@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "editor/operations/unreachable_cleaner.h"
+#include "editor/persistence/map_backup_service.h"
 
 #include "editor/editor.h"
 #include "editor/action_queue.h"
@@ -122,6 +123,7 @@ bool UnreachableCleaner::IsWalkable(const Tile* tile) {
 std::vector<Position> UnreachableCleaner::FindUnreachableTiles(
 	Map& map,
 	const UnreachableCleanerSettings& settings,
+	ProgressCallback on_progress,
 	uint64_t* out_total_tiles
 ) {
 	const int rx = std::max(1, (settings.viewport_width / 2) + settings.safety_margin);
@@ -195,7 +197,9 @@ std::vector<Position> UnreachableCleaner::FindUnreachableTiles(
 		}
 	}
 
-	g_gui.SetLoadDone(20);
+	if (on_progress) {
+		on_progress(20);
+	}
 
 	spdlog::info(
 		"UnreachableCleaner::FindUnreachableTiles: Step 1 indexing complete. Indexed {} walkable nodes across {} cells (walkable viewpoints: {}, non-walkable: {}).",
@@ -456,8 +460,8 @@ std::vector<Position> UnreachableCleaner::FindUnreachableTiles(
 		}
 
 		++cells_done;
-		if (cells_done % 32 == 0 && total_cells > 0) {
-			g_gui.SetLoadDone(20 + static_cast<int>(cells_done * 75.0 / static_cast<double>(total_cells)));
+		if (cells_done % 32 == 0 && total_cells > 0 && on_progress) {
+			on_progress(20 + static_cast<int>(cells_done * 75.0 / static_cast<double>(total_cells)));
 		}
 	}
 
@@ -476,48 +480,6 @@ std::vector<Position> UnreachableCleaner::FindUnreachableTiles(
 	return to_remove;
 }
 
-bool UnreachableCleaner::CreateBackup(Editor& editor, std::string& out_backup_path, std::string& out_error) {
-	std::time_t now = std::time(nullptr);
-	std::tm tm_now = *std::localtime(&now);
-	char time_buf[64];
-	std::strftime(time_buf, sizeof(time_buf), "%Y%m%d_%H%M%S", &tm_now);
-
-	FileName target_file;
-	if (editor.map.hasFile()) {
-		FileName src(wxstr(editor.map.getFilename()));
-		target_file = src;
-		target_file.SetName(src.GetName() + "_backup_" + time_buf);
-	} else {
-		std::string dir = nstr(FileSystem::GetLocalDataDirectory());
-		target_file.Assign(wxstr(dir + "untitled_backup_" + time_buf + ".otbm"));
-	}
-
-	out_backup_path = nstr(target_file.GetFullPath());
-
-	const std::string original_waypointfile = editor.map.getWaypointFilename();
-	const bool original_changed = editor.map.hasChanged();
-	const bool original_unnamed = editor.map.isUnnamed();
-
-	IOMapOTBM mapsaver(editor.map.getVersion());
-	const bool save_ok = mapsaver.saveMap(editor.map, target_file);
-
-	// Restore waypointfile, unnamed state, and preserve dirty state on both success and failure paths
-	editor.map.setWaypointFilename(original_waypointfile);
-	editor.map.setUnnamed(original_unnamed);
-	if (!original_changed && editor.map.hasChanged()) {
-		editor.map.clearChanges();
-	}
-
-	if (!save_ok) {
-		out_error = "Failed to save backup map file to: " + out_backup_path;
-		spdlog::error("UnreachableCleaner::CreateBackup: {}", out_error);
-		return false;
-	}
-
-	spdlog::info("UnreachableCleaner::CreateBackup: Created backup at {}", out_backup_path);
-	return true;
-}
-
 UnreachableCleanerResult UnreachableCleaner::Clean(Editor& editor, const UnreachableCleanerSettings& settings) {
 	UnreachableCleanerResult result;
 	Map& map = editor.map;
@@ -525,7 +487,12 @@ UnreachableCleanerResult UnreachableCleaner::Clean(Editor& editor, const Unreach
 	spdlog::info("UnreachableCleaner::Clean: Invoked. Starting analysis of unreachable tiles.");
 	g_gui.CreateLoadBar("Analyzing unreachable tiles...");
 
-	std::vector<Position> to_remove = FindUnreachableTiles(map, settings, &result.total_tiles_checked);
+	std::vector<Position> to_remove = FindUnreachableTiles(
+		map,
+		settings,
+		[](int percent) { g_gui.SetLoadDone(percent); },
+		&result.total_tiles_checked
+	);
 
 	g_gui.DestroyLoadBar();
 
@@ -554,10 +521,10 @@ UnreachableCleanerResult UnreachableCleaner::Clean(Editor& editor, const Unreach
 	// Step 3: Create backup if requested
 	if (settings.create_backup) {
 		std::string backup_err;
-		if (!CreateBackup(editor, result.backup_path, backup_err)) {
+		if (!MapBackupService::CreateSnapshot(editor, result.backup_path, backup_err, "unreachable_clean")) {
 			int proceed = DialogUtil::PopupDialog(
 				"Backup Failed",
-				"Failed to create map backup:\n" + backup_err + "\n\nDo you want to proceed with tile removal anyway?",
+				"Failed to create map backup snapshot:\n" + backup_err + "\n\nDo you want to proceed with tile removal anyway?",
 				wxYES | wxNO
 			);
 			if (proceed != wxID_YES) {
