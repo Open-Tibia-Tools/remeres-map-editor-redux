@@ -21,17 +21,18 @@ public:
 
 private:
 	void OnViewportModeChanged(wxCommandEvent& event);
+	void OnMultiFloorChanged(wxCommandEvent& event);
 	void UpdateControlStates();
 
 	wxRadioButton* radio_standard = nullptr;
 	wxRadioButton* radio_custom = nullptr;
 	wxSpinCtrl* custom_width_spin = nullptr;
 	wxSpinCtrl* custom_height_spin = nullptr;
+	wxCheckBox* multi_floor_checkbox = nullptr;
 	wxRadioButton* radio_scope_all = nullptr;
 	wxRadioButton* radio_scope_surface = nullptr;
 	wxRadioButton* radio_scope_underground = nullptr;
 	wxSpinCtrl* safety_margin_spin = nullptr;
-	wxCheckBox* multi_floor_checkbox = nullptr;
 	wxCheckBox* backup_checkbox = nullptr;
 };
 

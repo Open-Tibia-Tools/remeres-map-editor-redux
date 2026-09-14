@@ -38,22 +38,31 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	viewport_box->Add(custom_sizer, 0, wxLEFT | wxRIGHT | wxBOTTOM, 5);
 	top_sizer->Add(viewport_box, 0, wxEXPAND | wxALL, 10);
 
-	// 2. Floor Scope Group
-	wxStaticBoxSizer* scope_box = newd wxStaticBoxSizer(wxVERTICAL, this, "Floor Scope");
+	// 2. Multi-Floor Visibility Group
+	wxStaticBoxSizer* floor_box = newd wxStaticBoxSizer(wxVERTICAL, this, "Multi-Floor Visibility");
 
-	radio_scope_all = newd wxRadioButton(scope_box->GetStaticBox(), wxID_ANY, "All Floors (0 - 15)", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-	radio_scope_surface = newd wxRadioButton(scope_box->GetStaticBox(), wxID_ANY, "Surface Only (0 - 7)");
-	radio_scope_underground = newd wxRadioButton(scope_box->GetStaticBox(), wxID_ANY, "Underground Only (8 - 15)");
+	multi_floor_checkbox = newd wxCheckBox(floor_box->GetStaticBox(), wxID_ANY, "Consider multi-floor visibility (Z-axis)");
+	multi_floor_checkbox->SetValue(true);
+	multi_floor_checkbox->SetToolTip("Checks viewports across visible adjacent floors with isometric floor offset projection.");
+	floor_box->Add(multi_floor_checkbox, 0, wxALL, 5);
+
+	wxBoxSizer* scope_sizer = newd wxBoxSizer(wxVERTICAL);
+
+	radio_scope_all = newd wxRadioButton(floor_box->GetStaticBox(), wxID_ANY, "All Floors (0 - 15)", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+	radio_scope_surface = newd wxRadioButton(floor_box->GetStaticBox(), wxID_ANY, "Surface Only (0 - 7)");
+	radio_scope_underground = newd wxRadioButton(floor_box->GetStaticBox(), wxID_ANY, "Underground Only (8 - 15)");
 
 	radio_scope_all->SetValue(true);
 	radio_scope_all->SetToolTip("Scan and remove unreachable tiles across both surface and underground layers.");
 	radio_scope_surface->SetToolTip("Scan and remove unreachable tiles on surface levels only (e.g. open sea). Floors 8 - 15 are left untouched.");
 	radio_scope_underground->SetToolTip("Scan and remove unreachable tiles underground only (e.g. cavern voids). Floors 0 - 7 are left untouched.");
 
-	scope_box->Add(radio_scope_all, 0, wxALL, 5);
-	scope_box->Add(radio_scope_surface, 0, wxALL, 5);
-	scope_box->Add(radio_scope_underground, 0, wxALL, 5);
-	top_sizer->Add(scope_box, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
+	scope_sizer->Add(radio_scope_all, 0, wxBOTTOM, 3);
+	scope_sizer->Add(radio_scope_surface, 0, wxBOTTOM, 3);
+	scope_sizer->Add(radio_scope_underground, 0, 0);
+
+	floor_box->Add(scope_sizer, 0, wxLEFT | wxBOTTOM, 22);
+	top_sizer->Add(floor_box, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
 
 	// 3. Cleanup Options Group
 	wxStaticBoxSizer* options_box = newd wxStaticBoxSizer(wxVERTICAL, this, "Cleanup Options");
@@ -65,11 +74,6 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	margin_sizer->Add(safety_margin_spin, 0, wxALIGN_CENTER_VERTICAL);
 	options_box->Add(margin_sizer, 0, wxALL, 5);
 
-	multi_floor_checkbox = newd wxCheckBox(options_box->GetStaticBox(), wxID_ANY, "Consider multi-floor visibility (Z-axis)");
-	multi_floor_checkbox->SetValue(true);
-	multi_floor_checkbox->SetToolTip("Checks viewports across visible adjacent floors with isometric floor offset projection.");
-	options_box->Add(multi_floor_checkbox, 0, wxALL, 5);
-
 	backup_checkbox = newd wxCheckBox(options_box->GetStaticBox(), wxID_ANY, "Create map backup before modifying");
 	backup_checkbox->SetValue(true);
 	backup_checkbox->SetToolTip("Saves a timestamped .otbm copy before removing any tiles.");
@@ -77,7 +81,7 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 
 	top_sizer->Add(options_box, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
 
-	// 3. OK / Cancel Buttons
+	// 4. OK / Cancel Buttons
 	wxBoxSizer* button_sizer = newd wxBoxSizer(wxHORIZONTAL);
 
 	wxButton* ok_button = newd wxButton(this, wxID_OK, "Remove Tiles");
@@ -96,6 +100,7 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 
 	radio_standard->Bind(wxEVT_RADIOBUTTON, &RemoveUnreachableDialog::OnViewportModeChanged, this);
 	radio_custom->Bind(wxEVT_RADIOBUTTON, &RemoveUnreachableDialog::OnViewportModeChanged, this);
+	multi_floor_checkbox->Bind(wxEVT_CHECKBOX, &RemoveUnreachableDialog::OnMultiFloorChanged, this);
 
 	// Default to custom (26x11) as requested by user
 	radio_custom->SetValue(true);
@@ -110,10 +115,19 @@ void RemoveUnreachableDialog::OnViewportModeChanged(wxCommandEvent& WXUNUSED(eve
 	UpdateControlStates();
 }
 
+void RemoveUnreachableDialog::OnMultiFloorChanged(wxCommandEvent& WXUNUSED(event)) {
+	UpdateControlStates();
+}
+
 void RemoveUnreachableDialog::UpdateControlStates() {
 	const bool is_custom = radio_custom->GetValue();
 	custom_width_spin->Enable(is_custom);
 	custom_height_spin->Enable(is_custom);
+
+	const bool has_multi_floor = multi_floor_checkbox->GetValue();
+	radio_scope_all->Enable(has_multi_floor);
+	radio_scope_surface->Enable(has_multi_floor);
+	radio_scope_underground->Enable(has_multi_floor);
 }
 
 EditorOperations::UnreachableCleanerSettings RemoveUnreachableDialog::GetSettings() const {
@@ -129,10 +143,14 @@ EditorOperations::UnreachableCleanerSettings RemoveUnreachableDialog::GetSetting
 	settings.multi_floor = multi_floor_checkbox->GetValue();
 	settings.create_backup = backup_checkbox->GetValue();
 
-	if (radio_scope_surface && radio_scope_surface->GetValue()) {
-		settings.floor_scope = EditorOperations::CleanerFloorScope::SurfaceOnly;
-	} else if (radio_scope_underground && radio_scope_underground->GetValue()) {
-		settings.floor_scope = EditorOperations::CleanerFloorScope::UndergroundOnly;
+	if (settings.multi_floor) {
+		if (radio_scope_surface && radio_scope_surface->GetValue()) {
+			settings.floor_scope = EditorOperations::CleanerFloorScope::SurfaceOnly;
+		} else if (radio_scope_underground && radio_scope_underground->GetValue()) {
+			settings.floor_scope = EditorOperations::CleanerFloorScope::UndergroundOnly;
+		} else {
+			settings.floor_scope = EditorOperations::CleanerFloorScope::All;
+		}
 	} else {
 		settings.floor_scope = EditorOperations::CleanerFloorScope::All;
 	}
