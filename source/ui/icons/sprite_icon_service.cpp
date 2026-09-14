@@ -3,14 +3,17 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "rendering/utilities/sprite_icon_generator.h"
+#include "ui/icons/sprite_icon_service.h"
 #include "app/settings.h"
 #include "rendering/core/graphics.h"
+#include "rendering/core/template_image.h"
+#include "rendering/core/editor_sprite.h"
+#include <wx/dcmemory.h>
 #include <algorithm>
 #include <ranges>
 #include <span>
 
-wxBitmap SpriteIconGenerator::Generate(GameSprite* sprite, SpriteSize size, bool rescale) {
+wxBitmap SpriteIconService::Generate(GameSprite* sprite, SpriteSize size, bool rescale) {
 	ASSERT(sprite->width >= 1 && sprite->height >= 1);
 
 	const int bgshade = g_settings.getInteger(Config::ICON_BACKGROUND);
@@ -75,7 +78,7 @@ wxBitmap SpriteIconGenerator::Generate(GameSprite* sprite, SpriteSize size, bool
 	return wxBitmap(image);
 }
 
-wxBitmap SpriteIconGenerator::Generate(GameSprite* sprite, SpriteSize size, const Outfit& outfit, bool rescale, Direction direction) {
+wxBitmap SpriteIconService::Generate(GameSprite* sprite, SpriteSize size, const Outfit& outfit, bool rescale, Direction direction) {
 	ASSERT(sprite->width >= 1 && sprite->height >= 1);
 
 	const int bgshade = g_settings.getInteger(Config::ICON_BACKGROUND);
@@ -138,66 +141,59 @@ wxBitmap SpriteIconGenerator::Generate(GameSprite* sprite, SpriteSize size, cons
 
 	// Mounts
 	if (mountSpr) {
-			// Mount outfit
-			Outfit mountOutfit;
-			mountOutfit.lookType = outfit.lookMount;
-			mountOutfit.lookHead = outfit.lookMountHead;
-			mountOutfit.lookBody = outfit.lookMountBody;
-			mountOutfit.lookLegs = outfit.lookMountLegs;
-			mountOutfit.lookFeet = outfit.lookMountFeet;
+		Outfit mountOutfit;
+		mountOutfit.lookType = outfit.lookMount;
+		mountOutfit.lookHead = outfit.lookMountHead;
+		mountOutfit.lookBody = outfit.lookMountBody;
+		mountOutfit.lookLegs = outfit.lookMountLegs;
+		mountOutfit.lookFeet = outfit.lookMountFeet;
 
-			// We need to render the mount
-			// Simplified rendering: just render base frame 0 for mount (or south)
-			int mount_frame_index = 0;
-			if (mountSpr->pattern_x == 4) {
-				mount_frame_index = direction;
-			}
+		int mount_frame_index = 0;
+		if (mountSpr->pattern_x == 4) {
+			mount_frame_index = direction;
+		}
 
-			for (uint8_t l = 0; l < mountSpr->layers; l++) {
-				for (uint8_t w = 0; w < mountSpr->width; w++) {
-					for (uint8_t h = 0; h < mountSpr->height; h++) {
-						std::unique_ptr<uint8_t[]> data = nullptr;
-						ImageDimensions dimensions {};
+		for (uint8_t l = 0; l < mountSpr->layers; l++) {
+			for (uint8_t w = 0; w < mountSpr->width; w++) {
+				for (uint8_t h = 0; h < mountSpr->height; h++) {
+					std::unique_ptr<uint8_t[]> data = nullptr;
+					ImageDimensions dimensions {};
 
-						// Handle mount sprite layers/templates similar to main sprite
-						// (Usually mounts are standard creatures)
-						if (mountSpr->layers == 2) {
-							if (l == 1) {
-								continue;
-							}
-
-							auto* image_ptr = mountSpr->getTemplateImage(mountSpr->getIndex(w, h, 0, mount_frame_index, 0, 0, 0), mountOutfit);
-							dimensions = image_ptr->getDimensions();
-							data = image_ptr->getRGBData();
-						} else {
-							// Standard mount
-							const int sprite_index = mountSpr->getIndex(w, h, l, mount_frame_index, 0, 0, 0);
-							dimensions = mountSpr->spriteList[sprite_index]->getDimensions();
-							data = mountSpr->spriteList[sprite_index]->getRGBData();
+					if (mountSpr->layers == 2) {
+						if (l == 1) {
+							continue;
 						}
 
-						if (data) {
-							wxImage img(dimensions.width, dimensions.height, data.get(), true);
-							img.SetMaskColour(0xFF, 0x00, 0xFF);
-							// Mount offset
-							const auto mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(direction), 0, 0, mount_frame_index);
-							int mount_x = 0;
-							for (int column = w + 1; column < mount_metrics.num_columns; ++column) {
-								mount_x += mount_metrics.column_widths[column];
-							}
-							int mount_y = 0;
-							for (int row = h + 1; row < mount_metrics.num_rows; ++row) {
-								mount_y += mount_metrics.row_heights[row];
-							}
-							mount_x -= mountSpr->getDrawOffset().first;
-							mount_y -= mountSpr->getDrawOffset().second;
-							mount_x -= min_x;
-							mount_y -= min_y;
-							image.Paste(img, mount_x, mount_y);
+						auto* image_ptr = mountSpr->getTemplateImage(mountSpr->getIndex(w, h, 0, mount_frame_index, 0, 0, 0), mountOutfit);
+						dimensions = image_ptr->getDimensions();
+						data = image_ptr->getRGBData();
+					} else {
+						const int sprite_index = mountSpr->getIndex(w, h, l, mount_frame_index, 0, 0, 0);
+						dimensions = mountSpr->spriteList[sprite_index]->getDimensions();
+						data = mountSpr->spriteList[sprite_index]->getRGBData();
+					}
+
+					if (data) {
+						wxImage img(dimensions.width, dimensions.height, data.get(), true);
+						img.SetMaskColour(0xFF, 0x00, 0xFF);
+						const auto mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(direction), 0, 0, mount_frame_index);
+						int mount_x = 0;
+						for (int column = w + 1; column < mount_metrics.num_columns; ++column) {
+							mount_x += mount_metrics.column_widths[column];
 						}
+						int mount_y = 0;
+						for (int row = h + 1; row < mount_metrics.num_rows; ++row) {
+							mount_y += mount_metrics.row_heights[row];
+						}
+						mount_x -= mountSpr->getDrawOffset().first;
+						mount_y -= mountSpr->getDrawOffset().second;
+						mount_x -= min_x;
+						mount_y -= min_y;
+						image.Paste(img, mount_x, mount_y);
 					}
 				}
 			}
+		}
 	}
 
 	for (int pattern_y = 0; pattern_y < sprite->pattern_y; pattern_y++) {
@@ -272,4 +268,54 @@ wxBitmap SpriteIconGenerator::Generate(GameSprite* sprite, SpriteSize size, cons
 	}
 
 	return wxBitmap(image);
+}
+
+void SpriteIconService::DrawTo(Sprite* sprite, wxDC* dc, SpriteSize sz, int start_x, int start_y, int width, int height) {
+	if (!sprite || !dc) {
+		return;
+	}
+
+	const int sprite_dim = (sz == SPRITE_SIZE_64x64) ? 64 : (sz == SPRITE_SIZE_32x32 ? 32 : 16);
+	int src_width = (width == -1) ? sprite_dim : width;
+	int src_height = (height == -1) ? sprite_dim : height;
+
+	if (auto* es = dynamic_cast<EditorSprite*>(sprite)) {
+		wxBitmap* bmp = es->getBitmap(sz);
+		if (bmp && bmp->IsOk()) {
+			dc->DrawBitmap(*bmp, start_x, start_y, true);
+		}
+		return;
+	}
+
+	if (auto* cs = dynamic_cast<CreatureSprite*>(sprite)) {
+		if (cs->parent) {
+			DrawTo(cs->parent, dc, sz, cs->outfit, start_x, start_y, width, height);
+		}
+		return;
+	}
+
+	if (auto* gs = dynamic_cast<GameSprite*>(sprite)) {
+		wxBitmap bmp = Generate(gs, sz);
+		if (bmp.IsOk()) {
+			wxMemoryDC mdc(bmp);
+			dc->StretchBlit(start_x, start_y, src_width, src_height, &mdc, 0, 0, bmp.GetWidth(), bmp.GetHeight(), wxCOPY, true);
+		}
+		return;
+	}
+}
+
+void SpriteIconService::DrawTo(GameSprite* sprite, wxDC* dc, SpriteSize sz, const Outfit& outfit, int start_x, int start_y, int width, int height) {
+	if (!sprite || !dc) {
+		return;
+	}
+
+	const int sprite_dim = (sz == SPRITE_SIZE_64x64) ? 64 : (sz == SPRITE_SIZE_32x32 ? 32 : 16);
+	int src_width = (width == -1) ? sprite_dim : width;
+	int src_height = (height == -1) ? sprite_dim : height;
+
+	wxBitmap bmp = Generate(sprite, sz, outfit);
+	if (bmp.IsOk()) {
+		wxMemoryDC mdc(bmp);
+		dc->StretchBlit(start_x, start_y, src_width, src_height, &mdc, 0, 0, bmp.GetWidth(), bmp.GetHeight(), wxCOPY, true);
+	}
 }

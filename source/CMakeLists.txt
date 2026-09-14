@@ -245,7 +245,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/frame_pacer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_calculator.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_drawer.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/sprite_icon_generator.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/sprite_icon_service.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/tile_describer.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/about_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/browse_tile_window.h
@@ -627,7 +627,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/icon_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_calculator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_drawer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/sprite_icon_generator.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/sprite_icon_service.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/tile_describer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/about_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/browse_tile_window.cpp

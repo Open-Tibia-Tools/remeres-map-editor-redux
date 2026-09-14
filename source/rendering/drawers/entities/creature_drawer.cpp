@@ -40,11 +40,11 @@ namespace {
 		}
 
 		const auto draw_offset = sprite.getDrawOffset();
-		const wxSize composite_size = sprite.GetSize();
+		const ImageDimensions composite_size = sprite.GetSize();
 		const int left = screen_x - draw_offset.first;
 		const int top = screen_y - draw_offset.second;
-		const int width = std::max(1, composite_size.GetWidth());
-		const int height = std::max(1, composite_size.GetHeight());
+		const int width = std::max<int>(1, composite_size.width);
+		const int height = std::max<int>(1, composite_size.height);
 		light_buffer.AddScreenLight(left + width / 2, top + height / 2, view, light);
 	}
 

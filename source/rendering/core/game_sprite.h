@@ -22,9 +22,6 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
-#include <wx/dc.h>
-#include <wx/bitmap.h>
-#include <wx/dcmemory.h>
 
 enum SpriteSize {
 	SPRITE_SIZE_16x16,
@@ -39,28 +36,25 @@ class SpritePreloader;
 
 class Sprite {
 public:
-	Sprite() { }
+	Sprite() = default;
 	virtual ~Sprite() = default;
 
-	virtual void DrawTo(wxDC* dc, SpriteSize sz, int start_x, int start_y, int width = -1, int height = -1) = 0;
-	virtual void unloadDC() = 0;
-	virtual wxSize GetSize() const = 0;
+	virtual ImageDimensions GetSize() const = 0;
 
 private:
-	Sprite(const Sprite&);
-	Sprite& operator=(const Sprite&);
+	Sprite(const Sprite&) = delete;
+	Sprite& operator=(const Sprite&) = delete;
 };
 
 class GameSprite;
 class CreatureSprite : public Sprite {
 public:
-	CreatureSprite(GameSprite* parent, const Outfit& outfit);
-	~CreatureSprite() override;
+	CreatureSprite(GameSprite* parent, const Outfit& outfit) :
+		parent(parent), outfit(outfit) {}
+	~CreatureSprite() override = default;
 
-	void DrawTo(wxDC* dc, SpriteSize sz, int start_x, int start_y, int width = -1, int height = -1) override;
-	virtual void unloadDC() override;
-	wxSize GetSize() const override {
-		return wxSize(32, 32);
+	ImageDimensions GetSize() const override {
+		return ImageDimensions { 32, 32 };
 	}
 
 	GameSprite* parent;
@@ -94,12 +88,7 @@ public:
 	const AtlasRegion* getAtlasRegion(int _x, int _y, int _layer, int _subtype, int _pattern_x, int _pattern_y, int _pattern_z, int _frame);
 	const AtlasRegion* getAtlasRegion(int _x, int _y, int _dir, int _addon, int _pattern_z, const Outfit& _outfit, int _frame);
 
-	void DrawTo(wxDC* dc, SpriteSize sz, int start_x, int start_y, int width = -1, int height = -1) override;
-	virtual void DrawTo(wxDC* dc, SpriteSize sz, const Outfit& outfit, int start_x, int start_y, int width = -1, int height = -1);
-
-	void unloadDC() override;
-
-	wxSize GetSize() const override;
+	ImageDimensions GetSize() const override;
 
 	void clean(time_t time, int longevity = -1);
 
@@ -165,13 +154,9 @@ private:
 	};
 
 protected:
-	wxMemoryDC* getDC(SpriteSize size);
-	wxMemoryDC* getDC(SpriteSize size, const Outfit& outfit);
 	TemplateImage* getTemplateImage(int sprite_index, const Outfit& outfit);
 
 	uint32_t id;
-	std::unique_ptr<wxMemoryDC> dc[SPRITE_SIZE_COUNT];
-	std::unique_ptr<wxBitmap> bm[SPRITE_SIZE_COUNT];
 
 public:
 	// GameSprite info
@@ -187,7 +172,7 @@ public:
 		return id;
 	}
 	uint32_t getDebugImageId(size_t index = 0) const;
-	wxSize getCompositePixelSize() const;
+	ImageDimensions getCompositePixelSize() const;
 
 	std::unique_ptr<Animator> animator;
 
@@ -202,38 +187,11 @@ public:
 
 	std::vector<NormalImage*> spriteList;
 	std::vector<std::unique_ptr<TemplateImage>> instanced_templates; // Templates that use this sprite
-	struct CachedDC {
-		std::unique_ptr<wxMemoryDC> dc;
-		std::unique_ptr<wxBitmap> bm;
-	};
-
-	struct RenderKey {
-		SpriteSize size;
-		uint32_t colorHash;
-		uint32_t mountColorHash;
-		int lookMount, lookAddon, lookMountHead, lookMountBody, lookMountLegs, lookMountFeet;
-
-		bool operator==(const RenderKey& rk) const {
-			return size == rk.size && colorHash == rk.colorHash && mountColorHash == rk.mountColorHash && lookMount == rk.lookMount && lookAddon == rk.lookAddon && lookMountHead == rk.lookMountHead && lookMountBody == rk.lookMountBody && lookMountLegs == rk.lookMountLegs && lookMountFeet == rk.lookMountFeet;
-		}
-	};
-
-	struct RenderKeyHash {
-		size_t operator()(const RenderKey& k) const noexcept {
-			// Combine hashes of the most significant fields
-			size_t h = std::hash<uint64_t> {}((uint64_t(k.colorHash) << 32) | k.mountColorHash);
-			h ^= std::hash<uint64_t> {}((uint64_t(k.lookMount) << 32) | k.lookAddon) + 0x9e3779b9 + (h << 6) + (h >> 2);
-			h ^= std::hash<uint64_t> {}((uint64_t(k.lookMountHead) << 32) | k.lookMountBody) + 0x9e3779b9 + (h << 6) + (h >> 2);
-			return h;
-		}
-	};
-	std::unordered_map<RenderKey, std::unique_ptr<CachedDC>, RenderKeyHash> colored_dc;
-
 	bool is_resident = false; // Tracks if this GameSprite is in resident_game_sprites
 
 	friend class GraphicManager;
 	friend class GraphicsAssembler;
-	friend class SpriteIconGenerator;
+	friend class SpriteIconService;
 	friend class TextureGarbageCollector;
 	friend class TooltipDrawer;
 	friend class SpritePreloader;
@@ -261,7 +219,7 @@ protected:
 	uint32_t cached_generation_id = 0;
 	uint32_t cached_sprite_id = 0;
 	mutable bool geometry_cache_dirty = true;
-	mutable wxSize cached_composite_size;
+	mutable ImageDimensions cached_composite_size;
 	mutable std::pair<int, int> cached_draw_offset;
 	static constexpr size_t LAYOUT_CACHE_CAPACITY = 8;
 	mutable std::array<PlainLayoutCacheEntry, LAYOUT_CACHE_CAPACITY> plain_layout_cache_entries_ {};

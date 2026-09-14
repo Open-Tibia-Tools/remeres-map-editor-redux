@@ -101,10 +101,6 @@ void GraphicManager::clear() {
 	has_frame_groups = false;
 }
 
-void GraphicManager::cleanSoftwareSprites() {
-	collector.CleanSoftwareSprites(sprite_space);
-}
-
 bool GraphicManager::ensureAtlasManager() {
 	// Already initialized
 	if (atlas_manager_ && atlas_manager_->isValid()) {
@@ -184,10 +180,6 @@ uint16_t GraphicManager::getCreatureSpriteMaxID() const {
 
 bool GraphicManager::loadEditorSprites() {
 	return EditorSpriteLoader::Load(this);
-}
-
-void GraphicManager::addSpriteToCleanup(GameSprite* spr) {
-	collector.AddSpriteToCleanup(spr);
 }
 
 void GraphicManager::garbageCollection() {

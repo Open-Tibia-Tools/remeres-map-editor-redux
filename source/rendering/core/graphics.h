@@ -58,7 +58,7 @@ public:
 	~GraphicManager();
 
 	void clear();
-	void cleanSoftwareSprites();
+	void cleanSoftwareSprites() {}
 
 	Sprite* getSprite(int id);
 	void updateTime();
@@ -93,7 +93,6 @@ public:
 
 	// Cleans old & unused textures according to config settings
 	void garbageCollection();
-	void addSpriteToCleanup(GameSprite* spr);
 
 	wxFileName getMetadataFileName() const {
 		return client_version ? client_version->getMetadataPath() : wxFileName();

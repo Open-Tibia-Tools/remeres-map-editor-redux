@@ -11,12 +11,17 @@
 class EditorSprite : public Sprite {
 public:
 	EditorSprite(std::unique_ptr<wxBitmap> b16x16, std::unique_ptr<wxBitmap> b32x32);
-	~EditorSprite() override;
+	~EditorSprite() override = default;
 
-	void DrawTo(wxDC* dc, SpriteSize sz, int start_x, int start_y, int width = -1, int height = -1) override;
-	virtual void unloadDC() override;
-	wxSize GetSize() const override {
-		return wxSize(32, 32);
+	ImageDimensions GetSize() const override {
+		return ImageDimensions { 32, 32 };
+	}
+
+	wxBitmap* getBitmap(SpriteSize sz) const {
+		if (static_cast<size_t>(sz) < SPRITE_SIZE_COUNT) {
+			return bm[sz].get();
+		}
+		return nullptr;
 	}
 
 protected:

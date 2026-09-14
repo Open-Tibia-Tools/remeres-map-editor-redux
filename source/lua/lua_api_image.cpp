@@ -20,6 +20,7 @@
 #include "ui/gui.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/game_sprite.h"
+#include "ui/icons/sprite_icon_service.h"
 #include "rendering/core/normal_image.h"
 #include "game/items.h"
 #include <filesystem>
@@ -269,7 +270,7 @@ namespace LuaAPI {
 		wxMemoryDC dc(bmp);
 		dc.SetBackground(*wxWHITE_BRUSH);
 		dc.Clear();
-		sprite->DrawTo(&dc, SPRITE_SIZE_32x32, 0, 0, 32, 32);
+		SpriteIconService::DrawTo(sprite, &dc, SPRITE_SIZE_32x32, 0, 0, 32, 32);
 		dc.SelectObject(wxNullBitmap);
 		image = bmp.ConvertToImage();
 	}

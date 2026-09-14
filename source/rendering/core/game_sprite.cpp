@@ -5,8 +5,6 @@
 #include "app/main.h"
 #include "rendering/core/game_sprite.h"
 #include "rendering/core/graphics.h"
-#include "app/settings.h"
-#include "rendering/utilities/sprite_icon_generator.h"
 #include "rendering/core/outfit_colorizer.h"
 #include "rendering/core/outfit_colors.h"
 #include "rendering/core/normal_image.h"
@@ -73,40 +71,6 @@ namespace {
 	}
 }
 
-CreatureSprite::CreatureSprite(GameSprite* parent, const Outfit& outfit) :
-	parent(parent),
-	outfit(outfit) {
-}
-
-CreatureSprite::~CreatureSprite() {
-}
-
-void CreatureSprite::DrawTo(wxDC* dc, SpriteSize sz, int start_x, int start_y, int width, int height) {
-	if (parent) {
-		parent->DrawTo(dc, sz, outfit, start_x, start_y, width, height);
-	}
-}
-
-void CreatureSprite::unloadDC() {
-	if (parent) {
-		GameSprite::RenderKey key;
-		key.colorHash = outfit.getColorHash();
-		key.mountColorHash = outfit.getMountColorHash();
-		key.lookMount = outfit.lookMount;
-		key.lookAddon = outfit.lookAddon;
-		key.lookMountHead = outfit.lookMountHead;
-		key.lookMountBody = outfit.lookMountBody;
-		key.lookMountLegs = outfit.lookMountLegs;
-		key.lookMountFeet = outfit.lookMountFeet;
-
-		key.size = SPRITE_SIZE_16x16;
-		parent->colored_dc.erase(key);
-
-		key.size = SPRITE_SIZE_32x32;
-		parent->colored_dc.erase(key);
-	}
-}
-
 GameSprite::GameSprite() :
 	id(0),
 	height(0),
@@ -123,15 +87,11 @@ GameSprite::GameSprite() :
 	drawoffset_y(0),
 	minimap_color(0),
 	is_simple(false) {
-	// dc initialized to nullptr by unique_ptr default ctor
 }
 
-GameSprite::~GameSprite() {
-	unloadDC();
-	// instanced_templates and animator cleaned up automatically by unique_ptr
-}
+GameSprite::~GameSprite() = default;
 
-wxSize GameSprite::GetSize() const {
+ImageDimensions GameSprite::GetSize() const {
 	return getCompositePixelSize();
 }
 
@@ -183,16 +143,6 @@ void GameSprite::clean(time_t time, int longevity) {
 	}
 }
 
-void GameSprite::unloadDC() {
-	dc[SPRITE_SIZE_16x16].reset();
-	dc[SPRITE_SIZE_32x32].reset();
-	dc[SPRITE_SIZE_64x64].reset();
-	bm[SPRITE_SIZE_16x16].reset();
-	bm[SPRITE_SIZE_32x32].reset();
-	bm[SPRITE_SIZE_64x64].reset();
-	colored_dc.clear();
-}
-
 int GameSprite::getDrawHeight() const {
 	return draw_height;
 }
@@ -204,7 +154,7 @@ uint32_t GameSprite::getDebugImageId(size_t index) const {
 	return 0;
 }
 
-wxSize GameSprite::getCompositePixelSize() const {
+ImageDimensions GameSprite::getCompositePixelSize() const {
 	if (geometry_cache_dirty) {
 		rebuildGeometryCache();
 	}
@@ -244,7 +194,10 @@ void GameSprite::rebuildGeometryCache() const {
 		}
 	}
 
-	cached_composite_size = wxSize(max_width, max_height);
+	cached_composite_size = ImageDimensions {
+		static_cast<uint16_t>(max_width),
+		static_cast<uint16_t>(max_height)
+	};
 	cached_draw_offset = std::make_pair(
 		static_cast<int>(drawoffset_x) + std::max(0, static_cast<int>(max_part_width) - SPRITE_PIXELS),
 		static_cast<int>(drawoffset_y) + std::max(0, static_cast<int>(max_part_height) - SPRITE_PIXELS)
@@ -514,95 +467,6 @@ const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _dir, int _add
 		return spriteList[v]->getAtlasRegion();
 	}
 	return nullptr;
-}
-
-wxMemoryDC* GameSprite::getDC(SpriteSize size) {
-	ASSERT(size == SPRITE_SIZE_16x16 || size == SPRITE_SIZE_32x32);
-
-	if (!dc[size]) {
-		wxBitmap bmp = SpriteIconGenerator::Generate(this, size);
-		if (bmp.IsOk()) {
-			bm[size] = std::make_unique<wxBitmap>(bmp);
-			dc[size] = std::make_unique<wxMemoryDC>(*bm[size]);
-		}
-		g_graphics.addSpriteToCleanup(this);
-	}
-	return dc[size].get();
-}
-
-wxMemoryDC* GameSprite::getDC(SpriteSize size, const Outfit& outfit) {
-	ASSERT(size == SPRITE_SIZE_16x16 || size == SPRITE_SIZE_32x32);
-
-	RenderKey key;
-	key.size = size;
-	key.colorHash = outfit.getColorHash();
-	key.mountColorHash = outfit.getMountColorHash();
-	key.lookMount = outfit.lookMount;
-	key.lookAddon = outfit.lookAddon;
-	key.lookMountHead = outfit.lookMountHead;
-	key.lookMountBody = outfit.lookMountBody;
-	key.lookMountLegs = outfit.lookMountLegs;
-	key.lookMountFeet = outfit.lookMountFeet;
-
-	auto it = colored_dc.find(key);
-	if (it == colored_dc.end()) {
-		wxBitmap bmp = SpriteIconGenerator::Generate(this, size, outfit);
-		if (bmp.IsOk()) {
-			auto cache = std::make_unique<CachedDC>();
-			cache->bm = std::make_unique<wxBitmap>(bmp);
-			cache->dc = std::make_unique<wxMemoryDC>(*cache->bm);
-
-			auto res = colored_dc.insert(std::make_pair(key, std::move(cache)));
-			g_graphics.addSpriteToCleanup(this);
-			return res.first->second->dc.get();
-		}
-		return nullptr;
-	}
-	return it->second->dc.get();
-}
-
-void GameSprite::DrawTo(wxDC* dc, SpriteSize sz, int start_x, int start_y, int width, int height) {
-	const int sprite_dim = (sz == SPRITE_SIZE_64x64) ? 64 : (sz == SPRITE_SIZE_32x32 ? 32 : 16);
-	int src_width = sprite_dim;
-	int src_height = sprite_dim;
-
-	if (width == -1) {
-		width = src_width;
-	}
-	if (height == -1) {
-		height = src_height;
-	}
-	wxDC* sdc = getDC(sz);
-	if (sdc) {
-		dc->StretchBlit(start_x, start_y, width, height, sdc, 0, 0, src_width, src_height, wxCOPY, true);
-	} else {
-		const wxBrush& b = dc->GetBrush();
-		dc->SetBrush(*wxRED_BRUSH);
-		dc->DrawRectangle(start_x, start_y, width, height);
-		dc->SetBrush(b);
-	}
-}
-
-void GameSprite::DrawTo(wxDC* dc, SpriteSize sz, const Outfit& outfit, int start_x, int start_y, int width, int height) {
-	const int sprite_dim = (sz == SPRITE_SIZE_64x64) ? 64 : (sz == SPRITE_SIZE_32x32 ? 32 : 16);
-	int src_width = sprite_dim;
-	int src_height = sprite_dim;
-
-	if (width == -1) {
-		width = src_width;
-	}
-	if (height == -1) {
-		height = src_height;
-	}
-	wxDC* sdc = getDC(sz, outfit);
-	if (sdc) {
-		dc->StretchBlit(start_x, start_y, width, height, sdc, 0, 0, src_width, src_height, wxCOPY, true);
-	} else {
-		const wxBrush& b = dc->GetBrush();
-		dc->SetBrush(*wxRED_BRUSH);
-		dc->DrawRectangle(start_x, start_y, width, height);
-		dc->SetBrush(b);
-	}
 }
 
 namespace {

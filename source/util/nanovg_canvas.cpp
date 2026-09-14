@@ -12,6 +12,7 @@
 #include "util/nvg_utils.h"
 #include <nanovg_gl.h>
 #include "rendering/core/graphics.h"
+#include "ui/icons/sprite_icon_service.h"
 #include "ui/gui.h"
 
 #include <wx/dcclient.h>
@@ -333,9 +334,9 @@ int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64
 }
 
 int NanoVGCanvas::CreateGenericSpriteTexture(NVGcontext* vg, Sprite* sprite, uint64_t spriteId) {
-	wxSize sz = sprite->GetSize();
-	int w = sz.x;
-	int h = sz.y;
+	ImageDimensions sz = sprite->GetSize();
+	int w = sz.width;
+	int h = sz.height;
 
 	// Determine best SpriteSize for DrawTo
 	SpriteSize drawSize = SPRITE_SIZE_32x32;
@@ -353,7 +354,7 @@ int NanoVGCanvas::CreateGenericSpriteTexture(NVGcontext* vg, Sprite* sprite, uin
 		mdc.SetBackground(wxBrush(wxColor(0, 0, 0), wxBRUSHSTYLE_TRANSPARENT));
 		mdc.Clear();
 		// Draw at 0,0 with its size
-		sprite->DrawTo(&mdc, drawSize, 0, 0, w, h);
+		SpriteIconService::DrawTo(sprite, &mdc, drawSize, 0, 0, w, h);
 	}
 
 	wxImage img = bmp.ConvertToImage();

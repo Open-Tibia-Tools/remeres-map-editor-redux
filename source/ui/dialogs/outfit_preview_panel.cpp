@@ -1,5 +1,5 @@
 #include "ui/dialogs/outfit_preview_panel.h"
-#include "rendering/utilities/sprite_icon_generator.h"
+#include "ui/icons/sprite_icon_service.h"
 #include "rendering/core/graphics.h"
 #include "ui/gui.h"
 #include "ui/theme.h"
@@ -45,7 +45,7 @@ void OutfitPreviewPanel::OnPaint(wxPaintEvent& event) {
 			dir = WEST;
 		}
 
-		wxBitmap bmp = SpriteIconGenerator::Generate(spr, SPRITE_SIZE_32x32, draw_outfit, false, dir);
+		wxBitmap bmp = SpriteIconService::Generate(spr, SPRITE_SIZE_32x32, draw_outfit, false, dir);
 		if (bmp.IsOk()) {
 			std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
 			if (gc) {
