@@ -38,7 +38,7 @@
 ├──────────────────────────────────────────────────────────────────────────┤
 │               Rendering Layer (OpenGL 4.6 + NanoVG)                      │
 │  MapDrawer → SpriteBatch → TextureAtlas → ShaderProgram                  │
-│  Drawers: tiles, entities, overlays, cursors | PostProcess               │
+│  Drawers: tiles, entities, overlays, cursors                             │
 │  Controllers: drawing, selection, zoom, navigation, tooltips             │
 ├────────────────┬───────────────────┬─────────────────────────────────────┤
 │  Editor Core   │   Brush System    │    Map Data Layer                    │
@@ -114,7 +114,6 @@
 | `rendering/ui/map_display.*` | **MapCanvas**: OpenGL canvas widget |
 | `rendering/ui/tooltip_drawer.*` | NanoVG tooltip rendering |
 | `rendering/utilities/light_drawer.*` | Light overlay rendering |
-| `rendering/postprocess/` | Post-processing effects (scanline, xBRZ) |
 
 ---
 

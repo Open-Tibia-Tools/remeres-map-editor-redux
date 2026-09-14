@@ -2,7 +2,7 @@
 #include "ui/gui.h"
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/light_defaults.h"
-#include "rendering/postprocess/post_process_manager.h"
+
 
 #include <algorithm>
 
@@ -53,7 +53,6 @@ void DrawingOptions::SetDefault() {
 	minimum_ambient_light = rme::lighting::DEFAULT_MINIMUM_AMBIENT_LIGHT;
 	highlight_pulse = 0.0f;
 	anti_aliasing = false;
-	screen_shader_name = ShaderNames::NONE;
 }
 
 void DrawingOptions::SetIngame() {
@@ -142,7 +141,6 @@ void DrawingOptions::Update() {
 	draw_floor_shadow = show_shade;
 
 	anti_aliasing = g_settings.getBoolean(Config::ANTI_ALIASING);
-	screen_shader_name = g_settings.getString(Config::SCREEN_SHADER);
 	dirty_ = false;
 }
 

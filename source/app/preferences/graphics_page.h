@@ -20,7 +20,6 @@ private:
 	wxCheckBox* use_memcached_chkbox = nullptr;
 	wxCheckBox* anti_aliasing_chkbox = nullptr;
 
-	wxChoice* screen_shader_choice = nullptr;
 	wxChoice* icon_background_choice = nullptr;
 	wxChoice* screenshot_format_choice = nullptr;
 

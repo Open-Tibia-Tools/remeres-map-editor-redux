@@ -3,7 +3,6 @@
 #include "app/main.h"
 #include "app/preferences/preferences_layout.h"
 #include "app/settings.h"
-#include "rendering/postprocess/post_process_manager.h"
 #include "ui/gui.h"
 #include "ui/managers/vsync_policy.h"
 
@@ -26,19 +25,6 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		"Enable anti-aliasing",
 		"Smooth map rendering using linear interpolation so scaled views appear less jagged.",
 		g_settings.getBoolean(Config::ANTI_ALIASING)
-	);
-	screen_shader_choice = new wxChoice(rendering_section, wxID_ANY);
-	for (const auto& name : PostProcessManager::Instance().GetEffectNames()) {
-		screen_shader_choice->Append(name);
-	}
-	const auto current_shader = wxstr(g_settings.getString(Config::SCREEN_SHADER));
-	const int shader_index = screen_shader_choice->FindString(current_shader);
-	screen_shader_choice->SetSelection(shader_index != wxNOT_FOUND ? shader_index : 0);
-	PreferencesLayout::AddControlRow(
-		rendering_section,
-		"Screen shader",
-		"Apply a post-processing effect to the map viewport. Keep this on the default effect for the cleanest editing view.",
-		screen_shader_choice
 	);
 	page_sizer->Add(rendering_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
 
@@ -194,7 +180,6 @@ void GraphicsPage::Apply() {
 	g_settings.setInteger(Config::USE_MEMCACHED_SPRITES_TO_SAVE, use_memcached_chkbox->GetValue());
 
 	g_settings.setInteger(Config::ANTI_ALIASING, anti_aliasing_chkbox->GetValue());
-	g_settings.setString(Config::SCREEN_SHADER, nstr(screen_shader_choice->GetStringSelection()));
 
 	if (icon_background_choice->GetSelection() == 0) {
 		if (g_settings.getInteger(Config::ICON_BACKGROUND) != 0) {

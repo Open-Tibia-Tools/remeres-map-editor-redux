@@ -20,7 +20,6 @@
 #include "app/client_version.h"
 #include "app/main.h"
 #include "app/settings.h"
-#include "rendering/postprocess/post_process_manager.h"
 #include "ui/gui.h"
 #include "util/image_manager.h"
 
