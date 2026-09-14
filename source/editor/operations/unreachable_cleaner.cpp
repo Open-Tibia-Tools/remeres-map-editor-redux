@@ -480,8 +480,19 @@ bool UnreachableCleaner::CreateBackup(Editor& editor, std::string& out_backup_pa
 
 	out_backup_path = nstr(target_file.GetFullPath());
 
+	const std::string original_waypointfile = editor.map.getWaypointFilename();
+	const bool original_changed = editor.map.hasChanged();
+
 	IOMapOTBM mapsaver(editor.map.getVersion());
-	if (!mapsaver.saveMap(editor.map, target_file)) {
+	const bool save_ok = mapsaver.saveMap(editor.map, target_file);
+
+	// Restore waypointfile and preserve dirty state on both success and failure paths
+	editor.map.setWaypointFilename(original_waypointfile);
+	if (!original_changed && editor.map.hasChanged()) {
+		editor.map.clearChanges();
+	}
+
+	if (!save_ok) {
 		out_error = "Failed to save backup map file to: " + out_backup_path;
 		spdlog::error("UnreachableCleaner::CreateBackup: {}", out_error);
 		return false;
