@@ -38,7 +38,24 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	viewport_box->Add(custom_sizer, 0, wxLEFT | wxRIGHT | wxBOTTOM, 5);
 	top_sizer->Add(viewport_box, 0, wxEXPAND | wxALL, 10);
 
-	// 2. Cleanup Options Group
+	// 2. Floor Scope Group
+	wxStaticBoxSizer* scope_box = newd wxStaticBoxSizer(wxVERTICAL, this, "Floor Scope");
+
+	radio_scope_all = newd wxRadioButton(scope_box->GetStaticBox(), wxID_ANY, "All Floors (0 - 15)", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+	radio_scope_surface = newd wxRadioButton(scope_box->GetStaticBox(), wxID_ANY, "Surface Only (0 - 7)");
+	radio_scope_underground = newd wxRadioButton(scope_box->GetStaticBox(), wxID_ANY, "Underground Only (8 - 15)");
+
+	radio_scope_all->SetValue(true);
+	radio_scope_all->SetToolTip("Scan and remove unreachable tiles across both surface and underground layers.");
+	radio_scope_surface->SetToolTip("Scan and remove unreachable tiles on surface levels only (e.g. open sea). Floors 8 - 15 are left untouched.");
+	radio_scope_underground->SetToolTip("Scan and remove unreachable tiles underground only (e.g. cavern voids). Floors 0 - 7 are left untouched.");
+
+	scope_box->Add(radio_scope_all, 0, wxALL, 5);
+	scope_box->Add(radio_scope_surface, 0, wxALL, 5);
+	scope_box->Add(radio_scope_underground, 0, wxALL, 5);
+	top_sizer->Add(scope_box, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
+
+	// 3. Cleanup Options Group
 	wxStaticBoxSizer* options_box = newd wxStaticBoxSizer(wxVERTICAL, this, "Cleanup Options");
 
 	wxBoxSizer* margin_sizer = newd wxBoxSizer(wxHORIZONTAL);
@@ -111,5 +128,13 @@ EditorOperations::UnreachableCleanerSettings RemoveUnreachableDialog::GetSetting
 	settings.safety_margin = safety_margin_spin->GetValue();
 	settings.multi_floor = multi_floor_checkbox->GetValue();
 	settings.create_backup = backup_checkbox->GetValue();
+
+	if (radio_scope_surface && radio_scope_surface->GetValue()) {
+		settings.floor_scope = EditorOperations::CleanerFloorScope::SurfaceOnly;
+	} else if (radio_scope_underground && radio_scope_underground->GetValue()) {
+		settings.floor_scope = EditorOperations::CleanerFloorScope::UndergroundOnly;
+	} else {
+		settings.floor_scope = EditorOperations::CleanerFloorScope::All;
+	}
 	return settings;
 }

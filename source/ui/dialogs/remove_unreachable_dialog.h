@@ -27,6 +27,9 @@ private:
 	wxRadioButton* radio_custom = nullptr;
 	wxSpinCtrl* custom_width_spin = nullptr;
 	wxSpinCtrl* custom_height_spin = nullptr;
+	wxRadioButton* radio_scope_all = nullptr;
+	wxRadioButton* radio_scope_surface = nullptr;
+	wxRadioButton* radio_scope_underground = nullptr;
 	wxSpinCtrl* safety_margin_spin = nullptr;
 	wxCheckBox* multi_floor_checkbox = nullptr;
 	wxCheckBox* backup_checkbox = nullptr;

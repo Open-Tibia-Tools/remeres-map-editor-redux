@@ -129,9 +129,16 @@ std::vector<Position> UnreachableCleaner::FindUnreachableTiles(
 
 	g_stats = CleanStats();
 
+	const char* floor_scope_str = "All (0-15)";
+	if (settings.floor_scope == CleanerFloorScope::SurfaceOnly) {
+		floor_scope_str = "Surface Only (0-7)";
+	} else if (settings.floor_scope == CleanerFloorScope::UndergroundOnly) {
+		floor_scope_str = "Underground Only (8-15)";
+	}
+
 	spdlog::info(
-		"UnreachableCleaner::FindUnreachableTiles: Starting unreachable tile analysis (viewport: {}x{}, safety margin: {}, multi-floor: {}, query radius rx={}, ry={})",
-		settings.viewport_width, settings.viewport_height, settings.safety_margin, settings.multi_floor, rx, ry
+		"UnreachableCleaner::FindUnreachableTiles: Starting unreachable tile analysis (viewport: {}x{}, safety margin: {}, floor scope: {}, multi-floor: {}, query radius rx={}, ry={})",
+		settings.viewport_width, settings.viewport_height, settings.safety_margin, floor_scope_str, settings.multi_floor, rx, ry
 	);
 
 	// Step 1: Walkable Indexing using SpatialHashGrid
@@ -259,12 +266,19 @@ std::vector<Position> UnreachableCleaner::FindUnreachableTiles(
 			const bool node_has_walkable = (node_walk_it != walkable_nodes.end());
 
 			for (int z = 0; z < MAP_LAYERS; ++z) {
+				const bool is_surface = (z <= GROUND_LAYER);
+				if (settings.floor_scope == CleanerFloorScope::SurfaceOnly && !is_surface) {
+					continue;
+				}
+				if (settings.floor_scope == CleanerFloorScope::UndergroundOnly && is_surface) {
+					continue;
+				}
+
 				const Floor* floor = node->getFloor(z);
 				if (!floor) {
 					continue;
 				}
 
-				const bool is_surface = (z <= GROUND_LAYER);
 				const bool is_floor_cell_isolated = all_floors_isolated ||
 					(settings.multi_floor && (is_surface ? surface_isolated : underground_isolated));
 
