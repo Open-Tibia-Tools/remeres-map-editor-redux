@@ -40,6 +40,14 @@ public:
 	// Explicit shutdown to be called before global destruction
 	void shutdown();
 
+	[[nodiscard]] bool isMainThread() const noexcept {
+		return std::this_thread::get_id() == main_thread_id_;
+	}
+
+	void setMainThreadId(std::thread::id id = std::this_thread::get_id()) noexcept {
+		main_thread_id_ = id;
+	}
+
 private:
 	SpritePreloader();
 	~SpritePreloader();
@@ -112,6 +120,7 @@ private:
 	std::unordered_set<PendingSpriteKey, PendingSpriteKeyHash> pending_ids; // To avoid duplicate tasks for the same archive/id/generation/epoch
 	size_t queued_result_bytes = 0;
 	uint64_t active_epoch = 0;
+	std::thread::id main_thread_id_ = std::this_thread::get_id();
 };
 
 namespace rme {

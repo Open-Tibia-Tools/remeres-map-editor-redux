@@ -4,65 +4,22 @@
 #include "util/image_manager.h"
 
 namespace {
-	const char* selection_marker_xpm16x16[] = {
-		"16 16 2 1",
-		"  c None",
-		". c #000080",
-		" . . . . . . . .",
-		". . . . . . . . ",
-		" . . . . . . . .",
-		". . . . . . . . ",
-		" . . . . . . . .",
-		". . . . . . . . ",
-		" . . . . . . . .",
-		". . . . . . . . ",
-		" . . . . . . . .",
-		". . . . . . . . ",
-		" . . . . . . . .",
-		". . . . . . . . ",
-		" . . . . . . . .",
-		". . . . . . . . ",
-		" . . . . . . . .",
-		". . . . . . . . "
-	};
-
-	const char* selection_marker_xpm32x32[] = {
-		"32 32 2 1",
-		"  c None",
-		". c #000080",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . ",
-		" . . . . . . . . . . . . . . . .",
-		". . . . . . . . . . . . . . . . "
-	};
+	std::unique_ptr<wxBitmap> createSelectionMarkerBitmap(int size) {
+		wxImage img(size, size, false);
+		img.InitAlpha();
+		for (int y = 0; y < size; ++y) {
+			for (int x = 0; x < size; ++x) {
+				if ((x + y) % 2 == 1) {
+					img.SetRGB(x, y, 0x00, 0x00, 0x80);
+					img.SetAlpha(x, y, 255);
+				} else {
+					img.SetRGB(x, y, 0, 0, 0);
+					img.SetAlpha(x, y, 0);
+				}
+			}
+		}
+		return std::make_unique<wxBitmap>(img);
+	}
 
 	std::unique_ptr<EditorIcon> makeEditorIcon(std::string_view pathSmall, std::string_view pathLarge) {
 		return std::make_unique<EditorIcon>(
@@ -115,8 +72,8 @@ bool EditorIconRegistry::Load() {
 	Clear();
 
 	RegisterIcon(EDITOR_SPRITE_SELECTION_MARKER, std::make_unique<EditorIcon>(
-		std::make_unique<wxBitmap>(selection_marker_xpm16x16),
-		std::make_unique<wxBitmap>(selection_marker_xpm32x32)
+		createSelectionMarkerBitmap(16),
+		createSelectionMarkerBitmap(32)
 	));
 
 	RegisterIcon(EDITOR_SPRITE_BRUSH_CD_1x1, makeEditorIcon(IMAGE_CIRCULAR_1_SMALL, IMAGE_CIRCULAR_1));

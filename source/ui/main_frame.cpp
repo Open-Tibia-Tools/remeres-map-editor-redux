@@ -33,7 +33,6 @@
 #include "game/creature.h"
 
 #include <spdlog/spdlog.h>
-#include "../brushes/icon/editor_icon.xpm"
 
 MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size) :
 	wxFrame((wxFrame*)nullptr, -1, title, pos, size, wxDEFAULT_FRAME_STYLE) {

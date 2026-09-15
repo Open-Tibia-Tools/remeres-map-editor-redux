@@ -75,7 +75,7 @@ void SpritePreloader::clear() {
 		queued_result_bytes = 0;
 	}
 
-	if (wxIsMainThread()) {
+	if (isMainThread()) {
 		for (const auto& task : dropped_tasks) {
 			resetPreloadingFlag(task.pending, task.archive.get());
 		}
@@ -226,7 +226,7 @@ void SpritePreloader::workerLoop(std::stop_token stop_token) {
 
 void SpritePreloader::update() {
 	// CRITICAL: This method MUST only be called from the main GUI/OpenGL thread.
-	assert(wxIsMainThread());
+	assert(isMainThread());
 
 	// Move results to a local queue under lock to minimize holding time.
 	std::queue<Result> results;

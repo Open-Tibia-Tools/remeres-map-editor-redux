@@ -3,7 +3,6 @@
 #include "rendering/core/normal_image.h"
 #include "rendering/core/outfit_colorizer.h"
 #include "rendering/core/outfit_colors.h"
-#include "app/settings.h"
 #include "rendering/core/graphics.h"
 #include <atomic>
 #include <spdlog/spdlog.h>
@@ -30,9 +29,8 @@ TemplateImage::~TemplateImage() {
 }
 
 void TemplateImage::clean(time_t time, int longevity) {
-	// Evict from atlas if expired
-	if (longevity == -1) {
-		longevity = g_settings.getInteger(Config::TEXTURE_LONGEVITY);
+	if (longevity <= 0) {
+		return;
 	}
 	if (isGLLoaded && time - static_cast<time_t>(lastaccess.load(std::memory_order_relaxed)) > longevity) {
 		if (g_graphics.hasAtlasManager()) {

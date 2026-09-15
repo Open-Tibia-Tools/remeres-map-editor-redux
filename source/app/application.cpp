@@ -25,6 +25,7 @@
 
 #include "game/sprites.h"
 #include "ui/icons/editor_icon_registry.h"
+#include "util/image_manager.h"
 #include "editor/editor.h"
 #include "ui/dialogs/goto_position_dialog.h"
 #include "palette/palette_window.h"
@@ -52,8 +53,6 @@
 #include <spdlog/spdlog.h>
 #include <thread>
 #include <chrono>
-
-#include "../brushes/icon/editor_icon.xpm"
 
 wxIMPLEMENT_APP_NO_MAIN(Application);
 
@@ -195,8 +194,12 @@ bool Application::OnInit() {
 	// Load palette
 	g_gui.LoadPerspective();
 
-	wxIcon icon(editor_icon);
-	g_gui.root->SetIcon(icon);
+	wxIcon icon;
+	const wxBitmap icon_bmp = IMAGE_MANAGER.GetBitmap(IMAGE_EDITOR_ICON);
+	if (icon_bmp.IsOk()) {
+		icon.CopyFromBitmap(icon_bmp);
+		g_gui.root->SetIcon(icon);
+	}
 
 	if (g_settings.getInteger(Config::WELCOME_DIALOG) == 1 && m_file_to_open == wxEmptyString) {
 		g_gui.ShowWelcomeDialog(icon);

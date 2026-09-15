@@ -1,5 +1,4 @@
 #include "rendering/core/normal_image.h"
-#include "app/settings.h"
 #include "rendering/core/sprite_archive.h"
 #include "rendering/core/graphics.h"
 #include <spdlog/spdlog.h>
@@ -43,9 +42,8 @@ void NormalImage::fulfillPreload(std::unique_ptr<uint8_t[]> data) {
 }
 
 void NormalImage::clean(time_t time, int longevity) {
-	// Evict from atlas if expired
-	if (longevity == -1) {
-		longevity = g_settings.getInteger(Config::TEXTURE_LONGEVITY);
+	if (longevity <= 0) {
+		return;
 	}
 	if (isGLLoaded && time - static_cast<time_t>(lastaccess.load(std::memory_order_relaxed)) > longevity) {
 		if (g_graphics.hasAtlasManager()) {
