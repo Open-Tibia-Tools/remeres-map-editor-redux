@@ -2,13 +2,12 @@
 #define RME_RENDERING_CORE_SPRITE_ARCHIVE_H_
 
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
-class wxFileName;
-class wxString;
 struct ImageDimensions;
 
 class SpriteArchive {
@@ -20,8 +19,8 @@ public:
 		TwoByTwo = 3,
 	};
 
-	[[nodiscard]] static std::shared_ptr<SpriteArchive> load(const wxFileName& path, bool is_extended, wxString& error, std::vector<std::string>& warnings);
-	[[nodiscard]] static std::shared_ptr<SpriteArchive> loadProtobuf(const wxFileName& catalog_path, wxString& error, std::vector<std::string>& warnings);
+	[[nodiscard]] static std::shared_ptr<SpriteArchive> load(const std::filesystem::path& path, bool is_extended, std::string& error, std::vector<std::string>& warnings);
+	[[nodiscard]] static std::shared_ptr<SpriteArchive> loadProtobuf(const std::filesystem::path& catalog_path, std::string& error, std::vector<std::string>& warnings);
 
 	[[nodiscard]] uint32_t spriteCount() const {
 		return sprite_count_;

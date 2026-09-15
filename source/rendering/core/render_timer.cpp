@@ -2,36 +2,36 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
 #include "rendering/core/render_timer.h"
 
 RenderTimer::RenderTimer() {
-	timer = std::make_unique<wxStopWatch>();
-	timer->Start();
-}
-
-RenderTimer::~RenderTimer() {
+	Start();
 }
 
 void RenderTimer::Start() {
-	timer->Start();
+	start_time_ = std::chrono::steady_clock::now();
+	accumulated_duration_ = std::chrono::steady_clock::duration::zero();
 	is_paused = false;
 }
 
 void RenderTimer::Pause() {
 	if (!is_paused) {
-		timer->Pause();
+		accumulated_duration_ += (std::chrono::steady_clock::now() - start_time_);
 		is_paused = true;
 	}
 }
 
 void RenderTimer::Resume() {
 	if (is_paused) {
-		timer->Resume();
+		start_time_ = std::chrono::steady_clock::now();
 		is_paused = false;
 	}
 }
 
 long RenderTimer::getElapsedTime() const {
-	return (timer->TimeInMicro() / 1000).ToLong();
+	if (is_paused) {
+		return static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(accumulated_duration_).count());
+	}
+	const auto elapsed = accumulated_duration_ + (std::chrono::steady_clock::now() - start_time_);
+	return static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 }

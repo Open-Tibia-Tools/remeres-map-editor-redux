@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <format>
 #include <memory>
-#include <wx/string.h>
 
 namespace {
 	[[nodiscard]] size_t imageSpaceSize(const DatCatalog& catalog) {
@@ -25,12 +24,12 @@ namespace {
 		};
 	}
 
-	bool validateCatalog(const DatCatalog& catalog, wxString& error) {
+	bool validateCatalog(const DatCatalog& catalog, std::string& error) {
 		if (catalog.max_sprite_id >= MAX_SPRITES) {
-			error = wxString::FromUTF8(std::format(
+			error = std::format(
 				"DAT catalog references sprite id {} which exceeds MAX_SPRITES={}.",
 				catalog.max_sprite_id,
-				MAX_SPRITES));
+				MAX_SPRITES);
 			return false;
 		}
 
@@ -138,7 +137,7 @@ void GraphicsAssembler::resetRuntimeState(GraphicManager& manager) {
 	}
 }
 
-bool GraphicsAssembler::install(GraphicManager& manager, const DatCatalog& catalog, std::shared_ptr<SpriteArchive> sprite_archive, wxString& error, std::vector<std::string>& warnings) {
+bool GraphicsAssembler::install(GraphicManager& manager, const DatCatalog& catalog, std::shared_ptr<SpriteArchive> sprite_archive, std::string& error, std::vector<std::string>& warnings) {
 	if (!sprite_archive) {
 		error = "Sprite archive is missing.";
 		return false;
@@ -160,7 +159,7 @@ bool GraphicsAssembler::install(GraphicManager& manager, const DatCatalog& catal
 			continue;
 		}
 		if (!installSpriteEntry(manager, catalog, sprite_archive, entry, warnings)) {
-			error = wxString::FromUTF8(std::format("Failed to install graphics for client id {}.", entry.client_id));
+			error = std::format("Failed to install graphics for client id {}.", entry.client_id);
 			return false;
 		}
 	}
