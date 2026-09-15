@@ -26,8 +26,6 @@
 #include "io/filehandle.h"
 #include "app/settings.h"
 
-#include "rendering/io/editor_sprite_loader.h"
-
 #include <wx/mstream.h>
 #include <wx/dir.h>
 #include "rendering/utilities/wx_utils.h"
@@ -76,7 +74,6 @@ void GraphicManager::clear() {
 	SpritePreloader::get().clear();
 	sprite_space.clear();
 	image_space.clear();
-	// editor_sprite_space.clear(); // Editor sprites are global/internal and should persist across version changes
 	resident_images.clear();
 	resident_game_sprites.clear();
 
@@ -123,24 +120,14 @@ bool GraphicManager::ensureAtlasManager() {
 }
 
 Sprite* GraphicManager::getSprite(int id) {
-	if (id < 0) {
-		if (auto it = editor_sprite_space.find(id); it != editor_sprite_space.end()) {
-			return it->second.get();
-		}
-		return nullptr;
-	}
-	if (static_cast<size_t>(id) >= sprite_space.size()) {
+	if (id < 0 || static_cast<size_t>(id) >= sprite_space.size()) {
 		return nullptr;
 	}
 	return sprite_space[id].get();
 }
 
 GameSprite* GraphicManager::getGameSprite(int id) {
-	if (id < 0) {
-		return nullptr;
-	}
-
-	if (static_cast<size_t>(id) >= sprite_space.size()) {
+	if (id < 0 || static_cast<size_t>(id) >= sprite_space.size()) {
 		return nullptr;
 	}
 
@@ -149,13 +136,12 @@ GameSprite* GraphicManager::getGameSprite(int id) {
 
 void GraphicManager::insertSprite(int id, std::unique_ptr<Sprite> sprite) {
 	if (id < 0) {
-		editor_sprite_space[id] = std::move(sprite);
-	} else {
-		if (static_cast<size_t>(id) >= sprite_space.size()) {
-			sprite_space.resize(id + 1);
-		}
-		sprite_space[id] = std::move(sprite);
+		return;
 	}
+	if (static_cast<size_t>(id) >= sprite_space.size()) {
+		sprite_space.resize(id + 1);
+	}
+	sprite_space[id] = std::move(sprite);
 }
 
 GameSprite* GraphicManager::getCreatureSprite(int id) {
@@ -176,10 +162,6 @@ uint16_t GraphicManager::getItemSpriteMaxID() const {
 
 uint16_t GraphicManager::getCreatureSpriteMaxID() const {
 	return creature_count;
-}
-
-bool GraphicManager::loadEditorSprites() {
-	return EditorSpriteLoader::Load(this);
 }
 
 void GraphicManager::garbageCollection() {

@@ -22,7 +22,7 @@
 
 class Sprite;
 class GameSprite;
-class EditorSprite;
+class EditorIcon;
 
 enum {
 	DC_BTN_NORMAL,
@@ -46,6 +46,7 @@ public:
 
 	void SetSprite(int id);
 	void SetSprite(Sprite* sprite);
+	void SetEditorIcon(EditorIcon* icon);
 
 	void OnClick(wxMouseEvent&);
 
@@ -57,12 +58,15 @@ protected:
 	void DrawRaisedBorder(NVGcontext* vg, float x, float y);
 
 	void SetOverlay(Sprite* espr);
+	void SetEditorOverlay(EditorIcon* icon);
 
 	int type;
 	bool state; // pressed/unpressed
 	RenderSize size;
-	Sprite* sprite;
-	Sprite* overlay;
+	Sprite* sprite = nullptr;
+	EditorIcon* editor_icon = nullptr;
+	Sprite* overlay = nullptr;
+	EditorIcon* editor_overlay = nullptr;
 
 	DECLARE_DYNAMIC_CLASS(DCButton)
 };

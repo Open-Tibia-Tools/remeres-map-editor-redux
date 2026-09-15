@@ -24,6 +24,7 @@
 #include "editor/hotkey_manager.h"
 
 #include "game/sprites.h"
+#include "ui/icons/editor_icon_registry.h"
 #include "editor/editor.h"
 #include "ui/dialogs/goto_position_dialog.h"
 #include "palette/palette_window.h"
@@ -169,7 +170,7 @@ bool Application::OnInit() {
 	// Image handlers
 	wxInitAllImageHandlers();
 
-	g_gui.gfx.loadEditorSprites();
+	EditorIconRegistry::Load();
 
 	// Initialize Lua scripting system EARLY (before MainFrame)
 	if (!g_luaScripts.initialize()) {

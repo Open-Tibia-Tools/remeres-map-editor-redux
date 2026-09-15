@@ -106,6 +106,12 @@ public:
 	 */
 	int GetOrCreateSpriteTexture(NVGcontext* vg, Sprite* sprite);
 
+	/**
+	 * @brief Gets or creates a cached NanoVG image for an EditorIcon.
+	 */
+	int GetOrCreateEditorIconTexture(NVGcontext* vg, int editor_icon_id, SpriteSize size = SPRITE_SIZE_32x32);
+	int GetOrCreateEditorIconTexture(NVGcontext* vg, class EditorIcon* icon, SpriteSize size = SPRITE_SIZE_32x32);
+
 protected:
 	/**
 	 * @brief Override this to implement your custom NanoVG drawing.

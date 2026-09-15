@@ -171,7 +171,8 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_view_math.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/drawing_options.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/floor_visibility_mode.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/editor_sprite.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon_registry.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/game_sprite.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics_assembler.h
@@ -225,7 +226,6 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/shade_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_color_calculator.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_renderer.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/io/editor_sprite_loader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/screen_capture.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/screenshot_saver.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/map_drawer.h
@@ -557,7 +557,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_view_math.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/drawing_options.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/floor_visibility_mode.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/editor_sprite.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon_registry.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/game_sprite.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics_assembler.cpp
@@ -607,7 +608,6 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/shade_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_color_calculator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_renderer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/io/editor_sprite_loader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/screen_capture.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/screenshot_saver.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/map_drawer.cpp

@@ -88,9 +88,6 @@ public:
 	uint16_t getItemSpriteMaxID() const;
 	uint16_t getCreatureSpriteMaxID() const;
 
-	// This is part of the binary
-	bool loadEditorSprites();
-
 	// Cleans old & unused textures according to config settings
 	void garbageCollection();
 
@@ -139,9 +136,6 @@ private:
 	SpriteVector sprite_space;
 	using ImageVector = std::vector<std::unique_ptr<Image>>;
 	ImageVector image_space;
-
-	// Editor sprites use negative IDs, so they need a separate map
-	std::unordered_map<int, std::unique_ptr<Sprite>> editor_sprite_space;
 
 	// Active Resident Sets: Track only what's currently occupying memory/VRAM
 	// This avoids O(N) scans of the entire database.

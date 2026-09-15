@@ -7,7 +7,7 @@
 #include "app/settings.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/template_image.h"
-#include "rendering/core/editor_sprite.h"
+#include "ui/icons/editor_icon.h"
 #include <wx/dcmemory.h>
 #include <algorithm>
 #include <ranges>
@@ -270,6 +270,17 @@ wxBitmap SpriteIconService::Generate(GameSprite* sprite, SpriteSize size, const 
 	return wxBitmap(image);
 }
 
+void SpriteIconService::DrawTo(EditorIcon* icon, wxDC* dc, SpriteSize sz, int start_x, int start_y, int width, int height) {
+	if (!icon || !dc) {
+		return;
+	}
+
+	wxBitmap* bmp = icon->getBitmap(sz);
+	if (bmp && bmp->IsOk()) {
+		dc->DrawBitmap(*bmp, start_x, start_y, true);
+	}
+}
+
 void SpriteIconService::DrawTo(Sprite* sprite, wxDC* dc, SpriteSize sz, int start_x, int start_y, int width, int height) {
 	if (!sprite || !dc) {
 		return;
@@ -278,14 +289,6 @@ void SpriteIconService::DrawTo(Sprite* sprite, wxDC* dc, SpriteSize sz, int star
 	const int sprite_dim = (sz == SPRITE_SIZE_64x64) ? 64 : (sz == SPRITE_SIZE_32x32 ? 32 : 16);
 	int src_width = (width == -1) ? sprite_dim : width;
 	int src_height = (height == -1) ? sprite_dim : height;
-
-	if (auto* es = dynamic_cast<EditorSprite*>(sprite)) {
-		wxBitmap* bmp = es->getBitmap(sz);
-		if (bmp && bmp->IsOk()) {
-			dc->DrawBitmap(*bmp, start_x, start_y, true);
-		}
-		return;
-	}
 
 	if (auto* cs = dynamic_cast<CreatureSprite*>(sprite)) {
 		if (cs->parent) {
