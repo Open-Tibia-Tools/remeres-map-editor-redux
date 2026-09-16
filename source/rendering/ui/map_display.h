@@ -35,6 +35,7 @@ struct DrawingOptions;
 
 class Item;
 class Creature;
+class BaseMap;
 class MapWindow;
 class MapDrawer;
 class SelectionController;
@@ -187,6 +188,7 @@ private:
 	void PerformGarbageCollection();
 
 	MapWindow* GetMapWindow() const;
+	BaseMap* GetSecondaryMap() const;
 	bool renderer_initialized = false;
 	long m_last_gc_time = 0;
 	bool hover_preview_active_ = false;

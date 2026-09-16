@@ -241,6 +241,15 @@ MapWindow* MapCanvas::GetMapWindow() const {
 	return wxDynamicCast(GetParent(), MapWindow);
 }
 
+BaseMap* MapCanvas::GetSecondaryMap() const {
+	if (auto* map_tab = dynamic_cast<MapTab*>(GetMapWindow())) {
+		if (auto* session = map_tab->GetSession()) {
+			return session->secondary_map;
+		}
+	}
+	return nullptr;
+}
+
 void MapCanvas::EnsureNanoVG() {
 	if (!m_nvg) {
 		if (!gladLoadGL()) {

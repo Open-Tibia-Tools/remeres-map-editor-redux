@@ -15,9 +15,9 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
-
 #include <algorithm>
+#include <chrono>
+#include <cmath>
 
 #include "editor/editor.h"
 #include "brushes/managers/brush_manager.h"
@@ -73,7 +73,6 @@
 #include "rendering/drawers/tiles/tile_renderer.h"
 #include "rendering/drawers/entities/creature_name_drawer.h"
 #include "rendering/core/gl_resources.h"
-#include "ui/map_tab.h"
 
 
 MapDrawer::MapDrawer(MapCanvas* canvas) :
@@ -142,9 +141,11 @@ void MapDrawer::SetupVars() {
 	// Range is [0.0, 1.0]
 	// Using a sine wave for smooth transition
 	// (sin(t) + 1) / 2
-	double now = wxGetLocalTimeMillis().ToDouble();
+	const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now().time_since_epoch()
+	).count();
 	const double speed = 0.005;
-	options.highlight_pulse = (float)((sin(now * speed) + 1.0) / 2.0);
+	options.highlight_pulse = static_cast<float>((std::sin(static_cast<double>(now_ms) * speed) + 1.0) * 0.5);
 
 	ViewportParameters vp;
 	if (canvas) {
@@ -280,14 +281,7 @@ void MapDrawer::DrawBackground() {
 void MapDrawer::DrawMap(const RenderFrameContext& ctx) {
 	bool live_client = editor.live_manager.IsClient();
 
-	BaseMap* secondary_map = nullptr;
-	if (!options.ingame && canvas) {
-		if (auto* map_tab = dynamic_cast<MapTab*>(canvas->GetMapWindow())) {
-			if (auto* session = map_tab->GetSession()) {
-				secondary_map = session->secondary_map;
-			}
-		}
-	}
+	BaseMap* secondary_map = (!options.ingame && canvas) ? canvas->GetSecondaryMap() : nullptr;
 
 	for (int map_z = view.start_z; map_z >= view.superend_z; map_z--) {
 		RenderView floor_view = view;

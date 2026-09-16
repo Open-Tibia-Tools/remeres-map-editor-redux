@@ -31,13 +31,9 @@ class DoorIndicatorDrawer;
 #include "rendering/core/light_buffer.h"
 #include "app/definitions.h"
 #include "app/settings.h"
-#include "game/outfit.h"
-#include "game/creature.h"
-
 #include "rendering/core/render_view.h"
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/primitive_renderer.h"
-#include "rendering/core/gl_resources.h"
 
 class GridDrawer;
 
