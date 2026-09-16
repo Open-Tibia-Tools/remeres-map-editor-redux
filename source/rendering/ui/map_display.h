@@ -171,7 +171,6 @@ public:
 
 	FPSCounter fps_counter;
 
-	friend class MapDrawer;
 	friend class SelectionController;
 	friend class DrawingController;
 

@@ -124,7 +124,7 @@ MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
 
 	popup_menu = std::make_unique<MapPopupMenu>(editor);
 	animation_timer = std::make_unique<AnimationTimer>(this);
-	drawer = std::make_unique<MapDrawer>(this);
+	drawer = std::make_unique<MapDrawer>(editor);
 	selection_controller = std::make_unique<SelectionController>(this, editor);
 	drawing_controller = std::make_unique<DrawingController>(this, editor);
 	screenshot_controller = std::make_unique<ScreenshotController>(this);
@@ -344,11 +344,40 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 			last_animation_refresh_time_ = {};
 		}
 
-		// BatchRenderer calls removed - MapDrawer handles its own renderers
+		ViewportParameters vp;
+		MouseToMap(&vp.mouse_map_x, &vp.mouse_map_y);
+		GetViewBox(&vp.view_scroll_x, &vp.view_scroll_y, &vp.screensize_x, &vp.screensize_y);
+		vp.zoom = static_cast<float>(GetZoom());
+		vp.floor = GetFloor();
+		GetScreenCenter(&vp.camera_pos.x, &vp.camera_pos.y);
+		vp.camera_pos.z = vp.floor;
+		vp.light_origin = GetLightVisibilityOrigin();
+		vp.content_scale_factor = static_cast<float>(GetContentScaleFactor());
 
-		drawer->SetupVars();
+		InteractionRenderState interaction;
+		if (options.boundbox_selection) {
+			interaction.selection_bounds = MapBounds {
+				.x1 = std::min(last_click_map_x, last_cursor_map_x),
+				.y1 = std::min(last_click_map_y, last_cursor_map_y),
+				.x2 = std::max(last_click_map_x, last_cursor_map_x),
+				.y2 = std::max(last_click_map_y, last_cursor_map_y)
+			};
+		}
+		if (selection_controller) {
+			interaction.drag_start_position = selection_controller->GetDragStartPosition();
+		}
+		if (drawing_controller) {
+			interaction.brush_drag_state.is_dragging_draw = drawing_controller->IsDraggingDraw();
+		}
+		interaction.brush_drag_state.last_click_map_x = last_click_map_x;
+		interaction.brush_drag_state.last_click_map_y = last_click_map_y;
+		interaction.secondary_map = GetSecondaryMap();
+		interaction.is_pasting = isPasting();
+		interaction.current_brush = g_brush_manager.GetCurrentBrush();
+
+		drawer->SetupVars(vp);
 		drawer->SetupGL();
-		drawer->Draw();
+		drawer->Draw(interaction);
 
 		if (screenshot_controller->IsCapturing()) {
 			drawer->TakeScreenshot(screenshot_controller->GetBuffer());

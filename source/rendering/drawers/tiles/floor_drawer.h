@@ -5,7 +5,6 @@
 #ifndef RME_RENDERING_FLOOR_DRAWER_H_
 #define RME_RENDERING_FLOOR_DRAWER_H_
 
-class MapDrawer;
 struct RenderView;
 struct DrawingOptions;
 class BaseMap;

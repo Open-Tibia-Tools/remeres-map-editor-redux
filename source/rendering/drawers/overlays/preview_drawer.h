@@ -14,13 +14,14 @@ class SpriteBatch;
 class PrimitiveRenderer;
 struct RenderFrameContext;
 class BaseMap;
+class Brush;
 
 class PreviewDrawer {
 public:
 	PreviewDrawer();
 	~PreviewDrawer();
 
-	void draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* secondary_map, const RenderView& view, int map_z, const DrawingOptions& options, Editor& editor, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, uint32_t current_house_id, const RenderFrameContext* ctx = nullptr);
+	void draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* secondary_map, const RenderView& view, int map_z, const DrawingOptions& options, Editor& editor, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, uint32_t current_house_id, Brush* current_brush, const RenderFrameContext* ctx = nullptr);
 };
 
 #endif

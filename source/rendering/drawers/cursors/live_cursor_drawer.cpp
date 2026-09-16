@@ -22,14 +22,9 @@ void LiveCursorDrawer::draw(SpriteBatch& sprite_batch, const RenderView& view, E
 			continue;
 		}
 
-		wxColor draw_color = cursor.color;
+		float alpha = cursor.color.Alpha() / 255.0f;
 		if (cursor.pos.z < view.floor) {
-			draw_color = wxColor(
-				draw_color.Red(),
-				draw_color.Green(),
-				draw_color.Blue(),
-				std::max<uint8_t>(static_cast<uint8_t>(draw_color.Alpha() / 2), static_cast<uint8_t>(64))
-			);
+			alpha = std::max(alpha * 0.5f, 64.0f / 255.0f);
 		}
 
 		int offset;
@@ -43,10 +38,10 @@ void LiveCursorDrawer::draw(SpriteBatch& sprite_batch, const RenderView& view, E
 		float draw_y = ((cursor.pos.y * TILE_SIZE) - view.view_scroll_y) - offset;
 
 		glm::vec4 color(
-			draw_color.Red() / 255.0f,
-			draw_color.Green() / 255.0f,
-			draw_color.Blue() / 255.0f,
-			draw_color.Alpha() / 255.0f
+			cursor.color.Red() / 255.0f,
+			cursor.color.Green() / 255.0f,
+			cursor.color.Blue() / 255.0f,
+			alpha
 		);
 
 		sprite_batch.drawRect(draw_x, draw_y, static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), color, atlas);

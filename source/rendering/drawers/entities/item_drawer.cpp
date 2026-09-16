@@ -45,6 +45,16 @@ namespace {
 			light
 		);
 	}
+
+	constexpr DrawColor toDrawColorFrom8Bit(int color) {
+		if (color <= 0 || color >= 216) {
+			return DrawColor(0, 0, 0, 255);
+		}
+		const uint8_t red = static_cast<uint8_t>((color / 36) % 6 * 51);
+		const uint8_t green = static_cast<uint8_t>((color / 6) % 6 * 51);
+		const uint8_t blue = static_cast<uint8_t>(color % 6 * 51);
+		return DrawColor(red, green, blue, 255);
+	}
 }
 
 BlitItemParams::BlitItemParams(const Tile* t, Item* i, const DrawingOptions& o) : tile(t), item(i), options(&o) {
@@ -286,21 +296,16 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	if (draw_visuals && !options.ingame && options.show_light_str) {
 		const SpriteLight& light = item->getLight();
 		if (light.intensity > 0) {
-			wxColor lightColor = colorFromEightBit(light.color);
-			uint8_t byteR = lightColor.Red();
-			uint8_t byteG = lightColor.Green();
-			uint8_t byteB = lightColor.Blue();
-			uint8_t byteA = 255;
-
-			int startOffset = std::max<int>(16, 32 - light.intensity);
-			int sqSize = TILE_SIZE - startOffset;
+			const DrawColor lightColor = toDrawColorFrom8Bit(light.color);
+			const int startOffset = std::max<int>(16, 32 - light.intensity);
+			const int sqSize = TILE_SIZE - startOffset;
 
 			// We need to disable texture 2d for BlitSquare. SpriteDrawer::glBlitSquare does NOT disable texture 2d automatically?
 			// SpriteDrawer::glBlitSquare internally uses BatchRenderer::DrawQuad which sets blank texture if needed.
 			// So we don't need manual enable/disable here anymore.
 
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 2, draw_y + startOffset - 2, DrawColor(0, 0, 0, byteA), sqSize + 2, atlas);
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 1, draw_y + startOffset - 1, DrawColor(byteR, byteG, byteB, byteA), sqSize, atlas);
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 2, draw_y + startOffset - 2, DrawColor(0, 0, 0, 255), sqSize + 2, atlas);
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 1, draw_y + startOffset - 1, lightColor, sqSize, atlas);
 		}
 	}
 }

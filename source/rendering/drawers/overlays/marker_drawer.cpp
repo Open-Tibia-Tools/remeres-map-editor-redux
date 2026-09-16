@@ -2,8 +2,8 @@
 #include "rendering/drawers/entities/sprite_drawer.h"
 #include "rendering/core/sprite_batch.h"
 #include "map/tile.h"
+#include "game/spawn.h"
 #include "game/sprites.h"
-#include "editor/editor.h"
 
 MarkerDrawer::MarkerDrawer() {
 }
@@ -11,32 +11,32 @@ MarkerDrawer::MarkerDrawer() {
 MarkerDrawer::~MarkerDrawer() {
 }
 
-void MarkerDrawer::draw(SpriteBatch& sprite_batch, SpriteDrawer* drawer, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, uint32_t current_house_id, Editor& editor, const DrawingOptions& options, const RenderFrameContext* ctx) {
+void MarkerDrawer::draw(SpriteBatch& sprite_batch, SpriteDrawer* drawer, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, uint32_t current_house_id, Map& map, const DrawingOptions& options, const RenderFrameContext& ctx) {
 	// waypoint (blue flame)
 	if (!options.ingame && waypoint && options.show_waypoints) {
-		drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_WAYPOINT, DrawColor(64, 64, 255), ctx);
+		drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_WAYPOINT, DrawColor(64, 64, 255), &ctx);
 	}
 
 	// house exit (blue splash)
 	if (tile->isHouseExit() && options.show_houses) {
 		if (tile->hasHouseExit(current_house_id)) {
-			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_HOUSE_EXIT, DrawColor(64, 255, 255), ctx);
+			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_HOUSE_EXIT, DrawColor(64, 255, 255), &ctx);
 		} else {
-			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_HOUSE_EXIT, DrawColor(64, 64, 255), ctx);
+			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_HOUSE_EXIT, DrawColor(64, 64, 255), &ctx);
 		}
 	}
 
 	// town temple (gray flag)
-	if (options.show_towns && tile->isTownExit(editor.map)) {
-		drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_TOWN_TEMPLE, DrawColor(255, 255, 64, 170), ctx);
+	if (options.show_towns && tile->isTownExit(map)) {
+		drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_TOWN_TEMPLE, DrawColor(255, 255, 64, 170), &ctx);
 	}
 
 	// spawn (purple flame)
 	if (tile->spawn && options.show_spawns) {
 		if (tile->spawn->isSelected()) {
-			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_SPAWN, DrawColor(128, 128, 128), ctx);
+			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_SPAWN, DrawColor(128, 128, 128), &ctx);
 		} else {
-			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_SPAWN, DrawColor(255, 255, 255), ctx);
+			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_SPAWN, DrawColor(255, 255, 255), &ctx);
 		}
 	}
 }

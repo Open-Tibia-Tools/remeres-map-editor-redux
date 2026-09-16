@@ -158,8 +158,9 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 				for (int nd_map_y = nd_start_y; nd_map_y <= nd_end_y; nd_map_y += 4) {
 					MapNode* nd = map.getLeaf(nd_map_x, nd_map_y);
 					if (!nd) {
-						nd = map.createLeaf(nd_map_x, nd_map_y);
-						nd->setVisible(false, false);
+						live_client->queryNode(nd_map_x, nd_map_y, map_z > GROUND_LAYER);
+						grid_drawer->DrawNodeLoadingPlaceholder(sprite_batch, nd_map_x, nd_map_y, view, ctx.atlas);
+						continue;
 					}
 					visitNodeTiles(nd, nd_map_x, nd_map_y, true, visitor);
 				}
