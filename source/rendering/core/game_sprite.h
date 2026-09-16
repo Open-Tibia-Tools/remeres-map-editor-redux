@@ -103,6 +103,13 @@ public:
 		return light;
 	}
 
+	[[nodiscard]] bool isAnimated() const noexcept {
+		return frames > 1 && animator != nullptr;
+	}
+	[[nodiscard]] bool hasElevation() const noexcept {
+		return draw_height > 0;
+	}
+
 	// Helper for SpritePreloader to decompress data off-thread
 	[[nodiscard]] static std::unique_ptr<uint8_t[]> Decompress(std::span<const uint8_t> dump, bool use_alpha, int id = 0);
 
