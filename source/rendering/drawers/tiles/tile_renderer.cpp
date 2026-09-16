@@ -598,3 +598,51 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 	RenderAnimatedItems(sprite_batch, location, ctx, elevation, light_buffer, light_collection_only);
 	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, light_buffer, light_collection_only);
 }
+
+void TileRenderer::RenderDynamicPasses(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile* tile_above) const {
+	if (!location) {
+		return;
+	}
+	Tile* tile = const_cast<Tile*>(location->get());
+	if (!tile) {
+		return;
+	}
+
+	const auto& options = ctx.options;
+	if (options.show_only_modified && !tile->isModified()) {
+		return;
+	}
+
+	// If ground is animated, render it dynamically
+	if (tile->ground) {
+		const ItemDefinitionView git = tile->ground->getDefinition();
+		if (git) {
+			GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
+			if (gspr && gspr->isAnimated()) {
+				RenderStaticTerrain(sprite_batch, location, ctx, draw_x, draw_y, nullptr, false, tile_above);
+			}
+		}
+	}
+
+	TileElevationState elevation { draw_x, draw_y };
+	// Accumulate elevation of static items before animated items
+	if (!tile->items.empty()) {
+		for (const auto& item : tile->items) {
+			if (!item || item->isInvalidOTBMItem()) {
+				continue;
+			}
+			const ItemDefinitionView it = item->getDefinition();
+			if (!it) {
+				continue;
+			}
+			GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
+			if (ispr && !ispr->isAnimated() && ispr->hasElevation()) {
+				elevation.current_draw_x -= ispr->draw_height;
+				elevation.current_draw_y -= ispr->draw_height;
+			}
+		}
+	}
+
+	RenderAnimatedItems(sprite_batch, location, ctx, elevation, nullptr, false);
+	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, nullptr, false);
+}

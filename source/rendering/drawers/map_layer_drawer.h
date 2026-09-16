@@ -30,13 +30,14 @@ struct LightBuffer;
 struct RenderFrameContext;
 class SpriteBatch;
 class PrimitiveRenderer;
+class ChunkCacheManager;
 
 class MapLayerDrawer {
 public:
 	MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Map& map);
 	~MapLayerDrawer();
 
-	void Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx);
+	void Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx, ChunkCacheManager* chunk_cache = nullptr);
 
 private:
 	TileRenderer* tile_renderer;

@@ -91,14 +91,25 @@ void MapDrawer::SetupGL() {
 	if (!renderers_initialized) {
 		sprite_batch.initialize();
 		primitive_renderer.initialize();
+		chunk_cache_manager.initialize();
 		renderers_initialized = true;
 	}
 }
 
 void MapDrawer::Release() {
+	if (renderers_initialized) {
+		chunk_cache_manager.release();
+		renderers_initialized = false;
+	}
 }
 
 void MapDrawer::Draw(const InteractionRenderState& interaction) {
+	if (options.isDirty()) {
+		chunk_cache_manager.invalidateAll();
+		options.clearDirty();
+	}
+	chunk_cache_manager.updateDirtyState(editor.map.getChangeTracker());
+
 	light_buffer.Clear();
 	creature_name_drawer.clear();
 	options.transient_selection_bounds = std::nullopt;
@@ -269,7 +280,7 @@ bool MapDrawer::hasOverlays() {
 
 void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client) {
 	LiveClient* live_client_service = live_client ? editor.live_manager.GetClient() : nullptr;
-	map_layer_drawer.Draw(batch, map_z, live_client_service, floor_ctx);
+	map_layer_drawer.Draw(batch, map_z, live_client_service, floor_ctx, &chunk_cache_manager);
 }
 
 void MapDrawer::DrawLight() {

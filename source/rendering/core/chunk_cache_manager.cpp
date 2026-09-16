@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "rendering/core/chunk_cache_manager.h"
+#include "app/definitions.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/game_sprite.h"
@@ -13,6 +14,7 @@
 #include "map/tile.h"
 #include "game/item.h"
 #include <spdlog/spdlog.h>
+#include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 #include <cmath>
 
@@ -191,18 +193,24 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				if (git) {
 					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
 					if (gspr && !gspr->isAnimated()) {
-						TileInstance inst;
-						inst.x = static_cast<float>(x * 32);
-						inst.y = static_cast<float>(y * 32);
-						inst.w = 32.0f;
-						inst.h = 32.0f;
-						inst.sprite_id = gspr->getId();
-						inst.flags = 0;
-						inst.r = 1.0f;
-						inst.g = 1.0f;
-						inst.b = 1.0f;
-						inst.a = 1.0f;
-						bake_buffer_.push_back(inst);
+						const AtlasRegion* reg = gspr->getCachedDefaultRegion();
+						if (!reg) {
+							reg = gspr->getAtlasRegion(0, 0, 0, -1, 0, 0, 0, 0);
+						}
+						if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
+							TileInstance inst;
+							inst.x = static_cast<float>(x * 32);
+							inst.y = static_cast<float>(y * 32);
+							inst.w = static_cast<float>(reg->pixel_width);
+							inst.h = static_cast<float>(reg->pixel_height);
+							inst.sprite_id = reg->debug_sprite_id;
+							inst.flags = 0;
+							inst.r = 1.0f;
+							inst.g = 1.0f;
+							inst.b = 1.0f;
+							inst.a = 1.0f;
+							bake_buffer_.push_back(inst);
+						}
 					}
 				}
 			}
@@ -222,19 +230,58 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					continue;
 				}
 
-				const ImageDimensions dims = ispr->getCompositePixelSize();
-				TileInstance inst;
-				inst.x = static_cast<float>(x * 32 - elev);
-				inst.y = static_cast<float>(y * 32 - elev);
-				inst.w = static_cast<float>(dims.width);
-				inst.h = static_cast<float>(dims.height);
-				inst.sprite_id = ispr->getId();
-				inst.flags = 0;
-				inst.r = 1.0f;
-				inst.g = 1.0f;
-				inst.b = 1.0f;
-				inst.a = 1.0f;
-				bake_buffer_.push_back(inst);
+				const auto [draw_offset_x, draw_offset_y] = ispr->getDrawOffset();
+				const int item_x = x * 32 - elev - draw_offset_x;
+				const int item_y = y * 32 - elev - draw_offset_y;
+
+				const bool is_simple_sprite = (ispr->width == 1 && ispr->height == 1 && ispr->layers == 1);
+				if (is_simple_sprite) {
+					const AtlasRegion* reg = ispr->getCachedDefaultRegion();
+					if (!reg) {
+						reg = ispr->getAtlasRegion(0, 0, 0, -1, 0, 0, 0, 0);
+					}
+					if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
+						TileInstance inst;
+						inst.x = static_cast<float>(item_x);
+						inst.y = static_cast<float>(item_y);
+						inst.w = static_cast<float>(reg->pixel_width);
+						inst.h = static_cast<float>(reg->pixel_height);
+						inst.sprite_id = reg->debug_sprite_id;
+						inst.flags = 0;
+						inst.r = 1.0f;
+						inst.g = 1.0f;
+						inst.b = 1.0f;
+						inst.a = 1.0f;
+						bake_buffer_.push_back(inst);
+					}
+				} else {
+					const auto composite_metrics = ispr->getPlainLayoutMetrics(-1, 0, 0, 0, 0);
+					int x_offset = 0;
+					for (int cx = 0; cx < composite_metrics.num_columns; ++cx) {
+						int y_offset = 0;
+						for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
+							for (int cf = 0; cf < ispr->layers; ++cf) {
+								const AtlasRegion* reg = ispr->getAtlasRegion(cx, cy, cf, -1, 0, 0, 0, 0);
+								if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
+									TileInstance inst;
+									inst.x = static_cast<float>(item_x - x_offset);
+									inst.y = static_cast<float>(item_y - y_offset);
+									inst.w = static_cast<float>(reg->pixel_width);
+									inst.h = static_cast<float>(reg->pixel_height);
+									inst.sprite_id = reg->debug_sprite_id;
+									inst.flags = 0;
+									inst.r = 1.0f;
+									inst.g = 1.0f;
+									inst.b = 1.0f;
+									inst.a = 1.0f;
+									bake_buffer_.push_back(inst);
+								}
+							}
+							y_offset += composite_metrics.row_heights[cy];
+						}
+						x_offset += composite_metrics.column_widths[cx];
+					}
+				}
 
 				if (ispr->hasElevation()) {
 					elev += ispr->draw_height;
@@ -306,8 +353,18 @@ void ChunkCacheManager::renderFloor(
 		return;
 	}
 
+	const int offset = (map_z <= GROUND_LAYER)
+		? (GROUND_LAYER - map_z) * TILE_SIZE
+		: TILE_SIZE * (ctx.view.floor - map_z);
+	const glm::vec3 translation(
+		static_cast<float>(-ctx.view.view_scroll_x - offset),
+		static_cast<float>(-ctx.view.view_scroll_y - offset),
+		0.0f
+	);
+	const glm::mat4 floor_mvp = projection * glm::translate(glm::mat4(1.0f), translation);
+
 	shader_.Use();
-	shader_.SetMat4("uMVP", projection);
+	shader_.SetMat4("uMVP", floor_mvp);
 	shader_.SetInt("uAtlas", 0);
 	shader_.SetVec4("uGlobalTint", glm::vec4(1.0f));
 

@@ -44,6 +44,7 @@ public:
 	void RenderStaticItems(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, TileElevationState& elevation, LightBuffer* light_buffer = nullptr, bool light_collection_only = false) const;
 	void RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, TileElevationState& elevation, LightBuffer* light_buffer = nullptr, bool light_collection_only = false) const;
 	void RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, LightBuffer* light_buffer = nullptr, bool light_collection_only = false) const;
+	void RenderDynamicPasses(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile* tile_above = nullptr) const;
 
 private:
 	ItemDrawer* item_drawer;

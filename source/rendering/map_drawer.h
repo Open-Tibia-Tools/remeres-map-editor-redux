@@ -23,6 +23,7 @@
 #include "app/definitions.h"
 #include "app/settings.h"
 #include "rendering/core/drawing_options.h"
+#include "rendering/core/chunk_cache_manager.h"
 #include "rendering/core/light_buffer.h"
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/core/render_interaction_state.h"
@@ -82,6 +83,7 @@ class MapDrawer {
 	TileRenderer tile_renderer;
 	MapLayerDrawer map_layer_drawer;
 	LuaOverlayDrawer lua_overlay_drawer;
+	ChunkCacheManager chunk_cache_manager;
 
 public:
 	explicit MapDrawer(Editor& editor);
@@ -137,6 +139,12 @@ public:
 	}
 	HookIndicatorDrawer* getHookIndicatorDrawer() {
 		return &hook_indicator_drawer;
+	}
+	ChunkCacheManager& getChunkCacheManager() {
+		return chunk_cache_manager;
+	}
+	const ChunkCacheManager& getChunkCacheManager() const {
+		return chunk_cache_manager;
 	}
 	const RenderView& getView() const {
 		return view;

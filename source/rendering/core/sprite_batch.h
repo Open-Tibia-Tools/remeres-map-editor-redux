@@ -94,6 +94,11 @@ public:
 	 */
 	void ensureCapacity(size_t capacity);
 
+	/**
+	 * Flush pending sprites to GPU without ending batch.
+	 */
+	void flush(const AtlasManager& atlas_manager);
+
 	int getDrawCallCount() const {
 		return draw_call_count_;
 	}
@@ -102,8 +107,6 @@ public:
 	}
 
 private:
-	void flush(const AtlasManager& atlas_manager);
-
 	std::unique_ptr<ShaderProgram> shader_;
 
 	std::unique_ptr<GLVertexArray> vao_;

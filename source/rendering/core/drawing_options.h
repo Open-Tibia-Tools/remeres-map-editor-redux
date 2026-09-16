@@ -22,6 +22,7 @@ struct DrawingOptions {
 	void UpdateIfNeeded();
 	void MarkDirty() noexcept { dirty_ = true; }
 	[[nodiscard]] bool isDirty() const noexcept { return dirty_; }
+	void clearDirty() noexcept { dirty_ = false; }
 	bool isDrawLight() const noexcept;
 
 	bool transparent_floors;

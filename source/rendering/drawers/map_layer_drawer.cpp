@@ -16,6 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "rendering/drawers/map_layer_drawer.h"
+#include "rendering/core/chunk_cache_manager.h"
 #include "app/definitions.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
 #include "rendering/drawers/overlays/grid_drawer.h"
@@ -63,7 +64,7 @@ MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_dra
 MapLayerDrawer::~MapLayerDrawer() {
 }
 
-void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx) {
+void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx, ChunkCacheManager* chunk_cache) {
 	const RenderView& view = ctx.view;
 	const DrawingOptions& options = ctx.options;
 
@@ -172,9 +173,25 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		});
 	};
 
-	auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
-		tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, nullptr, false, tile_above);
-	};
+	const bool use_chunk_cache = (chunk_cache != nullptr && chunk_cache->isValid() && !live_client);
 
-	visitAllVisibleNodes(drawVisibleTiles);
+	if (use_chunk_cache) {
+		// 1. Flush any pending batch geometry before MDI chunk pass
+		sprite_batch.flush(ctx.atlas);
+
+		// 2. Multi-Draw Indirect Chunk Cache static terrain & static items pass
+		chunk_cache->renderFloor(map_z, map, ctx, view.projectionMatrix, ctx.atlas);
+
+		// 3. Dynamic overlay pass: animated items, creatures, markers, etc.
+		auto drawDynamicTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
+			tile_renderer->RenderDynamicPasses(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
+		};
+		visitAllVisibleNodes(drawDynamicTiles);
+	} else {
+		// Classic full-tile traversal fallback
+		auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
+			tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, nullptr, false, tile_above);
+		};
+		visitAllVisibleNodes(drawVisibleTiles);
+	}
 }
