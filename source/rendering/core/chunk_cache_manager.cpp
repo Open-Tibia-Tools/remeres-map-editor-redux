@@ -10,6 +10,8 @@
 #include "rendering/core/render_frame_context.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
+#include "rendering/core/sprite_batch.h"
+#include "rendering/drawers/tiles/tile_renderer.h"
 #include "map/map.h"
 #include "map/tile.h"
 #include "game/item.h"
@@ -161,6 +163,7 @@ CachedChunk& ChunkCacheManager::getOrCreateChunk(const ChunkCoord& coord) {
 
 void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const RenderFrameContext& ctx) {
 	bake_buffer_.clear();
+	chunk.dynamic_tiles.clear();
 
 	const int32_t base_x = chunk.coord.cx * CHUNK_SIZE;
 	const int32_t base_y = chunk.coord.cy * CHUNK_SIZE;
@@ -189,12 +192,21 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				continue;
 			}
 
+			bool is_dynamic = false;
+			if (tile->creature || tile->spawn || loc->getSpawnCount() > 0 || loc->getWaypointCount() > 0 ||
+				loc->getTownCount() > 0 || loc->getHouseExits() != nullptr || tile->invalidZones ||
+				(tile->ground && tile->ground->isInvalidOTBMItem())) {
+				is_dynamic = true;
+			}
+
 			// Static terrain ground
 			if (tile->ground) {
 				const ItemDefinitionView git = tile->ground->getDefinition();
 				if (git) {
 					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
-					if (gspr && !gspr->isAnimated()) {
+					if (gspr && gspr->isAnimated()) {
+						is_dynamic = true;
+					} else if (gspr) {
 						const SpritePatterns g_pat = PatternCalculator::Calculate(gspr, git, tile->ground.get(), tile, Position(x, y, z));
 						const AtlasRegion* reg = nullptr;
 						if (gspr->is_simple && g_pat.subtype == -1 && g_pat.x == 0 && g_pat.y == 0 && g_pat.z == 0) {
@@ -233,7 +245,11 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			// Static items on tile with elevation stacking
 			int elev = 0;
 			for (const auto& item : tile->items) {
-				if (!item || item->isInvalidOTBMItem()) {
+				if (!item) {
+					continue;
+				}
+				if (item->isInvalidOTBMItem()) {
+					is_dynamic = true;
 					continue;
 				}
 				const ItemDefinitionView it = item->getDefinition();
@@ -245,6 +261,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					continue;
 				}
 				if (ispr->isAnimated()) {
+					is_dynamic = true;
 					if (ispr->hasElevation()) {
 						elev += ispr->draw_height;
 					}
@@ -326,6 +343,10 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				if (ispr->hasElevation()) {
 					elev += ispr->draw_height;
 				}
+			}
+
+			if (is_dynamic) {
+				chunk.dynamic_tiles.push_back(DynamicTileInfo{ static_cast<uint8_t>(tx), static_cast<uint8_t>(ty) });
 			}
 		}
 	}
@@ -440,6 +461,60 @@ void ChunkCacheManager::prune(int current_floor) {
 			it = cached_chunks_.erase(it);
 		} else {
 			++it;
+		}
+	}
+}
+
+void ChunkCacheManager::renderDynamicOverlays(
+	int map_z,
+	const Map& map,
+	const RenderFrameContext& ctx,
+	SpriteBatch& sprite_batch,
+	const TileRenderer& tile_renderer
+) {
+	if (!isValid()) {
+		return;
+	}
+
+	const ViewBounds bounds = ctx.view.getBoundsForFloor(map_z);
+	const int min_cx = bounds.start_x >> 4;
+	const int max_cx = (bounds.end_x + 15) >> 4;
+	const int min_cy = bounds.start_y >> 4;
+	const int max_cy = (bounds.end_y + 15) >> 4;
+
+	const int offset = (map_z <= GROUND_LAYER)
+		? (GROUND_LAYER - map_z) * TILE_SIZE
+		: TILE_SIZE * (ctx.view.floor - map_z);
+
+	const int base_draw_x = -ctx.view.view_scroll_x - offset;
+	const int base_draw_y = -ctx.view.view_scroll_y - offset;
+
+	for (int cy = min_cy; cy <= max_cy; ++cy) {
+		for (int cx = min_cx; cx <= max_cx; ++cx) {
+			const ChunkCoord coord{ cx, cy, map_z };
+			auto it = cached_chunks_.find(coord);
+			if (it == cached_chunks_.end() || it->second.dynamic_tiles.empty()) {
+				continue;
+			}
+
+			const auto& chunk = it->second;
+			const int chunk_base_x = cx * CHUNK_SIZE;
+			const int chunk_base_y = cy * CHUNK_SIZE;
+
+			for (const auto& dt : chunk.dynamic_tiles) {
+				const int x = chunk_base_x + dt.rel_x;
+				const int y = chunk_base_y + dt.rel_y;
+				const TileLocation* loc = map.getTileL(x, y, map_z);
+				if (!loc) {
+					continue;
+				}
+
+				const int draw_x = x * TILE_SIZE + base_draw_x;
+				const int draw_y = y * TILE_SIZE + base_draw_y;
+
+				const Tile* tile_above = (map_z == GROUND_LAYER + 1) ? map.getTile(x, y, GROUND_LAYER) : nullptr;
+				tile_renderer.RenderDynamicPasses(sprite_batch, loc, ctx, draw_x, draw_y, tile_above);
+			}
 		}
 	}
 }

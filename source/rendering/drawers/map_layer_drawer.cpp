@@ -182,11 +182,8 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		// 2. Multi-Draw Indirect Chunk Cache static terrain & static items pass
 		chunk_cache->renderFloor(map_z, map, ctx, view.projectionMatrix, ctx.atlas);
 
-		// 3. Dynamic overlay pass: animated items, creatures, markers, etc.
-		auto drawDynamicTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
-			tile_renderer->RenderDynamicPasses(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
-		};
-		visitAllVisibleNodes(drawDynamicTiles);
+		// 3. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!
+		chunk_cache->renderDynamicOverlays(map_z, map, ctx, sprite_batch, *tile_renderer);
 	} else {
 		// Classic full-tile traversal fallback
 		auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {

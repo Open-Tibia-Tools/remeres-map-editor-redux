@@ -16,9 +16,16 @@
 
 class Map;
 class AtlasManager;
+class SpriteBatch;
+class TileRenderer;
 struct RenderFrameContext;
 struct RenderView;
 struct DrawingOptions;
+
+struct DynamicTileInfo {
+	uint8_t rel_x = 0;
+	uint8_t rel_y = 0;
+};
 
 struct CachedChunk {
 	ChunkCoord coord;
@@ -26,6 +33,7 @@ struct CachedChunk {
 	uint64_t last_accessed_frame = 0;
 	bool is_dirty = true;
 	bool is_empty = false;
+	std::vector<DynamicTileInfo> dynamic_tiles;
 };
 
 /**
@@ -76,6 +84,18 @@ public:
 		const RenderFrameContext& ctx,
 		const glm::mat4& projection,
 		const AtlasManager& atlas
+	);
+
+	/**
+	 * Render dynamic overlays (animated items, creatures, markers) for visible chunks on floor map_z.
+	 * Only tiles that contain actual dynamic elements are visited.
+	 */
+	void renderDynamicOverlays(
+		int map_z,
+		const Map& map,
+		const RenderFrameContext& ctx,
+		SpriteBatch& sprite_batch,
+		const TileRenderer& tile_renderer
 	);
 
 	/**

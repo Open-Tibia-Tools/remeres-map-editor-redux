@@ -56,7 +56,10 @@ MapDrawer::~MapDrawer() {
 		g_settings.removeObserver(settings_observer_id_);
 		settings_observer_id_ = 0;
 	}
-	Release();
+	if (renderers_initialized) {
+		chunk_cache_manager.release();
+		renderers_initialized = false;
+	}
 }
 
 void MapDrawer::SetupVars(const ViewportParameters& vp) {
@@ -97,10 +100,7 @@ void MapDrawer::SetupGL() {
 }
 
 void MapDrawer::Release() {
-	if (renderers_initialized) {
-		chunk_cache_manager.release();
-		renderers_initialized = false;
-	}
+	// End of frame hook: persistent GPU state and chunk cache must remain alive across frames
 }
 
 void MapDrawer::Draw(const InteractionRenderState& interaction) {
