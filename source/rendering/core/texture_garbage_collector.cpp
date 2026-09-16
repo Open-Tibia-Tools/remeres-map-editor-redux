@@ -18,7 +18,6 @@
 #include "rendering/core/texture_garbage_collector.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/image.h"
-#include "app/settings.h"
 #include <algorithm>
 #include <chrono>
 
@@ -47,15 +46,15 @@ void TextureGarbageCollector::NotifyTextureUnloaded() {
 }
 
 void TextureGarbageCollector::GarbageCollect(std::vector<GameSprite*>& resident_game_sprites, std::vector<void*>& resident_images, time_t current_time) {
-	if (!g_settings.getInteger(Config::TEXTURE_MANAGEMENT)) {
+	if (!options_.enabled) {
 		sweep_in_progress = false;
 		resident_image_cursor = 0;
 		resident_sprite_cursor = 0;
 		return;
 	}
 
-	const int clean_threshold = g_settings.getInteger(Config::TEXTURE_CLEAN_THRESHOLD);
-	const int clean_pulse = g_settings.getInteger(Config::TEXTURE_CLEAN_PULSE);
+	const int clean_threshold = options_.clean_threshold;
+	const int clean_pulse = options_.clean_pulse;
 	if (!sweep_in_progress) {
 		if (loaded_textures <= clean_threshold || current_time - lastclean <= clean_pulse) {
 			return;
@@ -66,7 +65,7 @@ void TextureGarbageCollector::GarbageCollect(std::vector<GameSprite*>& resident_
 		resident_sprite_cursor = resident_game_sprites.size();
 	}
 
-	const int longevity = g_settings.getInteger(Config::TEXTURE_LONGEVITY);
+	const int longevity = options_.longevity;
 	const auto sweep_start = std::chrono::steady_clock::now();
 	constexpr auto TIME_BUDGET = std::chrono::microseconds(1000);
 	constexpr size_t CHECK_INTERVAL = 128;

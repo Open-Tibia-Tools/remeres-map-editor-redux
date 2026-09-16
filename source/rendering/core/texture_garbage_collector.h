@@ -26,10 +26,24 @@
 class GameSprite;
 class Sprite;
 
+struct TextureGCOptions {
+	bool enabled = true;
+	int clean_threshold = 1000;
+	int clean_pulse = 60;
+	int longevity = 300;
+};
+
 class TextureGarbageCollector {
 public:
 	TextureGarbageCollector();
 	~TextureGarbageCollector();
+
+	void SetOptions(const TextureGCOptions& options) noexcept {
+		options_ = options;
+	}
+	[[nodiscard]] const TextureGCOptions& GetOptions() const noexcept {
+		return options_;
+	}
 
 	void GarbageCollect(std::vector<GameSprite*>& resident_game_sprites, std::vector<void*>& resident_images, time_t current_time);
 	void Clear();
@@ -42,6 +56,7 @@ public:
 	}
 
 private:
+	TextureGCOptions options_;
 	int loaded_textures;
 	time_t lastclean;
 	size_t resident_image_cursor = 0;

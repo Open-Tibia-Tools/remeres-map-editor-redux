@@ -101,48 +101,58 @@ void DrawingOptions::SetIngame() {
 
 #include "app/settings.h"
 
-void DrawingOptions::Update() {
-	transparent_floors = g_settings.getBoolean(Config::TRANSPARENT_FLOORS);
-	transparent_items = g_settings.getBoolean(Config::TRANSPARENT_ITEMS);
-	show_ingame_box = g_settings.getBoolean(Config::SHOW_INGAME_BOX);
-	show_lights = g_settings.getBoolean(Config::SHOW_LIGHTS);
-	show_light_str = g_settings.getBoolean(Config::SHOW_LIGHT_STR);
-	show_tech_items = g_settings.getBoolean(Config::SHOW_TECHNICAL_ITEMS);
-	show_invalid_tiles = g_settings.getBoolean(Config::SHOW_INVALID_TILES);
-	show_invalid_zones = g_settings.getBoolean(Config::SHOW_INVALID_ZONES);
-	show_waypoints = g_settings.getBoolean(Config::SHOW_WAYPOINTS);
-	show_grid = g_settings.getInteger(Config::SHOW_GRID);
-	ingame = !g_settings.getBoolean(Config::SHOW_EXTRA);
-	show_all_floors = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
-	floor_visibility_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
-	show_creatures = g_settings.getBoolean(Config::SHOW_CREATURES);
-	show_spawns = g_settings.getBoolean(Config::SHOW_SPAWNS);
-	show_houses = g_settings.getBoolean(Config::SHOW_HOUSES);
-	show_shade = g_settings.getBoolean(Config::SHOW_SHADE);
-	show_special_tiles = g_settings.getBoolean(Config::SHOW_SPECIAL_TILES);
-	show_items = g_settings.getBoolean(Config::SHOW_ITEMS);
-	highlight_items = g_settings.getBoolean(Config::HIGHLIGHT_ITEMS);
-	highlight_locked_doors = g_settings.getBoolean(Config::HIGHLIGHT_LOCKED_DOORS);
-	show_blocking = g_settings.getBoolean(Config::SHOW_BLOCKING);
-	show_tooltips = g_settings.getBoolean(Config::SHOW_TOOLTIPS);
-	show_as_minimap = g_settings.getBoolean(Config::SHOW_AS_MINIMAP);
-	show_only_colors = g_settings.getBoolean(Config::SHOW_ONLY_TILEFLAGS);
-	show_only_modified = g_settings.getBoolean(Config::SHOW_ONLY_MODIFIED_TILES);
-	show_preview = g_settings.getBoolean(Config::SHOW_PREVIEW);
-	show_hooks = g_settings.getBoolean(Config::SHOW_WALL_HOOKS);
-	hide_items_when_zoomed = g_settings.getBoolean(Config::HIDE_ITEMS_WHEN_ZOOMED);
-	show_towns = g_settings.getBoolean(Config::SHOW_TOWNS);
-	always_show_zones = g_settings.getBoolean(Config::ALWAYS_SHOW_ZONES);
-	extended_house_shader = g_settings.getBoolean(Config::EXT_HOUSE_SHADER);
+void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_manager) {
+	transparent_floors = settings.getBoolean(Config::TRANSPARENT_FLOORS);
+	transparent_items = settings.getBoolean(Config::TRANSPARENT_ITEMS);
+	show_ingame_box = settings.getBoolean(Config::SHOW_INGAME_BOX);
+	show_lights = settings.getBoolean(Config::SHOW_LIGHTS);
+	show_light_str = settings.getBoolean(Config::SHOW_LIGHT_STR);
+	show_tech_items = settings.getBoolean(Config::SHOW_TECHNICAL_ITEMS);
+	show_invalid_tiles = settings.getBoolean(Config::SHOW_INVALID_TILES);
+	show_invalid_zones = settings.getBoolean(Config::SHOW_INVALID_ZONES);
+	show_waypoints = settings.getBoolean(Config::SHOW_WAYPOINTS);
+	show_grid = settings.getInteger(Config::SHOW_GRID);
+	ingame = !settings.getBoolean(Config::SHOW_EXTRA);
+	show_all_floors = settings.getBoolean(Config::SHOW_ALL_FLOORS);
+	floor_visibility_mode = SanitizeFloorVisibilityMode(settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
+	show_creatures = settings.getBoolean(Config::SHOW_CREATURES);
+	show_spawns = settings.getBoolean(Config::SHOW_SPAWNS);
+	show_houses = settings.getBoolean(Config::SHOW_HOUSES);
+	show_shade = settings.getBoolean(Config::SHOW_SHADE);
+	show_special_tiles = settings.getBoolean(Config::SHOW_SPECIAL_TILES);
+	show_items = settings.getBoolean(Config::SHOW_ITEMS);
+	highlight_items = settings.getBoolean(Config::HIGHLIGHT_ITEMS);
+	highlight_locked_doors = settings.getBoolean(Config::HIGHLIGHT_LOCKED_DOORS);
+	show_blocking = settings.getBoolean(Config::SHOW_BLOCKING);
+	show_tooltips = settings.getBoolean(Config::SHOW_TOOLTIPS);
+	show_as_minimap = settings.getBoolean(Config::SHOW_AS_MINIMAP);
+	show_only_colors = settings.getBoolean(Config::SHOW_ONLY_TILEFLAGS);
+	show_only_modified = settings.getBoolean(Config::SHOW_ONLY_MODIFIED_TILES);
+	show_preview = settings.getBoolean(Config::SHOW_PREVIEW);
+	show_hooks = settings.getBoolean(Config::SHOW_WALL_HOOKS);
+	hide_items_when_zoomed = settings.getBoolean(Config::HIDE_ITEMS_WHEN_ZOOMED);
+	show_towns = settings.getBoolean(Config::SHOW_TOWNS);
+	always_show_zones = settings.getBoolean(Config::ALWAYS_SHOW_ZONES);
+	extended_house_shader = settings.getBoolean(Config::EXT_HOUSE_SHADER);
 	server_light = SpriteLight {
-		.intensity = static_cast<uint8_t>(std::clamp(g_brush_manager.GetLightIntensity(), 0, 255)),
-		.color = static_cast<uint8_t>(std::clamp(g_brush_manager.GetServerLightColor(), 0, 255))
+		.intensity = static_cast<uint8_t>(std::clamp(brush_manager.GetLightIntensity(), 0, 255)),
+		.color = static_cast<uint8_t>(std::clamp(brush_manager.GetServerLightColor(), 0, 255))
 	};
-	minimum_ambient_light = std::clamp(g_brush_manager.GetAmbientLightLevel(), 0.0f, 1.0f);
+	minimum_ambient_light = std::clamp(brush_manager.GetAmbientLightLevel(), 0.0f, 1.0f);
 	draw_floor_shadow = show_shade;
 
-	anti_aliasing = g_settings.getBoolean(Config::ANTI_ALIASING);
+	anti_aliasing = settings.getBoolean(Config::ANTI_ALIASING);
 	dirty_ = false;
+}
+
+void DrawingOptions::UpdateIfNeeded(const Settings& settings, const BrushManager& brush_manager) {
+	if (dirty_) {
+		Update(settings, brush_manager);
+	}
+}
+
+void DrawingOptions::Update() {
+	Update(g_settings, g_brush_manager);
 }
 
 void DrawingOptions::UpdateIfNeeded() {

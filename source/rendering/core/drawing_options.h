@@ -8,11 +8,16 @@
 #include "rendering/core/floor_visibility_mode.h"
 #include "rendering/core/sprite_light.h"
 
+class Settings;
+class BrushManager;
+
 struct DrawingOptions {
 	DrawingOptions();
 
 	void SetIngame();
 	void SetDefault();
+	void Update(const Settings& settings, const BrushManager& brush_manager);
+	void UpdateIfNeeded(const Settings& settings, const BrushManager& brush_manager);
 	void Update();
 	void UpdateIfNeeded();
 	void MarkDirty() noexcept { dirty_ = true; }

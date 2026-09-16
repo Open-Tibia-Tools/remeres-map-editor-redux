@@ -90,6 +90,12 @@ public:
 
 	// Cleans old & unused textures according to config settings
 	void garbageCollection();
+	void setGCOptions(const TextureGCOptions& options) {
+		collector.SetOptions(options);
+	}
+	[[nodiscard]] const TextureGCOptions& getGCOptions() const {
+		return collector.GetOptions();
+	}
 
 	std::filesystem::path getMetadataPath() const {
 		return client_version ? std::filesystem::path(client_version->getMetadataPath().GetFullPath().ToStdString()) : std::filesystem::path();

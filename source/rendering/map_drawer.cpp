@@ -144,7 +144,17 @@ void MapDrawer::SetupVars() {
 	const double speed = 0.005;
 	options.highlight_pulse = (float)((sin(now * speed) + 1.0) / 2.0);
 
-	view.Setup(canvas, options);
+	ViewportParameters vp;
+	if (canvas) {
+		canvas->MouseToMap(&vp.mouse_map_x, &vp.mouse_map_y);
+		canvas->GetViewBox(&vp.view_scroll_x, &vp.view_scroll_y, &vp.screensize_x, &vp.screensize_y);
+		vp.zoom = static_cast<float>(canvas->GetZoom());
+		vp.floor = canvas->GetFloor();
+		canvas->GetScreenCenter(&vp.camera_pos.x, &vp.camera_pos.y);
+		vp.camera_pos.z = vp.floor;
+		vp.light_origin = canvas->GetLightVisibilityOrigin();
+	}
+	view.Setup(vp, options, canvas ? &canvas->editor.map : nullptr);
 }
 
 void MapDrawer::SetupGL() {
