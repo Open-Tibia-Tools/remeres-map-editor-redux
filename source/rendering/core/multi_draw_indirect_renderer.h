@@ -26,7 +26,7 @@ public:
 		GLuint baseInstance; // Offset into instance buffer
 	};
 
-	static constexpr int DEFAULT_MAX_COMMANDS = 2048;
+	static constexpr int DEFAULT_MAX_COMMANDS = 16384;
 
 	MultiDrawIndirectRenderer();
 	~MultiDrawIndirectRenderer();
@@ -80,6 +80,9 @@ public:
 	 */
 	size_t getCommandCount() const {
 		return commands_.size();
+	}
+	[[nodiscard]] int getMaxCommands() const noexcept {
+		return max_commands_;
 	}
 
 	const std::vector<DrawElementsIndirectCommand>& getCommands() const {

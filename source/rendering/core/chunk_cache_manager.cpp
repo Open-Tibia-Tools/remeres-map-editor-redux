@@ -17,6 +17,7 @@
 #include "game/item.h"
 #include "rendering/utilities/pattern_calculator.h"
 #include "rendering/drawers/tiles/tile_color_calculator.h"
+#include "rendering/core/sprite_preloader.h"
 #include <spdlog/spdlog.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
@@ -98,7 +99,7 @@ bool ChunkCacheManager::initialize() {
 		return false;
 	}
 
-	if (!mdi_renderer_.initialize(2048)) {
+	if (!mdi_renderer_.initialize(16384)) {
 		spdlog::warn("ChunkCacheManager: MDI unavailable, using fallback execution");
 	}
 
@@ -164,6 +165,7 @@ CachedChunk& ChunkCacheManager::getOrCreateChunk(const ChunkCoord& coord) {
 void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const RenderFrameContext& ctx) {
 	bake_buffer_.clear();
 	chunk.dynamic_tiles.clear();
+	bool has_missing_sprites = false;
 
 	const int32_t base_x = chunk.coord.cx * CHUNK_SIZE;
 	const int32_t base_y = chunk.coord.cy * CHUNK_SIZE;
@@ -199,21 +201,19 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				is_dynamic = true;
 			}
 
-			// Static terrain ground
+			// Static terrain ground (water, grass, dirt, lava, etc. - ALWAYS baked into chunk cache!)
 			if (tile->ground) {
 				const ItemDefinitionView git = tile->ground->getDefinition();
 				if (git) {
 					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
-					if (gspr && gspr->isAnimated()) {
-						is_dynamic = true;
-					} else if (gspr) {
-						const SpritePatterns g_pat = PatternCalculator::Calculate(gspr, git, tile->ground.get(), tile, Position(x, y, z));
+					if (gspr) {
+						const SpritePatterns g_pat = PatternCalculator::Calculate(gspr, git, tile->ground.get(), tile, Position(x, y, z), 0);
 						const AtlasRegion* reg = nullptr;
-						if (gspr->is_simple && g_pat.subtype == -1 && g_pat.x == 0 && g_pat.y == 0 && g_pat.z == 0) {
+						if (gspr->is_simple && g_pat.subtype == -1 && g_pat.x == 0 && g_pat.y == 0 && g_pat.z == 0 && g_pat.frame == 0) {
 							reg = gspr->getCachedDefaultRegion();
 						}
 						if (!reg) {
-							reg = gspr->getAtlasRegion(0, 0, 0, g_pat.subtype, g_pat.x, g_pat.y, g_pat.z, 0);
+							reg = gspr->getAtlasRegion(0, 0, 0, g_pat.subtype, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
 						}
 						if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
 							uint8_t gr = 255, gg = 255, gb = 255;
@@ -237,6 +237,11 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 							inst.b = static_cast<float>(gb) * (1.0f / 255.0f);
 							inst.a = 1.0f;
 							bake_buffer_.push_back(inst);
+						} else {
+							if (!gspr->isSimpleAndLoaded()) {
+								rme::collectTileSprites(gspr, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
+							}
+							has_missing_sprites = true;
 						}
 					}
 				}
@@ -310,6 +315,11 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 						inst.b = bf;
 						inst.a = af;
 						bake_buffer_.push_back(inst);
+					} else {
+						if (!ispr->isSimpleAndLoaded()) {
+							rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
+						}
+						has_missing_sprites = true;
 					}
 				} else {
 					const auto composite_metrics = ispr->getPlainLayoutMetrics(i_pat.subtype, i_pat.x, i_pat.y, i_pat.z, 0);
@@ -332,6 +342,11 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 									inst.b = bf;
 									inst.a = af;
 									bake_buffer_.push_back(inst);
+								} else {
+									if (!ispr->isSimpleAndLoaded()) {
+										rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
+									}
+									has_missing_sprites = true;
 								}
 							}
 							y_offset += composite_metrics.row_heights[cy];
@@ -365,10 +380,12 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			}
 			chunk.slice = mega_buffer_.allocate(needed);
 		}
-		mega_buffer_.upload(chunk.slice, bake_buffer_.data(), needed);
+		if (chunk.slice.isValid()) {
+			mega_buffer_.upload(chunk.slice, bake_buffer_.data(), needed);
+		}
 	}
 
-	chunk.is_dirty = false;
+	chunk.is_dirty = has_missing_sprites;
 }
 
 void ChunkCacheManager::renderFloor(
@@ -393,27 +410,6 @@ void ChunkCacheManager::renderFloor(
 	const int min_cy = bounds.start_y >> 4;
 	const int max_cy = (bounds.end_y + 15) >> 4;
 
-	mdi_renderer_.clear();
-
-	for (int cy = min_cy; cy <= max_cy; ++cy) {
-		for (int cx = min_cx; cx <= max_cx; ++cx) {
-			const ChunkCoord coord{ cx, cy, map_z };
-			CachedChunk& chunk = getOrCreateChunk(coord);
-			if (chunk.is_dirty) {
-				bakeChunk(chunk, map, ctx);
-			}
-			chunk.last_accessed_frame = current_frame_;
-
-			if (!chunk.is_empty && chunk.slice.count > 0) {
-				mdi_renderer_.addDrawCommand(6, chunk.slice.count, 0, 0, chunk.slice.base_instance);
-			}
-		}
-	}
-
-	if (mdi_renderer_.getCommandCount() == 0) {
-		return;
-	}
-
 	const int offset = (map_z <= GROUND_LAYER)
 		? (GROUND_LAYER - map_z) * TILE_SIZE
 		: TILE_SIZE * (ctx.view.floor - map_z);
@@ -423,6 +419,8 @@ void ChunkCacheManager::renderFloor(
 		0.0f
 	);
 	const glm::mat4 floor_mvp = projection * glm::translate(glm::mat4(1.0f), translation);
+
+	mdi_renderer_.clear();
 
 	shader_.Use();
 	shader_.SetMat4("uMVP", floor_mvp);
@@ -434,18 +432,44 @@ void ChunkCacheManager::renderFloor(
 
 	mega_buffer_.bindVAO();
 
-	if (mdi_renderer_.isAvailable()) {
-		mdi_renderer_.upload();
-		mdi_renderer_.execute();
-	} else {
-		// Fallback for systems without MDI: glDrawElementsInstancedBaseInstance
-		for (const auto& cmd : mdi_renderer_.getCommands()) {
-			glDrawElementsInstancedBaseInstance(
-				GL_TRIANGLES, cmd.count, GL_UNSIGNED_INT, nullptr,
-				cmd.instanceCount, cmd.baseInstance
-			);
+	auto flushMdiBatch = [&]() {
+		if (mdi_renderer_.getCommandCount() == 0) {
+			return;
+		}
+		if (mdi_renderer_.isAvailable()) {
+			mdi_renderer_.upload();
+			mdi_renderer_.execute();
+		} else {
+			// Fallback for systems without MDI: glDrawElementsInstancedBaseInstance
+			for (const auto& cmd : mdi_renderer_.getCommands()) {
+				glDrawElementsInstancedBaseInstance(
+					GL_TRIANGLES, cmd.count, GL_UNSIGNED_INT, nullptr,
+					cmd.instanceCount, cmd.baseInstance
+				);
+			}
+		}
+		mdi_renderer_.clear();
+	};
+
+	for (int cy = min_cy; cy <= max_cy; ++cy) {
+		for (int cx = min_cx; cx <= max_cx; ++cx) {
+			const ChunkCoord coord{ cx, cy, map_z };
+			CachedChunk& chunk = getOrCreateChunk(coord);
+			if (chunk.is_dirty) {
+				bakeChunk(chunk, map, ctx);
+			}
+			chunk.last_accessed_frame = current_frame_;
+
+			if (!chunk.is_empty && chunk.slice.count > 0) {
+				if (static_cast<int>(mdi_renderer_.getCommandCount()) >= mdi_renderer_.getMaxCommands()) {
+					flushMdiBatch();
+				}
+				mdi_renderer_.addDrawCommand(6, chunk.slice.count, 0, 0, chunk.slice.base_instance);
+			}
 		}
 	}
+
+	flushMdiBatch();
 
 	mega_buffer_.unbindVAO();
 	shader_.Unuse();
@@ -473,6 +497,11 @@ void ChunkCacheManager::renderDynamicOverlays(
 	const TileRenderer& tile_renderer
 ) {
 	if (!isValid()) {
+		return;
+	}
+
+	// LOD Policy: When zoomed out beyond threshold, dynamic entities and overlays are culled
+	if (ctx.view.zoom >= 10.0 && ctx.options.hide_items_when_zoomed) {
 		return;
 	}
 

@@ -453,17 +453,6 @@ void TileRenderer::RenderDynamicPasses(SpriteBatch& sprite_batch, const TileLoca
 		return;
 	}
 
-	// If ground is animated, render it dynamically
-	if (tile->ground) {
-		const ItemDefinitionView git = tile->ground->getDefinition();
-		if (git) {
-			GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
-			if (gspr && gspr->isAnimated()) {
-				RenderStaticTerrain(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
-			}
-		}
-	}
-
 	TileElevationState animated_elevation { draw_x, draw_y };
 	RenderAnimatedItems(sprite_batch, location, ctx, animated_elevation);
 	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y);

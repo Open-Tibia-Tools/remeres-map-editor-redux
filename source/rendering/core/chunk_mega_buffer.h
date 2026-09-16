@@ -26,8 +26,8 @@ struct SlabSlice {
  */
 class ChunkMegaBuffer {
 public:
-	// Default capacity: 1,048,576 instances * 48 bytes = ~50MB VRAM
-	static constexpr size_t DEFAULT_CAPACITY = 1048576;
+	// Default capacity: 2,097,152 instances * 48 bytes = ~100MB VRAM
+	static constexpr size_t DEFAULT_CAPACITY = 2097152;
 	static constexpr uint32_t BLOCK_ALIGNMENT = 128; // Align allocations to 128 instances
 
 	ChunkMegaBuffer();

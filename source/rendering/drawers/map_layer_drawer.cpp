@@ -184,6 +184,9 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 
 		// 3. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!
 		chunk_cache->renderDynamicOverlays(map_z, map, ctx, sprite_batch, *tile_renderer);
+
+		// 4. Flush dynamic overlays for this floor so depth order across floors is preserved
+		sprite_batch.flush(ctx.atlas);
 	} else {
 		// Classic full-tile traversal fallback
 		auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
