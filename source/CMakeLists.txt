@@ -168,6 +168,8 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/animator.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/atlas_manager.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_cache_manager.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_mega_buffer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/coordinate_mapper.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_view_math.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/drawing_options.h
@@ -560,6 +562,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/animator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/atlas_manager.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_cache_manager.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_mega_buffer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/coordinate_mapper.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_view_math.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/drawing_options.cpp

@@ -26,7 +26,7 @@ public:
 		GLuint baseInstance; // Offset into instance buffer
 	};
 
-	static constexpr int MAX_COMMANDS = 16; // Support up to 16 atlases
+	static constexpr int DEFAULT_MAX_COMMANDS = 2048;
 
 	MultiDrawIndirectRenderer();
 	~MultiDrawIndirectRenderer();
@@ -42,7 +42,7 @@ public:
 	 * Initialize GPU buffer for indirect commands.
 	 * @return true if successful (requires GL 4.3+)
 	 */
-	bool initialize();
+	bool initialize(int max_commands = DEFAULT_MAX_COMMANDS);
 
 	/**
 	 * Cleanup GPU resources.
@@ -82,6 +82,10 @@ public:
 		return commands_.size();
 	}
 
+	const std::vector<DrawElementsIndirectCommand>& getCommands() const {
+		return commands_;
+	}
+
 	/**
 	 * Check if MDI is available (GL 4.3+).
 	 */
@@ -92,6 +96,7 @@ public:
 private:
 	std::vector<DrawElementsIndirectCommand> commands_;
 	std::unique_ptr<GLBuffer> command_buffer_;
+	int max_commands_ = DEFAULT_MAX_COMMANDS;
 	bool available_ = false;
 	bool initialized_ = false;
 };
