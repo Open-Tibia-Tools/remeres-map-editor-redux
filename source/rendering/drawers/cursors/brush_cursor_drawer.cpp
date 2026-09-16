@@ -1,7 +1,3 @@
-#include "app/main.h"
-
-// glut include removed
-
 #include "rendering/drawers/cursors/brush_cursor_drawer.h"
 #include "brushes/brush.h"
 #include "app/definitions.h" // For PI

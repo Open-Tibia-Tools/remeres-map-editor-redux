@@ -2,7 +2,6 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
 #include "rendering/drawers/entities/creature_name_drawer.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/text_renderer.h"

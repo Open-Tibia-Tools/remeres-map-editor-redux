@@ -2,11 +2,7 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
-
 #include <algorithm>
-#undef min
-#undef max
 
 #include "rendering/drawers/entities/item_drawer.h"
 #include "rendering/drawers/overlays/hook_indicator_drawer.h"

@@ -11,7 +11,6 @@ class Tile;
 class Item;
 struct RenderView;
 struct DrawingOptions;
-class Editor;
 class ItemDrawer;
 class SpriteDrawer;
 class CreatureDrawer;
@@ -26,6 +25,8 @@ struct SpritePatterns;
 class ItemDefinitionView;
 
 struct RenderFrameContext;
+
+class Editor;
 
 class TileRenderer {
 public:

@@ -27,6 +27,7 @@
 #include "brushes/brush.h"
 #include "rendering/drawers/map_layer_drawer.h"
 #include "rendering/ui/map_display.h"
+#include "rendering/ui/selection_controller.h"
 #include "editor/copybuffer.h"
 #include "live/live_socket.h"
 #include "rendering/core/graphics.h"
@@ -91,7 +92,7 @@ MapDrawer::MapDrawer(MapCanvas* canvas) :
 	tile_renderer = std::make_unique<TileRenderer>(item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), creature_name_drawer.get(), floor_drawer.get(), marker_drawer.get(), tooltip_drawer.get(), &editor);
 
 	grid_drawer = std::make_unique<GridDrawer>();
-	map_layer_drawer = std::make_unique<MapLayerDrawer>(tile_renderer.get(), grid_drawer.get(), &editor); // Initialized map_layer_drawer
+	map_layer_drawer = std::make_unique<MapLayerDrawer>(tile_renderer.get(), grid_drawer.get(), editor.map);
 	live_cursor_drawer = std::make_unique<LiveCursorDrawer>();
 	selection_drawer = std::make_unique<SelectionDrawer>();
 	brush_cursor_drawer = std::make_unique<BrushCursorDrawer>();
@@ -153,6 +154,7 @@ void MapDrawer::SetupVars() {
 		canvas->GetScreenCenter(&vp.camera_pos.x, &vp.camera_pos.y);
 		vp.camera_pos.z = vp.floor;
 		vp.light_origin = canvas->GetLightVisibilityOrigin();
+		vp.content_scale_factor = static_cast<float>(canvas->GetContentScaleFactor());
 	}
 	view.Setup(vp, options, canvas ? &canvas->editor.map : nullptr);
 }
@@ -228,13 +230,17 @@ void MapDrawer::Draw() {
 	sprite_batch->begin(view.projectionMatrix, *atlas);
 
 	if (drag_shadow_drawer) {
-		drag_shadow_drawer->draw(*sprite_batch, this, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options, &ctx);
+		std::optional<Position> drag_start;
+		if (canvas && canvas->selection_controller) {
+			drag_start = canvas->selection_controller->GetDragStartPosition();
+		}
+		drag_shadow_drawer->draw(*sprite_batch, editor, drag_start, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options, &ctx);
 	}
 
 	live_cursor_drawer->draw(*sprite_batch, view, editor, options, *atlas);
 
 	brush_overlay_drawer->draw(*sprite_batch, *primitive_renderer, this, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options, editor, *atlas);
-	selection_drawer->draw(*primitive_renderer, view, canvas, options);
+	selection_drawer->draw(*primitive_renderer, view, options);
 
 	if (options.show_grid) {
 		DrawGrid(original_bounds, *atlas);
@@ -304,7 +310,8 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx) {
 		}
 
 		if (secondary_map) {
-			preview_drawer->draw(*sprite_batch, canvas, secondary_map, floor_view, map_z, options, editor, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), options.current_house_id, &ctx);
+			const bool is_pasting = canvas ? canvas->isPasting() : false;
+			preview_drawer->draw(*sprite_batch, is_pasting, secondary_map, floor_view, map_z, options, editor, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), options.current_house_id, &ctx);
 		}
 	}
 }
@@ -355,7 +362,8 @@ bool MapDrawer::hasOverlays() const {
 }
 
 void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, bool light_collection_only) {
-	map_layer_drawer->Draw(batch, map_z, live_client, floor_ctx, light_buffer, light_collection_only);
+	LiveClient* live_client_service = live_client ? editor.live_manager.GetClient() : nullptr;
+	map_layer_drawer->Draw(batch, map_z, live_client_service, floor_ctx, light_buffer, light_collection_only);
 }
 
 void MapDrawer::DrawLight() {

@@ -18,6 +18,7 @@ struct ViewportParameters {
 	int screensize_y = 0;
 	float zoom = 1.0f;
 	int floor = GROUND_LAYER;
+	float content_scale_factor = 1.0f;
 	Position camera_pos;
 	std::optional<Position> light_origin;
 };

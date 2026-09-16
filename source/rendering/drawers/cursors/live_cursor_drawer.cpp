@@ -1,13 +1,11 @@
-#include "app/main.h"
-
 #include "rendering/drawers/cursors/live_cursor_drawer.h"
 
+#include "app/definitions.h"
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/render_view.h"
 #include "editor/editor.h"
 #include "live/live_socket.h"
 #include "rendering/core/drawing_options.h"
-#include "rendering/core/graphics.h"
 
 void LiveCursorDrawer::draw(SpriteBatch& sprite_batch, const RenderView& view, Editor& editor, const DrawingOptions& options, const AtlasManager& atlas) {
 	if (options.ingame || !editor.live_manager.IsLive()) {

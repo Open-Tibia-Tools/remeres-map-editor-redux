@@ -27,6 +27,10 @@
 #include <mutex>
 #include <memory>
 
+namespace boost::asio {
+class io_context;
+}
+
 struct NetworkMessage {
 	NetworkMessage();
 

@@ -5,7 +5,6 @@
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
 #include "app/definitions.h"
-#include <wx/gdicmn.h>
 
 void GridDrawer::DrawGrid(SpriteBatch& sprite_batch, const RenderView& view, const DrawingOptions& options, const ViewBounds& bounds, const AtlasManager& atlas) {
 	if (!options.show_grid) {
@@ -57,7 +56,9 @@ void GridDrawer::DrawIngameBox(SpriteBatch& sprite_batch, const RenderView& view
 	int box_end_x = box_end_map_x * TILE_SIZE - view.view_scroll_x;
 	int box_end_y = box_end_map_y * TILE_SIZE - view.view_scroll_y;
 
-	static wxColor side_color(0, 0, 0, 200);
+	constexpr glm::vec4 side_color(0.0f, 0.0f, 0.0f, 200.0f / 255.0f);
+	constexpr glm::vec4 red_color(1.0f, 0.0f, 0.0f, 1.0f);
+	constexpr glm::vec4 green_color(0.0f, 1.0f, 0.0f, 1.0f);
 
 	// left side
 	if (box_start_map_x >= bounds.start_x) {
@@ -80,21 +81,21 @@ void GridDrawer::DrawIngameBox(SpriteBatch& sprite_batch, const RenderView& view
 	}
 
 	// hidden tiles
-	drawRect(sprite_batch, box_start_x, box_start_y, box_end_x - box_start_x, box_end_y - box_start_y, *wxRED, atlas);
+	drawRect(sprite_batch, box_start_x, box_start_y, box_end_x - box_start_x, box_end_y - box_start_y, red_color, atlas);
 
 	// visible tiles
 	box_start_x += TILE_SIZE;
 	box_start_y += TILE_SIZE;
 	box_end_x -= 1 * TILE_SIZE;
 	box_end_y -= 1 * TILE_SIZE;
-	drawRect(sprite_batch, box_start_x, box_start_y, box_end_x - box_start_x, box_end_y - box_start_y, *wxGREEN, atlas);
+	drawRect(sprite_batch, box_start_x, box_start_y, box_end_x - box_start_x, box_end_y - box_start_y, green_color, atlas);
 
 	// player position
 	box_start_x += (ClientMapWidth - 3) / 2 * TILE_SIZE;
 	box_start_y += (ClientMapHeight - 3) / 2 * TILE_SIZE;
 	box_end_x = box_start_x + TILE_SIZE;
 	box_end_y = box_start_y + TILE_SIZE;
-	drawRect(sprite_batch, box_start_x, box_start_y, box_end_x - box_start_x, box_end_y - box_start_y, *wxGREEN, atlas);
+	drawRect(sprite_batch, box_start_x, box_start_y, box_end_x - box_start_x, box_end_y - box_start_y, green_color, atlas);
 }
 
 void GridDrawer::DrawNodeLoadingPlaceholder(SpriteBatch& sprite_batch, int nd_map_x, int nd_map_y, const RenderView& view, const AtlasManager& atlas) {
@@ -105,12 +106,10 @@ void GridDrawer::DrawNodeLoadingPlaceholder(SpriteBatch& sprite_batch, int nd_ma
 	sprite_batch.drawRect((float)cx, (float)cy, (float)TILE_SIZE * 4, (float)TILE_SIZE * 4, color, atlas);
 }
 
-void GridDrawer::drawRect(SpriteBatch& sprite_batch, int x, int y, int w, int h, const wxColor& color, const AtlasManager& atlas, int width) {
-	glm::vec4 c(color.Red() / 255.0f, color.Green() / 255.0f, color.Blue() / 255.0f, color.Alpha() / 255.0f);
-	sprite_batch.drawRectLines((float)x, (float)y, (float)w, (float)h, c, atlas);
+void GridDrawer::drawRect(SpriteBatch& sprite_batch, int x, int y, int w, int h, const glm::vec4& color, const AtlasManager& atlas, int width) {
+	sprite_batch.drawRectLines((float)x, (float)y, (float)w, (float)h, color, atlas);
 }
 
-void GridDrawer::drawFilledRect(SpriteBatch& sprite_batch, int x, int y, int w, int h, const wxColor& color, const AtlasManager& atlas) {
-	glm::vec4 c(color.Red() / 255.0f, color.Green() / 255.0f, color.Blue() / 255.0f, color.Alpha() / 255.0f);
-	sprite_batch.drawRect((float)x, (float)y, (float)w, (float)h, c, atlas);
+void GridDrawer::drawFilledRect(SpriteBatch& sprite_batch, int x, int y, int w, int h, const glm::vec4& color, const AtlasManager& atlas) {
+	sprite_batch.drawRect((float)x, (float)y, (float)w, (float)h, color, atlas);
 }

@@ -2,10 +2,6 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
-
-// glut include removed
-
 #include "rendering/drawers/overlays/brush_overlay_drawer.h"
 #include "rendering/map_drawer.h"
 #include "rendering/ui/map_display.h"

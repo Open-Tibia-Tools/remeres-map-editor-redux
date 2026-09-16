@@ -1,22 +1,15 @@
-#include "app/main.h"
-
-// glut include removed
-
 #include "rendering/drawers/overlays/selection_drawer.h"
 #include "rendering/core/primitive_renderer.h"
-#include <glm/glm.hpp>
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
-#include "rendering/ui/map_display.h"
-#include "rendering/core/graphics.h"
-#include "ui/gui.h"
+#include <glm/glm.hpp>
 #include <algorithm>
 
 namespace {
 	constexpr float SELECTION_OUTLINE_ALPHA = 0.95f;
 }
 
-void SelectionDrawer::draw(PrimitiveRenderer& primitive_renderer, const RenderView& view, const MapCanvas* canvas, const DrawingOptions& options) {
+void SelectionDrawer::draw(PrimitiveRenderer& primitive_renderer, const RenderView& view, const DrawingOptions& options) {
 	if (options.ingame) {
 		return;
 	}

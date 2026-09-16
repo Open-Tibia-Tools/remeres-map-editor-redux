@@ -95,8 +95,6 @@ class MapDrawer {
 
 protected:
 	friend class BrushOverlayDrawer;
-	friend class DragShadowDrawer;
-	friend class FloorDrawer;
 
 public:
 	MapDrawer(MapCanvas* canvas);

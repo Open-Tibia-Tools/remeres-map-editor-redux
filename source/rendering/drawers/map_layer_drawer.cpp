@@ -15,12 +15,10 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
-#include "app/definitions.h"
 #include "rendering/drawers/map_layer_drawer.h"
+#include "app/definitions.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
 #include "rendering/drawers/overlays/grid_drawer.h"
-#include "editor/editor.h"
 #include "live/live_client.h"
 #include "map/map.h"
 #include "map/map_region.h"
@@ -36,16 +34,16 @@
 #include <cmath>
 #include <limits>
 
-MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Editor* editor) :
+MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Map& map) :
 	tile_renderer(tile_renderer),
 	grid_drawer(grid_drawer),
-	editor(editor) {
+	map(map) {
 }
 
 MapLayerDrawer::~MapLayerDrawer() {
 }
 
-void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderFrameContext& ctx, LightBuffer& light_buffer, bool light_collection_only) {
+void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx, LightBuffer& light_buffer, bool light_collection_only) {
 	const RenderView& view = ctx.view;
 	const DrawingOptions& options = ctx.options;
 
@@ -113,8 +111,8 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		if (live && !nd->isVisible(map_z > GROUND_LAYER)) {
 			if (!nd->isRequested(map_z > GROUND_LAYER)) {
 				// Request the node
-				if (editor->live_manager.GetClient()) {
-					editor->live_manager.GetClient()->queryNode(nd_map_x, nd_map_y, map_z > GROUND_LAYER);
+				if (live_client) {
+					live_client->queryNode(nd_map_x, nd_map_y, map_z > GROUND_LAYER);
 				}
 				nd->setRequested(map_z > GROUND_LAYER, true);
 			}
@@ -158,9 +156,9 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		if (live_client) {
 			for (int nd_map_x = nd_start_x; nd_map_x <= nd_end_x; nd_map_x += 4) {
 				for (int nd_map_y = nd_start_y; nd_map_y <= nd_end_y; nd_map_y += 4) {
-					MapNode* nd = editor->map.getLeaf(nd_map_x, nd_map_y);
+					MapNode* nd = map.getLeaf(nd_map_x, nd_map_y);
 					if (!nd) {
-						nd = editor->map.createLeaf(nd_map_x, nd_map_y);
+						nd = map.createLeaf(nd_map_x, nd_map_y);
 						nd->setVisible(false, false);
 					}
 					visitNodeTiles(nd, nd_map_x, nd_map_y, true, visitor);
@@ -174,7 +172,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		int safe_end_x = nd_end_x + visibility_margin_tiles;
 		int safe_end_y = nd_end_y + visibility_margin_tiles;
 
-		editor->map.visitLeaves(safe_start_x, safe_start_y, safe_end_x, safe_end_y, [&](MapNode* nd, int nd_map_x, int nd_map_y) {
+		map.visitLeaves(safe_start_x, safe_start_y, safe_end_x, safe_end_y, [&](MapNode* nd, int nd_map_x, int nd_map_y) {
 			visitNodeTiles(nd, nd_map_x, nd_map_y, false, visitor);
 		});
 	};

@@ -1,18 +1,10 @@
-//////////////////////////////////////////////////////////////////////
-// This file is part of Remere's Map Editor
-//////////////////////////////////////////////////////////////////////
-
-#include "app/main.h"
-
-// glut include removed
-
 #include "rendering/drawers/tiles/floor_drawer.h"
 #include "rendering/drawers/entities/item_drawer.h"
 #include "rendering/drawers/entities/sprite_drawer.h"
 #include "rendering/drawers/entities/creature_drawer.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
-#include "editor/editor.h"
+#include "map/basemap.h"
 #include "map/tile.h"
 
 FloorDrawer::FloorDrawer() {
@@ -21,14 +13,14 @@ FloorDrawer::FloorDrawer() {
 FloorDrawer::~FloorDrawer() {
 }
 
-void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options, Editor& editor) {
+void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options, BaseMap& map) {
 
 	// Draw "transparent higher floor"
 	if (view.floor != 8 && view.floor != 0 && options.transparent_floors) {
 		int map_z = view.floor - 1;
 		for (int map_x = view.start_x; map_x <= view.end_x; map_x++) {
 			for (int map_y = view.start_y; map_y <= view.end_y; map_y++) {
-				Tile* tile = editor.map.getTile(map_x, map_y, map_z);
+				Tile* tile = map.getTile(map_x, map_y, map_z);
 				if (tile) {
 					int offset;
 					if (map_z <= GROUND_LAYER) {
