@@ -1,7 +1,7 @@
 #ifndef RME_RENDERING_CORE_TEXTURE_ATLAS_H_
 #define RME_RENDERING_CORE_TEXTURE_ATLAS_H_
 
-#include "app/main.h"
+#include <glad/glad.h>
 #include "rendering/core/pixel_buffer_object.h"
 #include "rendering/core/gl_resources.h"
 #include <optional>

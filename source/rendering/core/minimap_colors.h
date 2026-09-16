@@ -26,20 +26,20 @@ struct RGBQuad {
 	uint8_t blue;
 	uint8_t reserved;
 
-	RGBQuad(uint8_t r, uint8_t g, uint8_t b) :
+	constexpr RGBQuad(uint8_t r, uint8_t g, uint8_t b) :
 		red(r), green(g), blue(b), reserved(0) { }
 
-	operator uint32_t() {
+	constexpr operator uint32_t() const {
 		return (blue << 0) | (green << 8) | (red << 16);
 	}
 
-	operator bool() {
+	constexpr operator bool() const {
 		return blue != 0 || red != 0 || green != 0;
 	}
 };
 
 // All 256 minimap colors
-static RGBQuad minimap_color[256] = {
+inline constexpr RGBQuad minimap_color[256] = {
 	RGBQuad(0, 0, 0), RGBQuad(0, 0, 51), RGBQuad(0, 0, 102), RGBQuad(0, 0, 153), // 0
 	RGBQuad(0, 0, 204), RGBQuad(0, 0, 255), RGBQuad(0, 51, 0), RGBQuad(0, 51, 51), // 4
 	RGBQuad(0, 51, 102), RGBQuad(0, 51, 153), RGBQuad(0, 51, 204), RGBQuad(0, 51, 255), // 8

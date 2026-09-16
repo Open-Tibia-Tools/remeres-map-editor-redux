@@ -91,11 +91,11 @@ public:
 	// Cleans old & unused textures according to config settings
 	void garbageCollection();
 
-	wxFileName getMetadataFileName() const {
-		return client_version ? client_version->getMetadataPath() : wxFileName();
+	std::filesystem::path getMetadataPath() const {
+		return client_version ? std::filesystem::path(client_version->getMetadataPath().GetFullPath().ToStdString()) : std::filesystem::path();
 	}
-	wxFileName getSpritesFileName() const {
-		return client_version ? client_version->getSpritesPath() : wxFileName();
+	std::filesystem::path getSpritesPath() const {
+		return client_version ? std::filesystem::path(client_version->getSpritesPath().GetFullPath().ToStdString()) : std::filesystem::path();
 	}
 
 	bool hasTransparency() const;

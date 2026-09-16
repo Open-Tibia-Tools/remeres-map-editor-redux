@@ -128,7 +128,7 @@ void LuaScriptManager::registerAPIs() {
 	LuaAPI::registerAll(engine.getState());
 }
 
-static wxColor parseColor(const sol::object& obj, const wxColor& fallback) {
+static Color4u parseColor(const sol::object& obj, const Color4u& fallback) {
 	if (!obj.valid()) {
 		return fallback;
 	}
@@ -151,7 +151,12 @@ static wxColor parseColor(const sol::object& obj, const wxColor& fallback) {
 		if (tbl[4].valid()) {
 			a = tbl.get_or(4, a);
 		}
-		return wxColor(r, g, b, a);
+		return Color4u {
+			static_cast<uint8_t>(r),
+			static_cast<uint8_t>(g),
+			static_cast<uint8_t>(b),
+			static_cast<uint8_t>(a)
+		};
 	}
 
 	return fallback;
@@ -394,7 +399,7 @@ void LuaScriptManager::registerOverlayFunctions(sol::table& ctx, std::shared_ptr
 		cmd.z = opts.get_or(std::string("z"), view.floor);
 		cmd.w = opts.get_or(std::string("w"), 1);
 		cmd.h = opts.get_or(std::string("h"), 1);
-		cmd.color = parseColor(opts["color"], wxColor(255, 255, 255, 128));
+		cmd.color = parseColor(opts["color"], Color4u { 255, 255, 255, 128 });
 		out->push_back(cmd);
 	};
 
@@ -415,7 +420,7 @@ void LuaScriptManager::registerOverlayFunctions(sol::table& ctx, std::shared_ptr
 		cmd.x2 = opts.get_or(std::string("x2"), 0);
 		cmd.y2 = opts.get_or(std::string("y2"), 0);
 		cmd.z2 = opts.get_or(std::string("z2"), view.floor);
-		cmd.color = parseColor(opts["color"], wxColor(255, 255, 255, 200));
+		cmd.color = parseColor(opts["color"], Color4u { 255, 255, 255, 200 });
 		out->push_back(cmd);
 	};
 
@@ -431,7 +436,7 @@ void LuaScriptManager::registerOverlayFunctions(sol::table& ctx, std::shared_ptr
 		cmd.y = opts.get_or(std::string("y"), 0);
 		cmd.z = opts.get_or(std::string("z"), view.floor);
 		cmd.text = opts.get_or(std::string("text"), std::string());
-		cmd.color = parseColor(opts["color"], wxColor(255, 255, 255, 255));
+		cmd.color = parseColor(opts["color"], Color4u { 255, 255, 255, 255 });
 		if (!cmd.text.empty()) {
 			out->push_back(cmd);
 		}
@@ -456,7 +461,7 @@ void LuaScriptManager::registerOverlayFunctions(sol::table& ctx, std::shared_ptr
 
 				// Opacity handling
 				double opacity = opts.get_or(std::string("opacity"), 1.0);
-				cmd.color = wxColor(255, 255, 255, static_cast<uint8_t>(opacity * 255));
+				cmd.color = Color4u { 255, 255, 255, static_cast<uint8_t>(opacity * 255) };
 
 				out->push_back(cmd);
 			}
@@ -518,7 +523,7 @@ void LuaScriptManager::updateMapOverlayHover(int map_x, int map_y, int map_z, in
 			if (result.is<std::string>()) {
 				hasTooltip = true;
 				tooltip.text = result.as<std::string>();
-				tooltip.color = wxColor(255, 255, 255, 255);
+				tooltip.color = Color4u { 255, 255, 255, 255 };
 				tooltip.x = map_x;
 				tooltip.y = map_y;
 				tooltip.z = map_z;
@@ -534,18 +539,18 @@ void LuaScriptManager::updateMapOverlayHover(int map_x, int map_y, int map_z, in
 					highlight.h = h.get_or(std::string("h"), 1);
 					highlight.filled = h.get_or(std::string("filled"), false);
 					highlight.width = h.get_or(std::string("width"), 1);
-					highlight.color = parseColor(h["color"], wxColor(255, 255, 0, 128));
+					highlight.color = parseColor(h["color"], Color4u { 255, 255, 0, 128 });
 					hasHighlight = true;
 				}
 
 				if (table["tooltip"].valid()) {
 					if (table["tooltip"].is<std::string>()) {
 						tooltip.text = table["tooltip"].get<std::string>();
-						tooltip.color = wxColor(255, 255, 255, 255);
+						tooltip.color = Color4u { 255, 255, 255, 255 };
 					} else if (table["tooltip"].is<sol::table>()) {
 						sol::table t = table["tooltip"];
 						tooltip.text = t.get_or(std::string("text"), std::string());
-						tooltip.color = parseColor(t["color"], wxColor(255, 255, 255, 255));
+						tooltip.color = parseColor(t["color"], Color4u { 255, 255, 255, 255 });
 					}
 
 					if (!tooltip.text.empty()) {

@@ -1,7 +1,7 @@
 #ifndef RME_RENDERING_CORE_PIXEL_BUFFER_OBJECT_H_
 #define RME_RENDERING_CORE_PIXEL_BUFFER_OBJECT_H_
 
-#include "app/main.h"
+#include <glad/glad.h>
 #include "rendering/core/sync_handle.h"
 #include "rendering/core/gl_resources.h"
 #include <vector>

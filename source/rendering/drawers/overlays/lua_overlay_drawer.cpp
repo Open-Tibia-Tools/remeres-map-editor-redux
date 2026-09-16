@@ -108,7 +108,7 @@ void LuaOverlayDrawer::Draw(const RenderView& view, const DrawingOptions& option
 	refreshCache(view);
 
 	for (const auto& cmd : cachedCommands) {
-		glm::vec4 color(cmd.color.Red() / 255.0f, cmd.color.Green() / 255.0f, cmd.color.Blue() / 255.0f, cmd.color.Alpha() / 255.0f);
+		glm::vec4 color(cmd.color.r / 255.0f, cmd.color.g / 255.0f, cmd.color.b / 255.0f, cmd.color.a / 255.0f);
 
 		float screenX = 0, screenY = 0;
 
@@ -174,7 +174,7 @@ void LuaOverlayDrawer::DrawUI(NVGcontext* vg, const RenderView& view, const Draw
 	for (const auto& cmd : cachedCommands) {
 		if (cmd.type != MapOverlayCommand::Type::Text) continue;
 
-		glm::vec4 color(cmd.color.Red() / 255.0f, cmd.color.Green() / 255.0f, cmd.color.Blue() / 255.0f, cmd.color.Alpha() / 255.0f);
+		glm::vec4 color(cmd.color.r / 255.0f, cmd.color.g / 255.0f, cmd.color.b / 255.0f, cmd.color.a / 255.0f);
 
 		float screenX = 0, screenY = 0;
 

@@ -1,7 +1,7 @@
 #ifndef RME_RENDERING_CORE_MULTI_DRAW_INDIRECT_RENDERER_H_
 #define RME_RENDERING_CORE_MULTI_DRAW_INDIRECT_RENDERER_H_
 
-#include "app/main.h"
+#include <glad/glad.h>
 #include "rendering/core/gl_resources.h"
 #include <vector>
 #include <cstdint>

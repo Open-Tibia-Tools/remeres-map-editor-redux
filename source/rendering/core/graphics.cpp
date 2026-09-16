@@ -15,8 +15,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
-
 #include "game/sprites.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/sprite_preloader.h"
@@ -25,10 +23,6 @@
 #include <nanovg_gl.h>
 #include "io/filehandle.h"
 #include "app/settings.h"
-
-#include <wx/mstream.h>
-#include <wx/dir.h>
-#include "rendering/utilities/wx_utils.h"
 
 #include "rendering/core/outfit_colors.h"
 #include "rendering/core/outfit_colorizer.h"

@@ -4,7 +4,15 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <wx/colour.h>
+
+struct Color4u {
+	uint8_t r = 255;
+	uint8_t g = 255;
+	uint8_t b = 255;
+	uint8_t a = 255;
+
+	bool operator==(const Color4u&) const = default;
+};
 
 struct MapViewInfo {
 	int start_x = 0;
@@ -46,7 +54,7 @@ struct MapOverlayCommand {
 	uint32_t sprite_id = 0;
 
 	std::string text;
-	wxColor color = wxColor(255, 255, 255, 255);
+	Color4u color = { 255, 255, 255, 255 };
 };
 
 struct MapOverlayTooltip {
@@ -54,7 +62,7 @@ struct MapOverlayTooltip {
 	int y = 0;
 	int z = 0;
 	std::string text;
-	wxColor color = wxColor(255, 255, 255, 255);
+	Color4u color = { 255, 255, 255, 255 };
 };
 
 struct MapOverlayHoverState {

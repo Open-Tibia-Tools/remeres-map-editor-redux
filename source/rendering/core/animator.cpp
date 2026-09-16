@@ -15,7 +15,11 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include <cassert>
+#ifndef ASSERT
+#define ASSERT(x) assert(x)
+#endif
+#include "util/common.h"
 #include "rendering/core/animator.h"
 #include "rendering/core/graphics.h"
 
