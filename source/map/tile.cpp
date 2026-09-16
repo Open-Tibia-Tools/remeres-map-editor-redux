@@ -386,12 +386,11 @@ void Tile::modify() {
 	statflags |= TILESTATE_MODIFIED;
 	minimapColor = INVALID_MINIMAP_COLOR;
 
-	if (!ownedLocation) {
-		if (Editor* editor = g_gui.GetCurrentEditor()) {
-			const Position position = getPosition();
-			if (editor->map.getTile(position) == this) {
-				g_minimap.MarkTileDirty(editor->map, position);
-			}
+	if (Editor* editor = g_gui.GetCurrentEditor()) {
+		const Position position = getPosition();
+		editor->map.getChangeTracker().markTileDirty(position);
+		if (!ownedLocation && editor->map.getTile(position) == this) {
+			g_minimap.MarkTileDirty(editor->map, position);
 		}
 	}
 

@@ -155,6 +155,7 @@ void LiveSocket::sendNode(uint32_t clientId, MapNode* node, int32_t ndx, int32_t
 
 void LiveSocket::receiveFloor(NetworkMessage& message, Editor& editor, Action* action, int32_t ndx, int32_t ndy, int32_t z, MapNode* node, Floor* floor) {
 	Map& map = editor.map;
+	map.getChangeTracker().markNodeDirty(ndx, ndy, z);
 
 	uint16_t tileBits = message.read<uint16_t>();
 	if (tileBits == 0) {

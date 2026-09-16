@@ -24,6 +24,7 @@
 #include "map/map_allocator.h"
 #include "map/tile.h"
 #include "map/spatial_hash_grid.h"
+#include "map/spatial_change_tracker.h"
 #include <unordered_map>
 #include <memory>
 #include <iterator>
@@ -158,6 +159,13 @@ public:
 		return tilecount;
 	}
 
+	SpatialChangeTracker& getChangeTracker() noexcept {
+		return change_tracker;
+	}
+	const SpatialChangeTracker& getChangeTracker() const noexcept {
+		return change_tracker;
+	}
+
 public:
 	MapAllocator allocator;
 
@@ -165,6 +173,7 @@ protected:
 	uint64_t tilecount;
 
 	SpatialHashGrid grid; // The Spatial Hash Grid
+	SpatialChangeTracker change_tracker;
 
 	friend class MapNode;
 	friend class MapProcessor;
