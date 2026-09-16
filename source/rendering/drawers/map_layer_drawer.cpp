@@ -63,7 +63,7 @@ MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_dra
 MapLayerDrawer::~MapLayerDrawer() {
 }
 
-void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx, LightBuffer& light_buffer, bool light_collection_only) {
+void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx) {
 	const RenderView& view = ctx.view;
 	const DrawingOptions& options = ctx.options;
 
@@ -75,34 +75,11 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		? (GROUND_LAYER - map_z) * TILE_SIZE
 		: TILE_SIZE * (view.floor - map_z);
 
-	int nd_start_x = 0;
-	int nd_start_y = 0;
-	int nd_end_x = 0;
-	int nd_end_y = 0;
-	int visibility_margin_pixels = PAINTERS_ALGORITHM_SAFETY_MARGIN_PIXELS;
-
-	if (light_collection_only) {
-		constexpr int light_collection_margin_pixels = TILE_SIZE * 16;
-		visibility_margin_pixels = light_collection_margin_pixels;
-		const int camera_offset = (view.floor <= GROUND_LAYER)
-			? (GROUND_LAYER - view.floor) * TILE_SIZE
-			: 0;
-		const int max_floor_offset = std::max(std::abs(offset - camera_offset), TILE_SIZE * MAP_MAX_LAYER);
-		const int start_x = static_cast<int>(std::floor((view.view_scroll_x - light_collection_margin_pixels - max_floor_offset) / static_cast<float>(TILE_SIZE)));
-		const int start_y = static_cast<int>(std::floor((view.view_scroll_y - light_collection_margin_pixels - max_floor_offset) / static_cast<float>(TILE_SIZE)));
-		const int end_x = static_cast<int>(std::ceil((view.view_scroll_x + view.logical_width + light_collection_margin_pixels + max_floor_offset) / static_cast<float>(TILE_SIZE)));
-		const int end_y = static_cast<int>(std::ceil((view.view_scroll_y + view.logical_height + light_collection_margin_pixels + max_floor_offset) / static_cast<float>(TILE_SIZE)));
-
-		nd_start_x = start_x & ~3;
-		nd_start_y = start_y & ~3;
-		nd_end_x = (end_x & ~3) + 4;
-		nd_end_y = (end_y & ~3) + 4;
-	} else {
-		nd_start_x = view.start_x & ~3;
-		nd_start_y = view.start_y & ~3;
-		nd_end_x = (view.end_x & ~3) + 4;
-		nd_end_y = (view.end_y & ~3) + 4;
-	}
+	const int nd_start_x = view.start_x & ~3;
+	const int nd_start_y = view.start_y & ~3;
+	const int nd_end_x = (view.end_x & ~3) + 4;
+	const int nd_end_y = (view.end_y & ~3) + 4;
+	const int visibility_margin_pixels = PAINTERS_ALGORITHM_SAFETY_MARGIN_PIXELS;
 
 	const int visibility_margin_tiles = std::max(1, (visibility_margin_pixels + TILE_SIZE - 1) / TILE_SIZE);
 
@@ -195,15 +172,8 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		});
 	};
 
-	// OTClient floor-aware light occlusion: capture light count at START of each floor,
-	// so opaque ground tiles can record it during DrawTile to block light from floors below
-	if (draw_lights && !light_collection_only) {
-		light_buffer.SetFloorLightStart();
-	}
-
-	LightBuffer* active_light_buffer = draw_lights ? &light_buffer : nullptr;
 	auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
-		tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, active_light_buffer, light_collection_only, tile_above);
+		tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, nullptr, false, tile_above);
 	};
 
 	visitAllVisibleNodes(drawVisibleTiles);

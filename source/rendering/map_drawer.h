@@ -143,7 +143,7 @@ public:
 	}
 
 private:
-	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, bool light_collection_only = false);
+	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client);
 	bool renderers_initialized = false;
 	Settings::ObserverId settings_observer_id_ = 0;
 };

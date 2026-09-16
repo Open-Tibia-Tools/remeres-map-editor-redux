@@ -30,6 +30,7 @@
 #include "live/live_socket.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
+#include "rendering/core/light_gatherer.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "rendering/io/screen_capture.h"
 #include "rendering/core/gl_resources.h"
@@ -125,6 +126,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	primitive_renderer.setProjectionMatrix(view.projectionMatrix);
 	if (options.isDrawLight()) {
 		light_buffer.Prepare(view);
+		LightGatherer::Gather(editor.map, view, options, light_buffer);
 	}
 
 	DrawBackground();
@@ -203,8 +205,6 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx, const InteractionRenderSt
 
 		if (view.draw_all_visited_floors || map_z >= view.end_z) {
 			DrawMapLayer(sprite_batch, floor_ctx, map_z, live_client);
-		} else if (options.isDrawLight()) {
-			DrawMapLayer(sprite_batch, floor_ctx, map_z, live_client, true);
 		}
 
 		if (secondary_map) {
@@ -263,9 +263,9 @@ bool MapDrawer::hasOverlays() {
 	return false;
 }
 
-void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, bool light_collection_only) {
+void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client) {
 	LiveClient* live_client_service = live_client ? editor.live_manager.GetClient() : nullptr;
-	map_layer_drawer.Draw(batch, map_z, live_client_service, floor_ctx, light_buffer, light_collection_only);
+	map_layer_drawer.Draw(batch, map_z, live_client_service, floor_ctx);
 }
 
 void MapDrawer::DrawLight() {
