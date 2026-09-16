@@ -37,6 +37,8 @@ class SpriteAtlasLUT {
 public:
 	static constexpr GLuint SSBO_BINDING_INDEX = 2;
 	static constexpr size_t DEFAULT_INITIAL_CAPACITY = 65536;
+	static constexpr uint32_t WHITE_PIXEL_LUT_INDEX = 0;
+	static constexpr uint32_t MAX_SUPPORTED_SPRITES = 2000000;
 
 	SpriteAtlasLUT();
 	~SpriteAtlasLUT();

@@ -1,4 +1,4 @@
-﻿//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
@@ -7,14 +7,14 @@
 
 #include "rendering/core/light_buffer.h"
 
-class Map;
+class BaseMap;
 struct RenderView;
 struct DrawingOptions;
 
 class LightGatherer {
 public:
 	static void Gather(
-		const Map& map,
+		const BaseMap& map,
 		const RenderView& view,
 		const DrawingOptions& options,
 		LightBuffer& light_buffer

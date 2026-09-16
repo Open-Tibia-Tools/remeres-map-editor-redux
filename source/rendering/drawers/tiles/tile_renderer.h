@@ -17,7 +17,6 @@ class CreatureDrawer;
 class CreatureNameDrawer;
 class FloorDrawer;
 class MarkerDrawer;
-struct LightBuffer;
 class SpriteBatch;
 class PrimitiveRenderer;
 struct SpritePatterns;
@@ -36,14 +35,13 @@ class TileRenderer {
 public:
 	TileRenderer(ItemDrawer* id, SpriteDrawer* sd, CreatureDrawer* cd, CreatureNameDrawer* cnd, FloorDrawer* fd, MarkerDrawer* md, Editor* ed);
 
-	void DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int in_draw_x = -1, int in_draw_y = -1, LightBuffer* light_buffer = nullptr, bool light_collection_only = false, const Tile* tile_above = nullptr) const;
-	void RegisterGroundLightOcclusion(const TileLocation* location, const RenderView& view, LightBuffer& light_buffer, uint32_t floor_light_start) const;
+	void DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int in_draw_x = -1, int in_draw_y = -1, const Tile* tile_above = nullptr) const;
 
 	// Layered pass rendering
-	void RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, LightBuffer* light_buffer = nullptr, bool light_collection_only = false, const Tile* tile_above = nullptr) const;
-	void RenderStaticItems(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, TileElevationState& elevation, LightBuffer* light_buffer = nullptr, bool light_collection_only = false) const;
-	void RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, TileElevationState& elevation, LightBuffer* light_buffer = nullptr, bool light_collection_only = false) const;
-	void RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, LightBuffer* light_buffer = nullptr, bool light_collection_only = false) const;
+	void RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile* tile_above = nullptr) const;
+	void RenderStaticItems(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, TileElevationState& elevation) const;
+	void RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, TileElevationState& elevation) const;
+	void RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y) const;
 	void RenderDynamicPasses(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile* tile_above = nullptr) const;
 
 private:

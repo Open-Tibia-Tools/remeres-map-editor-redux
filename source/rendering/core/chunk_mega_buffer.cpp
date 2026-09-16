@@ -55,14 +55,14 @@ bool ChunkMegaBuffer::initialize(size_t max_instances) {
 		return false;
 	}
 
-	glGenBuffers(1, &vbo_);
+	glCreateBuffers(1, &vbo_);
 	if (vbo_ == 0) {
 		return false;
 	}
 
 	glNamedBufferStorage(vbo_, static_cast<GLsizeiptr>(total_capacity_ * sizeof(TileInstance)), nullptr, GL_DYNAMIC_STORAGE_BIT);
 
-	glGenVertexArrays(1, &vao_);
+	glCreateVertexArrays(1, &vao_);
 	if (vao_ == 0) {
 		release();
 		return false;

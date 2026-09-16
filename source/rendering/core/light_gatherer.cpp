@@ -4,7 +4,7 @@
 
 #include "rendering/core/light_gatherer.h"
 #include "app/definitions.h"
-#include "map/map.h"
+#include "map/basemap.h"
 #include "map/map_region.h"
 #include "map/tile.h"
 #include "game/item.h"
@@ -37,7 +37,7 @@ namespace {
 }
 
 void LightGatherer::Gather(
-	const Map& map,
+	const BaseMap& map,
 	const RenderView& view,
 	const DrawingOptions& options,
 	LightBuffer& light_buffer

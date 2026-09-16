@@ -329,6 +329,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 		}
 	}
 
+	map.getChangeTracker().markAllDirty();
 	return true;
 }
 

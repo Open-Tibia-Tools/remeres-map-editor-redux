@@ -102,9 +102,18 @@ void SpriteAtlasLUT::ensureCapacity(size_t required_capacity) {
 }
 
 void SpriteAtlasLUT::updateSprite(uint32_t sprite_id, const AtlasRegion& region) {
-	ensureCapacity(sprite_id + 1);
+	uint32_t slot = sprite_id;
+	if (sprite_id == AtlasRegion::INVALID_SENTINEL) {
+		slot = WHITE_PIXEL_LUT_INDEX;
+	}
 
-	SpriteLUTEntry& entry = cpu_entries_[sprite_id];
+	if (slot >= MAX_SUPPORTED_SPRITES) {
+		return;
+	}
+
+	ensureCapacity(static_cast<size_t>(slot) + 1);
+
+	SpriteLUTEntry& entry = cpu_entries_[slot];
 	entry.u_min = region.u_min;
 	entry.v_min = region.v_min;
 	entry.u_max = region.u_max;
@@ -112,19 +121,24 @@ void SpriteAtlasLUT::updateSprite(uint32_t sprite_id, const AtlasRegion& region)
 	entry.layer = static_cast<float>(region.atlas_index);
 	entry.valid = 1.0f;
 
-	dirty_min_id_ = std::min(dirty_min_id_, sprite_id);
-	dirty_max_id_ = std::max(dirty_max_id_, sprite_id);
+	dirty_min_id_ = std::min(dirty_min_id_, slot);
+	dirty_max_id_ = std::max(dirty_max_id_, slot);
 	has_dirty_entries_ = true;
 }
 
 void SpriteAtlasLUT::invalidateSprite(uint32_t sprite_id) {
-	if (sprite_id >= cpu_entries_.size()) {
+	uint32_t slot = sprite_id;
+	if (sprite_id == AtlasRegion::INVALID_SENTINEL) {
+		slot = WHITE_PIXEL_LUT_INDEX;
+	}
+
+	if (slot >= cpu_entries_.size()) {
 		return;
 	}
 
-	cpu_entries_[sprite_id].valid = 0.0f;
-	dirty_min_id_ = std::min(dirty_min_id_, sprite_id);
-	dirty_max_id_ = std::max(dirty_max_id_, sprite_id);
+	cpu_entries_[slot].valid = 0.0f;
+	dirty_min_id_ = std::min(dirty_min_id_, slot);
+	dirty_max_id_ = std::max(dirty_max_id_, slot);
 	has_dirty_entries_ = true;
 }
 

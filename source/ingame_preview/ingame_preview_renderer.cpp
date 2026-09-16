@@ -4,6 +4,7 @@
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/core/light_buffer.h"
+#include "rendering/core/light_gatherer.h"
 #include "rendering/utilities/light_drawer.h"
 #include "rendering/drawers/entities/creature_drawer.h"
 #include "rendering/drawers/entities/creature_name_drawer.h"
@@ -97,10 +98,13 @@ namespace IngamePreview {
 
 		primitive_renderer->setProjectionMatrix(view.projectionMatrix);
 		light_buffer->Clear();
+		const bool draw_lights = options.isDrawLight() && view.zoom <= 10.0f;
 		if (lighting_enabled) {
 			light_buffer->Prepare(view);
+			if (draw_lights) {
+				LightGatherer::Gather(map, view, options, *light_buffer);
+			}
 		}
-		const bool draw_lights = options.isDrawLight() && view.zoom <= 10.0f;
 		if (creature_name_drawer) {
 			creature_name_drawer->clear(); // Clear old labels
 		}
@@ -184,16 +188,8 @@ namespace IngamePreview {
 				});
 			};
 
-			if (draw_lights) {
-				ASSERT(light_buffer->lights.size() <= std::numeric_limits<uint32_t>::max());
-				const uint32_t floor_light_start = static_cast<uint32_t>(light_buffer->lights.size());
-				visitVisibleNodes([&](const TileLocation* location, int, int) {
-					tile_renderer->RegisterGroundLightOcclusion(location, view, *light_buffer, floor_light_start);
-				});
-			}
-
 			visitVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y) {
-				tile_renderer->DrawTile(*sprite_batch, location, ctx, draw_x, draw_y, draw_lights ? light_buffer.get() : nullptr);
+				tile_renderer->DrawTile(*sprite_batch, location, ctx, draw_x, draw_y);
 
 				if (creature_name_drawer && z == camera_pos.z) {
 					if (const Tile* tile = location->get(); tile && tile->creature) {

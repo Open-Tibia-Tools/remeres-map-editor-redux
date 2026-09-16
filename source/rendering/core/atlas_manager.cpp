@@ -20,6 +20,10 @@ bool AtlasManager::ensureInitialized() {
 
 	spdlog::info("AtlasManager: Texture array initialized ({}x{}, {} initial layers)", TextureAtlas::ATLAS_SIZE, TextureAtlas::ATLAS_SIZE, INITIAL_LAYERS);
 
+	if (!lut_.isValid()) {
+		lut_.initialize(65536);
+	}
+
 	// Ensure white pixel exists (ID AtlasRegion::INVALID_SENTINEL)
 	std::vector<uint8_t> white_data(TextureAtlas::BASE_SLOT_SIZE * TextureAtlas::BASE_SLOT_SIZE * 4, 255);
 	white_pixel_cache_ = addSprite(WHITE_PIXEL_ID, white_data.data(), TextureAtlas::BASE_SLOT_SIZE, TextureAtlas::BASE_SLOT_SIZE);
@@ -27,10 +31,6 @@ bool AtlasManager::ensureInitialized() {
 	if (!white_pixel_cache_) {
 		spdlog::error("AtlasManager: Failed to register white pixel sprite");
 		return false;
-	}
-
-	if (!lut_.isValid()) {
-		lut_.initialize(65536);
 	}
 
 	return true;

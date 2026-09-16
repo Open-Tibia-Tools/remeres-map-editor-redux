@@ -13,6 +13,8 @@
 #include "map/map.h"
 #include "map/tile.h"
 #include "game/item.h"
+#include "rendering/utilities/pattern_calculator.h"
+#include "rendering/drawers/tiles/tile_color_calculator.h"
 #include <spdlog/spdlog.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
@@ -193,11 +195,24 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				if (git) {
 					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
 					if (gspr && !gspr->isAnimated()) {
-						const AtlasRegion* reg = gspr->getCachedDefaultRegion();
+						const SpritePatterns g_pat = PatternCalculator::Calculate(gspr, git, tile->ground.get(), tile, Position(x, y, z));
+						const AtlasRegion* reg = nullptr;
+						if (gspr->is_simple && g_pat.subtype == -1 && g_pat.x == 0 && g_pat.y == 0 && g_pat.z == 0) {
+							reg = gspr->getCachedDefaultRegion();
+						}
 						if (!reg) {
-							reg = gspr->getAtlasRegion(0, 0, 0, -1, 0, 0, 0, 0);
+							reg = gspr->getAtlasRegion(0, 0, 0, g_pat.subtype, g_pat.x, g_pat.y, g_pat.z, 0);
 						}
 						if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
+							uint8_t gr = 255, gg = 255, gb = 255;
+							if (tile->ground->isSelected()) {
+								gr >>= 1;
+								gg >>= 1;
+								gb >>= 1;
+							} else if (!ctx.options.show_as_minimap && (ctx.options.hasTileColorModifiers() || loc->getSpawnCount() > 0)) {
+								TileColorCalculator::Calculate(tile, ctx.options, ctx.current_house_id, loc->getSpawnCount(), gr, gg, gb);
+							}
+
 							TileInstance inst;
 							inst.x = static_cast<float>(x * 32);
 							inst.y = static_cast<float>(y * 32);
@@ -205,9 +220,9 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 							inst.h = static_cast<float>(reg->pixel_height);
 							inst.sprite_id = reg->debug_sprite_id;
 							inst.flags = 0;
-							inst.r = 1.0f;
-							inst.g = 1.0f;
-							inst.b = 1.0f;
+							inst.r = static_cast<float>(gr) * (1.0f / 255.0f);
+							inst.g = static_cast<float>(gg) * (1.0f / 255.0f);
+							inst.b = static_cast<float>(gb) * (1.0f / 255.0f);
 							inst.a = 1.0f;
 							bake_buffer_.push_back(inst);
 						}
@@ -226,7 +241,13 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					continue;
 				}
 				GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
-				if (!ispr || ispr->isAnimated()) {
+				if (!ispr) {
+					continue;
+				}
+				if (ispr->isAnimated()) {
+					if (ispr->hasElevation()) {
+						elev += ispr->draw_height;
+					}
 					continue;
 				}
 
@@ -234,11 +255,30 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				const int item_x = x * 32 - elev - draw_offset_x;
 				const int item_y = y * 32 - elev - draw_offset_y;
 
+				const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z));
+
+				uint8_t r = 255, g = 255, b = 255, a = 255;
+				if (item->isSelected()) {
+					r >>= 1;
+					g >>= 1;
+					b >>= 1;
+				} else if (ctx.options.extended_house_shader && ctx.options.show_houses && tile->isHouseTile()) {
+					TileColorCalculator::GetHouseColor(tile->getHouseID(), r, g, b);
+				}
+
+				const float rf = static_cast<float>(r) * (1.0f / 255.0f);
+				const float gf = static_cast<float>(g) * (1.0f / 255.0f);
+				const float bf = static_cast<float>(b) * (1.0f / 255.0f);
+				const float af = static_cast<float>(a) * (1.0f / 255.0f);
+
 				const bool is_simple_sprite = (ispr->width == 1 && ispr->height == 1 && ispr->layers == 1);
 				if (is_simple_sprite) {
-					const AtlasRegion* reg = ispr->getCachedDefaultRegion();
+					const AtlasRegion* reg = nullptr;
+					if (ispr->is_simple && i_pat.subtype == -1 && i_pat.x == 0 && i_pat.y == 0 && i_pat.z == 0) {
+						reg = ispr->getCachedDefaultRegion();
+					}
 					if (!reg) {
-						reg = ispr->getAtlasRegion(0, 0, 0, -1, 0, 0, 0, 0);
+						reg = ispr->getAtlasRegion(0, 0, 0, i_pat.subtype, i_pat.x, i_pat.y, i_pat.z, 0);
 					}
 					if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
 						TileInstance inst;
@@ -248,20 +288,20 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 						inst.h = static_cast<float>(reg->pixel_height);
 						inst.sprite_id = reg->debug_sprite_id;
 						inst.flags = 0;
-						inst.r = 1.0f;
-						inst.g = 1.0f;
-						inst.b = 1.0f;
-						inst.a = 1.0f;
+						inst.r = rf;
+						inst.g = gf;
+						inst.b = bf;
+						inst.a = af;
 						bake_buffer_.push_back(inst);
 					}
 				} else {
-					const auto composite_metrics = ispr->getPlainLayoutMetrics(-1, 0, 0, 0, 0);
+					const auto composite_metrics = ispr->getPlainLayoutMetrics(i_pat.subtype, i_pat.x, i_pat.y, i_pat.z, 0);
 					int x_offset = 0;
 					for (int cx = 0; cx < composite_metrics.num_columns; ++cx) {
 						int y_offset = 0;
 						for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
 							for (int cf = 0; cf < ispr->layers; ++cf) {
-								const AtlasRegion* reg = ispr->getAtlasRegion(cx, cy, cf, -1, 0, 0, 0, 0);
+								const AtlasRegion* reg = ispr->getAtlasRegion(cx, cy, cf, i_pat.subtype, i_pat.x, i_pat.y, i_pat.z, 0);
 								if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
 									TileInstance inst;
 									inst.x = static_cast<float>(item_x - x_offset);
@@ -270,10 +310,10 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 									inst.h = static_cast<float>(reg->pixel_height);
 									inst.sprite_id = reg->debug_sprite_id;
 									inst.flags = 0;
-									inst.r = 1.0f;
-									inst.g = 1.0f;
-									inst.b = 1.0f;
-									inst.a = 1.0f;
+									inst.r = rf;
+									inst.g = gf;
+									inst.b = bf;
+									inst.a = af;
 									bake_buffer_.push_back(inst);
 								}
 							}

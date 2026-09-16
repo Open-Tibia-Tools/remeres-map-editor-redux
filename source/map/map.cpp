@@ -97,6 +97,7 @@ bool Map::open(const std::string& file) {
 	}
 
 	has_changed = false;
+	change_tracker.markAllDirty();
 
 	wxFileName fn = wxstr(file);
 	filename = fn.GetFullPath().mb_str(wxConvUTF8);

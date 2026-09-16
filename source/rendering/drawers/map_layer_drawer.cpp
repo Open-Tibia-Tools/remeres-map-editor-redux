@@ -190,7 +190,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 	} else {
 		// Classic full-tile traversal fallback
 		auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
-			tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, nullptr, false, tile_above);
+			tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
 		};
 		visitAllVisibleNodes(drawVisibleTiles);
 	}

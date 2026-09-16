@@ -24,40 +24,14 @@
 #include "rendering/drawers/entities/creature_name_drawer.h"
 #include "rendering/drawers/tiles/floor_drawer.h"
 #include "rendering/drawers/overlays/marker_drawer.h"
-#include "rendering/core/light_buffer.h"
 #include "rendering/core/sprite_preloader.h"
 #include "rendering/utilities/pattern_calculator.h"
 
+#include <algorithm>
 #include <ranges>
 
 TileRenderer::TileRenderer(ItemDrawer* id, SpriteDrawer* sd, CreatureDrawer* cd, CreatureNameDrawer* cnd, FloorDrawer* fd, MarkerDrawer* md, Editor* ed) :
 	item_drawer(id), sprite_drawer(sd), creature_drawer(cd), floor_drawer(fd), marker_drawer(md), creature_name_drawer(cnd), editor(ed) {
-}
-
-namespace {
-	[[nodiscard]] int projectedFloorOffsetTiles(const RenderView& view, int map_z) {
-		if (map_z <= GROUND_LAYER) {
-			return GROUND_LAYER - map_z;
-		}
-		return view.floor - map_z;
-	}
-
-	[[nodiscard]] std::pair<int, int> projectedTilePosition(const RenderView& view, const Position& position) {
-		const int offset_tiles = projectedFloorOffsetTiles(view, position.z);
-		return { position.x - offset_tiles, position.y - offset_tiles };
-	}
-
-	[[nodiscard]] bool tileCarriesTranslucentLight(const Tile* tile) {
-		if (!tile) {
-			return false;
-		}
-		if (tile->ground && (tile->ground->isTranslucent() || tile->ground->hasLensHelp())) {
-			return true;
-		}
-		return std::ranges::any_of(tile->items, [](const std::unique_ptr<Item>& item) {
-			return item && (item->isTranslucent() || item->hasLensHelp());
-		});
-	}
 }
 
 static DrawColor invalidTileOverlayColor(InvalidOTBMItemMarkerColor markerColor, bool selected) {
@@ -78,21 +52,7 @@ static DrawColor invalidTileOverlayColor(InvalidOTBMItemMarkerColor markerColor,
 	return DrawColor(red, green, blue, 171);
 }
 
-void TileRenderer::RegisterGroundLightOcclusion(const TileLocation* location, const RenderView& view, LightBuffer& light_buffer, uint32_t floor_light_start) const {
-	if (!location) {
-		return;
-	}
-
-	const Tile* tile = location->get();
-	if (!tile || !tile->ground || !tile->ground->blocksLightFromBelow()) {
-		return;
-	}
-
-	const auto [tile_x, tile_y] = projectedTilePosition(view, location->getPosition());
-	light_buffer.SetFieldBrightness(tile_x, tile_y, floor_light_start);
-}
-
-void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, LightBuffer* light_buffer, bool light_collection_only, const Tile* tile_above) const {
+void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile* tile_above) const {
 	if (!location) {
 		return;
 	}
@@ -107,32 +67,6 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 	const auto& position = location->getPosition();
 	const int map_z = position.z;
 
-	if (light_buffer) {
-		const auto [projected_tile_x, projected_tile_y] = projectedTilePosition(view, position);
-
-		if (!light_collection_only && tile->ground && tile->ground->blocksLightFromBelow()) {
-			light_buffer->SetFieldBrightness(projected_tile_x, projected_tile_y, light_buffer->current_floor_light_start);
-		}
-
-		// Translucent light: when on floor 8 (GROUND_LAYER + 1), check if floor 7 above has translucent items
-		// OTClient: light seeps through translucent ground (grates, windows) from floor 7 to floor 8
-		if (position.z == GROUND_LAYER + 1) {
-			const Tile* above_tile = tile_above;
-			if (!above_tile && editor) {
-				Position above_position = position;
-				--above_position.z;
-				above_tile = editor->map.getTile(above_position);
-			}
-			if (tileCarriesTranslucentLight(above_tile)) {
-				// Emit faint warm white light (intensity=1, color=215) matching OTClient
-				light_buffer->AddTileLight(projected_tile_x, projected_tile_y, SpriteLight {
-					.intensity = 1,
-					.color = 215
-				});
-			}
-		}
-	}
-
 	ItemDefinitionView ground_it;
 	if (tile->ground) {
 		ground_it = tile->ground->getDefinition();
@@ -140,22 +74,6 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 
 	const bool hidden_invalid_ground = tile->ground && tile->ground->isInvalidOTBMItem() && !options.show_invalid_tiles;
 	const bool unresolved_invalid_ground = tile->ground && tile->ground->isInvalidOTBMItem() && !ground_it;
-
-	if (light_collection_only) {
-		if (light_buffer && tile->ground && ground_it && !hidden_invalid_ground && !unresolved_invalid_ground && tile->ground->hasLight()) {
-			int ground_draw_x = draw_x;
-			int ground_draw_y = draw_y;
-			BlitItemParams params(position, tile->ground.get(), options);
-			params.tile = tile;
-			params.item_definition = ground_it;
-			params.light_collection_only = true;
-			params.light_buffer = light_buffer;
-			params.view = &view;
-			params.ctx = &ctx;
-			item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, ground_draw_x, ground_draw_y, params);
-		}
-		return;
-	}
 
 	bool as_minimap = options.show_as_minimap;
 	bool only_colors = as_minimap || options.show_only_colors;
@@ -196,7 +114,6 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 				params.green = g;
 				params.blue = b;
 				params.patterns = &patterns;
-				params.light_buffer = light_buffer;
 				params.view = &view;
 				params.ctx = &ctx;
 				item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
@@ -207,7 +124,6 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 				params.red = r;
 				params.green = g;
 				params.blue = b;
-				params.light_buffer = light_buffer;
 				params.view = &view;
 				params.ctx = &ctx;
 				item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
@@ -233,7 +149,7 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 	}
 }
 
-void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, TileElevationState& elevation, LightBuffer* light_buffer, bool light_collection_only) const {
+void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, TileElevationState& elevation) const {
 	if (!location) {
 		return;
 	}
@@ -245,47 +161,12 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 	const auto& view = ctx.view;
 	const auto& options = ctx.options;
 	const auto& position = location->getPosition();
-	const int map_z = position.z;
 	const bool as_minimap = options.show_as_minimap;
 	const bool only_colors = as_minimap || options.show_only_colors;
 	if (only_colors) {
 		return;
 	}
 	if (view.zoom >= 10.0 && options.hide_items_when_zoomed) {
-		return;
-	}
-
-	if (light_collection_only) {
-		if (!light_buffer) {
-			return;
-		}
-		BlitItemParams params(position, nullptr, options);
-		params.tile = tile;
-		params.light_collection_only = true;
-		params.light_buffer = light_buffer;
-		params.view = &view;
-		params.ctx = &ctx;
-
-		for (const auto& item : tile->items) {
-			if (!item->hasLight()) {
-				continue;
-			}
-			const ItemDefinitionView it = item->getDefinition();
-			if (item->isInvalidOTBMItem() && (!options.show_invalid_tiles || !it)) {
-				continue;
-			}
-
-			GameSprite* sprite = it ? ctx.gfx.getGameSprite(it.clientId()) : nullptr;
-			if (sprite && sprite->isAnimated()) {
-				continue; // Processed in RenderAnimatedItems
-			}
-
-			int item_draw_x = elevation.current_draw_x;
-			int item_draw_y = elevation.current_draw_y;
-			params.item = item.get();
-			params.item_definition = it;
-			item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, item_draw_x, item_draw_y, params);
-		}
 		return;
 	}
 
@@ -314,7 +195,6 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 	BlitItemParams item_params(position, nullptr, options);
 	item_params.tile = tile;
 	item_params.ctx = &ctx;
-	item_params.light_buffer = light_buffer;
 	item_params.view = &view;
 
 	for (const auto& item : tile->items) {
@@ -325,6 +205,10 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 
 		GameSprite* sprite = it ? ctx.gfx.getGameSprite(it.clientId()) : nullptr;
 		if (sprite && sprite->isAnimated()) {
+			if (sprite->hasElevation()) {
+				elevation.current_draw_x -= sprite->draw_height;
+				elevation.current_draw_y -= sprite->draw_height;
+			}
 			continue; // Processed in RenderAnimatedItems
 		}
 
@@ -355,7 +239,7 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 	}
 }
 
-void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, TileElevationState& elevation, LightBuffer* light_buffer, bool light_collection_only) const {
+void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, TileElevationState& elevation) const {
 	if (!location) {
 		return;
 	}
@@ -373,40 +257,6 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 		return;
 	}
 	if (view.zoom >= 10.0 && options.hide_items_when_zoomed) {
-		return;
-	}
-
-	if (light_collection_only) {
-		if (!light_buffer) {
-			return;
-		}
-		BlitItemParams params(position, nullptr, options);
-		params.tile = tile;
-		params.light_collection_only = true;
-		params.light_buffer = light_buffer;
-		params.view = &view;
-		params.ctx = &ctx;
-
-		for (const auto& item : tile->items) {
-			if (!item->hasLight()) {
-				continue;
-			}
-			const ItemDefinitionView it = item->getDefinition();
-			if (item->isInvalidOTBMItem() && (!options.show_invalid_tiles || !it)) {
-				continue;
-			}
-
-			GameSprite* sprite = it ? ctx.gfx.getGameSprite(it.clientId()) : nullptr;
-			if (!sprite || !sprite->isAnimated()) {
-				continue; // Only animated items here
-			}
-
-			int item_draw_x = elevation.current_draw_x;
-			int item_draw_y = elevation.current_draw_y;
-			params.item = item.get();
-			params.item_definition = it;
-			item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, item_draw_x, item_draw_y, params);
-		}
 		return;
 	}
 
@@ -435,7 +285,6 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 	BlitItemParams item_params(position, nullptr, options);
 	item_params.tile = tile;
 	item_params.ctx = &ctx;
-	item_params.light_buffer = light_buffer;
 	item_params.view = &view;
 
 	for (const auto& item : tile->items) {
@@ -446,6 +295,10 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 
 		GameSprite* sprite = it ? ctx.gfx.getGameSprite(it.clientId()) : nullptr;
 		if (!sprite || !sprite->isAnimated()) {
+			if (sprite && sprite->hasElevation()) {
+				elevation.current_draw_x -= sprite->draw_height;
+				elevation.current_draw_y -= sprite->draw_height;
+			}
 			continue; // Only animated items in this pass
 		}
 
@@ -474,7 +327,7 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 	}
 }
 
-void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, LightBuffer* light_buffer, bool light_collection_only) const {
+void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y) const {
 	if (!location) {
 		return;
 	}
@@ -486,21 +339,6 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 	const auto& view = ctx.view;
 	const auto& options = ctx.options;
 	const auto& position = location->getPosition();
-	const int map_z = position.z;
-
-	if (light_collection_only) {
-		if (light_buffer && tile->creature && options.show_creatures) {
-			creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
-				.map_pos = position,
-				.transient_selection_bounds = options.transient_selection_bounds,
-				.light_buffer = light_buffer,
-				.view = &view,
-				.light_collection_only = true,
-				.ctx = &ctx
-			});
-		}
-		return;
-	}
 
 	const bool as_minimap = options.show_as_minimap;
 	const bool only_colors = as_minimap || options.show_only_colors;
@@ -512,7 +350,6 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 				creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
 					.map_pos = position,
 					.transient_selection_bounds = options.transient_selection_bounds,
-					.light_buffer = light_buffer,
 					.view = &view,
 					.ctx = &ctx
 				});
@@ -563,7 +400,7 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 	}
 }
 
-void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int in_draw_x, int in_draw_y, LightBuffer* light_buffer, bool light_collection_only, const Tile* tile_above) const {
+void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int in_draw_x, int in_draw_y, const Tile* tile_above) const {
 	if (!location) {
 		return;
 	}
@@ -591,12 +428,15 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 		}
 	}
 
-	RenderStaticTerrain(sprite_batch, location, ctx, draw_x, draw_y, light_buffer, light_collection_only, tile_above);
+	RenderStaticTerrain(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
 
-	TileElevationState elevation { draw_x, draw_y };
-	RenderStaticItems(sprite_batch, location, ctx, elevation, light_buffer, light_collection_only);
-	RenderAnimatedItems(sprite_batch, location, ctx, elevation, light_buffer, light_collection_only);
-	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, light_buffer, light_collection_only);
+	TileElevationState static_elevation { draw_x, draw_y };
+	RenderStaticItems(sprite_batch, location, ctx, static_elevation);
+
+	TileElevationState animated_elevation { draw_x, draw_y };
+	RenderAnimatedItems(sprite_batch, location, ctx, animated_elevation);
+
+	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y);
 }
 
 void TileRenderer::RenderDynamicPasses(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile* tile_above) const {
@@ -619,30 +459,12 @@ void TileRenderer::RenderDynamicPasses(SpriteBatch& sprite_batch, const TileLoca
 		if (git) {
 			GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
 			if (gspr && gspr->isAnimated()) {
-				RenderStaticTerrain(sprite_batch, location, ctx, draw_x, draw_y, nullptr, false, tile_above);
+				RenderStaticTerrain(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
 			}
 		}
 	}
 
-	TileElevationState elevation { draw_x, draw_y };
-	// Accumulate elevation of static items before animated items
-	if (!tile->items.empty()) {
-		for (const auto& item : tile->items) {
-			if (!item || item->isInvalidOTBMItem()) {
-				continue;
-			}
-			const ItemDefinitionView it = item->getDefinition();
-			if (!it) {
-				continue;
-			}
-			GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
-			if (ispr && !ispr->isAnimated() && ispr->hasElevation()) {
-				elevation.current_draw_x -= ispr->draw_height;
-				elevation.current_draw_y -= ispr->draw_height;
-			}
-		}
-	}
-
-	RenderAnimatedItems(sprite_batch, location, ctx, elevation, nullptr, false);
-	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, nullptr, false);
+	TileElevationState animated_elevation { draw_x, draw_y };
+	RenderAnimatedItems(sprite_batch, location, ctx, animated_elevation);
+	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y);
 }
