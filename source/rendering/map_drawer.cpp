@@ -31,13 +31,14 @@
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
 #include "rendering/core/light_gatherer.h"
+#include "rendering/ui/inspection_badge_collector.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "rendering/io/screen_capture.h"
 #include "rendering/core/gl_resources.h"
 
 MapDrawer::MapDrawer(Editor& editor) :
 	editor(editor),
-	tile_renderer(&item_drawer, &sprite_drawer, &creature_drawer, &creature_name_drawer, &floor_drawer, &marker_drawer, &tooltip_drawer, &editor),
+	tile_renderer(&item_drawer, &sprite_drawer, &creature_drawer, &creature_name_drawer, &floor_drawer, &marker_drawer, &editor),
 	map_layer_drawer(&tile_renderer, &grid_drawer, editor.map),
 	lua_overlay_drawer(editor) {
 
@@ -223,7 +224,10 @@ void MapDrawer::DrawGrid(const ViewBounds& bounds, const AtlasManager& atlas) {
 }
 
 void MapDrawer::DrawTooltips(NVGcontext* vg) {
-	tooltip_drawer.draw(vg, view);
+	if (options.show_tooltips) {
+		InspectionBadgeCollector::Collect(editor.map, view, options, tooltip_drawer, editor);
+		tooltip_drawer.draw(vg, view);
+	}
 }
 
 void MapDrawer::DrawHookIndicators(NVGcontext* vg) {
@@ -248,7 +252,7 @@ bool MapDrawer::hasOverlays() {
 	if (options.show_creatures && !creature_name_drawer.empty()) {
 		return true;
 	}
-	if (options.show_tooltips && !tooltip_drawer.empty()) {
+	if (options.show_tooltips) {
 		return true;
 	}
 	if (options.show_hooks && !hook_indicator_drawer.empty()) {

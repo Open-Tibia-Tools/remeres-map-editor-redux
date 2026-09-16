@@ -24,15 +24,14 @@
 #include "rendering/drawers/entities/creature_name_drawer.h"
 #include "rendering/drawers/tiles/floor_drawer.h"
 #include "rendering/drawers/overlays/marker_drawer.h"
-#include "rendering/ui/tooltip_drawer.h"
 #include "rendering/core/light_buffer.h"
 #include "rendering/core/sprite_preloader.h"
 #include "rendering/utilities/pattern_calculator.h"
 
 #include <ranges>
 
-TileRenderer::TileRenderer(ItemDrawer* id, SpriteDrawer* sd, CreatureDrawer* cd, CreatureNameDrawer* cnd, FloorDrawer* fd, MarkerDrawer* md, TooltipDrawer* td, Editor* ed) :
-	item_drawer(id), sprite_drawer(sd), creature_drawer(cd), floor_drawer(fd), marker_drawer(md), tooltip_drawer(td), creature_name_drawer(cnd), editor(ed) {
+TileRenderer::TileRenderer(ItemDrawer* id, SpriteDrawer* sd, CreatureDrawer* cd, CreatureNameDrawer* cnd, FloorDrawer* fd, MarkerDrawer* md, Editor* ed) :
+	item_drawer(id), sprite_drawer(sd), creature_drawer(cd), floor_drawer(fd), marker_drawer(md), creature_name_drawer(cnd), editor(ed) {
 }
 
 namespace {
@@ -77,126 +76,6 @@ static DrawColor invalidTileOverlayColor(InvalidOTBMItemMarkerColor markerColor,
 	}
 
 	return DrawColor(red, green, blue, 171);
-}
-
-// Helper function to populate tooltip data from an item (in-place)
-static bool FillItemTooltipData(TooltipData& data, Item* item, const ItemDefinitionView& it, const Position& pos, bool isHouseTile, float zoom) {
-	if (!item) {
-		return false;
-	}
-
-	const uint16_t id = item->getID();
-	if (id < 100) {
-		return false;
-	}
-
-	uint16_t unique = 0;
-	uint16_t action = 0;
-	std::string_view text;
-	std::string_view description;
-	uint8_t doorId = 0;
-	Position destination;
-	bool hasContent = false;
-
-	bool is_complex = item->isComplex();
-	// Early exit for simple items
-	// isTooltipable is cached (isContainer || isDoor || isTeleport)
-	if (!is_complex && !it.isTooltipable()) {
-		return false;
-	}
-
-	bool is_container = it.isContainer();
-	bool is_door = isHouseTile && item->isDoor();
-	bool is_teleport = item->isTeleport();
-
-	if (is_complex) {
-		unique = item->getUniqueID();
-		action = item->getActionID();
-		text = item->getText();
-		description = item->getDescription();
-	}
-
-	// Check if it's a door
-	if (is_door) {
-		if (const Door* door = item->asDoor()) {
-			if (door->isRealDoor()) {
-				doorId = door->getDoorID();
-			}
-		}
-	}
-
-	// Check if it's a teleport
-	if (is_teleport) {
-		Teleport* tp = static_cast<Teleport*>(item);
-		if (tp->hasDestination()) {
-			destination = tp->getDestination();
-		}
-	}
-
-	// Check if container has content
-	if (is_container) {
-		if (const Container* container = item->asContainer()) {
-			hasContent = container->getItemCount() > 0;
-		}
-	}
-
-	// Only create tooltip if there's something to show
-	if (unique == 0 && action == 0 && doorId == 0 && text.empty() && description.empty() && destination.x == 0 && !hasContent) {
-		return false;
-	}
-
-	// Get item name from database
-	std::string_view itemName = it.name();
-	if (itemName.empty()) {
-		itemName = "Item";
-	}
-
-	data.pos = pos;
-	data.itemId = id;
-	data.itemName = itemName; // Assign string_view to string_view (no copy)
-
-	data.actionId = action;
-	data.uniqueId = unique;
-	data.doorId = doorId;
-	data.text = text;
-	data.description = description;
-	data.destination = destination;
-
-	// Populate container items
-	if (it.isContainer() && zoom <= 1.5f) {
-		if (const Container* container = item->asContainer()) {
-			// Set capacity for rendering empty slots
-			data.containerCapacity = static_cast<uint8_t>(container->getVolume());
-
-			const auto& items = container->getVector();
-			data.containerItems.clear();
-			// Reserve only what we need (capped at 32)
-			data.containerItems.reserve(std::min(items.size(), size_t(32)));
-			for (const auto& subItem : items) {
-				if (subItem) {
-					ContainerItem ci;
-					ci.id = subItem->getID();
-					ci.subtype = subItem->getSubtype();
-					ci.count = subItem->getCount();
-					// Sanity check for count
-					if (ci.count == 0) {
-						ci.count = 1;
-					}
-
-					data.containerItems.push_back(ci);
-
-					// Limit preview items to avoid massive tooltips
-					if (data.containerItems.size() >= 32) {
-						break;
-					}
-				}
-			}
-		}
-	}
-
-	data.updateCategory();
-
-	return true;
 }
 
 void TileRenderer::RegisterGroundLightOcclusion(const TileLocation* location, const RenderView& view, LightBuffer& light_buffer, uint32_t floor_light_start) const {
@@ -342,16 +221,6 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 
 	const bool is_house_tile = tile->isHouseTile();
 
-	// Ground tooltip (one per item)
-	if (options.show_tooltips && map_z == view.floor && tile->ground && ground_it) {
-		TooltipData& groundData = tooltip_drawer->requestTooltipData();
-		if (FillItemTooltipData(groundData, tile->ground.get(), ground_it, position, is_house_tile, view.zoom)) {
-			if (groundData.hasVisibleFields()) {
-				tooltip_drawer->commitTooltip();
-			}
-		}
-	}
-
 	// Draw helper border for selected house tiles
 	// Only draw on the current floor (grid)
 	if (options.show_houses && map_z == view.floor && is_house_tile && static_cast<int>(tile->getHouseID()) == current_house_id) {
@@ -442,8 +311,6 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 		TileColorCalculator::Calculate(tile, options, ctx.current_house_id, location->getSpawnCount(), r, g, b);
 	}
 
-	bool process_tooltips = options.show_tooltips && map_z == view.floor;
-
 	BlitItemParams item_params(position, nullptr, options);
 	item_params.tile = tile;
 	item_params.ctx = &ctx;
@@ -454,15 +321,6 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 		const ItemDefinitionView it = item->getDefinition();
 		if (item->isInvalidOTBMItem() && (!options.show_invalid_tiles || !it)) {
 			continue;
-		}
-
-		if (process_tooltips) {
-			TooltipData& itemData = tooltip_drawer->requestTooltipData();
-			if (FillItemTooltipData(itemData, item.get(), it, position, is_house_tile, view.zoom)) {
-				if (itemData.hasVisibleFields()) {
-					tooltip_drawer->commitTooltip();
-				}
-			}
 		}
 
 		GameSprite* sprite = it ? ctx.gfx.getGameSprite(it.clientId()) : nullptr;
@@ -691,14 +549,10 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 		}
 
 		if (view.zoom < 10.0) {
-			const bool need_waypoint = (options.show_tooltips && map_z == view.floor) || (view.zoom < 10.0 && !options.ingame && options.show_waypoints);
+			const bool need_waypoint = !options.ingame && options.show_waypoints;
 			const Waypoint* waypoint = nullptr;
 			if (need_waypoint && location->getWaypointCount() > 0 && editor) {
 				waypoint = editor->map.waypoints.getWaypoint(location);
-			}
-
-			if (options.show_tooltips && waypoint && map_z == view.floor) {
-				tooltip_drawer->addWaypointTooltip(position, waypoint->name);
 			}
 
 			// markers (waypoint, house exit, town temple, spawn)
