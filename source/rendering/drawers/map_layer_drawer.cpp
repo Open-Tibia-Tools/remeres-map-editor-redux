@@ -33,6 +33,26 @@
 
 #include <cmath>
 #include <limits>
+#include <array>
+
+namespace {
+	struct DiagonalTileIndex {
+		uint8_t dx;
+		uint8_t dy;
+		uint8_t index; // dx * 4 + dy
+	};
+
+	// 4x4 diagonal order (d = dx + dy from 0 to 6, traversing North-West to South-East)
+	constexpr std::array<DiagonalTileIndex, 16> kDiagonalTileIndices = {{
+		{0, 0, 0},
+		{1, 0, 4}, {0, 1, 1},
+		{2, 0, 8}, {1, 1, 5}, {0, 2, 2},
+		{3, 0, 12}, {2, 1, 9}, {1, 2, 6}, {0, 3, 3},
+		{3, 1, 13}, {2, 2, 10}, {1, 3, 7},
+		{3, 2, 14}, {2, 3, 11},
+		{3, 3, 15}
+	}};
+}
 
 MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Map& map) :
 	tile_renderer(tile_renderer),
@@ -129,26 +149,23 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		}
 
 		Floor* floor_above = (map_z == GROUND_LAYER + 1) ? nd->getFloor(GROUND_LAYER) : nullptr;
-		TileLocation* location = floor->locs.data();
-		TileLocation* loc_above = floor_above ? floor_above->locs.data() : nullptr;
-		int draw_x_base = node_draw_x;
-		for (int map_x = 0; map_x < 4; ++map_x, draw_x_base += TILE_SIZE) {
-			int draw_y = node_draw_y;
-			for (int map_y = 0; map_y < 4; ++map_y, ++location, draw_y += TILE_SIZE) {
-				const Tile* tile_above = loc_above ? (loc_above++)->get() : nullptr;
-
-				if (!location->get()) {
-					continue;
-				}
-
-				// Culling: Skip tiles that are far outside the viewport (fast integer AABB).
-				if (!fully_inside && (draw_x_base < min_visible_draw_x || draw_x_base > max_visible_draw_x ||
-					draw_y < min_visible_draw_y || draw_y > max_visible_draw_y)) {
-					continue;
-				}
-
-				visitor(location, draw_x_base, draw_y, tile_above);
+		for (const auto& [dx, dy, idx] : kDiagonalTileIndices) {
+			TileLocation* location = &floor->locs[idx];
+			if (!location->get()) {
+				continue;
 			}
+
+			const int draw_x = node_draw_x + dx * TILE_SIZE;
+			const int draw_y = node_draw_y + dy * TILE_SIZE;
+
+			// Culling: Skip tiles that are far outside the viewport (fast integer AABB).
+			if (!fully_inside && (draw_x < min_visible_draw_x || draw_x > max_visible_draw_x ||
+				draw_y < min_visible_draw_y || draw_y > max_visible_draw_y)) {
+				continue;
+			}
+
+			const Tile* tile_above = floor_above ? floor_above->locs[idx].get() : nullptr;
+			visitor(location, draw_x, draw_y, tile_above);
 		}
 	};
 
