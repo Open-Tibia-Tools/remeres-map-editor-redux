@@ -5,7 +5,6 @@
 #include "rendering/drawers/entities/item_drawer.h"
 #include "rendering/drawers/entities/creature_drawer.h"
 #include "brushes/managers/brush_manager.h"
-#include "rendering/core/graphics.h"
 #include "brushes/brush.h"
 #include "editor/copybuffer.h"
 #include "editor/editor.h"
@@ -147,7 +146,7 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 			int draw_x = ((mousePos.x * TILE_SIZE) - view.view_scroll_x) - offset;
 			int draw_y = ((mousePos.y * TILE_SIZE) - view.view_scroll_y) - offset;
 
-			const AtlasManager* atlas = ctx ? &ctx->atlas : (g_graphics.hasAtlasManager() ? g_graphics.getAtlasManager() : nullptr);
+			const AtlasManager* atlas = ctx ? &ctx->atlas : nullptr;
 			if (atlas) {
 				// Draw a semi-transparent white box over the tile
 				const glm::vec4 highlightColor(1.0f, 1.0f, 1.0f, 0.25f); // 25% white

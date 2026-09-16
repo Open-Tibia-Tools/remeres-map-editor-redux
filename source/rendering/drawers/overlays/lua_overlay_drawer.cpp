@@ -1,5 +1,5 @@
 #include "lua_overlay_drawer.h"
-#include "rendering/map_drawer.h"
+#include "rendering/core/sprite_batch.h"
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/core/text_renderer.h"
 #include "rendering/core/graphics.h"
@@ -31,16 +31,16 @@ namespace {
 	}
 }
 
-LuaOverlayDrawer::LuaOverlayDrawer(MapDrawer* mapDrawer) : mapDrawer(mapDrawer) {
+LuaOverlayDrawer::LuaOverlayDrawer(Editor& editor, LuaScriptManager* lua_scripts) : editor(editor), lua_scripts(lua_scripts) {
 }
 
 LuaOverlayDrawer::~LuaOverlayDrawer() {
 }
 
 LuaOverlayDrawer::CacheKey LuaOverlayDrawer::makeCacheKey(const RenderView& view) const {
-	Editor* editor = mapDrawer ? &mapDrawer->getEditor() : nullptr;
-	const Selection* selection = editor ? &editor->selection : nullptr;
-	const ActionQueue* actionQueue = editor && editor->actionQueue ? editor->actionQueue.get() : nullptr;
+	const Selection* selection = &editor.selection;
+	const ActionQueue* actionQueue = editor.actionQueue ? editor.actionQueue.get() : nullptr;
+	LuaScriptManager& scripts = lua_scripts ? *lua_scripts : g_luaScripts;
 
 	return CacheKey {
 		.start_x = view.start_x,
@@ -54,7 +54,7 @@ LuaOverlayDrawer::CacheKey LuaOverlayDrawer::makeCacheKey(const RenderView& view
 		.tile_size = view.tile_size,
 		.screen_width = view.screensize_x,
 		.screen_height = view.screensize_y,
-		.overlay_revision = g_luaScripts.getOverlayRevision(),
+		.overlay_revision = scripts.getOverlayRevision(),
 		.selection_count = selection ? selection->size() : 0,
 		.selection_hash = selection ? hashSelection(*selection) : 0,
 		.history_index = actionQueue ? actionQueue->getCurrentIndex() : 0,
@@ -72,11 +72,12 @@ void LuaOverlayDrawer::refreshCache(const RenderView& view) {
 	cacheValid = false;
 	cachedCommands.clear();
 
-	if (!g_luaScripts.isInitialized()) {
+	LuaScriptManager& scripts = lua_scripts ? *lua_scripts : g_luaScripts;
+	if (!scripts.isInitialized()) {
 		return;
 	}
 
-	const auto& shows = g_luaScripts.getMapOverlayShows();
+	const auto& shows = scripts.getMapOverlayShows();
 	if (shows.empty()) {
 		cacheValid = true;
 		return;
@@ -95,16 +96,11 @@ void LuaOverlayDrawer::refreshCache(const RenderView& view) {
 	viewInfo.screen_width = view.screensize_x;
 	viewInfo.screen_height = view.screensize_y;
 
-	g_luaScripts.collectMapOverlayCommands(viewInfo, cachedCommands);
+	scripts.collectMapOverlayCommands(viewInfo, cachedCommands);
 	cacheValid = true;
 }
 
-void LuaOverlayDrawer::Draw(const RenderView& view, const DrawingOptions& options, const AtlasManager& atlas) {
-	auto* primitives = mapDrawer->getPrimitiveRenderer();
-	auto* spriteBatch = mapDrawer->getSpriteBatch();
-
-	if (!primitives || !spriteBatch) return;
-
+void LuaOverlayDrawer::Draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primitive_renderer, const RenderView& view, const DrawingOptions& options, const AtlasManager& atlas) {
 	refreshCache(view);
 
 	for (const auto& cmd : cachedCommands) {
@@ -128,9 +124,9 @@ void LuaOverlayDrawer::Draw(const RenderView& view, const DrawingOptions& option
 				float w = cmd.screen_space ? cmd.w : cmd.w * view.tile_size * view.zoom;
 				float h = cmd.screen_space ? cmd.h : cmd.h * view.tile_size * view.zoom;
 				if (cmd.filled) {
-					primitives->drawRect(glm::vec4(screenX, screenY, w, h), color);
+					primitive_renderer.drawRect(glm::vec4(screenX, screenY, w, h), color);
 				} else {
-					primitives->drawBox(glm::vec4(screenX, screenY, w, h), color, static_cast<float>(cmd.width));
+					primitive_renderer.drawBox(glm::vec4(screenX, screenY, w, h), color, static_cast<float>(cmd.width));
 				}
 				break;
 			}
@@ -146,7 +142,7 @@ void LuaOverlayDrawer::Draw(const RenderView& view, const DrawingOptions& option
 					screenX2 = mapped_x2 - view.view_scroll_x;
 					screenY2 = mapped_y2 - view.view_scroll_y;
 				}
-				primitives->drawLine(glm::vec2(screenX, screenY), glm::vec2(screenX2, screenY2), color);
+				primitive_renderer.drawLine(glm::vec2(screenX, screenY), glm::vec2(screenX2, screenY2), color);
 				break;
 			}
 			case MapOverlayCommand::Type::Sprite: {
@@ -156,7 +152,7 @@ void LuaOverlayDrawer::Draw(const RenderView& view, const DrawingOptions& option
 					float sizeY = cmd.screen_space ? cmd.h : view.tile_size * view.zoom;
 					if (sizeX == 0) sizeX = 32.0f;
 					if (sizeY == 0) sizeY = 32.0f;
-					spriteBatch->draw(screenX, screenY, sizeX, sizeY, *region, color.r, color.g, color.b, color.a);
+					sprite_batch.draw(screenX, screenY, sizeX, sizeY, *region, color.r, color.g, color.b, color.a);
 				}
 				break;
 			}

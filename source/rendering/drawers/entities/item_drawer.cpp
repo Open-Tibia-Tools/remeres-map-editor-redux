@@ -23,21 +23,18 @@
 #include "rendering/core/render_frame_context.h"
 
 namespace {
-	GameSprite* resolveSprite(const ItemDefinitionView& definition, const RenderFrameContext* ctx = nullptr) {
-		if (!definition) {
+	GameSprite* resolveSprite(const ItemDefinitionView& definition, const RenderFrameContext* ctx) {
+		if (!definition || !ctx) {
 			return nullptr;
 		}
-		if (ctx) {
-			return ctx->gfx.getGameSprite(definition.clientId());
-		}
-		return g_graphics.getGameSprite(definition.clientId());
+		return ctx->gfx.getGameSprite(definition.clientId());
 	}
 
-	GameSprite* resolveSprite(ServerItemId item_id, const RenderFrameContext* ctx = nullptr) {
-		if (ctx) {
-			return resolveSprite(ctx->item_definitions.get(item_id), ctx);
+	GameSprite* resolveSprite(ServerItemId item_id, const RenderFrameContext* ctx) {
+		if (!ctx) {
+			return nullptr;
 		}
-		return resolveSprite(g_item_definitions.get(item_id), ctx);
+		return resolveSprite(ctx->item_definitions.get(item_id), ctx);
 	}
 
 	void registerSpriteLight(LightBuffer& light_buffer, const RenderView& view, int screen_x, int screen_y, const GameSprite::SpriteLayoutMetrics& metrics, const SpriteLight& light) {
@@ -308,9 +305,12 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	}
 }
 
-void ItemDrawer::DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, int screenx, int screeny, ServerItemId item_id, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha) {
-	const auto definition = g_item_definitions.get(item_id);
-	GameSprite* spr = resolveSprite(definition);
+void ItemDrawer::DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, int screenx, int screeny, ServerItemId item_id, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha, const RenderFrameContext* ctx) {
+	if (!ctx) {
+		return;
+	}
+	const auto definition = ctx->item_definitions.get(item_id);
+	GameSprite* spr = resolveSprite(definition, ctx);
 	uint16_t cid = definition ? definition.clientId() : 0;
 
 	switch (cid) {
@@ -318,7 +318,7 @@ void ItemDrawer::DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_dr
 		case 469:
 			b = 0;
 			alpha = (alpha * 171) >> 8;
-			spr = resolveSprite(SPRITE_ZONE);
+			spr = resolveSprite(SPRITE_ZONE, ctx);
 			break;
 
 		// Red invisible walkable tile
@@ -326,14 +326,14 @@ void ItemDrawer::DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_dr
 			g = 0;
 			b = 0;
 			alpha = (alpha * 171) >> 8;
-			spr = resolveSprite(SPRITE_ZONE);
+			spr = resolveSprite(SPRITE_ZONE, ctx);
 			break;
 
 		// Cyan invisible wall
 		case 2187:
 			r = 0;
 			alpha = alpha / 3;
-			spr = resolveSprite(SPRITE_ZONE);
+			spr = resolveSprite(SPRITE_ZONE, ctx);
 			break;
 
 		default:
@@ -342,13 +342,13 @@ void ItemDrawer::DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_dr
 
 	// primal light
 	if (cid >= 39092 && cid <= 39100 || cid == 39236 || cid == 39367 || cid == 39368) {
-		spr = resolveSprite(SPRITE_LIGHTSOURCE);
+		spr = resolveSprite(SPRITE_LIGHTSOURCE, ctx);
 		r = 0;
 		alpha = (alpha * 171) >> 8;
 	}
 
 	if (spr) {
-		sprite_drawer->BlitSprite(sprite_batch, screenx, screeny, spr, DrawColor(r, g, b, alpha));
+		sprite_drawer->BlitSprite(sprite_batch, screenx, screeny, spr, DrawColor(r, g, b, alpha), ctx);
 	}
 }
 

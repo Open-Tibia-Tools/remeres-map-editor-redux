@@ -64,7 +64,6 @@
 #include "rendering/ui/selection_controller.h"
 #include "rendering/ui/drawing_controller.h"
 #include "rendering/ui/map_menu_handler.h"
-#include "rendering/drawers/overlays/lua_overlay_drawer.h"
 
 #include "brushes/doodad/doodad_brush.h"
 #include "brushes/house/house_exit_brush.h"
@@ -283,9 +282,7 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 	if (options.highlight_locked_doors) {
 		drawer->DrawDoorIndicators(vg);
 	}
-	if (drawer->getLuaOverlayDrawer()) {
-		drawer->getLuaOverlayDrawer()->DrawUI(vg, drawer->getView(), options);
-	}
+	drawer->DrawUIOverlays(vg);
 
 	TextRenderer::EndFrame(vg);
 

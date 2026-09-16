@@ -93,9 +93,12 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 }
 
 void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, int screenx, int screeny, const Outfit& outfit, Direction dir, const CreatureDrawOptions& options) {
+	if (!options.ctx) {
+		return;
+	}
 	const bool draw_visuals = !options.light_collection_only;
-	GraphicManager& gfx = options.ctx ? options.ctx->gfx : g_graphics;
-	const ItemDefinitionStore& item_defs = options.ctx ? options.ctx->item_definitions : g_item_definitions;
+	GraphicManager& gfx = options.ctx->gfx;
+	const ItemDefinitionStore& item_defs = options.ctx->item_definitions;
 
 	if (outfit.lookItem != 0) {
 		const auto definition = item_defs.get(outfit.lookItem);

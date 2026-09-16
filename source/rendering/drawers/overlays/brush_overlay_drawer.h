@@ -8,7 +8,10 @@
 #include "map/position.h"
 #include <glm/glm.hpp>
 
-class MapDrawer;
+class BrushCursorDrawer;
+struct RenderFrameContext;
+class Settings;
+class BrushManager;
 struct RenderView;
 struct DrawingOptions;
 class Brush;
@@ -21,12 +24,33 @@ class SpriteBatch;
 class PrimitiveRenderer;
 class AtlasManager;
 
+struct BrushOverlayDragState {
+	bool is_dragging_draw = false;
+	int last_click_map_x = 0;
+	int last_click_map_y = 0;
+};
+
 class BrushOverlayDrawer {
 public:
 	BrushOverlayDrawer();
 	~BrushOverlayDrawer();
 
-	void draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primitive_renderer, MapDrawer* drawer, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options, Editor& editor, const AtlasManager& atlas);
+	void draw(
+		SpriteBatch& sprite_batch,
+		PrimitiveRenderer& primitive_renderer,
+		BrushCursorDrawer* brush_cursor_drawer,
+		const BrushOverlayDragState& drag_state,
+		ItemDrawer* item_drawer,
+		SpriteDrawer* sprite_drawer,
+		CreatureDrawer* creature_drawer,
+		const RenderView& view,
+		const DrawingOptions& options,
+		Editor& editor,
+		const AtlasManager& atlas,
+		const RenderFrameContext& ctx,
+		const Settings* settings = nullptr,
+		const BrushManager* brush_manager = nullptr
+	);
 
 private:
 	enum BrushColor {
@@ -42,8 +66,8 @@ private:
 
 	void get_color(Brush* brush, Editor& editor, const Position& position, uint8_t& r, uint8_t& g, uint8_t& b);
 
-	glm::vec4 get_brush_color(BrushColor color);
-	glm::vec4 get_check_color(Brush* brush, Editor& editor, const Position& pos);
+	glm::vec4 get_brush_color(BrushColor color, const Settings& settings);
+	glm::vec4 get_check_color(Brush* brush, Editor& editor, const Position& pos, const Settings& settings);
 };
 
 #endif

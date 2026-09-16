@@ -93,9 +93,6 @@ class MapDrawer {
 	std::unique_ptr<PrimitiveRenderer> primitive_renderer;
 
 
-protected:
-	friend class BrushOverlayDrawer;
-
 public:
 	MapDrawer(MapCanvas* canvas);
 	~MapDrawer();
@@ -113,6 +110,7 @@ public:
 	void DrawTooltips(NVGcontext* vg);
 	void DrawHookIndicators(NVGcontext* vg);
 	void DrawDoorIndicators(NVGcontext* vg);
+	void DrawUIOverlays(NVGcontext* vg);
 	void ClearFrameOverlays();
 	void DrawCreatureNames(NVGcontext* vg);
 	bool hasOverlays() const;

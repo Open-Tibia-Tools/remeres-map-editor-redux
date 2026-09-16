@@ -28,6 +28,7 @@
 #include "rendering/drawers/map_layer_drawer.h"
 #include "rendering/ui/map_display.h"
 #include "rendering/ui/selection_controller.h"
+#include "rendering/ui/drawing_controller.h"
 #include "editor/copybuffer.h"
 #include "live/live_socket.h"
 #include "rendering/core/graphics.h"
@@ -106,7 +107,7 @@ MapDrawer::MapDrawer(MapCanvas* canvas) :
 	primitive_renderer = std::make_unique<PrimitiveRenderer>();
 	hook_indicator_drawer = std::make_unique<HookIndicatorDrawer>();
 	door_indicator_drawer = std::make_unique<DoorIndicatorDrawer>();
-	lua_overlay_drawer = std::make_unique<LuaOverlayDrawer>(this);
+	lua_overlay_drawer = std::make_unique<LuaOverlayDrawer>(editor);
 
 	item_drawer->SetHookIndicatorDrawer(hook_indicator_drawer.get());
 	item_drawer->SetDoorIndicatorDrawer(door_indicator_drawer.get());
@@ -238,8 +239,17 @@ void MapDrawer::Draw() {
 	}
 
 	live_cursor_drawer->draw(*sprite_batch, view, editor, options, *atlas);
-
-	brush_overlay_drawer->draw(*sprite_batch, *primitive_renderer, this, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options, editor, *atlas);
+	if (brush_overlay_drawer) {
+		BrushOverlayDragState drag_state {};
+		if (canvas) {
+			if (canvas->drawing_controller) {
+				drag_state.is_dragging_draw = canvas->drawing_controller->IsDraggingDraw();
+			}
+			drag_state.last_click_map_x = canvas->last_click_map_x;
+			drag_state.last_click_map_y = canvas->last_click_map_y;
+		}
+		brush_overlay_drawer->draw(*sprite_batch, *primitive_renderer, brush_cursor_drawer.get(), drag_state, item_drawer.get(), sprite_drawer.get(), creature_drawer.get(), view, options, editor, *atlas, ctx);
+	}
 	selection_drawer->draw(*primitive_renderer, view, options);
 
 	if (options.show_grid) {
@@ -250,7 +260,9 @@ void MapDrawer::Draw() {
 	}
 
 	// Draw Lua Overlays (sprites, lines, rects, etc.)
-	lua_overlay_drawer->Draw(view, options, *atlas);
+	if (lua_overlay_drawer) {
+		lua_overlay_drawer->Draw(*sprite_batch, *primitive_renderer, view, options, *atlas);
+	}
 
 	// Draw creature names (Overlay) moved to DrawCreatureNames()
 
@@ -335,6 +347,12 @@ void MapDrawer::DrawHookIndicators(NVGcontext* vg) {
 void MapDrawer::DrawDoorIndicators(NVGcontext* vg) {
 	if (options.highlight_locked_doors) {
 		door_indicator_drawer->draw(vg, view);
+	}
+}
+
+void MapDrawer::DrawUIOverlays(NVGcontext* vg) {
+	if (lua_overlay_drawer) {
+		lua_overlay_drawer->DrawUI(vg, view, options);
 	}
 }
 

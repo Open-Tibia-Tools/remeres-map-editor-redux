@@ -8,7 +8,10 @@
 #include <vector>
 #include <cstdint>
 
-class MapDrawer;
+class Editor;
+class SpriteBatch;
+class PrimitiveRenderer;
+class LuaScriptManager;
 class CoordinateMapper;
 class AtlasManager;
 
@@ -16,10 +19,10 @@ struct NVGcontext;
 
 class LuaOverlayDrawer {
 public:
-	LuaOverlayDrawer(MapDrawer* mapDrawer);
+	explicit LuaOverlayDrawer(Editor& editor, LuaScriptManager* lua_scripts = nullptr);
 	~LuaOverlayDrawer();
 
-	void Draw(const RenderView& view, const DrawingOptions& options, const AtlasManager& atlas);
+	void Draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primitive_renderer, const RenderView& view, const DrawingOptions& options, const AtlasManager& atlas);
 	void DrawUI(NVGcontext* vg, const RenderView& view, const DrawingOptions& options);
 	bool hasUIElements(const RenderView& view);
 
@@ -45,7 +48,8 @@ private:
 		bool operator==(const CacheKey&) const = default;
 	};
 
-	MapDrawer* mapDrawer;
+	Editor& editor;
+	LuaScriptManager* lua_scripts = nullptr;
 	std::vector<MapOverlayCommand> cachedCommands;
 	CacheKey cachedKey {};
 	bool cacheValid = false;

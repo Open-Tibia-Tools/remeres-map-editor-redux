@@ -171,10 +171,6 @@ public:
 	FPSCounter fps_counter;
 
 	friend class MapDrawer;
-	friend class SelectionDrawer;
-	friend class BrushOverlayDrawer;
-	friend class DragShadowDrawer;
-	friend class PreviewDrawer;
 	friend class SelectionController;
 	friend class DrawingController;
 
