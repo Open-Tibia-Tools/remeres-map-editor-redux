@@ -276,13 +276,21 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 	nvgFontSize(vg, fontSize);
 	nvgFontFace(vg, "sans");
 
-	// Measure label widths
+	// Cache fixed label text widths
+	static thread_local std::unordered_map<std::string_view, float> s_label_width_cache;
 	float maxLabelWidth = 0.0f;
 	for (size_t i = 0; i < scratch_fields_count; ++i) {
 		const auto& field = scratch_fields[i];
-		float labelBounds[4];
-		nvgTextBounds(vg, 0, 0, field.label.data(), field.label.data() + field.label.size(), labelBounds);
-		float lw = labelBounds[2] - labelBounds[0];
+		auto it = s_label_width_cache.find(field.label);
+		float lw = 0.0f;
+		if (it != s_label_width_cache.end()) {
+			lw = it->second;
+		} else {
+			float labelBounds[4];
+			nvgTextBounds(vg, 0, 0, field.label.data(), field.label.data() + field.label.size(), labelBounds);
+			lw = labelBounds[2] - labelBounds[0];
+			s_label_width_cache[field.label] = lw;
+		}
 		if (lw > maxLabelWidth) {
 			maxLabelWidth = lw;
 		}
@@ -318,12 +326,12 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 			NVGtextRow rows[16];
 			int nRows = nvgTextBreakLines(vg, start, end, maxValueWidth, rows, 16);
 
-			for (int i = 0; i < nRows; i++) {
-				std::string_view line(rows[i].start, rows[i].end - rows[i].start);
+			for (int j = 0; j < nRows; j++) {
+				std::string_view line(rows[j].start, rows[j].end - rows[j].start);
 				field.wrappedLines.push_back(line);
 				totalLines++;
 
-				float lineWidth = lm.valueStartX + rows[i].width + padding * 2;
+				float lineWidth = lm.valueStartX + rows[j].width + padding * 2;
 				if (lineWidth > actualMaxWidth) {
 					actualMaxWidth = lineWidth;
 				}
@@ -399,32 +407,23 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 }
 
 void TooltipDrawer::drawBackground(NVGcontext* vg, float x, float y, float width, float height, float cornerRadius, const TooltipData& tooltip) {
+	// GPU Box Gradient soft drop shadow (replaces 4-pass CPU tessellation loop)
+	NVGpaint shadowPaint = nvgBoxGradient(vg, x, y + 2.0f, width, height, cornerRadius * 2.0f, 10.0f, nvgRGBA(0, 0, 0, 120), nvgRGBA(0, 0, 0, 0));
+	nvgBeginPath(vg);
+	nvgRect(vg, x - 10.0f, y - 8.0f, width + 20.0f, height + 20.0f);
+	nvgFillPaint(vg, shadowPaint);
+	nvgFill(vg);
 
 	// Get border color based on category
 	uint8_t borderR, borderG, borderB;
 	getHeaderColor(tooltip.category, borderR, borderG, borderB);
 
-	// Shadow (multi-layer soft shadow)
-	for (int i = 3; i >= 0; i--) {
-		float alpha = 35.0f + (3 - i) * 20.0f;
-		float spread = i * 2.0f;
-		float offsetY = 3.0f + i * 1.0f;
-		nvgBeginPath(vg);
-		nvgRoundedRect(vg, x - spread, y + offsetY - spread, width + spread * 2, height + spread * 2, cornerRadius + spread);
-		nvgFillColor(vg, nvgRGBA(0, 0, 0, static_cast<unsigned char>(alpha)));
-		nvgFill(vg);
-	}
-
-	// Main background - use theme
+	// Main background and full colored border - single path fill & stroke
 	wxColour bgCol = Theme::Get(Theme::Role::TooltipBg);
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, x, y, width, height, cornerRadius);
 	nvgFillColor(vg, nvgRGBA(bgCol.Red(), bgCol.Green(), bgCol.Blue(), 250));
 	nvgFill(vg);
-
-	// Full colored border around entire frame
-	nvgBeginPath(vg);
-	nvgRoundedRect(vg, x, y, width, height, cornerRadius);
 	nvgStrokeColor(vg, nvgRGBA(borderR, borderG, borderB, 255));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
@@ -467,9 +466,6 @@ void TooltipDrawer::drawContainerGrid(NVGcontext* vg, float x, float y, const To
 	}
 
 	// Calculate cursorY after text fields
-	// We need to re-calculate text height or pass it, but simpler to deduce from logic:
-	// The grid is at the bottom. We can just use the bottom of the box minus grid height minus padding.
-	// But let's calculate exact start Y based on text content for precision
 	float fontSize = 11.0f;
 	float lineHeight = fontSize * 1.4f;
 	float textBlockHeight = 0.0f;
@@ -488,15 +484,16 @@ void TooltipDrawer::drawContainerGrid(NVGcontext* vg, float x, float y, const To
 		float itemX = startX + col * layout.gridSlotSize;
 		float itemY = startY + row * layout.gridSlotSize;
 
-		// Draw slot background (always)
+		// Draw slot background with rounded rect and subtle border
 		nvgBeginPath(vg);
+		nvgRoundedRect(vg, itemX, itemY, 32.0f, 32.0f, 2.0f);
 		wxColour baseCol = Theme::Get(Theme::Role::CardBase);
 		wxColour borderCol = Theme::Get(Theme::Role::Border);
 
 		nvgFillColor(vg, nvgRGBA(baseCol.Red(), baseCol.Green(), baseCol.Blue(), 100)); // Dark slot placeholder
+		nvgFill(vg);
 		nvgStrokeColor(vg, nvgRGBA(borderCol.Red(), borderCol.Green(), borderCol.Blue(), 100)); // Light border
 		nvgStrokeWidth(vg, 1.0f);
-		nvgFill(vg);
 		nvgStroke(vg);
 
 		// Check if this is the summary info slot (last slot if we have empty spaces)
@@ -551,30 +548,47 @@ void TooltipDrawer::drawContainerGrid(NVGcontext* vg, float x, float y, const To
 }
 
 void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
-	if (!vg) {
+	if (!vg || active_count == 0) {
 		return;
 	}
 
+	const float zoom = view.zoom < 0.01f ? 1.0f : view.zoom;
+	const float inv_zoom = 1.0f / zoom;
+	const float tile_size_screen = 32.0f * inv_zoom;
+
+	// Zoom LOD guard: do not draw micro tooltips when zoomed far out
+	if (tile_size_screen < 14.0f) {
+		return;
+	}
+
+	const float screen_max_x = static_cast<float>(view.screensize_x) + 150.0f;
+	const float screen_max_y = static_cast<float>(view.screensize_y) + 300.0f;
+
 	for (size_t i = 0; i < active_count; ++i) {
 		const auto& tooltip = tooltips[i];
+
 		int unscaled_x, unscaled_y;
-		view.getScreenPosition(tooltip.pos.x, tooltip.pos.y, tooltip.pos.z, unscaled_x, unscaled_y);
+		if (!view.IsTileVisible(tooltip.pos.x, tooltip.pos.y, tooltip.pos.z, unscaled_x, unscaled_y)) {
+			continue;
+		}
 
-		float zoom = view.zoom < 0.01f ? 1.0f : view.zoom;
-
-		float screen_x = unscaled_x / zoom;
-		float screen_y = unscaled_y / zoom;
-		float tile_size_screen = 32.0f / zoom;
+		float screen_x = static_cast<float>(unscaled_x) * inv_zoom;
+		float screen_y = static_cast<float>(unscaled_y) * inv_zoom;
 
 		// Center on tile
-		screen_x += tile_size_screen / 2.0f;
-		screen_y += tile_size_screen / 2.0f;
+		screen_x += tile_size_screen * 0.5f;
+		screen_y += tile_size_screen * 0.5f;
+
+		// Strict frustum culling before measuring/layout
+		if (screen_x < -150.0f || screen_x > screen_max_x || screen_y < -50.0f || screen_y > screen_max_y) {
+			continue;
+		}
 
 		// Constants
-		float fontSize = 11.0f;
-		float padding = 10.0f;
-		float minWidth = 120.0f;
-		float maxWidth = 220.0f;
+		constexpr float fontSize = 11.0f;
+		constexpr float padding = 10.0f;
+		constexpr float minWidth = 120.0f;
+		constexpr float maxWidth = 220.0f;
 
 		// 1. Prepare Content
 		prepareFields(tooltip);
@@ -588,7 +602,7 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		LayoutMetrics layout = calculateLayout(vg, tooltip, maxWidth, minWidth, padding, fontSize);
 
 		// Position tooltip above tile
-		float tooltipX = screen_x - (layout.width / 2.0f);
+		float tooltipX = screen_x - (layout.width * 0.5f);
 		float tooltipY = screen_y - layout.height - 12.0f;
 
 		// 3. Draw Background & Shadow
@@ -601,3 +615,4 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		drawContainerGrid(vg, tooltipX, tooltipY, tooltip, layout);
 	}
 }
+

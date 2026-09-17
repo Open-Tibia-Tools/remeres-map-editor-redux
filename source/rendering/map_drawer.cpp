@@ -205,6 +205,14 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	// End Batches and Flush
 	sprite_batch.end(*atlas);
 	primitive_renderer.flush();
+
+	// Pre-collect indicators and tooltips so hasOverlays() accurately reflects whether any NanoVG geometry exists
+	if (options.show_tooltips) {
+		InspectionBadgeCollector::Collect(editor.map, view, options, tooltip_drawer, editor);
+	}
+	if (options.show_hooks || options.highlight_locked_doors) {
+		CollectIndicators();
+	}
 }
 
 void MapDrawer::DrawBackground() {
@@ -262,8 +270,7 @@ void MapDrawer::DrawGrid(const ViewBounds& bounds, const AtlasManager& atlas) {
 }
 
 void MapDrawer::DrawTooltips(NVGcontext* vg) {
-	if (options.show_tooltips) {
-		InspectionBadgeCollector::Collect(editor.map, view, options, tooltip_drawer, editor);
+	if (options.show_tooltips && !tooltip_drawer.empty()) {
 		tooltip_drawer.draw(vg, view);
 	}
 }
@@ -277,15 +284,13 @@ void MapDrawer::CollectIndicators() {
 }
 
 void MapDrawer::DrawHookIndicators(NVGcontext* vg) {
-	if (options.show_hooks) {
-		CollectIndicators();
+	if (options.show_hooks && !hook_indicator_drawer.empty()) {
 		hook_indicator_drawer.draw(vg, view);
 	}
 }
 
 void MapDrawer::DrawDoorIndicators(NVGcontext* vg) {
-	if (options.highlight_locked_doors) {
-		CollectIndicators();
+	if (options.highlight_locked_doors && !door_indicator_drawer.empty()) {
 		door_indicator_drawer.draw(vg, view);
 	}
 }
@@ -303,13 +308,13 @@ bool MapDrawer::hasOverlays() {
 	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
 		return true;
 	}
-	if (options.show_tooltips) {
+	if (options.show_tooltips && !tooltip_drawer.empty() && can_read_labels) {
 		return true;
 	}
-	if (options.show_hooks && can_read_labels) {
+	if (options.show_hooks && !hook_indicator_drawer.empty() && can_read_labels) {
 		return true;
 	}
-	if (options.highlight_locked_doors && can_read_labels) {
+	if (options.highlight_locked_doors && !door_indicator_drawer.empty() && can_read_labels) {
 		return true;
 	}
 	if (lua_overlay_drawer.hasUIElements(view)) {

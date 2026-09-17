@@ -255,7 +255,7 @@ void MapCanvas::EnsureNanoVG() {
 		if (!gladLoadGL()) {
 			spdlog::error("MapCanvas: Failed to initialize GLAD");
 		}
-		m_nvg.reset(nvgCreateGL3(NVG_ANTIALIAS | NVG_STENCIL_STROKES));
+		m_nvg.reset(nvgCreateGL3(NVG_ANTIALIAS));
 		if (m_nvg) {
 			TextRenderer::LoadFont(m_nvg.get());
 		} else {
@@ -276,7 +276,6 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
-	glClear(GL_STENCIL_BUFFER_BIT);
 	TextRenderer::BeginFrame(vg, GetSize().x, GetSize().y, GetContentScaleFactor());
 
 	if (options.show_creatures) {
