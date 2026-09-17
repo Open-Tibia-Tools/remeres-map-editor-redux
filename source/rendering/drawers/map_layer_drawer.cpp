@@ -183,10 +183,23 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		// 4. Flush dynamic overlays for this floor so depth order across floors is preserved
 		sprite_batch.flush(ctx.atlas);
 	} else {
-		// Classic full-tile traversal fallback
-		auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
-			tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
+		// Classic full-tile traversal fallback with two-pass layered rendering:
+		// Pass 1: Static Terrain & Ground Borders across all visible tiles
+		auto drawTerrainPass = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
+			tile_renderer->RenderStaticTerrain(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
 		};
-		visitAllVisibleNodes(drawVisibleTiles);
+		visitAllVisibleNodes(drawTerrainPass);
+
+		// Pass 2: Static Objects, Animated Items, and Dynamic Entities
+		auto drawObjectsPass = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
+			TileElevationState static_elevation { draw_x, draw_y };
+			tile_renderer->RenderStaticItems(sprite_batch, location, ctx, static_elevation);
+
+			TileElevationState animated_elevation { draw_x, draw_y };
+			tile_renderer->RenderAnimatedItems(sprite_batch, location, ctx, animated_elevation);
+
+			tile_renderer->RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y);
+		};
+		visitAllVisibleNodes(drawObjectsPass);
 	}
 }

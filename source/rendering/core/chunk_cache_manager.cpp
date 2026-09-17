@@ -285,7 +285,172 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		return;
 	}
 
-	// OTClient-parity diagonal iteration (dx + dy) for strict Painter's Algorithm depth order
+	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af) {
+		const bool is_simple = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
+		if (is_simple) {
+			const AtlasRegion* reg = nullptr;
+			if (spr->is_simple && pat.subtype == -1 && pat.x == 0 && pat.y == 0 && pat.z == 0 && pat.frame == 0) {
+				reg = spr->getCachedDefaultRegion();
+			}
+			if (!reg) {
+				reg = spr->getAtlasRegion(0, 0, 0, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
+			}
+			if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
+				TileInstance inst;
+				inst.x = static_cast<float>(draw_base_x);
+				inst.y = static_cast<float>(draw_base_y);
+				inst.w = static_cast<float>(reg->pixel_width);
+				inst.h = static_cast<float>(reg->pixel_height);
+				inst.sprite_id = reg->debug_sprite_id;
+				inst.flags = 0;
+				inst.r = rf;
+				inst.g = gf;
+				inst.b = bf;
+				inst.a = af;
+				bake_buffer_.push_back(inst);
+			}
+		} else {
+			const auto composite_metrics = spr->getPlainLayoutMetrics(pat.subtype, pat.x, pat.y, pat.z, pat.frame);
+			int x_offset = 0;
+			for (int cx = 0; cx < composite_metrics.num_columns; ++cx) {
+				int y_offset = 0;
+				for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
+					for (int cf = 0; cf < spr->layers; ++cf) {
+						const AtlasRegion* reg = spr->getAtlasRegion(cx, cy, cf, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
+						if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
+							TileInstance inst;
+							inst.x = static_cast<float>(draw_base_x - x_offset);
+							inst.y = static_cast<float>(draw_base_y - y_offset);
+							inst.w = static_cast<float>(reg->pixel_width);
+							inst.h = static_cast<float>(reg->pixel_height);
+							inst.sprite_id = reg->debug_sprite_id;
+							inst.flags = 0;
+							inst.r = rf;
+							inst.g = gf;
+							inst.b = bf;
+							inst.a = af;
+							bake_buffer_.push_back(inst);
+						}
+					}
+					y_offset += composite_metrics.row_heights[cy];
+				}
+				x_offset += composite_metrics.column_widths[cx];
+			}
+		}
+	};
+
+	// =========================================================================
+	// Pass 1: Static Terrain Ground & Ground Borders (Floor base layer)
+	// Render all base ground and ground borders across the chunk FIRST,
+	// so that objects, structures, and multi-tile sprites (2x1, 1x2, 2x2, etc.)
+	// always render cleanly on top of terrain transitions without border clipping.
+	// =========================================================================
+	for (int d = 0; d < 2 * CHUNK_SIZE - 1; ++d) {
+		for (int tx = 0; tx <= d && tx < CHUNK_SIZE; ++tx) {
+			const int ty = d - tx;
+			if (ty >= CHUNK_SIZE) {
+				continue;
+			}
+
+			const Floor* fl = floors[tx >> 2][ty >> 2];
+			if (!fl) {
+				continue;
+			}
+
+			const int loc_idx = (tx & 3) * 4 + (ty & 3);
+			const TileLocation* loc = &fl->locs[loc_idx];
+			const Tile* tile = loc->get();
+			if (!tile) {
+				continue;
+			}
+			if (ctx.options.show_only_modified && !tile->isModified()) {
+				continue;
+			}
+
+			const int x = base_x + tx;
+			const int y = base_y + ty;
+
+			uint8_t gr = 255, gg = 255, gb = 255;
+			if (!ctx.options.show_as_minimap && (ctx.options.hasTileColorModifiers() || loc->getSpawnCount() > 0)) {
+				TileColorCalculator::Calculate(tile, ctx.options, ctx.current_house_id, loc->getSpawnCount(), gr, gg, gb);
+			}
+
+			// 1. Static terrain ground (water, grass, dirt, lava, etc.)
+			if (tile->ground) {
+				const ItemDefinitionView git = tile->ground->getDefinition();
+				if (git) {
+					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
+					if (gspr) {
+						const SpritePatterns g_pat = PatternCalculator::Calculate(gspr, git, tile->ground.get(), tile, Position(x, y, z), 0);
+						if (!gspr->isSimpleAndLoaded()) {
+							rme::collectTileSprites(gspr, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
+						}
+
+						uint8_t r = gr, g = gg, b = gb;
+						if (tile->ground->isSelected()) {
+							r >>= 1;
+							g >>= 1;
+							b >>= 1;
+						}
+
+						const auto [g_off_x, g_off_y] = gspr->getDrawOffset();
+						const int ground_x = x * 32 - g_off_x;
+						const int ground_y = y * 32 - g_off_y;
+
+						pushSpriteInstances(gspr, g_pat, ground_x, ground_y,
+							static_cast<float>(r) * (1.0f / 255.0f),
+							static_cast<float>(g) * (1.0f / 255.0f),
+							static_cast<float>(b) * (1.0f / 255.0f),
+							1.0f);
+					}
+				}
+			}
+
+			// 2. Static ground borders (coastlines, grass edges, sand borders, etc.)
+			for (const auto& item : tile->items) {
+				if (!item || !item->isBorder() || item->isInvalidOTBMItem()) {
+					continue;
+				}
+				const ItemDefinitionView it = item->getDefinition();
+				if (!it) {
+					continue;
+				}
+				GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
+				if (!ispr || ispr->isAnimated()) {
+					continue;
+				}
+
+				const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z), 0);
+				if (!ispr->isSimpleAndLoaded()) {
+					rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
+				}
+
+				uint8_t r = gr, g = gg, b = gb;
+				if (item->isSelected()) {
+					r >>= 1;
+					g >>= 1;
+					b >>= 1;
+				}
+
+				const auto [draw_offset_x, draw_offset_y] = ispr->getDrawOffset();
+				const int item_x = x * 32 - draw_offset_x;
+				const int item_y = y * 32 - draw_offset_y;
+
+				pushSpriteInstances(ispr, i_pat, item_x, item_y,
+					static_cast<float>(r) * (1.0f / 255.0f),
+					static_cast<float>(g) * (1.0f / 255.0f),
+					static_cast<float>(b) * (1.0f / 255.0f),
+					1.0f);
+			}
+		}
+	}
+
+	// =========================================================================
+	// Pass 2: Static Objects, Structures & Elevated Items (Non-border items)
+	// Rendered in strict diagonal Painter's Algorithm order (North-West to South-East)
+	// with elevation stacking. Multi-tile sprites (extending North/West) correctly
+	// overlay terrain borders baked in Pass 1.
+	// =========================================================================
 	for (int d = 0; d < 2 * CHUNK_SIZE - 1; ++d) {
 		for (int tx = 0; tx <= d && tx < CHUNK_SIZE; ++tx) {
 			const int ty = d - tx;
@@ -318,93 +483,19 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				is_dynamic = true;
 			}
 
-			// Static terrain ground (water, grass, dirt, lava, etc. - ALWAYS baked into chunk cache!)
-			if (tile->ground) {
-				const ItemDefinitionView git = tile->ground->getDefinition();
-				if (git) {
-					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
-					if (gspr) {
-						const SpritePatterns g_pat = PatternCalculator::Calculate(gspr, git, tile->ground.get(), tile, Position(x, y, z), 0);
-						if (!gspr->isSimpleAndLoaded()) {
-							rme::collectTileSprites(gspr, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
-						}
-
-						uint8_t gr = 255, gg = 255, gb = 255;
-						if (tile->ground->isSelected()) {
-							gr >>= 1;
-							gg >>= 1;
-							gb >>= 1;
-						} else if (!ctx.options.show_as_minimap && (ctx.options.hasTileColorModifiers() || loc->getSpawnCount() > 0)) {
-							TileColorCalculator::Calculate(tile, ctx.options, ctx.current_house_id, loc->getSpawnCount(), gr, gg, gb);
-						}
-
-						const float grf = static_cast<float>(gr) * (1.0f / 255.0f);
-						const float ggf = static_cast<float>(gg) * (1.0f / 255.0f);
-						const float gbf = static_cast<float>(gb) * (1.0f / 255.0f);
-
-						const auto [g_off_x, g_off_y] = gspr->getDrawOffset();
-						const int ground_x = x * 32 - g_off_x;
-						const int ground_y = y * 32 - g_off_y;
-
-						const bool is_simple_ground = (gspr->width == 1 && gspr->height == 1 && gspr->layers == 1);
-						if (is_simple_ground) {
-							const AtlasRegion* reg = nullptr;
-							if (gspr->is_simple && g_pat.subtype == -1 && g_pat.x == 0 && g_pat.y == 0 && g_pat.z == 0 && g_pat.frame == 0) {
-								reg = gspr->getCachedDefaultRegion();
-							}
-							if (!reg) {
-								reg = gspr->getAtlasRegion(0, 0, 0, g_pat.subtype, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
-							}
-							if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
-								TileInstance inst;
-								inst.x = static_cast<float>(ground_x);
-								inst.y = static_cast<float>(ground_y);
-								inst.w = static_cast<float>(reg->pixel_width);
-								inst.h = static_cast<float>(reg->pixel_height);
-								inst.sprite_id = reg->debug_sprite_id;
-								inst.flags = 0;
-								inst.r = grf;
-								inst.g = ggf;
-								inst.b = gbf;
-								inst.a = 1.0f;
-								bake_buffer_.push_back(inst);
-							}
-						} else {
-							const auto composite_metrics = gspr->getPlainLayoutMetrics(g_pat.subtype, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
-							int x_offset = 0;
-							for (int cx = 0; cx < composite_metrics.num_columns; ++cx) {
-								int y_offset = 0;
-								for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
-									for (int cf = 0; cf < gspr->layers; ++cf) {
-										const AtlasRegion* reg = gspr->getAtlasRegion(cx, cy, cf, g_pat.subtype, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
-										if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
-											TileInstance inst;
-											inst.x = static_cast<float>(ground_x - x_offset);
-											inst.y = static_cast<float>(ground_y - y_offset);
-											inst.w = static_cast<float>(reg->pixel_width);
-											inst.h = static_cast<float>(reg->pixel_height);
-											inst.sprite_id = reg->debug_sprite_id;
-											inst.flags = 0;
-											inst.r = grf;
-											inst.g = ggf;
-											inst.b = gbf;
-											inst.a = 1.0f;
-											bake_buffer_.push_back(inst);
-										}
-									}
-									y_offset += composite_metrics.row_heights[cy];
-								}
-								x_offset += composite_metrics.column_widths[cx];
-							}
-						}
-					}
-				}
-			}
-
-			// Static items on tile with elevation stacking
 			int elev = 0;
 			for (const auto& item : tile->items) {
 				if (!item) {
+					continue;
+				}
+				if (item->isBorder()) {
+					if (const ItemDefinitionView it = item->getDefinition()) {
+						if (GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId())) {
+							if (ispr->isAnimated()) {
+								is_dynamic = true;
+							}
+						}
+					}
 					continue;
 				}
 				if (item->isInvalidOTBMItem()) {
@@ -431,7 +522,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				const int item_x = x * 32 - elev - draw_offset_x;
 				const int item_y = y * 32 - elev - draw_offset_y;
 
-				const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z));
+				const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z), 0);
 				if (!ispr->isSimpleAndLoaded()) {
 					rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
 				}
@@ -445,62 +536,11 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					TileColorCalculator::GetHouseColor(tile->getHouseID(), r, g, b);
 				}
 
-				const float rf = static_cast<float>(r) * (1.0f / 255.0f);
-				const float gf = static_cast<float>(g) * (1.0f / 255.0f);
-				const float bf = static_cast<float>(b) * (1.0f / 255.0f);
-				const float af = static_cast<float>(a) * (1.0f / 255.0f);
-
-				const bool is_simple_sprite = (ispr->width == 1 && ispr->height == 1 && ispr->layers == 1);
-				if (is_simple_sprite) {
-					const AtlasRegion* reg = nullptr;
-					if (ispr->is_simple && i_pat.subtype == -1 && i_pat.x == 0 && i_pat.y == 0 && i_pat.z == 0) {
-						reg = ispr->getCachedDefaultRegion();
-					}
-					if (!reg) {
-						reg = ispr->getAtlasRegion(0, 0, 0, i_pat.subtype, i_pat.x, i_pat.y, i_pat.z, 0);
-					}
-					if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
-						TileInstance inst;
-						inst.x = static_cast<float>(item_x);
-						inst.y = static_cast<float>(item_y);
-						inst.w = static_cast<float>(reg->pixel_width);
-						inst.h = static_cast<float>(reg->pixel_height);
-						inst.sprite_id = reg->debug_sprite_id;
-						inst.flags = 0;
-						inst.r = rf;
-						inst.g = gf;
-						inst.b = bf;
-						inst.a = af;
-						bake_buffer_.push_back(inst);
-					}
-				} else {
-					const auto composite_metrics = ispr->getPlainLayoutMetrics(i_pat.subtype, i_pat.x, i_pat.y, i_pat.z, 0);
-					int x_offset = 0;
-					for (int cx = 0; cx < composite_metrics.num_columns; ++cx) {
-						int y_offset = 0;
-						for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
-							for (int cf = 0; cf < ispr->layers; ++cf) {
-								const AtlasRegion* reg = ispr->getAtlasRegion(cx, cy, cf, i_pat.subtype, i_pat.x, i_pat.y, i_pat.z, 0);
-								if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
-									TileInstance inst;
-									inst.x = static_cast<float>(item_x - x_offset);
-									inst.y = static_cast<float>(item_y - y_offset);
-									inst.w = static_cast<float>(reg->pixel_width);
-									inst.h = static_cast<float>(reg->pixel_height);
-									inst.sprite_id = reg->debug_sprite_id;
-									inst.flags = 0;
-									inst.r = rf;
-									inst.g = gf;
-									inst.b = bf;
-									inst.a = af;
-									bake_buffer_.push_back(inst);
-								}
-							}
-							y_offset += composite_metrics.row_heights[cy];
-						}
-						x_offset += composite_metrics.column_widths[cx];
-					}
-				}
+				pushSpriteInstances(ispr, i_pat, item_x, item_y,
+					static_cast<float>(r) * (1.0f / 255.0f),
+					static_cast<float>(g) * (1.0f / 255.0f),
+					static_cast<float>(b) * (1.0f / 255.0f),
+					static_cast<float>(a) * (1.0f / 255.0f));
 
 				if (ispr->hasElevation()) {
 					elev += ispr->draw_height;

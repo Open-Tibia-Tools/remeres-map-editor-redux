@@ -347,7 +347,7 @@ public:
 		return getDefinition().attribute(ItemAttributeKey::Charges) != 0;
 	}
 	bool isBorder() const {
-		return getDefinition().hasFlag(ItemFlag::IsBorder);
+		return getDefinition().hasFlag(ItemFlag::IsBorder) || (isAlwaysOnBottom() && getTopOrder() == 1);
 	}
 	bool isOptionalBorder() const {
 		return getDefinition().hasFlag(ItemFlag::IsOptionalBorder);

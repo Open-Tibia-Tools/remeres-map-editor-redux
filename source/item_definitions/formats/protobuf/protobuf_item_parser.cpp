@@ -153,6 +153,7 @@ namespace {
 			fragment.flags |= flagMask(ItemFlag::AlwaysOnBottom);
 		}
 		if (flags.clip()) {
+			fragment.flags |= flagMask(ItemFlag::IsBorder);
 			fragment.always_on_top_order = 1;
 		} else if (flags.bottom()) {
 			fragment.always_on_top_order = 2;

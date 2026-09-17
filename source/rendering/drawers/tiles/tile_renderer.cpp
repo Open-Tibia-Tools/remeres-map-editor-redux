@@ -130,6 +130,43 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 		} else if (options.always_show_zones && (r != 255 || g != 255 || b != 255)) {
 			item_drawer->DrawRawBrush(sprite_batch, sprite_drawer, draw_x, draw_y, SPRITE_ZONE, r, g, b, 60, &ctx);
 		}
+
+		// Static ground borders (coastlines, grass edges, sand borders, etc.)
+		if (!tile->items.empty()) {
+			BlitItemParams border_params(position, nullptr, options);
+			border_params.tile = tile;
+			border_params.ctx = &ctx;
+			border_params.view = &view;
+			border_params.red = r;
+			border_params.green = g;
+			border_params.blue = b;
+
+			for (const auto& item : tile->items) {
+				if (!item || !item->isBorder() || item->isInvalidOTBMItem()) {
+					continue;
+				}
+				const ItemDefinitionView it = item->getDefinition();
+				if (!it) {
+					continue;
+				}
+				GameSprite* sprite = ctx.gfx.getGameSprite(it.clientId());
+				if (!sprite || sprite->isAnimated()) {
+					continue;
+				}
+
+				SpritePatterns patterns = PatternCalculator::Calculate(sprite, it, item.get(), tile, position, ctx.elapsed_time);
+				if (!sprite->isSimpleAndLoaded()) {
+					rme::collectTileSprites(sprite, patterns.x, patterns.y, patterns.z, patterns.frame);
+				}
+
+				border_params.item = item.get();
+				border_params.item_definition = it;
+				border_params.sprite = sprite;
+				border_params.patterns = &patterns;
+
+				item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, border_params);
+			}
+		}
 	}
 
 	const bool is_house_tile = tile->isHouseTile();
@@ -192,6 +229,9 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 	item_params.view = &view;
 
 	for (const auto& item : tile->items) {
+		if (item->isBorder()) {
+			continue;
+		}
 		const ItemDefinitionView it = item->getDefinition();
 		if (item->isInvalidOTBMItem() && (!options.show_invalid_tiles || !it)) {
 			continue;
@@ -217,16 +257,9 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 			item_params.item_definition = it;
 			item_params.sprite = sprite;
 			item_params.patterns = &patterns;
-
-			if (item->isBorder()) {
-				item_params.red = r;
-				item_params.green = g;
-				item_params.blue = b;
-			} else {
-				item_params.red = default_ir;
-				item_params.green = default_ig;
-				item_params.blue = default_ib;
-			}
+			item_params.red = default_ir;
+			item_params.green = default_ig;
+			item_params.blue = default_ib;
 
 			item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, elevation.current_draw_x, elevation.current_draw_y, item_params);
 		}

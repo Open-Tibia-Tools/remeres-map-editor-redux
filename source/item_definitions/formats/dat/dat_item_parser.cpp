@@ -64,7 +64,7 @@ namespace {
 
 		switch (flag) {
 			case DatFlagGroundBorder:
-				fragment.flags |= flagMask(ItemFlag::AlwaysOnBottom);
+				fragment.flags |= flagMask(ItemFlag::AlwaysOnBottom) | flagMask(ItemFlag::IsBorder);
 				fragment.always_on_top_order = 1;
 				return true;
 			case DatFlagOnBottom:

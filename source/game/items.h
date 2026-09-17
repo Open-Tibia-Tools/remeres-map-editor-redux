@@ -72,7 +72,7 @@ public:
 		it.moveable = view.hasFlag(ItemFlag::Moveable);
 		it.pickupable = view.hasFlag(ItemFlag::Pickupable);
 		it.hasElevation = view.hasFlag(ItemFlag::HasElevation);
-		it.isBorder = view.hasFlag(ItemFlag::IsBorder);
+		it.isBorder = view.hasFlag(ItemFlag::IsBorder) || (view.hasFlag(ItemFlag::AlwaysOnBottom) && view.attribute(ItemAttributeKey::AlwaysOnTopOrder) == 1);
 		it.isWall = view.hasFlag(ItemFlag::IsWall);
 		it.isTable = view.hasFlag(ItemFlag::IsTable);
 		it.isCarpet = view.hasFlag(ItemFlag::IsCarpet);
