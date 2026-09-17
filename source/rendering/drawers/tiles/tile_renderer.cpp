@@ -150,7 +150,7 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 					continue;
 				}
 				GameSprite* sprite = ctx.gfx.getGameSprite(it.clientId());
-				if (!sprite || sprite->isAnimated()) {
+				if (!sprite) {
 					continue;
 				}
 
@@ -312,6 +312,9 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 	item_params.view = &view;
 
 	for (const auto& item : tile->items) {
+		if (item->isBorder()) {
+			continue;
+		}
 		const ItemDefinitionView it = item->getDefinition();
 		if (item->isInvalidOTBMItem() && (!options.show_invalid_tiles || !it)) {
 			continue;
@@ -336,16 +339,9 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 		item_params.item_definition = it;
 		item_params.sprite = sprite;
 		item_params.patterns = &patterns;
-
-		if (item->isBorder()) {
-			item_params.red = r;
-			item_params.green = g;
-			item_params.blue = b;
-		} else {
-			item_params.red = default_ir;
-			item_params.green = default_ig;
-			item_params.blue = default_ib;
-		}
+		item_params.red = default_ir;
+		item_params.green = default_ig;
+		item_params.blue = default_ib;
 
 		item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, elevation.current_draw_x, elevation.current_draw_y, item_params);
 	}

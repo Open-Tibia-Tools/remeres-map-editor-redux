@@ -97,9 +97,9 @@ def bake_chunk_simulation(tiles: dict, base_x: int, base_y: int):
                 ground_item = MockItem(tile.ground_id)
                 push_sprite_instances(ground_item, x * 32, y * 32, 'terrain', (tx, ty))
 
-            # 2. Ground Borders
+            # 2. Ground Borders (including animated transitions such as shallow water ID 4647)
             for item in tile.items:
-                if not item.is_border or item.is_animated:
+                if not item.is_border:
                     continue
                 push_sprite_instances(item, x * 32, y * 32, 'border', (tx, ty))
 
@@ -123,8 +123,6 @@ def bake_chunk_simulation(tiles: dict, base_x: int, base_y: int):
 
             for item in tile.items:
                 if item.is_border:
-                    if item.is_animated:
-                        is_dynamic = True
                     continue
 
                 if item.is_animated:
@@ -222,19 +220,39 @@ def run_all_tests():
     assert vase_inst.y == base_y - 8.0, f"Vase y should be {base_y - 8.0} (elevated), got {vase_inst.y}"
     print(f"PASS: Elevation offsets correct (Table: {table_inst.y}, Vase: {vase_inst.y}).")
 
-    print("\n=== TEST 4: Dynamic Border & Item Isolation ===")
+    print("\n=== TEST 4: Animated Ground Borders (Shallow Water ID 4647) & Dynamic Isolation ===")
     dyn_tiles = {}
-    dt = MockTile(3, 3, ground_id=4526)
-    dt.items.append(MockItem(item_id=11, is_border=True, is_animated=True))  # Animated shoreline
-    dt.items.append(MockItem(item_id=22, is_border=False))  # Static rock
+    # Scenario: Water tile (3, 3) has animated shallow water border 4647 (anim=True) and 2x2 rock 1353
+    dt = MockTile(3, 3, ground_id=4608)
+    dt.items.append(MockItem(item_id=4647, is_border=True, is_animated=True))  # Shallow water border 4647
+    dt.items.append(MockItem(item_id=1353, is_border=False, width=2, height=2))  # 2x2 rock
     dyn_tiles[(3, 3)] = dt
 
+    # Neighboring tile (4, 4) has an actual dynamic entity (torch)
+    dt2 = MockTile(4, 4, ground_id=4526)
+    dt2.items.append(MockItem(item_id=1487, is_border=False, is_animated=True))  # Fire torch
+    dyn_tiles[(4, 4)] = dt2
+
     bake_buf, dyn_list = bake_chunk_simulation(dyn_tiles, 0, 0)
-    assert (3, 3) in dyn_list, "Dynamic tile list must contain tile (3, 3)"
-    # Static bake buffer should contain base ground and static rock, but NOT animated border
-    assert not any(inst.sprite_id == 1100 for inst in bake_buf), "Animated border should not be baked into static buffer"
-    assert any(inst.sprite_id == 2200 for inst in bake_buf), "Static rock should be baked into static buffer"
-    print("PASS: Animated border properly isolated from static VBO and recorded in dynamic_tiles list.")
+
+    # 1. Animated shallow water border MUST be baked into static Pass 1 buffer
+    border_4647_instances = [inst for inst in bake_buf if inst.sprite_id == 464700]
+    assert len(border_4647_instances) == 1, "Animated border 4647 must be baked into static Pass 1 buffer"
+    assert border_4647_instances[0].layer == 'border', "Border 4647 must be in border layer"
+
+    # 2. Rock 2x2 must be in Pass 2 and strictly drawn AFTER border 4647
+    rock_instances = [inst for inst in bake_buf if inst.layer == 'object' and inst.origin_tile == (3, 3)]
+    assert len(rock_instances) == 4, "Rock must have 4 sub-sprites"
+    border_idx = bake_buf.index(border_4647_instances[0])
+    for rock_inst in rock_instances:
+        rock_idx = bake_buf.index(rock_inst)
+        assert rock_idx > border_idx, f"Rock instance at {rock_idx} must be baked AFTER border 4647 at {border_idx}"
+
+    # 3. Dynamic tile list must only contain tile (4, 4) with the actual animated non-border item (torch)
+    assert (3, 3) not in dyn_list, "Tile (3, 3) with animated border must NOT be flagged dynamic"
+    assert (4, 4) in dyn_list, "Tile (4, 4) with animated torch must be flagged dynamic"
+    print("PASS: Animated shallow water border 4647 is strictly in Pass 1, overlaid by 2x2 rock, and not in dynamic list.")
+    print("PASS: Animated torch correctly flagged dynamic for overlay pass.")
 
     print("\n========================================================")
     print("ALL GROUND BORDER LAYER ORDERING TESTS PASSED (4/4)!")

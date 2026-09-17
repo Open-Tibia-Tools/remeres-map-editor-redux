@@ -416,7 +416,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					continue;
 				}
 				GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
-				if (!ispr || ispr->isAnimated()) {
+				if (!ispr) {
 					continue;
 				}
 
@@ -489,13 +489,6 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					continue;
 				}
 				if (item->isBorder()) {
-					if (const ItemDefinitionView it = item->getDefinition()) {
-						if (GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId())) {
-							if (ispr->isAnimated()) {
-								is_dynamic = true;
-							}
-						}
-					}
 					continue;
 				}
 				if (item->isInvalidOTBMItem()) {
