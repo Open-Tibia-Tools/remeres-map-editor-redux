@@ -82,7 +82,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 	const int base_screen_x = -view.view_scroll_x - offset;
 	const int base_screen_y = -view.view_scroll_y - offset;
 
-	bool draw_lights = options.isDrawLight() && view.zoom <= 10.0;
+	bool draw_lights = options.isDrawLight();
 
 	const int max_logical_w = static_cast<int>(view.logical_width);
 	const int max_logical_h = static_cast<int>(view.logical_height);

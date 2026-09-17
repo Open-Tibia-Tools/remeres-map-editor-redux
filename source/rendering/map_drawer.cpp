@@ -87,6 +87,13 @@ void MapDrawer::SetupVars(const ViewportParameters& vp) {
 void MapDrawer::SetupGL() {
 	view.SetupGL();
 
+	glDisable(GL_STENCIL_TEST);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquation(GL_FUNC_ADD);
+
 	// Ensure renderers are initialized
 	if (!renderers_initialized) {
 		sprite_batch.initialize();
@@ -282,7 +289,8 @@ void MapDrawer::DrawCreatureNames(NVGcontext* vg) {
 }
 
 bool MapDrawer::hasOverlays() {
-	if (options.show_creatures && !creature_name_drawer.empty()) {
+	const bool can_read_labels = (32.0f / view.zoom) >= 10.0f;
+	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
 		return true;
 	}
 	if (options.show_tooltips) {

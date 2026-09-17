@@ -691,10 +691,6 @@ void ChunkCacheManager::renderDynamicOverlays(
 		return;
 	}
 
-	// LOD Policy: When zoomed out beyond threshold, dynamic entities and overlays are culled
-	if (ctx.view.zoom >= 10.0 && ctx.options.hide_items_when_zoomed) {
-		return;
-	}
 
 	if (active_floor_ != map_z) {
 		return;

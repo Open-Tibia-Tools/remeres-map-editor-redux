@@ -163,9 +163,6 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 	if (only_colors) {
 		return;
 	}
-	if (view.zoom >= 10.0 && options.hide_items_when_zoomed) {
-		return;
-	}
 
 	const bool is_house_tile = tile->isHouseTile();
 	uint8_t default_ir = 255, default_ig = 255, default_ib = 255;
@@ -253,9 +250,6 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 	if (only_colors) {
 		return;
 	}
-	if (view.zoom >= 10.0 && options.hide_items_when_zoomed) {
-		return;
-	}
 
 	const bool is_house_tile = tile->isHouseTile();
 	uint8_t default_ir = 255, default_ig = 255, default_ib = 255;
@@ -341,18 +335,16 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 	const bool only_colors = as_minimap || options.show_only_colors;
 
 	if (!only_colors) {
-		if (view.zoom < 10.0 || !options.hide_items_when_zoomed) {
-			// monster/npc on tile
-			if (tile->creature && options.show_creatures) {
-				creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
-					.map_pos = position,
-					.transient_selection_bounds = options.transient_selection_bounds,
-					.view = &view,
-					.ctx = &ctx
-				});
-				if (creature_name_drawer) {
-					creature_name_drawer->addLabel(position, tile->creature->getName(), tile->creature.get());
-				}
+		// monster/npc on tile
+		if (tile->creature && options.show_creatures) {
+			creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
+				.map_pos = position,
+				.transient_selection_bounds = options.transient_selection_bounds,
+				.view = &view,
+				.ctx = &ctx
+			});
+			if (creature_name_drawer) {
+				creature_name_drawer->addLabel(position, tile->creature->getName(), tile->creature.get());
 			}
 		}
 
@@ -382,17 +374,15 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, overlay, 0, &ctx.atlas);
 		}
 
-		if (view.zoom < 10.0) {
-			const bool need_waypoint = !options.ingame && options.show_waypoints;
-			const Waypoint* waypoint = nullptr;
-			if (need_waypoint && location->getWaypointCount() > 0 && editor) {
-				waypoint = editor->map.waypoints.getWaypoint(location);
-			}
+		const bool need_waypoint = !options.ingame && options.show_waypoints;
+		const Waypoint* waypoint = nullptr;
+		if (need_waypoint && location->getWaypointCount() > 0 && editor) {
+			waypoint = editor->map.waypoints.getWaypoint(location);
+		}
 
-			// markers (waypoint, house exit, town temple, spawn)
-			if (editor) {
-				marker_drawer->draw(sprite_batch, sprite_drawer, draw_x, draw_y, tile, waypoint, ctx.current_house_id, editor->map, options, ctx);
-			}
+		// markers (waypoint, house exit, town temple, spawn)
+		if (editor) {
+			marker_drawer->draw(sprite_batch, sprite_drawer, draw_x, draw_y, tile, waypoint, ctx.current_house_id, editor->map, options, ctx);
 		}
 	}
 }
