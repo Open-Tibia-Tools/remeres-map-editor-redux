@@ -104,7 +104,7 @@ public:
 	/**
 	 * Bind the GPU LUT buffer to an SSBO binding index.
 	 */
-	void bindLUT(GLuint binding_point = SpriteAtlasLUT::SSBO_BINDING_INDEX) const {
+	void bindLUT(GLuint binding_point = SpriteAtlasLUT::SSBO_BINDING_INDEX) {
 		lut_.bind(binding_point);
 	}
 
@@ -120,7 +120,7 @@ public:
 
 private:
 	TextureAtlas atlas_;
-	mutable SpriteAtlasLUT lut_;
+	SpriteAtlasLUT lut_;
 
 	// Stable storage for AtlasRegions (deque doesn't invalidate pointers)
 	std::deque<AtlasRegion> region_storage_;

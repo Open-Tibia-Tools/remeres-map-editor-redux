@@ -34,31 +34,7 @@ struct ChunkCoordHash {
 	}
 };
 
-/// Coordinate of a 4x4 MapNode on floor z
-struct NodeCoord {
-	int32_t nx = 0;
-	int32_t ny = 0;
-	int32_t z = 0;
 
-	constexpr bool operator==(const NodeCoord& other) const noexcept = default;
-	constexpr auto operator<=>(const NodeCoord& other) const noexcept = default;
-};
-
-struct NodeCoordHash {
-	size_t operator()(const NodeCoord& n) const noexcept {
-		size_t h1 = std::hash<int32_t>{}(n.nx);
-		size_t h2 = std::hash<int32_t>{}(n.ny);
-		size_t h3 = std::hash<int32_t>{}(n.z);
-		return h1 ^ (h2 << 1) ^ (h3 << 2);
-	}
-};
-
-struct DirtyRect {
-	int32_t min_x = 0;
-	int32_t min_y = 0;
-	int32_t max_x = 0;
-	int32_t max_y = 0;
-};
 
 class SpatialChangeTracker {
 public:
@@ -100,17 +76,10 @@ public:
 	[[nodiscard]] const std::unordered_set<ChunkCoord, ChunkCoordHash>& getDirtyChunks() const noexcept {
 		return dirty_chunks_;
 	}
-	[[nodiscard]] const std::unordered_set<NodeCoord, NodeCoordHash>& getDirtyNodes() const noexcept {
-		return dirty_nodes_;
-	}
-	[[nodiscard]] const std::array<std::optional<DirtyRect>, MAP_LAYERS>& getDirtyRects() const noexcept {
-		return dirty_rects_by_floor_;
-	}
 
 	// Drain / reset methods for consumers (e.g. ChunkCacheManager, MinimapManager)
 	void clearDirty() noexcept;
 	[[nodiscard]] std::unordered_set<ChunkCoord, ChunkCoordHash> takeDirtyChunks() noexcept;
-	[[nodiscard]] std::array<std::optional<DirtyRect>, MAP_LAYERS> takeDirtyRects() noexcept;
 
 	// Listener registration
 	using InvalidationListener = std::function<void(const SpatialChangeTracker&)>;
@@ -119,13 +88,10 @@ public:
 
 private:
 	void notifyListeners();
-	void expandFloorRect(int32_t x, int32_t y, int32_t z);
 
 	bool all_dirty_ = false;
 	uint64_t generation_ = 0;
 	std::unordered_set<ChunkCoord, ChunkCoordHash> dirty_chunks_;
-	std::unordered_set<NodeCoord, NodeCoordHash> dirty_nodes_;
-	std::array<std::optional<DirtyRect>, MAP_LAYERS> dirty_rects_by_floor_;
 
 	struct ListenerEntry {
 		uint32_t id;

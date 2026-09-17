@@ -127,6 +127,11 @@ public:
 		grid.visitLeaves(min_x, min_y, max_x, max_y, std::forward<Func>(func));
 	}
 
+	template <typename Func>
+	void visitPopulatedChunks(int min_cx, int min_cy, int max_cx, int max_cy, int map_z, Func&& func) const {
+		grid.visitPopulatedChunks(min_cx, min_cy, max_cx, max_cy, map_z, std::forward<Func>(func));
+	}
+
 	// Assigns a tile, it might seem pointless to provide position, but it is not, as the passed tile may be nullptr
 	[[nodiscard]] std::unique_ptr<Tile> setTile(int _x, int _y, int _z, std::unique_ptr<Tile> newtile);
 	[[nodiscard]] std::unique_ptr<Tile> setTile(const Position& pos, std::unique_ptr<Tile> newtile) {

@@ -74,7 +74,7 @@ public:
 	/**
 	 * Bind the SSBO to the designated binding slot (default 2).
 	 */
-	void bind(GLuint binding_point = SSBO_BINDING_INDEX) const;
+	void bind(GLuint binding_point = SSBO_BINDING_INDEX);
 
 	/**
 	 * Unbind the SSBO.

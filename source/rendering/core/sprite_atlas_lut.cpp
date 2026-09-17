@@ -50,14 +50,12 @@ bool SpriteAtlasLUT::initialize(size_t initial_capacity) {
 
 	cpu_entries_.resize(std::max(initial_capacity, DEFAULT_INITIAL_CAPACITY));
 
-	glGenBuffers(1, &ssbo_);
+	glCreateBuffers(1, &ssbo_);
 	if (ssbo_ == 0) {
 		return false;
 	}
 
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, static_cast<GLsizeiptr>(cpu_entries_.size() * sizeof(SpriteLUTEntry)), cpu_entries_.data(), GL_DYNAMIC_DRAW);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	glNamedBufferData(ssbo_, static_cast<GLsizeiptr>(cpu_entries_.size() * sizeof(SpriteLUTEntry)), cpu_entries_.data(), GL_DYNAMIC_DRAW);
 
 	gpu_capacity_ = cpu_entries_.size();
 	has_dirty_entries_ = false;
@@ -91,9 +89,7 @@ void SpriteAtlasLUT::ensureCapacity(size_t required_capacity) {
 	cpu_entries_.resize(new_capacity);
 
 	if (ssbo_ != 0) {
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, static_cast<GLsizeiptr>(cpu_entries_.size() * sizeof(SpriteLUTEntry)), cpu_entries_.data(), GL_DYNAMIC_DRAW);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		glNamedBufferData(ssbo_, static_cast<GLsizeiptr>(cpu_entries_.size() * sizeof(SpriteLUTEntry)), cpu_entries_.data(), GL_DYNAMIC_DRAW);
 		gpu_capacity_ = cpu_entries_.size();
 		has_dirty_entries_ = false;
 		dirty_min_id_ = UINT32_MAX;
@@ -150,18 +146,18 @@ void SpriteAtlasLUT::flush() {
 	const size_t offset = dirty_min_id_ * sizeof(SpriteLUTEntry);
 	const size_t size = (dirty_max_id_ - dirty_min_id_ + 1) * sizeof(SpriteLUTEntry);
 
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_);
-	glBufferSubData(GL_SHADER_STORAGE_BUFFER, static_cast<GLintptr>(offset), static_cast<GLsizeiptr>(size), cpu_entries_.data() + dirty_min_id_);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	glNamedBufferSubData(ssbo_, static_cast<GLintptr>(offset), static_cast<GLsizeiptr>(size), cpu_entries_.data() + dirty_min_id_);
 
 	has_dirty_entries_ = false;
 	dirty_min_id_ = UINT32_MAX;
 	dirty_max_id_ = 0;
 }
 
-void SpriteAtlasLUT::bind(GLuint binding_point) const {
+void SpriteAtlasLUT::bind(GLuint binding_point) {
 	if (ssbo_ != 0) {
-		const_cast<SpriteAtlasLUT*>(this)->flush();
+		if (has_dirty_entries_) {
+			flush();
+		}
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_point, ssbo_);
 	}
 }

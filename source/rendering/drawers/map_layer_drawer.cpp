@@ -22,15 +22,10 @@
 #include "rendering/drawers/overlays/grid_drawer.h"
 #include "live/live_client.h"
 #include "map/map.h"
-#include "map/map_region.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
-#include "rendering/core/light_buffer.h"
 #include "rendering/core/sprite_batch.h"
-#include "rendering/core/primitive_renderer.h"
-#include "rendering/core/sprite_preloader.h"
 #include "rendering/core/render_frame_context.h"
-#include "item_definitions/core/item_definition_store.h"
 
 #include <cmath>
 #include <limits>
@@ -176,10 +171,10 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 	const bool use_chunk_cache = (chunk_cache != nullptr && chunk_cache->isValid() && !live_client);
 
 	if (use_chunk_cache) {
-		// 1. Flush any pending batch geometry before MDI chunk pass
+		// 1. Flush any pending batch geometry before chunk cache pass
 		sprite_batch.flush(ctx.atlas);
 
-		// 2. Multi-Draw Indirect Chunk Cache static terrain & static items pass
+		// 2. Chunk Cache static terrain & static items pass (instanced per-chunk VBOs)
 		chunk_cache->renderFloor(map_z, map, ctx, view.projectionMatrix, ctx.atlas);
 
 		// 3. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!

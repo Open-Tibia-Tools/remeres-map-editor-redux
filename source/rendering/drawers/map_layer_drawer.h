@@ -18,18 +18,12 @@
 #ifndef RME_MAP_LAYER_DRAWER_H
 #define RME_MAP_LAYER_DRAWER_H
 
-#include <iosfwd>
-
 class Map;
 class LiveClient;
 class TileRenderer;
 class GridDrawer;
-struct RenderView;
-struct DrawingOptions;
-struct LightBuffer;
 struct RenderFrameContext;
 class SpriteBatch;
-class PrimitiveRenderer;
 class ChunkCacheManager;
 
 class MapLayerDrawer {

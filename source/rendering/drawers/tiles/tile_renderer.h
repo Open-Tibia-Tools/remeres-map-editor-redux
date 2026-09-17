@@ -3,14 +3,11 @@
 
 #include <cstddef>
 #include <memory>
-#include <sstream>
 #include <stdint.h>
 
 class TileLocation;
 class Tile;
 class Item;
-struct RenderView;
-struct DrawingOptions;
 class ItemDrawer;
 class SpriteDrawer;
 class CreatureDrawer;
@@ -18,9 +15,6 @@ class CreatureNameDrawer;
 class FloorDrawer;
 class MarkerDrawer;
 class SpriteBatch;
-class PrimitiveRenderer;
-struct SpritePatterns;
-class ItemDefinitionView;
 
 struct RenderFrameContext;
 

@@ -1,4 +1,4 @@
-﻿//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
@@ -7,11 +7,9 @@
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
 #include "map/map.h"
-#include "map/map_region.h"
 #include "map/tile.h"
 #include "game/item.h"
 #include "game/complexitem.h"
-#include "game/waypoints.h"
 #include "editor/editor.h"
 #include <algorithm>
 #include <string_view>

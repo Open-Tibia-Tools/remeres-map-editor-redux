@@ -186,7 +186,10 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/template_image.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_preloader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_buffer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_types.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_palette.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_gatherer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_cache.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/minimap_colors.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/multi_draw_indirect_renderer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colorizer.h
@@ -251,8 +254,6 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/tooltip_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/zoom_controller.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/fps_counter.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/frame_pacer.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_calculator.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/icons/sprite_icon_service.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/tile_describer.h
@@ -580,6 +581,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_preloader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_buffer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_gatherer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_cache.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/multi_draw_indirect_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colorizer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colors.cpp
@@ -638,10 +640,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/tooltip_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/zoom_controller.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/fps_counter.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/frame_pacer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/icon_renderer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/icon_renderer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_calculator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/icons/sprite_icon_service.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/tile_describer.cpp

@@ -24,7 +24,6 @@
 #include "app/settings.h"
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/chunk_cache_manager.h"
-#include "rendering/core/light_buffer.h"
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/core/render_interaction_state.h"
 #include "rendering/core/render_view.h"
@@ -61,7 +60,6 @@ class MapDrawer {
 	RenderView view;
 	SpriteBatch sprite_batch;
 	PrimitiveRenderer primitive_renderer;
-	LightBuffer light_buffer;
 	LightDrawer light_drawer;
 	TooltipDrawer tooltip_drawer;
 	GridDrawer grid_drawer;

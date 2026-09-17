@@ -70,6 +70,114 @@ public:
 		return cells_.size();
 	}
 
+	static constexpr auto cell_key_less = [](const CellEntry& entry, uint64_t k) { return entry.key < k; };
+
+	// Binary search for a cell by key. Returns index, or cells_.size() if not found.
+	[[nodiscard]] size_t findCellIndex(uint64_t key) const {
+		auto it = std::lower_bound(cells_.begin(), cells_.end(), key, cell_key_less);
+		if (it != cells_.end() && it->key == key) {
+			return static_cast<size_t>(it - cells_.begin());
+		}
+		return cells_.size();
+	}
+
+	[[nodiscard]] const GridCell* getCell(size_t index) const noexcept {
+		return (index < cells_.size()) ? cells_[index].cell.get() : nullptr;
+	}
+
+	template <typename CellType = GridCell>
+	[[nodiscard]] static bool chunkHasFloor(const CellType& cell, int chunk_ix, int chunk_iy, int map_z) noexcept {
+		if (map_z < 0 || map_z >= MAP_LAYERS) {
+			return false;
+		}
+		const int start_lx = chunk_ix << 2; // chunk_ix * 4
+		const int start_ly = chunk_iy << 2; // chunk_iy * 4
+		for (int dy = 0; dy < 4; ++dy) {
+			const int row_base = (start_ly + dy) << NODES_PER_CELL_SHIFT; // * 16
+			for (int dx = 0; dx < 4; ++dx) {
+				const MapNode* node = cell.nodes[row_base + start_lx + dx].get();
+				if (node && node->getFloor(map_z)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Sparsely visits all populated 16x16 chunks on floor map_z intersecting [min_cx, max_cx] x [min_cy, max_cy].
+	 * Employs BOLT Hybrid Strategy: iterates sorted cells or performs row binary searches.
+	 * Guarantees zero empty chunks visited and zero duplicate chunk visits.
+	 */
+	template <typename Func>
+	void visitPopulatedChunks(int min_cx, int min_cy, int max_cx, int max_cy, int map_z, Func&& func) const {
+		if (cells_.empty() || min_cx > max_cx || min_cy > max_cy) {
+			return;
+		}
+
+		// Convert chunk coordinates (16 tiles) to cell coordinates (64 tiles)
+		const int start_cell_x = min_cx >> 2;
+		const int end_cell_x = max_cx >> 2;
+		const int start_cell_y = min_cy >> 2;
+		const int end_cell_y = max_cy >> 2;
+
+		const size_t cell_region_w = static_cast<size_t>(end_cell_x - start_cell_x + 1);
+		const size_t cell_region_h = static_cast<size_t>(end_cell_y - start_cell_y + 1);
+		const size_t cell_region_area = cell_region_w * cell_region_h;
+
+		auto processCell = [&](const GridCell& cell, int cell_x, int cell_y) {
+			const int cell_base_cx = cell_x << 2;
+			const int cell_base_cy = cell_y << 2;
+
+			const int local_min_cx = std::max(0, min_cx - cell_base_cx);
+			const int local_max_cx = std::min(3, max_cx - cell_base_cx);
+			const int local_min_cy = std::max(0, min_cy - cell_base_cy);
+			const int local_max_cy = std::min(3, max_cy - cell_base_cy);
+
+			for (int ciy = local_min_cy; ciy <= local_max_cy; ++ciy) {
+				for (int cix = local_min_cx; cix <= local_max_cx; ++cix) {
+					if (chunkHasFloor(cell, cix, ciy, map_z)) {
+						func(cell_base_cx + cix, cell_base_cy + ciy);
+					}
+				}
+			}
+		};
+
+		// BOLT HYBRID DECISION:
+		// If the query area in cells is larger than twice the total cell count,
+		// it is vastly faster to scan cells_ linearly than to do row binary searches.
+		if (cell_region_area > 2 * cells_.size()) {
+			// Sparse Path: O(TotalCells)
+			for (const auto& entry : cells_) {
+				int cell_x, cell_y;
+				getCellCoordsFromKey(entry.key, cell_x, cell_y);
+				if (cell_x >= start_cell_x && cell_x <= end_cell_x &&
+					cell_y >= start_cell_y && cell_y <= end_cell_y) {
+					processCell(*entry.cell, cell_x, cell_y);
+				}
+			}
+		} else {
+			// Bounded Row Search Path: O(Rows * log(TotalCells))
+			for (int cell_y = start_cell_y; cell_y <= end_cell_y; ++cell_y) {
+				const uint64_t row_start_key = makeKeyFromCell(start_cell_x, cell_y);
+				const uint64_t row_end_key = makeKeyFromCell(end_cell_x, cell_y);
+
+				auto it = std::lower_bound(cells_.cbegin(), cells_.cend(), row_start_key, cell_key_less);
+				while (it != cells_.cend() && it->key <= row_end_key) {
+					int cell_x, cy;
+					getCellCoordsFromKey(it->key, cell_x, cy);
+					if (cy != cell_y) {
+						break;
+					}
+					if (cell_x >= start_cell_x && cell_x <= end_cell_x) {
+						processCell(*it->cell, cell_x, cell_y);
+					}
+					++it;
+				}
+			}
+		}
+	}
+
 	template <typename Func>
 	void visitLeaves(int min_x, int min_y, int max_x, int max_y, Func&& func) {
 		if (max_x <= min_x || max_y <= min_y) {
@@ -137,16 +245,6 @@ protected:
 		int local_end_nx;
 	};
 
-	static constexpr auto cell_key_less = [](const CellEntry& entry, uint64_t k) { return entry.key < k; };
-
-	// Binary search for a cell by key. Returns index, or cells_.size() if not found.
-	[[nodiscard]] size_t findCellIndex(uint64_t key) const {
-		auto it = std::lower_bound(cells_.begin(), cells_.end(), key, cell_key_less);
-		if (it != cells_.end() && it->key == key) {
-			return static_cast<size_t>(it - cells_.begin());
-		}
-		return cells_.size();
-	}
 
 	// Find or insert a cell, returning its index.
 	// Allocates GridCell immediately on insertion â€” no null entries left behind.

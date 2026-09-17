@@ -18,8 +18,6 @@ class AtlasManager;
 class SpriteBatch;
 class TileRenderer;
 struct RenderFrameContext;
-struct RenderView;
-struct DrawingOptions;
 
 struct DynamicTileInfo {
 	uint8_t rel_x = 0;
@@ -92,8 +90,13 @@ struct CachedChunk {
 class ChunkCacheManager {
 public:
 	static constexpr int CHUNK_SIZE = 16;
-	static constexpr uint64_t EVICTION_FRAME_THRESHOLD = 300;
-	static constexpr uint64_t PRUNE_INTERVAL_FRAMES = 120;
+	static constexpr uint64_t EVICTION_FRAME_THRESHOLD = 300;     // 5.0 seconds at 60 FPS
+	static constexpr uint64_t FAR_FLOOR_FRAME_THRESHOLD = 60;      // 1.0 second at 60 FPS
+	static constexpr uint64_t DISTANT_FRAME_THRESHOLD = 60;        // 1.0 second at 60 FPS
+	static constexpr uint64_t PRUNE_INTERVAL_FRAMES = 120;         // 2.0 seconds at 60 FPS
+	static constexpr size_t MAX_CACHED_CHUNKS = 4096;              // High-water mark
+	static constexpr size_t TARGET_CACHED_CHUNKS = 3072;           // Low-water mark (75%)
+	static constexpr int VIEWPORT_MARGIN_CHUNKS = 32;              // 512 tiles
 
 	ChunkCacheManager();
 	~ChunkCacheManager();
@@ -129,7 +132,7 @@ public:
 		const Map& map,
 		const RenderFrameContext& ctx,
 		const glm::mat4& projection,
-		const AtlasManager& atlas
+		AtlasManager& atlas
 	);
 
 	/**
@@ -145,9 +148,9 @@ public:
 	);
 
 	/**
-	 * Evict distant/stale chunks outside the active floor range.
+	 * Evict distant/stale chunks outside the active floor range or viewport margin.
 	 */
-	void prune(int current_floor);
+	void prune(int current_floor, int min_cx = 0, int max_cx = 0, int min_cy = 0, int max_cy = 0, bool has_bounds = false);
 
 	[[nodiscard]] size_t getCachedChunkCount() const noexcept {
 		return cached_chunks_.size();
@@ -160,6 +163,7 @@ private:
 	void bakeChunk(CachedChunk& chunk, const Map& map, const RenderFrameContext& ctx);
 	void uploadChunk(CachedChunk& chunk, const std::vector<TileInstance>& instances);
 	CachedChunk& getOrCreateChunk(const ChunkCoord& coord);
+	void evictOldest(size_t count_to_remove);
 
 	GLuint vao_ = 0;
 	ShaderProgram shader_;
@@ -168,6 +172,9 @@ private:
 	std::unordered_map<ChunkCoord, CachedChunk, ChunkCoordHash> cached_chunks_;
 	std::vector<TileInstance> bake_buffer_;
 	uint64_t current_frame_ = 0;
+
+	std::vector<CachedChunk*> active_visible_chunks_;
+	int active_floor_ = -1;
 };
 
 #endif

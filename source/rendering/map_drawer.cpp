@@ -26,13 +26,9 @@
 #include "brushes/house/house_brush.h"
 #include "brushes/house/house_exit_brush.h"
 #include "game/sprites.h"
-#include "editor/copybuffer.h"
-#include "live/live_socket.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
-#include "rendering/core/light_gatherer.h"
 #include "rendering/ui/inspection_badge_collector.h"
-#include "item_definitions/core/item_definition_store.h"
 #include "rendering/io/screen_capture.h"
 #include "rendering/core/gl_resources.h"
 
@@ -46,8 +42,8 @@ MapDrawer::MapDrawer(Editor& editor) :
 	item_drawer.SetDoorIndicatorDrawer(&door_indicator_drawer);
 
 	options.Update();
-	settings_observer_id_ = g_settings.addObserver([this](uint32_t) {
-		options.MarkDirty();
+	settings_observer_id_ = g_settings.addObserver([this](uint32_t key) {
+		options.MarkSettingDirty(key);
 	});
 }
 
@@ -104,13 +100,19 @@ void MapDrawer::Release() {
 }
 
 void MapDrawer::Draw(const InteractionRenderState& interaction) {
-	if (options.isDirty()) {
+	if (options.isChunkBakeDirty()) {
 		chunk_cache_manager.invalidateAll();
-		options.clearDirty();
+		options.clearChunkBakeDirty();
 	}
+	if (options.isLightingDirty()) {
+		light_drawer.invalidateAll();
+		options.clearLightingDirty();
+	}
+	options.clearVisualDirty();
+	options.clearDirty();
 	chunk_cache_manager.updateDirtyState(editor.map.getChangeTracker());
+	light_drawer.updateDirtyState(editor.map.getChangeTracker());
 
-	light_buffer.Clear();
 	creature_name_drawer.clear();
 	options.transient_selection_bounds = std::nullopt;
 
@@ -136,10 +138,6 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	// Begin Batches
 	sprite_batch.begin(view.projectionMatrix, *atlas);
 	primitive_renderer.setProjectionMatrix(view.projectionMatrix);
-	if (options.isDrawLight()) {
-		light_buffer.Prepare(view);
-		LightGatherer::Gather(editor.map, view, options, light_buffer);
-	}
 
 	DrawBackground();
 
@@ -284,7 +282,7 @@ void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor
 }
 
 void MapDrawer::DrawLight() {
-	light_drawer.draw(view, light_buffer, options);
+	light_drawer.render(view, editor.map, g_graphics, options);
 }
 
 void MapDrawer::TakeScreenshot(uint8_t* screenshot_buffer) {

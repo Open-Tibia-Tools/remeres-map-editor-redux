@@ -1,10 +1,8 @@
 #include "rendering/drawers/tiles/tile_renderer.h"
 #include "rendering/core/sprite_batch.h"
-#include "rendering/core/primitive_renderer.h"
 
 #include "editor/editor.h"
 #include "map/tile.h"
-#include "map/map_region.h"
 #include "game/item.h"
 #include "game/waypoints.h"
 #include "brushes/waypoint/waypoint_brush.h"
@@ -24,11 +22,10 @@
 #include "rendering/drawers/entities/creature_name_drawer.h"
 #include "rendering/drawers/tiles/floor_drawer.h"
 #include "rendering/drawers/overlays/marker_drawer.h"
-#include "rendering/core/sprite_preloader.h"
 #include "rendering/utilities/pattern_calculator.h"
+#include "rendering/core/sprite_preloader.h"
 
 #include <algorithm>
-#include <ranges>
 
 TileRenderer::TileRenderer(ItemDrawer* id, SpriteDrawer* sd, CreatureDrawer* cd, CreatureNameDrawer* cnd, FloorDrawer* fd, MarkerDrawer* md, Editor* ed) :
 	item_drawer(id), sprite_drawer(sd), creature_drawer(cd), floor_drawer(fd), marker_drawer(md), creature_name_drawer(cnd), editor(ed) {

@@ -96,7 +96,6 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 	if (!options.ctx) {
 		return;
 	}
-	const bool draw_visuals = !options.light_collection_only;
 	GraphicManager& gfx = options.ctx->gfx;
 	const ItemDefinitionStore& item_defs = options.ctx->item_definitions;
 
@@ -107,9 +106,7 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 			if (spr && options.light_buffer && options.view && spr->hasLight()) {
 				registerCreatureSpriteLight(*options.light_buffer, *options.view, *spr, screenx, screeny, spr->getLight(), false);
 			}
-			if (draw_visuals) {
-				sprite_drawer->BlitSprite(sprite_batch, screenx, screeny, spr, options.color, options.ctx);
-			}
+			sprite_drawer->BlitSprite(sprite_batch, screenx, screeny, spr, options.color, options.ctx);
 			if (spr && options.light_buffer && options.view && options.preview_local_player) {
 				registerCreatureCenterLight(*options.light_buffer, *options.view, screenx, screeny, spr, spr->hasLight() ? spr->getLight() : SpriteLight {}, options.preview_local_player);
 			}
@@ -165,42 +162,40 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 					registerCreatureSpriteLight(*options.light_buffer, *options.view, screenx, screeny, mount_draw_offset, mount_metrics, mountSpr->getLight(), false);
 				}
 
-				if (draw_visuals) {
-					const int mount_base_x = screenx - mount_draw_offset.first;
-					const int mount_base_y = screeny - mount_draw_offset.second;
-					if (is_simple_mount) {
-						const AtlasRegion* region = mountSpr->getAtlasRegion(0, 0, static_cast<int>(dir), 0, 0, mountOutfit, resolvedFrame);
-						if (region) {
-							sprite_drawer->glBlitAtlasQuad(
-								sprite_batch,
-								mount_base_x,
-								mount_base_y,
-								region,
-								options.color
-							);
-						}
-					} else {
-						if (!has_mount_metrics) {
-							mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, resolvedFrame);
-						}
-						int mount_x_offset = 0;
-						for (int cx = 0; cx < mount_metrics.num_columns; ++cx) {
-							int mount_y_offset = 0;
-							for (int cy = 0; cy < mount_metrics.num_rows; ++cy) {
-								const AtlasRegion* region = mountSpr->getAtlasRegion(cx, cy, static_cast<int>(dir), 0, 0, mountOutfit, resolvedFrame);
-								if (region) {
-									sprite_drawer->glBlitAtlasQuad(
-										sprite_batch,
-										mount_base_x - mount_x_offset,
-										mount_base_y - mount_y_offset,
-										region,
-										options.color
-									);
-								}
-								mount_y_offset += mount_metrics.row_heights[cy];
+				const int mount_base_x = screenx - mount_draw_offset.first;
+				const int mount_base_y = screeny - mount_draw_offset.second;
+				if (is_simple_mount) {
+					const AtlasRegion* region = mountSpr->getAtlasRegion(0, 0, static_cast<int>(dir), 0, 0, mountOutfit, resolvedFrame);
+					if (region) {
+						sprite_drawer->glBlitAtlasQuad(
+							sprite_batch,
+							mount_base_x,
+							mount_base_y,
+							region,
+							options.color
+						);
+					}
+				} else {
+					if (!has_mount_metrics) {
+						mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, resolvedFrame);
+					}
+					int mount_x_offset = 0;
+					for (int cx = 0; cx < mount_metrics.num_columns; ++cx) {
+						int mount_y_offset = 0;
+						for (int cy = 0; cy < mount_metrics.num_rows; ++cy) {
+							const AtlasRegion* region = mountSpr->getAtlasRegion(cx, cy, static_cast<int>(dir), 0, 0, mountOutfit, resolvedFrame);
+							if (region) {
+								sprite_drawer->glBlitAtlasQuad(
+									sprite_batch,
+									mount_base_x - mount_x_offset,
+									mount_base_y - mount_y_offset,
+									region,
+									options.color
+								);
 							}
-							mount_x_offset += mount_metrics.column_widths[cx];
+							mount_y_offset += mount_metrics.row_heights[cy];
 						}
+						mount_x_offset += mount_metrics.column_widths[cx];
 					}
 				}
 
@@ -209,11 +204,10 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		}
 
 		// pattern_y => creature addon
-		if (draw_visuals) {
-			const auto sprite_draw_offset = spr->getDrawOffset();
-			const int base_x = screenx - sprite_draw_offset.first;
-			const int base_y = screeny - sprite_draw_offset.second;
-			for (int pattern_y = 0; pattern_y < spr->pattern_y; pattern_y++) {
+		const auto sprite_draw_offset = spr->getDrawOffset();
+		const int base_x = screenx - sprite_draw_offset.first;
+		const int base_y = screeny - sprite_draw_offset.second;
+		for (int pattern_y = 0; pattern_y < spr->pattern_y; pattern_y++) {
 
 				// continue if we dont have this addon
 				if (pattern_y > 0) {
@@ -257,7 +251,6 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 					sprite_x_offset += sprite_metrics.column_widths[cx];
 				}
 			}
-		}
 
 		if (options.light_buffer && options.view && options.preview_local_player) {
 			registerCreatureCenterLight(*options.light_buffer, *options.view, screenx, screeny, mountSpr ? mountSpr : spr, spr->hasLight() ? spr->getLight() : SpriteLight {}, options.preview_local_player);

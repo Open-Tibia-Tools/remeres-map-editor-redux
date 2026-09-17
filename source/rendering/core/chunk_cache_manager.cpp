@@ -13,11 +13,11 @@
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/shared_geometry.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
+#include "rendering/drawers/tiles/tile_color_calculator.h"
 #include "map/map.h"
 #include "map/tile.h"
 #include "game/item.h"
 #include "rendering/utilities/pattern_calculator.h"
-#include "rendering/drawers/tiles/tile_color_calculator.h"
 #include "rendering/core/sprite_preloader.h"
 #include <spdlog/spdlog.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -154,6 +154,8 @@ void ChunkCacheManager::release() {
 		vao_ = 0;
 	}
 	cached_chunks_.clear();
+	active_visible_chunks_.clear();
+	active_floor_ = -1;
 	shader_initialized_ = false;
 	current_frame_ = 0;
 }
@@ -232,15 +234,35 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 	const int32_t base_y = chunk.coord.cy * CHUNK_SIZE;
 	const int32_t z = chunk.coord.z;
 
+	const int32_t cell_x = chunk.coord.cx >> 2;
+	const int32_t cell_y = chunk.coord.cy >> 2;
+	const int32_t chunk_ix = chunk.coord.cx & 3;
+	const int32_t chunk_iy = chunk.coord.cy & 3;
+
 	const Floor* floors[4][4] = {};
 	bool any_floor = false;
-	for (int ny = 0; ny < 4; ++ny) {
-		for (int nx = 0; nx < 4; ++nx) {
-			const MapNode* nd = map.getLeaf(base_x + nx * 4, base_y + ny * 4);
-			if (nd) {
-				floors[nx][ny] = nd->getFloor(z);
-				if (floors[nx][ny]) {
-					any_floor = true;
+
+	// Single lookup for the containing 64x64 cell
+	const auto& grid = map.getGrid();
+	const uint64_t cell_key = SpatialHashGrid::makeKeyFromCell(cell_x, cell_y);
+	const size_t cell_idx = grid.findCellIndex(cell_key);
+
+	if (cell_idx < grid.cellCount()) {
+		const auto* cell_ptr = grid.getCell(cell_idx);
+		if (cell_ptr) {
+			const auto& cell = *cell_ptr;
+			for (int ny = 0; ny < 4; ++ny) {
+				const int node_y = (chunk_iy << 2) + ny;
+				const int row_base = node_y << 4; // * 16
+				for (int nx = 0; nx < 4; ++nx) {
+					const int node_x = (chunk_ix << 2) + nx;
+					const MapNode* nd = cell.nodes[row_base + node_x].get();
+					if (nd) {
+						floors[nx][ny] = nd->getFloor(z);
+						if (floors[nx][ny]) {
+							any_floor = true;
+						}
+					}
 				}
 			}
 		}
@@ -490,22 +512,23 @@ void ChunkCacheManager::renderFloor(
 	const Map& map,
 	const RenderFrameContext& ctx,
 	const glm::mat4& projection,
-	const AtlasManager& atlas
+	AtlasManager& atlas
 ) {
 	if (!isValid()) {
 		return;
 	}
 
 	++current_frame_;
-	if (current_frame_ % PRUNE_INTERVAL_FRAMES == 0) {
-		prune(ctx.view.floor);
-	}
 
 	const ViewBounds bounds = ctx.view.getBoundsForFloor(map_z);
 	const int min_cx = bounds.start_x >> 4;
 	const int max_cx = (bounds.end_x + 15) >> 4;
 	const int min_cy = bounds.start_y >> 4;
 	const int max_cy = (bounds.end_y + 15) >> 4;
+
+	if (current_frame_ % PRUNE_INTERVAL_FRAMES == 0) {
+		prune(ctx.view.floor, min_cx, max_cx, min_cy, max_cy, true);
+	}
 
 	const int offset = (map_z <= GROUND_LAYER)
 		? (GROUND_LAYER - map_z) * TILE_SIZE
@@ -527,36 +550,110 @@ void ChunkCacheManager::renderFloor(
 
 	glBindVertexArray(vao_);
 
-	for (int cy = min_cy; cy <= max_cy; ++cy) {
-		for (int cx = min_cx; cx <= max_cx; ++cx) {
-			const ChunkCoord coord{ cx, cy, map_z };
-			CachedChunk& chunk = getOrCreateChunk(coord);
-			if (chunk.is_dirty) {
-				bakeChunk(chunk, map, ctx);
-			}
-			chunk.last_accessed_frame = current_frame_;
+	// Reset active visible chunk list for this floor
+	active_visible_chunks_.clear();
+	active_floor_ = map_z;
 
-			if (!chunk.is_empty && chunk.instance_count > 0 && chunk.vbo != 0) {
-				glVertexArrayVertexBuffer(vao_, 1, chunk.vbo, 0, sizeof(TileInstance));
-				glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk.instance_count));
-			}
+	// Sparse Query: Touches ONLY populated chunks on map_z!
+	map.visitPopulatedChunks(min_cx, min_cy, max_cx, max_cy, map_z, [&](int cx, int cy) {
+		const ChunkCoord coord{ cx, cy, map_z };
+		CachedChunk& chunk = getOrCreateChunk(coord);
+		if (chunk.is_dirty) {
+			bakeChunk(chunk, map, ctx);
 		}
-	}
+		chunk.last_accessed_frame = current_frame_;
+
+		if (!chunk.is_empty && chunk.instance_count > 0 && chunk.vbo != 0) {
+			glVertexArrayVertexBuffer(vao_, 1, chunk.vbo, 0, sizeof(TileInstance));
+			glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk.instance_count));
+		}
+
+		active_visible_chunks_.push_back(&chunk);
+	});
 
 	glBindVertexArray(0);
 	shader_.Unuse();
 }
 
-void ChunkCacheManager::prune(int current_floor) {
+void ChunkCacheManager::prune(
+	int current_floor,
+	int min_cx, int max_cx,
+	int min_cy, int max_cy,
+	bool has_bounds
+) {
 	for (auto it = cached_chunks_.begin(); it != cached_chunks_.end();) {
 		const auto& [coord, chunk] = *it;
+		const uint64_t age = current_frame_ - chunk.last_accessed_frame;
 		const bool is_far_floor = std::abs(coord.z - current_floor) > 2;
-		const bool is_stale = (current_frame_ - chunk.last_accessed_frame) > EVICTION_FRAME_THRESHOLD;
-		if (is_far_floor && is_stale) {
+
+		// Tier 1: Empty chunks are evicted immediately
+		if (chunk.is_empty) {
 			it = cached_chunks_.erase(it);
-		} else {
-			++it;
+			continue;
 		}
+
+		// Tier 2: Distant floor aggressive eviction (1s)
+		if (is_far_floor && age > FAR_FLOOR_FRAME_THRESHOLD) {
+			it = cached_chunks_.erase(it);
+			continue;
+		}
+
+		// Tier 3: Viewport distance culling (> 32 chunks / 512 tiles away and unaccessed for 1s)
+		if (has_bounds) {
+			const bool is_far_dist = (coord.cx < min_cx - VIEWPORT_MARGIN_CHUNKS ||
+			                          coord.cx > max_cx + VIEWPORT_MARGIN_CHUNKS ||
+			                          coord.cy < min_cy - VIEWPORT_MARGIN_CHUNKS ||
+			                          coord.cy > max_cy + VIEWPORT_MARGIN_CHUNKS);
+			if (is_far_dist && age > DISTANT_FRAME_THRESHOLD) {
+				it = cached_chunks_.erase(it);
+				continue;
+			}
+		}
+
+		// Tier 4: Universal staleness eviction regardless of floor (5s)
+		if (age > EVICTION_FRAME_THRESHOLD) {
+			it = cached_chunks_.erase(it);
+			continue;
+		}
+
+		++it;
+	}
+
+	// Tier 5: Hard capacity ceiling (LRU eviction down to TARGET_CACHED_CHUNKS)
+	if (cached_chunks_.size() > MAX_CACHED_CHUNKS) {
+		evictOldest(cached_chunks_.size() - TARGET_CACHED_CHUNKS);
+	}
+}
+
+void ChunkCacheManager::evictOldest(size_t count_to_remove) {
+	if (count_to_remove == 0 || cached_chunks_.empty()) {
+		return;
+	}
+
+	std::vector<std::pair<uint64_t, ChunkCoord>> candidates;
+	candidates.reserve(cached_chunks_.size());
+
+	// Never evict chunks accessed in the current frame!
+	for (const auto& [coord, chunk] : cached_chunks_) {
+		if (chunk.last_accessed_frame < current_frame_) {
+			candidates.emplace_back(chunk.last_accessed_frame, coord);
+		}
+	}
+
+	if (candidates.empty()) {
+		return;
+	}
+
+	const size_t num_evict = std::min(count_to_remove, candidates.size());
+	std::partial_sort(
+		candidates.begin(),
+		candidates.begin() + num_evict,
+		candidates.end(),
+		[](const auto& a, const auto& b) { return a.first < b.first; }
+	);
+
+	for (size_t i = 0; i < num_evict; ++i) {
+		cached_chunks_.erase(candidates[i].second);
 	}
 }
 
@@ -576,11 +673,9 @@ void ChunkCacheManager::renderDynamicOverlays(
 		return;
 	}
 
-	const ViewBounds bounds = ctx.view.getBoundsForFloor(map_z);
-	const int min_cx = bounds.start_x >> 4;
-	const int max_cx = (bounds.end_x + 15) >> 4;
-	const int min_cy = bounds.start_y >> 4;
-	const int max_cy = (bounds.end_y + 15) >> 4;
+	if (active_floor_ != map_z) {
+		return;
+	}
 
 	const int offset = (map_z <= GROUND_LAYER)
 		? (GROUND_LAYER - map_z) * TILE_SIZE
@@ -589,32 +684,30 @@ void ChunkCacheManager::renderDynamicOverlays(
 	const int base_draw_x = -ctx.view.view_scroll_x - offset;
 	const int base_draw_y = -ctx.view.view_scroll_y - offset;
 
-	for (int cy = min_cy; cy <= max_cy; ++cy) {
-		for (int cx = min_cx; cx <= max_cx; ++cx) {
-			const ChunkCoord coord{ cx, cy, map_z };
-			auto it = cached_chunks_.find(coord);
-			if (it == cached_chunks_.end() || it->second.dynamic_tiles.empty()) {
+	// Direct iteration of active visible chunks gathered in renderFloor!
+	// Zero O(W x H) bounding box iteration, zero hash map lookups.
+	for (const CachedChunk* chunk_ptr : active_visible_chunks_) {
+		if (!chunk_ptr || chunk_ptr->dynamic_tiles.empty()) {
+			continue;
+		}
+
+		const auto& chunk = *chunk_ptr;
+		const int chunk_base_x = chunk.coord.cx * CHUNK_SIZE;
+		const int chunk_base_y = chunk.coord.cy * CHUNK_SIZE;
+
+		for (const auto& dt : chunk.dynamic_tiles) {
+			const int x = chunk_base_x + dt.rel_x;
+			const int y = chunk_base_y + dt.rel_y;
+			const TileLocation* loc = map.getTileL(x, y, map_z);
+			if (!loc) {
 				continue;
 			}
 
-			const auto& chunk = it->second;
-			const int chunk_base_x = cx * CHUNK_SIZE;
-			const int chunk_base_y = cy * CHUNK_SIZE;
+			const int draw_x = x * TILE_SIZE + base_draw_x;
+			const int draw_y = y * TILE_SIZE + base_draw_y;
 
-			for (const auto& dt : chunk.dynamic_tiles) {
-				const int x = chunk_base_x + dt.rel_x;
-				const int y = chunk_base_y + dt.rel_y;
-				const TileLocation* loc = map.getTileL(x, y, map_z);
-				if (!loc) {
-					continue;
-				}
-
-				const int draw_x = x * TILE_SIZE + base_draw_x;
-				const int draw_y = y * TILE_SIZE + base_draw_y;
-
-				const Tile* tile_above = (map_z == GROUND_LAYER + 1) ? map.getTile(x, y, GROUND_LAYER) : nullptr;
-				tile_renderer.RenderDynamicPasses(sprite_batch, loc, ctx, draw_x, draw_y, tile_above);
-			}
+			const Tile* tile_above = (map_z == GROUND_LAYER + 1) ? map.getTile(x, y, GROUND_LAYER) : nullptr;
+			tile_renderer.RenderDynamicPasses(sprite_batch, loc, ctx, draw_x, draw_y, tile_above);
 		}
 	}
 }

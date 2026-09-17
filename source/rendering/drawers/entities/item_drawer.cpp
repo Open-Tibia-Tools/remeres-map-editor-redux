@@ -12,7 +12,6 @@
 #include "rendering/drawers/entities/sprite_drawer.h"
 #include "rendering/drawers/entities/creature_drawer.h"
 #include "rendering/core/drawing_options.h"
-#include "rendering/core/light_buffer.h"
 #include "rendering/core/render_view.h"
 #include "rendering/utilities/pattern_calculator.h"
 #include "map/tile.h"
@@ -35,15 +34,6 @@ namespace {
 			return nullptr;
 		}
 		return resolveSprite(ctx->item_definitions.get(item_id), ctx);
-	}
-
-	void registerSpriteLight(LightBuffer& light_buffer, const RenderView& view, int screen_x, int screen_y, const GameSprite::SpriteLayoutMetrics& metrics, const SpriteLight& light) {
-		light_buffer.AddScreenLight(
-			screen_x - metrics.left_offset + metrics.total_width / 2,
-			screen_y - metrics.top_offset + metrics.total_height / 2,
-			view,
-			light
-		);
 	}
 
 	constexpr DrawColor toDrawColorFrom8Bit(int color) {
@@ -83,9 +73,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	int blue = params.blue;
 	int alpha = params.alpha;
 	const SpritePatterns* cached_patterns = params.patterns;
-	LightBuffer* light_buffer = params.light_buffer;
 	const RenderView* view = params.view;
-	const bool draw_visuals = !params.light_collection_only;
 
 	const ItemDefinitionView it = params.item_definition ? params.item_definition : item->getDefinition();
 
@@ -194,14 +182,6 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	int frame = patterns.frame;
 
 	const bool is_simple_sprite = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
-	GameSprite::SpriteLayoutMetrics composite_metrics {};
-	bool has_composite_metrics = false;
-
-	if (light_buffer && view && item->hasLight()) {
-		composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
-		has_composite_metrics = true;
-		registerSpriteLight(*light_buffer, *view, screenx, screeny, composite_metrics, item->getLight());
-	}
 
 	if (options.transparent_items && !ephemeral && (!it.isGroundTile() || spr->width > 1 || spr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || spr->width > 1 || spr->height > 1)) {
 		alpha >>= 1;
@@ -215,46 +195,42 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		}
 	}
 
-	if (draw_visuals) {
-		if (is_simple_sprite) {
-			const AtlasRegion* region = nullptr;
-			if (spr->is_simple && subtype == -1 && pattern_x == 0 && pattern_y == 0 && pattern_z == 0 && frame == 0) {
-				region = spr->getCachedDefaultRegion();
-			}
-			if (!region) {
-				region = spr->getAtlasRegion(0, 0, 0, subtype, pattern_x, pattern_y, pattern_z, frame);
-			}
-			if (region) {
+	if (is_simple_sprite) {
+		const AtlasRegion* region = nullptr;
+		if (spr->is_simple && subtype == -1 && pattern_x == 0 && pattern_y == 0 && pattern_z == 0 && frame == 0) {
+			region = spr->getCachedDefaultRegion();
+		}
+		if (!region) {
+			region = spr->getAtlasRegion(0, 0, 0, subtype, pattern_x, pattern_y, pattern_z, frame);
+		}
+		if (region) {
 #ifdef DEBUG
-				// DEBUG: Check for mismatch on Item 369 using PRECISE sub-sprite ID
-				if (item->getID() == 369) {
-					// Use 0,0 as pattern coordinates for 1x1 items
-					uint32_t precise_expected_id = spr->getSpriteId(frame, 0, 0);
-					if (region->debug_sprite_id != 0 && precise_expected_id != 0 && region->debug_sprite_id != precise_expected_id) {
-						spdlog::error("SPRITE MISMATCH DETECTED: Item 369 (Expected Sprite ID {}, Actual Region Owner {})", precise_expected_id, region->debug_sprite_id);
-					}
+			// DEBUG: Check for mismatch on Item 369 using PRECISE sub-sprite ID
+			if (item->getID() == 369) {
+				// Use 0,0 as pattern coordinates for 1x1 items
+				uint32_t precise_expected_id = spr->getSpriteId(frame, 0, 0);
+				if (region->debug_sprite_id != 0 && precise_expected_id != 0 && region->debug_sprite_id != precise_expected_id) {
+					spdlog::error("SPRITE MISMATCH DETECTED: Item 369 (Expected Sprite ID {}, Actual Region Owner {})", precise_expected_id, region->debug_sprite_id);
 				}
+			}
 #endif
-				sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx, screeny, region, DrawColor(red, green, blue, alpha));
-			}
-		} else {
-			if (!has_composite_metrics) {
-				composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
-			}
-			int x_offset = 0;
-			for (int cx = 0; cx < composite_metrics.num_columns; cx++) {
-				int y_offset = 0;
-				for (int cy = 0; cy < composite_metrics.num_rows; cy++) {
-					for (int cf = 0; cf != spr->layers; cf++) {
-						const AtlasRegion* region = spr->getAtlasRegion(cx, cy, cf, subtype, pattern_x, pattern_y, pattern_z, frame);
-						if (region) {
-							sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx - x_offset, screeny - y_offset, region, DrawColor(red, green, blue, alpha));
-						}
+			sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx, screeny, region, DrawColor(red, green, blue, alpha));
+		}
+	} else {
+		const auto composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
+		int x_offset = 0;
+		for (int cx = 0; cx < composite_metrics.num_columns; cx++) {
+			int y_offset = 0;
+			for (int cy = 0; cy < composite_metrics.num_rows; cy++) {
+				for (int cf = 0; cf != spr->layers; cf++) {
+					const AtlasRegion* region = spr->getAtlasRegion(cx, cy, cf, subtype, pattern_x, pattern_y, pattern_z, frame);
+					if (region) {
+						sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx - x_offset, screeny - y_offset, region, DrawColor(red, green, blue, alpha));
 					}
-					y_offset += composite_metrics.row_heights[cy];
 				}
-				x_offset += composite_metrics.column_widths[cx];
+				y_offset += composite_metrics.row_heights[cy];
 			}
+			x_offset += composite_metrics.column_widths[cx];
 		}
 	}
 
@@ -280,20 +256,18 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 		creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, outfit, static_cast<Direction>(podium->getDirection()), CreatureDrawOptions {
 			.color = DrawColor(red, green, blue, alpha),
-			.light_buffer = light_buffer,
 			.view = view,
-			.light_collection_only = params.light_collection_only,
 			.ctx = params.ctx
 		});
 	}
 
 	// draw wall hook
-	if (draw_visuals && !options.ingame && options.show_hooks && (it.hasFlag(ItemFlag::HookSouth) || it.hasFlag(ItemFlag::HookEast))) {
+	if (!options.ingame && options.show_hooks && (it.hasFlag(ItemFlag::HookSouth) || it.hasFlag(ItemFlag::HookEast))) {
 		DrawHookIndicator(it, pos);
 	}
 
 	// draw light color indicator
-	if (draw_visuals && !options.ingame && options.show_light_str) {
+	if (!options.ingame && options.show_light_str) {
 		const SpriteLight& light = item->getLight();
 		if (light.intensity > 0) {
 			const DrawColor lightColor = toDrawColorFrom8Bit(light.color);
