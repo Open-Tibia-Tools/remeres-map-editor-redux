@@ -7,11 +7,24 @@
 #include <atomic>
 #include <spdlog/spdlog.h>
 
-static std::atomic<uint32_t> template_id_generator(0x1000000);
+namespace {
+	constexpr uint32_t TEMPLATE_ID_START = 1'000'000;
+	constexpr uint32_t TEMPLATE_ID_MAX = 1'999'999;
+	std::atomic<uint32_t> template_id_generator(TEMPLATE_ID_START);
+
+	uint32_t get_next_template_id() {
+		uint32_t id = template_id_generator.fetch_add(1, std::memory_order_relaxed);
+		if (id > TEMPLATE_ID_MAX) {
+			template_id_generator.store(TEMPLATE_ID_START + 1, std::memory_order_relaxed);
+			id = TEMPLATE_ID_START;
+		}
+		return id;
+	}
+}
 
 TemplateImage::TemplateImage(GameSprite* parent, int v, const Outfit& outfit) :
 	atlas_region(nullptr),
-	texture_id(template_id_generator.fetch_add(1)), // Generate unique ID for Atlas
+	texture_id(get_next_template_id()), // Generate unique ID for Atlas (< DIRECT_LOOKUP_SIZE / MAX_SUPPORTED_SPRITES)
 	parent(parent),
 	sprite_index(v),
 	lookHead(outfit.lookHead),
