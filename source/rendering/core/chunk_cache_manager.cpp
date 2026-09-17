@@ -605,24 +605,26 @@ void ChunkCacheManager::prune(
 	bool has_bounds
 ) {
 	size_t empty_evicted = 0;
-	size_t far_floor_evicted = 0;
+
+	// Surface domain: floors 0 through GROUND_LAYER (7) are rendered together.
+	// Never consider surface floors as "far" from each other!
+	const bool is_surface_view = (current_floor <= GROUND_LAYER);
 
 	for (auto it = cached_chunks_.begin(); it != cached_chunks_.end();) {
 		const auto& [coord, chunk] = *it;
 		const uint64_t age = current_frame_ - chunk.last_accessed_frame;
-		const bool is_far_floor = std::abs(coord.z - current_floor) > 2;
 
-		// Tier 1: Empty chunks on far floors that are stale (retain on active floors to prevent re-bake loops!)
+		bool is_far_floor = false;
+		if (is_surface_view) {
+			is_far_floor = (coord.z > GROUND_LAYER + 2);
+		} else {
+			is_far_floor = (coord.z <= GROUND_LAYER) || (std::abs(coord.z - current_floor) > 2);
+		}
+
+		// Tier 1: Empty chunks on far floors that are stale (negative cache cleanup)
 		if (chunk.is_empty && is_far_floor && age > FAR_FLOOR_FRAME_THRESHOLD) {
 			it = cached_chunks_.erase(it);
 			++empty_evicted;
-			continue;
-		}
-
-		// Tier 2: Distant floor aggressive eviction (1s)
-		if (!chunk.is_empty && is_far_floor && age > FAR_FLOOR_FRAME_THRESHOLD) {
-			it = cached_chunks_.erase(it);
-			++far_floor_evicted;
 			continue;
 		}
 
@@ -637,10 +639,10 @@ void ChunkCacheManager::prune(
 		lru_evicted = needed;
 	}
 
-	const size_t total_evicted = empty_evicted + far_floor_evicted + lru_evicted;
+	const size_t total_evicted = empty_evicted + lru_evicted;
 	if (total_evicted > 0) {
-		spdlog::info("[ChunkCache] Prune (frame {}): Evicted {} chunk(s) ({} empty, {} far-floor, {} LRU) | Remaining: {}/{} (~{:.1f} MB VRAM)",
-			current_frame_, total_evicted, empty_evicted, far_floor_evicted, lru_evicted,
+		spdlog::info("[ChunkCache] Prune (frame {}): Evicted {} chunk(s) ({} empty, {} LRU) | Remaining: {}/{} (~{:.1f} MB VRAM)",
+			current_frame_, total_evicted, empty_evicted, lru_evicted,
 			cached_chunks_.size(), MAX_CACHED_CHUNKS, (cached_chunks_.size() * 3.5) / 1024.0);
 	}
 }
@@ -692,6 +694,16 @@ void ChunkCacheManager::renderDynamicOverlays(
 	}
 
 
+	// Dynamic overlay culling at extreme zoom:
+	// When zoomed out beyond 10x (ctx.view.zoom >= 10.0, i.e. <= 10% zoom, tile size <= 3.2px),
+	// dynamic tile elements (animated water ripples, torches, creatures) become subpixel.
+	// Static terrain and items are already rendered by the chunk cache VBOs on the GPU.
+	// Bypassing immediate CPU tile traversal here prevents pushing hundreds of thousands
+	// of dynamic sprites into SpriteBatch, preserving high framerates at extreme zoom.
+	if (ctx.view.zoom >= 10.0) {
+		return;
+	}
+
 	if (active_floor_ != map_z) {
 		return;
 	}
@@ -717,13 +729,18 @@ void ChunkCacheManager::renderDynamicOverlays(
 		for (const auto& dt : chunk.dynamic_tiles) {
 			const int x = chunk_base_x + dt.rel_x;
 			const int y = chunk_base_y + dt.rel_y;
+
+			const int draw_x = x * TILE_SIZE + base_draw_x;
+			const int draw_y = y * TILE_SIZE + base_draw_y;
+
+			if (!ctx.view.IsPixelVisible(draw_x, draw_y)) {
+				continue;
+			}
+
 			const TileLocation* loc = map.getTileL(x, y, map_z);
 			if (!loc) {
 				continue;
 			}
-
-			const int draw_x = x * TILE_SIZE + base_draw_x;
-			const int draw_y = y * TILE_SIZE + base_draw_y;
 
 			const Tile* tile_above = (map_z == GROUND_LAYER + 1) ? map.getTile(x, y, GROUND_LAYER) : nullptr;
 			tile_renderer.RenderDynamicPasses(sprite_batch, loc, ctx, draw_x, draw_y, tile_above);

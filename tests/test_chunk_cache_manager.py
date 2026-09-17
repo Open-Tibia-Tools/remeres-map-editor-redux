@@ -363,50 +363,74 @@ def test_empty_region_zero_allocation():
 def test_cache_eviction_prune_simulation():
     print("\n=== TEST 5: Cache Eviction (prune) Invariant Verification ===")
 
+    GROUND_LAYER = 7
+    MAX_CACHED_CHUNKS = 10
+    FAR_FLOOR_FRAME_THRESHOLD = 60
+
     class MockCachedChunk:
         def __init__(self, z: int, last_accessed: int, is_empty: bool):
             self.z = z
             self.last_accessed_frame = last_accessed
             self.is_empty = is_empty
 
-    cached_chunks = {
-        (0, 0, 7): MockCachedChunk(7, 400, False),  # active floor, recent -> RETAIN
-        (1, 0, 7): MockCachedChunk(7, 400, True),   # active floor, empty -> RETAIN (negative cache prevents re-bake death loop!)
-        (2, 0, 9): MockCachedChunk(9, 480, False),  # active range (abs(9-7) <= 2), recent -> RETAIN
-        (3, 0, 12): MockCachedChunk(12, 480, False), # far floor (abs(12-7) > 2), recent (500-480=20 <= 60) -> RETAIN (not stale yet)
-        (4, 0, 12): MockCachedChunk(12, 300, False),  # far floor, stale (>60 frames old: 500-300=200 > 60) -> EVICT
-        (5, 0, 7): MockCachedChunk(7, 100, False),   # active floor, older frame -> RETAIN (active floor chunks retained to prevent re-baking lag!)
-        (6, 0, 12): MockCachedChunk(12, 300, True),  # far floor, empty and stale -> EVICT
+    def simulate_prune(cached_chunks, current_floor, current_frame):
+        is_surface_view = (current_floor <= GROUND_LAYER)
+        to_erase = []
+
+        # Tier 1: Empty chunks on far floors that are stale
+        for coord, chunk in cached_chunks.items():
+            if is_surface_view:
+                is_far_floor = (chunk.z > GROUND_LAYER + 2)
+            else:
+                is_far_floor = (chunk.z <= GROUND_LAYER) or (abs(chunk.z - current_floor) > 2)
+
+            age = current_frame - chunk.last_accessed_frame
+            if chunk.is_empty and is_far_floor and age > FAR_FLOOR_FRAME_THRESHOLD:
+                to_erase.append(coord)
+
+        for coord in to_erase:
+            del cached_chunks[coord]
+
+        # Tier 3: LRU when exceeding capacity
+        if len(cached_chunks) > MAX_CACHED_CHUNKS:
+            needed = len(cached_chunks) - MAX_CACHED_CHUNKS
+            sorted_entries = sorted(cached_chunks.items(), key=lambda kv: kv[1].last_accessed_frame)
+            for i in range(needed):
+                del cached_chunks[sorted_entries[i][0]]
+
+    # Case A: Surface view (current_floor = 0)
+    # Surface floors (0..7) must NEVER be considered far floors from each other.
+    cached_surface = {
+        (0, 0, 7): MockCachedChunk(7, 100, False),  # Surface ground populated -> RETAIN
+        (1, 0, 7): MockCachedChunk(7, 100, True),   # Surface ground empty -> RETAIN (surface negative cache never wiped)
+        (2, 0, 0): MockCachedChunk(0, 100, False),  # Surface roof populated -> RETAIN
+        (3, 0, 4): MockCachedChunk(4, 100, True),   # Surface mid empty -> RETAIN
+        (4, 0, 12): MockCachedChunk(12, 100, True), # Underground deep empty, stale -> EVICT
+        (5, 0, 12): MockCachedChunk(12, 100, False),# Underground deep populated -> RETAIN (kept unless LRU needed)
     }
 
-    current_floor = 7
-    current_frame = 500
-    EVICTION_FRAME_THRESHOLD = 60
+    simulate_prune(cached_surface, current_floor=0, current_frame=500)
+    retained_coords = set(cached_surface.keys())
+    assert (4, 0, 12) not in retained_coords, "Stale underground empty chunk must be evicted"
+    assert (1, 0, 7) in retained_coords, "Surface empty chunk must NOT be evicted when viewing floor 0"
+    assert (0, 0, 7) in retained_coords, "Surface populated chunk must NOT be evicted when viewing floor 0"
+    assert (5, 0, 12) in retained_coords, "Populated underground chunk should be retained in VRAM"
 
-    # Prune logic under test:
-    to_erase = []
-    for coord, chunk in cached_chunks.items():
-        is_far_floor = abs(chunk.z - current_floor) > 2
-        is_stale = (current_frame - chunk.last_accessed_frame) > EVICTION_FRAME_THRESHOLD
+    # Case B: Capacity LRU eviction
+    # When cache exceeds MAX_CACHED_CHUNKS (10), oldest accessed chunks are evicted regardless of floor
+    cached_capacity = {
+        (i, 0, 7): MockCachedChunk(7, last_accessed=i * 10, is_empty=False)
+        for i in range(15)  # 15 chunks, max is 10
+    }
+    simulate_prune(cached_capacity, current_floor=7, current_frame=1000)
+    assert len(cached_capacity) == MAX_CACHED_CHUNKS, f"Expected {MAX_CACHED_CHUNKS} chunks after LRU, got {len(cached_capacity)}"
+    # Oldest 5 chunks (i=0..4) should be pruned
+    for i in range(5):
+        assert (i, 0, 7) not in cached_capacity, f"Chunk {i} should have been pruned by LRU"
+    for i in range(5, 15):
+        assert (i, 0, 7) in cached_capacity, f"Chunk {i} should have been retained by LRU"
 
-        # Tier 1: Empty chunks on far floors that are stale (retain on active floors to prevent re-bake loops!)
-        if chunk.is_empty and is_far_floor and is_stale:
-            to_erase.append(coord)
-            continue
-
-        # Tier 2: Distant floor aggressive eviction (1s)
-        if not chunk.is_empty and is_far_floor and is_stale:
-            to_erase.append(coord)
-            continue
-
-    for coord in to_erase:
-        del cached_chunks[coord]
-
-    retained = set(cached_chunks.keys())
-    expected = {(0, 0, 7), (1, 0, 7), (2, 0, 9), (3, 0, 12), (5, 0, 7)}
-    assert retained == expected, f"Eviction mismatch! Retained: {retained}, Expected: {expected}"
-
-    print("PASS: Prune eviction policy correctly retains active-floor chunks (including empty negative cache) and evicts far-floor stale chunks!")
+    print("PASS: Prune eviction policy correctly protects surface floor domain, cleans stale negative cache, and enforces LRU capacity bounds!")
 
 if __name__ == "__main__":
     test_single_cell_indexing()
