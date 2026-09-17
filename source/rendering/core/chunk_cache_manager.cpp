@@ -239,6 +239,8 @@ void ChunkCacheManager::uploadChunk(CachedChunk& chunk, const std::vector<TileIn
 void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const RenderFrameContext& ctx) {
 	bake_buffer_.clear();
 	chunk.dynamic_tiles.clear();
+	chunk.has_animated_terrain = false;
+	chunk.sample_animated_sprite = nullptr;
 
 	const int32_t base_x = chunk.coord.cx * CHUNK_SIZE;
 	const int32_t base_y = chunk.coord.cy * CHUNK_SIZE;
@@ -340,116 +342,15 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 	};
 
 	// =========================================================================
-	// Pass 1: Static Terrain Ground & Ground Borders (Floor base layer)
-	// Render all base ground and ground borders across the chunk FIRST,
-	// so that objects, structures, and multi-tile sprites (2x1, 1x2, 2x2, etc.)
-	// always render cleanly on top of terrain transitions without border clipping.
-	// =========================================================================
-	for (int d = 0; d < 2 * CHUNK_SIZE - 1; ++d) {
-		for (int tx = 0; tx <= d && tx < CHUNK_SIZE; ++tx) {
-			const int ty = d - tx;
-			if (ty >= CHUNK_SIZE) {
-				continue;
-			}
-
-			const Floor* fl = floors[tx >> 2][ty >> 2];
-			if (!fl) {
-				continue;
-			}
-
-			const int loc_idx = (tx & 3) * 4 + (ty & 3);
-			const TileLocation* loc = &fl->locs[loc_idx];
-			const Tile* tile = loc->get();
-			if (!tile) {
-				continue;
-			}
-			if (ctx.options.show_only_modified && !tile->isModified()) {
-				continue;
-			}
-
-			const int x = base_x + tx;
-			const int y = base_y + ty;
-
-			uint8_t gr = 255, gg = 255, gb = 255;
-			if (!ctx.options.show_as_minimap && (ctx.options.hasTileColorModifiers() || loc->getSpawnCount() > 0)) {
-				TileColorCalculator::Calculate(tile, ctx.options, ctx.current_house_id, loc->getSpawnCount(), gr, gg, gb);
-			}
-
-			// 1. Static terrain ground (water, grass, dirt, lava, etc.)
-			if (tile->ground) {
-				const ItemDefinitionView git = tile->ground->getDefinition();
-				if (git) {
-					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
-					if (gspr) {
-						const SpritePatterns g_pat = PatternCalculator::Calculate(gspr, git, tile->ground.get(), tile, Position(x, y, z), 0);
-						if (!gspr->isSimpleAndLoaded()) {
-							rme::collectTileSprites(gspr, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
-						}
-
-						uint8_t r = gr, g = gg, b = gb;
-						if (tile->ground->isSelected()) {
-							r >>= 1;
-							g >>= 1;
-							b >>= 1;
-						}
-
-						const auto [g_off_x, g_off_y] = gspr->getDrawOffset();
-						const int ground_x = x * 32 - g_off_x;
-						const int ground_y = y * 32 - g_off_y;
-
-						pushSpriteInstances(gspr, g_pat, ground_x, ground_y,
-							static_cast<float>(r) * (1.0f / 255.0f),
-							static_cast<float>(g) * (1.0f / 255.0f),
-							static_cast<float>(b) * (1.0f / 255.0f),
-							1.0f);
-					}
-				}
-			}
-
-			// 2. Static ground borders (coastlines, grass edges, sand borders, etc.)
-			for (const auto& item : tile->items) {
-				if (!item || !item->isBorder() || item->isInvalidOTBMItem()) {
-					continue;
-				}
-				const ItemDefinitionView it = item->getDefinition();
-				if (!it) {
-					continue;
-				}
-				GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
-				if (!ispr) {
-					continue;
-				}
-
-				const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z), 0);
-				if (!ispr->isSimpleAndLoaded()) {
-					rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
-				}
-
-				uint8_t r = gr, g = gg, b = gb;
-				if (item->isSelected()) {
-					r >>= 1;
-					g >>= 1;
-					b >>= 1;
-				}
-
-				const auto [draw_offset_x, draw_offset_y] = ispr->getDrawOffset();
-				const int item_x = x * 32 - draw_offset_x;
-				const int item_y = y * 32 - draw_offset_y;
-
-				pushSpriteInstances(ispr, i_pat, item_x, item_y,
-					static_cast<float>(r) * (1.0f / 255.0f),
-					static_cast<float>(g) * (1.0f / 255.0f),
-					static_cast<float>(b) * (1.0f / 255.0f),
-					1.0f);
-			}
-		}
-	}
-
-	// =========================================================================
-	// Pass 2: Static Objects, Structures & Elevated Items (Non-border items)
-	// Rendered in strict diagonal Painter's Algorithm order (North-West to South-East)
-	// with elevation stacking. Multi-tile sprites (extending North/West) correctly
-	// overlay terrain borders baked in Pass 1.
+	// Single Diagonal Loop (Painter's Algorithm: North-West to South-East)
+	// Traverses tiles in strict diagonal order. On each tile:
+	//   1. Ground (with ctx.elapsed_time for animated grounds like water)
+	//   2. Ground borders (isBorder(), with ctx.elapsed_time for shallow water)
+	//   3. Static items & structures with elevation stacking
+	// Multi-tile grounds (e.g. 2x2 mountain ID 919) at (x+1, y+1) correctly
+	// occlude items placed on tiles behind them (x, y).
+	// Multi-tile items (e.g. 2x2 rock) at (x+1, y+1) correctly overlay
+	// ground borders on tiles before them (x, y).
 	// =========================================================================
 	for (int d = 0; d < 2 * CHUNK_SIZE - 1; ++d) {
 		for (int tx = 0; tx <= d && tx < CHUNK_SIZE; ++tx) {
@@ -483,12 +384,97 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				is_dynamic = true;
 			}
 
-			int elev = 0;
+			uint8_t gr = 255, gg = 255, gb = 255;
+			if (!ctx.options.show_as_minimap && (ctx.options.hasTileColorModifiers() || loc->getSpawnCount() > 0)) {
+				TileColorCalculator::Calculate(tile, ctx.options, ctx.current_house_id, loc->getSpawnCount(), gr, gg, gb);
+			}
+
+			// 1. Static & animated terrain ground (water, grass, dirt, lava, etc.)
+			if (tile->ground) {
+				const ItemDefinitionView git = tile->ground->getDefinition();
+				if (git) {
+					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
+					if (gspr) {
+						if (gspr->isAnimated()) {
+							chunk.has_animated_terrain = true;
+							if (!chunk.sample_animated_sprite) {
+								chunk.sample_animated_sprite = gspr;
+							}
+						}
+
+						const SpritePatterns g_pat = PatternCalculator::Calculate(gspr, git, tile->ground.get(), tile, Position(x, y, z), ctx.elapsed_time);
+						if (!gspr->isSimpleAndLoaded()) {
+							rme::collectTileSprites(gspr, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
+						}
+
+						uint8_t r = gr, g = gg, b = gb;
+						if (tile->ground->isSelected()) {
+							r >>= 1;
+							g >>= 1;
+							b >>= 1;
+						}
+
+						const auto [g_off_x, g_off_y] = gspr->getDrawOffset();
+						const int ground_x = x * 32 - g_off_x;
+						const int ground_y = y * 32 - g_off_y;
+
+						pushSpriteInstances(gspr, g_pat, ground_x, ground_y,
+							static_cast<float>(r) * (1.0f / 255.0f),
+							static_cast<float>(g) * (1.0f / 255.0f),
+							static_cast<float>(b) * (1.0f / 255.0f),
+							1.0f);
+					}
+				}
+			}
+
+			// 2. Static & animated ground borders (coastlines, grass edges, shallow water, etc.)
 			for (const auto& item : tile->items) {
-				if (!item) {
+				if (!item || !item->isBorder() || item->isInvalidOTBMItem()) {
 					continue;
 				}
-				if (item->isBorder()) {
+				const ItemDefinitionView it = item->getDefinition();
+				if (!it) {
+					continue;
+				}
+				GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
+				if (!ispr) {
+					continue;
+				}
+
+				if (ispr->isAnimated()) {
+					chunk.has_animated_terrain = true;
+					if (!chunk.sample_animated_sprite) {
+						chunk.sample_animated_sprite = ispr;
+					}
+				}
+
+				const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z), ctx.elapsed_time);
+				if (!ispr->isSimpleAndLoaded()) {
+					rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
+				}
+
+				uint8_t r = gr, g = gg, b = gb;
+				if (item->isSelected()) {
+					r >>= 1;
+					g >>= 1;
+					b >>= 1;
+				}
+
+				const auto [draw_offset_x, draw_offset_y] = ispr->getDrawOffset();
+				const int item_x = x * 32 - draw_offset_x;
+				const int item_y = y * 32 - draw_offset_y;
+
+				pushSpriteInstances(ispr, i_pat, item_x, item_y,
+					static_cast<float>(r) * (1.0f / 255.0f),
+					static_cast<float>(g) * (1.0f / 255.0f),
+					static_cast<float>(b) * (1.0f / 255.0f),
+					1.0f);
+			}
+
+			// 3. Static items & structures with elevation stacking
+			int elev = 0;
+			for (const auto& item : tile->items) {
+				if (!item || item->isBorder()) {
 					continue;
 				}
 				if (item->isInvalidOTBMItem()) {
@@ -544,6 +530,13 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				chunk.dynamic_tiles.push_back(DynamicTileInfo{ static_cast<uint8_t>(tx), static_cast<uint8_t>(ty) });
 			}
 		}
+	}
+
+	chunk.last_baked_anim_time = ctx.elapsed_time;
+	if (chunk.sample_animated_sprite && chunk.sample_animated_sprite->animator) {
+		chunk.last_baked_frame = chunk.sample_animated_sprite->animator->getFrame(ctx.elapsed_time);
+	} else {
+		chunk.last_baked_frame = -1;
 	}
 
 	uploadChunk(chunk, bake_buffer_);
@@ -606,6 +599,23 @@ void ChunkCacheManager::renderFloor(
 	map.visitPopulatedChunks(min_cx, min_cy, max_cx, max_cy, map_z, [&](int cx, int cy) {
 		const ChunkCoord coord{ cx, cy, map_z };
 		CachedChunk& chunk = getOrCreateChunk(coord);
+
+		if (chunk.has_animated_terrain && ctx.options.show_preview && ctx.view.zoom < 10.0) {
+			bool frame_changed = false;
+			if (chunk.sample_animated_sprite && chunk.sample_animated_sprite->animator) {
+				const int cur_frame = chunk.sample_animated_sprite->animator->getFrame(ctx.elapsed_time);
+				if (cur_frame != chunk.last_baked_frame) {
+					frame_changed = true;
+				}
+			}
+			if (!frame_changed && std::abs(ctx.elapsed_time - chunk.last_baked_anim_time) >= 350) {
+				frame_changed = true;
+			}
+			if (frame_changed) {
+				chunk.is_dirty = true;
+			}
+		}
+
 		if (chunk.is_dirty) {
 			bakeChunk(chunk, map, ctx);
 			++baked_count;
@@ -623,7 +633,7 @@ void ChunkCacheManager::renderFloor(
 	});
 
 	if (baked_count > 0) {
-		spdlog::info("[ChunkCache] Floor {}: Baked {} new/dirty chunk(s) | Visible: {} chunks ({} instances) | Total cached: {}/{}",
+		spdlog::debug("[ChunkCache] Floor {}: Baked {} new/dirty chunk(s) | Visible: {} chunks ({} instances) | Total cached: {}/{}",
 			map_z, baked_count, rendered_chunk_count, rendered_instance_count, cached_chunks_.size(), MAX_CACHED_CHUNKS);
 	}
 

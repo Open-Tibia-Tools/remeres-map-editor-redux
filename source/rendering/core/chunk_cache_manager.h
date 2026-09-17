@@ -17,6 +17,7 @@ class Map;
 class AtlasManager;
 class SpriteBatch;
 class TileRenderer;
+class GameSprite;
 struct RenderFrameContext;
 
 struct DynamicTileInfo {
@@ -32,6 +33,10 @@ struct CachedChunk {
 	uint64_t last_accessed_frame = 0;
 	bool is_dirty = true;
 	bool is_empty = false;
+	bool has_animated_terrain = false;
+	const GameSprite* sample_animated_sprite = nullptr;
+	int last_baked_frame = -1;
+	long last_baked_anim_time = 0;
 	std::vector<DynamicTileInfo> dynamic_tiles;
 
 	CachedChunk() = default;
@@ -50,10 +55,18 @@ struct CachedChunk {
 		last_accessed_frame(other.last_accessed_frame),
 		is_dirty(other.is_dirty),
 		is_empty(other.is_empty),
+		has_animated_terrain(other.has_animated_terrain),
+		sample_animated_sprite(other.sample_animated_sprite),
+		last_baked_frame(other.last_baked_frame),
+		last_baked_anim_time(other.last_baked_anim_time),
 		dynamic_tiles(std::move(other.dynamic_tiles)) {
 		other.vbo = 0;
 		other.vbo_capacity = 0;
 		other.instance_count = 0;
+		other.has_animated_terrain = false;
+		other.sample_animated_sprite = nullptr;
+		other.last_baked_frame = -1;
+		other.last_baked_anim_time = 0;
 	}
 
 	CachedChunk& operator=(CachedChunk&& other) noexcept {
@@ -68,10 +81,18 @@ struct CachedChunk {
 			last_accessed_frame = other.last_accessed_frame;
 			is_dirty = other.is_dirty;
 			is_empty = other.is_empty;
+			has_animated_terrain = other.has_animated_terrain;
+			sample_animated_sprite = other.sample_animated_sprite;
+			last_baked_frame = other.last_baked_frame;
+			last_baked_anim_time = other.last_baked_anim_time;
 			dynamic_tiles = std::move(other.dynamic_tiles);
 			other.vbo = 0;
 			other.vbo_capacity = 0;
 			other.instance_count = 0;
+			other.has_animated_terrain = false;
+			other.sample_animated_sprite = nullptr;
+			other.last_baked_frame = -1;
+			other.last_baked_anim_time = 0;
 		}
 		return *this;
 	}
