@@ -11,6 +11,7 @@
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/sprite_batch.h"
+#include "rendering/core/shared_geometry.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
 #include "map/map.h"
 #include "map/tile.h"
@@ -88,34 +89,71 @@ ChunkCacheManager::~ChunkCacheManager() {
 bool ChunkCacheManager::initialize() {
 	release();
 
+	if (!SharedGeometry::Instance().initialize()) {
+		spdlog::error("ChunkCacheManager: Failed to initialize shared geometry");
+		return false;
+	}
+
 	if (!shader_.Load(CHUNK_VERT_SHADER, CHUNK_FRAG_SHADER)) {
 		spdlog::error("ChunkCacheManager: Failed to compile chunk shader");
 		return false;
 	}
 	shader_initialized_ = true;
 
-	if (!mega_buffer_.initialize(ChunkMegaBuffer::DEFAULT_CAPACITY)) {
-		spdlog::error("ChunkCacheManager: Failed to initialize mega-buffer");
+	glCreateVertexArrays(1, &vao_);
+	if (vao_ == 0) {
+		spdlog::error("ChunkCacheManager: Failed to create VAO");
+		release();
 		return false;
 	}
 
-	if (!mdi_renderer_.initialize(16384)) {
-		spdlog::warn("ChunkCacheManager: MDI unavailable, using fallback execution");
-	}
+	// Binding 0: Static unit quad geometry
+	glVertexArrayVertexBuffer(vao_, 0, SharedGeometry::Instance().getQuadVBO(), 0, 4 * sizeof(float));
+	glVertexArrayElementBuffer(vao_, SharedGeometry::Instance().getQuadEBO());
 
-	spdlog::info("ChunkCacheManager initialized successfully");
+	// Loc 0: Quad pos (vec2)
+	glEnableVertexArrayAttrib(vao_, 0);
+	glVertexArrayAttribFormat(vao_, 0, 2, GL_FLOAT, GL_FALSE, 0);
+	glVertexArrayAttribBinding(vao_, 0, 0);
+
+	// Loc 1: Quad texcoord (vec2)
+	glEnableVertexArrayAttrib(vao_, 1);
+	glVertexArrayAttribFormat(vao_, 1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float));
+	glVertexArrayAttribBinding(vao_, 1, 0);
+
+	// Binding 1: Instance data from chunk VBO
+	glVertexArrayBindingDivisor(vao_, 1, 1);
+
+	// Loc 2: aRect (vec4: x, y, w, h)
+	glEnableVertexArrayAttrib(vao_, 2);
+	glVertexArrayAttribFormat(vao_, 2, 4, GL_FLOAT, GL_FALSE, offsetof(TileInstance, x));
+	glVertexArrayAttribBinding(vao_, 2, 1);
+
+	// Loc 3: aSpriteId (uint)
+	glEnableVertexArrayAttrib(vao_, 3);
+	glVertexArrayAttribIFormat(vao_, 3, 1, GL_UNSIGNED_INT, offsetof(TileInstance, sprite_id));
+	glVertexArrayAttribBinding(vao_, 3, 1);
+
+	// Loc 4: aFlags (uint)
+	glEnableVertexArrayAttrib(vao_, 4);
+	glVertexArrayAttribIFormat(vao_, 4, 1, GL_UNSIGNED_INT, offsetof(TileInstance, flags));
+	glVertexArrayAttribBinding(vao_, 4, 1);
+
+	// Loc 5: aTint (vec4: r, g, b, a)
+	glEnableVertexArrayAttrib(vao_, 5);
+	glVertexArrayAttribFormat(vao_, 5, 4, GL_FLOAT, GL_FALSE, offsetof(TileInstance, r));
+	glVertexArrayAttribBinding(vao_, 5, 1);
+
+	spdlog::info("ChunkCacheManager initialized successfully (Per-Chunk VBO Architecture)");
 	return true;
 }
 
 void ChunkCacheManager::release() {
-	for (auto& [coord, chunk] : cached_chunks_) {
-		if (chunk.slice.isValid()) {
-			mega_buffer_.free(chunk.slice);
-		}
+	if (vao_ != 0) {
+		glDeleteVertexArrays(1, &vao_);
+		vao_ = 0;
 	}
 	cached_chunks_.clear();
-	mega_buffer_.release();
-	mdi_renderer_.cleanup();
 	shader_initialized_ = false;
 	current_frame_ = 0;
 }
@@ -156,20 +194,64 @@ CachedChunk& ChunkCacheManager::getOrCreateChunk(const ChunkCoord& coord) {
 		chunk.coord = coord;
 		chunk.is_dirty = true;
 		chunk.is_empty = false;
-		auto [new_it, _] = cached_chunks_.emplace(coord, chunk);
+		auto [new_it, _] = cached_chunks_.emplace(coord, std::move(chunk));
 		return new_it->second;
 	}
 	return it->second;
 }
 
+void ChunkCacheManager::uploadChunk(CachedChunk& chunk, const std::vector<TileInstance>& instances) {
+	if (instances.empty()) {
+		chunk.instance_count = 0;
+		chunk.is_empty = true;
+		return;
+	}
+
+	chunk.is_empty = false;
+	chunk.instance_count = static_cast<uint32_t>(instances.size());
+
+	if (chunk.vbo == 0) {
+		glCreateBuffers(1, &chunk.vbo);
+		chunk.vbo_capacity = 0;
+	}
+
+	const size_t required_bytes = instances.size() * sizeof(TileInstance);
+	if (required_bytes > chunk.vbo_capacity) {
+		glNamedBufferData(chunk.vbo, static_cast<GLsizeiptr>(required_bytes), instances.data(), GL_STATIC_DRAW);
+		chunk.vbo_capacity = required_bytes;
+	} else {
+		glNamedBufferSubData(chunk.vbo, 0, static_cast<GLsizeiptr>(required_bytes), instances.data());
+	}
+}
+
 void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const RenderFrameContext& ctx) {
 	bake_buffer_.clear();
 	chunk.dynamic_tiles.clear();
-	bool has_missing_sprites = false;
 
 	const int32_t base_x = chunk.coord.cx * CHUNK_SIZE;
 	const int32_t base_y = chunk.coord.cy * CHUNK_SIZE;
 	const int32_t z = chunk.coord.z;
+
+	const Floor* floors[4][4] = {};
+	bool any_floor = false;
+	for (int ny = 0; ny < 4; ++ny) {
+		for (int nx = 0; nx < 4; ++nx) {
+			const MapNode* nd = map.getLeaf(base_x + nx * 4, base_y + ny * 4);
+			if (nd) {
+				floors[nx][ny] = nd->getFloor(z);
+				if (floors[nx][ny]) {
+					any_floor = true;
+				}
+			}
+		}
+	}
+
+	if (!any_floor) {
+		chunk.is_empty = true;
+		chunk.is_dirty = false;
+		chunk.instance_count = 0;
+		return;
+	}
 
 	// OTClient-parity diagonal iteration (dx + dy) for strict Painter's Algorithm depth order
 	for (int d = 0; d < 2 * CHUNK_SIZE - 1; ++d) {
@@ -179,13 +261,13 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				continue;
 			}
 
-			const int x = base_x + tx;
-			const int y = base_y + ty;
-
-			const TileLocation* loc = map.getTileL(x, y, z);
-			if (!loc) {
+			const Floor* fl = floors[tx >> 2][ty >> 2];
+			if (!fl) {
 				continue;
 			}
+
+			const int loc_idx = (tx & 3) * 4 + (ty & 3);
+			const TileLocation* loc = &fl->locs[loc_idx];
 			const Tile* tile = loc->get();
 			if (!tile) {
 				continue;
@@ -193,6 +275,9 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			if (ctx.options.show_only_modified && !tile->isModified()) {
 				continue;
 			}
+
+			const int x = base_x + tx;
+			const int y = base_y + ty;
 
 			bool is_dynamic = false;
 			if (tile->creature || tile->spawn || loc->getSpawnCount() > 0 || loc->getWaypointCount() > 0 ||
@@ -208,40 +293,77 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
 					if (gspr) {
 						const SpritePatterns g_pat = PatternCalculator::Calculate(gspr, git, tile->ground.get(), tile, Position(x, y, z), 0);
-						const AtlasRegion* reg = nullptr;
-						if (gspr->is_simple && g_pat.subtype == -1 && g_pat.x == 0 && g_pat.y == 0 && g_pat.z == 0 && g_pat.frame == 0) {
-							reg = gspr->getCachedDefaultRegion();
+						if (!gspr->isSimpleAndLoaded()) {
+							rme::collectTileSprites(gspr, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
 						}
-						if (!reg) {
-							reg = gspr->getAtlasRegion(0, 0, 0, g_pat.subtype, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
-						}
-						if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
-							uint8_t gr = 255, gg = 255, gb = 255;
-							if (tile->ground->isSelected()) {
-								gr >>= 1;
-								gg >>= 1;
-								gb >>= 1;
-							} else if (!ctx.options.show_as_minimap && (ctx.options.hasTileColorModifiers() || loc->getSpawnCount() > 0)) {
-								TileColorCalculator::Calculate(tile, ctx.options, ctx.current_house_id, loc->getSpawnCount(), gr, gg, gb);
-							}
 
-							TileInstance inst;
-							inst.x = static_cast<float>(x * 32);
-							inst.y = static_cast<float>(y * 32);
-							inst.w = static_cast<float>(reg->pixel_width);
-							inst.h = static_cast<float>(reg->pixel_height);
-							inst.sprite_id = reg->debug_sprite_id;
-							inst.flags = 0;
-							inst.r = static_cast<float>(gr) * (1.0f / 255.0f);
-							inst.g = static_cast<float>(gg) * (1.0f / 255.0f);
-							inst.b = static_cast<float>(gb) * (1.0f / 255.0f);
-							inst.a = 1.0f;
-							bake_buffer_.push_back(inst);
-						} else {
-							if (!gspr->isSimpleAndLoaded()) {
-								rme::collectTileSprites(gspr, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
+						uint8_t gr = 255, gg = 255, gb = 255;
+						if (tile->ground->isSelected()) {
+							gr >>= 1;
+							gg >>= 1;
+							gb >>= 1;
+						} else if (!ctx.options.show_as_minimap && (ctx.options.hasTileColorModifiers() || loc->getSpawnCount() > 0)) {
+							TileColorCalculator::Calculate(tile, ctx.options, ctx.current_house_id, loc->getSpawnCount(), gr, gg, gb);
+						}
+
+						const float grf = static_cast<float>(gr) * (1.0f / 255.0f);
+						const float ggf = static_cast<float>(gg) * (1.0f / 255.0f);
+						const float gbf = static_cast<float>(gb) * (1.0f / 255.0f);
+
+						const auto [g_off_x, g_off_y] = gspr->getDrawOffset();
+						const int ground_x = x * 32 - g_off_x;
+						const int ground_y = y * 32 - g_off_y;
+
+						const bool is_simple_ground = (gspr->width == 1 && gspr->height == 1 && gspr->layers == 1);
+						if (is_simple_ground) {
+							const AtlasRegion* reg = nullptr;
+							if (gspr->is_simple && g_pat.subtype == -1 && g_pat.x == 0 && g_pat.y == 0 && g_pat.z == 0 && g_pat.frame == 0) {
+								reg = gspr->getCachedDefaultRegion();
 							}
-							has_missing_sprites = true;
+							if (!reg) {
+								reg = gspr->getAtlasRegion(0, 0, 0, g_pat.subtype, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
+							}
+							if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
+								TileInstance inst;
+								inst.x = static_cast<float>(ground_x);
+								inst.y = static_cast<float>(ground_y);
+								inst.w = static_cast<float>(reg->pixel_width);
+								inst.h = static_cast<float>(reg->pixel_height);
+								inst.sprite_id = reg->debug_sprite_id;
+								inst.flags = 0;
+								inst.r = grf;
+								inst.g = ggf;
+								inst.b = gbf;
+								inst.a = 1.0f;
+								bake_buffer_.push_back(inst);
+							}
+						} else {
+							const auto composite_metrics = gspr->getPlainLayoutMetrics(g_pat.subtype, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
+							int x_offset = 0;
+							for (int cx = 0; cx < composite_metrics.num_columns; ++cx) {
+								int y_offset = 0;
+								for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
+									for (int cf = 0; cf < gspr->layers; ++cf) {
+										const AtlasRegion* reg = gspr->getAtlasRegion(cx, cy, cf, g_pat.subtype, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
+										if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
+											TileInstance inst;
+											inst.x = static_cast<float>(ground_x - x_offset);
+											inst.y = static_cast<float>(ground_y - y_offset);
+											inst.w = static_cast<float>(reg->pixel_width);
+											inst.h = static_cast<float>(reg->pixel_height);
+											inst.sprite_id = reg->debug_sprite_id;
+											inst.flags = 0;
+											inst.r = grf;
+											inst.g = ggf;
+											inst.b = gbf;
+											inst.a = 1.0f;
+											bake_buffer_.push_back(inst);
+										}
+									}
+									y_offset += composite_metrics.row_heights[cy];
+								}
+								x_offset += composite_metrics.column_widths[cx];
+							}
 						}
 					}
 				}
@@ -278,6 +400,9 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				const int item_y = y * 32 - elev - draw_offset_y;
 
 				const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z));
+				if (!ispr->isSimpleAndLoaded()) {
+					rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
+				}
 
 				uint8_t r = 255, g = 255, b = 255, a = 255;
 				if (item->isSelected()) {
@@ -315,11 +440,6 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 						inst.b = bf;
 						inst.a = af;
 						bake_buffer_.push_back(inst);
-					} else {
-						if (!ispr->isSimpleAndLoaded()) {
-							rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
-						}
-						has_missing_sprites = true;
 					}
 				} else {
 					const auto composite_metrics = ispr->getPlainLayoutMetrics(i_pat.subtype, i_pat.x, i_pat.y, i_pat.z, 0);
@@ -342,11 +462,6 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 									inst.b = bf;
 									inst.a = af;
 									bake_buffer_.push_back(inst);
-								} else {
-									if (!ispr->isSimpleAndLoaded()) {
-										rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
-									}
-									has_missing_sprites = true;
 								}
 							}
 							y_offset += composite_metrics.row_heights[cy];
@@ -366,26 +481,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		}
 	}
 
-	if (bake_buffer_.empty()) {
-		chunk.is_empty = true;
-		if (chunk.slice.isValid()) {
-			mega_buffer_.free(chunk.slice);
-		}
-	} else {
-		chunk.is_empty = false;
-		const uint32_t needed = static_cast<uint32_t>(bake_buffer_.size());
-		if (!chunk.slice.isValid() || chunk.slice.capacity < needed) {
-			if (chunk.slice.isValid()) {
-				mega_buffer_.free(chunk.slice);
-			}
-			chunk.slice = mega_buffer_.allocate(needed);
-		}
-		if (chunk.slice.isValid()) {
-			mega_buffer_.upload(chunk.slice, bake_buffer_.data(), needed);
-		}
-	}
-
-	chunk.is_dirty = has_missing_sprites;
+	uploadChunk(chunk, bake_buffer_);
+	chunk.is_dirty = false;
 }
 
 void ChunkCacheManager::renderFloor(
@@ -420,8 +517,6 @@ void ChunkCacheManager::renderFloor(
 	);
 	const glm::mat4 floor_mvp = projection * glm::translate(glm::mat4(1.0f), translation);
 
-	mdi_renderer_.clear();
-
 	shader_.Use();
 	shader_.SetMat4("uMVP", floor_mvp);
 	shader_.SetInt("uAtlas", 0);
@@ -430,26 +525,7 @@ void ChunkCacheManager::renderFloor(
 	atlas.bind(0);
 	atlas.bindLUT(SpriteAtlasLUT::SSBO_BINDING_INDEX);
 
-	mega_buffer_.bindVAO();
-
-	auto flushMdiBatch = [&]() {
-		if (mdi_renderer_.getCommandCount() == 0) {
-			return;
-		}
-		if (mdi_renderer_.isAvailable()) {
-			mdi_renderer_.upload();
-			mdi_renderer_.execute();
-		} else {
-			// Fallback for systems without MDI: glDrawElementsInstancedBaseInstance
-			for (const auto& cmd : mdi_renderer_.getCommands()) {
-				glDrawElementsInstancedBaseInstance(
-					GL_TRIANGLES, cmd.count, GL_UNSIGNED_INT, nullptr,
-					cmd.instanceCount, cmd.baseInstance
-				);
-			}
-		}
-		mdi_renderer_.clear();
-	};
+	glBindVertexArray(vao_);
 
 	for (int cy = min_cy; cy <= max_cy; ++cy) {
 		for (int cx = min_cx; cx <= max_cx; ++cx) {
@@ -460,28 +536,23 @@ void ChunkCacheManager::renderFloor(
 			}
 			chunk.last_accessed_frame = current_frame_;
 
-			if (!chunk.is_empty && chunk.slice.count > 0) {
-				if (static_cast<int>(mdi_renderer_.getCommandCount()) >= mdi_renderer_.getMaxCommands()) {
-					flushMdiBatch();
-				}
-				mdi_renderer_.addDrawCommand(6, chunk.slice.count, 0, 0, chunk.slice.base_instance);
+			if (!chunk.is_empty && chunk.instance_count > 0 && chunk.vbo != 0) {
+				glVertexArrayVertexBuffer(vao_, 1, chunk.vbo, 0, sizeof(TileInstance));
+				glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk.instance_count));
 			}
 		}
 	}
 
-	flushMdiBatch();
-
-	mega_buffer_.unbindVAO();
+	glBindVertexArray(0);
 	shader_.Unuse();
 }
 
 void ChunkCacheManager::prune(int current_floor) {
 	for (auto it = cached_chunks_.begin(); it != cached_chunks_.end();) {
 		const auto& [coord, chunk] = *it;
-		if (std::abs(coord.z - current_floor) > 2 && (current_frame_ - chunk.last_accessed_frame) > EVICTION_FRAME_THRESHOLD) {
-			if (chunk.slice.isValid()) {
-				mega_buffer_.free(const_cast<SlabSlice&>(chunk.slice));
-			}
+		const bool is_far_floor = std::abs(coord.z - current_floor) > 2;
+		const bool is_stale = (current_frame_ - chunk.last_accessed_frame) > EVICTION_FRAME_THRESHOLD;
+		if (is_far_floor && is_stale) {
 			it = cached_chunks_.erase(it);
 		} else {
 			++it;

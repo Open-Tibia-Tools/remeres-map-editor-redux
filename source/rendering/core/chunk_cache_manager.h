@@ -7,9 +7,8 @@
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
-#include "rendering/core/chunk_mega_buffer.h"
-#include "rendering/core/multi_draw_indirect_renderer.h"
 #include "rendering/core/shader_program.h"
+#include "rendering/core/tile_instance.h"
 #include "map/spatial_change_tracker.h"
 #include <unordered_map>
 #include <vector>
@@ -29,18 +28,65 @@ struct DynamicTileInfo {
 
 struct CachedChunk {
 	ChunkCoord coord;
-	SlabSlice slice;
+	GLuint vbo = 0;
+	size_t vbo_capacity = 0; // in bytes
+	uint32_t instance_count = 0;
 	uint64_t last_accessed_frame = 0;
 	bool is_dirty = true;
 	bool is_empty = false;
 	std::vector<DynamicTileInfo> dynamic_tiles;
+
+	CachedChunk() = default;
+	~CachedChunk() {
+		if (vbo != 0) {
+			glDeleteBuffers(1, &vbo);
+			vbo = 0;
+		}
+	}
+
+	CachedChunk(CachedChunk&& other) noexcept :
+		coord(other.coord),
+		vbo(other.vbo),
+		vbo_capacity(other.vbo_capacity),
+		instance_count(other.instance_count),
+		last_accessed_frame(other.last_accessed_frame),
+		is_dirty(other.is_dirty),
+		is_empty(other.is_empty),
+		dynamic_tiles(std::move(other.dynamic_tiles)) {
+		other.vbo = 0;
+		other.vbo_capacity = 0;
+		other.instance_count = 0;
+	}
+
+	CachedChunk& operator=(CachedChunk&& other) noexcept {
+		if (this != &other) {
+			if (vbo != 0) {
+				glDeleteBuffers(1, &vbo);
+			}
+			coord = other.coord;
+			vbo = other.vbo;
+			vbo_capacity = other.vbo_capacity;
+			instance_count = other.instance_count;
+			last_accessed_frame = other.last_accessed_frame;
+			is_dirty = other.is_dirty;
+			is_empty = other.is_empty;
+			dynamic_tiles = std::move(other.dynamic_tiles);
+			other.vbo = 0;
+			other.vbo_capacity = 0;
+			other.instance_count = 0;
+		}
+		return *this;
+	}
+
+	CachedChunk(const CachedChunk&) = delete;
+	CachedChunk& operator=(const CachedChunk&) = delete;
 };
 
 /**
  * High-performance Chunk Cache Manager.
  *
- * Implements persistent mega-buffer slab allocation for cached 16x16 macro-chunks,
- * dynamic MDI (MultiDrawIndirect) submission, shader SSBO indirection,
+ * Implements per-chunk VBO caching (parity with Imgui Map Editor architecture),
+ * instanced rendering, shader SSBO indirection via SpriteAtlasLUT,
  * and floor-aware smart eviction.
  */
 class ChunkCacheManager {
@@ -107,15 +153,15 @@ public:
 		return cached_chunks_.size();
 	}
 	[[nodiscard]] bool isValid() const noexcept {
-		return mega_buffer_.isValid() && shader_initialized_;
+		return vao_ != 0 && shader_initialized_;
 	}
 
 private:
 	void bakeChunk(CachedChunk& chunk, const Map& map, const RenderFrameContext& ctx);
+	void uploadChunk(CachedChunk& chunk, const std::vector<TileInstance>& instances);
 	CachedChunk& getOrCreateChunk(const ChunkCoord& coord);
 
-	ChunkMegaBuffer mega_buffer_;
-	MultiDrawIndirectRenderer mdi_renderer_;
+	GLuint vao_ = 0;
 	ShaderProgram shader_;
 	bool shader_initialized_ = false;
 
