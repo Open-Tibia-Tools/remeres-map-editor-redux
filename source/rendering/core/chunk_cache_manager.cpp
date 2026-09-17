@@ -17,6 +17,8 @@
 #include "map/map.h"
 #include "map/tile.h"
 #include "game/item.h"
+#include "game/creature.h"
+#include "game/outfit.h"
 #include "rendering/utilities/pattern_calculator.h"
 #include "rendering/core/sprite_preloader.h"
 #include <spdlog/spdlog.h>
@@ -287,6 +289,23 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		return;
 	}
 
+	auto pushRegionInstance = [&](const AtlasRegion* reg, int draw_x, int draw_y, float rf, float gf, float bf, float af) {
+		if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
+			TileInstance inst;
+			inst.x = static_cast<float>(draw_x);
+			inst.y = static_cast<float>(draw_y);
+			inst.w = static_cast<float>(reg->pixel_width);
+			inst.h = static_cast<float>(reg->pixel_height);
+			inst.sprite_id = reg->debug_sprite_id;
+			inst.flags = 0;
+			inst.r = rf;
+			inst.g = gf;
+			inst.b = bf;
+			inst.a = af;
+			bake_buffer_.push_back(inst);
+		}
+	};
+
 	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af) {
 		const bool is_simple = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
 		if (is_simple) {
@@ -297,20 +316,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			if (!reg) {
 				reg = spr->getAtlasRegion(0, 0, 0, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
 			}
-			if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
-				TileInstance inst;
-				inst.x = static_cast<float>(draw_base_x);
-				inst.y = static_cast<float>(draw_base_y);
-				inst.w = static_cast<float>(reg->pixel_width);
-				inst.h = static_cast<float>(reg->pixel_height);
-				inst.sprite_id = reg->debug_sprite_id;
-				inst.flags = 0;
-				inst.r = rf;
-				inst.g = gf;
-				inst.b = bf;
-				inst.a = af;
-				bake_buffer_.push_back(inst);
-			}
+			pushRegionInstance(reg, draw_base_x, draw_base_y, rf, gf, bf, af);
 		} else {
 			const auto composite_metrics = spr->getPlainLayoutMetrics(pat.subtype, pat.x, pat.y, pat.z, pat.frame);
 			int x_offset = 0;
@@ -319,24 +325,123 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
 					for (int cf = 0; cf < spr->layers; ++cf) {
 						const AtlasRegion* reg = spr->getAtlasRegion(cx, cy, cf, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
-						if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
-							TileInstance inst;
-							inst.x = static_cast<float>(draw_base_x - x_offset);
-							inst.y = static_cast<float>(draw_base_y - y_offset);
-							inst.w = static_cast<float>(reg->pixel_width);
-							inst.h = static_cast<float>(reg->pixel_height);
-							inst.sprite_id = reg->debug_sprite_id;
-							inst.flags = 0;
-							inst.r = rf;
-							inst.g = gf;
-							inst.b = bf;
-							inst.a = af;
-							bake_buffer_.push_back(inst);
-						}
+						pushRegionInstance(reg, draw_base_x - x_offset, draw_base_y - y_offset, rf, gf, bf, af);
 					}
 					y_offset += composite_metrics.row_heights[cy];
 				}
 				x_offset += composite_metrics.column_widths[cx];
+			}
+		}
+	};
+
+	auto pushCreatureInstances = [&](const Creature* creature, int screenx, int screeny) {
+		if (!creature) {
+			return;
+		}
+
+		float rf = 1.0f, gf = 1.0f, bf = 1.0f, af = 1.0f;
+		if (!ctx.options.ingame && creature->isSelected()) {
+			rf = 0.5f;
+			gf = 0.5f;
+			bf = 0.5f;
+		}
+
+		const Outfit& outfit = creature->getLookType();
+		const Direction dir = creature->getDirection();
+
+		if (outfit.lookItem != 0) {
+			const auto definition = ctx.item_definitions.get(outfit.lookItem);
+			if (definition) {
+				GameSprite* ispr = ctx.gfx.getGameSprite(definition.clientId());
+				if (ispr) {
+					const auto [draw_offset_x, draw_offset_y] = ispr->getDrawOffset();
+					const int item_x = screenx - draw_offset_x;
+					const int item_y = screeny - draw_offset_y;
+					const SpritePatterns pat { .x = 0, .y = 0, .z = 0, .frame = 0, .subtype = -1 };
+					pushSpriteInstances(ispr, pat, item_x, item_y, rf, gf, bf, af);
+				}
+			}
+			return;
+		}
+
+		const Outfit* drawOutfit = &outfit;
+		if (drawOutfit->lookType == 0) {
+			drawOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+		}
+		GameSprite* spr = ctx.gfx.getCreatureSprite(drawOutfit->lookType);
+		if (!spr && drawOutfit->lookType != DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) {
+			drawOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
+			spr = ctx.gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
+		}
+		if (!spr) {
+			return;
+		}
+
+		int pattern_z = 0;
+		GameSprite* mountSpr = nullptr;
+		if (drawOutfit->lookMount != 0) {
+			if ((mountSpr = ctx.gfx.getCreatureSprite(drawOutfit->lookMount))) {
+				Outfit mountOutfit;
+				mountOutfit.lookType = drawOutfit->lookMount;
+				mountOutfit.lookMount = 0;
+				mountOutfit.lookHead = drawOutfit->lookMountHead;
+				mountOutfit.lookBody = drawOutfit->lookMountBody;
+				mountOutfit.lookLegs = drawOutfit->lookMountLegs;
+				mountOutfit.lookFeet = drawOutfit->lookMountFeet;
+
+				const auto mount_draw_offset = mountSpr->getDrawOffset();
+				const bool is_simple_mount = (mountSpr->width == 1 && mountSpr->height == 1);
+				const int mount_base_x = screenx - mount_draw_offset.first;
+				const int mount_base_y = screeny - mount_draw_offset.second;
+
+				if (is_simple_mount) {
+					const AtlasRegion* region = mountSpr->getAtlasRegion(0, 0, static_cast<int>(dir), 0, 0, mountOutfit, 0);
+					pushRegionInstance(region, mount_base_x, mount_base_y, rf, gf, bf, af);
+				} else {
+					const auto mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, 0);
+					int mount_x_offset = 0;
+					for (int cx = 0; cx < mount_metrics.num_columns; ++cx) {
+						int mount_y_offset = 0;
+						for (int cy = 0; cy < mount_metrics.num_rows; ++cy) {
+							const AtlasRegion* region = mountSpr->getAtlasRegion(cx, cy, static_cast<int>(dir), 0, 0, mountOutfit, 0);
+							pushRegionInstance(region, mount_base_x - mount_x_offset, mount_base_y - mount_y_offset, rf, gf, bf, af);
+							mount_y_offset += mount_metrics.row_heights[cy];
+						}
+						mount_x_offset += mount_metrics.column_widths[cx];
+					}
+				}
+
+				pattern_z = std::clamp(spr->pattern_z - 1, 0, 1);
+			}
+		}
+
+		const auto sprite_draw_offset = spr->getDrawOffset();
+		const int base_x = screenx - sprite_draw_offset.first;
+		const int base_y = screeny - sprite_draw_offset.second;
+
+		for (int pattern_y = 0; pattern_y < spr->pattern_y; pattern_y++) {
+			if (pattern_y > 0) {
+				if ((pattern_y - 1 >= 31) || !(drawOutfit->lookAddon & (1 << (pattern_y - 1)))) {
+					continue;
+				}
+			}
+
+			if (spr->width == 1 && spr->height == 1) {
+				const AtlasRegion* region = spr->getAtlasRegion(0, 0, static_cast<int>(dir), pattern_y, pattern_z, *drawOutfit, 0);
+				pushRegionInstance(region, base_x, base_y, rf, gf, bf, af);
+				continue;
+			}
+
+			const auto sprite_metrics = spr->getOutfitLayoutMetrics(static_cast<int>(dir), pattern_y, pattern_z, 0);
+			int sprite_x_offset = 0;
+			for (int cx = 0; cx < sprite_metrics.num_columns; ++cx) {
+				int sprite_y_offset = 0;
+				for (int cy = 0; cy < sprite_metrics.num_rows; ++cy) {
+					const AtlasRegion* region = spr->getAtlasRegion(cx, cy, static_cast<int>(dir), pattern_y, pattern_z, *drawOutfit, 0);
+					pushRegionInstance(region, base_x - sprite_x_offset, base_y - sprite_y_offset, rf, gf, bf, af);
+					sprite_y_offset += sprite_metrics.row_heights[cy];
+				}
+				sprite_x_offset += sprite_metrics.column_widths[cx];
 			}
 		}
 	};
@@ -377,8 +482,11 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			const int x = base_x + tx;
 			const int y = base_y + ty;
 
+			const bool as_minimap = ctx.options.show_as_minimap;
+			const bool only_colors = as_minimap || ctx.options.show_only_colors;
+
 			bool is_dynamic = false;
-			if (tile->creature || tile->spawn || loc->getSpawnCount() > 0 || loc->getWaypointCount() > 0 ||
+			if ((tile->creature && ctx.options.show_creatures && !only_colors) || tile->spawn || loc->getSpawnCount() > 0 || loc->getWaypointCount() > 0 ||
 				loc->getTownCount() > 0 || loc->getHouseExits() != nullptr || tile->invalidZones ||
 				(tile->ground && tile->ground->isInvalidOTBMItem())) {
 				is_dynamic = true;
@@ -524,6 +632,11 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				if (ispr->hasElevation()) {
 					elev += ispr->draw_height;
 				}
+			}
+
+			// 4. Creature on tile (Painter's Algorithm: NW-to-SE order ensures occlusion by adjacent South/East walls and structures)
+			if (tile->creature && ctx.options.show_creatures && !only_colors) {
+				pushCreatureInstances(tile->creature.get(), x * 32, y * 32);
 			}
 
 			if (is_dynamic) {

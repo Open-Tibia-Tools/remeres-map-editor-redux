@@ -113,6 +113,7 @@ void DrawingOptions::SetIngame() {
 
 void DrawingOptions::MarkSettingDirty(uint32_t key) noexcept {
 	switch (key) {
+		case Config::SHOW_CREATURES:
 		case Config::TRANSPARENT_ITEMS:
 		case Config::SHOW_SPECIAL_TILES:
 		case Config::SHOW_HOUSES:
@@ -186,6 +187,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 		new_extended_house_shader != extended_house_shader ||
 		new_show_blocking != show_blocking ||
 		new_show_spawns != show_spawns ||
+		new_show_creatures != show_creatures ||
 		new_highlight_items != highlight_items ||
 		new_show_only_colors != show_only_colors ||
 		new_show_only_modified != show_only_modified ||

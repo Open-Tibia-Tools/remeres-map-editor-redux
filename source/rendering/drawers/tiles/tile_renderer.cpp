@@ -347,7 +347,7 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 	}
 }
 
-void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y) const {
+void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, bool render_creature_sprites) const {
 	if (!location) {
 		return;
 	}
@@ -366,12 +366,14 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 	if (!only_colors) {
 		// monster/npc on tile
 		if (tile->creature && options.show_creatures) {
-			creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
-				.map_pos = position,
-				.transient_selection_bounds = options.transient_selection_bounds,
-				.view = &view,
-				.ctx = &ctx
-			});
+			if (render_creature_sprites) {
+				creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, tile->creature.get(), CreatureDrawOptions {
+					.map_pos = position,
+					.transient_selection_bounds = options.transient_selection_bounds,
+					.view = &view,
+					.ctx = &ctx
+				});
+			}
 			if (creature_name_drawer) {
 				creature_name_drawer->addLabel(position, tile->creature->getName(), tile->creature.get());
 			}
@@ -452,7 +454,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 	TileElevationState animated_elevation { draw_x, draw_y };
 	RenderAnimatedItems(sprite_batch, location, ctx, animated_elevation);
 
-	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y);
+	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, /*render_creature_sprites=*/true);
 }
 
 void TileRenderer::RenderDynamicPasses(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile* tile_above) const {
@@ -471,5 +473,5 @@ void TileRenderer::RenderDynamicPasses(SpriteBatch& sprite_batch, const TileLoca
 
 	TileElevationState animated_elevation { draw_x, draw_y };
 	RenderAnimatedItems(sprite_batch, location, ctx, animated_elevation);
-	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y);
+	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, /*render_creature_sprites=*/false);
 }
