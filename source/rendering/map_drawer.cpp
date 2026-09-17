@@ -30,8 +30,6 @@
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
 #include "rendering/drawers/overlays/map_overlay_collector.h"
-#include "rendering/ui/inspection_badge_collector.h"
-#include "rendering/drawers/overlays/world_indicator_collector.h"
 #include "rendering/io/screen_capture.h"
 #include "rendering/core/gl_resources.h"
 
