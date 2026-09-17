@@ -150,7 +150,9 @@ public:
 
 private:
 	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client);
+	void CollectIndicators();
 	bool renderers_initialized = false;
+	bool indicators_collected = false;
 	Settings::ObserverId settings_observer_id_ = 0;
 };
 

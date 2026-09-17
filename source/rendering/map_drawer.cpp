@@ -30,6 +30,7 @@
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
 #include "rendering/ui/inspection_badge_collector.h"
+#include "rendering/drawers/overlays/world_indicator_collector.h"
 #include "rendering/io/screen_capture.h"
 #include "rendering/core/gl_resources.h"
 
@@ -38,9 +39,6 @@ MapDrawer::MapDrawer(Editor& editor) :
 	tile_renderer(&item_drawer, &sprite_drawer, &creature_drawer, &creature_name_drawer, &floor_drawer, &marker_drawer, &editor),
 	map_layer_drawer(&tile_renderer, &grid_drawer, editor.map),
 	lua_overlay_drawer(editor) {
-
-	item_drawer.SetHookIndicatorDrawer(&hook_indicator_drawer);
-	item_drawer.SetDoorIndicatorDrawer(&door_indicator_drawer);
 
 	options.Update();
 	settings_observer_id_ = g_settings.addObserver([this](uint32_t key) {
@@ -270,12 +268,24 @@ void MapDrawer::DrawTooltips(NVGcontext* vg) {
 	}
 }
 
+void MapDrawer::CollectIndicators() {
+	if (indicators_collected) {
+		return;
+	}
+	indicators_collected = true;
+	WorldIndicatorCollector::Collect(editor.map, view, options, &door_indicator_drawer, &hook_indicator_drawer);
+}
+
 void MapDrawer::DrawHookIndicators(NVGcontext* vg) {
-	hook_indicator_drawer.draw(vg, view);
+	if (options.show_hooks) {
+		CollectIndicators();
+		hook_indicator_drawer.draw(vg, view);
+	}
 }
 
 void MapDrawer::DrawDoorIndicators(NVGcontext* vg) {
 	if (options.highlight_locked_doors) {
+		CollectIndicators();
 		door_indicator_drawer.draw(vg, view);
 	}
 }
@@ -296,10 +306,10 @@ bool MapDrawer::hasOverlays() {
 	if (options.show_tooltips) {
 		return true;
 	}
-	if (options.show_hooks && !hook_indicator_drawer.empty()) {
+	if (options.show_hooks && can_read_labels) {
 		return true;
 	}
-	if (options.highlight_locked_doors && !door_indicator_drawer.empty()) {
+	if (options.highlight_locked_doors && can_read_labels) {
 		return true;
 	}
 	if (lua_overlay_drawer.hasUIElements(view)) {
@@ -322,6 +332,7 @@ void MapDrawer::TakeScreenshot(uint8_t* screenshot_buffer) {
 }
 
 void MapDrawer::ClearFrameOverlays() {
+	indicators_collected = false;
 	tooltip_drawer.clear();
 	hook_indicator_drawer.clear();
 	door_indicator_drawer.clear();

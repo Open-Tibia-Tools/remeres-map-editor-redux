@@ -1,5 +1,6 @@
 #include "rendering/drawers/overlays/door_indicator_drawer.h"
 #include <nanovg.h>
+#include <algorithm>
 #include "rendering/core/render_view.h"
 #include "rendering/utilities/icon_renderer.h"
 #include "util/image_manager.h"
@@ -30,7 +31,7 @@ void DoorIndicatorDrawer::draw(NVGcontext* vg, const RenderView& view) {
 
 	const float zoomFactor = 1.0f / view.zoom;
 	const float iconSize = 12.0f * zoomFactor;
-	const float outlineOffset = 1.0f * zoomFactor;
+	const float outlineOffset = std::max(1.0f, 1.0f * zoomFactor);
 	const float tileSize = 32.0f * zoomFactor;
 	const float halfTileSize = tileSize * 0.5f;
 

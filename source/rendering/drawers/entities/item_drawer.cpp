@@ -5,8 +5,6 @@
 #include <algorithm>
 
 #include "rendering/drawers/entities/item_drawer.h"
-#include "rendering/drawers/overlays/hook_indicator_drawer.h"
-#include "rendering/drawers/overlays/door_indicator_drawer.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/sprite_batch.h"
 #include "rendering/drawers/entities/sprite_drawer.h"
@@ -76,21 +74,6 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	const RenderView* view = params.view;
 
 	const ItemDefinitionView it = params.item_definition ? params.item_definition : item->getDefinition();
-
-	// Locked door indicator (only if highlight_locked_doors enabled and not ingame)
-	if (options.highlight_locked_doors && !options.ingame && it.isDoor()) {
-		bool locked = item->isLocked();
-
-		// Door orientation: horizontal wall -> West border (south=true), vertical wall -> North border (east=true)
-		if (static_cast<BorderType>(it.attribute(ItemAttributeKey::BorderAlignment)) == WALL_HORIZONTAL) {
-			DrawDoorIndicator(locked, pos, true, false);
-		} else if (static_cast<BorderType>(it.attribute(ItemAttributeKey::BorderAlignment)) == WALL_VERTICAL) {
-			DrawDoorIndicator(locked, pos, false, true);
-		} else {
-			// Center case for non-aligned doors
-			DrawDoorIndicator(locked, pos, false, false);
-		}
-	}
 
 	if (!options.ingame) {
 		bool is_selected = item->isSelected();
@@ -261,11 +244,6 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		});
 	}
 
-	// draw wall hook
-	if (!options.ingame && options.show_hooks && (it.hasFlag(ItemFlag::HookSouth) || it.hasFlag(ItemFlag::HookEast))) {
-		DrawHookIndicator(it, pos);
-	}
-
 	// draw light color indicator
 	if (!options.ingame && options.show_light_str) {
 		const SpriteLight& light = item->getLight();
@@ -328,17 +306,5 @@ void ItemDrawer::DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_dr
 
 	if (spr) {
 		sprite_drawer->BlitSprite(sprite_batch, screenx, screeny, spr, DrawColor(r, g, b, alpha), ctx);
-	}
-}
-
-void ItemDrawer::DrawHookIndicator(const ItemDefinitionView& definition, const Position& pos) {
-	if (hook_indicator_drawer) {
-		hook_indicator_drawer->addHook(pos, definition.hasFlag(ItemFlag::HookSouth), definition.hasFlag(ItemFlag::HookEast));
-	}
-}
-
-void ItemDrawer::DrawDoorIndicator(bool locked, const Position& pos, bool south, bool east) {
-	if (door_indicator_drawer) {
-		door_indicator_drawer->addDoor(pos, locked, south, east);
 	}
 }

@@ -15,8 +15,6 @@ class CreatureDrawer;
 class Tile;
 class Item;
 class GameSprite;
-class HookIndicatorDrawer;
-class DoorIndicatorDrawer;
 struct RenderView;
 struct RenderFrameContext;
 
@@ -52,19 +50,6 @@ public:
 	void BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, int& draw_x, int& draw_y, const BlitItemParams& params);
 
 	void DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, int screenx, int screeny, ServerItemId item_id, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha, const RenderFrameContext* ctx = nullptr);
-	void DrawHookIndicator(const ItemDefinitionView& definition, const Position& pos);
-	void DrawDoorIndicator(bool locked, const Position& pos, bool south, bool east);
-
-	void SetHookIndicatorDrawer(HookIndicatorDrawer* drawer) {
-		hook_indicator_drawer = drawer;
-	}
-	void SetDoorIndicatorDrawer(DoorIndicatorDrawer* drawer) {
-		door_indicator_drawer = drawer;
-	}
-
-private:
-	HookIndicatorDrawer* hook_indicator_drawer = nullptr;
-	DoorIndicatorDrawer* door_indicator_drawer = nullptr;
 };
 
 #endif
