@@ -389,6 +389,8 @@ def test_panning_margin_bypass():
             self.last_floor = -1
             self.texture_allocated = False
             self.upload_count = 0
+            self.texture_recreation_count = 0
+            self.MARGIN_CHUNKS = 8
 
         def render(self, bounds_start_x: int, bounds_start_y: int, bounds_end_x: int, bounds_end_y: int, floor: int):
             view_min_cx = bounds_start_x >> 4
@@ -396,27 +398,27 @@ def test_panning_margin_bypass():
             view_min_cy = bounds_start_y >> 4
             view_max_cy = bounds_end_y >> 4
 
+            # Invariant: Texture allocation is persistent (created ONCE).
+            # It must NEVER be deleted and recreated during panning.
+            if not self.texture_allocated:
+                self.texture_allocated = True
+                self.texture_recreation_count += 1
+
             bounds_outside = (
                 self.last_floor != floor or
-                not self.texture_allocated or
                 view_min_cx < self.last_min_cx or
                 view_max_cx > self.last_max_cx or
                 view_min_cy < self.last_min_cy or
-                view_max_cy > self.last_max_cy or
-                view_min_cx > self.last_min_cx + 2 or
-                view_max_cx < self.last_max_cx - 2 or
-                view_min_cy > self.last_min_cy + 2 or
-                view_max_cy < self.last_max_cy - 2
+                view_max_cy > self.last_max_cy
             )
 
             if bounds_outside:
                 self.upload_count += 1
-                self.last_min_cx = view_min_cx - 1
-                self.last_max_cx = view_max_cx + 1
-                self.last_min_cy = view_min_cy - 1
-                self.last_max_cy = view_max_cy + 1
+                self.last_min_cx = view_min_cx - self.MARGIN_CHUNKS
+                self.last_max_cx = view_max_cx + self.MARGIN_CHUNKS
+                self.last_min_cy = view_min_cy - self.MARGIN_CHUNKS
+                self.last_max_cy = view_max_cy + self.MARGIN_CHUNKS
                 self.last_floor = floor
-                self.texture_allocated = True
 
     drawer = MockLightDrawer()
 
@@ -427,49 +429,51 @@ def test_panning_margin_bypass():
     start_y = 1600
 
     drawer.render(start_x, start_y, start_x + view_w_tiles, start_y + view_h_tiles, 7)
-    assert drawer.upload_count == 1, "Initial frame must allocate texture"
-    assert drawer.last_min_cx == 99  # 100 - 1
-    assert drawer.last_max_cx == 102 # (1620 >> 4 = 101) + 1
-    assert drawer.last_min_cy == 99  # 100 - 1
-    assert drawer.last_max_cy == 101 # (1615 >> 4 = 100) + 1
+    assert drawer.upload_count == 1, "Initial frame must upload texture"
+    assert drawer.texture_recreation_count == 1, "Initial frame allocates texture exactly once"
+    assert drawer.last_min_cx == 92  # 100 - 8
+    assert drawer.last_max_cx == 109 # (1620 >> 4 = 101) + 8
+    assert drawer.last_min_cy == 92  # 100 - 8
+    assert drawer.last_max_cy == 108 # (1615 >> 4 = 100) + 8
 
     # Scenario 1: Sub-pixel and sub-tile camera panning
     # Move camera by small increments (1 tile, 2 tiles, 5 tiles, 8 tiles)
     for step in range(1, 10):
         drawer.render(start_x + step, start_y + step, start_x + view_w_tiles + step, start_y + view_h_tiles + step, 7)
     assert drawer.upload_count == 1, f"Sub-tile panning triggered unexpected uploads: {drawer.upload_count}"
-    print("  -> Sub-tile panning across 10 frames: PASS (0 PCIe uploads)")
+    assert drawer.texture_recreation_count == 1, "Texture must never be recreated during sub-tile panning!"
+    print("  -> Sub-tile panning across 10 frames: PASS (0 PCIe uploads, 0 texture recreations)")
 
-    # Scenario 2: Panning exactly within 1-chunk margin
-    # Shift up to 14 tiles (less than 1 chunk of 16 tiles) in all 4 directions
-    for dx, dy in [(12, 0), (0, 12), (-5, 0), (0, -5), (8, 8)]:
+    # Scenario 2: Panning within 8-chunk margin (up to 120 tiles)
+    # Shift up to 100 tiles in all directions
+    for dx, dy in [(64, 0), (0, 64), (-64, 0), (0, -64), (80, 80)]:
         cur_x = start_x + dx
         cur_y = start_y + dy
         drawer.render(cur_x, cur_y, cur_x + view_w_tiles, cur_y + view_h_tiles, 7)
-    assert drawer.upload_count == 1, f"Panning within margin triggered upload: {drawer.upload_count}"
-    print("  -> Panning within 1-chunk margin in all directions: PASS (0 PCIe uploads)")
+    assert drawer.upload_count == 1, f"Panning within 8-chunk margin triggered upload: {drawer.upload_count}"
+    assert drawer.texture_recreation_count == 1, "Texture must never be recreated during margin panning!"
+    print("  -> Panning within 8-chunk margin: PASS (0 PCIe uploads, 0 texture recreations)")
 
-    # Scenario 3: Continuous smooth panning trajectory (100 frames)
-    # Moving at 1 tile per frame to the right
-    # A chunk is 16 tiles. Over 100 tiles, we cross chunk boundaries ~6 times.
-    # Without margin, naive renderer would upload 100 times.
-    # With 1-chunk retained margin, upload count must be <= 7!
+    # Scenario 3: Continuous smooth panning trajectory (200 frames)
+    # Moving at 1 tile per frame to the right (200 tiles = 12.5 chunks)
+    # With 8-chunk retained margin, upload count must be <= 3!
     uploads_before = drawer.upload_count
-    for frame in range(100):
+    for frame in range(200):
         pos_x = start_x + frame
         pos_y = start_y
         drawer.render(pos_x, pos_y, pos_x + view_w_tiles, pos_y + view_h_tiles, 7)
 
     trajectory_uploads = drawer.upload_count - uploads_before
-    print(f"  -> Continuous 100-frame panning trajectory: {trajectory_uploads} uploads (bypassed {100 - trajectory_uploads} uploads, {100 - trajectory_uploads}% bypass rate)")
-    assert trajectory_uploads <= 8, f"Too many uploads during panning: {trajectory_uploads}"
-    assert trajectory_uploads >= 4, f"Failed to trigger upload when crossing margin: {trajectory_uploads}"
+    print(f"  -> Continuous 200-frame panning trajectory: {trajectory_uploads} uploads (bypassed {200 - trajectory_uploads} uploads, {(200 - trajectory_uploads) * 100 / 200:.1f}% bypass rate)")
+    assert trajectory_uploads <= 3, f"Too many uploads during panning: {trajectory_uploads}"
+    assert drawer.texture_recreation_count == 1, "Persistent texture MUST NOT be recreated during trajectory!"
 
-    # Scenario 4: Floor switch immediately forces texture upload
+    # Scenario 4: Floor switch forces texture content update (via glTexSubImage2D), but NOT texture recreation!
     drawer.render(start_x, start_y, start_x + view_w_tiles, start_y + view_h_tiles, 8)
     assert drawer.last_floor == 8
-    print("  -> Floor switch: PASS (correctly forces texture rebuild)")
-    print("PASS: Panning within 1-chunk margin successfully bypasses GPU texture uploads!")
+    assert drawer.texture_recreation_count == 1, "Floor switch must reuse existing GPU texture memory!"
+    print("  -> Floor switch: PASS (reuses persistent GPU texture, 0 recreations)")
+    print("PASS: Panning within 8-chunk margin successfully bypasses GPU texture uploads with ZERO texture recreation!")
 
 if __name__ == "__main__":
     test_distance_lut()

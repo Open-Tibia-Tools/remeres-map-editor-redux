@@ -375,7 +375,7 @@ def test_cache_eviction_prune_simulation():
         (2, 0, 9): MockCachedChunk(9, 480, False),  # active range (abs(9-7) <= 2), recent -> RETAIN
         (3, 0, 12): MockCachedChunk(12, 480, False), # far floor (abs(12-7) > 2), recent (500-480=20 <= 60) -> RETAIN (not stale yet)
         (4, 0, 12): MockCachedChunk(12, 300, False),  # far floor, stale (>60 frames old: 500-300=200 > 60) -> EVICT
-        (5, 0, 7): MockCachedChunk(7, 100, False),   # active floor, very stale (>240 frames old: 500-100=400 > 240) -> EVICT
+        (5, 0, 7): MockCachedChunk(7, 100, False),   # active floor, older frame -> RETAIN (active floor chunks retained to prevent re-baking lag!)
     }
 
     current_floor = 7
@@ -387,19 +387,23 @@ def test_cache_eviction_prune_simulation():
     for coord, chunk in cached_chunks.items():
         is_far_floor = abs(chunk.z - current_floor) > 2
         is_stale = (current_frame - chunk.last_accessed_frame) > EVICTION_FRAME_THRESHOLD
-        is_very_stale = (current_frame - chunk.last_accessed_frame) > (EVICTION_FRAME_THRESHOLD * 4)
 
-        if (is_far_floor and is_stale) or chunk.is_empty or is_very_stale:
+        if chunk.is_empty:
             to_erase.append(coord)
+            continue
+
+        if is_far_floor and is_stale:
+            to_erase.append(coord)
+            continue
 
     for coord in to_erase:
         del cached_chunks[coord]
 
     retained = set(cached_chunks.keys())
-    expected = {(0, 0, 7), (2, 0, 9), (3, 0, 12)}
+    expected = {(0, 0, 7), (2, 0, 9), (3, 0, 12), (5, 0, 7)}
     assert retained == expected, f"Eviction mismatch! Retained: {retained}, Expected: {expected}"
 
-    print("PASS: Prune eviction policy correctly evicts empty chunks, far-floor stale chunks, and very stale chunks!")
+    print("PASS: Prune eviction policy correctly retains active-floor chunks and only evicts empty or far-floor stale chunks!")
 
 if __name__ == "__main__":
     test_single_cell_indexing()

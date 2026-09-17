@@ -41,8 +41,9 @@ inline constexpr auto s_distance_table = generateDistanceTable();
 
 class LightCache {
 public:
-	static constexpr uint64_t EVICTION_FRAME_THRESHOLD = 600;
+	static constexpr uint64_t FAR_FLOOR_FRAME_THRESHOLD = 60;
 	static constexpr uint64_t PRUNE_INTERVAL_FRAMES = 120;
+	static constexpr size_t MAX_CACHED_LIGHT_CHUNKS = 65536;
 
 	LightCache();
 	~LightCache();

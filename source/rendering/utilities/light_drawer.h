@@ -75,6 +75,9 @@ private:
 
 	std::vector<uint32_t> viewport_pixels_;
 
+	// Margin around viewport to avoid GPU texture re-uploads while panning
+	static constexpr int MARGIN_CHUNKS = 8;
+
 	// Cached bounds to eliminate redundant texture updates
 	int last_min_cx_ = 0;
 	int last_min_cy_ = 0;
@@ -85,9 +88,14 @@ private:
 	bool force_texture_rebuild_ = true;
 	uint64_t current_frame_ = 0;
 
-	// Legacy texture dimensions for draw()
+	// Viewport active texture dimensions
 	int tex_width_ = 0;
 	int tex_height_ = 0;
+
+	// Persistent GPU allocated texture storage dimensions
+	int gpu_tex_width_ = 0;
+	int gpu_tex_height_ = 0;
+
 	std::vector<uint8_t> legacy_tile_brightness_;
 };
 

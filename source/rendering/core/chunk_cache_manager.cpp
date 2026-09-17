@@ -598,28 +598,10 @@ void ChunkCacheManager::prune(
 			continue;
 		}
 
-		// Tier 3: Viewport distance culling (> 32 chunks / 512 tiles away and unaccessed for 1s)
-		if (has_bounds) {
-			const bool is_far_dist = (coord.cx < min_cx - VIEWPORT_MARGIN_CHUNKS ||
-			                          coord.cx > max_cx + VIEWPORT_MARGIN_CHUNKS ||
-			                          coord.cy < min_cy - VIEWPORT_MARGIN_CHUNKS ||
-			                          coord.cy > max_cy + VIEWPORT_MARGIN_CHUNKS);
-			if (is_far_dist && age > DISTANT_FRAME_THRESHOLD) {
-				it = cached_chunks_.erase(it);
-				continue;
-			}
-		}
-
-		// Tier 4: Universal staleness eviction regardless of floor (5s)
-		if (age > EVICTION_FRAME_THRESHOLD) {
-			it = cached_chunks_.erase(it);
-			continue;
-		}
-
 		++it;
 	}
 
-	// Tier 5: Hard capacity ceiling (LRU eviction down to TARGET_CACHED_CHUNKS)
+	// Tier 3: Hard capacity ceiling (LRU eviction down to TARGET_CACHED_CHUNKS)
 	if (cached_chunks_.size() > MAX_CACHED_CHUNKS) {
 		evictOldest(cached_chunks_.size() - TARGET_CACHED_CHUNKS);
 	}

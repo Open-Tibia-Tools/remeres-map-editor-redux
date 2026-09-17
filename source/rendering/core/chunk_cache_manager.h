@@ -90,12 +90,10 @@ struct CachedChunk {
 class ChunkCacheManager {
 public:
 	static constexpr int CHUNK_SIZE = 16;
-	static constexpr uint64_t EVICTION_FRAME_THRESHOLD = 300;     // 5.0 seconds at 60 FPS
 	static constexpr uint64_t FAR_FLOOR_FRAME_THRESHOLD = 60;      // 1.0 second at 60 FPS
-	static constexpr uint64_t DISTANT_FRAME_THRESHOLD = 60;        // 1.0 second at 60 FPS
 	static constexpr uint64_t PRUNE_INTERVAL_FRAMES = 120;         // 2.0 seconds at 60 FPS
-	static constexpr size_t MAX_CACHED_CHUNKS = 4096;              // High-water mark
-	static constexpr size_t TARGET_CACHED_CHUNKS = 3072;           // Low-water mark (75%)
+	static constexpr size_t MAX_CACHED_CHUNKS = 65536;             // High-water mark (~200 MB VRAM ceiling)
+	static constexpr size_t TARGET_CACHED_CHUNKS = 49152;          // Low-water mark (75%)
 	static constexpr int VIEWPORT_MARGIN_CHUNKS = 32;              // 512 tiles
 
 	ChunkCacheManager();

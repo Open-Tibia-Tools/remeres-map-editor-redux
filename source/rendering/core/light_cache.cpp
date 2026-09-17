@@ -125,7 +125,7 @@ void LightCache::prune(int current_floor, uint64_t current_frame) {
 		const uint64_t age = current_frame - it->second.last_accessed_frame;
 		const bool is_far_floor = std::abs(it->first.z - current_floor) > 2;
 
-		if ((is_far_floor && age > 60) || age > EVICTION_FRAME_THRESHOLD) {
+		if (is_far_floor && age > FAR_FLOOR_FRAME_THRESHOLD) {
 			it = chunks_.erase(it);
 		} else {
 			++it;

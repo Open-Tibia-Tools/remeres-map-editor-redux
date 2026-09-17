@@ -26,11 +26,12 @@ void LightDrawer::initGL() {
 		layout (location = 0) in vec2 aPos;
 
 		uniform mat4 uMVP;
+		uniform vec2 uTexScale;
 		out vec2 TexCoord;
 
 		void main() {
 			gl_Position = uMVP * vec4(aPos, 0.0, 1.0);
-			TexCoord = vec2(aPos.x, aPos.y);
+			TexCoord = vec2(aPos.x * uTexScale.x, aPos.y * uTexScale.y);
 		}
 	)";
 
@@ -64,6 +65,16 @@ void LightDrawer::initGL() {
 	glVertexArrayAttribFormat(vao_->GetID(), 0, 2, GL_FLOAT, GL_FALSE, 0);
 	glVertexArrayAttribBinding(vao_->GetID(), 0, 0);
 	glBindVertexArray(0);
+
+	texture_ = std::make_unique<GLTextureResource>(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, texture_->GetID());
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	gpu_tex_width_ = 0;
+	gpu_tex_height_ = 0;
 }
 
 void LightDrawer::updateViewportTexture(
@@ -106,18 +117,28 @@ void LightDrawer::updateViewportTexture(
 		}
 	}
 
-	if (!texture_ || tex_width_ != tex_w || tex_height_ != tex_h) {
+	if (!texture_) {
 		texture_ = std::make_unique<GLTextureResource>(GL_TEXTURE_2D);
-		tex_width_ = tex_w;
-		tex_height_ = tex_h;
-		glTextureStorage2D(texture_->GetID(), 1, GL_RGBA8, tex_w, tex_h);
-		glTextureParameteri(texture_->GetID(), GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTextureParameteri(texture_->GetID(), GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTextureParameteri(texture_->GetID(), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTextureParameteri(texture_->GetID(), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glBindTexture(GL_TEXTURE_2D, texture_->GetID());
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	glTextureSubImage2D(texture_->GetID(), 0, 0, 0, tex_w, tex_h, GL_RGBA, GL_UNSIGNED_BYTE, viewport_pixels_.data());
+	glBindTexture(GL_TEXTURE_2D, texture_->GetID());
+	if (tex_w > gpu_tex_width_ || tex_h > gpu_tex_height_) {
+		gpu_tex_width_ = std::max(tex_w, std::max(gpu_tex_width_ * 2, 512));
+		gpu_tex_height_ = std::max(tex_h, std::max(gpu_tex_height_ * 2, 512));
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, gpu_tex_width_, gpu_tex_height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	}
+
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_w, tex_h, GL_RGBA, GL_UNSIGNED_BYTE, viewport_pixels_.data());
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	tex_width_ = tex_w;
+	tex_height_ = tex_h;
 }
 
 void LightDrawer::render(
@@ -155,23 +176,18 @@ void LightDrawer::render(
 	const int view_min_cy = (bounds.start_y >> 4);
 	const int view_max_cy = (bounds.end_y >> 4);
 
-	const bool bounds_outside = (last_floor_ != view.floor ||
-	                             !texture_ ||
-	                             view_min_cx < last_min_cx_ ||
-	                             view_max_cx > last_max_cx_ ||
-	                             view_min_cy < last_min_cy_ ||
-	                             view_max_cy > last_max_cy_ ||
-	                             view_min_cx > last_min_cx_ + 2 ||
-	                             view_max_cx < last_max_cx_ - 2 ||
-	                             view_min_cy > last_min_cy_ + 2 ||
-	                             view_max_cy < last_max_cy_ - 2);
+	const bool floor_changed = (last_floor_ != view.floor);
 	const bool config_changed = (config != last_config_);
+	const bool outside_cached_region = (view_min_cx < last_min_cx_ ||
+	                                    view_max_cx > last_max_cx_ ||
+	                                    view_min_cy < last_min_cy_ ||
+	                                    view_max_cy > last_max_cy_);
 
-	if (bounds_outside || config_changed || force_texture_rebuild_) {
-		const int min_cx = view_min_cx - 1;
-		const int max_cx = view_max_cx + 1;
-		const int min_cy = view_min_cy - 1;
-		const int max_cy = view_max_cy + 1;
+	if (floor_changed || config_changed || outside_cached_region || force_texture_rebuild_ || !texture_ || gpu_tex_width_ <= 0) {
+		const int min_cx = view_min_cx - MARGIN_CHUNKS;
+		const int max_cx = view_max_cx + MARGIN_CHUNKS;
+		const int min_cy = view_min_cy - MARGIN_CHUNKS;
+		const int max_cy = view_max_cy + MARGIN_CHUNKS;
 
 		updateViewportTexture(view, map, gfx, config, min_cx, min_cy, max_cx, max_cy);
 		last_min_cx_ = min_cx;
@@ -183,7 +199,7 @@ void LightDrawer::render(
 		force_texture_rebuild_ = false;
 	}
 
-	if (!texture_ || tex_width_ <= 0 || tex_height_ <= 0) {
+	if (!texture_ || tex_width_ <= 0 || tex_height_ <= 0 || gpu_tex_width_ <= 0 || gpu_tex_height_ <= 0) {
 		return;
 	}
 
@@ -197,6 +213,10 @@ void LightDrawer::render(
 
 	shader_->Use();
 	shader_->SetInt("uLightTexture", 0);
+	shader_->SetVec2("uTexScale", glm::vec2(
+		static_cast<float>(tex_width_) / static_cast<float>(gpu_tex_width_),
+		static_cast<float>(tex_height_) / static_cast<float>(gpu_tex_height_)
+	));
 	shader_->SetMat4("uMVP", view.projectionMatrix * view.viewMatrix * model);
 
 	glBindTextureUnit(0, texture_->GetID());
@@ -328,18 +348,28 @@ void LightDrawer::draw(const RenderView& view, const LightBuffer& light_buffer, 
 
 	computeBrightness(view, light_buffer, options);
 
-	if (!texture_ || tex_width_ != light_buffer.width || tex_height_ != light_buffer.height) {
+	if (!texture_) {
 		texture_ = std::make_unique<GLTextureResource>(GL_TEXTURE_2D);
-		tex_width_ = light_buffer.width;
-		tex_height_ = light_buffer.height;
-		glTextureStorage2D(texture_->GetID(), 1, GL_RGBA8, tex_width_, tex_height_);
-		glTextureParameteri(texture_->GetID(), GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTextureParameteri(texture_->GetID(), GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTextureParameteri(texture_->GetID(), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTextureParameteri(texture_->GetID(), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glBindTexture(GL_TEXTURE_2D, texture_->GetID());
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	glTextureSubImage2D(texture_->GetID(), 0, 0, 0, light_buffer.width, light_buffer.height, GL_RGBA, GL_UNSIGNED_BYTE, legacy_tile_brightness_.data());
+	glBindTexture(GL_TEXTURE_2D, texture_->GetID());
+	if (light_buffer.width > gpu_tex_width_ || light_buffer.height > gpu_tex_height_) {
+		gpu_tex_width_ = std::max(light_buffer.width, std::max(gpu_tex_width_ * 2, 512));
+		gpu_tex_height_ = std::max(light_buffer.height, std::max(gpu_tex_height_ * 2, 512));
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, gpu_tex_width_, gpu_tex_height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	}
+
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, light_buffer.width, light_buffer.height, GL_RGBA, GL_UNSIGNED_BYTE, legacy_tile_brightness_.data());
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	tex_width_ = light_buffer.width;
+	tex_height_ = light_buffer.height;
 
 	const float draw_x = static_cast<float>(light_buffer.origin_x * TILE_SIZE - view.view_scroll_x);
 	const float draw_y = static_cast<float>(light_buffer.origin_y * TILE_SIZE - view.view_scroll_y);
@@ -351,6 +381,10 @@ void LightDrawer::draw(const RenderView& view, const LightBuffer& light_buffer, 
 
 	shader_->Use();
 	shader_->SetInt("uLightTexture", 0);
+	shader_->SetVec2("uTexScale", glm::vec2(
+		static_cast<float>(tex_width_) / static_cast<float>(gpu_tex_width_),
+		static_cast<float>(tex_height_) / static_cast<float>(gpu_tex_height_)
+	));
 	shader_->SetMat4("uMVP", view.projectionMatrix * view.viewMatrix * model);
 
 	glBindTextureUnit(0, texture_->GetID());
