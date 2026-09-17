@@ -556,8 +556,8 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	const float inv_zoom = 1.0f / zoom;
 	const float tile_size_screen = 32.0f * inv_zoom;
 
-	// Zoom LOD guard: do not draw micro tooltips when zoomed far out
-	if (tile_size_screen < 14.0f) {
+	// Zoom LOD guard: do not draw micro tooltips when zoomed beyond 10% zoom (matching editor LOD policy)
+	if (view.zoom > 10.0f) {
 		return;
 	}
 

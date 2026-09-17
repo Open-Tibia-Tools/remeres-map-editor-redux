@@ -207,10 +207,10 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	primitive_renderer.flush();
 
 	// Pre-collect indicators and tooltips so hasOverlays() accurately reflects whether any NanoVG geometry exists
-	if (options.show_tooltips) {
+	if (options.show_tooltips && view.zoom <= 10.0f) {
 		InspectionBadgeCollector::Collect(editor.map, view, options, tooltip_drawer, editor);
 	}
-	if (options.show_hooks || options.highlight_locked_doors) {
+	if ((options.show_hooks || options.highlight_locked_doors) && view.zoom <= 10.0f) {
 		CollectIndicators();
 	}
 }
@@ -270,7 +270,7 @@ void MapDrawer::DrawGrid(const ViewBounds& bounds, const AtlasManager& atlas) {
 }
 
 void MapDrawer::DrawTooltips(NVGcontext* vg) {
-	if (options.show_tooltips && !tooltip_drawer.empty()) {
+	if (options.show_tooltips && !tooltip_drawer.empty() && view.zoom <= 10.0f) {
 		tooltip_drawer.draw(vg, view);
 	}
 }
@@ -284,13 +284,13 @@ void MapDrawer::CollectIndicators() {
 }
 
 void MapDrawer::DrawHookIndicators(NVGcontext* vg) {
-	if (options.show_hooks && !hook_indicator_drawer.empty()) {
+	if (options.show_hooks && !hook_indicator_drawer.empty() && view.zoom <= 10.0f) {
 		hook_indicator_drawer.draw(vg, view);
 	}
 }
 
 void MapDrawer::DrawDoorIndicators(NVGcontext* vg) {
-	if (options.highlight_locked_doors && !door_indicator_drawer.empty()) {
+	if (options.highlight_locked_doors && !door_indicator_drawer.empty() && view.zoom <= 10.0f) {
 		door_indicator_drawer.draw(vg, view);
 	}
 }
@@ -300,11 +300,13 @@ void MapDrawer::DrawUIOverlays(NVGcontext* vg) {
 }
 
 void MapDrawer::DrawCreatureNames(NVGcontext* vg) {
-	creature_name_drawer.draw(vg, view);
+	if (options.show_creatures && !creature_name_drawer.empty() && view.zoom <= 10.0f) {
+		creature_name_drawer.draw(vg, view);
+	}
 }
 
 bool MapDrawer::hasOverlays() {
-	const bool can_read_labels = (32.0f / view.zoom) >= 10.0f;
+	const bool can_read_labels = view.zoom <= 10.0f;
 	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
 		return true;
 	}

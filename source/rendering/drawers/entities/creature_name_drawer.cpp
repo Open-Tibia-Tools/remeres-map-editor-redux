@@ -39,9 +39,8 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	const float inv_zoom = 1.0f / zoom;
 	const float tile_size_screen = 32.0f * inv_zoom;
 
-	// When zoomed out far, text labels overlap into solid illegible noise and tank performance.
-	// Matching ImguiMapEditor policy: skip text labels when tiles are smaller than 10 pixels.
-	if (tile_size_screen < 10.0f) {
+	// When zoomed out far, skip text labels when zoomed beyond 10% zoom (matching editor LOD policy)
+	if (view.zoom > 10.0f) {
 		return;
 	}
 

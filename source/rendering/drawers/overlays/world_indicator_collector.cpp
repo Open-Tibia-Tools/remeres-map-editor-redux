@@ -19,7 +19,7 @@ void WorldIndicatorCollector::Collect(
 		return;
 	}
 
-	const bool can_read_labels = (32.0f / view.zoom) >= 10.0f;
+	const bool can_read_labels = view.zoom <= 10.0f;
 	if (!can_read_labels) {
 		return;
 	}

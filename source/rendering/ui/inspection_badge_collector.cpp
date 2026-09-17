@@ -129,10 +129,8 @@ void InspectionBadgeCollector::Collect(
 		return;
 	}
 
-	const float inv_zoom = 1.0f / (view.zoom < 0.01f ? 1.0f : view.zoom);
-	const float tile_size_screen = 32.0f * inv_zoom;
-	// Skip collecting inspection badges when tiles are smaller than 14 pixels
-	if (tile_size_screen < 14.0f) {
+	// Skip collecting inspection badges when zoomed beyond 10% zoom (matching editor LOD policy)
+	if (view.zoom > 10.0f) {
 		return;
 	}
 
