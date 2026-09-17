@@ -228,6 +228,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/hook_indicator_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/door_indicator_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/world_indicator_collector.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/map_overlay_collector.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/lua_overlay_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/marker_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/preview_drawer.h
@@ -615,6 +616,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/hook_indicator_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/door_indicator_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/world_indicator_collector.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/map_overlay_collector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/lua_overlay_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/marker_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/preview_drawer.cpp

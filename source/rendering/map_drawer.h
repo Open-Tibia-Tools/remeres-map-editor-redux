@@ -148,11 +148,58 @@ public:
 		return view;
 	}
 
+	void InvalidateOverlays() noexcept {
+		overlay_cache.invalidate();
+	}
+
 private:
+	struct OverlayCacheState {
+		int floor = -1;
+		float zoom = -1.0f;
+		ViewBounds bounds{};
+		bool show_tooltips = false;
+		bool show_hooks = false;
+		bool highlight_locked_doors = false;
+		uint64_t map_generation = 0;
+		bool valid = false;
+
+		[[nodiscard]] bool isValid(
+			int cur_floor,
+			float cur_zoom,
+			const ViewBounds& cur_bounds,
+			bool opt_tooltips,
+			bool opt_hooks,
+			bool opt_doors,
+			uint64_t cur_gen
+		) const noexcept {
+			if (!valid) {
+				return false;
+			}
+			if (floor != cur_floor || zoom != cur_zoom) {
+				return false;
+			}
+			if (show_tooltips != opt_tooltips || show_hooks != opt_hooks || highlight_locked_doors != opt_doors) {
+				return false;
+			}
+			if (map_generation != cur_gen) {
+				return false;
+			}
+			if (cur_bounds.start_x < bounds.start_x || cur_bounds.end_x > bounds.end_x ||
+				cur_bounds.start_y < bounds.start_y || cur_bounds.end_y > bounds.end_y) {
+				return false;
+			}
+			return true;
+		}
+
+		void invalidate() noexcept {
+			valid = false;
+		}
+	};
+
 	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client);
-	void CollectIndicators();
+	void CollectOverlays();
 	bool renderers_initialized = false;
-	bool indicators_collected = false;
+	OverlayCacheState overlay_cache;
 	Settings::ObserverId settings_observer_id_ = 0;
 };
 

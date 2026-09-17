@@ -29,6 +29,7 @@
 #include "game/sprites.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
+#include "rendering/drawers/overlays/map_overlay_collector.h"
 #include "rendering/ui/inspection_badge_collector.h"
 #include "rendering/drawers/overlays/world_indicator_collector.h"
 #include "rendering/io/screen_capture.h"
@@ -129,12 +130,16 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	if (options.isChunkBakeDirty()) {
 		spdlog::info("[MapDrawer] options.isChunkBakeDirty() triggered chunk_cache_manager.invalidateAll()");
 		chunk_cache_manager.invalidateAll();
+		InvalidateOverlays();
 		options.clearChunkBakeDirty();
 	}
 	if (options.isLightingDirty()) {
 		spdlog::info("[MapDrawer] options.isLightingDirty() triggered light_drawer.invalidateAll()");
 		light_drawer.invalidateAll();
 		options.clearLightingDirty();
+	}
+	if (options.isDirty() || options.isVisualDirty()) {
+		InvalidateOverlays();
 	}
 	options.clearVisualDirty();
 	options.clearDirty();
@@ -207,12 +212,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	primitive_renderer.flush();
 
 	// Pre-collect indicators and tooltips so hasOverlays() accurately reflects whether any NanoVG geometry exists
-	if (options.show_tooltips && view.zoom <= 10.0f) {
-		InspectionBadgeCollector::Collect(editor.map, view, options, tooltip_drawer, editor);
-	}
-	if ((options.show_hooks || options.highlight_locked_doors) && view.zoom <= 10.0f) {
-		CollectIndicators();
-	}
+	CollectOverlays();
 }
 
 void MapDrawer::DrawBackground() {
@@ -275,12 +275,66 @@ void MapDrawer::DrawTooltips(NVGcontext* vg) {
 	}
 }
 
-void MapDrawer::CollectIndicators() {
-	if (indicators_collected) {
+void MapDrawer::CollectOverlays() {
+	const bool can_read_labels = view.zoom <= 10.0f;
+	if (!can_read_labels) {
+		if (overlay_cache.valid) {
+			tooltip_drawer.clear();
+			hook_indicator_drawer.clear();
+			door_indicator_drawer.clear();
+			overlay_cache.invalidate();
+		}
 		return;
 	}
-	indicators_collected = true;
-	WorldIndicatorCollector::Collect(editor.map, view, options, &door_indicator_drawer, &hook_indicator_drawer);
+
+	const bool need_tooltips = options.show_tooltips;
+	const bool need_hooks = !options.ingame && options.show_hooks;
+	const bool need_doors = !options.ingame && options.highlight_locked_doors;
+
+	if (!need_tooltips && !need_doors && !need_hooks) {
+		if (overlay_cache.valid) {
+			tooltip_drawer.clear();
+			hook_indicator_drawer.clear();
+			door_indicator_drawer.clear();
+			overlay_cache.invalidate();
+		}
+		return;
+	}
+
+	const int map_z = view.floor;
+	const ViewBounds current_bounds = view.getBoundsForFloor(map_z);
+	const uint64_t current_generation = editor.map.getChangeTracker().getGeneration();
+
+	if (overlay_cache.isValid(map_z, view.zoom, current_bounds, need_tooltips, need_hooks, need_doors, current_generation)) {
+		return;
+	}
+
+	tooltip_drawer.clear();
+	hook_indicator_drawer.clear();
+	door_indicator_drawer.clear();
+
+	constexpr int EXTRA_MARGIN_TILES = 8;
+	const ViewBounds collect_bounds = view.getBoundsForFloor(map_z, EXTRA_MARGIN_TILES);
+
+	MapOverlayCollector::Collect(
+		editor.map,
+		view,
+		collect_bounds,
+		options,
+		&editor,
+		need_tooltips ? &tooltip_drawer : nullptr,
+		need_doors ? &door_indicator_drawer : nullptr,
+		need_hooks ? &hook_indicator_drawer : nullptr
+	);
+
+	overlay_cache.floor = map_z;
+	overlay_cache.zoom = view.zoom;
+	overlay_cache.bounds = collect_bounds;
+	overlay_cache.show_tooltips = need_tooltips;
+	overlay_cache.show_hooks = need_hooks;
+	overlay_cache.highlight_locked_doors = need_doors;
+	overlay_cache.map_generation = current_generation;
+	overlay_cache.valid = true;
 }
 
 void MapDrawer::DrawHookIndicators(NVGcontext* vg) {
@@ -339,8 +393,7 @@ void MapDrawer::TakeScreenshot(uint8_t* screenshot_buffer) {
 }
 
 void MapDrawer::ClearFrameOverlays() {
-	indicators_collected = false;
-	tooltip_drawer.clear();
-	hook_indicator_drawer.clear();
-	door_indicator_drawer.clear();
+	// Overlay data (tooltips, hooks, doors) are cached across frames until invalidated
+	// (e.g. camera moves outside bounds, zoom change, map edit, or options toggle).
+	// Transient per-frame overlays (like creature names) are cleared during their render pass.
 }
