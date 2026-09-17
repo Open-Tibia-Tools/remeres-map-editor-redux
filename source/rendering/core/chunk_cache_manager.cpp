@@ -517,6 +517,13 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 	chunk.is_dirty = false;
 }
 
+void ChunkCacheManager::advanceFrame(int current_floor) {
+	++current_frame_;
+	if (current_frame_ % PRUNE_INTERVAL_FRAMES == 0) {
+		prune(current_floor);
+	}
+}
+
 void ChunkCacheManager::renderFloor(
 	int map_z,
 	const Map& map,
@@ -528,17 +535,11 @@ void ChunkCacheManager::renderFloor(
 		return;
 	}
 
-	++current_frame_;
-
 	const ViewBounds bounds = ctx.view.getBoundsForFloor(map_z);
 	const int min_cx = bounds.start_x >> 4;
 	const int max_cx = (bounds.end_x + 15) >> 4;
 	const int min_cy = bounds.start_y >> 4;
 	const int max_cy = (bounds.end_y + 15) >> 4;
-
-	if (current_frame_ % PRUNE_INTERVAL_FRAMES == 0) {
-		prune(ctx.view.floor, min_cx, max_cx, min_cy, max_cy, true);
-	}
 
 	const int offset = (map_z <= GROUND_LAYER)
 		? (GROUND_LAYER - map_z) * TILE_SIZE
@@ -611,15 +612,15 @@ void ChunkCacheManager::prune(
 		const uint64_t age = current_frame_ - chunk.last_accessed_frame;
 		const bool is_far_floor = std::abs(coord.z - current_floor) > 2;
 
-		// Tier 1: Empty chunks are evicted immediately
-		if (chunk.is_empty) {
+		// Tier 1: Empty chunks on far floors that are stale (retain on active floors to prevent re-bake loops!)
+		if (chunk.is_empty && is_far_floor && age > FAR_FLOOR_FRAME_THRESHOLD) {
 			it = cached_chunks_.erase(it);
 			++empty_evicted;
 			continue;
 		}
 
 		// Tier 2: Distant floor aggressive eviction (1s)
-		if (is_far_floor && age > FAR_FLOOR_FRAME_THRESHOLD) {
+		if (!chunk.is_empty && is_far_floor && age > FAR_FLOOR_FRAME_THRESHOLD) {
 			it = cached_chunks_.erase(it);
 			++far_floor_evicted;
 			continue;

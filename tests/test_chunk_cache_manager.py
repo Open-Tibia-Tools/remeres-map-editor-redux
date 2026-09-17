@@ -371,11 +371,12 @@ def test_cache_eviction_prune_simulation():
 
     cached_chunks = {
         (0, 0, 7): MockCachedChunk(7, 400, False),  # active floor, recent -> RETAIN
-        (1, 0, 7): MockCachedChunk(7, 400, True),   # active floor, empty -> EVICT
+        (1, 0, 7): MockCachedChunk(7, 400, True),   # active floor, empty -> RETAIN (negative cache prevents re-bake death loop!)
         (2, 0, 9): MockCachedChunk(9, 480, False),  # active range (abs(9-7) <= 2), recent -> RETAIN
         (3, 0, 12): MockCachedChunk(12, 480, False), # far floor (abs(12-7) > 2), recent (500-480=20 <= 60) -> RETAIN (not stale yet)
         (4, 0, 12): MockCachedChunk(12, 300, False),  # far floor, stale (>60 frames old: 500-300=200 > 60) -> EVICT
         (5, 0, 7): MockCachedChunk(7, 100, False),   # active floor, older frame -> RETAIN (active floor chunks retained to prevent re-baking lag!)
+        (6, 0, 12): MockCachedChunk(12, 300, True),  # far floor, empty and stale -> EVICT
     }
 
     current_floor = 7
@@ -388,11 +389,13 @@ def test_cache_eviction_prune_simulation():
         is_far_floor = abs(chunk.z - current_floor) > 2
         is_stale = (current_frame - chunk.last_accessed_frame) > EVICTION_FRAME_THRESHOLD
 
-        if chunk.is_empty:
+        # Tier 1: Empty chunks on far floors that are stale (retain on active floors to prevent re-bake loops!)
+        if chunk.is_empty and is_far_floor and is_stale:
             to_erase.append(coord)
             continue
 
-        if is_far_floor and is_stale:
+        # Tier 2: Distant floor aggressive eviction (1s)
+        if not chunk.is_empty and is_far_floor and is_stale:
             to_erase.append(coord)
             continue
 
@@ -400,10 +403,10 @@ def test_cache_eviction_prune_simulation():
         del cached_chunks[coord]
 
     retained = set(cached_chunks.keys())
-    expected = {(0, 0, 7), (2, 0, 9), (3, 0, 12), (5, 0, 7)}
+    expected = {(0, 0, 7), (1, 0, 7), (2, 0, 9), (3, 0, 12), (5, 0, 7)}
     assert retained == expected, f"Eviction mismatch! Retained: {retained}, Expected: {expected}"
 
-    print("PASS: Prune eviction policy correctly retains active-floor chunks and only evicts empty or far-floor stale chunks!")
+    print("PASS: Prune eviction policy correctly retains active-floor chunks (including empty negative cache) and evicts far-floor stale chunks!")
 
 if __name__ == "__main__":
     test_single_cell_indexing()

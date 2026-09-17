@@ -133,6 +133,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	}
 	options.clearVisualDirty();
 	options.clearDirty();
+	chunk_cache_manager.advanceFrame(view.floor);
 	chunk_cache_manager.updateDirtyState(editor.map.getChangeTracker());
 	light_drawer.updateDirtyState(editor.map.getChangeTracker());
 

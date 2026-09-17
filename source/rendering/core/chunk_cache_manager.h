@@ -146,6 +146,11 @@ public:
 	);
 
 	/**
+	 * Advance frame counter and trigger periodic prune. Called once per frame by the renderer.
+	 */
+	void advanceFrame(int current_floor);
+
+	/**
 	 * Evict distant/stale chunks outside the active floor range or viewport margin.
 	 */
 	void prune(int current_floor, int min_cx = 0, int max_cx = 0, int min_cy = 0, int max_cy = 0, bool has_bounds = false);
