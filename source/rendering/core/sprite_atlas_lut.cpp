@@ -5,6 +5,7 @@
 #include "rendering/core/sprite_atlas_lut.h"
 #include "rendering/core/texture_atlas.h"
 #include <algorithm>
+#include <spdlog/spdlog.h>
 
 SpriteAtlasLUT::SpriteAtlasLUT() = default;
 
@@ -52,6 +53,7 @@ bool SpriteAtlasLUT::initialize(size_t initial_capacity) {
 
 	glCreateBuffers(1, &ssbo_);
 	if (ssbo_ == 0) {
+		spdlog::error("[SpriteAtlasLUT] Failed to create SSBO buffer");
 		return false;
 	}
 
@@ -61,11 +63,15 @@ bool SpriteAtlasLUT::initialize(size_t initial_capacity) {
 	has_dirty_entries_ = false;
 	dirty_min_id_ = UINT32_MAX;
 	dirty_max_id_ = 0;
+
+	spdlog::info("[SpriteAtlasLUT] Initialized SSBO with capacity {} entries ({} KB GPU buffer) | SSBO ID: {}",
+		cpu_entries_.size(), (cpu_entries_.size() * sizeof(SpriteLUTEntry)) / 1024, ssbo_);
 	return true;
 }
 
 void SpriteAtlasLUT::release() {
 	if (ssbo_ != 0) {
+		spdlog::info("[SpriteAtlasLUT] Released SSBO buffer ID {} (capacity was {} entries)", ssbo_, gpu_capacity_);
 		glDeleteBuffers(1, &ssbo_);
 		ssbo_ = 0;
 	}
@@ -81,6 +87,7 @@ void SpriteAtlasLUT::ensureCapacity(size_t required_capacity) {
 		return;
 	}
 
+	const size_t old_capacity = cpu_entries_.size();
 	size_t new_capacity = cpu_entries_.size() == 0 ? DEFAULT_INITIAL_CAPACITY : cpu_entries_.size();
 	while (new_capacity < required_capacity) {
 		new_capacity *= 2;
@@ -94,6 +101,9 @@ void SpriteAtlasLUT::ensureCapacity(size_t required_capacity) {
 		has_dirty_entries_ = false;
 		dirty_min_id_ = UINT32_MAX;
 		dirty_max_id_ = 0;
+
+		spdlog::info("[SpriteAtlasLUT] Capacity expanded: {} -> {} entries ({} KB GPU buffer) | SSBO ID: {}",
+			old_capacity, new_capacity, (new_capacity * sizeof(SpriteLUTEntry)) / 1024, ssbo_);
 	}
 }
 

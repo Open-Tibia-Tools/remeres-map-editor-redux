@@ -10,6 +10,7 @@
 #include "rendering/core/graphics.h"
 #include <algorithm>
 #include <cmath>
+#include <spdlog/spdlog.h>
 
 namespace rme::lighting {
 
@@ -67,6 +68,7 @@ bool LightCache::updateDirtyState(SpatialChangeTracker& tracker) {
 	}
 
 	if (tracker.isAllDirty() || pending_all_dirty_) {
+		spdlog::info("[LightCache] SpatialChangeTracker::isAllDirty() triggered invalidateAll");
 		invalidateAll();
 		pending_all_dirty_ = false;
 		pending_dirty_chunks_.clear();
@@ -80,6 +82,9 @@ bool LightCache::updateDirtyState(SpatialChangeTracker& tracker) {
 	if (pending_dirty_chunks_.empty()) {
 		return false;
 	}
+
+	spdlog::info("[LightCache] SpatialChangeTracker: {} dirty chunk(s) invalidated across 3x3 neighborhood",
+		pending_dirty_chunks_.size());
 
 	bool any_invalidated = false;
 	for (const auto& coord : pending_dirty_chunks_) {
@@ -100,6 +105,7 @@ bool LightCache::updateDirtyState(SpatialChangeTracker& tracker) {
 }
 
 void LightCache::invalidateAll() noexcept {
+	spdlog::info("[LightCache] InvalidateAll: marking all {} light chunks invalid", chunks_.size());
 	for (auto& [coord, chunk] : chunks_) {
 		chunk.is_valid = false;
 	}
@@ -121,15 +127,21 @@ void LightCache::invalidateTile(int32_t x, int32_t y, int32_t z) {
 }
 
 void LightCache::prune(int current_floor, uint64_t current_frame) {
+	size_t evicted_count = 0;
 	for (auto it = chunks_.begin(); it != chunks_.end(); ) {
 		const uint64_t age = current_frame - it->second.last_accessed_frame;
 		const bool is_far_floor = std::abs(it->first.z - current_floor) > 2;
 
 		if (is_far_floor && age > FAR_FLOOR_FRAME_THRESHOLD) {
 			it = chunks_.erase(it);
+			++evicted_count;
 		} else {
 			++it;
 		}
+	}
+	if (evicted_count > 0) {
+		spdlog::info("[LightCache] Pruned {} stale light chunk(s) | Remaining: {} cached",
+			evicted_count, chunks_.size());
 	}
 }
 

@@ -91,8 +91,22 @@ public:
 	/**
 	 * Get layer count.
 	 */
-	int getLayerCount() const {
+	int getLayerCount() const noexcept {
 		return layer_count_;
+	}
+
+	/**
+	 * Get allocated layer capacity.
+	 */
+	int getAllocatedLayers() const noexcept {
+		return allocated_layers_;
+	}
+
+	/**
+	 * Get total count of sprites stored in atlas.
+	 */
+	int getTotalSpriteCount() const noexcept {
+		return total_sprite_count_;
 	}
 
 	/**

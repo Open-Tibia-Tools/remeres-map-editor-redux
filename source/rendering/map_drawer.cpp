@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <spdlog/spdlog.h>
 
 #include "rendering/map_drawer.h"
 #include "editor/editor.h"
@@ -100,11 +101,33 @@ void MapDrawer::Release() {
 }
 
 void MapDrawer::Draw(const InteractionRenderState& interaction) {
+	static uint64_t s_frame_heartbeat = 0;
+	if (++s_frame_heartbeat % 120 == 0) {
+		auto* atlas_ptr = g_graphics.getAtlasManager();
+		const int atlas_layers = atlas_ptr ? atlas_ptr->getLayerCount() : 0;
+		const int atlas_allocated = atlas_ptr ? atlas_ptr->getAllocatedLayers() : 0;
+		const int atlas_sprites = atlas_ptr ? atlas_ptr->getTotalSpriteCount() : 0;
+		spdlog::info("[RenderHeartbeat] Frame #{}: Floor={} | Zoom={:.1f}% | Chunks Cached={}/{} (~{:.1f} MB) | Atlas: {}/{} layers ({} sprites) | Light: {}",
+			s_frame_heartbeat,
+			view.floor,
+			view.zoom * 100.0f,
+			chunk_cache_manager.getCachedChunkCount(),
+			ChunkCacheManager::MAX_CACHED_CHUNKS,
+			(chunk_cache_manager.getCachedChunkCount() * 3.5) / 1024.0,
+			atlas_layers,
+			atlas_allocated,
+			atlas_sprites,
+			options.isDrawLight() ? "ON" : "OFF"
+		);
+	}
+
 	if (options.isChunkBakeDirty()) {
+		spdlog::info("[MapDrawer] options.isChunkBakeDirty() triggered chunk_cache_manager.invalidateAll()");
 		chunk_cache_manager.invalidateAll();
 		options.clearChunkBakeDirty();
 	}
 	if (options.isLightingDirty()) {
+		spdlog::info("[MapDrawer] options.isLightingDirty() triggered light_drawer.invalidateAll()");
 		light_drawer.invalidateAll();
 		options.clearLightingDirty();
 	}

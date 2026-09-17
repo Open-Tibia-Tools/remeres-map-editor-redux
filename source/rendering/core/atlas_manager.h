@@ -92,6 +92,27 @@ public:
 	}
 
 	/**
+	 * Get number of active texture layers.
+	 */
+	int getLayerCount() const noexcept {
+		return atlas_.getLayerCount();
+	}
+
+	/**
+	 * Get number of allocated GPU texture layers.
+	 */
+	int getAllocatedLayers() const noexcept {
+		return atlas_.getAllocatedLayers();
+	}
+
+	/**
+	 * Get total count of sprites stored in the texture atlas.
+	 */
+	int getTotalSpriteCount() const noexcept {
+		return atlas_.getTotalSpriteCount();
+	}
+
+	/**
 	 * Get the GPU SpriteAtlasLUT for SSBO sprite coordinate indirection.
 	 */
 	SpriteAtlasLUT& getLUT() noexcept {

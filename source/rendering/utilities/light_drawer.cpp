@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstring>
 #include <glm/gtc/matrix_transform.hpp>
+#include <spdlog/spdlog.h>
 
 LightDrawer::LightDrawer() = default;
 
@@ -129,9 +130,14 @@ void LightDrawer::updateViewportTexture(
 
 	glBindTexture(GL_TEXTURE_2D, texture_->GetID());
 	if (tex_w > gpu_tex_width_ || tex_h > gpu_tex_height_) {
+		const int old_w = gpu_tex_width_;
+		const int old_h = gpu_tex_height_;
 		gpu_tex_width_ = std::max(tex_w, std::max(gpu_tex_width_ * 2, 512));
 		gpu_tex_height_ = std::max(tex_h, std::max(gpu_tex_height_ * 2, 512));
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, gpu_tex_width_, gpu_tex_height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+		spdlog::info("[LightDrawer] GPU texture storage allocated/resized: {}x{} -> {}x{} (~{:.2f} MB VRAM) | ID: {}",
+			old_w, old_h, gpu_tex_width_, gpu_tex_height_,
+			(gpu_tex_width_ * gpu_tex_height_ * 4) / (1024.0 * 1024.0), texture_->GetID());
 	}
 
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_w, tex_h, GL_RGBA, GL_UNSIGNED_BYTE, viewport_pixels_.data());
@@ -184,6 +190,15 @@ void LightDrawer::render(
 	                                    view_max_cy > last_max_cy_);
 
 	if (floor_changed || config_changed || outside_cached_region || force_texture_rebuild_ || !texture_ || gpu_tex_width_ <= 0) {
+		spdlog::info("[LightDrawer] Updating lightmap (reason: {}{}{}{}{}) | Viewport: [{},{}]..[{},{}], Cached: [{},{}]..[{},{}]",
+			floor_changed ? "floor_changed " : "",
+			config_changed ? "config_changed " : "",
+			outside_cached_region ? "outside_margin " : "",
+			force_texture_rebuild_ ? "force_rebuild " : "",
+			(!texture_ || gpu_tex_width_ <= 0) ? "initial_alloc " : "",
+			view_min_cx, view_min_cy, view_max_cx, view_max_cy,
+			last_min_cx_, last_min_cy_, last_max_cx_, last_max_cy_);
+
 		const int min_cx = view_min_cx - MARGIN_CHUNKS;
 		const int max_cx = view_max_cx + MARGIN_CHUNKS;
 		const int min_cy = view_min_cy - MARGIN_CHUNKS;

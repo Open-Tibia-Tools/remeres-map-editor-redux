@@ -144,11 +144,16 @@ bool ChunkCacheManager::initialize() {
 	glVertexArrayAttribFormat(vao_, 5, 4, GL_FLOAT, GL_FALSE, offsetof(TileInstance, r));
 	glVertexArrayAttribBinding(vao_, 5, 1);
 
-	spdlog::info("ChunkCacheManager initialized successfully (Per-Chunk VBO Architecture)");
+	spdlog::info("[ChunkCache] Initialized successfully (VAO: {}, Max capacity: {} chunks, Target: {} chunks)",
+		vao_, MAX_CACHED_CHUNKS, TARGET_CACHED_CHUNKS);
 	return true;
 }
 
 void ChunkCacheManager::release() {
+	if (vao_ != 0 || !cached_chunks_.empty()) {
+		spdlog::info("[ChunkCache] Released (cleared {} cached chunk VBOs, destroyed VAO: {})",
+			cached_chunks_.size(), vao_);
+	}
 	if (vao_ != 0) {
 		glDeleteVertexArrays(1, &vao_);
 		vao_ = 0;
@@ -162,12 +167,16 @@ void ChunkCacheManager::release() {
 
 void ChunkCacheManager::updateDirtyState(SpatialChangeTracker& change_tracker) {
 	if (change_tracker.isAllDirty()) {
+		spdlog::info("[ChunkCache] SpatialChangeTracker::isAllDirty() triggered InvalidateAll");
 		invalidateAll();
 		change_tracker.clearDirty();
 		return;
 	}
 
 	auto dirty_chunks = change_tracker.takeDirtyChunks();
+	if (!dirty_chunks.empty()) {
+		spdlog::info("[ChunkCache] SpatialChangeTracker: {} dirty chunk(s) marked for re-bake", dirty_chunks.size());
+	}
 	for (const auto& coord : dirty_chunks) {
 		auto it = cached_chunks_.find(coord);
 		if (it != cached_chunks_.end()) {
@@ -177,6 +186,7 @@ void ChunkCacheManager::updateDirtyState(SpatialChangeTracker& change_tracker) {
 }
 
 void ChunkCacheManager::invalidateAll() {
+	spdlog::info("[ChunkCache] InvalidateAll: marked {} cached chunks dirty", cached_chunks_.size());
 	for (auto& [coord, chunk] : cached_chunks_) {
 		chunk.is_dirty = true;
 	}
@@ -554,22 +564,34 @@ void ChunkCacheManager::renderFloor(
 	active_visible_chunks_.clear();
 	active_floor_ = map_z;
 
+	uint32_t baked_count = 0;
+	uint32_t rendered_chunk_count = 0;
+	uint32_t rendered_instance_count = 0;
+
 	// Sparse Query: Touches ONLY populated chunks on map_z!
 	map.visitPopulatedChunks(min_cx, min_cy, max_cx, max_cy, map_z, [&](int cx, int cy) {
 		const ChunkCoord coord{ cx, cy, map_z };
 		CachedChunk& chunk = getOrCreateChunk(coord);
 		if (chunk.is_dirty) {
 			bakeChunk(chunk, map, ctx);
+			++baked_count;
 		}
 		chunk.last_accessed_frame = current_frame_;
 
 		if (!chunk.is_empty && chunk.instance_count > 0 && chunk.vbo != 0) {
 			glVertexArrayVertexBuffer(vao_, 1, chunk.vbo, 0, sizeof(TileInstance));
 			glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk.instance_count));
+			++rendered_chunk_count;
+			rendered_instance_count += chunk.instance_count;
 		}
 
 		active_visible_chunks_.push_back(&chunk);
 	});
+
+	if (baked_count > 0) {
+		spdlog::info("[ChunkCache] Floor {}: Baked {} new/dirty chunk(s) | Visible: {} chunks ({} instances) | Total cached: {}/{}",
+			map_z, baked_count, rendered_chunk_count, rendered_instance_count, cached_chunks_.size(), MAX_CACHED_CHUNKS);
+	}
 
 	glBindVertexArray(0);
 	shader_.Unuse();
@@ -581,6 +603,9 @@ void ChunkCacheManager::prune(
 	int min_cy, int max_cy,
 	bool has_bounds
 ) {
+	size_t empty_evicted = 0;
+	size_t far_floor_evicted = 0;
+
 	for (auto it = cached_chunks_.begin(); it != cached_chunks_.end();) {
 		const auto& [coord, chunk] = *it;
 		const uint64_t age = current_frame_ - chunk.last_accessed_frame;
@@ -589,21 +614,33 @@ void ChunkCacheManager::prune(
 		// Tier 1: Empty chunks are evicted immediately
 		if (chunk.is_empty) {
 			it = cached_chunks_.erase(it);
+			++empty_evicted;
 			continue;
 		}
 
 		// Tier 2: Distant floor aggressive eviction (1s)
 		if (is_far_floor && age > FAR_FLOOR_FRAME_THRESHOLD) {
 			it = cached_chunks_.erase(it);
+			++far_floor_evicted;
 			continue;
 		}
 
 		++it;
 	}
 
+	size_t lru_evicted = 0;
 	// Tier 3: Hard capacity ceiling (LRU eviction down to TARGET_CACHED_CHUNKS)
 	if (cached_chunks_.size() > MAX_CACHED_CHUNKS) {
-		evictOldest(cached_chunks_.size() - TARGET_CACHED_CHUNKS);
+		const size_t needed = cached_chunks_.size() - TARGET_CACHED_CHUNKS;
+		evictOldest(needed);
+		lru_evicted = needed;
+	}
+
+	const size_t total_evicted = empty_evicted + far_floor_evicted + lru_evicted;
+	if (total_evicted > 0) {
+		spdlog::info("[ChunkCache] Prune (frame {}): Evicted {} chunk(s) ({} empty, {} far-floor, {} LRU) | Remaining: {}/{} (~{:.1f} MB VRAM)",
+			current_frame_, total_evicted, empty_evicted, far_floor_evicted, lru_evicted,
+			cached_chunks_.size(), MAX_CACHED_CHUNKS, (cached_chunks_.size() * 3.5) / 1024.0);
 	}
 }
 
@@ -637,6 +674,9 @@ void ChunkCacheManager::evictOldest(size_t count_to_remove) {
 	for (size_t i = 0; i < num_evict; ++i) {
 		cached_chunks_.erase(candidates[i].second);
 	}
+
+	spdlog::warn("[ChunkCache] High-water mark exceeded (>{} chunks)! LRU evicted {} oldest chunks | Remaining: {}",
+		MAX_CACHED_CHUNKS, num_evict, cached_chunks_.size());
 }
 
 void ChunkCacheManager::renderDynamicOverlays(
