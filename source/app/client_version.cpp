@@ -18,18 +18,15 @@
 #include <toml++/toml.h>
 #include <charconv>
 #include <string>
+#include <format>
 #include "app/main.h"
 
 #include "app/settings.h"
 #include "io/filehandle.h"
 
-#include "ui/gui.h"
-
 #include "util/file_system.h"
-#include "ui/dialog_util.h"
 #include "app/client_version.h"
 
-#include <wx/dir.h>
 #include <wx/filename.h>
 
 // Static methods to load/save
@@ -293,8 +290,8 @@ bool ClientVersion::saveVersions() {
 		db_obj.insert_or_assign("dataDirectory", nstr(version->data_path));
 
 		if (!version->data_versions.empty()) {
-			db_obj.insert_or_assign("datSignature", fmt::format("{:X}", version->data_versions[0].datSignature));
-			db_obj.insert_or_assign("sprSignature", fmt::format("{:X}", version->data_versions[0].sprSignature));
+			db_obj.insert_or_assign("datSignature", std::format("{:X}", version->data_versions[0].datSignature));
+			db_obj.insert_or_assign("sprSignature", std::format("{:X}", version->data_versions[0].sprSignature));
 		}
 
 		toml::array otbmVers;
@@ -479,8 +476,6 @@ bool ClientVersion::hasValidPaths() {
 		return false;
 	}
 
-	wxDir dir(client_path.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
-
 	// OTFI loading removed (deprecated)
 	// Metadata and sprites paths are now set in loadVersionsFromTOML or defaulted.
 	// We just verify they exist here.
@@ -540,32 +535,6 @@ bool ClientVersion::hasValidPaths() {
 	message << "Sprites signature: %X";
 	wxLogError(wxString::Format(message, datSignature, sprSignature));
 	return false;
-}
-
-bool ClientVersion::loadValidPaths() {
-	while (!hasValidPaths()) {
-		wxString message = "Could not locate metadata and/or sprite files, please navigate to your client assets %s installation folder.\n";
-		message << "Attempted metadata file: %s\n";
-		message << "Attempted sprites file: %s\n";
-
-		DialogUtil::PopupDialog("Error", wxString::Format(message, name, metadata_path.GetFullPath(), sprites_path.GetFullPath()), wxOK);
-
-		wxString dirHelpText("Select assets directory.");
-		wxDirDialog file_dlg(nullptr, dirHelpText, "", wxDD_DIR_MUST_EXIST);
-		int ok = file_dlg.ShowModal();
-		if (ok == wxID_CANCEL) {
-			return false;
-		}
-
-		client_path.Assign(file_dlg.GetPath() + FileName::GetPathSeparator());
-	}
-
-	if (!ClientVersion::saveVersions()) {
-		wxLogError("Failed to save client versions after locating valid paths.");
-		return false;
-	}
-
-	return true;
 }
 
 DatFormat ClientVersion::getDatFormatForSignature(uint32_t signature) const {

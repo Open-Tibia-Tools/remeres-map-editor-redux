@@ -70,17 +70,17 @@ MaterialsExtensionList Materials::getExtensionsByVersion(const ClientVersionID& 
 	return ret_list;
 }
 
-bool Materials::loadMaterials(const FileName& identifier, wxString& error, std::vector<std::string>& warnings) {
+bool Materials::loadMaterials(const FileName& identifier, std::string& error, std::vector<std::string>& warnings) {
 	pugi::xml_document doc;
 	pugi::xml_parse_result result = doc.load_file(identifier.GetFullPath().mb_str());
 	if (!result) {
-		warnings.push_back((wxString("Could not open ") + identifier.GetFullName() + " (file not found or syntax error)").ToStdString());
+		warnings.push_back(std::format("Could not open {} (file not found or syntax error)", identifier.GetFullName().ToStdString()));
 		return false;
 	}
 
 	pugi::xml_node node = doc.child("materials");
 	if (!node) {
-		warnings.push_back((identifier.GetFullName() + ": Invalid rootheader.").ToStdString());
+		warnings.push_back(std::format("{}: Invalid rootheader.", identifier.GetFullName().ToStdString()));
 		return false;
 	}
 
@@ -93,7 +93,7 @@ bool Materials::loadMaterials(const FileName& identifier, wxString& error, std::
 	return true;
 }
 
-bool Materials::unserializeMaterials(const FileName& filename, pugi::xml_node node, wxString& error, std::vector<std::string>& warnings) {
+bool Materials::unserializeMaterials(const FileName& filename, pugi::xml_node node, std::string& error, std::vector<std::string>& warnings) {
 	ManifestSectionsSeen seen;
 	std::vector<FileName> paletteFiles;
 
@@ -118,7 +118,7 @@ bool Materials::unserializeMaterials(const FileName& filename, pugi::xml_node no
 	return resolvePaletteReferences(paletteFiles, error, warnings);
 }
 
-bool Materials::loadMaterialsSection(const FileName& filename, pugi::xml_node section, std::string_view sectionName, ManifestSectionsSeen& seen, std::vector<FileName>& paletteFiles, wxString& error, std::vector<std::string>& warnings) {
+bool Materials::loadMaterialsSection(const FileName& filename, pugi::xml_node section, std::string_view sectionName, ManifestSectionsSeen& seen, std::vector<FileName>& paletteFiles, std::string& error, std::vector<std::string>& warnings) {
 	if (sectionName == "borders") {
 		seen.borders = true;
 		return loadModuleIncludes(filename, section, "border", error, warnings);
@@ -146,7 +146,7 @@ bool Materials::loadMaterialsSection(const FileName& filename, pugi::xml_node se
 	return true;
 }
 
-bool Materials::loadTilesetSources(const FileName& filename, pugi::xml_node section, wxString& error) {
+bool Materials::loadTilesetSources(const FileName& filename, pugi::xml_node section, std::string& error) {
 	std::vector<FileName> tilesetFiles;
 	if (!MaterialIncludeResolver::collectSectionFiles(filename, section, "tilesets", tilesetFiles, error)) {
 		return false;
@@ -160,21 +160,21 @@ bool Materials::loadTilesetSources(const FileName& filename, pugi::xml_node sect
 	return true;
 }
 
-bool Materials::loadModuleIncludes(const FileName& manifest, pugi::xml_node section, std::string_view expectedNode, wxString& error, std::vector<std::string>& warnings) {
+bool Materials::loadModuleIncludes(const FileName& manifest, pugi::xml_node section, std::string_view expectedNode, std::string& error, std::vector<std::string>& warnings) {
 	bool loadedAny = false;
 	for (pugi::xml_node includeNode = section.child("include"); includeNode; includeNode = includeNode.next_sibling("include")) {
 		std::vector<FileName> files;
 		if (const auto fileAttribute = includeNode.attribute("file")) {
 			FileName includeFile = MaterialIncludeResolver::resolveRelativePath(manifest, fileAttribute.as_string());
 			if (!includeFile.FileExists()) {
-				error = "Missing modular include file: " + includeFile.GetFullPath();
+				error = std::format("Missing modular include file: {}", includeFile.GetFullPath().ToStdString());
 				return false;
 			}
 			files.push_back(includeFile);
 		} else if (const auto folderAttribute = includeNode.attribute("folder")) {
 			FileName folder = MaterialIncludeResolver::resolveRelativeFolder(manifest, folderAttribute.as_string());
 			if (!folder.DirExists()) {
-				error = "Missing modular include folder: " + folder.GetFullPath();
+				error = std::format("Missing modular include folder: {}", folder.GetFullPath().ToStdString());
 				return false;
 			}
 			files = MaterialIncludeResolver::collectXmlFiles(folder, includeNode.attribute("subfolders").as_bool(false));
@@ -189,7 +189,7 @@ bool Materials::loadModuleIncludes(const FileName& manifest, pugi::xml_node sect
 			pugi::xml_document doc;
 			pugi::xml_parse_result result = doc.load_file(file.GetFullPath().mb_str());
 			if (!result) {
-				error = "Could not parse modular include file: " + file.GetFullPath();
+				error = std::format("Could not parse modular include file: {}", file.GetFullPath().ToStdString());
 				return false;
 			}
 
@@ -209,19 +209,19 @@ bool Materials::loadModuleIncludes(const FileName& manifest, pugi::xml_node sect
 	}
 
 	if (!loadedAny) {
-		error = "Modular section has no include entries: " + wxString(section.name());
+		error = std::format("Modular section has no include entries: {}", section.name());
 		return false;
 	}
 	return true;
 }
 
-bool Materials::loadPaletteIncludes(const FileName& manifest, pugi::xml_node section, std::vector<FileName>& paletteFiles, wxString& error) {
+bool Materials::loadPaletteIncludes(const FileName& manifest, pugi::xml_node section, std::vector<FileName>& paletteFiles, std::string& error) {
 	bool loadedAny = false;
 	for (pugi::xml_node includeNode = section.child("include"); includeNode; includeNode = includeNode.next_sibling("include")) {
 		if (const auto fileAttribute = includeNode.attribute("file")) {
 			FileName includeFile = MaterialIncludeResolver::resolveRelativePath(manifest, fileAttribute.as_string());
 			if (!includeFile.FileExists()) {
-				error = "Missing palettes include file: " + includeFile.GetFullPath();
+				error = std::format("Missing palettes include file: {}", includeFile.GetFullPath().ToStdString());
 				return false;
 			}
 			loadedAny = true;
@@ -229,7 +229,7 @@ bool Materials::loadPaletteIncludes(const FileName& manifest, pugi::xml_node sec
 		} else if (const auto folderAttribute = includeNode.attribute("folder")) {
 			FileName folder = MaterialIncludeResolver::resolveRelativeFolder(manifest, folderAttribute.as_string());
 			if (!folder.DirExists()) {
-				error = "Missing palettes include folder: " + folder.GetFullPath();
+				error = std::format("Missing palettes include folder: {}", folder.GetFullPath().ToStdString());
 				return false;
 			}
 			for (const FileName& file : MaterialIncludeResolver::collectXmlFiles(folder, includeNode.attribute("subfolders").as_bool(false))) {
@@ -246,7 +246,7 @@ bool Materials::loadPaletteIncludes(const FileName& manifest, pugi::xml_node sec
 	return true;
 }
 
-bool Materials::resolvePaletteReferences(const std::vector<FileName>& paletteFiles, wxString& error, std::vector<std::string>& warnings) {
+bool Materials::resolvePaletteReferences(const std::vector<FileName>& paletteFiles, std::string& error, std::vector<std::string>& warnings) {
 	for (const FileName& paletteFile : paletteFiles) {
 		if (!loadPaletteFile(paletteFile, error, warnings)) {
 			return false;
@@ -359,17 +359,17 @@ static void loadTilesetCreatureEntry(pugi::xml_node node, DynamicTilesetDefiniti
 	}
 }
 
-bool Materials::loadPaletteFile(const FileName& filename, wxString& error, std::vector<std::string>& warnings) {
+bool Materials::loadPaletteFile(const FileName& filename, std::string& error, std::vector<std::string>& warnings) {
 	pugi::xml_document doc;
 	pugi::xml_parse_result result = doc.load_file(filename.GetFullPath().mb_str());
 	if (!result) {
-		error = "Could not parse palettes file: " + filename.GetFullPath();
+		error = std::format("Could not parse palettes file: {}", filename.GetFullPath().ToStdString());
 		return false;
 	}
 
 	pugi::xml_node root = doc.child("palettes");
 	if (!root) {
-		error = "Invalid palettes file root: " + filename.GetFullPath();
+		error = std::format("Invalid palettes file root: {}", filename.GetFullPath().ToStdString());
 		return false;
 	}
 
@@ -396,15 +396,15 @@ bool Materials::loadPaletteFile(const FileName& filename, wxString& error, std::
 	return true;
 }
 
-bool Materials::loadTilesetInclude(const FileName& manifest, pugi::xml_node includeNode, DynamicPaletteDefinition& palette, wxString& error, std::vector<std::string>& warnings) {
+bool Materials::loadTilesetInclude(const FileName& manifest, pugi::xml_node includeNode, DynamicPaletteDefinition& palette, std::string& error, std::vector<std::string>& warnings) {
 	if (const auto fileAttribute = includeNode.attribute("file")) {
 		FileName includeFile = MaterialIncludeResolver::resolveRelativePath(manifest, fileAttribute.as_string());
 		if (!includeFile.FileExists()) {
-			error = "Missing tileset include file: " + includeFile.GetFullPath();
+			error = std::format("Missing tileset include file: {}", includeFile.GetFullPath().ToStdString());
 			return false;
 		}
 		if (!database.isKnownTilesetSource(normalizedPathKey(includeFile))) {
-			error = "Tileset include is not declared in materials.xml <tilesets>: " + includeFile.GetFullPath();
+			error = std::format("Tileset include is not declared in materials.xml <tilesets>: {}", includeFile.GetFullPath().ToStdString());
 			return false;
 		}
 		return loadDynamicTilesetFile(includeFile, palette, error, warnings);
@@ -413,12 +413,12 @@ bool Materials::loadTilesetInclude(const FileName& manifest, pugi::xml_node incl
 	if (const auto folderAttribute = includeNode.attribute("folder")) {
 		FileName folder = MaterialIncludeResolver::resolveRelativeFolder(manifest, folderAttribute.as_string());
 		if (!folder.DirExists()) {
-			error = "Missing tileset include folder: " + folder.GetFullPath();
+			error = std::format("Missing tileset include folder: {}", folder.GetFullPath().ToStdString());
 			return false;
 		}
 		for (const FileName& file : MaterialIncludeResolver::collectXmlFiles(folder, includeNode.attribute("subfolders").as_bool(false))) {
 			if (!database.isKnownTilesetSource(normalizedPathKey(file))) {
-				error = "Tileset include is not declared in materials.xml <tilesets>: " + file.GetFullPath();
+				error = std::format("Tileset include is not declared in materials.xml <tilesets>: {}", file.GetFullPath().ToStdString());
 				return false;
 			}
 			if (!loadDynamicTilesetFile(file, palette, error, warnings)) {
@@ -430,27 +430,27 @@ bool Materials::loadTilesetInclude(const FileName& manifest, pugi::xml_node incl
 
 	const std::string message = std::format("tileset_include: manifest=\"{}\" include node is missing both file and folder attributes", manifest.GetFullPath().ToStdString());
 	warnings.push_back(message);
-	error = wxstr(message);
+	error = message;
 	return false;
 }
 
-bool Materials::loadDynamicTilesetFile(const FileName& filename, DynamicPaletteDefinition& palette, wxString& error, std::vector<std::string>& warnings) {
+bool Materials::loadDynamicTilesetFile(const FileName& filename, DynamicPaletteDefinition& palette, std::string& error, std::vector<std::string>& warnings) {
 	pugi::xml_document doc;
 	pugi::xml_parse_result result = doc.load_file(filename.GetFullPath().mb_str());
 	if (!result) {
-		error = "Could not parse tileset file: " + filename.GetFullPath();
+		error = std::format("Could not parse tileset file: {}", filename.GetFullPath().ToStdString());
 		return false;
 	}
 
 	pugi::xml_node root = doc.child("tileset");
 	if (!root) {
-		error = "Invalid tileset file root: " + filename.GetFullPath();
+		error = std::format("Invalid tileset file root: {}", filename.GetFullPath().ToStdString());
 		return false;
 	}
 
 	const auto nameAttribute = root.attribute("name");
 	if (!nameAttribute || std::string(nameAttribute.as_string()).empty()) {
-		error = "Tileset file is missing name attribute: " + filename.GetFullPath();
+		error = std::format("Tileset file is missing name attribute: {}", filename.GetFullPath().ToStdString());
 		return false;
 	}
 

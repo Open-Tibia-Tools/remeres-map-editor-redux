@@ -83,7 +83,7 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 
 	const std::string& tmpType = attribute.as_string();
 	if (tmpType != "monster" && tmpType != "npc") {
-		warnings.push_back((wxString("Invalid type tag of creature node \"") + wxstr(tmpType) + "\"").ToStdString());
+		warnings.push_back(std::format("Invalid type tag of creature node \"{}\"", tmpType));
 		return nullptr;
 	}
 
@@ -150,7 +150,7 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 			if (ct->outfit.lookType == 0) {
 				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			} else if (g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
-				warnings.push_back((wxString("Invalid creature \"") + wxstr(ct->name) + "\" look type #" + std::to_string(ct->outfit.lookType)).ToStdString());
+				warnings.push_back(std::format("Invalid creature \"{}\" look type #{}", ct->name, ct->outfit.lookType));
 				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			}
 		} else if (ct->outfit.lookType == 0) {
@@ -161,7 +161,7 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 	return ct;
 }
 
-CreatureType* CreatureType::loadFromOTXML(const FileName& filename, pugi::xml_document& doc, std::vector<std::string>& warnings) {
+CreatureType* CreatureType::loadFromOTXML(const std::filesystem::path& filename, pugi::xml_document& doc, std::vector<std::string>& warnings) {
 	ASSERT(doc != nullptr);
 
 	bool isNpc;
@@ -183,7 +183,7 @@ CreatureType* CreatureType::loadFromOTXML(const FileName& filename, pugi::xml_do
 
 	CreatureType* ct = newd CreatureType();
 	if (isNpc) {
-		ct->name = nstr(filename.GetName());
+		ct->name = filename.stem().string();
 	} else {
 		ct->name = attribute.as_string();
 	}
@@ -246,7 +246,7 @@ CreatureType* CreatureType::loadFromOTXML(const FileName& filename, pugi::xml_do
 	if (ct->outfit.lookItem == 0) {
 		if (ct->outfit.lookType != 0) {
 			if (g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
-				warnings.push_back((wxString("Invalid creature \"") + wxstr(ct->name) + "\" look type #" + std::to_string(ct->outfit.lookType)).ToStdString());
+				warnings.push_back(std::format("Invalid creature \"{}\" look type #{}", ct->name, ct->outfit.lookType));
 				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			}
 		} else {
@@ -312,11 +312,11 @@ bool CreatureDatabase::hasMissing() const {
 	});
 }
 
-bool CreatureDatabase::loadFromXML(const FileName& filename, bool standard, wxString& error, std::vector<std::string>& warnings) {
+bool CreatureDatabase::loadFromXML(const std::filesystem::path& filename, bool standard, std::string& error, std::vector<std::string>& warnings) {
 	pugi::xml_document doc;
-	pugi::xml_parse_result result = doc.load_file(filename.GetFullPath().mb_str());
+	pugi::xml_parse_result result = doc.load_file(filename.c_str());
 	if (!result) {
-		error = "Couldn't open file \"" + filename.GetFullName() + "\", invalid format?";
+		error = std::format("Couldn't open file \"{}\", invalid format?", filename.filename().string());
 		return false;
 	}
 
@@ -335,7 +335,7 @@ bool CreatureDatabase::loadFromXML(const FileName& filename, bool standard, wxSt
 		if (creatureType) {
 			creatureType->standard = standard;
 			if ((*this)[creatureType->name]) {
-				warnings.push_back((wxString("Duplicate creature type name \"") + wxstr(creatureType->name) + "\"! Discarding...").ToStdString());
+				warnings.push_back(std::format("Duplicate creature type name \"{}\"! Discarding...", creatureType->name));
 				delete creatureType;
 			} else {
 				creature_map[as_lower_str(creatureType->name)] = creatureType;
@@ -351,11 +351,11 @@ static void registerImportedCreature(CreatureType* creatureType, std::vector<std
 	}
 }
 
-bool CreatureDatabase::importXMLFromOT(const FileName& filename, wxString& error, std::vector<std::string>& warnings) {
+bool CreatureDatabase::importXMLFromOT(const std::filesystem::path& filename, std::string& error, std::vector<std::string>& warnings) {
 	pugi::xml_document doc;
-	pugi::xml_parse_result result = doc.load_file(filename.GetFullPath().mb_str());
+	pugi::xml_parse_result result = doc.load_file(filename.c_str());
 	if (!result) {
-		error = "Couldn't open file \"" + filename.GetFullName() + "\", invalid format?";
+		error = std::format("Couldn't open file \"{}\", invalid format?", filename.filename().string());
 		return false;
 	}
 
@@ -371,11 +371,10 @@ bool CreatureDatabase::importXMLFromOT(const FileName& filename, wxString& error
 				continue;
 			}
 
-			FileName monsterFile(filename);
-			monsterFile.SetFullName(wxString(attribute.as_string(), wxConvUTF8));
+			std::filesystem::path monsterFile = filename.parent_path() / attribute.as_string();
 
 			pugi::xml_document monsterDoc;
-			pugi::xml_parse_result monsterResult = monsterDoc.load_file(monsterFile.GetFullPath().mb_str());
+			pugi::xml_parse_result monsterResult = monsterDoc.load_file(monsterFile.c_str());
 			if (!monsterResult) {
 				continue;
 			}
@@ -414,7 +413,7 @@ bool CreatureDatabase::importXMLFromOT(const FileName& filename, wxString& error
 	return true;
 }
 
-bool CreatureDatabase::saveToXML(const FileName& filename) {
+bool CreatureDatabase::saveToXML(const std::filesystem::path& filename) {
 	pugi::xml_document doc;
 
 	pugi::xml_node decl = doc.prepend_child(pugi::node_declaration);
@@ -444,5 +443,5 @@ bool CreatureDatabase::saveToXML(const FileName& filename) {
 			creatureNode.append_attribute("lookmountfeet") = outfit.lookMountFeet;
 		}
 	}
-	return doc.save_file(filename.GetFullPath().mb_str(), "\t", pugi::format_default, pugi::encoding_utf8);
+	return doc.save_file(filename.c_str(), "\t", pugi::format_default, pugi::encoding_utf8);
 }

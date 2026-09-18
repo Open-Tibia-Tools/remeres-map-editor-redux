@@ -4,7 +4,7 @@
 
 #include "app/main.h"
 
-#include "game/animation_timer.h"
+#include "rendering/ui/animation_timer.h"
 #include "rendering/ui/map_display.h"
 
 AnimationTimer::AnimationTimer(MapCanvas* canvas) :

@@ -14,6 +14,6 @@ struct MaterialManifestFiles {
 	std::vector<FileName> palettes;
 };
 
-[[nodiscard]] bool LoadMaterialManifestFiles(const FileName& manifestFile, MaterialManifestFiles& files, wxString& error);
+[[nodiscard]] bool LoadMaterialManifestFiles(const FileName& manifestFile, MaterialManifestFiles& files, std::string& error);
 
 #endif

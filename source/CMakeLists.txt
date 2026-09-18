@@ -77,7 +77,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/editor/selection_thread.h
     ${CMAKE_CURRENT_LIST_DIR}/ext/pugiconfig.hpp
     ${CMAKE_CURRENT_LIST_DIR}/ext/pugixml.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/game/animation_timer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/animation_timer.h
     ${CMAKE_CURRENT_LIST_DIR}/game/complexitem.h
     ${CMAKE_CURRENT_LIST_DIR}/game/creature.h
     ${CMAKE_CURRENT_LIST_DIR}/game/creatures.h
@@ -483,7 +483,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/editor/selection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/selection_thread.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ext/pugixml.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/game/animation_timer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/animation_timer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/complexitem.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/creature.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/creatures.cpp

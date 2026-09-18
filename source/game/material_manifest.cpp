@@ -15,27 +15,27 @@ struct ManifestSection {
 	bool* seen = nullptr;
 };
 
-[[nodiscard]] bool collectManifestSection(const FileName& manifestFile, pugi::xml_node node, const ManifestSection& section, MaterialManifestFiles& files, wxString& error) {
+[[nodiscard]] bool collectManifestSection(const FileName& manifestFile, pugi::xml_node node, const ManifestSection& section, MaterialManifestFiles& files, std::string& error) {
 	*section.seen = true;
 	return MaterialIncludeResolver::collectSectionFiles(manifestFile, node, section.name, files.*section.files, error);
 }
 
 } // namespace
 
-bool LoadMaterialManifestFiles(const FileName& manifestFile, MaterialManifestFiles& files, wxString& error) {
+bool LoadMaterialManifestFiles(const FileName& manifestFile, MaterialManifestFiles& files, std::string& error) {
 	files = {};
 
 	pugi::xml_document doc;
 	const pugi::xml_parse_result result = doc.load_file(manifestFile.GetFullPath().mb_str());
 	if (!result) {
-		error = wxstr(std::format("Could not parse materials manifest: {}: {} at offset {}",
-			manifestFile.GetFullPath().ToStdString(), result.description(), result.offset));
+		error = std::format("Could not parse materials manifest: {}: {} at offset {}",
+			manifestFile.GetFullPath().ToStdString(), result.description(), result.offset);
 		return false;
 	}
 
 	pugi::xml_node root = doc.child("materials");
 	if (!root) {
-		error = "Invalid materials manifest root: " + manifestFile.GetFullPath();
+		error = std::format("Invalid materials manifest root: {}", manifestFile.GetFullPath().ToStdString());
 		return false;
 	}
 

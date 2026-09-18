@@ -52,7 +52,7 @@
 #include "ui/browse_tile_window.h"
 #include "ui/dialog_helper.h"
 #include "ui/map_tab.h"
-#include "game/animation_timer.h"
+#include "rendering/ui/animation_timer.h"
 #include "ui/map_popup_menu.h"
 #include "brushes/brush_utility.h"
 #include "rendering/ui/clipboard_handler.h"

@@ -62,13 +62,13 @@ void FileMenuHandler::OnImportMonsterData(wxCommandEvent& WXUNUSED(event)) {
 		wxArrayString paths;
 		dlg.GetPaths(paths);
 		for (uint32_t i = 0; i < paths.GetCount(); ++i) {
-			wxString error;
+			std::string error;
 			std::vector<std::string> warnings;
-			bool ok = g_creatures.importXMLFromOT(FileName(paths[i]), error, warnings);
+			bool ok = g_creatures.importXMLFromOT(paths[i].ToStdWstring(), error, warnings);
 			if (ok) {
 				DialogUtil::ListDialog("Monster loader errors", warnings);
 			} else {
-				wxMessageBox("Error OT data file \"" + paths[i] + "\".\n" + error, "Error", wxOK | wxICON_INFORMATION, g_gui.root);
+				wxMessageBox(wxstr(std::format("Error OT data file \"{}\".\n{}", paths[i].ToStdString(), error)), "Error", wxOK | wxICON_INFORMATION, g_gui.root);
 			}
 		}
 	}

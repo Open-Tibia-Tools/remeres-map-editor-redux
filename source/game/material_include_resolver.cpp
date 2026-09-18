@@ -1,19 +1,38 @@
 #include "game/material_include_resolver.h"
 
-#include <wx/dir.h>
+#include <algorithm>
+#include <filesystem>
+#include <format>
+
+namespace fs = std::filesystem;
 
 namespace MaterialIncludeResolver {
 
 std::vector<FileName> collectXmlFiles(const FileName& directory, bool recursive) {
-	wxArrayString files;
-	const int flags = wxDIR_FILES | (recursive ? wxDIR_DIRS : 0);
-	wxDir::GetAllFiles(directory.GetFullPath(), &files, "*.xml", flags);
-
 	std::vector<FileName> result;
-	result.reserve(files.size());
-	for (const auto& file : files) {
-		result.emplace_back(file);
+	std::error_code ec;
+	const fs::path dir_path = fs::u8path(directory.GetFullPath().ToStdString());
+	if (!fs::exists(dir_path, ec) || !fs::is_directory(dir_path, ec)) {
+		return result;
 	}
+
+	auto check_and_add = [&](const fs::directory_entry& entry) {
+		std::error_code entry_ec;
+		if (entry.is_regular_file(entry_ec) && entry.path().extension() == ".xml") {
+			result.emplace_back(wxstr(entry.path().string()));
+		}
+	};
+
+	if (recursive) {
+		for (const auto& entry : fs::recursive_directory_iterator(dir_path, fs::directory_options::skip_permission_denied, ec)) {
+			check_and_add(entry);
+		}
+	} else {
+		for (const auto& entry : fs::directory_iterator(dir_path, fs::directory_options::skip_permission_denied, ec)) {
+			check_and_add(entry);
+		}
+	}
+
 	std::ranges::sort(result, [](const FileName& lhs, const FileName& rhs) {
 		return lhs.GetFullPath().CmpNoCase(rhs.GetFullPath()) < 0;
 	});
@@ -21,31 +40,28 @@ std::vector<FileName> collectXmlFiles(const FileName& directory, bool recursive)
 }
 
 FileName resolveRelativePath(const FileName& baseFile, const std::string& relative) {
-	wxString normalized = wxString(relative);
-	normalized.Replace("\\", "/");
-	FileName path(baseFile.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + normalized);
-	path.Normalize(wxPATH_NORM_ALL);
-	return path;
+	const fs::path basePath = fs::u8path(baseFile.GetFullPath().ToStdString()).parent_path();
+	const fs::path resolved = (basePath / fs::u8path(relative)).lexically_normal();
+	return FileName(wxstr(resolved.string()));
 }
 
 FileName resolveRelativeFolder(const FileName& baseFile, const std::string& relative) {
-	wxString normalized = wxString(relative);
-	normalized.Replace("\\", "/");
-	if (!normalized.empty() && !normalized.EndsWith("/")) {
-		normalized += "/";
+	const fs::path basePath = fs::u8path(baseFile.GetFullPath().ToStdString()).parent_path();
+	fs::path resolved = (basePath / fs::u8path(relative)).lexically_normal();
+	std::string folderStr = resolved.string();
+	if (!folderStr.empty() && folderStr.back() != '/' && folderStr.back() != '\\') {
+		folderStr += '/';
 	}
-	FileName path(baseFile.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + normalized);
-	path.Normalize(wxPATH_NORM_ALL);
-	return path;
+	return FileName(wxstr(folderStr));
 }
 
-bool collectSectionFiles(const FileName& manifestFile, pugi::xml_node section, std::string_view sectionName, std::vector<FileName>& out, wxString& error) {
+bool collectSectionFiles(const FileName& manifestFile, pugi::xml_node section, std::string_view sectionName, std::vector<FileName>& out, std::string& error) {
 	bool loadedAny = false;
 	for (pugi::xml_node includeNode = section.child("include"); includeNode; includeNode = includeNode.next_sibling("include")) {
 		if (const auto fileAttribute = includeNode.attribute("file")) {
 			FileName includeFile = resolveRelativePath(manifestFile, fileAttribute.as_string());
 			if (!includeFile.FileExists()) {
-				error = "Missing modular include file: " + includeFile.GetFullPath();
+				error = std::format("Missing modular include file: {}", includeFile.GetFullPath().ToStdString());
 				return false;
 			}
 			out.push_back(includeFile);
@@ -56,7 +72,7 @@ bool collectSectionFiles(const FileName& manifestFile, pugi::xml_node section, s
 		if (const auto folderAttribute = includeNode.attribute("folder")) {
 			FileName folder = resolveRelativeFolder(manifestFile, folderAttribute.as_string());
 			if (!folder.DirExists()) {
-				error = "Missing modular include folder: " + folder.GetFullPath();
+				error = std::format("Missing modular include folder: {}", folder.GetFullPath().ToStdString());
 				return false;
 			}
 			std::vector<FileName> folderFiles = collectXmlFiles(folder, includeNode.attribute("subfolders").as_bool(false));
@@ -66,10 +82,11 @@ bool collectSectionFiles(const FileName& manifestFile, pugi::xml_node section, s
 	}
 
 	if (!loadedAny) {
-		error = "Modular section has no include entries: " + wxString(std::string(sectionName));
+		error = std::format("Modular section has no include entries: {}", sectionName);
 		return false;
 	}
 	return true;
 }
 
 }
+

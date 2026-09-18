@@ -43,6 +43,7 @@ public:
 	}
 
 private:
+	bool PromptForClientPaths(ClientVersion* version);
 	bool LoadDataFiles(wxString& error, std::vector<std::string>& warnings);
 	[[nodiscard]] wxString GetModularDataPath() const;
 	void FailDataLoad();

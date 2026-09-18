@@ -8,6 +8,8 @@
 #include <spdlog/spdlog.h>
 
 #include "ui/gui.h"
+#include "ui/dialog_util.h"
+#include <wx/dirdlg.h>
 #include "util/file_system.h"
 #include "game/sprites.h"
 #include "game/materials.h"
@@ -86,7 +88,7 @@ bool VersionManager::LoadVersion(ClientVersionID version, wxString& error, std::
 
 		loaded_version = version;
 		if (!getLoadedVersion()->hasValidPaths()) {
-			if (!getLoadedVersion()->loadValidPaths()) {
+			if (!PromptForClientPaths(getLoadedVersion())) {
 				error = "Couldn't load relevant asset files";
 				loaded_version = CLIENT_VERSION_NONE;
 				return false;
@@ -115,6 +117,36 @@ ClientVersionID VersionManager::GetCurrentVersionID() const {
 const ClientVersion& VersionManager::GetCurrentVersion() const {
 	assert(!loaded_version.empty());
 	return *getLoadedVersion();
+}
+
+bool VersionManager::PromptForClientPaths(ClientVersion* version) {
+	if (!version) {
+		return false;
+	}
+
+	while (!version->hasValidPaths()) {
+		wxString message = "Could not locate metadata and/or sprite files, please navigate to your client assets %s installation folder.\n";
+		message << "Attempted metadata file: %s\n";
+		message << "Attempted sprites file: %s\n";
+
+		DialogUtil::PopupDialog("Error", wxString::Format(message, wxstr(version->getName()), version->getMetadataPath().GetFullPath(), version->getSpritesPath().GetFullPath()), wxOK);
+
+		wxString dirHelpText("Select assets directory.");
+		wxDirDialog file_dlg(nullptr, dirHelpText, "", wxDD_DIR_MUST_EXIST);
+		int ok = file_dlg.ShowModal();
+		if (ok == wxID_CANCEL) {
+			return false;
+		}
+
+		version->setClientPath(FileName(file_dlg.GetPath() + FileName::GetPathSeparator()));
+	}
+
+	if (!ClientVersion::saveVersions()) {
+		wxLogError("Failed to save client versions after locating valid paths.");
+		return false;
+	}
+
+	return true;
 }
 
 bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& warnings) {
@@ -169,9 +201,11 @@ void VersionManager::FailDataLoad() {
 }
 
 bool VersionManager::LoadMaterialManifest(const FileName& materials_manifest, MaterialManifestFiles& manifest_files, wxString& error) {
-	if (LoadMaterialManifestFiles(materials_manifest, manifest_files, error)) {
+	std::string manifest_error;
+	if (LoadMaterialManifestFiles(materials_manifest, manifest_files, manifest_error)) {
 		return true;
 	}
+	error = wxstr(manifest_error);
 	FailDataLoad();
 	return false;
 }
@@ -248,8 +282,9 @@ void VersionManager::AppendMissingItemWarnings(std::vector<std::string>& warning
 bool VersionManager::LoadCreatureFiles(const MaterialManifestFiles& manifest_files, wxString& error, std::vector<std::string>& warnings) {
 	g_loading.SetLoadDone(35, "Loading creatures.xml ...");
 	for (const FileName& creatureFile : manifest_files.creatures) {
-		if (!g_creatures.loadFromXML(creatureFile, true, error, warnings)) {
-			error = "Couldn't load creatures XML file " + creatureFile.GetFullPath() + ": " + error;
+		std::string creature_error;
+		if (!g_creatures.loadFromXML(creatureFile.GetFullPath().ToStdWstring(), true, creature_error, warnings)) {
+			error = wxstr(std::format("Couldn't load creatures XML file {}: {}", creatureFile.GetFullPath().ToStdString(), creature_error));
 			FailDataLoad();
 			return false;
 		}
@@ -259,8 +294,9 @@ bool VersionManager::LoadCreatureFiles(const MaterialManifestFiles& manifest_fil
 
 bool VersionManager::LoadModularMaterials(const FileName& materials_manifest, wxString& error, std::vector<std::string>& warnings) {
 	g_loading.SetLoadDone(50, "Loading materials.xml ...");
-	if (!g_materials.loadMaterials(materials_manifest, error, warnings)) {
-		error = "Couldn't load materials.xml: " + error;
+	std::string materials_error;
+	if (!g_materials.loadMaterials(materials_manifest, materials_error, warnings)) {
+		error = wxstr(std::format("Couldn't load materials.xml: {}", materials_error));
 		FailDataLoad();
 		return false;
 	}

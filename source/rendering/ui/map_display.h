@@ -24,7 +24,7 @@
 #include "rendering/utilities/fps_counter.h"
 
 #include "ui/map_popup_menu.h"
-#include "game/animation_timer.h"
+#include "rendering/ui/animation_timer.h"
 #include "rendering/core/graphics.h"
 #include <chrono>
 #include <memory>
