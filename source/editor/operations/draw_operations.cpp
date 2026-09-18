@@ -2,11 +2,10 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "editor/operations/draw_operations.h"
 #include "editor/editor.h"
 #include "editor/action_queue.h"
-#include "ui/gui.h"
 #include "brushes/managers/doodad_preview_manager.h"
 #include "brushes/brush.h"
 #include "brushes/doodad/doodad_brush.h"
@@ -288,8 +287,7 @@ namespace {
 
 } // namespace
 
-void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw) {
-	Brush* brush = g_gui.GetCurrentBrush();
+void DrawOperations::draw(Editor& editor, Brush* brush, Position offset, bool alt, bool dodraw, int brush_size) {
 	if (!brush) {
 		return;
 	}
@@ -362,7 +360,7 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 		}
 		int param;
 		if (!brush->is<CreatureBrush>()) {
-			param = g_gui.GetBrushSize();
+			param = brush_size;
 		}
 		if (dodraw) {
 			brush->draw(&editor.map, new_tile.get(), &param);
@@ -375,8 +373,7 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 	}
 }
 
-void DrawOperations::draw(Editor& editor, const PositionVector& tilestodraw, bool alt, bool dodraw) {
-	Brush* brush = g_gui.GetCurrentBrush();
+void DrawOperations::draw(Editor& editor, Brush* brush, const PositionVector& tilestodraw, bool alt, bool dodraw, int brush_size) {
 	if (!brush) {
 		return;
 	}
@@ -440,8 +437,7 @@ void DrawOperations::draw(Editor& editor, const PositionVector& tilestodraw, boo
 	editor.addAction(std::move(action), 2);
 }
 
-void DrawOperations::draw(Editor& editor, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw) {
-	Brush* brush = g_gui.GetCurrentBrush();
+void DrawOperations::draw(Editor& editor, Brush* brush, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw, int brush_size) {
 	if (!brush) {
 		return;
 	}

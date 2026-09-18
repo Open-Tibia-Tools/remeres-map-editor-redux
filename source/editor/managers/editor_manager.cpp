@@ -339,7 +339,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 			}
 		}
 
-		editor = EditorFactory::LoadFromFile(g_gui.copybuffer, fileName, load_options);
+		editor = EditorFactory::LoadFromFile(g_gui.copybuffer, std::filesystem::path(fileName.GetFullPath().ToStdWstring()), load_options);
 	} catch (std::runtime_error& e) {
 		g_status.SetStatusText("Failed to load map.");
 		DialogUtil::PopupDialog(g_gui.root, "Error!", wxString(e.what(), wxConvUTF8), wxOK);

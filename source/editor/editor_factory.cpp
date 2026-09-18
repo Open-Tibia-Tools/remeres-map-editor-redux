@@ -13,8 +13,13 @@
 #include "map/tile.h"
 #include "game/creature.h"
 #include "game/spawn.h"
+#include "ui/managers/minimap_manager.h"
 
 void SetupCallbacks(Editor* editor) {
+	editor->onTileModified = [editor](const Position& pos) {
+		g_minimap.MarkTileDirty(editor->map, pos);
+	};
+
 	editor->onStateChange = [editor]() {
 		g_gui.UpdateTitle();
 		g_gui.UpdateMenus();
@@ -74,12 +79,12 @@ std::unique_ptr<Editor> EditorFactory::CreateEmpty(CopyBuffer& copybuffer) {
 	return editor;
 }
 
-std::unique_ptr<Editor> EditorFactory::LoadFromFile(CopyBuffer& copybuffer, const FileName& fn, const MapLoadOptions& load_options) {
+std::unique_ptr<Editor> EditorFactory::LoadFromFile(CopyBuffer& copybuffer, const std::filesystem::path& fn, const MapLoadOptions& load_options) {
 	MapVersion mapVersion;
 	mapVersion.otbm = g_version.GetCurrentVersion().getPrefferedMapVersionID();
 	mapVersion.client = g_version.GetCurrentVersion().getProtocolID();
 
-	std::unique_ptr<Editor> editor = std::make_unique<Editor>(copybuffer, mapVersion, std::filesystem::path(fn.GetFullPath().ToStdWstring()), load_options);
+	std::unique_ptr<Editor> editor = std::make_unique<Editor>(copybuffer, mapVersion, fn, load_options);
 	SetupCallbacks(editor.get());
 	return editor;
 }

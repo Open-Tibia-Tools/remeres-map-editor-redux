@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "map/tile_operations.h"
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "editor/action.h"
 #include "editor/dirty_list.h"
@@ -24,7 +24,6 @@
 #include "map/map.h"
 #include "map/tile.h"
 #include "editor/editor.h"
-#include "ui/gui.h"
 
 #include <ranges>
 #include <ctime>
@@ -250,8 +249,7 @@ void Action::commit(DirtyList* dirty_list) {
 					dirty_list->AddChange(c);
 				}
 				if (type != ACTION_SELECT) {
-					editor.map.getChangeTracker().markTileDirty(pos);
-					g_minimap.MarkTileDirty(editor.map, pos);
+					editor.markTileModified(pos);
 				}
 				break;
 			}
@@ -431,8 +429,7 @@ void Action::undo(DirtyList* dirty_list) {
 					dirty_list->AddChange(c);
 				}
 				if (type != ACTION_SELECT) {
-					editor.map.getChangeTracker().markTileDirty(pos);
-					g_minimap.MarkTileDirty(editor.map, pos);
+					editor.markTileModified(pos);
 				}
 				break;
 			}

@@ -1,9 +1,10 @@
 #ifndef RME_EDITOR_FACTORY_H
 #define RME_EDITOR_FACTORY_H
 #include <memory>
-#include "app/main.h"
+#include "app/definitions.h"
 #include "app/client_version.h"
 #include "editor/persistence/map_load_options.h"
+#include <filesystem>
 
 class Editor;
 class CopyBuffer;
@@ -15,7 +16,7 @@ public:
 	static std::unique_ptr<Editor> CreateEmpty(CopyBuffer& copybuffer);
 
 	// Loads a map from file, handles version checking/switching
-	static std::unique_ptr<Editor> LoadFromFile(CopyBuffer& copybuffer, const FileName& fn, const MapLoadOptions& load_options = {});
+	static std::unique_ptr<Editor> LoadFromFile(CopyBuffer& copybuffer, const std::filesystem::path& fn, const MapLoadOptions& load_options = {});
 
 	// Joins a live session
 	static std::unique_ptr<Editor> JoinLive(CopyBuffer& copybuffer, std::unique_ptr<LiveClient> client);

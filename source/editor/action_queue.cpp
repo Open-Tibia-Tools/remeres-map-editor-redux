@@ -15,7 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "editor/action_queue.h"
 #include "lua/lua_script_manager.h"

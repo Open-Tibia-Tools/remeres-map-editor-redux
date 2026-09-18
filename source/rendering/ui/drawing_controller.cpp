@@ -43,6 +43,7 @@ DrawingController::~DrawingController() {
 
 void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down) {
 	Brush* brush = g_gui.GetCurrentBrush();
+	int brush_size = g_gui.GetBrushSize();
 	if (brush) {
 		const BrushFootprint footprint = g_gui.GetBrushFootprint();
 		if (shift_down && brush->canDrag()) {
@@ -57,9 +58,9 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 				if (alt_down && footprint.isSingleTile()) {
 					// z0mg, just clicked a tile, shift variaton.
 					if (ctrl_down) {
-						editor.undraw(mouse_map_pos, alt_down);
+						editor.undraw(brush, mouse_map_pos, alt_down, brush_size);
 					} else {
-						editor.draw(mouse_map_pos, alt_down);
+						editor.draw(brush, mouse_map_pos, alt_down, brush_size);
 					}
 					last_draw_pos = mouse_map_pos;
 				} else {
@@ -82,9 +83,9 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 						}
 					}
 					if (ctrl_down) {
-						editor.undraw(tilestodraw, tilestoborder, alt_down);
+						editor.undraw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 					} else {
-						editor.draw(tilestodraw, tilestoborder, alt_down);
+						editor.draw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 					}
 				}
 			} else if (brush->is<DoorBrush>()) {
@@ -99,18 +100,18 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 				tilestoborder.push_back(Position(mouse_map_pos.x + 1, mouse_map_pos.y, mouse_map_pos.z));
 
 				if (ctrl_down) {
-					editor.undraw(tilestodraw, tilestoborder, alt_down);
+					editor.undraw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 				} else {
-					editor.draw(tilestodraw, tilestoborder, alt_down);
+					editor.draw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 				}
 			} else if (brush->is<DoodadBrush>() || brush->is<SpawnBrush>() || brush->is<CreatureBrush>()) {
 				if (ctrl_down) {
 					if (brush->is<DoodadBrush>()) {
 						PositionVector tilestodraw;
 						BrushUtility::GetTilesToDraw(mouse_map_pos.x, mouse_map_pos.y, mouse_map_pos.z, &tilestodraw, nullptr);
-						editor.undraw(tilestodraw, alt_down);
+						editor.undraw(brush, tilestodraw, alt_down, brush_size);
 					} else {
-						editor.undraw(mouse_map_pos, shift_down || alt_down);
+						editor.undraw(brush, mouse_map_pos, shift_down || alt_down, brush_size);
 					}
 				} else {
 					bool will_show_spawn = false;
@@ -123,7 +124,7 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 						}
 					}
 
-					editor.draw(mouse_map_pos, shift_down || alt_down);
+					editor.draw(brush, mouse_map_pos, shift_down || alt_down, brush_size);
 
 					if (will_show_spawn) {
 						Tile* tile = editor.map.getTile(mouse_map_pos);
@@ -153,20 +154,20 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 					BrushUtility::GetTilesToDraw(mouse_map_pos.x, mouse_map_pos.y, mouse_map_pos.z, &tilestodraw, &tilestoborder, fill);
 
 					if (!fill && ctrl_down) {
-						editor.undraw(tilestodraw, tilestoborder, alt_down);
+						editor.undraw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 					} else {
-						editor.draw(tilestodraw, tilestoborder, alt_down);
+						editor.draw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 					}
 				} else if (brush->oneSizeFitsAll()) {
 					if (brush->is<HouseExitBrush>() || brush->is<WaypointBrush>()) {
-						editor.draw(mouse_map_pos, alt_down);
+						editor.draw(brush, mouse_map_pos, alt_down, brush_size);
 					} else {
 						PositionVector tilestodraw;
 						tilestodraw.push_back(mouse_map_pos);
 						if (ctrl_down) {
-							editor.undraw(tilestodraw, alt_down);
+							editor.undraw(brush, tilestodraw, alt_down, brush_size);
 						} else {
-							editor.draw(tilestodraw, alt_down);
+							editor.draw(brush, tilestodraw, alt_down, brush_size);
 						}
 					}
 				} else {
@@ -175,9 +176,9 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 					BrushUtility::GetTilesToDraw(mouse_map_pos.x, mouse_map_pos.y, mouse_map_pos.z, &tilestodraw, nullptr);
 
 					if (ctrl_down) {
-						editor.undraw(tilestodraw, alt_down);
+						editor.undraw(brush, tilestodraw, alt_down, brush_size);
 					} else {
-						editor.draw(tilestodraw, alt_down);
+						editor.draw(brush, tilestodraw, alt_down, brush_size);
 					}
 				}
 			}
@@ -194,14 +195,15 @@ void DrawingController::HandleDrag(const Position& mouse_map_pos, bool shift_dow
 	last_draw_pos = mouse_map_pos;
 
 	Brush* brush = g_gui.GetCurrentBrush();
+	int brush_size = g_gui.GetBrushSize();
 	if (drawing && brush) {
 		if (brush->is<DoodadBrush>()) {
 			if (ctrl_down) {
 				PositionVector tilestodraw;
 				BrushUtility::GetTilesToDraw(mouse_map_pos.x, mouse_map_pos.y, mouse_map_pos.z, &tilestodraw, nullptr);
-				editor.undraw(tilestodraw, shift_down || alt_down);
+				editor.undraw(brush, tilestodraw, shift_down || alt_down, brush_size);
 			} else {
-				editor.draw(mouse_map_pos, shift_down || alt_down);
+				editor.draw(brush, mouse_map_pos, shift_down || alt_down, brush_size);
 			}
 		} else if (brush->is<DoorBrush>()) {
 			if (!brush->canDraw(&editor.map, mouse_map_pos)) {
@@ -218,9 +220,9 @@ void DrawingController::HandleDrag(const Position& mouse_map_pos, bool shift_dow
 				tilestoborder.push_back(Position(mouse_map_pos.x + 1, mouse_map_pos.y, mouse_map_pos.z));
 
 				if (ctrl_down) {
-					editor.undraw(tilestodraw, tilestoborder, alt_down);
+					editor.undraw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 				} else {
-					editor.draw(tilestodraw, tilestoborder, alt_down);
+					editor.draw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 				}
 			}
 		} else if (brush->needBorders()) {
@@ -229,9 +231,9 @@ void DrawingController::HandleDrag(const Position& mouse_map_pos, bool shift_dow
 			BrushUtility::GetTilesToDraw(mouse_map_pos.x, mouse_map_pos.y, mouse_map_pos.z, &tilestodraw, &tilestoborder);
 
 			if (ctrl_down) {
-				editor.undraw(tilestodraw, tilestoborder, alt_down);
+				editor.undraw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 			} else {
-				editor.draw(tilestodraw, tilestoborder, alt_down);
+				editor.draw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 			}
 		} else if (brush->oneSizeFitsAll()) {
 			drawing = true;
@@ -239,17 +241,17 @@ void DrawingController::HandleDrag(const Position& mouse_map_pos, bool shift_dow
 			tilestodraw.push_back(mouse_map_pos);
 
 			if (ctrl_down) {
-				editor.undraw(tilestodraw, alt_down);
+				editor.undraw(brush, tilestodraw, alt_down, brush_size);
 			} else {
-				editor.draw(tilestodraw, alt_down);
+				editor.draw(brush, tilestodraw, alt_down, brush_size);
 			}
 		} else { // No borders
 			PositionVector tilestodraw;
 			BrushUtility::GetTilesToDraw(mouse_map_pos.x, mouse_map_pos.y, mouse_map_pos.z, &tilestodraw, nullptr);
 			if (ctrl_down) {
-				editor.undraw(tilestodraw, alt_down);
+				editor.undraw(brush, tilestodraw, alt_down, brush_size);
 			} else {
-				editor.draw(tilestodraw, alt_down);
+				editor.draw(brush, tilestodraw, alt_down, brush_size);
 			}
 		}
 
@@ -269,6 +271,7 @@ void DrawingController::HandleDrag(const Position& mouse_map_pos, bool shift_dow
 void DrawingController::HandleRelease(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down) {
 	if (dragging_draw) {
 		Brush* brush = g_gui.GetCurrentBrush();
+		int brush_size = g_gui.GetBrushSize();
 		if (brush) {
 			if (brush->is<SpawnBrush>()) {
 				int start_map_x = std::min(canvas->last_click_map_x, mouse_map_pos.x);
@@ -282,7 +285,7 @@ void DrawingController::HandleRelease(const Position& mouse_map_pos, bool shift_
 				int width = std::min(g_settings.getInteger(Config::MAX_SPAWN_RADIUS), ((end_map_x - start_map_x) / 2 + (end_map_y - start_map_y) / 2) / 2);
 				const BrushSizeState previous_size_state = g_gui.GetBrushSizeState();
 				g_gui.SetBrushSize(width);
-				editor.draw(Position(map_x, map_y, mouse_map_pos.z), alt_down);
+				editor.draw(brush, Position(map_x, map_y, mouse_map_pos.z), alt_down, width);
 				g_gui.RestoreBrushSizeState(previous_size_state);
 			} else {
 				PositionVector tilestodraw;
@@ -373,9 +376,9 @@ void DrawingController::HandleRelease(const Position& mouse_map_pos, bool shift_
 					}
 				}
 				if (ctrl_down) {
-					editor.undraw(tilestodraw, tilestoborder, alt_down);
+					editor.undraw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 				} else {
-					editor.draw(tilestodraw, tilestoborder, alt_down);
+					editor.draw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 				}
 			}
 		}

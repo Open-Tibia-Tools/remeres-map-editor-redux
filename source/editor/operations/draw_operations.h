@@ -9,9 +9,9 @@ class Editor;
 
 class DrawOperations {
 public:
-	static void draw(Editor& editor, Position offset, bool alt, bool dodraw);
-	static void draw(Editor& editor, const PositionVector& tilestodraw, bool alt, bool dodraw);
-	static void draw(Editor& editor, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw);
+	static void draw(Editor& editor, Brush* brush, Position offset, bool alt, bool dodraw, int brush_size = 1);
+	static void draw(Editor& editor, Brush* brush, const PositionVector& tilestodraw, bool alt, bool dodraw, int brush_size = 1);
+	static void draw(Editor& editor, Brush* brush, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw, int brush_size = 1);
 };
 
 #endif

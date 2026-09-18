@@ -15,7 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "editor/editor.h"
 #include "editor/action_queue.h"
@@ -132,16 +132,23 @@ DestroySelectionResult Editor::destroySelection() {
 
 // Helper functions moved to SelectionOperations
 
-void Editor::drawInternal(Position offset, bool alt, bool dodraw) {
-	DrawOperations::draw(*this, offset, alt, dodraw);
+void Editor::markTileModified(const Position& pos) {
+	map.getChangeTracker().markTileDirty(pos);
+	if (onTileModified) {
+		onTileModified(pos);
+	}
 }
 
-void Editor::drawInternal(const PositionVector& tilestodraw, bool alt, bool dodraw) {
-	DrawOperations::draw(*this, tilestodraw, alt, dodraw);
+void Editor::drawInternal(Brush* brush, Position offset, bool alt, bool dodraw, int brush_size) {
+	DrawOperations::draw(*this, brush, offset, alt, dodraw, brush_size);
 }
 
-void Editor::drawInternal(const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw) {
-	DrawOperations::draw(*this, tilestodraw, tilestoborder, alt, dodraw);
+void Editor::drawInternal(Brush* brush, const PositionVector& tilestodraw, bool alt, bool dodraw, int brush_size) {
+	DrawOperations::draw(*this, brush, tilestodraw, alt, dodraw, brush_size);
+}
+
+void Editor::drawInternal(Brush* brush, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw, int brush_size) {
+	DrawOperations::draw(*this, brush, tilestodraw, tilestoborder, alt, dodraw, brush_size);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

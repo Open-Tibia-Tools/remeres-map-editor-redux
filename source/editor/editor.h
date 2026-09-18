@@ -63,6 +63,9 @@ public:
 	std::function<void()> onStateChange;
 	void notifyStateChange();
 
+	std::function<void(const Position&)> onTileModified;
+	void markTileModified(const Position& pos);
+
 public: // Functions
 	// Map handling
 
@@ -92,41 +95,41 @@ public: // Functions
 	void clearInvalidHouseTiles(std::function<void(int)> on_progress = nullptr);
 	void clearModifiedTileState(std::function<void(int)> on_progress = nullptr);
 
-	// Draw using the current brush to the target position
+	// Draw using the specified brush to the target position
 	// alt is whether the ALT key is pressed
-	void draw(const Position& offset, bool alt);
-	void undraw(const Position& offset, bool alt);
-	void draw(const PositionVector& posvec, bool alt);
-	void draw(const PositionVector& todraw, PositionVector& toborder, bool alt);
-	void undraw(const PositionVector& posvec, bool alt);
-	void undraw(const PositionVector& todraw, PositionVector& toborder, bool alt);
+	void draw(Brush* brush, const Position& offset, bool alt, int brush_size = 1);
+	void undraw(Brush* brush, const Position& offset, bool alt, int brush_size = 1);
+	void draw(Brush* brush, const PositionVector& posvec, bool alt, int brush_size = 1);
+	void draw(Brush* brush, const PositionVector& todraw, PositionVector& toborder, bool alt, int brush_size = 1);
+	void undraw(Brush* brush, const PositionVector& posvec, bool alt, int brush_size = 1);
+	void undraw(Brush* brush, const PositionVector& todraw, PositionVector& toborder, bool alt, int brush_size = 1);
 
 protected:
-	void drawInternal(const Position offset, bool alt, bool dodraw);
-	void drawInternal(const PositionVector& posvec, bool alt, bool dodraw);
-	void drawInternal(const PositionVector& todraw, PositionVector& toborder, bool alt, bool dodraw);
+	void drawInternal(Brush* brush, const Position offset, bool alt, bool dodraw, int brush_size);
+	void drawInternal(Brush* brush, const PositionVector& posvec, bool alt, bool dodraw, int brush_size);
+	void drawInternal(Brush* brush, const PositionVector& todraw, PositionVector& toborder, bool alt, bool dodraw, int brush_size);
 
 	Editor(const Editor&);
 	Editor& operator=(const Editor&);
 };
 
-inline void Editor::draw(const Position& offset, bool alt) {
-	drawInternal(offset, alt, true);
+inline void Editor::draw(Brush* brush, const Position& offset, bool alt, int brush_size) {
+	drawInternal(brush, offset, alt, true, brush_size);
 }
-inline void Editor::undraw(const Position& offset, bool alt) {
-	drawInternal(offset, alt, false);
+inline void Editor::undraw(Brush* brush, const Position& offset, bool alt, int brush_size) {
+	drawInternal(brush, offset, alt, false, brush_size);
 }
-inline void Editor::draw(const PositionVector& posvec, bool alt) {
-	drawInternal(posvec, alt, true);
+inline void Editor::draw(Brush* brush, const PositionVector& posvec, bool alt, int brush_size) {
+	drawInternal(brush, posvec, alt, true, brush_size);
 }
-inline void Editor::draw(const PositionVector& todraw, PositionVector& toborder, bool alt) {
-	drawInternal(todraw, toborder, alt, true);
+inline void Editor::draw(Brush* brush, const PositionVector& todraw, PositionVector& toborder, bool alt, int brush_size) {
+	drawInternal(brush, todraw, toborder, alt, true, brush_size);
 }
-inline void Editor::undraw(const PositionVector& posvec, bool alt) {
-	drawInternal(posvec, alt, false);
+inline void Editor::undraw(Brush* brush, const PositionVector& posvec, bool alt, int brush_size) {
+	drawInternal(brush, posvec, alt, false, brush_size);
 }
-inline void Editor::undraw(const PositionVector& todraw, PositionVector& toborder, bool alt) {
-	drawInternal(todraw, toborder, alt, false);
+inline void Editor::undraw(Brush* brush, const PositionVector& todraw, PositionVector& toborder, bool alt, int brush_size) {
+	drawInternal(brush, todraw, toborder, alt, false, brush_size);
 }
 
 #endif
