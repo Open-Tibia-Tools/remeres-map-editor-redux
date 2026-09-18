@@ -34,7 +34,7 @@ struct OTBM_TeleportDestination {
 
 class Container : public Item {
 public:
-	Container(const uint16_t type);
+	Container(const ServerItemId type);
 	~Container();
 
 	std::unique_ptr<Item> deepCopy() const;
@@ -72,7 +72,7 @@ protected:
 
 class Teleport : public Item {
 public:
-	Teleport(const uint16_t type);
+	Teleport(const ServerItemId type);
 
 	std::unique_ptr<Item> deepCopy() const;
 
@@ -116,7 +116,7 @@ protected:
 
 class Door : public Item {
 public:
-	Door(const uint16_t type);
+	Door(const ServerItemId type);
 
 	std::unique_ptr<Item> deepCopy() const;
 
@@ -142,7 +142,7 @@ protected:
 
 class Depot : public Item {
 public:
-	Depot(const uint16_t _type);
+	Depot(const ServerItemId _type);
 
 	std::unique_ptr<Item> deepCopy() const;
 
@@ -169,7 +169,7 @@ protected:
 
 class Podium : public Item {
 public:
-	Podium(const uint16_t _type);
+	Podium(const ServerItemId _type);
 
 	std::unique_ptr<Item> deepCopy() const;
 

@@ -70,8 +70,8 @@ namespace LuaAPI {
 			throw sol::error("Invalid tile");
 		}
 
-		if (itemId < 0 || itemId > 65535) {
-			throw sol::error("addItemToTile: itemId must be between 0 and 65535");
+		if (itemId < 0) {
+			throw sol::error("addItemToTile: itemId must be non-negative");
 		}
 		if (countOpt && (*countOpt < 0 || *countOpt > 65535)) {
 			throw sol::error("addItemToTile: count must be between 0 and 65535");
@@ -80,7 +80,7 @@ namespace LuaAPI {
 		// Mark tile for undo before modification
 		markTileForUndo(tile);
 
-		std::unique_ptr<Item> item = Item::Create(static_cast<uint16_t>(itemId));
+		std::unique_ptr<Item> item = Item::Create(static_cast<ServerItemId>(itemId));
 		if (!item) {
 			throw sol::error("Failed to create item with id " + std::to_string(itemId));
 		}

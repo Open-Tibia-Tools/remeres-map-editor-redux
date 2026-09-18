@@ -112,22 +112,22 @@ bool XmlItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFr
 			return true;
 		}
 
-		uint16_t from_id = 0;
-		uint16_t to_id = 0;
+		uint32_t from_id = 0;
+		uint32_t to_id = 0;
 		if (const auto id_attr = item_node.attribute("id")) {
-			from_id = to_id = id_attr.as_ushort();
+			from_id = to_id = id_attr.as_uint();
 		} else {
-			from_id = item_node.attribute("fromid").as_ushort();
-			to_id = item_node.attribute("toid").as_ushort();
+			from_id = item_node.attribute("fromid").as_uint();
+			to_id = item_node.attribute("toid").as_uint();
 		}
 
-		uint16_t from_client_id = 0;
-		uint16_t to_client_id = 0;
+		uint32_t from_client_id = 0;
+		uint32_t to_client_id = 0;
 		if (const auto client_id_attr = item_node.attribute("clientid")) {
-			from_client_id = to_client_id = client_id_attr.as_ushort();
+			from_client_id = to_client_id = client_id_attr.as_uint();
 		} else {
-			from_client_id = item_node.attribute("fromclientid").as_ushort();
-			to_client_id = item_node.attribute("toclientid").as_ushort();
+			from_client_id = item_node.attribute("fromclientid").as_uint();
+			to_client_id = item_node.attribute("toclientid").as_uint();
 		}
 
 		if (from_id == 0 || to_id == 0) {

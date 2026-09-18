@@ -123,7 +123,7 @@ public:
 	ServerItemId maxServerId() const {
 		return max_server_id_;
 	}
-	uint16_t getMaxID() const {
+	ServerItemId getMaxID() const {
 		return maxServerId();
 	}
 
@@ -161,7 +161,7 @@ private:
 	ItemVisualTable visual_;
 	ItemEditorTable editor_;
 
-	std::array<DefinitionId, static_cast<size_t>(std::numeric_limits<ServerItemId>::max()) + 1> server_to_index_ {};
+	std::vector<DefinitionId> server_to_index_;
 	std::unordered_map<ClientItemId, std::vector<ServerItemId>> client_to_servers_;
 	mutable std::vector<ServerItemId> empty_client_results_;
 	ServerItemId max_server_id_ = 0;

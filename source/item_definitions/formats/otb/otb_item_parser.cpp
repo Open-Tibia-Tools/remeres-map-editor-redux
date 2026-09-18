@@ -144,18 +144,48 @@ bool OtbItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFr
 			}
 
 			switch (attr) {
-				case ITEM_ATTR_SERVERID:
-					if (!readFixedPayload(item_node, length, fragment.server_id)) {
+				case ITEM_ATTR_SERVERID: {
+					if (length == sizeof(uint16_t)) {
+						uint16_t id16 = 0;
+						if (item_node->getU16(id16)) {
+							fragment.server_id = id16;
+						} else {
+							warnings.push_back("Invalid server id in items.otb.");
+						}
+					} else if (length == sizeof(uint32_t)) {
+						uint32_t id32 = 0;
+						if (item_node->getU32(id32)) {
+							fragment.server_id = id32;
+						} else {
+							warnings.push_back("Invalid server id in items.otb.");
+						}
+					} else {
 						warnings.push_back("Invalid server id in items.otb.");
 						skipPayload(item_node, length);
 					}
 					break;
-				case ITEM_ATTR_CLIENTID:
-					if (!readFixedPayload(item_node, length, fragment.client_id)) {
+				}
+				case ITEM_ATTR_CLIENTID: {
+					if (length == sizeof(uint16_t)) {
+						uint16_t id16 = 0;
+						if (item_node->getU16(id16)) {
+							fragment.client_id = id16;
+						} else {
+							warnings.push_back("Invalid client id in items.otb.");
+						}
+					} else if (length == sizeof(uint32_t)) {
+						uint32_t id32 = 0;
+						if (item_node->getU32(id32)) {
+							fragment.client_id = id32;
+						} else {
+							warnings.push_back("Invalid client id in items.otb.");
+						}
+					} else {
 						warnings.push_back("Invalid client id in items.otb.");
 						skipPayload(item_node, length);
 					}
 					break;
+				}
 				case ITEM_ATTR_NAME: {
 					std::string value;
 					if (!item_node->getRAW(value, length)) {

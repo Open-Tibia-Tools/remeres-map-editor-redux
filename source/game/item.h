@@ -89,13 +89,13 @@ public:
 	inline static const std::string ATTR_TIER = "tier";
 
 	// Factory member to create item of right type based on type
-	static std::unique_ptr<Item> Create(uint16_t _type, uint16_t _subtype = 0xFFFF);
+	static std::unique_ptr<Item> Create(ServerItemId _type, uint16_t _subtype = 0xFFFF);
 	static std::unique_ptr<Item> Create(pugi::xml_node);
 	static std::unique_ptr<Item> Create_OTBM(const IOMap& maphandle, BinaryNode* stream);
 
 public:
 	// Constructor for items
-	Item(unsigned short _type, unsigned short _count);
+	Item(ServerItemId _type, unsigned short _count);
 
 	virtual ~Item();
 
@@ -171,23 +171,23 @@ public:
 	static uint16_t LiquidName2ID(std::string id);
 
 	// IDs
-	[[nodiscard]] uint16_t getID() const {
+	[[nodiscard]] ServerItemId getID() const {
 		return id;
 	}
-	// Type access via stable index â€” no cached pointer, safe across vector resizes
+	void setID(ServerItemId new_id) {
+		id = new_id;
+	}
+	// Type access via stable index — no cached pointer, safe across vector resizes
 	[[nodiscard]] ItemDefinitionView getDefinition() const {
 		return g_item_definitions.get(id);
 	}
-	[[nodiscard]] uint16_t getClientID() const {
+	[[nodiscard]] ClientItemId getClientID() const {
 		if (const auto definition = getDefinition()) {
 			return definition.clientId();
 		}
 		return 0;
 	}
 	[[nodiscard]] GameSprite* getSprite() const;
-	// NOTE: This is very volatile, do NOT use this unless you know exactly what you're doing
-	// which you probably don't so avoid it like the plague!
-	void setID(uint16_t id);
 
 	bool typeExists() const {
 		return g_item_definitions.typeExists(id);
@@ -467,7 +467,7 @@ public:
 	std::string_view getDescription() const;
 
 protected:
-	uint16_t id; // the same id as in ItemDefinitionStore
+	ServerItemId id; // the same id as in ItemDefinitionStore
 	// Subtype is either fluid type, count, subtype or charges
 	uint16_t subtype;
 	bool selected;

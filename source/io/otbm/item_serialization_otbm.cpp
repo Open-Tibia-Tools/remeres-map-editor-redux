@@ -77,6 +77,10 @@ bool ItemSerializationOTBM::unserializeAttributes(const IOMap& maphandle, Binary
 				spdlog::warn("Failed to read attribute map for item id={} ('{}')", item.getID(), item.getName());
 				return false;
 			}
+			const int32_t* serverIdAttr = item.getIntegerAttribute("serverId");
+			if (serverIdAttr && *serverIdAttr > 0) {
+				item.setID(static_cast<ServerItemId>(*serverIdAttr));
+			}
 		} else if (!readAttribute(maphandle, static_cast<OTBM_ItemAttribute>(attribute), stream, item)) {
 			// Unrecognized or junk byte (e.g. trailing subtype written by some map editors).
 			// Stop reading attributes but don't fail â€” keep the item as-is.
@@ -232,7 +236,7 @@ bool ItemSerializationOTBM::readAttribute(const IOMap& maphandle, OTBM_ItemAttri
 
 bool ItemSerializationOTBM::serializeItemNode(const IOMap& maphandle, NodeFileWriteHandle& f, const Item& item) {
 	f.addNode(OTBM_ITEM);
-	f.addU16(item.getID());
+	f.addU16(static_cast<uint16_t>(item.getID() > 0xFFFF ? 0 : item.getID()));
 	if (maphandle.version.otbm == MAP_OTBM_1) {
 		const auto iType = item.getDefinition();
 		if (iType.hasFlag(ItemFlag::Stackable) || iType.isSplash() || iType.isFluidContainer()) {
@@ -253,7 +257,7 @@ bool ItemSerializationOTBM::serializeItemNode(const IOMap& maphandle, NodeFileWr
 }
 
 void ItemSerializationOTBM::serializeItemCompact(const IOMap& /*maphandle*/, NodeFileWriteHandle& f, const Item& item) {
-	f.addU16(item.getID());
+	f.addU16(static_cast<uint16_t>(item.getID() > 0xFFFF ? 0 : item.getID()));
 }
 
 void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, NodeFileWriteHandle& f, const Item& item) {
@@ -266,6 +270,9 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 	}
 
 	if (maphandle.version.otbm >= MAP_OTBM_4) {
+		if (item.getID() > 0xFFFF && !item.hasIntegerAttribute("serverId")) {
+			const_cast<Item&>(item).setAttribute("serverId", static_cast<int32_t>(item.getID()));
+		}
 		if (item.hasAttributes()) {
 			f.addU8(OTBM_ATTR_ATTRIBUTE_MAP);
 			item.serializeAttributeMap(maphandle, f);

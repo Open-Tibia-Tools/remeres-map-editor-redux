@@ -96,7 +96,7 @@ void ItemDefinitionStore::clear() {
 	visual_ = {};
 	passive_metadata_ = {};
 	editor_ = {};
-	server_to_index_.fill(0);
+	server_to_index_.clear();
 	client_to_servers_.clear();
 	empty_client_results_.clear();
 	max_server_id_ = 0;
@@ -132,6 +132,7 @@ void ItemDefinitionStore::reserve(size_t count) {
 	passive_metadata_.json_blobs.reserve(count);
 	visual_.client_ids.reserve(count);
 	editor_.data.reserve(count);
+	server_to_index_.reserve(count + 100);
 }
 
 void ItemDefinitionStore::append(ResolvedItemDefinitionRow row) {
@@ -163,6 +164,9 @@ void ItemDefinitionStore::append(ResolvedItemDefinitionRow row) {
 	visual_.client_ids.push_back(row.client_id);
 	editor_.data.emplace_back();
 
+	if (row.server_id >= server_to_index_.size()) {
+		server_to_index_.resize(static_cast<size_t>(row.server_id) + 1, 0);
+	}
 	server_to_index_[row.server_id] = index + 1;
 	if (row.client_id != 0) {
 		client_to_servers_[row.client_id].push_back(row.server_id);
@@ -171,10 +175,16 @@ void ItemDefinitionStore::append(ResolvedItemDefinitionRow row) {
 }
 
 bool ItemDefinitionStore::exists(ServerItemId server_id) const {
+	if (server_id >= server_to_index_.size()) {
+		return false;
+	}
 	return server_to_index_[server_id] != 0;
 }
 
 ItemDefinitionView ItemDefinitionStore::get(ServerItemId server_id) const {
+	if (server_id >= server_to_index_.size()) {
+		return {};
+	}
 	const DefinitionId stored_index = server_to_index_[server_id];
 	if (stored_index == 0) {
 		return {};
@@ -255,6 +265,9 @@ void ItemDefinitionStore::setDescription(ServerItemId server_id, std::string val
 }
 
 DefinitionId ItemDefinitionStore::indexOf(ServerItemId server_id) const {
+	if (server_id >= server_to_index_.size()) {
+		throw std::out_of_range("Unknown item definition id");
+	}
 	const DefinitionId stored_index = server_to_index_[server_id];
 	if (stored_index == 0) {
 		throw std::out_of_range("Unknown item definition id");

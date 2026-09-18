@@ -35,7 +35,7 @@
 #include <array>
 #include <string_view>
 
-std::unique_ptr<Item> Item::Create(uint16_t _type, uint16_t _subtype /*= 0xFFFF*/) {
+std::unique_ptr<Item> Item::Create(ServerItemId _type, uint16_t _subtype /*= 0xFFFF*/) {
 	if (_type == 0) {
 		return nullptr;
 	}
@@ -74,7 +74,7 @@ std::unique_ptr<Item> Item::Create(uint16_t _type, uint16_t _subtype /*= 0xFFFF*
 	return newItem;
 }
 
-Item::Item(unsigned short _type, unsigned short _count) :
+Item::Item(ServerItemId _type, unsigned short _count) :
 	id(_type),
 	subtype(1),
 	selected(false) {
@@ -119,10 +119,6 @@ uint32_t Item::memsize() const {
 		}
 	}
 	return mem;
-}
-
-void Item::setID(uint16_t newid) {
-	id = newid;
 }
 
 GameSprite* Item::getSprite() const {

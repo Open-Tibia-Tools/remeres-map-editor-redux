@@ -26,7 +26,7 @@
 
 class RAWBrush : public Brush {
 public:
-	RAWBrush(uint16_t itemid); // Create a RAWBrush of the specified type
+	RAWBrush(ServerItemId itemid); // Create a RAWBrush of the specified type
 	~RAWBrush() override;
 
 
@@ -41,7 +41,7 @@ public:
 	}
 	int getLookID() const override;
 	std::string getName() const override;
-	uint16_t getItemID() const;
+	ServerItemId getItemID() const;
 
 protected:
 	ServerItemId item_id = 0;

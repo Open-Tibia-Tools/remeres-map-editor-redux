@@ -473,10 +473,18 @@ bool DatItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatCatalo
 		error = "Failed to read DAT signature.";
 		return false;
 	}
-	if (!file.getU16(catalog.item_count) || !file.getU16(catalog.creature_count) || !file.getU16(catalog.effect_count) || !file.getU16(catalog.distance_count)) {
+	uint16_t item_count_16 = 0;
+	uint16_t creature_count_16 = 0;
+	uint16_t effect_count_16 = 0;
+	uint16_t distance_count_16 = 0;
+	if (!file.getU16(item_count_16) || !file.getU16(creature_count_16) || !file.getU16(effect_count_16) || !file.getU16(distance_count_16)) {
 		error = "Failed to read DAT header counts.";
 		return false;
 	}
+	catalog.item_count = item_count_16;
+	catalog.creature_count = creature_count_16;
+	catalog.effect_count = effect_count_16;
+	catalog.distance_count = distance_count_16;
 	if (catalog.item_count < 100 || catalog.creature_count == 0) {
 		error = "Invalid DAT header counts.";
 		return false;
