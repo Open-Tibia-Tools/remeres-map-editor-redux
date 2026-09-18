@@ -79,7 +79,7 @@ std::unique_ptr<Editor> EditorFactory::LoadFromFile(CopyBuffer& copybuffer, cons
 	mapVersion.otbm = g_version.GetCurrentVersion().getPrefferedMapVersionID();
 	mapVersion.client = g_version.GetCurrentVersion().getProtocolID();
 
-	std::unique_ptr<Editor> editor = std::make_unique<Editor>(copybuffer, mapVersion, fn, load_options);
+	std::unique_ptr<Editor> editor = std::make_unique<Editor>(copybuffer, mapVersion, std::filesystem::path(fn.GetFullPath().ToStdWstring()), load_options);
 	SetupCallbacks(editor.get());
 	return editor;
 }

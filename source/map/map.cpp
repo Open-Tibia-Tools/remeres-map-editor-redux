@@ -89,7 +89,7 @@ bool Map::open(const std::string& file) {
 		g_gui.SetLoadDone(percent, msg.empty() ? wxString() : wxstr(std::string(msg)));
 	});
 
-	bool success = maploader.loadMap(*this, wxstr(file));
+	bool success = maploader.loadMap(*this, file);
 
 	mapVersion = maploader.version;
 

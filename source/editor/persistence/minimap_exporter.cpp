@@ -7,8 +7,11 @@
 #include "map/tile.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <filesystem>
+#include <format>
+#include <fstream>
 #include <stdexcept>
 
 namespace minimap_export {
@@ -201,47 +204,35 @@ std::vector<Chunk> buildChunks(const Bounds& bounds, int outputImageSize, int ch
 	return chunks;
 }
 
-wxFileName exportRootDirectory(const MinimapExportOptions& options) {
-	wxFileName directory(options.outputDirectory);
-	directory.AppendDir(wxString::FromUTF8(options.fileBaseName.c_str()));
-	return directory;
+std::filesystem::path exportRootDirectory(const MinimapExportOptions& options) {
+	return options.outputDirectory / options.fileBaseName;
 }
 
-wxFileName floorDirectory(const MinimapExportOptions& options, int floor) {
-	wxFileName directory(exportRootDirectory(options));
-	directory.AppendDir(wxString::Format("%d", floor));
-	return directory;
+std::filesystem::path floorDirectory(const MinimapExportOptions& options, int floor) {
+	return exportRootDirectory(options) / std::to_string(floor);
 }
 
-wxFileName fullImagesDirectory(const MinimapExportOptions& options) {
-	wxFileName directory(exportRootDirectory(options));
-	directory.AppendDir("full_images");
-	return directory;
+std::filesystem::path fullImagesDirectory(const MinimapExportOptions& options) {
+	return exportRootDirectory(options) / "full_images";
 }
 
-bool ensureDirectory(const wxFileName& directory) {
-	return directory.DirExists() || wxFileName::Mkdir(directory.GetFullPath(), wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+bool ensureDirectory(const std::filesystem::path& directory) {
+	std::error_code ec;
+	return std::filesystem::is_directory(directory, ec) || std::filesystem::create_directories(directory, ec);
 }
 
-wxFileName outputFile(const wxFileName& directory, const std::string& baseName, const std::string& extension) {
-	wxFileName file(directory);
-	const std::string fullName = baseName + extension;
-	file.SetFullName(wxString::FromUTF8(fullName.c_str()));
-	return file;
+std::filesystem::path outputFile(const std::filesystem::path& directory, const std::string& baseName, const std::string& extension) {
+	return directory / (baseName + extension);
 }
 
-wxFileName chunkFile(const MinimapExportOptions& options, int floor, const Chunk& chunk) {
+std::filesystem::path chunkFile(const MinimapExportOptions& options, int floor, const Chunk& chunk) {
 	const std::string extension = options.format == MinimapExportFormat::Jpg ? ".jpg" : ".webp";
-	wxFileName file(floorDirectory(options, floor));
-	file.SetFullName(wxString::FromUTF8(options.fileBaseName.c_str()) + wxString::Format("_z%d_x%d_y%d", floor, chunk.x, chunk.y) + wxString::FromUTF8(extension.c_str()));
-	return file;
+	return floorDirectory(options, floor) / std::format("{}_z{}_x{}_y{}{}", options.fileBaseName, floor, chunk.x, chunk.y, extension);
 }
 
-wxFileName fullImageFile(const MinimapExportOptions& options, int floor) {
+std::filesystem::path fullImageFile(const MinimapExportOptions& options, int floor) {
 	const std::string extension = options.format == MinimapExportFormat::Jpg ? ".jpg" : ".webp";
-	wxFileName file(fullImagesDirectory(options));
-	file.SetFullName(wxString::FromUTF8(options.fileBaseName.c_str()) + wxString::Format("_z%d_full", floor) + wxString::FromUTF8(extension.c_str()));
-	return file;
+	return fullImagesDirectory(options) / std::format("{}_z{}_full{}", options.fileBaseName, floor, extension);
 }
 
 } // namespace minimap_export
@@ -255,6 +246,21 @@ namespace {
 
 	const std::filesystem::path path(fileBaseName);
 	return path.filename().string() == fileBaseName;
+}
+
+[[nodiscard]] bool isDirectoryWritable(const std::filesystem::path& dir) {
+	std::error_code ec;
+	if (!std::filesystem::is_directory(dir, ec)) {
+		return false;
+	}
+	const auto test_file = dir / ("__probe_write_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+	std::ofstream out(test_file);
+	if (!out.is_open()) {
+		return false;
+	}
+	out.close();
+	std::filesystem::remove(test_file, ec);
+	return true;
 }
 
 [[nodiscard]] MinimapExportResult validateOptions(Editor& editor, const MinimapExportOptions& options) {
@@ -294,10 +300,11 @@ namespace {
 			}
 		}
 	}
-	if (!options.outputDirectory.DirExists()) {
+	std::error_code ec;
+	if (!std::filesystem::is_directory(options.outputDirectory, ec)) {
 		return { .ok = false, .error = "Output folder not found." };
 	}
-	if (!options.outputDirectory.IsDirWritable()) {
+	if (!isDirectoryWritable(options.outputDirectory)) {
 		return { .ok = false, .error = "Output folder is not writable." };
 	}
 	return { .ok = true };
@@ -311,12 +318,12 @@ MinimapExportResult MinimapExporter::Export(Editor& editor, const MinimapExportO
 	}
 
 	try {
-		const wxFileName rootDirectory = minimap_export::exportRootDirectory(options);
+		const std::filesystem::path rootDirectory = minimap_export::exportRootDirectory(options);
 		if (!minimap_export::ensureDirectory(rootDirectory)) {
-			return { .ok = false, .error = "Failed to create minimap export folder: " + rootDirectory.GetFullPath().ToStdString() };
+			return { .ok = false, .error = "Failed to create minimap export folder: " + rootDirectory.string() };
 		}
-		if (!rootDirectory.IsDirWritable()) {
-			return { .ok = false, .error = "Minimap export folder is not writable: " + rootDirectory.GetFullPath().ToStdString() };
+		if (!isDirectoryWritable(rootDirectory)) {
+			return { .ok = false, .error = "Minimap export folder is not writable: " + rootDirectory.string() };
 		}
 
 		if (options.format == MinimapExportFormat::Otmm) {

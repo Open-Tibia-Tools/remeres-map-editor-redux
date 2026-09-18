@@ -44,17 +44,18 @@ bool MapBackupService::CreateSnapshot(
 ) {
 	const std::string time_str = GenerateTimestampString(true);
 
-	FileName target_file;
+	std::filesystem::path target_file;
 	if (editor.map.hasFile()) {
-		FileName src(wxstr(editor.map.getFilename()));
-		target_file = src;
-		target_file.SetName(src.GetName() + "_" + operation_tag + "_" + time_str);
+		std::filesystem::path src(editor.map.getFilename());
+		std::string stem = src.stem().string();
+		std::string ext = src.extension().string();
+		target_file = src.parent_path() / (stem + "_" + operation_tag + "_" + time_str + ext);
 	} else {
 		std::string dir = nstr(FileSystem::GetLocalDataDirectory());
-		target_file.Assign(wxstr(dir + "untitled_" + operation_tag + "_" + time_str + ".otbm"));
+		target_file = std::filesystem::path(dir) / ("untitled_" + operation_tag + "_" + time_str + ".otbm");
 	}
 
-	out_backup_path = nstr(target_file.GetFullPath());
+	out_backup_path = target_file.string();
 
 	const std::string original_waypointfile = editor.map.getWaypointFilename();
 	const bool original_changed = editor.map.hasChanged();

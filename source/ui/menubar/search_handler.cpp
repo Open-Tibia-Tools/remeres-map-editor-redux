@@ -56,7 +56,7 @@ namespace {
 		}
 
 		const uint32_t page_limit = searchResultsLimit();
-		EditorOperations::ItemSearcher finder(item_id, page_limit, page_offset);
+		EditorOperations::ItemSearcher finder(item_id, page_limit, page_offset, [](uint32_t percent) { g_gui.SetLoadDone(percent); });
 		g_gui.CreateLoadBar(load_bar_label);
 		foreach_ItemOnMap(*search_map, finder, false);
 		g_gui.DestroyLoadBar();
@@ -86,7 +86,7 @@ namespace {
 		}
 
 		const uint32_t page_limit = searchResultsLimit();
-		EditorOperations::CreatureSearcher finder(creature_brush, page_limit, page_offset);
+		EditorOperations::CreatureSearcher finder(creature_brush, page_limit, page_offset, [](uint32_t percent) { g_gui.SetLoadDone(percent); });
 		g_gui.CreateLoadBar(load_bar_label);
 		foreach_TileOnMap(*search_map, finder);
 		g_gui.DestroyLoadBar();
@@ -116,7 +116,7 @@ namespace {
 		}
 
 		const uint32_t page_limit = searchResultsLimit();
-		EditorOperations::ItemSearcher finder(item_id, page_limit, page_offset);
+		EditorOperations::ItemSearcher finder(item_id, page_limit, page_offset, [](uint32_t percent) { g_gui.SetLoadDone(percent); });
 		g_gui.CreateLoadBar(load_bar_label);
 		foreach_ItemOnMap(*search_map, finder, true);
 		g_gui.DestroyLoadBar();
@@ -249,7 +249,7 @@ void SearchHandler::OnRemoveItemOnSelection(wxCommandEvent& WXUNUSED(event)) {
 	if (dialog.ShowModal() == wxID_OK) {
 		g_gui.GetCurrentEditor()->actionQueue->clear();
 		g_gui.CreateLoadBar("Searching item on selection to remove...");
-		EditorOperations::RemoveItemCondition condition(dialog.getResultID());
+		EditorOperations::RemoveItemCondition condition(dialog.getResultID(), [](uint32_t percent) { g_gui.SetLoadDone(percent); });
 		int64_t count = RemoveItemOnMap(g_gui.GetCurrentMap(), condition, true);
 		g_gui.DestroyLoadBar();
 
@@ -283,7 +283,7 @@ void SearchHandler::SearchItems(bool unique, bool action, bool container, bool w
 	}
 
 	// Use the MapSearcher from EditorOperations
-	EditorOperations::MapSearcher finder;
+	EditorOperations::MapSearcher finder([](uint32_t percent) { g_gui.SetLoadDone(percent); });
 	finder.search_unique = unique;
 	finder.search_action = action;
 	finder.search_container = container;
@@ -297,7 +297,7 @@ void SearchHandler::SearchItems(bool unique, bool action, bool container, bool w
 		SearchResult res;
 		res.tile = tile;
 		res.item = item;
-		res.description = finder.desc(item).utf8_string();
+		res.description = finder.desc(item);
 		found.push_back(res);
 	}
 

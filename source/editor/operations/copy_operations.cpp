@@ -15,7 +15,7 @@
 #include "editor/action_queue.h"
 #include "app/settings.h"
 
-#include <sstream>
+#include <format>
 
 void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 	if (editor.selection.empty()) {
@@ -64,9 +64,7 @@ void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 		}
 	}
 
-	std::ostringstream ss;
-	ss << "Copied " << tile_count << " tile" << (tile_count > 1 ? "s" : "") << " (" << item_count << " item" << (item_count > 1 ? "s" : "") << ")";
-	g_gui.SetStatusText(wxstr(ss.str()));
+	g_gui.SetStatusText(std::format("Copied {} tile{} ({} item{})", tile_count, (tile_count > 1 ? "s" : ""), item_count, (item_count > 1 ? "s" : "")));
 }
 
 void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
@@ -162,9 +160,7 @@ void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 	}
 
 	editor.addBatch(std::move(batch));
-	std::stringstream ss;
-	ss << "Cut out " << tile_count << " tile" << (tile_count > 1 ? "s" : "") << " (" << item_count << " item" << (item_count > 1 ? "s" : "") << ")";
-	g_gui.SetStatusText(wxstr(ss.str()));
+	g_gui.SetStatusText(std::format("Cut out {} tile{} ({} item{})", tile_count, (tile_count > 1 ? "s" : ""), item_count, (item_count > 1 ? "s" : "")));
 }
 
 void CopyOperations::paste(Editor& editor, CopyBuffer& buffer, const Position& toPosition) {

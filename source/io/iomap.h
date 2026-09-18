@@ -19,6 +19,7 @@
 #define RME_MAP_IO_H_
 
 #include "app/client_version.h"
+#include <filesystem>
 #include <functional>
 #include <string_view>
 
@@ -69,8 +70,8 @@ public:
 		}
 	}
 
-	virtual bool loadMap(Map& map, const FileName& identifier) = 0;
-	virtual bool saveMap(Map& map, const FileName& identifier) = 0;
+	virtual bool loadMap(Map& map, const std::filesystem::path& identifier) = 0;
+	virtual bool saveMap(Map& map, const std::filesystem::path& identifier) = 0;
 
 protected:
 	ProgressCallback progress_callback;
@@ -82,10 +83,10 @@ public:
 		version = v;
 	}
 
-	bool loadMap(Map& map, const FileName& identifier) override {
+	bool loadMap(Map& map, const std::filesystem::path& identifier) override {
 		return false;
 	}
-	bool saveMap(Map& map, const FileName& identifier) override {
+	bool saveMap(Map& map, const std::filesystem::path& identifier) override {
 		return false;
 	}
 };

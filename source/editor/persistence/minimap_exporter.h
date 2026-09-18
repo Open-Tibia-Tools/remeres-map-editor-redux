@@ -5,9 +5,9 @@
 
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <functional>
 #include <string>
-#include <wx/filename.h>
 
 class Editor;
 
@@ -26,7 +26,7 @@ using MinimapExportFloorMask = std::array<bool, MAP_LAYERS>;
 }
 
 struct MinimapExportOptions {
-	wxFileName outputDirectory;
+	std::filesystem::path outputDirectory;
 	std::string fileBaseName;
 	MinimapExportFormat format = MinimapExportFormat::Otmm;
 	MinimapExportFloorMask selectedFloors = allMinimapExportFloors();

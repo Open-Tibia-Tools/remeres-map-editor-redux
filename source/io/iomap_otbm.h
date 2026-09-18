@@ -99,16 +99,16 @@ public:
 
 	using WriteResult = OTBMWriteResult;
 
-	static bool getVersionInfo(const FileName& identifier, MapVersion& out_ver);
-	static bool peekStartupInfo(const FileName& identifier, OTBMStartupPeekResult& out_info);
+	static bool getVersionInfo(const std::filesystem::path& identifier, MapVersion& out_ver);
+	static bool peekStartupInfo(const std::filesystem::path& identifier, OTBMStartupPeekResult& out_info);
 
-	bool loadMap(Map& map, const FileName& identifier) override;
-	bool saveMap(Map& map, const FileName& identifier) override;
+	bool loadMap(Map& map, const std::filesystem::path& identifier) override;
+	bool saveMap(Map& map, const std::filesystem::path& identifier) override;
 
 protected:
 	static bool getVersionInfo(NodeFileReadHandle* f, MapVersion& out_ver);
 
-	bool loadMapFromDisk(Map& map, const FileName& identifier);
+	bool loadMapFromDisk(Map& map, const std::filesystem::path& identifier);
 
 	bool loadMap(Map& map, NodeFileReadHandle& handle);
 	bool loadMapRoot(Map& map, NodeFileReadHandle& f, BinaryNode*& root, BinaryNode*& mapHeaderNode);
@@ -119,7 +119,7 @@ protected:
 	void readTowns(Map& map, BinaryNode* mapNode);
 	void readWaypoints(Map& map, BinaryNode* mapNode);
 
-	bool saveMapToDisk(Map& map, const FileName& identifier);
+	bool saveMapToDisk(Map& map, const std::filesystem::path& identifier);
 
 	bool saveMap(Map& map, NodeFileWriteHandle& handle);
 

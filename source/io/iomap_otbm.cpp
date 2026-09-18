@@ -122,9 +122,8 @@ void Podium::serializeItemAttributes_OTBM(const IOMap& maphandle, NodeFileWriteH
 
 /* Entry level calls */
 
-bool IOMapOTBM::getVersionInfo(const FileName& filename, MapVersion& out_ver) {
-
-	DiskNodeFileReadHandle f(nstr(filename.GetFullPath()), StringVector(1, "OTBM"));
+bool IOMapOTBM::getVersionInfo(const std::filesystem::path& filename, MapVersion& out_ver) {
+	DiskNodeFileReadHandle f(filename.string(), StringVector(1, "OTBM"));
 	if (!f.isOk()) {
 		return false;
 	}
@@ -135,17 +134,17 @@ bool IOMapOTBM::getVersionInfo(NodeFileReadHandle* f, MapVersion& out_ver) {
 	return HeaderSerializationOTBM::getVersionInfo(*f, out_ver);
 }
 
-bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResult& out_info) {
+bool IOMapOTBM::peekStartupInfo(const std::filesystem::path& identifier, OTBMStartupPeekResult& out_info) {
 	out_info = {};
-	out_info.map_name = nstr(identifier.GetName());
+	out_info.map_name = identifier.stem().string();
 
 	std::error_code ec;
-	auto ftime = std::filesystem::last_write_time(identifier.GetFullPath().ToStdWstring(), ec);
+	auto ftime = std::filesystem::last_write_time(identifier, ec);
 	if (!ec) {
 		out_info.modified_time = ftime;
 	}
 
-	DiskNodeFileReadHandle handle(nstr(identifier.GetFullPath()), StringVector(1, "OTBM"));
+	DiskNodeFileReadHandle handle(identifier.string(), StringVector(1, "OTBM"));
 	if (!handle.isOk()) {
 		out_info.has_error = true;
 		out_info.error_message = handle.getErrorMessage();
@@ -161,9 +160,8 @@ bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResul
 	return true;
 }
 
-bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
-	spdlog::debug("Loading OTBM map from disk: {}", filename.GetFullPath().ToStdString());
-	std::filesystem::path path(nstr(filename.GetFullPath()));
+bool IOMapOTBM::loadMapFromDisk(Map& map, const std::filesystem::path& path) {
+	spdlog::debug("Loading OTBM map from disk: {}", path.string());
 
 	std::error_code ec;
 	const auto size = std::filesystem::file_size(path, ec);
@@ -179,7 +177,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 
 	// Memory optimization: larger than 512MB, stream from disk
 	if (size > 512 * 1024 * 1024) {
-		DiskNodeFileReadHandle f(nstr(filename.GetFullPath()), StringVector(1, "OTBM"));
+		DiskNodeFileReadHandle f(path.string(), StringVector(1, "OTBM"));
 		if (!f.isOk()) {
 			spdlog::error("{}", f.getErrorMessage());
 			return false;
@@ -190,7 +188,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	} else {
 		std::ifstream file(path, std::ios::binary);
 		if (!file.is_open()) {
-			spdlog::error("Couldn't open file for reading: {}", filename.GetFullPath().ToStdString());
+			spdlog::error("Couldn't open file for reading: {}", path.string());
 			return false;
 		}
 
@@ -213,13 +211,13 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	}
 
 	// Read auxiliary files
-	auto loadAux = [&](bool (*func)(Map&, const FileName&), const std::string& suffix, std::string& target) {
-		std::string defaultFile = nstr(filename.GetName()) + "-" + suffix + ".xml";
+	auto loadAux = [&](bool (*func)(Map&, const std::filesystem::path&), const std::string& suffix, std::string& target) {
+		std::string defaultFile = path.stem().string() + "-" + suffix + ".xml";
 		bool expected = !target.empty();
 
 		if (expected) {
 			// Validate/sanitize OTBM-provided target
-			auto paths = MapXMLIO::normalizeMapFilePaths(filename, target);
+			auto paths = MapXMLIO::normalizeMapFilePaths(path, target);
 			if (!std::filesystem::exists(paths.second)) {
 				// File does not exist or invalid, try default
 				expected = false;
@@ -227,7 +225,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 		}
 
 		if (!expected) {
-			auto paths = MapXMLIO::normalizeMapFilePaths(filename, defaultFile);
+			auto paths = MapXMLIO::normalizeMapFilePaths(path, defaultFile);
 			if (std::filesystem::exists(paths.second)) {
 				target = defaultFile;
 				expected = true;
@@ -235,7 +233,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 		}
 
 		if (expected) {
-			if (!func(map, filename)) {
+			if (!func(map, path)) {
 				spdlog::warn("Failed to load {} file: {}", suffix, target);
 			}
 		} else {
@@ -254,10 +252,10 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 		std::string waypointFile = map.waypointfile;
 		// If no external file linked, check the default one
 		if (waypointFile.empty()) {
-			waypointFile = nstr(filename.GetName()) + "-waypoint.xml";
+			waypointFile = path.stem().string() + "-waypoint.xml";
 		}
 
-		auto paths = MapXMLIO::normalizeMapFilePaths(filename, waypointFile);
+		auto paths = MapXMLIO::normalizeMapFilePaths(path, waypointFile);
 		if (std::filesystem::exists(paths.second)) {
 			// Case 3: Both exist - Merge and warn
 			// Ensure map knows about the file
@@ -268,7 +266,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 			// Load from XML to merge with existing OTBM waypoints
 			// Pass false to NOT replace existing OTBM waypoints (OTBM takes precedence)
 			size_t beforeCount = map.waypoints.size();
-			if (MapXMLIO::loadWaypoints(map, filename, false)) {
+			if (MapXMLIO::loadWaypoints(map, path, false)) {
 				size_t afterCount = map.waypoints.size();
 				if (afterCount > beforeCount) {
 					warnings.push_back("Waypoints detected in both OTBM and external XML file. They have been merged (OTBM took precedence). Future saves will only use the XML file.");
@@ -286,7 +284,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 			spdlog::info("Waypoints migrated to external file: {}", map.waypointfile);
 
 			// Save immediately to XML
-			if (!MapXMLIO::saveWaypoints(map, filename)) {
+			if (!MapXMLIO::saveWaypoints(map, path)) {
 				// Migration failed
 				map.waypointfile.clear();
 				warnings.push_back("Failed to migrate waypoints to external XML file. Waypoints will remain in the OTBM file until migration succeeds.");
@@ -301,8 +299,8 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 
 		// If map.waypointfile is empty (not set in OTBM), try to look for the default file
 		if (!expected) {
-			std::string defaultFile = nstr(filename.GetName()) + "-waypoint.xml";
-			auto paths = MapXMLIO::normalizeMapFilePaths(filename, defaultFile);
+			std::string defaultFile = path.stem().string() + "-waypoint.xml";
+			auto paths = MapXMLIO::normalizeMapFilePaths(path, defaultFile);
 			if (std::filesystem::exists(paths.second)) {
 				map.waypointfile = defaultFile;
 				expected = true;
@@ -311,12 +309,12 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 
 		if (expected) {
 			// Try to load from XML
-			if (!MapXMLIO::loadWaypoints(map, filename)) {
+			if (!MapXMLIO::loadWaypoints(map, path)) {
 				spdlog::warn("Failed to load waypoint file: {}", map.waypointfile);
 			}
 		} else {
 			// No waypoint file specified and no default file found, just set the default for future saves
-			map.waypointfile = nstr(filename.GetName()) + "-waypoint.xml";
+			map.waypointfile = path.stem().string() + "-waypoint.xml";
 		}
 	}
 
@@ -324,7 +322,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	return true;
 }
 
-bool IOMapOTBM::loadMap(Map& map, const FileName& filename) {
+bool IOMapOTBM::loadMap(Map& map, const std::filesystem::path& filename) {
 	return loadMapFromDisk(map, filename);
 }
 
@@ -398,14 +396,14 @@ bool IOMapOTBM::loadMap(Map& map, NodeFileReadHandle& f) {
 	return true;
 }
 
-bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
+bool IOMapOTBM::saveMapToDisk(Map& map, const std::filesystem::path& identifier) {
 	DiskNodeFileWriteHandle f(
-		nstr(identifier.GetFullPath()),
+		identifier.string(),
 		(g_settings.getInteger(Config::SAVE_WITH_OTB_MAGIC_NUMBER) ? "OTBM" : std::string(4, '\0'))
 	);
 
 	if (!f.isOk()) {
-		spdlog::error("Can not open file {} for writing", identifier.GetFullPath().ToStdString());
+		spdlog::error("Can not open file {} for writing", identifier.string());
 		return false;
 	}
 
@@ -428,7 +426,7 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 	// Always save waypoints to XML if they exist, creating a default file if needed
 	if (map.waypoints.size() > 0) {
 		if (map.waypointfile.empty()) {
-			map.waypointfile = identifier.GetName() + "-waypoint.xml";
+			map.waypointfile = identifier.stem().string() + "-waypoint.xml";
 			// Notify user of auto-creation? Maybe not needed here as it's standard behavior now,
 			// but we could log it.
 			spdlog::info("Auto-created waypoint file: {}", map.waypointfile);
@@ -449,7 +447,7 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 	return true;
 }
 
-bool IOMapOTBM::saveMap(Map& map, const FileName& identifier) {
+bool IOMapOTBM::saveMap(Map& map, const std::filesystem::path& identifier) {
 	return saveMapToDisk(map, identifier);
 }
 

@@ -6,6 +6,7 @@
 #include "editor/operations/clean_operations.h"
 #include "editor/operations/search_operations.h"
 #include "editor/operations/unreachable_cleaner.h"
+#include "editor/persistence/map_backup_service.h"
 #include "ui/dialogs/remove_unreachable_dialog.h"
 #include "map/map.h"
 #include "editor/action_queue.h"
@@ -26,7 +27,7 @@ void MapActionsHandler::OnMapRemoveItems(wxCommandEvent& WXUNUSED(event)) {
 		g_gui.GetCurrentEditor()->selection.clear();
 		g_gui.GetCurrentEditor()->actionQueue->clear();
 
-		EditorOperations::RemoveItemCondition condition(itemid);
+		EditorOperations::RemoveItemCondition condition(itemid, [](uint32_t percent) { g_gui.SetLoadDone(percent); });
 		g_gui.CreateLoadBar("Searching map for items to remove...");
 
 		int64_t count = RemoveItemOnMap(g_gui.GetCurrentMap(), condition, false);
@@ -54,10 +55,80 @@ void MapActionsHandler::OnMapRemoveUnreachable(wxCommandEvent& WXUNUSED(event)) 
 	}
 
 	RemoveUnreachableDialog dialog(frame);
-	if (dialog.ShowModal() == wxID_OK) {
-		const auto settings = dialog.GetSettings();
-		EditorOperations::UnreachableCleaner::Clean(*editor, settings);
+	if (dialog.ShowModal() != wxID_OK) {
+		return;
 	}
+
+	const auto settings = dialog.GetSettings();
+
+	g_gui.CreateLoadBar("Analyzing unreachable tiles...");
+	uint64_t total_checked = 0;
+	std::vector<Position> to_remove = EditorOperations::UnreachableCleaner::FindUnreachableTiles(
+		editor->map,
+		settings,
+		[](uint32_t percent) { g_gui.SetLoadDone(percent); },
+		&total_checked
+	);
+	g_gui.DestroyLoadBar();
+
+	if (to_remove.empty()) {
+		DialogUtil::PopupDialog("Remove Unreachable Tiles", "No unreachable tiles were found on the map.", wxOK);
+		return;
+	}
+
+	wxString prompt;
+	prompt << "Found " << to_remove.size() << " unreachable tile(s) that are never visible from any player viewpoint.\n\n";
+	if (settings.create_backup) {
+		prompt << "A backup will be created before any tiles are removed.\n\n";
+	}
+	prompt << "Do you want to permanently delete these tiles?";
+
+	int confirm = DialogUtil::PopupDialog("Remove Unreachable Tiles", prompt, wxYES | wxNO);
+	if (confirm != wxID_YES) {
+		return;
+	}
+
+	auto run_settings = settings;
+	if (settings.create_backup) {
+		std::string backup_path;
+		std::string backup_err;
+		if (!MapBackupService::CreateSnapshot(*editor, backup_path, backup_err, "unreachable_clean")) {
+			int proceed = DialogUtil::PopupDialog(
+				"Backup Failed",
+				"Failed to create map backup snapshot:\n" + backup_err + "\n\nDo you want to proceed with tile removal anyway?",
+				wxYES | wxNO
+			);
+			if (proceed != wxID_YES) {
+				return;
+			}
+			run_settings.create_backup = false;
+		}
+	}
+
+	g_gui.CreateLoadBar("Removing unreachable tiles...");
+	auto result = EditorOperations::UnreachableCleaner::Apply(
+		*editor,
+		to_remove,
+		run_settings,
+		[](uint32_t percent) { g_gui.SetLoadDone(percent); }
+	);
+	g_gui.DestroyLoadBar();
+
+	g_gui.RefreshView();
+
+	wxString status;
+	status << "Removed " << result.tiles_removed << " unreachable tile(s).";
+	if (result.backup_created) {
+		status << " Backup: " << wxstr(result.backup_path);
+	}
+	g_gui.SetStatusText(status);
+
+	wxString complete_msg;
+	complete_msg << "Successfully removed " << result.tiles_removed << " unreachable tile(s).";
+	if (result.backup_created) {
+		complete_msg << "\n\nBackup saved to:\n" << wxstr(result.backup_path);
+	}
+	DialogUtil::PopupDialog("Removal Complete", complete_msg, wxOK);
 }
 
 void MapActionsHandler::OnClearHouseTiles(wxCommandEvent& WXUNUSED(event)) {

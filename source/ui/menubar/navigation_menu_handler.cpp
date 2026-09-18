@@ -53,7 +53,7 @@ namespace {
 		}
 
 		const uint32_t page_limit = searchResultsLimit();
-		EditorOperations::ItemSearcher finder(item_id, page_limit, page_offset);
+		EditorOperations::ItemSearcher finder(item_id, page_limit, page_offset, [](uint32_t percent) { g_gui.SetLoadDone(percent); });
 		g_gui.CreateLoadBar(load_bar_label);
 		foreach_ItemOnMap(*search_map, finder, false);
 		g_gui.DestroyLoadBar();
@@ -83,7 +83,7 @@ namespace {
 		}
 
 		const uint32_t page_limit = searchResultsLimit();
-		EditorOperations::CreatureSearcher finder(creature_brush, page_limit, page_offset);
+		EditorOperations::CreatureSearcher finder(creature_brush, page_limit, page_offset, [](uint32_t percent) { g_gui.SetLoadDone(percent); });
 		g_gui.CreateLoadBar(load_bar_label);
 		foreach_TileOnMap(*search_map, finder);
 		g_gui.DestroyLoadBar();

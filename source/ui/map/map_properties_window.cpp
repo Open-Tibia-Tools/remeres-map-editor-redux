@@ -190,8 +190,36 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		new_ver.otbm = MAP_OTBM_4;
 	}
 
-	if (!MapVersionChanger::changeMapVersion(this, editor, new_ver)) {
-		return;
+	if (new_ver.client != old_ver.client) {
+		if (g_gui.GetOpenMapCount() > 1) {
+			DialogUtil::PopupDialog(this, "Error", "You can not change editor version with multiple maps open", wxOK);
+			return;
+		}
+
+		MapConversionOptions conversion_options;
+		if (new_ver.client < old_ver.client) {
+			int ret = DialogUtil::PopupDialog(this, "Notice", "Converting to a previous version may have serious side-effects, are you sure you want to do this?", wxYES | wxNO);
+			if (ret != wxID_YES) {
+				return;
+			}
+			int add = DialogUtil::PopupDialog(this, "Unrecognized creatures", "There may be creatures on the old version that are not present in this version, do you want to add them to this version as well?", wxYES | wxNO);
+			conversion_options.keep_unrecognized_creatures = (add == wxID_YES);
+		}
+
+		auto result = MapVersionChanger::changeMapVersion(editor, new_ver, conversion_options);
+		if (!result.warnings.empty()) {
+			DialogUtil::ListDialog(this, "Warnings", result.warnings);
+		}
+		if (!result.success) {
+			DialogUtil::PopupDialog(this, "Map Loader Error", result.error, wxOK);
+			DialogUtil::PopupDialog(this, "Conversion Error", "Could not convert map. The map will now be closed.", wxOK);
+			return;
+		}
+	} else {
+		auto result = MapVersionChanger::changeMapVersion(editor, new_ver);
+		if (!result.success) {
+			return;
+		}
 	}
 
 	map.setMapDescription(nstr(description_ctrl->GetValue()));

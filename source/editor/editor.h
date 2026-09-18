@@ -44,7 +44,7 @@ class LiveSocket;
 class Editor {
 public:
 	Editor(CopyBuffer& copybuffer, const MapVersion& version, std::unique_ptr<LiveClient> client);
-	Editor(CopyBuffer& copybuffer, const MapVersion& version, const FileName& fn, const MapLoadOptions& load_options = {});
+	Editor(CopyBuffer& copybuffer, const MapVersion& version, const std::filesystem::path& fn, const MapLoadOptions& load_options = {});
 	Editor(CopyBuffer& copybuffer, const MapVersion& version);
 	~Editor();
 

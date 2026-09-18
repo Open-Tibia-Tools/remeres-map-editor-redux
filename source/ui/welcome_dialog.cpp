@@ -502,7 +502,7 @@ void WelcomeDialog::EnsurePeeked(const wxString& path) {
 	}
 
 	OTBMStartupPeekResult peek_result;
-	if (!IOMapOTBM::peekStartupInfo(FileName(path), peek_result) && !peek_result.has_error) {
+	if (!IOMapOTBM::peekStartupInfo(std::filesystem::path(path.ToStdWstring()), peek_result) && !peek_result.has_error) {
 		peek_result.has_error = true;
 		peek_result.error_message = "Could not read the selected map.";
 	}

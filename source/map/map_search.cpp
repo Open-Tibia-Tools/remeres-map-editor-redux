@@ -108,7 +108,7 @@ std::vector<SearchResult> MapSearchUtility::SearchItems(Map& map, bool unique, b
 		std::vector<SearchResult> results;
 		results.reserve(searcher.found.size());
 		for (auto& p : searcher.found) {
-			results.push_back({ p.first, p.second, searcher.desc(p.second).ToStdString() });
+			results.push_back({ p.first, p.second, searcher.desc(p.second) });
 		}
 		return results;
 	};

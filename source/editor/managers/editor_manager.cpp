@@ -186,9 +186,22 @@ void EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
 				g_gui.root->Update();
 			}
 
-			EditorPersistence::saveMap(*editor, fileName, showdialog);
+			if (showdialog) {
+				g_gui.CreateLoadBar("Saving OTBM map...");
+			}
+			auto progress = showdialog ? [](int percent, std::string_view msg) {
+				g_gui.SetLoadDone(percent, msg.empty() ? wxString() : wxstr(std::string(msg)));
+			} : EditorPersistence::ProgressCallback{};
 
-			if (!editor->map.hasChanged()) {
+			auto result = EditorPersistence::saveMap(*editor, fileName.GetFullPath().ToStdString(), progress);
+
+			if (showdialog) {
+				g_gui.DestroyLoadBar();
+			}
+
+			if (!result.success) {
+				DialogUtil::PopupDialog("Error", result.error_message, wxOK);
+			} else {
 				g_status.SetStatusText("Map saved successfully.");
 			}
 
@@ -291,7 +304,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 	std::unique_ptr<Editor> editor;
 	try {
 		MapVersion ver;
-		if (!IOMapOTBM::getVersionInfo(fileName, ver)) {
+		if (!IOMapOTBM::getVersionInfo(std::filesystem::path(fileName.GetFullPath().ToStdWstring()), ver)) {
 			throw std::runtime_error(std::format("Could not open file \"{}\".\nThis is not a valid OTBM file or it does not exist.", nstr(fileName.GetFullPath())));
 		}
 

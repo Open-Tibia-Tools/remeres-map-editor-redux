@@ -12,8 +12,6 @@
 #include "map/map_region.h"
 #include "map/spatial_hash_grid.h"
 #include "game/item.h"
-#include "ui/gui.h"
-#include "ui/dialog_util.h"
 #include "app/definitions.h"
 #include "util/common.h"
 
@@ -455,7 +453,7 @@ std::vector<Position> UnreachableCleaner::FindUnreachableTiles(
 
 		++cells_done;
 		if (cells_done % 32 == 0 && total_cells > 0 && on_progress) {
-			on_progress(20 + static_cast<int>(cells_done * 75.0 / static_cast<double>(total_cells)));
+			on_progress(static_cast<uint32_t>(20 + static_cast<int>(cells_done * 75.0 / static_cast<double>(total_cells))));
 		}
 	}
 
@@ -474,66 +472,33 @@ std::vector<Position> UnreachableCleaner::FindUnreachableTiles(
 	return to_remove;
 }
 
-UnreachableCleanerResult UnreachableCleaner::Clean(Editor& editor, const UnreachableCleanerSettings& settings) {
+UnreachableCleanerResult UnreachableCleaner::Apply(
+	Editor& editor,
+	const std::vector<Position>& to_remove,
+	const UnreachableCleanerSettings& settings,
+	ProgressCallback on_progress
+) {
 	UnreachableCleanerResult result;
+	result.unreachable_tiles_found = to_remove.size();
 	Map& map = editor.map;
 
-	spdlog::info("UnreachableCleaner::Clean: Invoked. Starting analysis of unreachable tiles.");
-	g_gui.CreateLoadBar("Analyzing unreachable tiles...");
-
-	std::vector<Position> to_remove = FindUnreachableTiles(
-		map,
-		settings,
-		[](int percent) { g_gui.SetLoadDone(percent); },
-		&result.total_tiles_checked
-	);
-
-	g_gui.DestroyLoadBar();
-
-	result.unreachable_tiles_found = to_remove.size();
-
 	if (to_remove.empty()) {
-		spdlog::info("UnreachableCleaner::Clean: No unreachable tiles found.");
-		DialogUtil::PopupDialog("Remove Unreachable Tiles", "No unreachable tiles were found on the map.", wxOK);
 		return result;
 	}
 
-	// Confirm removal with user
-	wxString prompt;
-	prompt << "Found " << to_remove.size() << " unreachable tile(s) that are never visible from any player viewpoint.\n\n";
-	if (settings.create_backup) {
-		prompt << "A backup will be created before any tiles are removed.\n\n";
-	}
-	prompt << "Do you want to permanently delete these tiles?";
-
-	int confirm = DialogUtil::PopupDialog("Remove Unreachable Tiles", prompt, wxYES | wxNO);
-	if (confirm != wxID_YES) {
-		spdlog::info("UnreachableCleaner::Clean: User cancelled tile removal.");
-		return result;
-	}
-
-	// Step 3: Create backup if requested
+	// Step 1: Create backup if requested
 	if (settings.create_backup) {
 		std::string backup_err;
 		if (!MapBackupService::CreateSnapshot(editor, result.backup_path, backup_err, "unreachable_clean")) {
-			int proceed = DialogUtil::PopupDialog(
-				"Backup Failed",
-				"Failed to create map backup snapshot:\n" + backup_err + "\n\nDo you want to proceed with tile removal anyway?",
-				wxYES | wxNO
-			);
-			if (proceed != wxID_YES) {
-				result.error_message = backup_err;
-				spdlog::warn("UnreachableCleaner::Clean: Aborted after backup failure.");
-				return result;
-			}
-		} else {
-			result.backup_created = true;
+			result.error_message = backup_err;
+			spdlog::warn("UnreachableCleaner::Apply: Backup failed: {}", backup_err);
+			return result;
 		}
+		result.backup_created = true;
 	}
 
-	// Step 4: Delete unreachable tiles
-	spdlog::info("UnreachableCleaner::Clean: Beginning deletion of {} unreachable tile(s)...", to_remove.size());
-	g_gui.CreateLoadBar("Removing unreachable tiles...");
+	// Step 2: Delete unreachable tiles
+	spdlog::info("UnreachableCleaner::Apply: Beginning deletion of {} unreachable tile(s)...", to_remove.size());
 
 	editor.selection.clear();
 	if (editor.actionQueue) {
@@ -548,33 +513,35 @@ UnreachableCleanerResult UnreachableCleaner::Clean(Editor& editor, const Unreach
 		++result.tiles_removed;
 		++remove_done;
 
-		if (remove_done % 0x2000 == 0 && total_to_remove > 0) {
-			g_gui.SetLoadDone(static_cast<int>(remove_done * 100.0 / static_cast<double>(total_to_remove)));
+		if (remove_done % 0x2000 == 0 && total_to_remove > 0 && on_progress) {
+			on_progress(static_cast<uint32_t>(remove_done * 100.0 / static_cast<double>(total_to_remove)));
 		}
 	}
 
-	g_gui.DestroyLoadBar();
-
 	map.doChange();
-	g_gui.RefreshView();
 
-	spdlog::info("UnreachableCleaner::Clean: Successfully removed {} unreachable tile(s).", result.tiles_removed);
-
-	wxString status;
-	status << "Removed " << result.tiles_removed << " unreachable tile(s).";
-	if (result.backup_created) {
-		status << " Backup: " << wxstr(result.backup_path);
-	}
-	g_gui.SetStatusText(status);
-
-	wxString complete_msg;
-	complete_msg << "Successfully removed " << result.tiles_removed << " unreachable tile(s).";
-	if (result.backup_created) {
-		complete_msg << "\n\nBackup saved to:\n" << wxstr(result.backup_path);
-	}
-	DialogUtil::PopupDialog("Removal Complete", complete_msg, wxOK);
-
+	spdlog::info("UnreachableCleaner::Apply: Successfully removed {} unreachable tile(s).", result.tiles_removed);
 	return result;
+}
+
+UnreachableCleanerResult UnreachableCleaner::Clean(
+	Editor& editor,
+	const UnreachableCleanerSettings& settings,
+	ProgressCallback on_progress
+) {
+	UnreachableCleanerResult result;
+	std::vector<Position> to_remove = FindUnreachableTiles(
+		editor.map,
+		settings,
+		on_progress,
+		&result.total_tiles_checked
+	);
+	result.unreachable_tiles_found = to_remove.size();
+	if (to_remove.empty()) {
+		return result;
+	}
+
+	return Apply(editor, to_remove, settings, on_progress);
 }
 
 } // namespace EditorOperations
