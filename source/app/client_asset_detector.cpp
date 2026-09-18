@@ -125,11 +125,11 @@ namespace {
 						probe_client.setClientData(dat_signature, 0, format);
 
 						ItemDefinitionLoadInput input;
-						input.dat_path = dat_path;
+						input.dat_path = dat_path.GetFullPath().ToStdWstring();
 						input.client_version = &probe_client;
 
 						DatCatalog catalog;
-						wxString error;
+						std::string error;
 						std::vector<std::string> warnings;
 						if (!parser.parseCatalog(input, catalog, error, warnings)) {
 							continue;

@@ -6,7 +6,7 @@
 class IItemDefinitionParser {
 public:
 	virtual ~IItemDefinitionParser() = default;
-	virtual bool parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, wxString& error, std::vector<std::string>& warnings) const = 0;
+	virtual bool parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::string& error, std::vector<std::string>& warnings) const = 0;
 };
 
 #endif

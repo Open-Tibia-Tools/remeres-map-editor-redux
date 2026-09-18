@@ -97,7 +97,7 @@ namespace {
 
 namespace {
 
-[[nodiscard]] std::vector<wxFileName> xmlInputPaths(const ItemDefinitionLoadInput& input) {
+[[nodiscard]] std::vector<std::filesystem::path> xmlInputPaths(const ItemDefinitionLoadInput& input) {
 	if (!input.xml_paths.empty()) {
 		return input.xml_paths;
 	}
@@ -106,7 +106,7 @@ namespace {
 
 } // namespace
 
-bool XmlItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, wxString& error, std::vector<std::string>& warnings) const {
+bool XmlItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::string& error, std::vector<std::string>& warnings) const {
 	const auto visitor = [&](const FileName&, pugi::xml_node item_node, wxString& visit_error, std::vector<std::string>& visit_warnings) {
 		if (as_lower_str(item_node.name()) != "item") {
 			return true;
@@ -159,10 +159,13 @@ bool XmlItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFr
 	};
 
 	bool parsedAny = false;
-	for (const wxFileName& xmlPath : xmlInputPaths(input)) {
-		if (!XmlFileLoader::visitElements(FileName(xmlPath.GetFullPath()), "items", visitor, error, warnings)) {
-			if (error.empty()) {
-				error = "Could not load items XML file: " + xmlPath.GetFullPath();
+	for (const std::filesystem::path& xmlPath : xmlInputPaths(input)) {
+		wxString wx_error;
+		if (!XmlFileLoader::visitElements(FileName(wxstr(xmlPath.string())), "items", visitor, wx_error, warnings)) {
+			if (wx_error.empty()) {
+				error = std::format("Could not load items XML file: {}", xmlPath.string());
+			} else {
+				error = wx_error.ToStdString();
 			}
 			return false;
 		}

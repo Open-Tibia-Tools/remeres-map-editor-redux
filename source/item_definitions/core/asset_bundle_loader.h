@@ -8,12 +8,11 @@
 
 class GraphicManager;
 class ItemDefinitionStore;
-class wxString;
 
 class AssetBundleLoader {
 public:
-	bool load(const AssetLoadRequest& request, AssetBundle& bundle, wxString& error, std::vector<std::string>& warnings) const;
-	bool install(AssetBundle& bundle, GraphicManager& graphics, ItemDefinitionStore& store, wxString& error, std::vector<std::string>& warnings) const;
+	bool load(const AssetLoadRequest& request, AssetBundle& bundle, std::string& error, std::vector<std::string>& warnings) const;
+	bool install(AssetBundle& bundle, GraphicManager& graphics, ItemDefinitionStore& store, std::string& error, std::vector<std::string>& warnings) const;
 };
 
 #endif

@@ -34,10 +34,10 @@ namespace {
 	}
 }
 
-bool OtbItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, wxString& error, std::vector<std::string>& warnings) const {
-	DiskNodeFileReadHandle file(input.otb_path.GetFullPath().ToStdString(), StringVector(1, "OTBI"));
+bool OtbItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::string& error, std::vector<std::string>& warnings) const {
+	DiskNodeFileReadHandle file(input.otb_path.string(), StringVector(1, "OTBI"));
 	if (!file.isOk()) {
-		error = wxString::FromUTF8(std::format("Couldn't open items.otb: {}", file.getErrorMessage()));
+		error = std::format("Couldn't open items.otb: {}", file.getErrorMessage());
 		return false;
 	}
 
@@ -77,7 +77,7 @@ bool OtbItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFr
 		case 2: version = OtbFileFormatVersion::V2; break;
 		case 3: version = OtbFileFormatVersion::V3; break;
 		default:
-			error = wxString::FromUTF8(std::format("Unsupported items.otb version {}", major_version));
+			error = std::format("Unsupported items.otb version {}", major_version);
 			return false;
 	}
 

@@ -59,7 +59,7 @@ namespace {
 		return flag;
 	}
 
-	bool readFlagPayload(DatFormat format, FileReadHandle& file, DatCatalogEntry& entry, uint8_t flag, uint8_t previous_flag, wxString& error, std::vector<std::string>& warnings) {
+	bool readFlagPayload(DatFormat format, FileReadHandle& file, DatCatalogEntry& entry, uint8_t flag, uint8_t previous_flag, std::string& error, std::vector<std::string>& warnings) {
 		auto& fragment = entry.item_fragment;
 
 		switch (flag) {
@@ -219,12 +219,12 @@ namespace {
 			case DatFlagWings:
 				return file.skip(16);
 			default:
-				error = wxString::FromUTF8(std::format("DAT catalog: unknown flag {} after {}.", static_cast<int>(flag), static_cast<int>(previous_flag)));
+				error = std::format("DAT catalog: unknown flag {} after {}.", static_cast<int>(flag), static_cast<int>(previous_flag));
 				return false;
 		}
 	}
 
-	bool readFlags(DatFormat format, FileReadHandle& file, DatCatalogEntry& entry, wxString& error, std::vector<std::string>& warnings) {
+	bool readFlags(DatFormat format, FileReadHandle& file, DatCatalogEntry& entry, std::string& error, std::vector<std::string>& warnings) {
 		uint8_t flag = 0xFF;
 		uint8_t previous_flag = 0xFF;
 
@@ -424,7 +424,7 @@ void DatItemParser::appendFragments(const DatCatalog& catalog, ItemDefinitionFra
 	}
 }
 
-bool DatItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, wxString& error, std::vector<std::string>& warnings) const {
+bool DatItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::string& error, std::vector<std::string>& warnings) const {
 	if (input.dat_catalog != nullptr) {
 		appendFragments(*input.dat_catalog, fragments);
 		if (fragments.dat.empty()) {
@@ -447,19 +447,19 @@ bool DatItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFr
 	return true;
 }
 
-bool DatItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatCatalog& catalog, wxString& error, std::vector<std::string>& warnings) const {
+bool DatItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatCatalog& catalog, std::string& error, std::vector<std::string>& warnings) const {
 	if (input.client_version == nullptr) {
 		error = "DAT parser requires a client version.";
 		return false;
 	}
-	if (input.dat_path.GetFullPath().IsEmpty()) {
+	if (input.dat_path.empty()) {
 		error = "DAT parser requires a dat path.";
 		return false;
 	}
 
-	FileReadHandle file(nstr(input.dat_path.GetFullPath()));
+	FileReadHandle file(input.dat_path.string());
 	if (!file.isOk()) {
-		error = wxstr(std::format("Failed to open {} for reading\nThe error reported was: {}", input.dat_path.GetFullPath().utf8_string(), file.getErrorMessage()));
+		error = std::format("Failed to open {} for reading\nThe error reported was: {}", input.dat_path.string(), file.getErrorMessage());
 		return false;
 	}
 
@@ -492,7 +492,7 @@ bool DatItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatCatalo
 
 	catalog.format = input.client_version->getDatFormatForSignature(catalog.signature);
 	if (catalog.format == DAT_FORMAT_UNKNOWN) {
-		error = wxstr(std::format("Unknown dat signature: {:#x}", catalog.signature));
+		error = std::format("Unknown dat signature: {:#x}", catalog.signature);
 		return false;
 	}
 
@@ -507,24 +507,24 @@ bool DatItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatCatalo
 
 		if (!readFlags(catalog.format, file, entry, error, warnings)) {
 			if (error.empty()) {
-				error = wxstr(std::format("Failed to read DAT flags for client id {}", client_id));
+				error = std::format("Failed to read DAT flags for client id {}", client_id);
 			}
 			return false;
 		}
 
 		uint8_t group_count = 1;
 		if (catalog.has_frame_groups && client_id > catalog.item_count && !file.getU8(group_count)) {
-			error = wxstr(std::format("Failed to read DAT frame-group count for client id {}", client_id));
+			error = std::format("Failed to read DAT frame-group count for client id {}", client_id);
 			return false;
 		}
 		if (group_count == 0) {
-			error = wxstr(std::format("Invalid DAT frame-group count for client id {}", client_id));
+			error = std::format("Invalid DAT frame-group count for client id {}", client_id);
 			return false;
 		}
 
 		for (uint32_t group_index = 0; group_index < group_count; ++group_index) {
 			if (!readSpriteGroup(catalog, file, entry, group_index, warnings)) {
-				error = wxstr(std::format("Failed to read DAT sprite group {} for client id {}", group_index, client_id));
+				error = std::format("Failed to read DAT sprite group {} for client id {}", group_index, client_id);
 				return false;
 			}
 		}

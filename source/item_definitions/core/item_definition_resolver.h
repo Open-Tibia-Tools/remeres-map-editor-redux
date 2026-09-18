@@ -8,11 +8,11 @@ struct DatCatalog;
 
 class ItemDefinitionResolver {
 public:
-	static bool resolve(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, wxString& error, std::vector<std::string>& warnings, MissingItemReport* missingReport = nullptr);
+	static bool resolve(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, std::string& error, std::vector<std::string>& warnings, MissingItemReport* missingReport = nullptr);
 
 private:
-	static bool resolveDatOtb(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, wxString& error, std::vector<std::string>& warnings, MissingItemReport* missingReport);
-	static bool resolveDatOnly(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, wxString& error, std::vector<std::string>& warnings, MissingItemReport* missingReport);
+	static bool resolveDatOtb(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, std::string& error, std::vector<std::string>& warnings, MissingItemReport* missingReport);
+	static bool resolveDatOnly(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, std::string& error, std::vector<std::string>& warnings, MissingItemReport* missingReport);
 	static void applyXmlOverrides(const XmlItemFragment& xml, ResolvedItemDefinitionRow& row);
 };
 

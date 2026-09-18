@@ -180,25 +180,29 @@ bool VersionManager::LoadCanonicalAssets(const wxString& modular_data_path, cons
 	AssetLoadRequest asset_request;
 	asset_request.mode = getLoadedVersion()->getItemDefinitionMode();
 	asset_request.client_version = getLoadedVersion();
-	asset_request.dat_path = getLoadedVersion()->getMetadataPath();
-	asset_request.spr_path = getLoadedVersion()->getSpritesPath();
-	asset_request.otb_path = wxFileName(modular_data_path + "items.otb");
-	asset_request.xml_paths.assign(manifest_files.items.begin(), manifest_files.items.end());
+	asset_request.dat_path = getLoadedVersion()->getMetadataPath().GetFullPath().ToStdWstring();
+	asset_request.spr_path = getLoadedVersion()->getSpritesPath().GetFullPath().ToStdWstring();
+	asset_request.otb_path = (modular_data_path + "items.otb").ToStdWstring();
+	asset_request.xml_paths.reserve(manifest_files.items.size());
+	for (const auto& item_path : manifest_files.items) {
+		asset_request.xml_paths.emplace_back(item_path.GetFullPath().ToStdWstring());
+	}
 
 	// Track whether this mode uses OTB
 	last_load_has_otb = (asset_request.mode != ItemDefinitionMode::DatOnly && asset_request.mode != ItemDefinitionMode::ProtobufOnly);
 
 	AssetBundle bundle;
 	AssetBundleLoader bundle_loader;
-	if (!bundle_loader.load(asset_request, bundle, error, warnings)) {
-		error = "Couldn't load canonical asset bundle: " + error;
+	std::string bundle_error;
+	if (!bundle_loader.load(asset_request, bundle, bundle_error, warnings)) {
+		error = wxString::FromUTF8(std::format("Couldn't load canonical asset bundle: {}", bundle_error));
 		FailDataLoad();
 		return false;
 	}
 
 	g_loading.SetLoadDone(20, "Installing graphics...");
-	if (!bundle_loader.install(bundle, g_gui.gfx, g_item_definitions, error, warnings)) {
-		error = "Couldn't install canonical asset bundle: " + error;
+	if (!bundle_loader.install(bundle, g_gui.gfx, g_item_definitions, bundle_error, warnings)) {
+		error = wxString::FromUTF8(std::format("Couldn't install canonical asset bundle: {}", bundle_error));
 		FailDataLoad();
 		return false;
 	}
