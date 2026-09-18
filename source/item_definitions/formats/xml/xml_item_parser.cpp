@@ -107,7 +107,7 @@ namespace {
 } // namespace
 
 bool XmlItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::string& error, std::vector<std::string>& warnings) const {
-	const auto visitor = [&](const FileName&, pugi::xml_node item_node, std::string& visit_error, std::vector<std::string>& visit_warnings) {
+	const auto visitor = [&](const std::filesystem::path&, pugi::xml_node item_node, std::string& visit_error, std::vector<std::string>& visit_warnings) {
 		if (as_lower_str(item_node.name()) != "item") {
 			return true;
 		}
@@ -160,7 +160,7 @@ bool XmlItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFr
 
 	bool parsedAny = false;
 	for (const std::filesystem::path& xmlPath : xmlInputPaths(input)) {
-		if (!XmlFileLoader::visitElements(FileName(wxstr(xmlPath.string())), "items", visitor, error, warnings)) {
+		if (!XmlFileLoader::visitElements(xmlPath, "items", visitor, error, warnings)) {
 			if (error.empty()) {
 				error = std::format("Could not load items XML file: {}", xmlPath.string());
 			}
