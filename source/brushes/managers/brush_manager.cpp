@@ -98,7 +98,7 @@ void BrushManager::SelectBrushInternal(Brush* brush) {
 		return;
 	}
 
-	g_status.SetStatusText("Selected brush: " + wxstr(brush->getName()));
+	g_status.SetStatusText(std::format("Selected brush: {}", brush->getName()));
 
 	brush_variation = std::min(brush_variation, brush->getMaxVariation());
 	// If we are switching away from a doodad brush, we need to clear the secondary map

@@ -10,6 +10,7 @@
 #include <string_view>
 #include <algorithm>
 #include <cctype>
+#include <format>
 
 // Helper for C++20 case-insensitive comparison (zero allocation)
 static const auto iequal = [](char a, char b) {
@@ -107,6 +108,6 @@ uint32_t TableBrushLoader::getAlignment(const std::string& alignString, std::vec
 		}
 	}
 
-	warnings.push_back((wxString("Unknown table alignment '") + wxstr(alignString) + "'\n").ToStdString());
+	warnings.push_back(std::format("Unknown table alignment '{}'\n", alignString));
 	return 0xFFFFFFFF;
 }

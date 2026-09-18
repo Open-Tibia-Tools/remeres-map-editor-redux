@@ -13,6 +13,7 @@
 
 #include "ext/pugixml.hpp"
 #include <boost/lexical_cast.hpp>
+#include <format>
 
 // Helper
 #include <ranges>
@@ -79,7 +80,7 @@ bool DoodadBrushLoader::load(pugi::xml_node node, DoodadBrushItems& items, Dooda
 				settings.thickness = boost::lexical_cast<int32_t>(thicknessString.substr(0, slash));
 				settings.thickness_ceiling = std::max<int32_t>(settings.thickness, boost::lexical_cast<int32_t>(thicknessString.substr(slash + 1)));
 			} catch (const boost::bad_lexical_cast&) {
-				warnings.push_back((wxString("Invalid thickness format: ") + wxstr(thicknessString)).ToStdString());
+				warnings.push_back(std::format("Invalid thickness format: {}", thicknessString));
 				settings.thickness = 0;
 				settings.thickness_ceiling = 0;
 			}

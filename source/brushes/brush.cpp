@@ -164,7 +164,7 @@ bool Brushes::unserializeBrush(pugi::xml_node node, std::vector<std::string>& wa
 	brush->load(node, subWarnings);
 
 	if (!subWarnings.empty()) {
-		warnings.push_back((wxString("Errors while loading brush \"") << wxstr(brush->getName()) << "\"").ToStdString());
+		warnings.push_back(std::format("Errors while loading brush \"{}\"", brush->getName()));
 		warnings.insert(warnings.end(), subWarnings.begin(), subWarnings.end());
 	}
 
@@ -177,7 +177,7 @@ bool Brushes::unserializeBrush(pugi::xml_node node, std::vector<std::string>& wa
 	Brush* otherBrush = getBrush(brush->getName());
 	if (otherBrush) {
 		if (otherBrush != brush) {
-			warnings.push_back(std::string(wxstr(std::format("Duplicate brush name {}. Undefined behaviour may ensue.", brush->getName())).mb_str()));
+			warnings.push_back(std::format("Duplicate brush name {}. Undefined behaviour may ensue.", brush->getName()));
 		} else {
 			// Don't insert
 			return true;
@@ -199,7 +199,7 @@ bool Brushes::unserializeBorder(pugi::xml_node node, std::vector<std::string>& w
 
 	uint32_t id = attribute.as_uint();
 	if (borders.contains(id)) {
-		warnings.push_back(std::string(wxstr(std::format("Border ID {} already exists", id)).mb_str()));
+		warnings.push_back(std::format("Border ID {} already exists", id));
 		return false;
 	}
 

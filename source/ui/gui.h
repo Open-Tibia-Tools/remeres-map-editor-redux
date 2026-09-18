@@ -159,8 +159,17 @@ public:
 	}
 	void UpdateMenus();
 	void ShowToolbar(ToolBarID id, bool show);
-	void SetStatusText(wxString text) {
+	void SetStatusText(std::string_view text) {
 		g_status.SetStatusText(text);
+	}
+	void SetStatusText(const char* text) {
+		g_status.SetStatusText(text);
+	}
+	void SetStatusText(const std::string& text) {
+		g_status.SetStatusText(text);
+	}
+	void SetStatusText(const wxString& text) {
+		g_status.SetStatusText(text.ToStdString());
 	}
 
 	// Get the current GL context

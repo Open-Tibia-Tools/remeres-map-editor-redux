@@ -7,7 +7,6 @@
 #include "brushes/ground/ground_brush.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "ext/pugixml.hpp"
-#include <wx/string.h>
 #include <utility>
 
 AutoBorder::AutoBorder(int _id) :

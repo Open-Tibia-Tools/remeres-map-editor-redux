@@ -8,7 +8,7 @@
 #include "brushes/brush.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "ext/pugixml.hpp"
-#include <wx/string.h>
+#include <format>
 
 extern Brushes g_brushes;
 
@@ -187,7 +187,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 				} else {
 					Brush* tobrush = g_brushes.getBrush(value);
 					if (!tobrush) {
-						warnings.push_back((wxString("To brush ") + wxstr(value) + " doesn't exist.").ToStdString());
+						warnings.push_back(std::format("To brush {} doesn't exist.", value));
 						// newAutoBorder is automatically deleted if borderBlock is destroyed or reset (RAII via std::unique_ptr)
 						continue;
 					}
@@ -385,7 +385,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 					if (otherBrush) {
 						brush.friends.push_back(otherBrush->getID());
 					} else {
-						warnings.push_back((wxString("Brush '") + wxstr(name) + "' is not defined.").ToStdString());
+						warnings.push_back(std::format("Brush '{}' is not defined.", name));
 					}
 				}
 			}
@@ -400,7 +400,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 					if (otherBrush) {
 						brush.friends.push_back(otherBrush->getID());
 					} else {
-						warnings.push_back((wxString("Brush '") + wxstr(name) + "' is not defined.").ToStdString());
+						warnings.push_back(std::format("Brush '{}' is not defined.", name));
 					}
 				}
 			}

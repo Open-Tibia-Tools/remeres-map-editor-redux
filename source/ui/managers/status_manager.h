@@ -7,11 +7,13 @@
 
 #include "app/main.h"
 
+#include <string_view>
+
 class StatusManager {
 public:
 	void SetTitle(const wxString& title);
 	void UpdateTitle();
-	void SetStatusText(const wxString& text, int field = 0);
+	void SetStatusText(std::string_view text, int field = 0);
 };
 
 extern StatusManager g_status;
