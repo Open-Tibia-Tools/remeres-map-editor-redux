@@ -5,7 +5,7 @@
 #ifndef RME_DOODAD_PREVIEW_MANAGER_H_
 #define RME_DOODAD_PREVIEW_MANAGER_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include <memory>
 
 class BaseMap;

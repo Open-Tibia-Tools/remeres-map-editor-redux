@@ -5,7 +5,7 @@
 #ifndef RME_GROUND_BRUSH_LOADER_H
 #define RME_GROUND_BRUSH_LOADER_H
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include <vector>
 
 class GroundBrush;

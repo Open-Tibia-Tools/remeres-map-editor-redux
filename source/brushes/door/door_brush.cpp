@@ -2,7 +2,7 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "brushes/door/door_brush.h"
 
 #include "app/settings.h"

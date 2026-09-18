@@ -5,7 +5,7 @@
 #ifndef RME_AUTOBORDER_PREVIEW_MANAGER_H_
 #define RME_AUTOBORDER_PREVIEW_MANAGER_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include <memory>
 #include <vector>
 #include "map/position.h"

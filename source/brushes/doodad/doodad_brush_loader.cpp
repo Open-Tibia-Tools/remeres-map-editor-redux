@@ -2,7 +2,7 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "brushes/doodad/doodad_brush_loader.h"
 #include "brushes/doodad/doodad_brush_items.h"
 #include "brushes/doodad/doodad_brush.h" // For DoodadBrush definition if needed for pointer check?

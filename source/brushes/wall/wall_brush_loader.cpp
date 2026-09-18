@@ -4,7 +4,7 @@
 
 #include "brushes/wall/wall_brush_loader.h"
 
-#include "app/main.h" // Global brushes
+#include "app/definitions.h" // Global brushes
 #include "brushes/wall/wall_brush.h"
 #include "brushes/wall/wall_brush_items.h"
 #include "item_definitions/core/item_definition_store.h"

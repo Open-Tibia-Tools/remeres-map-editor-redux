@@ -5,7 +5,7 @@
 #ifndef RME_BRUSH_MANAGER_H_
 #define RME_BRUSH_MANAGER_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "brushes/brush_enums.h"
 #include "brushes/brush_footprint.h"
 

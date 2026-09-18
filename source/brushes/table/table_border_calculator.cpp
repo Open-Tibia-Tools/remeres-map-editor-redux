@@ -6,7 +6,7 @@
 #include "brushes/table/table_brush.h"
 #include "brushes/table/table_brush_items.h"
 #include "map/basemap.h"
-#include "app/main.h"
+#include "app/definitions.h"
 #include <array>
 
 // TableBorderCalculator is a friend of TableBrush so it can access protected members.

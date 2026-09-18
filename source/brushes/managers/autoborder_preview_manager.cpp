@@ -2,7 +2,7 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "brushes/managers/autoborder_preview_manager.h"
 #include "brushes/brush.h"
 #include "brushes/managers/brush_manager.h"

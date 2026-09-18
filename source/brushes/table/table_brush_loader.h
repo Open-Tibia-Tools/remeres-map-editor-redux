@@ -5,7 +5,7 @@
 #ifndef RME_BRUSHES_TABLE_TABLE_BRUSH_LOADER_H
 #define RME_BRUSHES_TABLE_TABLE_BRUSH_LOADER_H
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 class TableBrush;
 class TableBrushItems;

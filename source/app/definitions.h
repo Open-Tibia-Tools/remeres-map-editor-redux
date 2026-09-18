@@ -22,6 +22,12 @@
 #include <cassert>
 #include <numbers>
 #include <string>
+#include <vector>
+
+#include "app/rme_forward_declarations.h"
+#include "ext/pugixml.hpp"
+
+using StringVector = std::vector<std::string>;
 
 #ifdef DEBUG_MEM
 	#define _CRTDBG_MAP_ALLOC
