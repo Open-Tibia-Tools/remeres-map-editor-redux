@@ -2,6 +2,7 @@
 #define RME_MAP_SPATIAL_HASH_GRID_H
 
 #include "app/main.h"
+#include "map/map_region.h"
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -10,7 +11,6 @@
 #include <limits>
 #include <array>
 
-class MapNode;
 class BaseMap;
 
 class SpatialHashGrid {

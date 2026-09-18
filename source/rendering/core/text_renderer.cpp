@@ -73,7 +73,7 @@ void TextRenderer::BeginFrame(NVGcontext* vg, int width, int height, float pixel
 	if (!vg) {
 		return;
 	}
-	nvgBeginFrame(vg, width, height, pixelRatio);
+	nvgBeginFrame(vg, static_cast<float>(width), static_cast<float>(height), pixelRatio);
 }
 
 void TextRenderer::EndFrame(NVGcontext* vg) {
@@ -92,7 +92,7 @@ void TextRenderer::DrawText(NVGcontext* vg, int x, int y, const std::string& tex
 	nvgFontFace(vg, "sans");
 	nvgFillColor(vg, nvgRGBAf(color.r, color.g, color.b, color.a));
 	nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-	nvgText(vg, x, y, text.c_str(), nullptr);
+	nvgText(vg, static_cast<float>(x), static_cast<float>(y), text.c_str(), nullptr);
 }
 
 void TextRenderer::DrawTextBox(NVGcontext* vg, int x, int y, int width, const std::string& text, const glm::vec4& color, float fontSize) {
@@ -104,7 +104,7 @@ void TextRenderer::DrawTextBox(NVGcontext* vg, int x, int y, int width, const st
 	nvgFontFace(vg, "sans");
 	nvgFillColor(vg, nvgRGBAf(color.r, color.g, color.b, color.a));
 	nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-	nvgTextBox(vg, x, y, width, text.c_str(), nullptr);
+	nvgTextBox(vg, static_cast<float>(x), static_cast<float>(y), static_cast<float>(width), text.c_str(), nullptr);
 }
 
 void TextRenderer::DrawRect(NVGcontext* vg, int x, int y, int w, int h, const glm::vec4& color) {
@@ -113,7 +113,7 @@ void TextRenderer::DrawRect(NVGcontext* vg, int x, int y, int w, int h, const gl
 	}
 
 	nvgBeginPath(vg);
-	nvgRect(vg, x, y, w, h);
+	nvgRect(vg, static_cast<float>(x), static_cast<float>(y), static_cast<float>(w), static_cast<float>(h));
 	nvgFillColor(vg, nvgRGBAf(color.r, color.g, color.b, color.a));
 	nvgFill(vg);
 }
