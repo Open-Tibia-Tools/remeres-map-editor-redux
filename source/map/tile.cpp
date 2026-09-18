@@ -273,7 +273,7 @@ bool Tile::hasProperty(enum ITEMPROPERTY prop) const {
 
 int Tile::getIndexOf(Item* item) const {
 	if (!item) {
-		return wxNOT_FOUND;
+		return -1;
 	}
 
 	int index = 0;
@@ -290,7 +290,7 @@ int Tile::getIndexOf(Item* item) const {
 			return index;
 		}
 	}
-	return wxNOT_FOUND;
+	return -1;
 }
 
 Item* Tile::getTopItem() const {

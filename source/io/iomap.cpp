@@ -15,26 +15,5 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
-#include "ui/gui.h"
-#include "ui/dialog_util.h"
+#include "io/iomap.h"
 
-void IOMap::error(const wxString format, ...) {
-	va_list argp;
-	va_start(argp, format);
-	errorstr.PrintfV(format, argp);
-	va_end(argp);
-};
-
-void IOMap::warning(const wxString format, ...) {
-	wxString s;
-	va_list argp;
-	va_start(argp, format);
-	s.PrintfV(format, argp);
-	va_end(argp);
-	warnings.push_back(s.ToStdString());
-};
-
-bool IOMap::queryUser(const wxString& title, const wxString& text) {
-	return DialogUtil::PopupDialog(title, text, wxYES | wxNO) == wxID_YES;
-}

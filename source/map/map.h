@@ -66,9 +66,9 @@ public:
 		return warnings;
 	}
 	bool hasError() const {
-		return error.size() != 0;
+		return !error.empty();
 	}
-	wxString getError() const {
+	const std::string& getError() const {
 		return error;
 	}
 
@@ -154,7 +154,7 @@ protected:
 
 protected:
 	std::vector<std::string> warnings;
-	wxString error;
+	std::string error;
 
 	std::string name; // The map name, NOT the same as filename
 	std::string filename; // the maps filename

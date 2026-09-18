@@ -4,7 +4,6 @@
 
 #include "map/map.h"
 #include "item_definitions/core/item_definition_store.h"
-#include "ui/dialog_util.h"
 #include <spdlog/spdlog.h>
 
 namespace {
@@ -134,16 +133,7 @@ bool HeaderSerializationOTBM::loadMapRoot(Map& map, NodeFileReadHandle& f, MapVe
 	version.otbm = static_cast<MapVersionID>(u32);
 
 	if (version.otbm > MAP_OTBM_4) {
-		// Failed to read version
-		if (DialogUtil::PopupDialog("Map error", "The loaded map appears to be a OTBM format that is not supported by the editor.\n"
-												 "Do you still want to attempt to load the map?",
-									wxYES | wxNO)
-			== wxID_YES) {
-			spdlog::warn("Unsupported or damaged map version: {}", static_cast<int>(version.otbm));
-		} else {
-			spdlog::error("Unsupported OTBM version {}, could not load map", static_cast<int>(version.otbm));
-			return false;
-		}
+		spdlog::warn("Unsupported OTBM version {}, attempting to load map anyway", static_cast<int>(version.otbm));
 	}
 
 	uint16_t u16;
@@ -162,15 +152,7 @@ bool HeaderSerializationOTBM::loadMapRoot(Map& map, NodeFileReadHandle& f, MapVe
 	}
 
 	if (u32 > static_cast<uint32_t>(g_item_definitions.MajorVersion)) {
-		if (DialogUtil::PopupDialog("Map error", "The loaded map appears to be a items.otb format that deviates from the "
-												 "items.otb loaded by the editor. Do you still want to attempt to load the map?",
-									wxYES | wxNO)
-			== wxID_YES) {
-			spdlog::warn("Unsupported or damaged OTB major version: {}", u32);
-		} else {
-			spdlog::error("Outdated items.otb (major {}), could not load map", u32);
-			return false;
-		}
+		spdlog::warn("Unsupported or damaged OTB major version: {}, attempting to load map anyway", u32);
 	}
 
 	if (!root->getU32(u32)) {

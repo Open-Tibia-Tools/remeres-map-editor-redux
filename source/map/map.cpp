@@ -23,6 +23,7 @@
 #include "map/map_converter.h"
 #include "map/map_spawn_manager.h"
 
+#include <filesystem>
 #include <sstream>
 #include <algorithm>
 #include <ranges>
@@ -84,6 +85,9 @@ bool Map::open(const std::string& file) {
 	tilecount = 0;
 
 	IOMapOTBM maploader(getVersion());
+	maploader.setProgressCallback([](int percent, std::string_view msg) {
+		g_gui.SetLoadDone(percent, msg.empty() ? wxString() : wxstr(std::string(msg)));
+	});
 
 	bool success = maploader.loadMap(*this, wxstr(file));
 
@@ -99,9 +103,9 @@ bool Map::open(const std::string& file) {
 	has_changed = false;
 	change_tracker.markAllDirty();
 
-	wxFileName fn = wxstr(file);
-	filename = fn.GetFullPath().mb_str(wxConvUTF8);
-	name = fn.GetFullName().mb_str(wxConvUTF8);
+	std::filesystem::path fn = std::filesystem::u8path(file);
+	filename = fn.string();
+	name = fn.filename().string();
 
 	// convert(getReplacementMapClassic(), true);
 

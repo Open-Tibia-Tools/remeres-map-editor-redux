@@ -7,8 +7,8 @@
 #include "util/image_manager.h"
 
 namespace {
-wxString fallbackValue(const wxString& value) {
-	return value.empty() ? wxString("-") : value;
+wxString fallbackValue(std::string_view value) {
+	return value.empty() ? wxString("-") : wxstr(value);
 }
 
 wxString formatUnsigned(uint32_t value) {
@@ -19,7 +19,7 @@ wxString formatMapDescription(const OTBMStartupPeekResult* info) {
 	if (!info || info->description.empty()) {
 		return "-";
 	}
-	return info->description;
+	return wxstr(info->description);
 }
 
 wxString formatMapClientVersion(const OTBMStartupPeekResult* info) {
@@ -97,7 +97,7 @@ wxColour StartupStatusColour(StartupCompatibilityStatus status) {
 }
 
 std::vector<StartupInfoField> BuildStartupMapFields(const OTBMStartupPeekResult* info) {
-	const wxString error_description = (info != nullptr && info->has_error && !info->error_message.empty()) ? info->error_message : wxString("-");
+	const wxString error_description = (info != nullptr && info->has_error && !info->error_message.empty()) ? wxstr(info->error_message) : wxString("-");
 	const wxColour error_colour = (info != nullptr && info->has_error) ? Theme::Get(Theme::Role::Warning) : wxNullColour;
 
 	if (!info || info->has_error) {

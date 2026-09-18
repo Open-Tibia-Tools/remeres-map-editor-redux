@@ -120,6 +120,11 @@ void EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 
 		// Perform the actual save
 		IOMapOTBM mapsaver(editor.map.getVersion());
+		if (showdialog) {
+			mapsaver.setProgressCallback([](int percent, std::string_view msg) {
+				g_gui.SetLoadDone(percent, msg.empty() ? wxString() : wxstr(std::string(msg)));
+			});
+		}
 		bool success = mapsaver.saveMap(editor.map, fn);
 
 		if (showdialog) {

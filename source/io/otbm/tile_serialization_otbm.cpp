@@ -7,7 +7,6 @@
 #include "game/house.h"
 #include "io/otbm/item_serialization_otbm.h"
 #include "item_definitions/core/item_definition_store.h"
-#include "ui/gui.h"
 #include <algorithm>
 #include <functional>
 #include <vector>

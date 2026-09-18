@@ -18,8 +18,8 @@
 #define RME_IOMAP_OTBM_H_
 
 #include <vector>
-#include <wx/datetime.h>
-#include <wx/string.h>
+#include <string>
+#include <filesystem>
 #include "io/iomap.h"
 #include "io/filehandle.h"
 #include "io/otbm/otbm_types.h"
@@ -72,23 +72,23 @@ struct OTBM_HouseTile_coords {
 	uint32_t houseid;
 };
 
+#pragma pack()
+
 struct OTBMStartupPeekResult {
-	wxString map_name;
-	wxString client_version = "Placeholder";
+	std::string map_name;
+	std::string client_version = "Placeholder";
 	uint16_t width = 0;
 	uint16_t height = 0;
 	int otbm_version = 0;
 	uint32_t items_major_version = 0;
 	uint32_t items_minor_version = 0;
-	wxString house_xml_file;
-	wxString spawn_xml_file;
-	wxString description;
-	wxDateTime modified_time;
+	std::string house_xml_file;
+	std::string spawn_xml_file;
+	std::string description;
+	std::filesystem::file_time_type modified_time{};
 	bool has_error = false;
-	wxString error_message;
+	std::string error_message;
 };
-
-#pragma pack()
 
 class IOMapOTBM : public IOMap {
 public:

@@ -12,26 +12,22 @@
 #include "game/town.h"
 #include "game/house.h"
 #include "app/settings.h"
-#include "ui/gui.h"
 
 #include <spdlog/spdlog.h>
 #include <format>
 #include <sstream>
 #include <ranges>
 
-std::pair<std::string, std::string> MapXMLIO::normalizeMapFilePaths(const wxFileName& dir, const std::string& filename) {
-	std::string utf8_path = (const char*)(dir.GetPath(wxPATH_GET_SEPARATOR | wxPATH_GET_VOLUME).mb_str(wxConvUTF8));
-	utf8_path += filename;
-
-	std::string encoded_path = (const char*)(dir.GetPath(wxPATH_GET_SEPARATOR | wxPATH_GET_VOLUME).mb_str(wxConvLocal));
-	encoded_path += filename;
-
-	return { utf8_path, encoded_path };
+std::pair<std::string, std::string> MapXMLIO::normalizeMapFilePaths(const std::filesystem::path& dir, const std::string& filename) {
+	std::filesystem::path base = std::filesystem::is_directory(dir) ? dir : dir.parent_path();
+	std::filesystem::path full = base / filename;
+	std::string s = full.string();
+	return { s, s };
 }
 
-bool MapXMLIO::loadSpawns(Map& map, const wxFileName& dir) {
+bool MapXMLIO::loadSpawns(Map& map, const std::filesystem::path& dir) {
 	auto paths = normalizeMapFilePaths(dir, map.spawnfile);
-	if (!FileName(wxstr(paths.first)).FileExists()) {
+	if (!std::filesystem::exists(paths.second)) {
 		return false;
 	}
 
@@ -159,7 +155,7 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 	return true;
 }
 
-bool MapXMLIO::saveSpawns(const Map& map, const wxFileName& dir) {
+bool MapXMLIO::saveSpawns(const Map& map, const std::filesystem::path& dir) {
 	auto paths = normalizeMapFilePaths(dir, map.spawnfile);
 
 	pugi::xml_document doc;
@@ -233,9 +229,9 @@ bool MapXMLIO::saveSpawns(const Map& map, pugi::xml_document& doc) {
 	return true;
 }
 
-bool MapXMLIO::loadHouses(Map& map, const wxFileName& dir) {
+bool MapXMLIO::loadHouses(Map& map, const std::filesystem::path& dir) {
 	auto paths = normalizeMapFilePaths(dir, map.housefile);
-	if (!FileName(wxstr(paths.first)).FileExists()) {
+	if (!std::filesystem::exists(paths.second)) {
 		return false;
 	}
 
@@ -299,7 +295,7 @@ bool MapXMLIO::loadHouses(Map& map, pugi::xml_document& doc) {
 	return true;
 }
 
-bool MapXMLIO::saveHouses(const Map& map, const wxFileName& dir) {
+bool MapXMLIO::saveHouses(const Map& map, const std::filesystem::path& dir) {
 	auto paths = normalizeMapFilePaths(dir, map.housefile);
 
 	pugi::xml_document doc;
@@ -340,9 +336,9 @@ bool MapXMLIO::saveHouses(const Map& map, pugi::xml_document& doc) {
 	return true;
 }
 
-bool MapXMLIO::loadWaypoints(Map& map, const wxFileName& dir, bool replace) {
+bool MapXMLIO::loadWaypoints(Map& map, const std::filesystem::path& dir, bool replace) {
 	auto paths = normalizeMapFilePaths(dir, map.waypointfile);
-	if (!FileName(wxstr(paths.first)).FileExists()) {
+	if (!std::filesystem::exists(paths.second)) {
 		return false;
 	}
 
@@ -380,7 +376,7 @@ bool MapXMLIO::loadWaypoints(Map& map, pugi::xml_document& doc, bool replace) {
 	return loadWaypoints(map, doc.child("waypoints"), replace);
 }
 
-bool MapXMLIO::saveWaypoints(const Map& map, const wxFileName& dir) {
+bool MapXMLIO::saveWaypoints(const Map& map, const std::filesystem::path& dir) {
 	auto paths = normalizeMapFilePaths(dir, map.waypointfile);
 
 	pugi::xml_document doc;

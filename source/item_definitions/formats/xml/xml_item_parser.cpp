@@ -107,7 +107,7 @@ namespace {
 } // namespace
 
 bool XmlItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::string& error, std::vector<std::string>& warnings) const {
-	const auto visitor = [&](const FileName&, pugi::xml_node item_node, wxString& visit_error, std::vector<std::string>& visit_warnings) {
+	const auto visitor = [&](const FileName&, pugi::xml_node item_node, std::string& visit_error, std::vector<std::string>& visit_warnings) {
 		if (as_lower_str(item_node.name()) != "item") {
 			return true;
 		}
@@ -146,7 +146,7 @@ bool XmlItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFr
 			}
 
 			for (pugi::xml_node attribute_node = item_node.first_child(); attribute_node; attribute_node = attribute_node.next_sibling()) {
-				if (!attribute_node.attribute("key")) {
+				if (as_lower_str(attribute_node.name()) != "attribute") {
 					continue;
 				}
 				applyAttribute(fragment, attribute_node);
@@ -160,12 +160,9 @@ bool XmlItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFr
 
 	bool parsedAny = false;
 	for (const std::filesystem::path& xmlPath : xmlInputPaths(input)) {
-		wxString wx_error;
-		if (!XmlFileLoader::visitElements(FileName(wxstr(xmlPath.string())), "items", visitor, wx_error, warnings)) {
-			if (wx_error.empty()) {
+		if (!XmlFileLoader::visitElements(FileName(wxstr(xmlPath.string())), "items", visitor, error, warnings)) {
+			if (error.empty()) {
 				error = std::format("Could not load items XML file: {}", xmlPath.string());
-			} else {
-				error = wx_error.ToStdString();
 			}
 			return false;
 		}

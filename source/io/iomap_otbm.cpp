@@ -17,10 +17,6 @@
 
 #include "app/main.h"
 
-#include <wx/wfstream.h>
-#include <wx/mstream.h>
-#include <wx/datstrm.h>
-
 #include <format>
 #include <fstream>
 #include <vector>
@@ -30,8 +26,6 @@
 
 #include "app/settings.h"
 #include "ext/pugixml.hpp"
-#include "ui/gui.h"
-#include "ui/dialog_util.h"
 
 #include "game/creatures.h"
 #include "game/creature.h"
@@ -143,17 +137,18 @@ bool IOMapOTBM::getVersionInfo(NodeFileReadHandle* f, MapVersion& out_ver) {
 
 bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResult& out_info) {
 	out_info = {};
-	out_info.map_name = identifier.GetName();
+	out_info.map_name = nstr(identifier.GetName());
 
-	wxDateTime modified_time;
-	if (identifier.GetTimes(nullptr, &modified_time, nullptr)) {
-		out_info.modified_time = modified_time;
+	std::error_code ec;
+	auto ftime = std::filesystem::last_write_time(identifier.GetFullPath().ToStdWstring(), ec);
+	if (!ec) {
+		out_info.modified_time = ftime;
 	}
 
 	DiskNodeFileReadHandle handle(nstr(identifier.GetFullPath()), StringVector(1, "OTBM"));
 	if (!handle.isOk()) {
 		out_info.has_error = true;
-		out_info.error_message = wxstr(handle.getErrorMessage());
+		out_info.error_message = handle.getErrorMessage();
 		return false;
 	}
 
@@ -225,7 +220,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 		if (expected) {
 			// Validate/sanitize OTBM-provided target
 			auto paths = MapXMLIO::normalizeMapFilePaths(filename, target);
-			if (!FileName(wxstr(paths.first)).FileExists()) {
+			if (!std::filesystem::exists(paths.second)) {
 				// File does not exist or invalid, try default
 				expected = false;
 			}
@@ -233,7 +228,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 
 		if (!expected) {
 			auto paths = MapXMLIO::normalizeMapFilePaths(filename, defaultFile);
-			if (FileName(wxstr(paths.first)).FileExists()) {
+			if (std::filesystem::exists(paths.second)) {
 				target = defaultFile;
 				expected = true;
 			}
@@ -263,7 +258,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 		}
 
 		auto paths = MapXMLIO::normalizeMapFilePaths(filename, waypointFile);
-		if (FileName(wxstr(paths.first)).FileExists()) {
+		if (std::filesystem::exists(paths.second)) {
 			// Case 3: Both exist - Merge and warn
 			// Ensure map knows about the file
 			if (map.waypointfile.empty()) {
@@ -276,12 +271,8 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 			if (MapXMLIO::loadWaypoints(map, filename, false)) {
 				size_t afterCount = map.waypoints.size();
 				if (afterCount > beforeCount) {
-					DialogUtil::PopupDialog(g_gui.root, "Warning", "Waypoints detected in both OTBM and external XML file.\n"
-																   "They have been merged.\n"
-																   "Note: OTBM waypoints took precedence over XML duplicates.\n"
-																   "\n"
-																   "Future saves will ONLY use the XML file.",
-											wxOK | wxICON_WARNING);
+					warnings.push_back("Waypoints detected in both OTBM and external XML file. They have been merged (OTBM took precedence). Future saves will only use the XML file.");
+					spdlog::warn("Waypoints detected in both OTBM and external XML file. Merged.");
 				}
 			}
 		} else {
@@ -291,15 +282,15 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 				map.waypointfile = waypointFile;
 			}
 
-			DialogUtil::PopupDialog(g_gui.root, "Waypoint Migration", std::format("Waypoints detected in OTBM file.\n\nThey have been migrated to the external file:\n{}\n\nThey will be removed from the OTBM file on the next save.", map.waypointfile), wxOK | wxICON_INFORMATION);
+			warnings.push_back(std::format("Waypoints detected in OTBM file migrated to external file: {}. They will be removed from the OTBM file on the next save.", map.waypointfile));
+			spdlog::info("Waypoints migrated to external file: {}", map.waypointfile);
 
 			// Save immediately to XML
 			if (!MapXMLIO::saveWaypoints(map, filename)) {
 				// Migration failed
 				map.waypointfile.clear();
-				DialogUtil::PopupDialog(g_gui.root, "Error", "Failed to migrate waypoints to external XML file.\n"
-															 "Waypoints will REMAIN in the OTBM file until migration succeeds.",
-										wxOK | wxICON_ERROR);
+				warnings.push_back("Failed to migrate waypoints to external XML file. Waypoints will remain in the OTBM file until migration succeeds.");
+				spdlog::error("Failed to migrate waypoints to external XML file.");
 			}
 			// If successful, next save will skip OTBM writing because map.waypointfile is set
 		}
@@ -312,7 +303,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 		if (!expected) {
 			std::string defaultFile = nstr(filename.GetName()) + "-waypoint.xml";
 			auto paths = MapXMLIO::normalizeMapFilePaths(filename, defaultFile);
-			if (FileName(wxstr(paths.first)).FileExists()) {
+			if (std::filesystem::exists(paths.second)) {
 				map.waypointfile = defaultFile;
 				expected = true;
 			}
@@ -351,7 +342,7 @@ void IOMapOTBM::readMapNodes(Map& map, NodeFileReadHandle& f, BinaryNode* mapHea
 
 	for (BinaryNode* mapNode = mapHeaderNode->getChild(); mapNode != nullptr; mapNode = mapNode->advance()) {
 		if (++nodes_loaded % 2048 == 0) {
-			g_gui.SetLoadDone(static_cast<int32_t>(100.0 * f.tell() / f.size()));
+			reportProgress(static_cast<int32_t>(100.0 * f.tell() / f.size()));
 		}
 
 		uint8_t node_type;
@@ -422,13 +413,13 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 		return false;
 	}
 
-	g_gui.SetLoadDone(99, "Saving spawns...");
+	reportProgress(99, "Saving spawns...");
 	if (!MapXMLIO::saveSpawns(map, identifier)) {
 		spdlog::error("Failed to save spawns!");
 		return false;
 	}
 
-	g_gui.SetLoadDone(99, "Saving houses...");
+	reportProgress(99, "Saving houses...");
 	if (!MapXMLIO::saveHouses(map, identifier)) {
 		spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save houses");
 		return false;
