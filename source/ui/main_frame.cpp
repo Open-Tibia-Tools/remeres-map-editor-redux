@@ -49,10 +49,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	std::vector<std::string> warnings;
 	wxString error;
 
-	wxFileName filename;
-	filename.Assign(FileSystem::GetFoundDataDirectory() + "menubar.xml");
+	wxFileName filename(wxstr((FileSystem::GetFoundDataDirectory() / "menubar.xml").string()));
 	if (!filename.FileExists()) {
-		filename = FileName(FileSystem::GetDataDirectory() + "menubar.xml");
+		filename = FileName(wxstr((FileSystem::GetDataDirectory() / "menubar.xml").string()));
 	}
 
 	if (!menu_bar->Load(filename, warnings, error)) {

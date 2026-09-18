@@ -250,8 +250,7 @@ bool Application::OnInit() {
 	}
 #endif
 
-	FileName save_failed_file = FileSystem::GetLocalDataDirectory();
-	save_failed_file.SetName(".saving.txt");
+	FileName save_failed_file(wxstr((FileSystem::GetLocalDataDirectory() / ".saving.txt").string()));
 	if (save_failed_file.FileExists()) {
 		std::ifstream f(nstr(save_failed_file.GetFullPath()).c_str(), std::ios::in);
 

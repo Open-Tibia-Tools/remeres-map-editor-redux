@@ -437,7 +437,7 @@ namespace LuaAPI {
 	}
 
 	static std::string getDataDirectory() {
-		return FileSystem::GetDataDirectory().ToStdString();
+		return FileSystem::GetDataDirectory().string();
 	}
 
 	static sol::table storageForScript(sol::this_state ts, const std::string& name) {
@@ -448,7 +448,7 @@ namespace LuaAPI {
 		
 		// Determine potential base directories
 		fs::path scriptsPath = fs::weakly_canonical(LuaScriptManager::getInstance().getScriptsDirectory());
-		fs::path dataPath = fs::weakly_canonical(FileSystem::GetDataDirectory().ToStdString());
+		fs::path dataPath = fs::weakly_canonical(FileSystem::GetDataDirectory());
 
 		std::string scriptDir = lua["SCRIPT_DIR"].get_or(std::string(""));
 

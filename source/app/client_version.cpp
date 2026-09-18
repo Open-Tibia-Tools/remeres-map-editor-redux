@@ -88,40 +88,32 @@ void ClientVersion::loadVersions() {
 }
 
 void ClientVersion::loadVersionsFromTOML(const std::string& configName) {
-	wxFileName file_to_load;
+	std::filesystem::path file_to_load;
 
-	wxFileName exec_dir_client_toml;
-	exec_dir_client_toml.Assign(FileSystem::GetExecDirectory());
-	exec_dir_client_toml.SetFullName(configName);
-
-	wxFileName data_dir_client_toml;
-	data_dir_client_toml.Assign(FileSystem::GetDataDirectory());
-	data_dir_client_toml.SetFullName(configName);
-
-	wxFileName work_dir_client_toml;
-	work_dir_client_toml.Assign(FileSystem::GetFoundDataDirectory());
-	work_dir_client_toml.SetFullName(configName);
+	std::filesystem::path exec_dir_client_toml = FileSystem::GetExecDirectory() / configName;
+	std::filesystem::path data_dir_client_toml = FileSystem::GetDataDirectory() / configName;
+	std::filesystem::path work_dir_client_toml = FileSystem::GetFoundDataDirectory() / configName;
 
 	file_to_load = data_dir_client_toml; // Primary location
-	if (!file_to_load.FileExists()) {
+	if (!std::filesystem::exists(file_to_load)) {
 		file_to_load = exec_dir_client_toml;
-		if (!file_to_load.FileExists()) {
+		if (!std::filesystem::exists(file_to_load)) {
 			file_to_load = work_dir_client_toml;
-			if (!file_to_load.FileExists()) {
-				file_to_load.Clear();
+			if (!std::filesystem::exists(file_to_load)) {
+				file_to_load.clear();
 			}
 		}
 	}
 
-	if (!file_to_load.FileExists()) {
+	if (file_to_load.empty() || !std::filesystem::exists(file_to_load)) {
 		return;
 	}
 
-	loaded_file_path = file_to_load.GetFullPath().ToStdString();
+	loaded_file_path = file_to_load.string();
 
 	toml::table config;
 	try {
-		config = toml::parse_file(file_to_load.GetFullPath().ToStdString());
+		config = toml::parse_file(file_to_load.string());
 	} catch (const toml::parse_error& err) {
 		wxLogError("Parsing failed for %s: %s", configName, err.description());
 		return;
@@ -319,22 +311,19 @@ bool ClientVersion::saveVersions() {
 	// Save Database
 	db_table.insert_or_assign("clients", std::move(db_clients_array));
 
-	wxFileName db_file;
+	std::filesystem::path db_file;
 	if (!loaded_file_path.empty()) {
-		db_file.Assign(loaded_file_path);
+		db_file = loaded_file_path;
 	} else {
-		db_file.Assign(FileSystem::GetDataDirectory(), "clients.toml");
+		db_file = FileSystem::GetDataDirectory() / "clients.toml";
 	}
 
-	if (!db_file.DirExists()) {
-		if (!db_file.Mkdir(0755, wxPATH_MKDIR_FULL)) {
-			wxLogError("Failed to create directory for clients.toml: %s", db_file.GetPath());
-		}
-	}
+	std::error_code ec;
+	std::filesystem::create_directories(db_file.parent_path(), ec);
 
-	std::ofstream db_stream(db_file.GetFullPath().ToStdString());
+	std::ofstream db_stream(db_file);
 	if (!db_stream.is_open()) {
-		wxLogError("Failed to open clients.toml for writing: %s", db_file.GetFullPath());
+		wxLogError("Failed to open clients.toml for writing: %s", wxstr(db_file.string()));
 		return false;
 	}
 	db_stream << db_table;
@@ -458,15 +447,16 @@ void ClientVersion::setLatestVersion(ClientVersion* version) {
 }
 
 FileName ClientVersion::getDataPath() const {
-	wxString basePath = FileSystem::GetDataDirectory();
-	if (!wxFileName(basePath).DirExists()) {
+	std::filesystem::path basePath = FileSystem::GetDataDirectory();
+	std::error_code ec;
+	if (!std::filesystem::is_directory(basePath, ec)) {
 		basePath = FileSystem::GetFoundDataDirectory();
 	}
-	return basePath + data_path + FileName::GetPathSeparator();
+	return FileName(wxstr((basePath / data_path.ToStdWstring()).string()) + FileName::GetPathSeparator());
 }
 
 FileName ClientVersion::getLocalDataPath() const {
-	FileName f = FileSystem::GetLocalDataDirectory() + data_path + FileName::GetPathSeparator();
+	FileName f(wxstr((FileSystem::GetLocalDataDirectory() / data_path.ToStdWstring()).string()) + FileName::GetPathSeparator());
 	f.Mkdir(0755, wxPATH_MKDIR_FULL);
 	return f;
 }

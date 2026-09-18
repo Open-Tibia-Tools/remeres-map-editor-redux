@@ -24,16 +24,17 @@ std::string MapBackupService::GenerateTimestampString(bool compact) {
 }
 
 void MapBackupService::WriteCrashMarker(const std::vector<std::string>& files) {
-	std::string marker_path = nstr(FileSystem::GetLocalDataDirectory()) + ".saving.txt";
-	std::ofstream f(marker_path.c_str(), std::ios::trunc | std::ios::out);
+	std::filesystem::path marker_path = FileSystem::GetLocalDataDirectory() / ".saving.txt";
+	std::ofstream f(marker_path, std::ios::trunc | std::ios::out);
 	for (const auto& file : files) {
 		f << file << '\n';
 	}
 }
 
 void MapBackupService::ClearCrashMarker() {
-	std::string marker_path = nstr(FileSystem::GetLocalDataDirectory()) + ".saving.txt";
-	std::remove(marker_path.c_str());
+	std::filesystem::path marker_path = FileSystem::GetLocalDataDirectory() / ".saving.txt";
+	std::error_code ec;
+	std::filesystem::remove(marker_path, ec);
 }
 
 bool MapBackupService::CreateSnapshot(
@@ -51,8 +52,8 @@ bool MapBackupService::CreateSnapshot(
 		std::string ext = src.extension().string();
 		target_file = src.parent_path() / (stem + "_" + operation_tag + "_" + time_str + ext);
 	} else {
-		std::string dir = nstr(FileSystem::GetLocalDataDirectory());
-		target_file = std::filesystem::path(dir) / ("untitled_" + operation_tag + "_" + time_str + ".otbm");
+		std::filesystem::path dir = FileSystem::GetLocalDataDirectory();
+		target_file = dir / ("untitled_" + operation_tag + "_" + time_str + ".otbm");
 	}
 
 	out_backup_path = target_file.string();

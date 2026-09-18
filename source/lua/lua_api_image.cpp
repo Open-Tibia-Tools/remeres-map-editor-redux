@@ -72,8 +72,8 @@ namespace LuaAPI {
 
 		namespace fs = std::filesystem;
 		fs::path scriptsPath = fs::weakly_canonical(LuaScriptManager::getInstance().getScriptsDirectory());
-		fs::path dataPath = fs::weakly_canonical(FileSystem::GetDataDirectory().ToStdString());
-		fs::path execPath = fs::weakly_canonical(FileSystem::GetExecDirectory().ToStdString());
+		fs::path dataPath = fs::weakly_canonical(FileSystem::GetDataDirectory());
+		fs::path execPath = fs::weakly_canonical(FileSystem::GetExecDirectory());
 		std::vector<fs::path> lookupRoots;
 
 		try {

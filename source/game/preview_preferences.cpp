@@ -56,7 +56,7 @@ void from_json(const nlohmann::json& j, FavoriteItem& f) {
 }
 
 void PreviewPreferences::load() {
-	std::filesystem::path prefPath = std::filesystem::path(FileSystem::GetLocalDataDirectory().ToStdWstring()) / "preferences.json";
+	std::filesystem::path prefPath = FileSystem::GetLocalDataDirectory() / "preferences.json";
 
 	std::ifstream f(prefPath);
 	if (!f.is_open()) {
@@ -88,7 +88,7 @@ void PreviewPreferences::load() {
 }
 
 void PreviewPreferences::save() {
-	std::filesystem::path dir = std::filesystem::path(FileSystem::GetLocalDataDirectory().ToStdWstring());
+	std::filesystem::path dir = FileSystem::GetLocalDataDirectory();
 	std::error_code ec;
 	std::filesystem::create_directories(dir, ec);
 
