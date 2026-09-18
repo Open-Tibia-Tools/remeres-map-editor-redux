@@ -58,8 +58,10 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/editor/copybuffer.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/dirty_list.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/hotkey_manager.h
+    ${CMAKE_CURRENT_LIST_DIR}/util/common.h
     ${CMAKE_CURRENT_LIST_DIR}/util/file_system.h
     ${CMAKE_CURRENT_LIST_DIR}/util/image_manager.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/wx_common.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor_factory.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/copy_operations.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/draw_operations.h
@@ -761,6 +763,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/map_statistics_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/live_dialogs.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/menubar_loader.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/wx_common.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/common.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_canvas.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_listbox.cpp

@@ -18,7 +18,7 @@
 #ifndef RME_COMMONS_H_
 #define RME_COMMONS_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "map/position.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,22 +44,6 @@ std::string i2s(int i);
 std::string f2s(double i);
 int s2i(const std::string& s);
 double s2f(const std::string& s);
-wxString i2ws(int i);
-wxString f2ws(double i);
-int ws2i(wxString s);
-double ws2f(wxString s);
-
-inline wxString wxstr(std::string_view sv) {
-	return wxString::FromUTF8(sv.data(), sv.length());
-}
-
-inline wxString wxstr(const std::string& str) {
-	return wxString::FromUTF8(str.c_str(), str.length());
-}
-
-inline wxString wxstr(const char* str) {
-	return wxString::FromUTF8(str);
-}
 
 // replaces all instances of sought in str with replacement
 void replaceString(std::string& str, std::string_view sought, std::string_view replacement);
@@ -85,14 +69,6 @@ int random(int low, int high);
 // Unicode conversions
 std::wstring string2wstring(const std::string& utf8string);
 std::string wstring2string(const std::wstring& widestring);
-
-// Gets position values from ClipBoard
-bool posFromClipboard(Position& position, const int mapWidth = MAP_MAX_WIDTH, const int mapHeight = MAP_MAX_HEIGHT);
-
-// Returns 'yes' if the defined value is true or 'no' if it is false.
-wxString b2yn(bool v);
-
-wxColor colorFromEightBit(int color);
 
 // Standard math functions are now used via <cmath> and <algorithm>
 // std::abs, std::min, std::max should be used instead.

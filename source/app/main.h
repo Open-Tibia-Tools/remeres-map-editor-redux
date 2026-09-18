@@ -26,27 +26,7 @@
 	#define _WIN32_WINNT 0x0501
 #endif
 
-#ifdef DEBUG_MEM
-
-	#define _CRTDBG_MAP_ALLOC
-
-	#include <stdlib.h>
-	#include <crtdbg.h>
-
-	#pragma warning(disable : 4291)
-_Ret_bytecap_(_Size) inline void* __CRTDECL operator new(size_t _Size, const char* file, int line) {
-	return ::operator new(_Size, _NORMAL_BLOCK, file, line);
-}
-_Ret_bytecap_(_Size) inline void* __CRTDECL operator new[](size_t _Size, const char* file, int line) {
-	return ::operator new[](_Size, _NORMAL_BLOCK, file, line);
-}
-	#define newd new (__FILE__, __LINE__)
-
-#else
-
-	#define newd new
-
-#endif
+#include "app/definitions.h"
 
 // Boost libraries
 #include <boost/utility.hpp>
@@ -54,7 +34,6 @@ _Ret_bytecap_(_Size) inline void* __CRTDECL operator new[](size_t _Size, const c
 #include <boost/asio.hpp>
 
 #include <wx/defs.h>
-#include "app/definitions.h"
 
 #include <glad/glad.h>
 
@@ -93,16 +72,6 @@ _Ret_bytecap_(_Size) inline void* __CRTDECL operator new[](size_t _Size, const c
 // This has annoyed me one time too many
 #define wxANY_ID (wxID_ANY)
 
-#include <assert.h>
-#define _MSG(msg) !bool(msg)
-#ifndef ASSERT
-	#ifdef __DEBUG__
-		#define ASSERT assert
-	#else
-		#define ASSERT(...)
-	#endif
-#endif
-
 // The complete STL ?, well, almost ;)
 #include <math.h>
 #include <list>
@@ -128,6 +97,7 @@ using FileName = wxFileName;
 #include "util/json.h"
 
 #include "util/common.h"
+#include "ui/wx_common.h"
 #include "app/threads.h"
 
 #include "app/rme_forward_declarations.h"

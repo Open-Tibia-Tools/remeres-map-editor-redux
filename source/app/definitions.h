@@ -19,9 +19,35 @@
 #define RME_DEFINITIONS_H_
 
 #include <cstdint>
+#include <cassert>
 #include <numbers>
+#include <string>
 
-#define __W_RME_APPLICATION_NAME__ wxString("OTAcademy Map Editor")
+#ifdef DEBUG_MEM
+	#define _CRTDBG_MAP_ALLOC
+	#include <stdlib.h>
+	#include <crtdbg.h>
+	#pragma warning(disable : 4291)
+_Ret_bytecap_(_Size) inline void* __CRTDECL operator new(size_t _Size, const char* file, int line) {
+	return ::operator new(_Size, _NORMAL_BLOCK, file, line);
+}
+_Ret_bytecap_(_Size) inline void* __CRTDECL operator new[](size_t _Size, const char* file, int line) {
+	return ::operator new[](_Size, _NORMAL_BLOCK, file, line);
+}
+	#define newd new (__FILE__, __LINE__)
+#else
+	#define newd new
+#endif
+
+#define _MSG(msg) !bool(msg)
+#ifndef ASSERT
+	#ifdef __DEBUG__
+		#define ASSERT assert
+	#else
+		#define ASSERT(...)
+	#endif
+#endif
+
 #define __RME_APPLICATION_NAME__ std::string("OTAcademy Map Editor")
 
 // Version info
@@ -46,17 +72,13 @@
 // #define __PRERELEASE__ 1
 
 #ifdef __EXPERIMENTAL__
-	#define __RME_VERSION__ std::string(i2s(__RME_VERSION_MAJOR__) + "." + i2s(__RME_VERSION_MINOR__) + "." + i2s(__RME_SUBVERSION__) + " BETA")
-	#define __W_RME_VERSION__ (wxString() << __RME_VERSION_MAJOR__ << "." << __RME_VERSION_MINOR__ << "." << __RME_SUBVERSION__ << " BETA")
+	#define __RME_VERSION__ std::string("4.1.2 BETA")
 #elif __SNAPSHOT__
-	#define __RME_VERSION__ std::string(i2s(__RME_VERSION_MAJOR__) + "." + i2s(__RME_VERSION_MINOR__) + "." + i2s(__RME_SUBVERSION__) + " - SNAPSHOT")
-	#define __W_RME_VERSION__ (wxString() << __RME_VERSION_MAJOR__ << "." << __RME_VERSION_MINOR__ << "." << __RME_SUBVERSION__ << " - SNAPSHOT")
+	#define __RME_VERSION__ std::string("4.1.2 - SNAPSHOT")
 #elif __PRERELEASE__
-	#define __RME_VERSION__ std::string(i2s(__RME_VERSION_MAJOR__) + "." + i2s(__RME_VERSION_MINOR__) + "." + i2s(__RME_SUBVERSION__) + " (Pre-release)")
-	#define __W_RME_VERSION__ (wxString() << __RME_VERSION_MAJOR__ << "." << __RME_VERSION_MINOR__ << "." << __RME_SUBVERSION__ << " (Pre-release)")
+	#define __RME_VERSION__ std::string("4.1.2 (Pre-release)")
 #else
-	#define __RME_VERSION__ std::string(i2s(__RME_VERSION_MAJOR__) + "." + i2s(__RME_VERSION_MINOR__) + "." + i2s(__RME_SUBVERSION__))
-	#define __W_RME_VERSION__ (wxString() << __RME_VERSION_MAJOR__ << "." << __RME_VERSION_MINOR__ << "." << __RME_SUBVERSION__)
+	#define __RME_VERSION__ std::string("4.1.2")
 #endif
 // OS
 
@@ -168,8 +190,6 @@ struct DrawColor {
 	}
 };
 
-// wxString conversions
-#define nstr(str) (str).ToStdString()
 
 // increment & decrement definitions
 #define IMPLEMENT_INCREMENT_OP(Type)                     \
