@@ -1,7 +1,7 @@
 #ifndef RME_MAP_SPATIAL_HASH_GRID_H
 #define RME_MAP_SPATIAL_HASH_GRID_H
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "map/map_region.h"
 #include <cstdint>
 #include <memory>

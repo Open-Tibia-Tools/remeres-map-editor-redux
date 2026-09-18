@@ -16,7 +16,7 @@
 #include <unordered_map>
 #include <spdlog/spdlog.h>
 
-void EditorPersistence::loadMap(Editor& editor, const std::filesystem::path& fn, const MapLoadOptions& load_options) {
+void EditorPersistence::loadMap(Editor& editor, const std::filesystem::path& fn, const MapLoadOptions& load_options, ProgressCallback on_progress) {
 	MapVersion ver;
 	if (!IOMapOTBM::getVersionInfo(fn, ver)) {
 		throw std::runtime_error("Could not open file \"" + fn.string() + "\".\nThis is not a valid OTBM file or it does not exist.");
@@ -26,7 +26,7 @@ void EditorPersistence::loadMap(Editor& editor, const std::filesystem::path& fn,
 		throw std::runtime_error(std::format("Client version mismatch. Expected protocol {} but got protocol {}", ver.client, g_version.GetCurrentVersion().getProtocolID()));
 	}
 
-	editor.map.open(fn.string());
+	editor.map.open(fn.string(), on_progress);
 }
 
 SaveResult EditorPersistence::saveMap(Editor& editor, const std::filesystem::path& filename, ProgressCallback on_progress) {
@@ -353,7 +353,7 @@ MapImportResult EditorPersistence::importMap(
 	editor.actionQueue->clear();
 
 	Map imported_map;
-	bool loaded = imported_map.open(filename.string());
+	bool loaded = imported_map.open(filename.string(), on_progress);
 
 	if (!loaded) {
 		result.error = "Error loading map!\n" + imported_map.getError();

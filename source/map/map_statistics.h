@@ -1,7 +1,9 @@
 #ifndef RME_MAP_STATISTICS_H_
 #define RME_MAP_STATISTICS_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
+#include <cstdint>
+#include <functional>
 #include <string>
 #include <map>
 
@@ -41,7 +43,7 @@ struct MapStatistics {
 
 class MapStatisticsCollector {
 public:
-	static MapStatistics Collect(Map* map);
+	static MapStatistics Collect(Map* map, std::function<void(int)> progress = nullptr);
 };
 
 #endif

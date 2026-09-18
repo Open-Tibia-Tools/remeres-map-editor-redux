@@ -15,9 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
-
-#include "ui/gui.h" // loadbar
+#include "app/definitions.h"
 
 #include "map/map.h"
 #include "map/map_converter.h"
@@ -76,7 +74,7 @@ Map::~Map() {
 	spdlog::info("Map destroying [Map={}]", static_cast<void*>(this));
 }
 
-bool Map::open(const std::string& file) {
+bool Map::open(const std::string& file, std::function<void(int, std::string_view)> progress_cb) {
 	if (file == filename) {
 		return true; // Do not reopen ourselves!
 	}
@@ -85,9 +83,11 @@ bool Map::open(const std::string& file) {
 	tilecount = 0;
 
 	IOMapOTBM maploader(getVersion());
-	maploader.setProgressCallback([](int percent, std::string_view msg) {
-		g_gui.SetLoadDone(percent, msg.empty() ? wxString() : wxstr(std::string(msg)));
-	});
+	if (progress_cb) {
+		maploader.setProgressCallback([progress_cb](int percent, std::string_view msg) {
+			progress_cb(percent, msg);
+		});
+	}
 
 	bool success = maploader.loadMap(*this, file);
 

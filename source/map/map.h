@@ -19,6 +19,8 @@
 #define RME_MAP_H_
 
 #include <cstdint>
+#include <functional>
+#include <string_view>
 #include "map/basemap.h"
 #include "map/tile.h"
 #include "game/town.h"
@@ -150,7 +152,7 @@ public:
 
 protected:
 	// Loads a map
-	bool open(const std::string& identifier);
+	bool open(const std::string& identifier, std::function<void(int, std::string_view)> progress_cb = nullptr);
 
 protected:
 	std::vector<std::string> warnings;

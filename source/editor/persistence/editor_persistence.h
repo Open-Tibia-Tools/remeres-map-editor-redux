@@ -44,7 +44,7 @@ public:
 	using ProgressCallback = std::function<void(int percent, std::string_view msg)>;
 
 	static SaveResult saveMap(Editor& editor, const std::filesystem::path& filename = {}, ProgressCallback on_progress = nullptr);
-	static void loadMap(Editor& editor, const std::filesystem::path& filename, const MapLoadOptions& load_options = {});
+	static void loadMap(Editor& editor, const std::filesystem::path& filename, const MapLoadOptions& load_options = {}, ProgressCallback on_progress = nullptr);
 	static MapImportResult importMap(Editor& editor, const std::filesystem::path& filename, const MapImportOptions& options = {}, ProgressCallback on_progress = nullptr);
 	static bool importMiniMap(Editor& editor, const std::filesystem::path& filename, int import, int import_x_offset, int import_y_offset, int import_z_offset);
 

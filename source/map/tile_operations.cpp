@@ -2,7 +2,7 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "map/tile_operations.h"
 #include "map/tile.h"
 #include "map/basemap.h"
