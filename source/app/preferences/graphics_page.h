@@ -30,6 +30,8 @@ private:
 
 	wxChoice* vsync_choice = nullptr;
 	wxCheckBox* show_fps_chkbox = nullptr;
+
+	wxChoice* hardware_profile_choice = nullptr;
 };
 
 #endif

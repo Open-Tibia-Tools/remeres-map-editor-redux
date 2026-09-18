@@ -19,6 +19,7 @@ class SpriteBatch;
 class TileRenderer;
 class GameSprite;
 struct RenderFrameContext;
+struct HardwareBudget;
 
 struct DynamicTileInfo {
 	uint8_t rel_x = 0;
@@ -111,10 +112,7 @@ struct CachedChunk {
 class ChunkCacheManager {
 public:
 	static constexpr int CHUNK_SIZE = 16;
-	static constexpr uint64_t FAR_FLOOR_FRAME_THRESHOLD = 60;      // 1.0 second at 60 FPS
 	static constexpr uint64_t PRUNE_INTERVAL_FRAMES = 120;         // 2.0 seconds at 60 FPS
-	static constexpr size_t MAX_CACHED_CHUNKS = 65536;             // High-water mark (~200 MB VRAM ceiling)
-	static constexpr size_t TARGET_CACHED_CHUNKS = 49152;          // Low-water mark (75%)
 	static constexpr int VIEWPORT_MARGIN_CHUNKS = 32;              // 512 tiles
 
 	ChunkCacheManager();
@@ -127,6 +125,11 @@ public:
 
 	bool initialize();
 	void release();
+
+	[[nodiscard]] size_t getMaxCachedChunks() const noexcept { return max_cached_chunks_; }
+	[[nodiscard]] size_t getTargetCachedChunks() const noexcept { return target_cached_chunks_; }
+	[[nodiscard]] uint64_t getFarFloorThreshold() const noexcept { return far_floor_frame_threshold_; }
+	void applyBudget(const HardwareBudget& budget);
 
 	/**
 	 * Synchronize dirty state from the map's SpatialChangeTracker.
@@ -199,6 +202,10 @@ private:
 
 	std::vector<CachedChunk*> active_visible_chunks_;
 	int active_floor_ = -1;
+
+	size_t max_cached_chunks_ = 65536;
+	size_t target_cached_chunks_ = 49152;
+	uint64_t far_floor_frame_threshold_ = 60;
 };
 
 #endif

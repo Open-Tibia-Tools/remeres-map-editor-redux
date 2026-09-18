@@ -21,6 +21,7 @@
 #include <spdlog/spdlog.h>
 
 #include "rendering/map_drawer.h"
+#include "rendering/core/hardware_profile.h"
 #include "editor/editor.h"
 #include "brushes/managers/brush_manager.h"
 #include "brushes/brush.h"
@@ -111,18 +112,25 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		const int atlas_layers = atlas_ptr ? atlas_ptr->getLayerCount() : 0;
 		const int atlas_allocated = atlas_ptr ? atlas_ptr->getAllocatedLayers() : 0;
 		const int atlas_sprites = atlas_ptr ? atlas_ptr->getTotalSpriteCount() : 0;
-		spdlog::info("[RenderHeartbeat] Frame #{}: Floor={} | Zoom={:.1f}% | Chunks Cached={}/{} (~{:.1f} MB) | Atlas: {}/{} layers ({} sprites) | Light: {}",
+		spdlog::info("[RenderHeartbeat] Frame #{}: Floor={} | Zoom={:.1f}% | Chunks Cached={}/{} (~{:.1f} MB) | Atlas: {}/{} layers ({} sprites) | Profile: {} ({}) | Light: {}",
 			s_frame_heartbeat,
 			view.floor,
 			view.zoom * 100.0f,
 			chunk_cache_manager.getCachedChunkCount(),
-			ChunkCacheManager::MAX_CACHED_CHUNKS,
+			chunk_cache_manager.getMaxCachedChunks(),
 			(chunk_cache_manager.getCachedChunkCount() * 3.5) / 1024.0,
 			atlas_layers,
 			atlas_allocated,
 			atlas_sprites,
+			HardwareProfileManager::getModeName(HardwareProfileManager::get().getProfileMode()),
+			HardwareProfileManager::getTierName(HardwareProfileManager::get().getActiveTier()),
 			options.isDrawLight() ? "ON" : "OFF"
 		);
+	}
+
+	const auto& active_budget = HardwareProfileManager::get().getActiveBudget();
+	if (active_budget.max_cached_chunks != chunk_cache_manager.getMaxCachedChunks()) {
+		chunk_cache_manager.applyBudget(active_budget);
 	}
 
 	if (options.isChunkBakeDirty()) {

@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "rendering/core/chunk_cache_manager.h"
+#include "rendering/core/hardware_profile.h"
 #include "app/definitions.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/core/graphics.h"
@@ -146,9 +147,27 @@ bool ChunkCacheManager::initialize() {
 	glVertexArrayAttribFormat(vao_, 5, 4, GL_FLOAT, GL_FALSE, offsetof(TileInstance, r));
 	glVertexArrayAttribBinding(vao_, 5, 1);
 
+	applyBudget(HardwareProfileManager::get().getActiveBudget());
+
 	spdlog::info("[ChunkCache] Initialized successfully (VAO: {}, Max capacity: {} chunks, Target: {} chunks)",
-		vao_, MAX_CACHED_CHUNKS, TARGET_CACHED_CHUNKS);
+		vao_, max_cached_chunks_, target_cached_chunks_);
 	return true;
+}
+
+void ChunkCacheManager::applyBudget(const HardwareBudget& budget) {
+	max_cached_chunks_ = budget.max_cached_chunks;
+	target_cached_chunks_ = budget.target_cached_chunks;
+	far_floor_frame_threshold_ = budget.far_floor_threshold_frames;
+
+	if (cached_chunks_.size() > target_cached_chunks_) {
+		const size_t excess = cached_chunks_.size() - target_cached_chunks_;
+		evictOldest(excess);
+		spdlog::info("[ChunkCache] Applied budget (max: {}, target: {}): trimmed {} excess chunks | Remaining: {}",
+			max_cached_chunks_, target_cached_chunks_, excess, cached_chunks_.size());
+	} else {
+		spdlog::info("[ChunkCache] Applied budget: max chunks {}, target chunks {}, far floor threshold {} frames",
+			max_cached_chunks_, target_cached_chunks_, far_floor_frame_threshold_);
+	}
 }
 
 void ChunkCacheManager::release() {
@@ -747,7 +766,7 @@ void ChunkCacheManager::renderFloor(
 
 	if (baked_count > 0) {
 		spdlog::debug("[ChunkCache] Floor {}: Baked {} new/dirty chunk(s) | Visible: {} chunks ({} instances) | Total cached: {}/{}",
-			map_z, baked_count, rendered_chunk_count, rendered_instance_count, cached_chunks_.size(), MAX_CACHED_CHUNKS);
+			map_z, baked_count, rendered_chunk_count, rendered_instance_count, cached_chunks_.size(), max_cached_chunks_);
 	}
 
 	glBindVertexArray(0);
@@ -778,7 +797,7 @@ void ChunkCacheManager::prune(
 		}
 
 		// Tier 1: Empty chunks on far floors that are stale (negative cache cleanup)
-		if (chunk.is_empty && is_far_floor && age > FAR_FLOOR_FRAME_THRESHOLD) {
+		if (chunk.is_empty && is_far_floor && age > far_floor_frame_threshold_) {
 			it = cached_chunks_.erase(it);
 			++empty_evicted;
 			continue;
@@ -788,9 +807,9 @@ void ChunkCacheManager::prune(
 	}
 
 	size_t lru_evicted = 0;
-	// Tier 3: Hard capacity ceiling (LRU eviction down to TARGET_CACHED_CHUNKS)
-	if (cached_chunks_.size() > MAX_CACHED_CHUNKS) {
-		const size_t needed = cached_chunks_.size() - TARGET_CACHED_CHUNKS;
+	// Tier 3: Hard capacity ceiling (LRU eviction down to target_cached_chunks_)
+	if (cached_chunks_.size() > max_cached_chunks_) {
+		const size_t needed = cached_chunks_.size() - target_cached_chunks_;
 		evictOldest(needed);
 		lru_evicted = needed;
 	}
@@ -799,7 +818,7 @@ void ChunkCacheManager::prune(
 	if (total_evicted > 0) {
 		spdlog::info("[ChunkCache] Prune (frame {}): Evicted {} chunk(s) ({} empty, {} LRU) | Remaining: {}/{} (~{:.1f} MB VRAM)",
 			current_frame_, total_evicted, empty_evicted, lru_evicted,
-			cached_chunks_.size(), MAX_CACHED_CHUNKS, (cached_chunks_.size() * 3.5) / 1024.0);
+			cached_chunks_.size(), max_cached_chunks_, (cached_chunks_.size() * 3.5) / 1024.0);
 	}
 }
 
@@ -835,7 +854,7 @@ void ChunkCacheManager::evictOldest(size_t count_to_remove) {
 	}
 
 	spdlog::warn("[ChunkCache] High-water mark exceeded (>{} chunks)! LRU evicted {} oldest chunks | Remaining: {}",
-		MAX_CACHED_CHUNKS, num_evict, cached_chunks_.size());
+		max_cached_chunks_, num_evict, cached_chunks_.size());
 }
 
 void ChunkCacheManager::renderDynamicOverlays(

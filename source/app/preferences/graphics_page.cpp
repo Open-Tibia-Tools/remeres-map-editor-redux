@@ -1,4 +1,6 @@
 #include "app/preferences/graphics_page.h"
+#include "rendering/core/hardware_profile.h"
+#include <format>
 
 #include "app/main.h"
 #include "app/preferences/preferences_layout.h"
@@ -168,6 +170,46 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 	);
 	page_sizer->Add(performance_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
 
+	auto* hardware_section = new PreferencesSectionPanel(
+		GetScrollWindow(),
+		"Hardware & Performance Profile",
+		"Automatically configure or manually simulate memory and rendering budgets (e.g. to test low-end systems on high-end hardware)."
+	);
+
+	const auto& specs = HardwareProfileManager::get().getSpecs();
+	const auto detected_tier = HardwareProfileManager::get().getDetectedTier();
+
+	std::string detected_desc = std::format(
+		"Detected: {} CPU threads | {:.1f} GB RAM | {} ({} MB Dedicated VRAM) | Recommended: {}",
+		specs.cpu_cores,
+		specs.total_ram_mb / 1024.0,
+		specs.gpu_renderer.empty() ? "GPU" : specs.gpu_renderer,
+		specs.dedicated_vram_mb,
+		HardwareProfileManager::getTierName(detected_tier)
+	);
+	PreferencesLayout::AddNotice(
+		hardware_section,
+		detected_desc,
+		Theme::Role::TextSubtle
+	);
+
+	hardware_profile_choice = new wxChoice(hardware_section, wxID_ANY);
+	hardware_profile_choice->Append(wxString::Format("Auto-Detect (Recommended: %s)", wxString(HardwareProfileManager::getTierName(detected_tier).data())));
+	hardware_profile_choice->Append("Low-End (Power Saver / 2 GB VRAM / 2 Threads)");
+	hardware_profile_choice->Append("Medium (Balanced / 4-6 GB VRAM / 4 Threads)");
+	hardware_profile_choice->Append("High (High-Performance / 8+ GB VRAM / Max Threads)");
+
+	const int current_profile_mode = g_settings.getInteger(Config::HARDWARE_PROFILE_MODE);
+	hardware_profile_choice->SetSelection(std::clamp(current_profile_mode, 0, 3));
+
+	PreferencesLayout::AddControlRow(
+		hardware_section,
+		"Optimization Profile",
+		"Select 'Low-End' to simulate 2 GB VRAM ceilings (~180 MB chunk VBOs, 2 threads). Takes effect immediately, trimming GPU memory live.",
+		hardware_profile_choice
+	);
+	page_sizer->Add(hardware_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+
 	FinishLayout();
 }
 
@@ -228,6 +270,20 @@ void GraphicsPage::Apply() {
 	const auto previous_vsync_mode = sanitizeVSyncMode(g_settings.getInteger(Config::VSYNC_MODE));
 	g_settings.setInteger(Config::VSYNC_MODE, static_cast<int>(requested_vsync_mode));
 	g_settings.setInteger(Config::SHOW_FPS_COUNTER, show_fps_chkbox->GetValue());
+
+	if (hardware_profile_choice) {
+		const int chosen_profile_mode_int = hardware_profile_choice->GetSelection();
+		const auto new_profile_mode = static_cast<HardwareProfileMode>(chosen_profile_mode_int);
+		const auto old_profile_mode = static_cast<HardwareProfileMode>(g_settings.getInteger(Config::HARDWARE_PROFILE_MODE));
+
+		if (new_profile_mode != old_profile_mode) {
+			g_settings.setInteger(Config::HARDWARE_PROFILE_MODE, chosen_profile_mode_int);
+			HardwareProfileManager::get().setProfileMode(new_profile_mode);
+			spdlog::info("[GraphicsPage] Hardware optimization profile changed: {} -> {}",
+				HardwareProfileManager::getModeName(old_profile_mode),
+				HardwareProfileManager::getModeName(new_profile_mode));
+		}
+	}
 
 	if (requested_vsync_mode != previous_vsync_mode) {
 		const auto vsync_summary = g_gl_context.ReapplyVSyncToRegisteredCanvases();

@@ -21,6 +21,8 @@
 #include "ui/dialog_util.h"
 #include "app/application.h"
 #include "util/file_system.h"
+#include "util/system_specs.h"
+#include "rendering/core/hardware_profile.h"
 #include "editor/hotkey_manager.h"
 
 #include "game/sprites.h"
@@ -79,6 +81,12 @@ bool Application::OnInit() {
 
 	// Load settings early for theme support
 	g_settings.load();
+
+	// Initialize hardware detection and active performance profile early
+	const auto initial_specs = SystemSpecsDetector::detect(false);
+	auto& profile_mgr = HardwareProfileManager::get();
+	profile_mgr.initialize(initial_specs);
+	profile_mgr.setProfileMode(static_cast<HardwareProfileMode>(g_settings.getInteger(Config::HARDWARE_PROFILE_MODE)));
 
 	int rawTheme = g_settings.getInteger(Config::THEME);
 	Theme::Type theme = Theme::Type::System;

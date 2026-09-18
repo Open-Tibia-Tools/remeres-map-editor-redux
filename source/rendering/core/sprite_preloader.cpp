@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "rendering/core/sprite_preloader.h"
+#include "rendering/core/hardware_profile.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/normal_image.h"
 #include "rendering/core/sprite_archive.h"
@@ -25,7 +26,8 @@ SpritePreloader& SpritePreloader::get() {
 }
 
 SpritePreloader::SpritePreloader() : stopping(false) {
-	unsigned int num_threads = std::clamp(std::thread::hardware_concurrency(), MIN_WORKER_THREADS, MAX_WORKER_THREADS);
+	const unsigned int budget_threads = HardwareProfileManager::get().getActiveBudget().worker_threads;
+	unsigned int num_threads = std::clamp(budget_threads, MIN_WORKER_THREADS, MAX_WORKER_THREADS);
 	workers.reserve(num_threads);
 	for (unsigned int i = 0; i < num_threads; ++i) {
 		workers.emplace_back([this](std::stop_token stop_token) {

@@ -1,4 +1,5 @@
 #include "rendering/core/atlas_manager.h"
+#include "rendering/core/hardware_profile.h"
 #include <iostream>
 #include <algorithm>
 #include <spdlog/spdlog.h>
@@ -8,17 +9,15 @@ bool AtlasManager::ensureInitialized() {
 		return true;
 	}
 
-	// Pre-allocate 16 layers (16 * 16384 = 262K sprites capacity).
-	// This keeps startup memory bounded while still covering typical working sets.
-	// Larger datasets will dynamically expand this via addLayer().
-	static constexpr int INITIAL_LAYERS = 16;
+	const int initial_layers = HardwareProfileManager::get().getActiveBudget().initial_atlas_layers;
 
-	if (!atlas_.initialize(INITIAL_LAYERS)) {
+	if (!atlas_.initialize(initial_layers)) {
 		spdlog::error("AtlasManager: Failed to initialize texture array");
 		return false;
 	}
 
-	spdlog::info("AtlasManager: Texture array initialized ({}x{}, {} initial layers)", TextureAtlas::ATLAS_SIZE, TextureAtlas::ATLAS_SIZE, INITIAL_LAYERS);
+	spdlog::info("AtlasManager: Texture array initialized ({}x{}, {} initial layers, active budget)",
+		TextureAtlas::ATLAS_SIZE, TextureAtlas::ATLAS_SIZE, initial_layers);
 
 	if (!lut_.isValid()) {
 		lut_.initialize(65536);

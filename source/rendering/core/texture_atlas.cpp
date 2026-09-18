@@ -1,4 +1,5 @@
 #include "rendering/core/texture_atlas.h"
+#include "rendering/core/hardware_profile.h"
 #include <algorithm>
 #include <cstring>
 #include <spdlog/spdlog.h>
@@ -95,9 +96,8 @@ bool TextureAtlas::addLayer() {
 
 	// If we need more layers than allocated, reallocate
 	if (layer_count_ >= allocated_layers_) {
-		// Linear growth to prevent massive VRAM spikes
-		// 4 layers = ~268 MB VRAM
-		const int new_allocated = std::min(allocated_layers_ + 4, MAX_LAYERS);
+		const int step = HardwareProfileManager::get().getActiveBudget().atlas_expansion_step;
+		const int new_allocated = std::min(allocated_layers_ + step, MAX_LAYERS);
 
 		// Create new larger texture array
 		auto new_texture = std::make_unique<GLTextureResource>(GL_TEXTURE_2D_ARRAY);
