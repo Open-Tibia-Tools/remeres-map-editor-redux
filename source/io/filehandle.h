@@ -33,9 +33,6 @@
 #include <cstring>
 #include <string_view>
 
-class wxFileName;
-using FileName = wxFileName;
-
 #ifndef FORCEINLINE
 	#ifdef _MSV_VER
 		#define FORCEINLINE __forceinline

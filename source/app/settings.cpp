@@ -16,10 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/settings.h"
-#include "ui/gui_ids.h"
-#include "app/client_version.h"
-#include "app/main.h"
-#include "ui/managers/vsync_policy.h"
+#include "app/definitions.h"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
