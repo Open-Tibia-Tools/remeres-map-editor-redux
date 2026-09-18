@@ -323,12 +323,12 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 
 		ClientVersion* current = g_version.getLoadedVersion();
 		if (!current || current->getID() != target->getID()) {
-			wxString error;
+			std::string error;
 			std::vector<std::string> warnings;
 			if (CloseAllEditors()) {
 				if (!g_version.LoadVersion(target->getID(), error, warnings)) {
 					g_status.SetStatusText("Failed to load map.");
-					DialogUtil::PopupDialog("Error", error, wxOK);
+					DialogUtil::PopupDialog("Error", wxstr(error), wxOK);
 					return false;
 				}
 				if (!warnings.empty()) {
@@ -388,7 +388,12 @@ void EditorManager::DoCut() {
 		return;
 	}
 
-	editor->copybuffer.cut(*editor, g_gui.GetCurrentFloor());
+	auto result = editor->copybuffer.cut(*editor, g_gui.GetCurrentFloor());
+	if (result.empty) {
+		g_gui.SetStatusText("No tiles to cut.");
+	} else {
+		g_gui.SetStatusText(std::format("Cut out {} tile{} ({} item{})", result.tile_count, (result.tile_count > 1 ? "s" : ""), result.item_count, (result.item_count > 1 ? "s" : "")));
+	}
 	g_gui.RefreshView();
 	g_gui.root->UpdateMenubar();
 }
@@ -403,7 +408,12 @@ void EditorManager::DoCopy() {
 		return;
 	}
 
-	editor->copybuffer.copy(*editor, g_gui.GetCurrentFloor());
+	auto result = editor->copybuffer.copy(*editor, g_gui.GetCurrentFloor());
+	if (result.empty) {
+		g_gui.SetStatusText("No tiles to copy.");
+	} else {
+		g_gui.SetStatusText(std::format("Copied {} tile{} ({} item{})", result.tile_count, (result.tile_count > 1 ? "s" : ""), result.item_count, (result.item_count > 1 ? "s" : "")));
+	}
 	g_gui.RefreshView();
 	g_gui.root->UpdateMenubar();
 }

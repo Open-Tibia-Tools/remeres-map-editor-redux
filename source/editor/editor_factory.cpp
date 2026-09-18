@@ -103,7 +103,7 @@ bool EditorFactory::EnsureVersion(ClientVersionID version) {
 		return false;
 	}
 
-	wxString error;
+	std::string error;
 	std::vector<std::string> warnings;
 	if (g_version.LoadVersion(version, error, warnings)) {
 		if (!warnings.empty()) {
@@ -111,7 +111,7 @@ bool EditorFactory::EnsureVersion(ClientVersionID version) {
 		}
 		return true;
 	} else {
-		DialogUtil::PopupDialog("Error", error, wxOK);
+		DialogUtil::PopupDialog("Error", wxstr(error), wxOK);
 		return false;
 	}
 }

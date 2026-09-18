@@ -17,7 +17,7 @@ public:
 	~VersionManager();
 
 	void UnloadVersion();
-	bool LoadVersion(ClientVersionID ver, wxString& error, std::vector<std::string>& warnings, bool force = false);
+	bool LoadVersion(ClientVersionID ver, std::string& error, std::vector<std::string>& warnings, bool force = false);
 
 	// The current version loaded (returns CLIENT_VERSION_NONE if no version is loaded)
 	const ClientVersion& GetCurrentVersion() const;
@@ -44,14 +44,14 @@ public:
 
 private:
 	bool PromptForClientPaths(ClientVersion* version);
-	bool LoadDataFiles(wxString& error, std::vector<std::string>& warnings);
-	[[nodiscard]] wxString GetModularDataPath() const;
+	bool LoadDataFiles(std::string& error, std::vector<std::string>& warnings);
+	[[nodiscard]] std::filesystem::path GetModularDataPath() const;
 	void FailDataLoad();
-	bool LoadMaterialManifest(const FileName& materials_manifest, MaterialManifestFiles& manifest_files, wxString& error);
-	bool LoadCanonicalAssets(const wxString& modular_data_path, const MaterialManifestFiles& manifest_files, wxString& error, std::vector<std::string>& warnings);
+	bool LoadMaterialManifest(const FileName& materials_manifest, MaterialManifestFiles& manifest_files, std::string& error);
+	bool LoadCanonicalAssets(const std::filesystem::path& modular_data_path, const MaterialManifestFiles& manifest_files, std::string& error, std::vector<std::string>& warnings);
 	void AppendMissingItemWarnings(std::vector<std::string>& warnings) const;
-	bool LoadCreatureFiles(const MaterialManifestFiles& manifest_files, wxString& error, std::vector<std::string>& warnings);
-	bool LoadModularMaterials(const FileName& materials_manifest, wxString& error, std::vector<std::string>& warnings);
+	bool LoadCreatureFiles(const MaterialManifestFiles& manifest_files, std::string& error, std::vector<std::string>& warnings);
+	bool LoadModularMaterials(const FileName& materials_manifest, std::string& error, std::vector<std::string>& warnings);
 
 	ClientVersionID loaded_version;
 	MissingItemReport last_missing_items;

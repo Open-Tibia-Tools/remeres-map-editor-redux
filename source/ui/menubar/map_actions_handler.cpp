@@ -144,8 +144,10 @@ void MapActionsHandler::OnClearHouseTiles(wxCommandEvent& WXUNUSED(event)) {
 	);
 
 	if (ret == wxID_YES) {
-		// Editor will do the work
-		editor->clearInvalidHouseTiles(true);
+		ScopedLoadingBar loading("Clearing invalid house tiles...");
+		editor->clearInvalidHouseTiles([&](int percent) {
+			loading.SetLoadDone(percent);
+		});
 	}
 
 	g_gui.RefreshView();
@@ -164,8 +166,10 @@ void MapActionsHandler::OnClearModifiedState(wxCommandEvent& WXUNUSED(event)) {
 	);
 
 	if (ret == wxID_YES) {
-		// Editor will do the work
-		editor->clearModifiedTileState(true);
+		ScopedLoadingBar loading("Clearing modified state from all tiles...");
+		editor->clearModifiedTileState([&](int percent) {
+			loading.SetLoadDone(percent);
+		});
 	}
 
 	g_gui.RefreshView();
@@ -196,7 +200,9 @@ void MapActionsHandler::OnBorderizeSelection(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 
-	g_gui.GetCurrentEditor()->borderizeSelection();
+	if (!g_gui.GetCurrentEditor()->borderizeSelection()) {
+		g_gui.SetStatusText("No items selected. Can't borderize.");
+	}
 	g_gui.RefreshView();
 }
 
@@ -207,7 +213,10 @@ void MapActionsHandler::OnBorderizeMap(wxCommandEvent& WXUNUSED(event)) {
 
 	int ret = DialogUtil::PopupDialog("Borderize Map", "Are you sure you want to borderize the entire map (this action cannot be undone)?", wxYES | wxNO);
 	if (ret == wxID_YES) {
-		g_gui.GetCurrentEditor()->borderizeMap(true);
+		ScopedLoadingBar loading("Borderizing map...");
+		g_gui.GetCurrentEditor()->borderizeMap([&](int percent) {
+			loading.SetLoadDone(percent);
+		});
 	}
 
 	g_gui.RefreshView();
@@ -218,7 +227,9 @@ void MapActionsHandler::OnRandomizeSelection(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 
-	g_gui.GetCurrentEditor()->randomizeSelection();
+	if (!g_gui.GetCurrentEditor()->randomizeSelection()) {
+		g_gui.SetStatusText("No items selected. Can't randomize.");
+	}
 	g_gui.RefreshView();
 }
 
@@ -229,7 +240,10 @@ void MapActionsHandler::OnRandomizeMap(wxCommandEvent& WXUNUSED(event)) {
 
 	int ret = DialogUtil::PopupDialog("Randomize Map", "Are you sure you want to randomize the entire map (this action cannot be undone)?", wxYES | wxNO);
 	if (ret == wxID_YES) {
-		g_gui.GetCurrentEditor()->randomizeMap(true);
+		ScopedLoadingBar loading("Randomizing map...");
+		g_gui.GetCurrentEditor()->randomizeMap([&](int percent) {
+			loading.SetLoadDone(percent);
+		});
 	}
 
 	g_gui.RefreshView();

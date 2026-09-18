@@ -8,12 +8,18 @@ class Editor;
 class Tile;
 class DoodadBrush;
 
+struct DestroySelectionResult {
+	int tile_count = 0;
+	int item_count = 0;
+	bool empty = false;
+};
+
 class SelectionOperations {
 public:
 	static void moveSelection(Editor& editor, Position offset);
-	static void destroySelection(Editor& editor);
-	static void borderizeSelection(Editor& editor);
-	static void randomizeSelection(Editor& editor);
+	static DestroySelectionResult destroySelection(Editor& editor);
+	static bool borderizeSelection(Editor& editor);
+	static bool randomizeSelection(Editor& editor);
 
 	// Helper functions used by Editor::drawInternal
 	static void removeDuplicateWalls(Tile* buffer_tile, Tile* new_tile);

@@ -2,12 +2,11 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "editor/operations/copy_operations.h"
 #include "editor/copybuffer.h"
 #include "editor/editor.h"
 #include "map/tile_operations.h"
-#include "ui/gui.h"
 #include "game/creature.h"
 #include "game/spawn.h"
 #include "map/map.h"
@@ -17,10 +16,9 @@
 
 #include <format>
 
-void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
+CopyResult CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 	if (editor.selection.empty()) {
-		g_gui.SetStatusText("No tiles to copy.");
-		return;
+		return {.empty = true};
 	}
 
 	buffer.clear();
@@ -64,13 +62,16 @@ void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 		}
 	}
 
-	g_gui.SetStatusText(std::format("Copied {} tile{} ({} item{})", tile_count, (tile_count > 1 ? "s" : ""), item_count, (item_count > 1 ? "s" : "")));
+	return {
+		.tile_count = tile_count,
+		.item_count = item_count,
+		.empty = false
+	};
 }
 
-void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
+CopyResult CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 	if (editor.selection.empty()) {
-		g_gui.SetStatusText("No tiles to cut.");
-		return;
+		return {.empty = true};
 	}
 
 	buffer.clear();
@@ -160,7 +161,11 @@ void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 	}
 
 	editor.addBatch(std::move(batch));
-	g_gui.SetStatusText(std::format("Cut out {} tile{} ({} item{})", tile_count, (tile_count > 1 ? "s" : ""), item_count, (item_count > 1 ? "s" : "")));
+	return {
+		.tile_count = tile_count,
+		.item_count = item_count,
+		.empty = false
+	};
 }
 
 void CopyOperations::paste(Editor& editor, CopyBuffer& buffer, const Position& toPosition) {

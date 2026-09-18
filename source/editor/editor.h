@@ -79,19 +79,18 @@ public: // Functions
 	// Moves the selected area by the offset
 	void moveSelection(Position offset);
 	// Deletes all selected items
-	void destroySelection();
+	DestroySelectionResult destroySelection();
 	// Borderizes the selected region
-	void borderizeSelection();
+	bool borderizeSelection();
 	// Randomizes the ground in the selected region
-	void randomizeSelection();
+	bool randomizeSelection();
 
 	// Same as above although it applies to the entire map
 	// action queue is flushed when these functions are called
-	// showdialog is whether a progress bar should be shown
-	void borderizeMap(bool showdialog);
-	void randomizeMap(bool showdialog);
-	void clearInvalidHouseTiles(bool showdialog);
-	void clearModifiedTileState(bool showdialog);
+	void borderizeMap(std::function<void(int)> on_progress = nullptr);
+	void randomizeMap(std::function<void(int)> on_progress = nullptr);
+	void clearInvalidHouseTiles(std::function<void(int)> on_progress = nullptr);
+	void clearModifiedTileState(std::function<void(int)> on_progress = nullptr);
 
 	// Draw using the current brush to the target position
 	// alt is whether the ALT key is pressed

@@ -59,6 +59,7 @@ MapTab::~MapTab() {
 	iref->owner_count--;
 	if (iref->owner_count <= 0) {
 		spdlog::info("MapTab destroying editor [Editor={}]", (void*)iref->session.editor);
+		UnnamedRenderingLock();
 		delete iref->session.editor;
 		delete iref;
 	}

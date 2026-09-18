@@ -2,7 +2,7 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "editor/operations/selection_operations.h"
 #include "editor/editor.h"
@@ -12,8 +12,8 @@
 #include "map/map.h"
 #include "map/tile_operations.h"
 #include "brushes/ground/ground_brush.h"
+#include "game/creature.h"
 #include "app/settings.h"
-#include "ui/gui.h"
 
 #include "brushes/doodad/doodad_brush.h"
 
@@ -43,9 +43,9 @@ void SelectionOperations::removeDuplicateWalls(Tile* buffer, Tile* tile) {
 	}
 }
 
-void SelectionOperations::borderizeSelection(Editor& editor) {
+bool SelectionOperations::borderizeSelection(Editor& editor) {
 	if (editor.selection.empty()) {
-		g_gui.SetStatusText("No items selected. Can't borderize.");
+		return false;
 	}
 
 	std::unique_ptr<Action> action = editor.actionQueue->createAction(ACTION_BORDERIZE);
@@ -56,11 +56,12 @@ void SelectionOperations::borderizeSelection(Editor& editor) {
 		action->addChange(std::make_unique<Change>(std::move(newTile)));
 	}
 	editor.addAction(std::move(action));
+	return true;
 }
 
-void SelectionOperations::randomizeSelection(Editor& editor) {
+bool SelectionOperations::randomizeSelection(Editor& editor) {
 	if (editor.selection.empty()) {
-		g_gui.SetStatusText("No items selected. Can't randomize.");
+		return false;
 	}
 
 	std::unique_ptr<Action> action = editor.actionQueue->createAction(ACTION_RANDOMIZE);
@@ -82,6 +83,7 @@ void SelectionOperations::randomizeSelection(Editor& editor) {
 		}
 	}
 	editor.addAction(std::move(action));
+	return true;
 }
 
 void SelectionOperations::moveSelection(Editor& editor, Position offset) {
@@ -333,82 +335,84 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 	editor.selection.updateSelectionCount();
 }
 
-void SelectionOperations::destroySelection(Editor& editor) {
+DestroySelectionResult SelectionOperations::destroySelection(Editor& editor) {
 	if (editor.selection.empty()) {
-		g_gui.SetStatusText("No selected items to delete.");
-	} else {
-		int tile_count = 0;
-		int item_count = 0;
-		PositionList tilestoborder;
+		return {.empty = true};
+	}
 
-		std::unique_ptr<BatchAction> batch = editor.actionQueue->createBatch(ACTION_DELETE_TILES);
-		std::unique_ptr<Action> action = editor.actionQueue->createAction(batch.get());
+	int tile_count = 0;
+	int item_count = 0;
+	PositionList tilestoborder;
 
-		for (Tile* tile : editor.selection) {
-			tile_count++;
+	std::unique_ptr<BatchAction> batch = editor.actionQueue->createBatch(ACTION_DELETE_TILES);
+	std::unique_ptr<Action> action = editor.actionQueue->createAction(batch.get());
 
-			std::unique_ptr<Tile> newtile = TileOperations::deepCopy(tile, editor.map);
+	for (Tile* tile : editor.selection) {
+		tile_count++;
 
-			auto tile_selection = TileOperations::popSelectedItems(newtile.get());
-			for (auto& item : tile_selection) {
-				++item_count;
-				// Items are deleted when the unique_ptr in tile_selection goes out of scope
-			}
+		std::unique_ptr<Tile> newtile = TileOperations::deepCopy(tile, editor.map);
 
-			if (newtile->creature && newtile->creature->isSelected()) {
-				newtile->creature.reset();
-			}
+		auto tile_selection = TileOperations::popSelectedItems(newtile.get());
+		for (auto& item : tile_selection) {
+			++item_count;
+			// Items are deleted when the unique_ptr in tile_selection goes out of scope
+		}
 
-			if (newtile->spawn && newtile->spawn->isSelected()) {
-				newtile->spawn.reset();
-			}
+		if (newtile->creature && newtile->creature->isSelected()) {
+			newtile->creature.reset();
+		}
 
-			if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
-				for (int y = -1; y <= 1; y++) {
-					for (int x = -1; x <= 1; x++) {
-						tilestoborder.push_back(
-							Position(tile->getX() + x, tile->getY() + y, tile->getZ())
-						);
-					}
+		if (newtile->spawn && newtile->spawn->isSelected()) {
+			newtile->spawn.reset();
+		}
+
+		if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
+			for (int y = -1; y <= 1; y++) {
+				for (int x = -1; x <= 1; x++) {
+					tilestoborder.push_back(
+						Position(tile->getX() + x, tile->getY() + y, tile->getZ())
+					);
 				}
 			}
-			action->addChange(std::make_unique<Change>(std::move(newtile)));
+		}
+		action->addChange(std::make_unique<Change>(std::move(newtile)));
+	}
+
+	batch->addAndCommitAction(std::move(action));
+
+	if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
+		// Remove duplicates
+		tilestoborder.sort();
+		tilestoborder.unique();
+
+		action = editor.actionQueue->createAction(batch.get());
+		for (const Position& pos : tilestoborder) {
+			TileLocation* location = editor.map.createTileL(pos);
+			Tile* tile = location->get();
+
+			if (tile) {
+				std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
+				TileOperations::borderize(new_tile.get(), &editor.map);
+				TileOperations::wallize(new_tile.get(), &editor.map);
+				TileOperations::tableize(new_tile.get(), &editor.map);
+				TileOperations::carpetize(new_tile.get(), &editor.map);
+				action->addChange(std::make_unique<Change>(std::move(new_tile)));
+			} else {
+				std::unique_ptr<Tile> new_tile = editor.map.allocator(location);
+				TileOperations::borderize(new_tile.get(), &editor.map);
+				if (!new_tile->empty()) {
+					action->addChange(std::make_unique<Change>(std::move(new_tile)));
+				}
+			}
 		}
 
 		batch->addAndCommitAction(std::move(action));
-
-		if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
-			// Remove duplicates
-			tilestoborder.sort();
-			tilestoborder.unique();
-
-			action = editor.actionQueue->createAction(batch.get());
-			for (const Position& pos : tilestoborder) {
-				TileLocation* location = editor.map.createTileL(pos);
-				Tile* tile = location->get();
-
-				if (tile) {
-					std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
-					TileOperations::borderize(new_tile.get(), &editor.map);
-					TileOperations::wallize(new_tile.get(), &editor.map);
-					TileOperations::tableize(new_tile.get(), &editor.map);
-					TileOperations::carpetize(new_tile.get(), &editor.map);
-					action->addChange(std::make_unique<Change>(std::move(new_tile)));
-				} else {
-					std::unique_ptr<Tile> new_tile = editor.map.allocator(location);
-					TileOperations::borderize(new_tile.get(), &editor.map);
-					if (!new_tile->empty()) {
-						action->addChange(std::make_unique<Change>(std::move(new_tile)));
-					}
-				}
-			}
-
-			batch->addAndCommitAction(std::move(action));
-		}
-
-		editor.addBatch(std::move(batch));
-		wxString ss;
-		ss << "Deleted " << tile_count << " tile" << (tile_count > 1 ? "s" : "") << " (" << item_count << " item" << (item_count > 1 ? "s" : "") << ")";
-		g_gui.SetStatusText(ss);
 	}
+
+	editor.addBatch(std::move(batch));
+	return {
+		.tile_count = tile_count,
+		.item_count = item_count,
+		.empty = false
+	};
 }

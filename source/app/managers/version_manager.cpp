@@ -66,7 +66,7 @@ VersionManager::~VersionManager() {
 	// like SpritePreloader that may have already been destructed.
 }
 
-bool VersionManager::LoadVersion(ClientVersionID version, wxString& error, std::vector<std::string>& warnings, bool force) {
+bool VersionManager::LoadVersion(ClientVersionID version, std::string& error, std::vector<std::string>& warnings, bool force) {
 	if (ClientVersion::get(version) == nullptr) {
 		error = "Unsupported client version! (8)";
 		return false;
@@ -149,7 +149,7 @@ bool VersionManager::PromptForClientPaths(ClientVersion* version) {
 	return true;
 }
 
-bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& warnings) {
+bool VersionManager::LoadDataFiles(std::string& error, std::vector<std::string>& warnings) {
 	g_gui.gfx.client_version = getLoadedVersion();
 
 	// OTFI loading removed. Metadata and sprite files are configured via clients.toml or defaults in ClientVersion.
@@ -157,14 +157,14 @@ bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& wa
 	g_loading.CreateLoadBar("Loading asset files");
 	g_loading.SetLoadDone(0, "Loading canonical asset bundle...");
 
-	const wxString modular_data_path = GetModularDataPath();
-	if (!wxFileName(modular_data_path).DirExists()) {
-		error = "Missing modular client data directory: " + modular_data_path;
+	const std::filesystem::path modular_data_path = GetModularDataPath();
+	if (!std::filesystem::is_directory(modular_data_path)) {
+		error = "Missing modular client data directory: " + modular_data_path.string();
 		FailDataLoad();
 		return false;
 	}
 
-	const FileName materials_manifest(modular_data_path + "materials.xml");
+	const FileName materials_manifest(wxstr((modular_data_path / "materials.xml").string()));
 	MaterialManifestFiles manifest_files;
 	if (!LoadMaterialManifest(materials_manifest, manifest_files, error)) {
 		return false;
@@ -189,8 +189,8 @@ bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& wa
 	return true;
 }
 
-wxString VersionManager::GetModularDataPath() const {
-	return wxstr((FileSystem::GetDataDirectory() / getLoadedVersion()->getDataDirectory()).string()) + FileName::GetPathSeparator();
+std::filesystem::path VersionManager::GetModularDataPath() const {
+	return FileSystem::GetDataDirectory() / getLoadedVersion()->getDataDirectory();
 }
 
 void VersionManager::FailDataLoad() {
@@ -200,23 +200,23 @@ void VersionManager::FailDataLoad() {
 	UnloadVersion();
 }
 
-bool VersionManager::LoadMaterialManifest(const FileName& materials_manifest, MaterialManifestFiles& manifest_files, wxString& error) {
+bool VersionManager::LoadMaterialManifest(const FileName& materials_manifest, MaterialManifestFiles& manifest_files, std::string& error) {
 	std::string manifest_error;
 	if (LoadMaterialManifestFiles(materials_manifest, manifest_files, manifest_error)) {
 		return true;
 	}
-	error = wxstr(manifest_error);
+	error = manifest_error;
 	FailDataLoad();
 	return false;
 }
 
-bool VersionManager::LoadCanonicalAssets(const wxString& modular_data_path, const MaterialManifestFiles& manifest_files, wxString& error, std::vector<std::string>& warnings) {
+bool VersionManager::LoadCanonicalAssets(const std::filesystem::path& modular_data_path, const MaterialManifestFiles& manifest_files, std::string& error, std::vector<std::string>& warnings) {
 	AssetLoadRequest asset_request;
 	asset_request.mode = getLoadedVersion()->getItemDefinitionMode();
 	asset_request.client_version = getLoadedVersion();
 	asset_request.dat_path = getLoadedVersion()->getMetadataPath().GetFullPath().ToStdWstring();
 	asset_request.spr_path = getLoadedVersion()->getSpritesPath().GetFullPath().ToStdWstring();
-	asset_request.otb_path = (modular_data_path + "items.otb").ToStdWstring();
+	asset_request.otb_path = (modular_data_path / "items.otb").wstring();
 	asset_request.xml_paths.reserve(manifest_files.items.size());
 	for (const auto& item_path : manifest_files.items) {
 		asset_request.xml_paths.emplace_back(item_path.GetFullPath().ToStdWstring());
@@ -229,14 +229,14 @@ bool VersionManager::LoadCanonicalAssets(const wxString& modular_data_path, cons
 	AssetBundleLoader bundle_loader;
 	std::string bundle_error;
 	if (!bundle_loader.load(asset_request, bundle, bundle_error, warnings)) {
-		error = wxString::FromUTF8(std::format("Couldn't load canonical asset bundle: {}", bundle_error));
+		error = std::format("Couldn't load canonical asset bundle: {}", bundle_error);
 		FailDataLoad();
 		return false;
 	}
 
 	g_loading.SetLoadDone(20, "Installing graphics...");
 	if (!bundle_loader.install(bundle, g_gui.gfx, g_item_definitions, bundle_error, warnings)) {
-		error = wxString::FromUTF8(std::format("Couldn't install canonical asset bundle: {}", bundle_error));
+		error = std::format("Couldn't install canonical asset bundle: {}", bundle_error);
 		FailDataLoad();
 		return false;
 	}
@@ -279,12 +279,12 @@ void VersionManager::AppendMissingItemWarnings(std::vector<std::string>& warning
 	}
 }
 
-bool VersionManager::LoadCreatureFiles(const MaterialManifestFiles& manifest_files, wxString& error, std::vector<std::string>& warnings) {
+bool VersionManager::LoadCreatureFiles(const MaterialManifestFiles& manifest_files, std::string& error, std::vector<std::string>& warnings) {
 	g_loading.SetLoadDone(35, "Loading creatures.xml ...");
 	for (const FileName& creatureFile : manifest_files.creatures) {
 		std::string creature_error;
 		if (!g_creatures.loadFromXML(creatureFile.GetFullPath().ToStdWstring(), true, creature_error, warnings)) {
-			error = wxstr(std::format("Couldn't load creatures XML file {}: {}", creatureFile.GetFullPath().ToStdString(), creature_error));
+			error = std::format("Couldn't load creatures XML file {}: {}", creatureFile.GetFullPath().ToStdString(), creature_error);
 			FailDataLoad();
 			return false;
 		}
@@ -292,11 +292,11 @@ bool VersionManager::LoadCreatureFiles(const MaterialManifestFiles& manifest_fil
 	return true;
 }
 
-bool VersionManager::LoadModularMaterials(const FileName& materials_manifest, wxString& error, std::vector<std::string>& warnings) {
+bool VersionManager::LoadModularMaterials(const FileName& materials_manifest, std::string& error, std::vector<std::string>& warnings) {
 	g_loading.SetLoadDone(50, "Loading materials.xml ...");
 	std::string materials_error;
 	if (!g_materials.loadMaterials(materials_manifest, materials_error, warnings)) {
-		error = wxstr(std::format("Couldn't load materials.xml: {}", materials_error));
+		error = std::format("Couldn't load materials.xml: {}", materials_error);
 		FailDataLoad();
 		return false;
 	}

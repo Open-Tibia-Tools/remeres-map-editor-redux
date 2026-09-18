@@ -3,7 +3,6 @@
 #include "editor/editor.h"
 #include "editor/action_queue.h"
 #include "app/managers/version_manager.h"
-#include "app/application.h"
 #include "game/creatures.h"
 #include "game/creature.h"
 #include "map/tile.h"
@@ -45,8 +44,6 @@ MapVersionChangeResult MapVersionChanger::changeMapVersion(Editor& editor, MapVe
 		editor.actionQueue->clear();
 
 		if (new_ver.client < old_ver.client) {
-			UnnamedRenderingLock();
-
 			// Remember all creatures types on the map
 			MapConversionContext conversion_context;
 			foreach_TileOnMap(map, conversion_context);
@@ -56,9 +53,9 @@ MapVersionChangeResult MapVersionChanger::changeMapVersion(Editor& editor, MapVe
 
 			// Load the new version
 			ClientVersion* target = ClientVersion::getBestMatch(new_ver.client);
-			wxString load_error_1;
+			std::string load_error_1;
 			if (!target || !g_version.LoadVersion(target->getID(), load_error_1, result.warnings)) {
-				result.error = load_error_1.ToStdString();
+				result.error = load_error_1;
 				if (result.error.empty() && !target) {
 					result.error = "No compatible client version found for this protocol.";
 				}
@@ -78,11 +75,10 @@ MapVersionChangeResult MapVersionChanger::changeMapVersion(Editor& editor, MapVe
 
 			map.cleanInvalidTiles(true);
 		} else {
-			UnnamedRenderingLock();
 			ClientVersion* target = ClientVersion::getBestMatch(new_ver.client);
-			wxString load_error_2;
+			std::string load_error_2;
 			if (!target || !g_version.LoadVersion(target->getID(), load_error_2, result.warnings)) {
-				result.error = load_error_2.ToStdString();
+				result.error = load_error_2;
 				if (result.error.empty() && !target) {
 					result.error = "No compatible client version found for this protocol.";
 				}

@@ -87,10 +87,10 @@ void FileMenuHandler::OnExportMinimap(wxCommandEvent& WXUNUSED(event)) {
 }
 
 void FileMenuHandler::OnReloadDataFiles(wxCommandEvent& WXUNUSED(event)) {
-	wxString error;
+	std::string error;
 	std::vector<std::string> warnings;
 	g_version.LoadVersion(g_version.GetCurrentVersionID(), error, warnings, true);
-	DialogUtil::PopupDialog("Error", error, wxOK);
+	DialogUtil::PopupDialog("Error", wxstr(error), wxOK);
 	DialogUtil::ListDialog("Warnings", warnings);
 }
 
