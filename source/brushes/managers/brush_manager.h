@@ -68,9 +68,7 @@ public:
 	}
 
 	// Additional brush parameters
-	void SetSpawnTime(int time) {
-		creature_spawntime = time;
-	}
+	void SetSpawnTime(int time);
 
 	void SetLightIntensity(int v) {
 		light_intensity = v;

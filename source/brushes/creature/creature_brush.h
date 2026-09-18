@@ -56,6 +56,13 @@ public:
 protected:
 	CreatureType* creature_type;
 	mutable std::unique_ptr<Sprite> creature_sprite_wrapper;
+
+public:
+	static void setDefaultSpawnTime(int time) { default_spawn_time = time; }
+	static int getDefaultSpawnTime() { return default_spawn_time; }
+
+private:
+	static inline int default_spawn_time = 60;
 };
 
 #endif

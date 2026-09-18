@@ -17,10 +17,10 @@
 
 #include "app/definitions.h"
 
-#include "ui/gui.h"
 #include "game/materials.h"
 #include "brushes/brush.h"
 #include "game/creatures.h"
+#include "rendering/core/graphics.h"
 #include <algorithm>
 #include <format>
 
@@ -149,7 +149,7 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 		if (lookTypeAttr) {
 			if (ct->outfit.lookType == 0) {
 				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
-			} else if (g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
+			} else if (g_graphics.getCreatureSprite(ct->outfit.lookType) == nullptr) {
 				warnings.push_back(std::format("Invalid creature \"{}\" look type #{}", ct->name, ct->outfit.lookType));
 				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			}
@@ -245,7 +245,7 @@ CreatureType* CreatureType::loadFromOTXML(const std::filesystem::path& filename,
 
 	if (ct->outfit.lookItem == 0) {
 		if (ct->outfit.lookType != 0) {
-			if (g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
+			if (g_graphics.getCreatureSprite(ct->outfit.lookType) == nullptr) {
 				warnings.push_back(std::format("Invalid creature \"{}\" look type #{}", ct->name, ct->outfit.lookType));
 				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			}

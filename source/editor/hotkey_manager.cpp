@@ -7,6 +7,8 @@
 #include "brushes/brush.h"
 #include "app/settings.h"
 
+#include <sstream>
+
 HotkeyManager g_hotkeys;
 
 Hotkey::Hotkey() {

@@ -182,6 +182,23 @@ constexpr int MaxLightIntensity = 8;
 constexpr int PixelFormatRGB = 3;
 constexpr int PixelFormatRGBA = 4;
 
+// Client version constants
+inline constexpr int OTB_VERSION_NONE = 0;
+
+// Selection floor modes
+enum SelectionFloorMode {
+	SELECT_CURRENT_FLOOR,
+	SELECT_ALL_FLOORS,
+	SELECT_VISIBLE_FLOORS,
+};
+
+// VSync mode
+enum class VSyncMode : int {
+	Off = 0,
+	On = 1,
+	Adaptive = 2,
+};
+
 struct DrawColor {
 	uint8_t r;
 	uint8_t g;

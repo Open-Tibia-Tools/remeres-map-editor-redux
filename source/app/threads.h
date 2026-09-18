@@ -18,6 +18,6 @@
 #ifndef RME_THREAD_H_
 #define RME_THREAD_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #endif

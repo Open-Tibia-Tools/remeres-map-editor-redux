@@ -7,8 +7,8 @@
 #include "brushes/wall/wall_brush.h"
 #include "brushes/wall/wall_brush_loader.h"
 #include "brushes/wall/wall_border_calculator.h"
+#include "brushes/door/door_brush.h"
 
-#include "ui/gui.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "map/basemap.h"
 #include "map/tile_operations.h"
@@ -167,8 +167,7 @@ void WallDecorationBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 	ASSERT(tile);
 
 	auto iter = tile->items.begin();
-
-	bool prefLocked = g_gui.HasDoorLocked();
+	const bool prefLocked = DoorBrush::isLocked();
 
 	TileOperations::cleanWalls(tile, this);
 	while (iter != tile->items.end()) {

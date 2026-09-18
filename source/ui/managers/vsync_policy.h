@@ -1,11 +1,7 @@
 #ifndef RME_VSYNC_POLICY_H_
 #define RME_VSYNC_POLICY_H_
 
-enum class VSyncMode : int {
-	Off = 0,
-	On = 1,
-	Adaptive = 2,
-};
+#include "app/definitions.h"
 
 enum class SwapIntervalApplicationResult {
 	Set,

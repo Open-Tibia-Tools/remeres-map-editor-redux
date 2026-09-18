@@ -112,24 +112,24 @@ bool Map::open(const std::string& file, std::function<void(int, std::string_view
 	return true;
 }
 
-bool Map::convert(MapVersion to, bool showdialog) {
-	return MapConverter::convert(*this, to, showdialog);
+bool Map::convert(MapVersion to) {
+	return MapConverter::convert(*this, to);
 }
 
-bool Map::convert(const ConversionMap& rm, bool showdialog) {
-	return MapConverter::convert(*this, rm, showdialog);
+bool Map::convert(const ConversionMap& rm, ProgressCallback progress_cb) {
+	return MapConverter::convert(*this, rm, progress_cb);
 }
 
-void Map::cleanInvalidTiles(bool showdialog) {
-	MapConverter::cleanInvalidTiles(*this, showdialog);
+void Map::cleanInvalidTiles(ProgressCallback progress_cb) {
+	MapConverter::cleanInvalidTiles(*this, progress_cb);
 }
 
-void Map::cleanInvalidZones(bool showdialog) {
-	MapConverter::cleanInvalidZones(*this, showdialog);
+void Map::cleanInvalidZones(ProgressCallback progress_cb) {
+	MapConverter::cleanInvalidZones(*this, progress_cb);
 }
 
-void Map::convertHouseTiles(uint32_t fromId, uint32_t toId) {
-	MapConverter::convertHouseTiles(*this, fromId, toId);
+void Map::convertHouseTiles(uint32_t fromId, uint32_t toId, ProgressCallback progress_cb) {
+	MapConverter::convertHouseTiles(*this, fromId, toId, progress_cb);
 }
 
 MapVersion Map::getVersion() const {

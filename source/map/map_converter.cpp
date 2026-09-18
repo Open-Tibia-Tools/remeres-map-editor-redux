@@ -1,7 +1,6 @@
 #include "map/map_converter.h"
 #include "map/map.h"
 #include "map/tile_operations.h"
-#include "ui/gui.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "game/item.h"
 #include <unordered_map>
@@ -9,7 +8,7 @@
 #include <ranges>
 #include <algorithm>
 
-bool MapConverter::convert(Map& map, MapVersion to, bool showdialog) {
+bool MapConverter::convert(Map& map, MapVersion to) {
 	if (map.mapVersion.client == to.client) {
 		// Only OTBM version differs
 		// No changes necessary
@@ -124,9 +123,9 @@ namespace {
 
 } // namespace
 
-bool MapConverter::convert(Map& map, const ConversionMap& rm, bool showdialog) {
-	if (showdialog) {
-		g_gui.CreateLoadBar("Converting map ...");
+bool MapConverter::convert(Map& map, const ConversionMap& rm, ProgressCallback progress_cb) {
+	if (progress_cb) {
+		progress_cb(0, "Converting map ...");
 	}
 
 	std::unordered_map<const std::vector<uint16_t>*, std::unordered_set<uint16_t>> mtm_lookups;
@@ -149,21 +148,21 @@ bool MapConverter::convert(Map& map, const ConversionMap& rm, bool showdialog) {
 		applySTMConversion(tile, rm, inserted_items);
 
 		++tiles_done;
-		if (showdialog && tiles_done % 0x10000 == 0) {
-			g_gui.SetLoadDone(static_cast<int>(tiles_done * 100.0 / static_cast<double>(map.getTileCount())));
+		if (progress_cb && tiles_done % 0x10000 == 0) {
+			progress_cb(static_cast<int>(tiles_done * 100.0 / static_cast<double>(map.getTileCount())), "Converting map ...");
 		}
 	}
 
-	if (showdialog) {
-		g_gui.DestroyLoadBar();
+	if (progress_cb) {
+		progress_cb(100, "Converting map ...");
 	}
 
 	return true;
 }
 
-void MapConverter::cleanInvalidTiles(Map& map, bool showdialog) {
-	if (showdialog) {
-		g_gui.CreateLoadBar("Removing invalid tiles...");
+void MapConverter::cleanInvalidTiles(Map& map, ProgressCallback progress_cb) {
+	if (progress_cb) {
+		progress_cb(0, "Removing invalid tiles...");
 	}
 
 	uint64_t tiles_done = 0;
@@ -188,19 +187,19 @@ void MapConverter::cleanInvalidTiles(Map& map, bool showdialog) {
 		TileOperations::update(tile);
 
 		++tiles_done;
-		if (showdialog && tiles_done % 0x10000 == 0) {
-			g_gui.SetLoadDone(static_cast<int>(tiles_done * 100.0 / static_cast<double>(map.getTileCount())));
+		if (progress_cb && tiles_done % 0x10000 == 0) {
+			progress_cb(static_cast<int>(tiles_done * 100.0 / static_cast<double>(map.getTileCount())), "Removing invalid tiles...");
 		}
 	}
 
-	if (showdialog) {
-		g_gui.DestroyLoadBar();
+	if (progress_cb) {
+		progress_cb(100, "Removing invalid tiles...");
 	}
 }
 
-void MapConverter::cleanInvalidZones(Map& map, bool showdialog) {
-	if (showdialog) {
-		g_gui.CreateLoadBar("Removing invalid zones...");
+void MapConverter::cleanInvalidZones(Map& map, ProgressCallback progress_cb) {
+	if (progress_cb) {
+		progress_cb(0, "Removing invalid zones...");
 	}
 
 	uint64_t tiles_done = 0;
@@ -217,18 +216,20 @@ void MapConverter::cleanInvalidZones(Map& map, bool showdialog) {
 		TileOperations::update(tile);
 
 		++tiles_done;
-		if (showdialog && tiles_done % 0x10000 == 0) {
-			g_gui.SetLoadDone(static_cast<int>(tiles_done * 100.0 / static_cast<double>(map.getTileCount())));
+		if (progress_cb && tiles_done % 0x10000 == 0) {
+			progress_cb(static_cast<int>(tiles_done * 100.0 / static_cast<double>(map.getTileCount())), "Removing invalid zones...");
 		}
 	}
 
-	if (showdialog) {
-		g_gui.DestroyLoadBar();
+	if (progress_cb) {
+		progress_cb(100, "Removing invalid zones...");
 	}
 }
 
-void MapConverter::convertHouseTiles(Map& map, uint32_t fromId, uint32_t toId) {
-	g_gui.CreateLoadBar("Converting house tiles...");
+void MapConverter::convertHouseTiles(Map& map, uint32_t fromId, uint32_t toId, ProgressCallback progress_cb) {
+	if (progress_cb) {
+		progress_cb(0, "Converting house tiles...");
+	}
 	uint64_t tiles_done = 0;
 
 	auto filtered_tiles = map.tiles() | std::views::filter([fromId](const auto& tile_loc) {
@@ -239,10 +240,12 @@ void MapConverter::convertHouseTiles(Map& map, uint32_t fromId, uint32_t toId) {
 	for (auto& tile_loc : filtered_tiles) {
 		tile_loc.get()->setHouseID(toId);
 		++tiles_done;
-		if (tiles_done % 0x10000 == 0) {
-			g_gui.SetLoadDone(static_cast<int>(tiles_done * 100.0 / static_cast<double>(map.getTileCount())));
+		if (progress_cb && tiles_done % 0x10000 == 0) {
+			progress_cb(static_cast<int>(tiles_done * 100.0 / static_cast<double>(map.getTileCount())), "Converting house tiles...");
 		}
 	}
 
-	g_gui.DestroyLoadBar();
+	if (progress_cb) {
+		progress_cb(100, "Converting house tiles...");
+	}
 }

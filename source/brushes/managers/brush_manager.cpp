@@ -6,6 +6,8 @@
 
 #include "brushes/managers/brush_manager.h"
 #include "brushes/brush.h"
+#include "brushes/door/door_brush.h"
+#include "brushes/creature/creature_brush.h"
 #include "brushes/managers/doodad_preview_manager.h"
 #include "brushes/spawn/spawn_brush.h"
 #include "ui/managers/status_manager.h"
@@ -369,7 +371,13 @@ bool BrushManager::HasResizableDoodadBrush() const {
 
 void BrushManager::SetDoorLocked(bool on) {
 	draw_locked_doors = on;
+	DoorBrush::setLocked(on);
 	g_gui.RefreshView();
+}
+
+void BrushManager::SetSpawnTime(int time) {
+	creature_spawntime = time;
+	CreatureBrush::setDefaultSpawnTime(time);
 }
 
 void BrushManager::FillDoodadPreviewBuffer() {

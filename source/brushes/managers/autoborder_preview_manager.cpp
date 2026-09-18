@@ -45,7 +45,7 @@ void AutoborderPreviewManager::Update(Editor& editor, const Position& pos, bool 
 	PositionVector tilestoborder;
 
 	// Use BrushUtility to get affected tiles based on shape
-	BrushUtility::GetTilesToDraw(pos.x, pos.y, pos.z, &tilestodraw, &tilestoborder);
+	BrushUtility::GetTilesToDraw(&editor.map, brush, g_gui.GetBrushFootprint(), pos.x, pos.y, pos.z, &tilestodraw, &tilestoborder);
 
 	SimulateBrush(editor, pos, tilestodraw, alt_pressed);
 	ApplyBorders(tilestodraw, tilestoborder);

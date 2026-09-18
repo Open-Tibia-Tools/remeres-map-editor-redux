@@ -185,12 +185,8 @@ std::string Settings::DynamicValue::str() {
 		using T = std::decay_t<decltype(arg)>;
 		if constexpr (std::is_same_v<T, std::monostate>) {
 			return "";
-		} else if constexpr (std::is_same_v<T, int>) {
-			return i2s(arg);
-		} else if constexpr (std::is_same_v<T, uint32_t>) {
-			return i2s(arg);
-		} else if constexpr (std::is_same_v<T, float>) {
-			return f2s(arg);
+		} else if constexpr (std::is_same_v<T, int> || std::is_same_v<T, uint32_t> || std::is_same_v<T, float>) {
+			return std::to_string(arg);
 		} else {
 			return arg;
 		}

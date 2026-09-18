@@ -39,16 +39,18 @@ public:
 	Map();
 	~Map() override;
 
+	using ProgressCallback = std::function<void(int percent, std::string_view msg)>;
+
 	// Operations on the entire map
-	void cleanInvalidTiles(bool showdialog = false);
-	void cleanInvalidZones(bool showdialog = false);
-	void convertHouseTiles(uint32_t fromId, uint32_t toId);
+	void cleanInvalidTiles(ProgressCallback progress_cb = nullptr);
+	void cleanInvalidZones(ProgressCallback progress_cb = nullptr);
+	void convertHouseTiles(uint32_t fromId, uint32_t toId, ProgressCallback progress_cb = nullptr);
 
 	// Save a bmp image of the minimap
 
 	//
-	bool convert(MapVersion to, bool showdialog = false);
-	bool convert(const ConversionMap& cm, bool showdialog = false);
+	bool convert(MapVersion to);
+	bool convert(const ConversionMap& cm, ProgressCallback progress_cb = nullptr);
 
 	// Query information about the map
 

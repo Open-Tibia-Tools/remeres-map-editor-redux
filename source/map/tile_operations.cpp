@@ -12,7 +12,6 @@
 #include "game/complexitem.h"
 #include "game/creature.h"
 #include "editor/editor.h"
-#include "ui/gui.h"
 #include "brushes/ground/ground_brush.h"
 #include "brushes/wall/wall_brush.h"
 #include "brushes/table/table_brush.h"
@@ -84,13 +83,19 @@ namespace TileOperations {
 
 	} // anonymous namespace
 
+	static SelectionChangedCallback s_selection_changed_cb = nullptr;
+
+	void setSelectionChangedCallback(SelectionChangedCallback cb) {
+		s_selection_changed_cb = std::move(cb);
+	}
+
 	void markSelectionChanged(Tile* tile) {
 		if (!tile) {
 			return;
 		}
 
-		if (Editor* editor = g_gui.GetCurrentEditor()) {
-			editor->selection.markChanged();
+		if (s_selection_changed_cb) {
+			s_selection_changed_cb(tile);
 		}
 	}
 

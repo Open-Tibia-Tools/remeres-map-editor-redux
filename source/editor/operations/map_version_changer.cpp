@@ -49,7 +49,7 @@ MapVersionChangeResult MapVersionChanger::changeMapVersion(Editor& editor, MapVe
 			foreach_TileOnMap(map, conversion_context);
 
 			// Perform the conversion
-			map.convert(new_ver, true);
+			map.convert(new_ver);
 
 			// Load the new version
 			ClientVersion* target = ClientVersion::getBestMatch(new_ver.client);
@@ -73,7 +73,7 @@ MapVersionChangeResult MapVersionChanger::changeMapVersion(Editor& editor, MapVe
 				}
 			}
 
-			map.cleanInvalidTiles(true);
+			map.cleanInvalidTiles();
 		} else {
 			ClientVersion* target = ClientVersion::getBestMatch(new_ver.client);
 			std::string load_error_2;
@@ -84,10 +84,10 @@ MapVersionChangeResult MapVersionChanger::changeMapVersion(Editor& editor, MapVe
 				}
 				return result;
 			}
-			map.convert(new_ver, true);
+			map.convert(new_ver);
 		}
 	} else {
-		map.convert(new_ver, true);
+		map.convert(new_ver);
 	}
 	result.success = true;
 	return result;

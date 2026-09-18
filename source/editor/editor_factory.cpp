@@ -11,11 +11,31 @@
 
 #include "ui/tile_properties/tile_properties_panel.h"
 #include "map/tile.h"
+#include "map/tile_operations.h"
 #include "game/creature.h"
 #include "game/spawn.h"
 #include "ui/managers/minimap_manager.h"
 
 void SetupCallbacks(Editor* editor) {
+	static bool s_global_callbacks_initialized = false;
+	if (!s_global_callbacks_initialized) {
+		s_global_callbacks_initialized = true;
+		Tile::setModifiedCallback([](Tile* tile) {
+			if (Editor* current_editor = g_gui.GetCurrentEditor()) {
+				const Position position = tile->getPosition();
+				current_editor->map.getChangeTracker().markTileDirty(position);
+				if (!tile->ownedLocation && current_editor->map.getTile(position) == tile) {
+					g_minimap.MarkTileDirty(current_editor->map, position);
+				}
+			}
+		});
+		TileOperations::setSelectionChangedCallback([](Tile*) {
+			if (Editor* current_editor = g_gui.GetCurrentEditor()) {
+				current_editor->selection.markChanged();
+			}
+		});
+	}
+
 	editor->onTileModified = [editor](const Position& pos) {
 		g_minimap.MarkTileDirty(editor->map, pos);
 	};

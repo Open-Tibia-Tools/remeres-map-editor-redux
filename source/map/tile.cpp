@@ -22,8 +22,6 @@
 #include "editor/editor.h"
 #include "map/tile.h"
 #include "map/tile_operations.h"
-#include "ui/gui.h"
-#include "ui/managers/minimap_manager.h"
 #include "game/creature.h"
 #include "game/house.h"
 #include "map/basemap.h"
@@ -386,12 +384,8 @@ void Tile::modify() {
 	statflags |= TILESTATE_MODIFIED;
 	minimapColor = INVALID_MINIMAP_COLOR;
 
-	if (Editor* editor = g_gui.GetCurrentEditor()) {
-		const Position position = getPosition();
-		editor->map.getChangeTracker().markTileDirty(position);
-		if (!ownedLocation && editor->map.getTile(position) == this) {
-			g_minimap.MarkTileDirty(editor->map, position);
-		}
+	if (s_modified_cb) {
+		s_modified_cb(this);
 	}
 
 	if (isSelected()) {

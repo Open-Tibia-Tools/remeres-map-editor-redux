@@ -10,8 +10,9 @@
 class DoorBrush : public Brush {
 public:
 	explicit DoorBrush(DoorType doortype);
-	~DoorBrush() override = default;
+	~DoorBrush() override;
 
+	static DoorBrush* getDoorBrush(DoorType type);
 
 	static void switchDoor(Item* door);
 
@@ -25,8 +26,14 @@ public:
 		return true;
 	}
 
+	static void setLocked(bool locked) { pref_locked = locked; }
+	static bool isLocked() { return pref_locked; }
+
 protected:
 	DoorType doortype;
+
+private:
+	static inline bool pref_locked = false;
 };
 
 #endif

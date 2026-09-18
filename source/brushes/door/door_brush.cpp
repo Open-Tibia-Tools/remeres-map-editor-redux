@@ -13,16 +13,30 @@
 #include "map/map.h"
 #include "map/tile.h"
 #include "map/tile_operations.h"
-#include "ui/gui.h"
 
 #include <ranges>
 #include <array>
 #include <string_view>
-#include <algorithm>
+static std::array<DoorBrush*, 16> s_door_brushes = {};
 
 DoorBrush::DoorBrush(DoorType doortype) :
 	doortype(doortype) {
-	//
+	if (static_cast<size_t>(doortype) < s_door_brushes.size()) {
+		s_door_brushes[doortype] = this;
+	}
+}
+
+DoorBrush::~DoorBrush() {
+	if (static_cast<size_t>(doortype) < s_door_brushes.size() && s_door_brushes[doortype] == this) {
+		s_door_brushes[doortype] = nullptr;
+	}
+}
+
+DoorBrush* DoorBrush::getDoorBrush(DoorType type) {
+	if (static_cast<size_t>(type) < s_door_brushes.size()) {
+		return s_door_brushes[type];
+	}
+	return nullptr;
 }
 
 std::string DoorBrush::getName() const {
@@ -77,7 +91,7 @@ void DoorBrush::switchDoor(Item* item) {
 	}
 
 	uint16_t oppositeVariant = 0;
-	bool prefLocked = g_gui.HasDoorLocked();
+	bool prefLocked = DoorBrush::isLocked();
 
 	const auto& doorItems = wb->items.getDoorItems(wall_alignment);
 	for (const auto& dt : doorItems) {
@@ -125,7 +139,7 @@ bool DoorBrush::canDraw(BaseMap* map, const Position& position) const {
 	uint16_t discarded_id = 0;
 	bool close_match = false;
 	bool open = item->isBrushDoor() && item->isOpen();
-	bool prefLocked = g_gui.HasDoorLocked();
+	bool prefLocked = DoorBrush::isLocked();
 
 	WallBrush* test_brush = wb;
 	do {
@@ -186,7 +200,7 @@ void DoorBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 		bool close_match = false;
 		bool perfect_match = false;
 		bool open = parameter ? *static_cast<bool*>(parameter) : (item->isBrushDoor() && item->isOpen());
-		bool prefLocked = g_gui.HasDoorLocked();
+		bool prefLocked = DoorBrush::isLocked();
 
 		WallBrush* test_brush = wb;
 		do {
