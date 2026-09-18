@@ -164,7 +164,7 @@ bool VersionManager::LoadDataFiles(std::string& error, std::vector<std::string>&
 		return false;
 	}
 
-	const FileName materials_manifest(wxstr((modular_data_path / "materials.xml").string()));
+	const std::filesystem::path materials_manifest = modular_data_path / "materials.xml";
 	MaterialManifestFiles manifest_files;
 	if (!LoadMaterialManifest(materials_manifest, manifest_files, error)) {
 		return false;
@@ -200,7 +200,7 @@ void VersionManager::FailDataLoad() {
 	UnloadVersion();
 }
 
-bool VersionManager::LoadMaterialManifest(const FileName& materials_manifest, MaterialManifestFiles& manifest_files, std::string& error) {
+bool VersionManager::LoadMaterialManifest(const std::filesystem::path& materials_manifest, MaterialManifestFiles& manifest_files, std::string& error) {
 	std::string manifest_error;
 	if (LoadMaterialManifestFiles(materials_manifest, manifest_files, manifest_error)) {
 		return true;
@@ -219,7 +219,7 @@ bool VersionManager::LoadCanonicalAssets(const std::filesystem::path& modular_da
 	asset_request.otb_path = (modular_data_path / "items.otb").wstring();
 	asset_request.xml_paths.reserve(manifest_files.items.size());
 	for (const auto& item_path : manifest_files.items) {
-		asset_request.xml_paths.emplace_back(item_path.GetFullPath().ToStdWstring());
+		asset_request.xml_paths.emplace_back(item_path.wstring());
 	}
 
 	// Track whether this mode uses OTB
@@ -281,10 +281,10 @@ void VersionManager::AppendMissingItemWarnings(std::vector<std::string>& warning
 
 bool VersionManager::LoadCreatureFiles(const MaterialManifestFiles& manifest_files, std::string& error, std::vector<std::string>& warnings) {
 	g_loading.SetLoadDone(35, "Loading creatures.xml ...");
-	for (const FileName& creatureFile : manifest_files.creatures) {
+	for (const auto& creatureFile : manifest_files.creatures) {
 		std::string creature_error;
-		if (!g_creatures.loadFromXML(creatureFile.GetFullPath().ToStdWstring(), true, creature_error, warnings)) {
-			error = std::format("Couldn't load creatures XML file {}: {}", creatureFile.GetFullPath().ToStdString(), creature_error);
+		if (!g_creatures.loadFromXML(creatureFile.wstring(), true, creature_error, warnings)) {
+			error = std::format("Couldn't load creatures XML file {}: {}", creatureFile.string(), creature_error);
 			FailDataLoad();
 			return false;
 		}
@@ -292,7 +292,7 @@ bool VersionManager::LoadCreatureFiles(const MaterialManifestFiles& manifest_fil
 	return true;
 }
 
-bool VersionManager::LoadModularMaterials(const FileName& materials_manifest, std::string& error, std::vector<std::string>& warnings) {
+bool VersionManager::LoadModularMaterials(const std::filesystem::path& materials_manifest, std::string& error, std::vector<std::string>& warnings) {
 	g_loading.SetLoadDone(50, "Loading materials.xml ...");
 	std::string materials_error;
 	if (!g_materials.loadMaterials(materials_manifest, materials_error, warnings)) {

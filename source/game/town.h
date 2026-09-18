@@ -20,6 +20,7 @@
 
 #include "map/position.h"
 #include <memory>
+#include <map>
 
 class Town {
 public:

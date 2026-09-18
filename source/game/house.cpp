@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "map/tile_operations.h"
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "game/complexitem.h" // Door
 #include "game/house.h"

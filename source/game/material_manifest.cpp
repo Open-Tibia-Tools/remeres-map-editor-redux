@@ -11,31 +11,31 @@ namespace {
 
 struct ManifestSection {
 	std::string_view name;
-	std::vector<FileName> MaterialManifestFiles::* files;
+	std::vector<std::filesystem::path> MaterialManifestFiles::* files;
 	bool* seen = nullptr;
 };
 
-[[nodiscard]] bool collectManifestSection(const FileName& manifestFile, pugi::xml_node node, const ManifestSection& section, MaterialManifestFiles& files, std::string& error) {
+[[nodiscard]] bool collectManifestSection(const std::filesystem::path& manifestFile, pugi::xml_node node, const ManifestSection& section, MaterialManifestFiles& files, std::string& error) {
 	*section.seen = true;
 	return MaterialIncludeResolver::collectSectionFiles(manifestFile, node, section.name, files.*section.files, error);
 }
 
 } // namespace
 
-bool LoadMaterialManifestFiles(const FileName& manifestFile, MaterialManifestFiles& files, std::string& error) {
+bool LoadMaterialManifestFiles(const std::filesystem::path& manifestFile, MaterialManifestFiles& files, std::string& error) {
 	files = {};
 
 	pugi::xml_document doc;
-	const pugi::xml_parse_result result = doc.load_file(manifestFile.GetFullPath().mb_str());
+	const pugi::xml_parse_result result = doc.load_file(manifestFile.c_str());
 	if (!result) {
 		error = std::format("Could not parse materials manifest: {}: {} at offset {}",
-			manifestFile.GetFullPath().ToStdString(), result.description(), result.offset);
+			manifestFile.string(), result.description(), result.offset);
 		return false;
 	}
 
 	pugi::xml_node root = doc.child("materials");
 	if (!root) {
-		error = std::format("Invalid materials manifest root: {}", manifestFile.GetFullPath().ToStdString());
+		error = std::format("Invalid materials manifest root: {}", manifestFile.string());
 		return false;
 	}
 
