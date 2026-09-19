@@ -243,6 +243,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const std::filesystem::path& path) {
 		}
 	};
 
+	reportProgress(98, "Loading houses and spawns...");
 	loadAux(&MapXMLIO::loadHouses, "house", map.housefile);
 	loadAux(&MapXMLIO::loadSpawns, "spawn", map.spawnfile);
 	// Waypoint migration and loading logic
@@ -319,6 +320,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const std::filesystem::path& path) {
 	}
 
 	map.getChangeTracker().markAllDirty();
+	reportProgress(100, "Done");
 	return true;
 }
 

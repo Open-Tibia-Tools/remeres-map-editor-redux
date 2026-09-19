@@ -52,14 +52,14 @@ Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version) :
 	map.initializeEmpty();
 }
 
-Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, const std::filesystem::path& fn, const MapLoadOptions& load_options) :
+Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, const std::filesystem::path& fn, const MapLoadOptions& load_options, EditorPersistence::ProgressCallback on_progress) :
 	live_manager(*this),
 	actionQueue(newd ActionQueue(*this)),
 	selection(*this),
 	copybuffer(copybuffer),
 	replace_brush(nullptr) {
 	spdlog::info("Editor created (From File) [Editor={}]", (void*)this);
-	EditorPersistence::loadMap(*this, fn, load_options);
+	EditorPersistence::loadMap(*this, fn, load_options, std::move(on_progress));
 }
 
 Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, std::unique_ptr<LiveClient> client) :

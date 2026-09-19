@@ -339,7 +339,12 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 			}
 		}
 
-		editor = EditorFactory::LoadFromFile(g_gui.copybuffer, fileName, load_options);
+		ScopedLoadingBar loading_bar("Loading OTBM map...");
+		auto on_progress = [](int percent, std::string_view msg) {
+			g_gui.SetLoadDone(percent, msg.empty() ? wxString() : wxstr(std::string(msg)));
+		};
+
+		editor = EditorFactory::LoadFromFile(g_gui.copybuffer, fileName, load_options, on_progress);
 	} catch (std::runtime_error& e) {
 		g_status.SetStatusText("Failed to load map.");
 		DialogUtil::PopupDialog(g_gui.root, "Error!", wxString(e.what(), wxConvUTF8), wxOK);
