@@ -61,28 +61,13 @@
 #include <unordered_map>
 #include <chrono>
 
-using attribute_t = uint8_t;
-using flags_t = uint32_t;
-
-// Item OTBM operations delegated to ItemSerializationOTBM
+// Item OTBM operations delegated to ItemSerializationOTBM (used by LiveSocket)
 std::unique_ptr<Item> Item::Create_OTBM(const IOMap& maphandle, BinaryNode* stream) {
 	return ItemSerializationOTBM::createFromStream(maphandle, stream);
 }
 
-bool Item::readItemAttribute_OTBM(const IOMap& maphandle, OTBM_ItemAttribute attr, BinaryNode* stream) {
-	return ItemSerializationOTBM::readAttribute(maphandle, attr, stream, *this);
-}
-
-bool Item::unserializeAttributes_OTBM(const IOMap& maphandle, BinaryNode* stream) {
-	return ItemSerializationOTBM::unserializeAttributes(maphandle, stream, *this);
-}
-
 bool Item::unserializeItemNode_OTBM(const IOMap& maphandle, BinaryNode* node) {
 	return ItemSerializationOTBM::unserializeItemNode(maphandle, node, *this);
-}
-
-void Item::serializeItemAttributes_OTBM(const IOMap& maphandle, NodeFileWriteHandle& stream) const {
-	ItemSerializationOTBM::serializeItemAttributes(maphandle, stream, *this);
 }
 
 void Item::serializeItemCompact_OTBM(const IOMap& maphandle, NodeFileWriteHandle& stream) const {
@@ -93,44 +78,12 @@ bool Item::serializeItemNode_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f
 	return ItemSerializationOTBM::serializeItemNode(maphandle, file, *this);
 }
 
-bool Teleport::readItemAttribute_OTBM(const IOMap& maphandle, OTBM_ItemAttribute attribute, BinaryNode* stream) {
-	return ItemSerializationOTBM::readAttribute(maphandle, attribute, stream, *this);
-}
-
-void Teleport::serializeItemAttributes_OTBM(const IOMap& maphandle, NodeFileWriteHandle& stream) const {
-	ItemSerializationOTBM::serializeItemAttributes(maphandle, stream, *this);
-}
-
-bool Door::readItemAttribute_OTBM(const IOMap& maphandle, OTBM_ItemAttribute attribute, BinaryNode* stream) {
-	return ItemSerializationOTBM::readAttribute(maphandle, attribute, stream, *this);
-}
-
-void Door::serializeItemAttributes_OTBM(const IOMap& maphandle, NodeFileWriteHandle& stream) const {
-	ItemSerializationOTBM::serializeItemAttributes(maphandle, stream, *this);
-}
-
-bool Depot::readItemAttribute_OTBM(const IOMap& maphandle, OTBM_ItemAttribute attribute, BinaryNode* stream) {
-	return ItemSerializationOTBM::readAttribute(maphandle, attribute, stream, *this);
-}
-
-void Depot::serializeItemAttributes_OTBM(const IOMap& maphandle, NodeFileWriteHandle& stream) const {
-	ItemSerializationOTBM::serializeItemAttributes(maphandle, stream, *this);
-}
-
 bool Container::unserializeItemNode_OTBM(const IOMap& maphandle, BinaryNode* node) {
 	return ItemSerializationOTBM::unserializeItemNode(maphandle, node, *this);
 }
 
 bool Container::serializeItemNode_OTBM(const IOMap& maphandle, NodeFileWriteHandle& file) const {
 	return ItemSerializationOTBM::serializeItemNode(maphandle, file, *this);
-}
-
-bool Podium::readItemAttribute_OTBM(const IOMap& maphandle, OTBM_ItemAttribute attribute, BinaryNode* stream) {
-	return ItemSerializationOTBM::readAttribute(maphandle, attribute, stream, *this);
-}
-
-void Podium::serializeItemAttributes_OTBM(const IOMap& maphandle, NodeFileWriteHandle& stream) const {
-	ItemSerializationOTBM::serializeItemAttributes(maphandle, stream, *this);
 }
 
 /* Entry level calls */

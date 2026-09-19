@@ -83,9 +83,6 @@ public:
 		return this;
 	}
 
-	virtual void serializeItemAttributes_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f) const;
-	virtual bool readItemAttribute_OTBM(const IOMap& maphandle, OTBM_ItemAttribute attr, BinaryNode* node);
-
 	int32_t getX() const {
 		return destination.x;
 	}
@@ -130,9 +127,6 @@ public:
 	uint8_t getDoorID() const;
 	void setDoorID(uint8_t id);
 
-	virtual void serializeItemAttributes_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f) const;
-	virtual bool readItemAttribute_OTBM(const IOMap& maphandle, OTBM_ItemAttribute attr, BinaryNode* node);
-
 	DoorType getDoorType() const;
 	bool isRealDoor() const;
 
@@ -159,9 +153,6 @@ public:
 	void setDepotID(uint8_t id) {
 		depotId = id;
 	}
-
-	virtual void serializeItemAttributes_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f) const;
-	virtual bool readItemAttribute_OTBM(const IOMap& maphandle, OTBM_ItemAttribute attr, BinaryNode* node);
 
 protected:
 	uint8_t depotId;
@@ -223,9 +214,6 @@ public:
 	void setShowPlatform(bool newState) {
 		showPlatform = newState;
 	}
-
-	virtual void serializeItemAttributes_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f) const;
-	virtual bool readItemAttribute_OTBM(const IOMap& maphandle, OTBM_ItemAttribute attr, BinaryNode* node);
 
 protected:
 	Outfit outfit;
