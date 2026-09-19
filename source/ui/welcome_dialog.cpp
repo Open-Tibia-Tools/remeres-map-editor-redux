@@ -56,7 +56,7 @@ WelcomeDialog::WelcomeDialog(const wxString& title_text, const wxString& version
 		m_configured_clients.push_back({
 			client,
 			wxstr(client->getName()),
-			client->getClientPath().GetFullPath(),
+			wxString(client->getClientPath().wstring()),
 		});
 	}
 
@@ -97,7 +97,7 @@ void WelcomeDialog::RefreshConfiguredClients() {
 		m_configured_clients.push_back({
 			client,
 			wxstr(client->getName()),
-			client->getClientPath().GetFullPath(),
+			wxString(client->getClientPath().wstring()),
 		});
 	}
 

@@ -23,7 +23,7 @@ namespace {
 	constexpr size_t kMaxSampleOffsets = 24;
 
 	struct ResolvedClientFile {
-		wxFileName path;
+		std::filesystem::path path;
 		std::string filename;
 		bool exists = false;
 	};
@@ -43,16 +43,16 @@ namespace {
 		int alpha_matches = 0;
 	};
 
-	ResolvedClientFile resolveClientFile(const wxFileName& client_path, const std::string& configured_name, const std::string& fallback_name) {
+	ResolvedClientFile resolveClientFile(const std::filesystem::path& client_path, const std::string& configured_name, const std::string& fallback_name) {
 		const auto isSafeRelativePath = [](const std::string& raw_name) {
 			if (raw_name.empty()) {
 				return false;
 			}
-			const wxFileName path(wxString::FromUTF8(raw_name));
-			if (path.IsAbsolute()) {
+			const std::filesystem::path path = std::filesystem::u8path(raw_name);
+			if (path.is_absolute()) {
 				return false;
 			}
-			for (const auto& directory : path.GetDirs()) {
+			for (const auto& directory : path) {
 				if (directory == "..") {
 					return false;
 				}
@@ -66,8 +66,8 @@ namespace {
 			}
 			ResolvedClientFile resolved;
 			resolved.filename = candidate_name;
-			resolved.path = wxFileName(client_path.GetFullPath(), wxString::FromUTF8(candidate_name));
-			resolved.exists = resolved.path.FileExists();
+			resolved.path = client_path / std::filesystem::u8path(candidate_name);
+			resolved.exists = std::filesystem::is_regular_file(resolved.path);
 			if (resolved.exists) {
 				return resolved;
 			}
@@ -75,10 +75,10 @@ namespace {
 		return {};
 	}
 
-	std::optional<uint32_t> readSignature(const wxFileName& path, std::string_view label, std::vector<std::string>& warnings) {
-		FileReadHandle file(path.GetFullPath().ToStdString());
+	std::optional<uint32_t> readSignature(const std::filesystem::path& path, std::string_view label, std::vector<std::string>& warnings) {
+		FileReadHandle file(path);
 		if (!file.isOk()) {
-			const auto message = std::format("{} signature detection failed: could not open {}", label, path.GetFullPath().ToStdString());
+			const auto message = std::format("{} signature detection failed: could not open {}", label, path.string());
 			spdlog::warn(message);
 			warnings.push_back(message);
 			return std::nullopt;
@@ -86,7 +86,7 @@ namespace {
 
 		uint32_t signature = 0;
 		if (!file.getU32(signature)) {
-			const auto message = std::format("{} signature detection failed: could not read header from {}", label, path.GetFullPath().ToStdString());
+			const auto message = std::format("{} signature detection failed: could not read header from {}", label, path.string());
 			spdlog::warn(message);
 			warnings.push_back(message);
 			return std::nullopt;
@@ -95,7 +95,7 @@ namespace {
 		return signature;
 	}
 
-	std::vector<DatProbeCandidate> probeDatCandidates(const wxFileName& dat_path, uint32_t dat_signature) {
+	std::vector<DatProbeCandidate> probeDatCandidates(const std::filesystem::path& dat_path, uint32_t dat_signature) {
 		static constexpr std::array formats = {
 			DAT_FORMAT_74,
 			DAT_FORMAT_755,
@@ -125,7 +125,7 @@ namespace {
 						probe_client.setClientData(dat_signature, 0, format);
 
 						ItemDefinitionLoadInput input;
-						input.dat_path = dat_path.GetFullPath().ToStdWstring();
+						input.dat_path = dat_path.wstring();
 						input.client_version = &probe_client;
 
 						DatCatalog catalog;
@@ -237,8 +237,8 @@ namespace {
 		return sample_offsets;
 	}
 
-	std::optional<SpriteProbeCandidate> probeSpriteCandidate(const wxFileName& spr_path, bool extended) {
-		FileReadHandle file(spr_path.GetFullPath().ToStdString());
+	std::optional<SpriteProbeCandidate> probeSpriteCandidate(const std::filesystem::path& spr_path, bool extended) {
+		FileReadHandle file(spr_path);
 		if (!file.isOk()) {
 			return std::nullopt;
 		}
@@ -325,7 +325,7 @@ namespace {
 ClientAssetDetectionResult ClientAssetDetector::detect(const ClientVersion& client) {
 	// common code: check if path exists
 	ClientAssetDetectionResult result;
-	if (!client.getClientPath().DirExists()) {
+	if (!std::filesystem::is_directory(client.getClientPath())) {
 		const auto message = "Client asset detection skipped: selected client path does not exist.";
 		spdlog::warn(message);
 		result.warnings.emplace_back(message);
@@ -438,9 +438,9 @@ void ClientAssetDetector::internalDetectProtobuf(const ClientVersion& client, Cl
 	}
 
 	// open catalog-content.json
-	std::ifstream catalog_stream(catalog_file.path.GetFullPath().ToStdString());
+	std::ifstream catalog_stream(catalog_file.path);
 	if (!catalog_stream.is_open()) {
-		const auto message = std::format("Client asset detection failed: could not open {}", catalog_file.path.GetFullPath().ToStdString());
+		const auto message = std::format("Client asset detection failed: could not open {}", catalog_file.path.string());
 		spdlog::warn(message);
 		result.warnings.emplace_back(message);
 		return;

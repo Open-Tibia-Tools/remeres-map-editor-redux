@@ -81,7 +81,7 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 				if (!map_header_node->getString(description)) {
 					return false;
 				}
-				out_info.description = wxstr(description);
+				out_info.description = description;
 				break;
 			}
 			case OTBM_ATTR_EXT_SPAWN_FILE: {
@@ -89,7 +89,7 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 				if (!map_header_node->getString(spawn_file)) {
 					return false;
 				}
-				out_info.spawn_xml_file = wxstr(spawn_file);
+				out_info.spawn_xml_file = spawn_file;
 				break;
 			}
 			case OTBM_ATTR_EXT_HOUSE_FILE: {
@@ -97,7 +97,7 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 				if (!map_header_node->getString(house_file)) {
 					return false;
 				}
-				out_info.house_xml_file = wxstr(house_file);
+				out_info.house_xml_file = house_file;
 				break;
 			}
 			case OTBM_ATTR_EXT_SPAWN_NPC_FILE: {

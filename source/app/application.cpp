@@ -250,9 +250,9 @@ bool Application::OnInit() {
 	}
 #endif
 
-	FileName save_failed_file(wxstr((FileSystem::GetLocalDataDirectory() / ".saving.txt").string()));
-	if (save_failed_file.FileExists()) {
-		std::ifstream f(nstr(save_failed_file.GetFullPath()).c_str(), std::ios::in);
+	FileName save_failed_file = FileSystem::GetLocalDataDirectory() / ".saving.txt";
+	if (std::filesystem::exists(save_failed_file)) {
+		std::ifstream f(save_failed_file, std::ios::in);
 
 		std::string backup_otbm, backup_house, backup_spawn;
 
@@ -262,7 +262,7 @@ bool Application::OnInit() {
 
 		// Remove the file
 		f.close();
-		std::remove(nstr(save_failed_file.GetFullPath()).c_str());
+		std::filesystem::remove(save_failed_file);
 
 		// Query file retrieval if possible
 		if (!backup_otbm.empty()) {
@@ -293,7 +293,7 @@ bool Application::OnInit() {
 				}
 
 				// Load the map
-				g_gui.LoadMap(wxstr(backup_otbm.substr(0, backup_otbm.size() - 1)));
+				g_gui.LoadMap(FileName(backup_otbm.substr(0, backup_otbm.size() - 1)));
 				return true;
 			}
 		}
@@ -317,8 +317,8 @@ void Application::OnEventLoopEnter(wxEventLoopBase* loop) {
 	}
 
 	// Open a map.
-	if (m_file_to_open != wxEmptyString) {
-		g_gui.LoadMap(FileName(m_file_to_open));
+	if (!m_file_to_open.empty()) {
+		g_gui.LoadMap(FileName(m_file_to_open.ToStdWstring()));
 	} else if (!g_gui.IsWelcomeDialogShown() && g_gui.NewMap()) { // Open a new empty map
 		// You generally don't want to save this map...
 		g_gui.GetCurrentEditor()->map.clearChanges();
@@ -327,7 +327,7 @@ void Application::OnEventLoopEnter(wxEventLoopBase* loop) {
 
 void Application::MacOpenFiles(const wxArrayString& fileNames) {
 	if (!fileNames.IsEmpty()) {
-		g_gui.LoadMap(FileName(fileNames.Item(0)));
+		g_gui.LoadMap(FileName(fileNames.Item(0).ToStdWstring()));
 	}
 }
 

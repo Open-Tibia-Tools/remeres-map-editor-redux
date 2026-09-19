@@ -129,7 +129,7 @@ bool VersionManager::PromptForClientPaths(ClientVersion* version) {
 		message << "Attempted metadata file: %s\n";
 		message << "Attempted sprites file: %s\n";
 
-		DialogUtil::PopupDialog("Error", wxString::Format(message, wxstr(version->getName()), version->getMetadataPath().GetFullPath(), version->getSpritesPath().GetFullPath()), wxOK);
+		DialogUtil::PopupDialog("Error", wxString::Format(message, wxstr(version->getName()), wxstr(version->getMetadataPath().string()), wxstr(version->getSpritesPath().string())), wxOK);
 
 		wxString dirHelpText("Select assets directory.");
 		wxDirDialog file_dlg(nullptr, dirHelpText, "", wxDD_DIR_MUST_EXIST);
@@ -138,7 +138,7 @@ bool VersionManager::PromptForClientPaths(ClientVersion* version) {
 			return false;
 		}
 
-		version->setClientPath(FileName(file_dlg.GetPath() + FileName::GetPathSeparator()));
+		version->setClientPath(std::filesystem::u8path(file_dlg.GetPath().ToStdString()));
 	}
 
 	if (!ClientVersion::saveVersions()) {
@@ -214,8 +214,8 @@ bool VersionManager::LoadCanonicalAssets(const std::filesystem::path& modular_da
 	AssetLoadRequest asset_request;
 	asset_request.mode = getLoadedVersion()->getItemDefinitionMode();
 	asset_request.client_version = getLoadedVersion();
-	asset_request.dat_path = getLoadedVersion()->getMetadataPath().GetFullPath().ToStdWstring();
-	asset_request.spr_path = getLoadedVersion()->getSpritesPath().GetFullPath().ToStdWstring();
+	asset_request.dat_path = getLoadedVersion()->getMetadataPath().wstring();
+	asset_request.spr_path = getLoadedVersion()->getSpritesPath().wstring();
 	asset_request.otb_path = (modular_data_path / "items.otb").wstring();
 	asset_request.xml_paths.reserve(manifest_files.items.size());
 	for (const auto& item_path : manifest_files.items) {

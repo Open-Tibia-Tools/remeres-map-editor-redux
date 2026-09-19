@@ -120,14 +120,13 @@ void AboutWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 }
 
 void AboutWindow::OnClickLicense(wxCommandEvent& WXUNUSED(event)) {
-	FileName path;
+	std::filesystem::path path;
 	try {
-		path = wxStandardPaths::Get().GetExecutablePath();
+		path = std::filesystem::path(wxStandardPaths::Get().GetExecutablePath().ToStdWstring()).parent_path() / "COPYING.txt";
 	} catch (std::bad_cast&) {
 		return;
 	}
-	path.SetFullName("COPYING.txt");
-	std::ifstream gpl(path.GetFullPath().mb_str());
+	std::ifstream gpl(path);
 
 	std::string gpl_str;
 	char ch;

@@ -49,9 +49,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	std::vector<std::string> warnings;
 	wxString error;
 
-	wxFileName filename(wxstr((FileSystem::GetFoundDataDirectory() / "menubar.xml").string()));
-	if (!filename.FileExists()) {
-		filename = FileName(wxstr((FileSystem::GetDataDirectory() / "menubar.xml").string()));
+	FileName filename = FileSystem::GetFoundDataDirectory() / "menubar.xml";
+	if (!std::filesystem::exists(filename)) {
+		filename = FileSystem::GetDataDirectory() / "menubar.xml";
 	}
 
 	if (!menu_bar->Load(filename, warnings, error)) {
@@ -253,7 +253,7 @@ bool MainFrame::DoQuerySave(bool doclose) {
 				wxFileDialog file(this, "Save...", "", "", "*.otbm", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 				int32_t result = file.ShowModal();
 				if (result == wxID_OK) {
-					g_gui.SaveCurrentMap(file.GetPath(), true);
+					g_gui.SaveCurrentMap(file.GetPath().ToStdWstring(), true);
 				} else {
 					return false;
 				}

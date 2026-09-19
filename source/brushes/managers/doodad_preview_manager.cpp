@@ -9,7 +9,6 @@
 #include "brushes/managers/brush_manager.h"
 #include "game/sprites.h"
 #include "map/map.h"
-#include "ui/gui.h"
 #include <cmath>
 #include <numbers>
 #include <vector>

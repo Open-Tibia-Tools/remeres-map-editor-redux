@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <wx/filename.h>
+#include <filesystem>
 
 #include "app/client_version.h"
 

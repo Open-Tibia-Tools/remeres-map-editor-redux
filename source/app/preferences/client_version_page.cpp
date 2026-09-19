@@ -469,7 +469,7 @@ void ClientVersionPage::RefreshClientEditor() {
 	config_property->SetHelpString("How item definitions are loaded for this client.");
 
 	client_prop_grid->Append(new wxPropertyCategory("Files & Paths"));
-	auto* client_path_property = client_prop_grid->Append(new wxDirProperty("Client Path", "clientPath", active_client->getClientPath().GetFullPath()));
+	auto* client_path_property = client_prop_grid->Append(new wxDirProperty("Client Path", "clientPath", wxstr(active_client->getClientPath().string())));
 	client_path_property->SetHelpString("Folder containing the configured client DAT and SPR files.");
 	auto* data_directory_property = client_prop_grid->Append(new wxStringProperty("Data Directory", "dataDirectory", wxstr(active_client->getDataDirectory())));
 	data_directory_property->SetHelpString("Editor data folder used for this client version.");
@@ -665,7 +665,7 @@ void ClientVersionPage::ApplyDetectionResult(ClientVersion& client, const Client
 
 void ClientVersionPage::RequestClientAssetDetection(ClientVersion& client) {
 	const auto client_id = client.getID();
-	const auto requested_path = client.getClientPath().GetFullPath().ToStdString();
+	const auto requested_path = client.getClientPath().string();
 	const auto request_id = ++next_detection_request_id;
 	auto snapshot = client.clone();
 	wxWeakRef<ClientVersionPage> weak_this(this);
@@ -693,7 +693,7 @@ void ClientVersionPage::RequestClientAssetDetection(ClientVersion& client) {
 			if (!client) {
 				return;
 			}
-			if (client->getClientPath().GetFullPath().ToStdString() != requested_path) {
+			if (client->getClientPath().string() != requested_path) {
 				return;
 			}
 
@@ -716,7 +716,7 @@ void ClientVersionPage::SyncClientPropertiesToGrid(const ClientVersion& client) 
 	UpdateGridProperty(client_prop_grid, "Name", wxstr(client.getName()));
 	UpdateGridProperty(client_prop_grid, "description", wxstr(client.getDescription()));
 	UpdateGridProperty(client_prop_grid, "configType", SelectionFromConfigType(client.getConfigType()));
-	UpdateGridProperty(client_prop_grid, "clientPath", client.getClientPath().GetFullPath());
+	UpdateGridProperty(client_prop_grid, "clientPath", wxstr(client.getClientPath().string()));
 	UpdateGridProperty(client_prop_grid, "dataDirectory", wxstr(client.getDataDirectory()));
 	UpdateGridProperty(client_prop_grid, "metadataFile", wxstr(client.getMetadataFile()));
 	UpdateGridProperty(client_prop_grid, "spritesFile", wxstr(client.getSpritesFile()));
@@ -930,7 +930,7 @@ void ClientVersionPage::OnPropertyChanged(wxPropertyGridEvent& event) {
 	} else if (prop_name == "configType") {
 		client->setConfigType(ConfigTypeFromSelection(prop->GetValue().GetLong()));
 	} else if (prop_name == "clientPath") {
-		client->setClientPath(FileName(value.As<wxString>()));
+		client->setClientPath(FileName(value.As<wxString>().ToStdWstring()));
 		RequestClientAssetDetection(*client);
 	} else if (prop_name == "dataDirectory") {
 		client->setDataDirectory(nstr(value.As<wxString>()));

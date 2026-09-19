@@ -17,15 +17,15 @@
 bool MenuBarLoader::Load(const FileName& path, wxMenuBar* menubar, MainMenuBar* mb, std::unordered_map<MenuBar::ActionID, std::list<wxMenuItem*>>& items, const std::unordered_map<std::string, std::unique_ptr<MenuBar::Action>>& actions, RecentFilesManager& recentFilesManager, std::vector<std::string>& warnings, wxString& error) {
 	// Open the XML file
 	pugi::xml_document doc;
-	pugi::xml_parse_result result = doc.load_file(path.GetFullPath().mb_str());
+	pugi::xml_parse_result result = doc.load_file(path.c_str());
 	if (!result) {
-		error = "Could not open " + path.GetFullName() + " (file not found or syntax error)";
+		error = "Could not open " + wxstr(path.filename().string()) + " (file not found or syntax error)";
 		return false;
 	}
 
 	pugi::xml_node node = doc.child("menubar");
 	if (!node) {
-		error = path.GetFullName() + ": Invalid rootheader.";
+		error = wxstr(path.filename().string()) + ": Invalid rootheader.";
 		return false;
 	}
 
@@ -48,7 +48,7 @@ bool MenuBarLoader::Load(const FileName& path, wxMenuBar* menubar, MainMenuBar* 
 #endif
 		} else if (i) {
 			delete i;
-			warnings.push_back((path.GetFullName() + ": Only menus can be subitems of main menu").ToStdString());
+			warnings.push_back(path.filename().string() + ": Only menus can be subitems of main menu");
 		}
 	}
 

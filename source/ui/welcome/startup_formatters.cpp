@@ -4,6 +4,7 @@
 
 #include "app/client_version.h"
 #include "ui/theme.h"
+#include "ui/wx_common.h"
 #include "util/image_manager.h"
 
 namespace {

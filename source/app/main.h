@@ -92,7 +92,6 @@
 #include <fstream>
 
 using StringVector = std::vector<std::string>;
-using FileName = wxFileName;
 
 #include "util/json.h"
 

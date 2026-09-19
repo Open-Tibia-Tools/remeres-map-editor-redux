@@ -193,7 +193,7 @@ void EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
 				g_gui.SetLoadDone(percent, msg.empty() ? wxString() : wxstr(std::string(msg)));
 			} : EditorPersistence::ProgressCallback{};
 
-			auto result = EditorPersistence::saveMap(*editor, fileName.GetFullPath().ToStdString(), progress);
+			auto result = EditorPersistence::saveMap(*editor, fileName, progress);
 
 			if (showdialog) {
 				g_gui.DestroyLoadBar();
@@ -252,7 +252,7 @@ void EditorManager::OpenMap() {
 	wxFileDialog dialog(g_gui.root, "Open map file", wxEmptyString, wxEmptyString, wildcard, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
 	if (dialog.ShowModal() == wxID_OK) {
-		LoadMap(dialog.GetPath());
+		LoadMap(dialog.GetPath().ToStdWstring());
 	}
 }
 
@@ -262,13 +262,13 @@ void EditorManager::SaveMap() {
 	}
 
 	if (GetCurrentMap().hasFile()) {
-		SaveCurrentMap(FileName(""), true);
+		SaveCurrentMap(FileName(), true);
 	} else {
 		wxString wildcard = MAP_SAVE_FILE_WILDCARD;
 		wxFileDialog dialog(g_gui.root, "Save...", wxEmptyString, wxEmptyString, wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 
 		if (dialog.ShowModal() == wxID_OK) {
-			SaveCurrentMap(dialog.GetPath(), true);
+			SaveCurrentMap(dialog.GetPath().ToStdWstring(), true);
 		}
 	}
 }
@@ -282,15 +282,15 @@ void EditorManager::SaveMapAs() {
 	wxFileDialog dialog(g_gui.root, "Save As...", "", "", wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 
 	if (dialog.ShowModal() == wxID_OK) {
-		SaveCurrentMap(dialog.GetPath(), true);
+		SaveCurrentMap(dialog.GetPath().ToStdWstring(), true);
 		g_status.UpdateTitle();
-		g_gui.root->AddRecentFile(dialog.GetPath());
+		g_gui.root->AddRecentFile(dialog.GetPath().ToStdWstring());
 		g_gui.root->UpdateMenubar();
 	}
 }
 
 bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load_options) {
-	spdlog::info("EditorManager::LoadMap - Loading map: {}", nstr(fileName.GetFullPath()));
+	spdlog::info("EditorManager::LoadMap - Loading map: {}", fileName.string());
 	g_status.SetStatusText("Loading map...");
 	if (g_gui.root) {
 		g_gui.root->Update();
@@ -304,8 +304,8 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 	std::unique_ptr<Editor> editor;
 	try {
 		MapVersion ver;
-		if (!IOMapOTBM::getVersionInfo(std::filesystem::path(fileName.GetFullPath().ToStdWstring()), ver)) {
-			throw std::runtime_error(std::format("Could not open file \"{}\".\nThis is not a valid OTBM file or it does not exist.", nstr(fileName.GetFullPath())));
+		if (!IOMapOTBM::getVersionInfo(fileName, ver)) {
+			throw std::runtime_error(std::format("Could not open file \"{}\".\nThis is not a valid OTBM file or it does not exist.", fileName.string()));
 		}
 
 		ClientVersion* target = nullptr;
@@ -339,7 +339,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 			}
 		}
 
-		editor = EditorFactory::LoadFromFile(g_gui.copybuffer, std::filesystem::path(fileName.GetFullPath().ToStdWstring()), load_options);
+		editor = EditorFactory::LoadFromFile(g_gui.copybuffer, fileName, load_options);
 	} catch (std::runtime_error& e) {
 		g_status.SetStatusText("Failed to load map.");
 		DialogUtil::PopupDialog(g_gui.root, "Error!", wxString(e.what(), wxConvUTF8), wxOK);

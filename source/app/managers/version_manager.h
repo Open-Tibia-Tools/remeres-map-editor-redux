@@ -5,7 +5,7 @@
 #ifndef RME_VERSION_MANAGER_H_
 #define RME_VERSION_MANAGER_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "app/client_version.h"
 #include "item_definitions/core/missing_item_report.h"
 
