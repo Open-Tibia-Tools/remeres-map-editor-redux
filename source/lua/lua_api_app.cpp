@@ -26,7 +26,7 @@
 #include "editor/action.h"
 #include "map/tile.h"
 #include "editor/selection.h"
-#include "game/items.h"
+#include "item_definitions/core/item_definition_store.h"
 #include "game/complexitem.h"
 #include "brushes/raw/raw_brush.h"
 #include "brushes/ground/auto_border.h"
@@ -612,11 +612,9 @@ namespace LuaAPI {
 			g_luaScripts.registerContextMenuItem(label, callback, ts);
 		};
 		app["selectRaw"] = [](int itemId) {
-			if (g_items.typeExists(itemId)) {
-				ItemType it = g_items[itemId];
-				if (it.raw_brush) {
-					g_gui.SelectBrush(it.raw_brush);
-				}
+			const auto view = g_item_definitions.get(static_cast<ServerItemId>(itemId));
+			if (view && view.editorData().raw_brush) {
+				g_gui.SelectBrush(view.editorData().raw_brush);
 			}
 		};
 

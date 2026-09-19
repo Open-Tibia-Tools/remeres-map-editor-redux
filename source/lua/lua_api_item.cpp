@@ -18,7 +18,7 @@
 #include "app/main.h"
 #include "lua_api_item.h"
 #include "game/item.h"
-#include "game/items.h"
+#include "item_definitions/core/item_definition_store.h"
 #include "game/complexitem.h"
 
 #include <algorithm>
@@ -134,10 +134,8 @@ namespace LuaAPI {
 				}
 			},
 			"hasElevation", sol::property([](const Item& item) {
-				if (g_items.typeExists(item.getID())) {
-					return g_items[item.getID()].hasElevation;
-				}
-				return false;
+				const auto def = g_item_definitions.get(item.getID());
+				return def && def.hasFlag(ItemFlag::HasElevation);
 			}),
 			"zOrder", sol::property(&Item::getTopOrder),
 
@@ -157,38 +155,37 @@ namespace LuaAPI {
 		// Get item info by ID - returns a table with item properties
 		items["getInfo"] = [](sol::this_state ts, int id) -> sol::object {
 			sol::state_view lua(ts);
-			if (!g_items.typeExists(id)) {
+			const auto view = g_item_definitions.get(static_cast<ServerItemId>(id));
+			if (!view) {
 				return sol::nil;
 			}
-			ItemType it = g_items.getItemType(id);
 			sol::table info = lua.create_table();
-			info["id"] = it.id;
-			info["clientId"] = it.clientID;
-			info["name"] = it.name;
-			info["description"] = it.description;
-			info["isStackable"] = it.stackable;
-			info["isMoveable"] = it.moveable;
-			info["isPickupable"] = it.pickupable;
-			info["isGroundTile"] = it.isGroundTile();
-			info["isBorder"] = it.isBorder;
-			info["isWall"] = it.isWall;
-			info["isDoor"] = it.isDoor();
-			info["isTable"] = it.isTable;
-			info["isCarpet"] = it.isCarpet;
-			const auto definition = g_item_definitions.get(id);
-			info["isPodium"] = definition && definition.isPodium();
-			info["hasElevation"] = it.hasElevation;
+			info["id"] = view.serverId();
+			info["clientId"] = view.clientId();
+			info["name"] = std::string(view.name());
+			info["description"] = std::string(view.description());
+			info["isStackable"] = view.hasFlag(ItemFlag::Stackable);
+			info["isMoveable"] = view.hasFlag(ItemFlag::Moveable);
+			info["isPickupable"] = view.hasFlag(ItemFlag::Pickupable);
+			info["isGroundTile"] = view.isGroundTile();
+			info["isBorder"] = view.hasFlag(ItemFlag::IsBorder) || (view.hasFlag(ItemFlag::AlwaysOnBottom) && view.attribute(ItemAttributeKey::AlwaysOnTopOrder) == 1);
+			info["isWall"] = view.hasFlag(ItemFlag::IsWall);
+			info["isDoor"] = view.isDoor();
+			info["isTable"] = view.hasFlag(ItemFlag::IsTable);
+			info["isCarpet"] = view.hasFlag(ItemFlag::IsCarpet);
+			info["isPodium"] = view.isPodium();
+			info["hasElevation"] = view.hasFlag(ItemFlag::HasElevation);
 			return info;
 		};
 
 		// Check if item ID exists
 		items["exists"] = [](int id) -> bool {
-			return g_items.typeExists(id);
+			return g_item_definitions.typeExists(static_cast<ServerItemId>(id));
 		};
 
 		// Get max item ID
 		items["getMaxId"] = []() -> int {
-			return g_items.getMaxID();
+			return static_cast<int>(g_item_definitions.getMaxID());
 		};
 
 		// Find items by name (returns array of {id, name} tables)
@@ -198,23 +195,21 @@ namespace LuaAPI {
 
 			int limit = maxResults.value_or(50);
 			int count = 0;
-			int maxId = g_items.getMaxID();
 			std::string searchLower = toLower(searchName);
 
-			for (int id = 1; id <= maxId && count < limit; ++id) {
-				if (!g_items.typeExists(id)) {
+			for (const ServerItemId id : g_item_definitions.allIds()) {
+				if (count >= limit) {
+					break;
+				}
+				const auto view = g_item_definitions.get(id);
+				if (!view || view.name().empty()) {
 					continue;
 				}
 
-				ItemType it = g_items.getItemType(id);
-				if (it.name.empty()) {
-					continue;
-				}
-
-				if (containsIgnoreCaseOptimized(it.name, searchLower)) {
+				if (containsIgnoreCaseOptimized(std::string(view.name()), searchLower)) {
 					sol::table item = lua.create_table();
-					item["id"] = it.id;
-					item["name"] = it.name;
+					item["id"] = view.serverId();
+					item["name"] = std::string(view.name());
 					results[++count] = item;
 				}
 			}
@@ -225,27 +220,26 @@ namespace LuaAPI {
 		// Find first item matching name exactly (case-insensitive)
 		items["findIdByName"] = [](const std::string& searchName) -> sol::optional<int> {
 			std::string searchLower = toLower(searchName);
-			int maxId = g_items.getMaxID();
 
-			for (int id = 1; id <= maxId; ++id) {
-				if (!g_items.typeExists(id)) {
+			// First pass: exact match
+			for (const ServerItemId id : g_item_definitions.allIds()) {
+				const auto view = g_item_definitions.get(id);
+				if (!view || view.name().empty()) {
 					continue;
 				}
-
-				ItemType it = g_items.getItemType(id);
-				if (toLower(it.name) == searchLower) {
-					return id;
+				if (toLower(std::string(view.name())) == searchLower) {
+					return static_cast<int>(view.serverId());
 				}
 			}
 
-			for (int id = 1; id <= maxId; ++id) {
-				if (!g_items.typeExists(id)) {
+			// Second pass: substring match
+			for (const ServerItemId id : g_item_definitions.allIds()) {
+				const auto view = g_item_definitions.get(id);
+				if (!view || view.name().empty()) {
 					continue;
 				}
-
-				ItemType it = g_items.getItemType(id);
-				if (containsIgnoreCaseOptimized(it.name, searchLower)) {
-					return id;
+				if (containsIgnoreCaseOptimized(std::string(view.name()), searchLower)) {
+					return static_cast<int>(view.serverId());
 				}
 			}
 
@@ -254,10 +248,8 @@ namespace LuaAPI {
 
 		// Get item name by ID
 		items["getName"] = [](int id) -> std::string {
-			if (g_items.typeExists(id)) {
-				return g_items.getItemType(id).name;
-			}
-			return "";
+			const auto view = g_item_definitions.get(static_cast<ServerItemId>(id));
+			return view ? std::string(view.name()) : "";
 		};
 	}
 
