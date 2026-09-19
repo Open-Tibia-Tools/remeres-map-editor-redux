@@ -109,6 +109,7 @@ protected:
 	static bool getVersionInfo(NodeFileReadHandle* f, MapVersion& out_ver);
 
 	bool loadMapFromDisk(Map& map, const FileName& identifier);
+	bool loadMapFast(Map& map, const uint8_t* data, size_t size);
 
 	bool loadMap(Map& map, NodeFileReadHandle& handle);
 	bool loadMapRoot(Map& map, NodeFileReadHandle& f, BinaryNode*& root, BinaryNode*& mapHeaderNode);
