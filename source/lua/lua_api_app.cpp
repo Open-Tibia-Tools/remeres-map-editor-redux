@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "lua_api_app.h"
+#include "lua_api.h"
 #include "lua_script_manager.h"
 #include "ui/gui.h"
 #include "editor/editor.h"

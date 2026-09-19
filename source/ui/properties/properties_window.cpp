@@ -25,8 +25,6 @@
 #include "ui/tile_properties/container_grid_canvas.h"
 #include "ui/properties/attribute_service.h"
 #include "ui/properties/property_validator.h"
-#include "ui/properties/property_applier.h"
-#include "ui/properties/teleport_service.h"
 #include "item_definitions/core/item_definition_store.h"
 
 #include <wx/grid.h>
@@ -280,7 +278,12 @@ void PropertiesWindow::saveGeneralPanel() {
 		int new_count = count_field->GetValue();
 		int new_tier = (tier_field ? tier_field->GetValue() : 0);
 
-		PropertyApplier::applyItemProperties(edit_item, new_count, new_uid, new_aid, new_tier);
+		if (edit_item->isStackable() || edit_item->isCharged()) {
+			edit_item->setSubtype(new_count);
+		}
+		edit_item->setUniqueID(new_uid);
+		edit_item->setActionID(new_aid);
+		edit_item->setTier(new_tier);
 	}
 }
 

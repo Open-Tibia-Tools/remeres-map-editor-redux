@@ -12,7 +12,6 @@ class Editor;
 class SpriteBatch;
 class PrimitiveRenderer;
 class LuaScriptManager;
-class CoordinateMapper;
 class AtlasManager;
 
 struct NVGcontext;

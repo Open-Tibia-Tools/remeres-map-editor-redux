@@ -97,7 +97,6 @@ using StringVector = std::vector<std::string>;
 
 #include "util/common.h"
 #include "ui/wx_common.h"
-#include "app/threads.h"
 
 #include "app/rme_forward_declarations.h"
 

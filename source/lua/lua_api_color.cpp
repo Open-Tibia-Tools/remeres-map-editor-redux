@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "lua_api_color.h"
+#include "lua_api.h"
 
 #include <algorithm>
 #include <cctype>

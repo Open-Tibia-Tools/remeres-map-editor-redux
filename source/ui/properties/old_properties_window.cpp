@@ -18,8 +18,6 @@
 #include "app/application.h"
 #include "ui/properties/old_properties_window.h"
 #include "ui/properties/property_validator.h"
-#include "ui/properties/property_applier.h"
-#include "ui/properties/teleport_service.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "util/image_manager.h"
 
@@ -175,12 +173,12 @@ void OldPropertiesWindow::OnFocusChange(wxFocusEvent& event) {
 
 void OldPropertiesWindow::OnChar(wxKeyEvent& evt) {
 	if (evt.GetKeyCode() == WXK_CONTROL_V) {
-		int x, y, z;
 		const Editor* const editor = g_gui.GetCurrentEditor();
-		if (TeleportService::handlePositionPaste(x, y, z, editor->map.getWidth(), editor->map.getHeight())) {
-			x_field->SetValue(x);
-			y_field->SetValue(y);
-			z_field->SetValue(z);
+		Position position;
+		if (editor && posFromClipboard(position, editor->map.getWidth(), editor->map.getHeight())) {
+			x_field->SetValue(position.x);
+			y_field->SetValue(position.y);
+			z_field->SetValue(position.z);
 			return;
 		}
 	}
@@ -221,12 +219,18 @@ void OldPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		}
 
 		// Done validating, set the values.
-		PropertyApplier::applyItemProperties(edit_item, new_count, new_uid, new_aid, new_tier);
+		if (edit_item->isStackable() || edit_item->isCharged()) {
+			edit_item->setSubtype(new_count);
+		}
+		edit_item->setUniqueID(new_uid);
+		edit_item->setActionID(new_aid);
+		edit_item->setTier(new_tier);
+
 		if (door) {
-			PropertyApplier::applyDoorProperties(door, new_door_id);
+			door->setDoorID(new_door_id);
 		}
 		if (teleport) {
-			PropertyApplier::applyTeleportProperties(teleport, new_dest);
+			teleport->setDestination(new_dest);
 		}
 	}
 	EndModal(1);

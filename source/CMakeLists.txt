@@ -122,7 +122,6 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/animator.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/atlas_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_cache_manager.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/coordinate_mapper.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_view_math.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/drawing_options.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/floor_visibility_mode.h
@@ -160,7 +159,6 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_light.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sync_handle.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/text_renderer.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_array.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_atlas.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_garbage_collector.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/brush_cursor_drawer.h
@@ -289,7 +287,6 @@ set(rme_core_SRC
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/xml/xml_item_parser.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/floor_visibility_calculator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/filehandle.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/io/iomap.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/iomap_otbm.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/map_xml_io.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/xml_file_loader.cpp
@@ -312,7 +309,6 @@ set(rme_core_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/animator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/atlas_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_cache_manager.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/coordinate_mapper.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_view_math.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/drawing_options.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/floor_visibility_mode.cpp
@@ -343,7 +339,6 @@ set(rme_core_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_atlas_lut.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_batch.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/text_renderer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_array.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_atlas.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_garbage_collector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/brush_cursor_drawer.cpp
@@ -382,7 +377,6 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/graphics_page.h
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/interface_page.h
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/client_version_page.h
-    ${CMAKE_CURRENT_LIST_DIR}/app/threads.h
     ${CMAKE_CURRENT_LIST_DIR}/app/updater.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/hotkey_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/util/image_manager.h
@@ -451,9 +445,7 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/object_properties_base.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/property_validator.h
-    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/property_applier.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/attribute_service.h
-    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/teleport_service.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/creature_properties_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/spawn_properties_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/container_properties_window.h
@@ -559,21 +551,7 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/util/virtual_item_grid.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/map_session.h
     ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_algo.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_app.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_brush.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_color.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_creature.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_geo.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_http.h
     ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_image.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_item.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_json.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_map.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_noise.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_position.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_selection.h
-    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_tile.h
     ${CMAKE_CURRENT_LIST_DIR}/lua/lua_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/lua/lua_engine.h
     ${CMAKE_CURRENT_LIST_DIR}/lua/lua_script.h
@@ -616,7 +594,6 @@ set(rme_ui_SRC
     ${CMAKE_CURRENT_LIST_DIR}/live/live_server.cpp
     ${CMAKE_CURRENT_LIST_DIR}/live/live_socket.cpp
     ${CMAKE_CURRENT_LIST_DIR}/live/live_tab.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/mkpch.cpp
     ${CMAKE_CURRENT_LIST_DIR}/net/net_connection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/net/process_com.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_common.cpp
@@ -664,9 +641,7 @@ set(rme_ui_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/object_properties_base.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/property_validator.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/property_applier.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/attribute_service.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/teleport_service.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/creature_properties_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/spawn_properties_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/container_properties_window.cpp

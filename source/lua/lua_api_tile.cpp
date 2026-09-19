@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "lua_api_tile.h"
+#include "lua_api.h"
 #include "lua_api.h"
 #include <algorithm>
 #include <iterator>

@@ -38,7 +38,7 @@
 #include "palette/palette_window.h"
 #include "rendering/ui/screenshot_controller.h"
 #include "rendering/utilities/tile_describer.h"
-#include "rendering/core/coordinate_mapper.h"
+#include "rendering/core/map_view_math.h"
 #include "rendering/ui/map_display.h"
 #include "rendering/ui/map_status_updater.h"
 #include "rendering/map_drawer.h"
@@ -427,7 +427,18 @@ void MapCanvas::ScreenToMap(int screen_x, int screen_y, int* map_x, int* map_y) 
 		mw->GetViewStart(&start_x, &start_y);
 	}
 
-	CoordinateMapper::ScreenToMap(screen_x, screen_y, start_x, start_y, zoom, floor, GetContentScaleFactor(), map_x, map_y);
+	MainMapViewMath::ScreenToMap(
+		screen_x,
+		screen_y,
+		MainMapViewport {
+			.view_scroll_x = start_x,
+			.view_scroll_y = start_y,
+			.zoom = zoom,
+			.floor = floor,
+			.scale_factor = GetContentScaleFactor(),
+		},
+		map_x,
+		map_y);
 }
 #if 0
 

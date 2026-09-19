@@ -3,7 +3,7 @@
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/core/text_renderer.h"
 #include "rendering/core/graphics.h"
-#include "rendering/core/coordinate_mapper.h"
+#include "rendering/core/map_view_math.h"
 #include "editor/action_queue.h"
 #include "editor/editor.h"
 #include "editor/selection.h"
@@ -13,6 +13,22 @@
 #include <functional>
 
 namespace {
+	static void mapToScreen(int map_x, int map_y, int map_z, const RenderView& view, int* screen_x, int* screen_y) {
+		MainMapViewMath::MapToScreen(
+			map_x,
+			map_y,
+			map_z,
+			MainMapViewport {
+				.view_scroll_x = view.start_x,
+				.view_scroll_y = view.start_y,
+				.zoom = view.zoom,
+				.floor = map_z,
+				.scale_factor = 1.0,
+			},
+			screen_x,
+			screen_y);
+	}
+
 	static std::size_t hashSelection(const Selection& selection) {
 		std::size_t hash = 1469598103934665603ull;
 		for (const Tile* tile : selection.getTiles()) {
@@ -114,7 +130,7 @@ void LuaOverlayDrawer::Draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primit
 		} else {
 			if (cmd.z != view.floor) continue; // Only draw on current floor if world space
 			int mapped_x, mapped_y;
-			CoordinateMapper::MapToScreen(cmd.x, cmd.y, view.start_x, view.start_y, view.zoom, cmd.z, 1.0, &mapped_x, &mapped_y);
+			mapToScreen(cmd.x, cmd.y, cmd.z, view, &mapped_x, &mapped_y);
 			screenX = mapped_x - view.view_scroll_x;
 			screenY = mapped_y - view.view_scroll_y;
 		}
@@ -138,7 +154,7 @@ void LuaOverlayDrawer::Draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primit
 				} else {
 					if (cmd.z2 != view.floor) continue;
 					int mapped_x2, mapped_y2;
-					CoordinateMapper::MapToScreen(cmd.x2, cmd.y2, view.start_x, view.start_y, view.zoom, cmd.z2, 1.0, &mapped_x2, &mapped_y2);
+					mapToScreen(cmd.x2, cmd.y2, cmd.z2, view, &mapped_x2, &mapped_y2);
 					screenX2 = mapped_x2 - view.view_scroll_x;
 					screenY2 = mapped_y2 - view.view_scroll_y;
 				}
@@ -180,7 +196,7 @@ void LuaOverlayDrawer::DrawUI(NVGcontext* vg, const RenderView& view, const Draw
 		} else {
 			if (cmd.z != view.floor) continue;
 			int mapped_x, mapped_y;
-			CoordinateMapper::MapToScreen(cmd.x, cmd.y, view.start_x, view.start_y, view.zoom, cmd.z, 1.0, &mapped_x, &mapped_y);
+			mapToScreen(cmd.x, cmd.y, cmd.z, view, &mapped_x, &mapped_y);
 			screenX = mapped_x - view.view_scroll_x;
 			screenY = mapped_y - view.view_scroll_y;
 		}

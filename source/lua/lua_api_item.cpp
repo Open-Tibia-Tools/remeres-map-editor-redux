@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "lua_api_item.h"
+#include "lua_api.h"
 #include "game/item.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "game/complexitem.h"

@@ -22,7 +22,6 @@
 #include "ui/theme.h"
 #include <nanovg.h>
 #include <format>
-#include "rendering/core/coordinate_mapper.h"
 #include <wx/wx.h>
 #include "item_definitions/core/item_definition_store.h"
 
