@@ -50,6 +50,7 @@ layout(std430, binding = 2) readonly buffer AtlasLUT {
 uniform mat4 uMVP;
 uniform vec4 uGlobalTint;
 
+flat out uint vFlags;
 out vec3 vTexCoord;
 out vec4 vColor;
 
@@ -57,14 +58,21 @@ void main() {
 	vec2 worldPos = aRect.xy + aPos * aRect.zw;
 	gl_Position = uMVP * vec4(worldPos, 0.0, 1.0);
 
-	SpriteLUTEntry entry = lutEntries[aSpriteId];
-	vec2 uv = mix(entry.uv_rect.xy, entry.uv_rect.zw, aTexCoord);
-	vTexCoord = vec3(uv, entry.layer);
-	vColor = aTint * uGlobalTint;
+	vFlags = aFlags;
+	if ((aFlags & 1u) != 0u) {
+		vTexCoord = vec3(0.0);
+		vColor = aTint * uGlobalTint;
+	} else {
+		SpriteLUTEntry entry = lutEntries[aSpriteId];
+		vec2 uv = mix(entry.uv_rect.xy, entry.uv_rect.zw, aTexCoord);
+		vTexCoord = vec3(uv, entry.layer);
+		vColor = aTint * uGlobalTint;
+	}
 }
 )";
 
 	constexpr const char* CHUNK_FRAG_SHADER = R"(#version 430 core
+flat in uint vFlags;
 in vec3 vTexCoord;
 in vec4 vColor;
 out vec4 FragColor;
@@ -72,6 +80,13 @@ out vec4 FragColor;
 uniform sampler2DArray uAtlas;
 
 void main() {
+	if ((vFlags & 1u) != 0u) {
+		FragColor = vColor;
+		if (FragColor.a < 0.01) {
+			discard;
+		}
+		return;
+	}
 	vec4 texColor = texture(uAtlas, vTexCoord);
 	FragColor = texColor * vColor;
 	if (FragColor.a < 0.01) {
@@ -331,8 +346,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		inst.y = static_cast<float>(ry);
 		inst.w = static_cast<float>(rw);
 		inst.h = static_cast<float>(rh);
-		inst.sprite_id = SpriteAtlasLUT::WHITE_PIXEL_LUT_INDEX;
-		inst.flags = 0;
+		inst.sprite_id = 0;
+		inst.flags = 1; // SOLID_COLOR: direct color quad, bypasses texture atlas and LUT
 		inst.r = rf;
 		inst.g = gf;
 		inst.b = bf;
@@ -587,6 +602,24 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				if (!it) {
 					continue;
 				}
+				const uint16_t item_client_id = it.clientId();
+				const uint16_t item_server_id = item->getID();
+
+				if (ctx.options.show_tech_items && !ctx.options.ingame) {
+					if (item_server_id == 459 || item_client_id == 469) {
+						pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 1.0f, 0.0f, 170.0f / 255.0f);
+						continue;
+					}
+					if (item_server_id == 460 || item_client_id == 470 || item_client_id == 17970 || item_client_id == 20028 || item_client_id == 34168) {
+						pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 0.0f, 0.0f, 170.0f / 255.0f);
+						continue;
+					}
+					if (item_server_id == 1548 || item_client_id == 2187) {
+						pushColorRect(x * 32, y * 32, 32, 32, 0.0f, 1.0f, 1.0f, 80.0f / 255.0f);
+						continue;
+					}
+				}
+
 				GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
 				if (!ispr) {
 					continue;
