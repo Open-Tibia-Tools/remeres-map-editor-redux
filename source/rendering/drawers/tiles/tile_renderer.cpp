@@ -151,6 +151,13 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 				}
 				GameSprite* sprite = ctx.gfx.getGameSprite(it.clientId());
 				if (!sprite) {
+					if (options.show_tech_items && !options.ingame) {
+						border_params.item = item.get();
+						border_params.item_definition = it;
+						border_params.sprite = nullptr;
+						border_params.patterns = nullptr;
+						item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, border_params);
+					}
 					continue;
 				}
 
@@ -261,6 +268,15 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 			item_params.green = default_ig;
 			item_params.blue = default_ib;
 
+			item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, elevation.current_draw_x, elevation.current_draw_y, item_params);
+		} else if (it && options.show_tech_items && !options.ingame) {
+			item_params.item = item.get();
+			item_params.item_definition = it;
+			item_params.sprite = nullptr;
+			item_params.patterns = nullptr;
+			item_params.red = default_ir;
+			item_params.green = default_ig;
+			item_params.blue = default_ib;
 			item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, elevation.current_draw_x, elevation.current_draw_y, item_params);
 		}
 	}
