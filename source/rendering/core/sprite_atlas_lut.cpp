@@ -4,6 +4,7 @@
 
 #include "rendering/core/sprite_atlas_lut.h"
 #include "rendering/core/texture_atlas.h"
+#include "rendering/core/atlas_manager.h"
 #include <algorithm>
 #include <spdlog/spdlog.h>
 
@@ -109,7 +110,7 @@ void SpriteAtlasLUT::ensureCapacity(size_t required_capacity) {
 
 void SpriteAtlasLUT::updateSprite(uint32_t sprite_id, const AtlasRegion& region) {
 	uint32_t slot = sprite_id;
-	if (sprite_id == AtlasRegion::INVALID_SENTINEL) {
+	if (sprite_id == AtlasRegion::INVALID_SENTINEL || sprite_id == AtlasManager::WHITE_PIXEL_ID) {
 		slot = WHITE_PIXEL_LUT_INDEX;
 	}
 
@@ -134,7 +135,7 @@ void SpriteAtlasLUT::updateSprite(uint32_t sprite_id, const AtlasRegion& region)
 
 void SpriteAtlasLUT::invalidateSprite(uint32_t sprite_id) {
 	uint32_t slot = sprite_id;
-	if (sprite_id == AtlasRegion::INVALID_SENTINEL) {
+	if (sprite_id == AtlasRegion::INVALID_SENTINEL || sprite_id == AtlasManager::WHITE_PIXEL_ID) {
 		slot = WHITE_PIXEL_LUT_INDEX;
 	}
 
