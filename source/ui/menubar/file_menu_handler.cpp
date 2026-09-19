@@ -13,7 +13,6 @@
 #include "ui/extension_window.h"
 #include "game/creatures.h"
 #include "app/managers/version_manager.h"
-#include "ui/controls/sortable_list_box.h"
 
 FileMenuHandler::FileMenuHandler(MainFrame* frame, MainMenuBar* menubar) :
 	frame(frame), menubar(menubar) {
