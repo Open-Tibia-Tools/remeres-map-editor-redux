@@ -58,6 +58,26 @@ Tile* BaseMap::createTile(int x, int y, int z) {
 	return ptr;
 }
 
+Tile* BaseMap::createTileInCell(size_t cell_idx, int x, int y, int z) {
+	ASSERT(z < MAP_LAYERS);
+	MapNode* leaf = grid.getLeafForceInCell(cell_idx, x, y);
+	if (!leaf) {
+		return nullptr;
+	}
+	Floor* f = leaf->createFloor(x, y, z);
+	int offset_x = x & 3;
+	int offset_y = y & 3;
+	TileLocation* tmp = &f->locs[offset_x * 4 + offset_y];
+	if (tmp->tile) {
+		return tmp->tile.get();
+	}
+	std::unique_ptr<Tile> t = allocator(tmp);
+	t->setLocation(tmp);
+	Tile* ptr = t.get();
+	tmp->tile = std::move(t);
+	return ptr;
+}
+
 Tile* BaseMap::getOrCreateTile(const Position& pos) {
 	if (Tile* t = getTile(pos)) {
 		return t;
