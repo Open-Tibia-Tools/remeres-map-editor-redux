@@ -25,6 +25,7 @@
 
 #include "editor/editor.h"
 #include "editor/action_queue.h"
+#include "io/otbm/fast_otbm_reader.h"
 
 LivePeer::LivePeer(LiveServer* server, boost::asio::ip::tcp::socket socket) :
 	LiveSocket(),
@@ -263,12 +264,8 @@ void LivePeer::parseNodeRequest(NetworkMessage& message) {
 void LivePeer::parseReceiveChanges(NetworkMessage& message) {
 	Editor& editor = *server->getEditor();
 
-	// -1 on address since we skip the first START_NODE when sending
 	const std::string& data = message.read<std::string>();
-	mapReader.assign(reinterpret_cast<const uint8_t*>(data.c_str() - 1), data.size());
-
-	BinaryNode* rootNode = mapReader.getRootNode();
-	BinaryNode* tileNode = rootNode->getChild();
+	FastOTBMStream stream(reinterpret_cast<const uint8_t*>(data.data()), data.size());
 
 	// We need ownership of the action, but createAction returns unique_ptr.
 	// We'll move it into a temporary unique_ptr, get the raw pointer for metadata, then move to queue.
@@ -276,15 +273,19 @@ void LivePeer::parseReceiveChanges(NetworkMessage& message) {
 	NetworkedAction* action = static_cast<NetworkedAction*>(rawAction.get());
 	action->owner = clientId;
 
-	if (tileNode) {
-		do {
-			std::unique_ptr<Tile> tile = readTile(tileNode, editor, nullptr);
-			if (tile) {
-				action->addChange(std::make_unique<Change>(std::move(tile)));
-			}
-		} while (tileNode->advance());
+	while (stream.hasMore() && stream.peekByte() == OTBM_NODE_START) {
+		stream.readByte(); // consume OTBM_NODE_START
+		uint8_t tileType = stream.readByte();
+		FastOTBMNode tileNode(tileType, stream.p, stream.end);
+		std::unique_ptr<Tile> tile = readTile(tileNode, editor, nullptr);
+		if (tile) {
+			action->addChange(std::make_unique<Change>(std::move(tile)));
+		}
+		if (!tileNode.closed) {
+			tileNode.stream.skipNode();
+		}
+		stream.p = tileNode.stream.p;
 	}
-	mapReader.close();
 
 	editor.actionQueue->addAction(std::move(rawAction));
 

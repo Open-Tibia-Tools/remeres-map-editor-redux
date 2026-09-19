@@ -91,7 +91,6 @@ public:
 	// Factory member to create item of right type based on type
 	static std::unique_ptr<Item> Create(ServerItemId _type, uint16_t _subtype = 0xFFFF);
 	static std::unique_ptr<Item> Create(pugi::xml_node);
-	static std::unique_ptr<Item> Create_OTBM(const IOMap& maphandle, BinaryNode* stream);
 
 public:
 	// Constructor for items
@@ -154,10 +153,6 @@ public:
 	}
 
 	// OTBM map interface
-	// Serialize and unserialize (for save/load)
-	// Used internally
-	virtual bool unserializeItemNode_OTBM(const IOMap& maphandle, BinaryNode* node);
-
 	// Will return a node containing this item
 	virtual bool serializeItemNode_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f) const;
 	// Will write this item to the stream supplied in the argument

@@ -46,20 +46,6 @@ namespace {
 		return std::vector<uint8_t>(rawData.begin() + static_cast<std::ptrdiff_t>(safeBegin), rawData.begin() + static_cast<std::ptrdiff_t>(safeEnd));
 	}
 
-	PreservedOTBMNode capturePreservedNode(BinaryNode* node) {
-		PreservedOTBMNode preserved;
-		if (!node) {
-			return preserved;
-		}
-
-		const std::string_view rawPayload = node->rawData();
-		preserved.rawPayload.assign(rawPayload.begin(), rawPayload.end());
-
-		for (BinaryNode* childNode : node->children()) {
-			preserved.children.push_back(capturePreservedNode(childNode));
-		}
-		return preserved;
-	}
 
 	void writePreservedNode(NodeFileWriteHandle& writer, const PreservedOTBMNode& node) {
 		if (node.rawPayload.empty()) {

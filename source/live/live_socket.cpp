@@ -19,11 +19,13 @@
 #include "live/live_socket.h"
 #include "map/map_region.h"
 #include "io/iomap_otbm.h"
+#include "io/otbm/fast_otbm_reader.h"
+#include "io/otbm/item_serialization_otbm.h"
 #include "live/live_tab.h"
 #include "editor/editor.h"
 
 LiveSocket::LiveSocket() :
-	cursors(), mapReader(nullptr, 0), mapWriter(),
+	cursors(), mapWriter(),
 	mapVersion(MapVersion(MAP_OTBM_4, OTB_VERSION_NONE)), log(nullptr),
 	name("User"), password("") {
 	//
@@ -167,13 +169,8 @@ void LiveSocket::receiveFloor(NetworkMessage& message, Editor& editor, Action* a
 		return;
 	}
 
-	// -1 on address since we skip the first START_NODE when sending
 	std::string data = message.read<std::string>();
-	data.insert(0, 1, ' ');
-	mapReader.assign(reinterpret_cast<const uint8_t*>(data.c_str()), data.size());
-
-	BinaryNode* rootNode = mapReader.getRootNode();
-	BinaryNode* tileNode = rootNode->getChild();
+	FastOTBMStream stream(reinterpret_cast<const uint8_t*>(data.data()), data.size());
 
 	Position position(0, 0, z);
 	for (uint_fast8_t x = 0; x < 4; ++x) {
@@ -182,14 +179,21 @@ void LiveSocket::receiveFloor(NetworkMessage& message, Editor& editor, Action* a
 			position.y = (ndy * 4) + y;
 
 			if (testFlags(tileBits, static_cast<uint64_t>(1) << ((x * 4) + y))) {
-				receiveTile(tileNode, editor, action, &position);
-				tileNode->advance();
+				if (stream.hasMore() && stream.peekByte() == OTBM_NODE_START) {
+					stream.readByte(); // consume OTBM_NODE_START
+					uint8_t tileType = stream.readByte();
+					FastOTBMNode tileNode(tileType, stream.p, stream.end);
+					receiveTile(tileNode, editor, action, &position);
+					if (!tileNode.closed) {
+						tileNode.stream.skipNode();
+					}
+					stream.p = tileNode.stream.p;
+				}
 			} else {
 				action->addChange(std::make_unique<Change>(std::move(map.allocator(node->createTile(position.x, position.y, z)))));
 			}
 		}
 	}
-	mapReader.close();
 }
 
 void LiveSocket::sendFloor(NetworkMessage& message, Floor* floor) {
@@ -228,9 +232,7 @@ void LiveSocket::sendFloor(NetworkMessage& message, Floor* floor) {
 	message.write<std::string>(stream);
 }
 
-void LiveSocket::receiveTile(BinaryNode* node, Editor& editor, Action* action, const Position* position) {
-	ASSERT(node != nullptr);
-
+void LiveSocket::receiveTile(FastOTBMNode& node, Editor& editor, Action* action, const Position* position) {
 	std::unique_ptr<Tile> tile = readTile(node, editor, position);
 	action->addChange(std::make_unique<Change>(std::move(tile)));
 }
@@ -269,14 +271,10 @@ void LiveSocket::sendTile(MemoryNodeFileWriteHandle& writer, Tile* tile, const P
 	writer.endNode();
 }
 
-std::unique_ptr<Tile> LiveSocket::readTile(BinaryNode* node, Editor& editor, const Position* position) {
-	ASSERT(node != nullptr);
-
+std::unique_ptr<Tile> LiveSocket::readTile(FastOTBMNode& node, Editor& editor, const Position* position) {
 	Map& map = editor.map;
 
-	uint8_t tileType;
-	node->getByte(tileType);
-
+	uint8_t tileType = node.type;
 	if (tileType != OTBM_TILE && tileType != OTBM_HOUSETILE) {
 		return nullptr;
 	}
@@ -286,13 +284,13 @@ std::unique_ptr<Tile> LiveSocket::readTile(BinaryNode* node, Editor& editor, con
 		pos = *position;
 	} else {
 		uint16_t x;
-		node->getU16(x);
+		node.stream.getU16(x);
 		pos.x = x;
 		uint16_t y;
-		node->getU16(y);
+		node.stream.getU16(y);
 		pos.y = y;
 		uint8_t z;
-		node->getU8(z);
+		node.stream.getU8(z);
 		pos.z = z;
 	}
 
@@ -302,8 +300,7 @@ std::unique_ptr<Tile> LiveSocket::readTile(BinaryNode* node, Editor& editor, con
 
 	if (tileType == OTBM_HOUSETILE) {
 		uint32_t houseId;
-		if (!node->getU32(houseId)) {
-			// warning("House tile without house data, discarding tile");
+		if (!node.stream.getU32(houseId)) {
 			return nullptr;
 		}
 
@@ -312,60 +309,37 @@ std::unique_ptr<Tile> LiveSocket::readTile(BinaryNode* node, Editor& editor, con
 			if (house) {
 				tile->setHouse(house);
 			}
-		} else {
-			// warning("Invalid house id from tile %d:%d:%d", pos.x, pos.y, pos.z);
 		}
 	}
 
 	uint8_t attribute;
-	while (node->getU8(attribute)) {
+	while (node.stream.getU8(attribute)) {
 		switch (attribute) {
 			case OTBM_ATTR_TILE_FLAGS: {
 				uint32_t flags = 0;
-				if (!node->getU32(flags)) {
-					// warning("Invalid tile flags of tile on %d:%d:%d", pos.x, pos.y, pos.z);
-				}
+				node.stream.getU32(flags);
 				tile->setMapFlags(flags);
 				break;
 			}
 			case OTBM_ATTR_ITEM: {
-				std::unique_ptr<Item> item = Item::Create_OTBM(mapVersion, node);
-				if (!item) {
-					// warning("Invalid item at tile %d:%d:%d", pos.x, pos.y, pos.z);
-				}
+				std::unique_ptr<Item> item = ItemSerializationOTBM::createFromStream(mapVersion, node.stream);
 				tile->addItem(std::move(item));
 				break;
 			}
 			default:
-				// warning("Unknown tile attribute at %d:%d:%d", pos.x, pos.y, pos.z);
 				break;
 		}
 	}
 
-	// for(BinaryNode* itemNode = node->getChild(); itemNode; itemNode->advance()) {
-	BinaryNode* itemNode = node->getChild();
-	if (itemNode) {
-		do {
-			uint8_t itemType;
-			if (!itemNode->getByte(itemType)) {
-				// warning("Unknown item type %d:%d:%d", pos.x, pos.y, pos.z);
-				return nullptr;
+	node.forEachChild([&](FastOTBMNode& itemNode) {
+		if (itemNode.type == OTBM_ITEM) {
+			std::unique_ptr<Item> item = ItemSerializationOTBM::createFromStream(mapVersion, itemNode.stream);
+			if (item) {
+				ItemSerializationOTBM::unserializeItemNode(mapVersion, itemNode, *item);
+				tile->addItem(std::move(item));
 			}
-
-			if (itemType == OTBM_ITEM) {
-				std::unique_ptr<Item> item = Item::Create_OTBM(mapVersion, itemNode);
-				if (item) {
-					if (!item->unserializeItemNode_OTBM(mapVersion, itemNode)) {
-						// warning("Couldn't unserialize item attributes at %d:%d:%d", pos.x, pos.y, pos.z);
-					}
-					tile->addItem(std::move(item));
-				}
-			} else {
-				// warning("Unknown type of tile child node");
-			}
-			//}
-		} while (itemNode->advance());
-	}
+		}
+	});
 
 	return tile;
 }

@@ -21,7 +21,6 @@
 #include <functional>
 
 class Map;
-class BinaryNode;
 class NodeFileWriteHandle;
 class Tile;
 class IOMapOTBM;

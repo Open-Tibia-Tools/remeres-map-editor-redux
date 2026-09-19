@@ -63,7 +63,6 @@ public:
 	double getWeight() const;
 	uint32_t memsize() const override;
 
-	virtual bool unserializeItemNode_OTBM(const IOMap& maphandle, BinaryNode* node);
 	virtual bool serializeItemNode_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f) const;
 
 protected:

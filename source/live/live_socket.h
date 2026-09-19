@@ -31,6 +31,7 @@ class LiveLogTab;
 class Action;
 class MapNode;
 class Floor;
+class FastOTBMNode;
 
 struct LiveCursor {
 	uint32_t id;
@@ -74,11 +75,11 @@ protected:
 	void receiveFloor(NetworkMessage& message, Editor& editor, Action* action, int32_t ndx, int32_t ndy, int32_t z, MapNode* node, Floor* floor);
 	void sendFloor(NetworkMessage& message, Floor* floor);
 
-	void receiveTile(BinaryNode* node, Editor& editor, Action* action, const Position* position);
+	void receiveTile(FastOTBMNode& node, Editor& editor, Action* action, const Position* position);
 	void sendTile(MemoryNodeFileWriteHandle& writer, Tile* tile, const Position* position);
 
 	// read / write types
-	std::unique_ptr<Tile> readTile(BinaryNode* node, Editor& editor, const Position* position);
+	std::unique_ptr<Tile> readTile(FastOTBMNode& node, Editor& editor, const Position* position);
 
 	LiveCursor readCursor(NetworkMessage& message);
 	void writeCursor(NetworkMessage& message, const LiveCursor& cursor);
@@ -86,7 +87,6 @@ protected:
 	//
 	std::unordered_map<uint32_t, LiveCursor> cursors;
 
-	MemoryNodeFileReadHandle mapReader;
 	MemoryNodeFileWriteHandle mapWriter;
 	VirtualIOMap mapVersion;
 

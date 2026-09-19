@@ -4,7 +4,6 @@
 #include "io/otbm/otbm_types.h"
 
 class Map;
-class BinaryNode;
 class FastOTBMNode;
 class NodeFileWriteHandle;
 struct MapVersion;
