@@ -6,7 +6,6 @@
 #include "editor/operations/draw_operations.h"
 #include "editor/editor.h"
 #include "editor/action_queue.h"
-#include "brushes/managers/doodad_preview_manager.h"
 #include "brushes/brush.h"
 #include "brushes/doodad/doodad_brush.h"
 #include "brushes/ground/ground_brush.h"
@@ -19,6 +18,7 @@
 #include "brushes/creature/creature_brush.h"
 #include "brushes/spawn/spawn_brush.h"
 #include "brushes/door/door_brush.h"
+#include "brushes/managers/doodad_preview_manager.h"
 #include "map/map.h"
 #include "map/tile.h"
 #include "map/tile_operations.h"
@@ -214,8 +214,7 @@ namespace {
 
 		if (alt && dodraw) {
 			// This is exempt from USE_AUTOMAGIC
-			g_doodad_preview.GetBufferMap()->clear();
-			BaseMap* draw_map = g_doodad_preview.GetBufferMap();
+			BaseMap draw_map;
 
 			for (const auto& drawPos : tilestodraw) {
 				auto* location = editor.map.createTileL(drawPos);
@@ -223,23 +222,23 @@ namespace {
 				if (tile) {
 					std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
 					TileOperations::cleanWalls(new_tile.get(), brush);
-					brush->draw(draw_map, new_tile.get(), nullptr);
-					(void)draw_map->setTile(drawPos, std::move(new_tile));
+					brush->draw(&draw_map, new_tile.get(), nullptr);
+					(void)draw_map.setTile(drawPos, std::move(new_tile));
 				} else {
 					std::unique_ptr<Tile> new_tile(editor.map.allocator(location));
-					brush->draw(draw_map, new_tile.get(), nullptr);
-					(void)draw_map->setTile(drawPos, std::move(new_tile));
+					brush->draw(&draw_map, new_tile.get(), nullptr);
+					(void)draw_map.setTile(drawPos, std::move(new_tile));
 				}
 			}
 			// Iterate over the map instead of tilestodraw to avoid duplicates!
-			for (MapIterator it = draw_map->begin(); it != draw_map->end(); ++it) {
+			for (MapIterator it = draw_map.begin(); it != draw_map.end(); ++it) {
 				Tile* tile = it->get();
 				if (tile) {
-					TileOperations::wallize(tile, draw_map);
+					TileOperations::wallize(tile, &draw_map);
 					action->addChange(std::make_unique<Change>(std::unique_ptr<Tile>(tile)));
 				}
 			}
-			draw_map->clear(false);
+			draw_map.clear(false);
 			// Commit
 			batch->addAndCommitAction(std::move(action));
 		} else {

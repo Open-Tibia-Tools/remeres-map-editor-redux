@@ -6,6 +6,7 @@
 #include "map/position.h"
 #include "rendering/core/floor_visibility_mode.h"
 #include "rendering/core/sprite_light.h"
+#include "rendering/core/light_defaults.h"
 
 class Settings;
 class BrushManager;
@@ -15,6 +16,8 @@ struct DrawingOptions {
 
 	void SetIngame();
 	void SetDefault();
+	void Update(const Settings& settings, int light_intensity = rme::lighting::DEFAULT_SERVER_LIGHT_INTENSITY, int server_light_color = rme::lighting::DEFAULT_SERVER_LIGHT_COLOR, float ambient_light_level = rme::lighting::DEFAULT_MINIMUM_AMBIENT_LIGHT);
+	void UpdateIfNeeded(const Settings& settings, int light_intensity = rme::lighting::DEFAULT_SERVER_LIGHT_INTENSITY, int server_light_color = rme::lighting::DEFAULT_SERVER_LIGHT_COLOR, float ambient_light_level = rme::lighting::DEFAULT_MINIMUM_AMBIENT_LIGHT);
 	void Update(const Settings& settings, const BrushManager& brush_manager);
 	void UpdateIfNeeded(const Settings& settings, const BrushManager& brush_manager);
 	void Update();

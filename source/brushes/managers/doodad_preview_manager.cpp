@@ -6,7 +6,6 @@
 #include "brushes/managers/doodad_preview_manager.h"
 #include "brushes/brush.h"
 #include "brushes/doodad/doodad_brush.h"
-#include "brushes/managers/brush_manager.h"
 #include "game/sprites.h"
 #include "map/map.h"
 #include <cmath>
@@ -25,20 +24,23 @@ void DoodadPreviewManager::Clear() {
 	doodad_buffer_map->clear();
 }
 
-void DoodadPreviewManager::FillBuffer() {
-	Brush* current_brush = g_brush_manager.GetCurrentBrush();
-	if (!current_brush || !current_brush->is<DoodadBrush>()) {
+void DoodadPreviewManager::FillBuffer(
+	DoodadBrush* brush,
+	int variation,
+	const BrushFootprint& footprint,
+	bool useCustomThickness,
+	float customThicknessMod
+) {
+	if (!brush) {
 		return;
 	}
 
 	doodad_buffer_map->clear();
 
-	DoodadBrush* brush = current_brush->as<DoodadBrush>();
-	if (brush->isEmpty(g_brush_manager.GetBrushVariation())) {
+	if (brush->isEmpty(variation)) {
 		return;
 	}
 
-	const BrushFootprint footprint = g_brush_manager.GetBrushFootprint();
 	std::vector<Position> valid_offsets;
 	for (int y = footprint.min_offset_y; y <= footprint.max_offset_y; ++y) {
 		for (int x = footprint.min_offset_x; x <= footprint.max_offset_x; ++x) {
@@ -50,7 +52,7 @@ void DoodadPreviewManager::FillBuffer() {
 
 	const int area = std::max(1, static_cast<int>(valid_offsets.size()));
 	int object_count = 0;
-	const int object_range = (g_brush_manager.UseCustomThickness() ? static_cast<int>(area * g_brush_manager.GetCustomThicknessMod()) : brush->getThickness() * area / std::max(1, brush->getThicknessCeiling()));
+	const int object_range = (useCustomThickness ? static_cast<int>(area * customThicknessMod) : brush->getThickness() * area / std::max(1, brush->getThicknessCeiling()));
 	const int final_object_count = std::max(1, object_range + random(object_range));
 
 	Position center_pos(0x8000, 0x8000, 0x8);
@@ -69,9 +71,9 @@ void DoodadPreviewManager::FillBuffer() {
 
 				// Decide whether the zone should have a composite or several single objects.
 				bool fail = false;
-				if (random(brush->getTotalChance(g_brush_manager.GetBrushVariation())) <= brush->getCompositeChance(g_brush_manager.GetBrushVariation())) {
+				if (random(brush->getTotalChance(variation)) <= brush->getCompositeChance(variation)) {
 					// Composite
-					const CompositeTileList& composites = brush->getComposite(g_brush_manager.GetBrushVariation());
+					const CompositeTileList& composites = brush->getComposite(variation);
 
 					// Figure out if the placement is valid
 					for (const auto& composite : composites) {
@@ -103,7 +105,7 @@ void DoodadPreviewManager::FillBuffer() {
 						}
 					}
 					exit = true;
-				} else if (brush->hasSingleObjects(g_brush_manager.GetBrushVariation())) {
+				} else if (brush->hasSingleObjects(variation)) {
 					Position pos = center_pos + Position(xpos, ypos, 0);
 					Tile* tile = doodad_buffer_map->getTile(pos);
 					if (tile) {
@@ -114,8 +116,8 @@ void DoodadPreviewManager::FillBuffer() {
 					} else {
 						tile = doodad_buffer_map->createTile(pos.x, pos.y, pos.z);
 					}
-					int variation = g_brush_manager.GetBrushVariation();
-					brush->draw(doodad_buffer_map.get(), tile, &variation);
+					int var = variation;
+					brush->draw(doodad_buffer_map.get(), tile, &var);
 					exit = true;
 				}
 				if (fail) {
@@ -126,9 +128,9 @@ void DoodadPreviewManager::FillBuffer() {
 			++object_count;
 		}
 	} else {
-		if (brush->hasCompositeObjects(g_brush_manager.GetBrushVariation()) && random(brush->getTotalChance(g_brush_manager.GetBrushVariation())) <= brush->getCompositeChance(g_brush_manager.GetBrushVariation())) {
+		if (brush->hasCompositeObjects(variation) && random(brush->getTotalChance(variation)) <= brush->getCompositeChance(variation)) {
 			// Composite
-			const CompositeTileList& composites = brush->getComposite(g_brush_manager.GetBrushVariation());
+			const CompositeTileList& composites = brush->getComposite(variation);
 
 			// All placement is valid...
 
@@ -142,10 +144,10 @@ void DoodadPreviewManager::FillBuffer() {
 					tile->addItem(item->deepCopy());
 				}
 			}
-		} else if (brush->hasSingleObjects(g_brush_manager.GetBrushVariation())) {
+		} else if (brush->hasSingleObjects(variation)) {
 			Tile* tile = doodad_buffer_map->createTile(center_pos.x, center_pos.y, center_pos.z);
-			int variation = g_brush_manager.GetBrushVariation();
-			brush->draw(doodad_buffer_map.get(), tile, &variation);
+			int var = variation;
+			brush->draw(doodad_buffer_map.get(), tile, &var);
 		}
 	}
 }

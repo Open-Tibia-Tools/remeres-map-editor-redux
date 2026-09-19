@@ -6,16 +6,24 @@
 #define RME_DOODAD_PREVIEW_MANAGER_H_
 
 #include "app/definitions.h"
+#include "brushes/brush_footprint.h"
 #include <memory>
 
 class BaseMap;
+class DoodadBrush;
 
 class DoodadPreviewManager {
 public:
 	DoodadPreviewManager();
 	~DoodadPreviewManager();
 
-	void FillBuffer();
+	void FillBuffer(
+		DoodadBrush* brush,
+		int variation,
+		const BrushFootprint& footprint,
+		bool useCustomThickness,
+		float customThicknessMod
+	);
 	BaseMap* GetBufferMap() {
 		return doodad_buffer_map.get();
 	}
