@@ -6,6 +6,7 @@
 #include "game/item.h"
 #include "game/house.h"
 #include "io/otbm/item_serialization_otbm.h"
+#include "io/otbm/fast_otbm_reader.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "ui/gui.h"
 #include <algorithm>
@@ -94,62 +95,68 @@ namespace {
 	}
 }
 
-void TileSerializationOTBM::readTileArea(IOMapOTBM& iomap, Map& map, BinaryNode* mapNode) {
+void TileSerializationOTBM::readTileArea(
+	IOMapOTBM& iomap,
+	Map& map,
+	FastOTBMNode& mapNode,
+	const std::array<size_t, 16>* cell_indices,
+	std::vector<std::pair<uint32_t, Tile*>>& out_house_tiles,
+	uint64_t& out_tile_count)
+{
 	uint16_t base_x, base_y;
 	uint8_t base_z;
-	if (!mapNode->getU16(base_x) || !mapNode->getU16(base_y) || !mapNode->getU8(base_z)) {
+	if (!mapNode.stream.getU16(base_x) || !mapNode.stream.getU16(base_y) || !mapNode.stream.getU8(base_z)) {
 		return;
 	}
 
-	for (BinaryNode* tileNode : mapNode->children()) {
-		uint8_t tile_type;
-		if (!tileNode->getByte(tile_type)) {
-			continue;
-		}
-
+	mapNode.forEachChild([&](FastOTBMNode& tileNode) {
+		const uint8_t tile_type = tileNode.type;
 		if (tile_type != OTBM_TILE && tile_type != OTBM_HOUSETILE) {
-			continue;
+			return;
 		}
 
 		uint8_t x_offset, y_offset;
-		if (!tileNode->getU8(x_offset) || !tileNode->getU8(y_offset)) {
-			continue;
+		if (!tileNode.stream.getU8(x_offset) || !tileNode.stream.getU8(y_offset)) {
+			return;
 		}
 
-		const Position pos(base_x + x_offset, base_y + y_offset, base_z);
+		const int x = base_x + x_offset;
+		const int y = base_y + y_offset;
+		const int z = base_z;
 
-		if (map.getTile(pos)) {
-			continue;
-		}
-
-		Tile* tile = map.createTile(pos.x, pos.y, pos.z);
-		House* house = nullptr;
-
+		uint32_t house_id = 0;
 		if (tile_type == OTBM_HOUSETILE) {
-			uint32_t house_id;
-			if (tileNode->getU32(house_id) && house_id != 0) {
-				house = map.houses.getHouse(house_id);
-				if (!house) {
-					auto new_house = std::make_unique<House>(map);
-					house = new_house.get();
-					new_house->setID(house_id);
-					map.houses.addHouse(std::move(new_house));
-				}
+			if (!tileNode.stream.getU32(house_id)) {
+				house_id = 0;
 			}
 		}
 
-		uint8_t attribute;
+		Tile* tile = nullptr;
+		if (cell_indices) {
+			const size_t cell_idx = (*cell_indices)[((y_offset >> 6) << 2) | (x_offset >> 6)];
+			tile = map.createTileInCell(cell_idx, x, y, z);
+		} else {
+			tile = map.createTile(x, y, z);
+		}
+
+		if (!tile || tile->size() > 0) {
+			return;
+		}
+
+		++out_tile_count;
+
 		bool stop_attributes = false;
-		while (!stop_attributes) {
-			const size_t attributeOffset = tileNode->getReadOffset();
-			if (!tileNode->getU8(attribute)) {
+		while (!stop_attributes && tileNode.stream.hasMoreProps()) {
+			const uint8_t* attrStart = tileNode.stream.p;
+			uint8_t attribute = 0;
+			if (!tileNode.stream.getU8(attribute)) {
 				break;
 			}
 
 			switch (attribute) {
 				case OTBM_ATTR_TILE_FLAGS: {
 					uint32_t flags = 0;
-					if (tileNode->getU32(flags)) {
+					if (tileNode.stream.getU32(flags)) {
 						tile->setMapFlags(flags);
 						const uint32_t unknownBits = flags & ~KNOWN_TILE_FLAG_MASK;
 						if (unknownBits != 0) {
@@ -159,11 +166,23 @@ void TileSerializationOTBM::readTileArea(IOMapOTBM& iomap, Map& map, BinaryNode*
 					break;
 				}
 				case OTBM_ATTR_ITEM: {
-					auto item = ItemSerializationOTBM::createFromStream(iomap, tileNode);
-					const auto rawItemBytes = copyRawBytes(tileNode->rawData(), attributeOffset, tileNode->getReadOffset());
+					const uint8_t* itemStart = attrStart;
+					auto item = ItemSerializationOTBM::createFromStream(iomap, tileNode.stream);
+					const uint8_t* itemEnd = tileNode.stream.p;
 					if (hasResolvedDefinition(item)) {
-						tile->addItem(std::move(item));
+						tile->addItemFast(std::move(item));
 					} else {
+						FastOTBMStream rawStream(itemStart, itemEnd);
+						std::vector<uint8_t> rawItemBytes;
+						while (rawStream.hasMoreProps()) {
+							uint8_t b = 0;
+							if (rawStream.getByte(b)) {
+								rawItemBytes.push_back(b);
+							} else {
+								break;
+							}
+						}
+
 						const bool treatAsGround = shouldTreatInlineItemAsGround(*tile);
 						const uint16_t serverId = item ? item->getID() : decodeServerIdFromInlineBytes(rawItemBytes);
 						if (!item) {
@@ -174,7 +193,7 @@ void TileSerializationOTBM::readTileArea(IOMapOTBM& iomap, Map& map, BinaryNode*
 								.kind = treatAsGround ? InvalidOTBMItemKind::MissingGround : InvalidOTBMItemKind::MissingItem,
 								.rawInlineBytes = rawItemBytes,
 							});
-							tile->addItem(std::move(item));
+							tile->addItemFast(std::move(item));
 						} else if (!rawItemBytes.empty()) {
 							tile->addOpaqueTileAttribute(OpaqueTileAttributeRecord {
 								.rawBytes = rawItemBytes,
@@ -184,8 +203,18 @@ void TileSerializationOTBM::readTileArea(IOMapOTBM& iomap, Map& map, BinaryNode*
 					break;
 				}
 				default: {
+					FastOTBMStream rawStream(attrStart, tileNode.stream.end);
+					std::vector<uint8_t> rawBytes;
+					while (rawStream.hasMoreProps()) {
+						uint8_t b = 0;
+						if (rawStream.getByte(b)) {
+							rawBytes.push_back(b);
+						} else {
+							break;
+						}
+					}
 					tile->addOpaqueTileAttribute(OpaqueTileAttributeRecord {
-						.rawBytes = copyRawBytes(tileNode->rawData(), attributeOffset, tileNode->rawData().size()),
+						.rawBytes = std::move(rawBytes),
 					});
 					stop_attributes = true;
 					break;
@@ -193,17 +222,12 @@ void TileSerializationOTBM::readTileArea(IOMapOTBM& iomap, Map& map, BinaryNode*
 			}
 		}
 
-		for (BinaryNode* itemNode : tileNode->children()) {
-			uint8_t item_type;
-			if (!itemNode->getByte(item_type)) {
-				tile->addOpaqueChildNode(capturePreservedNode(itemNode));
-				continue;
-			}
-
+		tileNode.forEachChild([&](FastOTBMNode& itemNode) {
+			const uint8_t item_type = itemNode.type;
 			if (item_type == OTBM_ITEM) {
-				auto item = ItemSerializationOTBM::createFromStream(iomap, itemNode);
+				auto item = ItemSerializationOTBM::createFromStream(iomap, itemNode.stream);
 				if (!hasResolvedDefinition(item)) {
-					PreservedOTBMNode rawNode = capturePreservedNode(itemNode);
+					PreservedOTBMNode rawNode = itemNode.capturePreserved();
 					const uint16_t serverId = item ? item->getID() : decodeServerIdFromNodePayload(rawNode);
 					if (!item) {
 						item = createInvalidPlaceholder(serverId);
@@ -213,34 +237,34 @@ void TileSerializationOTBM::readTileArea(IOMapOTBM& iomap, Map& map, BinaryNode*
 							.kind = InvalidOTBMItemKind::MissingItem,
 							.rawNode = std::move(rawNode),
 						});
-						tile->addItem(std::move(item));
+						tile->addItemFast(std::move(item));
 					} else if (!rawNode.empty()) {
 						tile->addOpaqueChildNode(std::move(rawNode));
 					}
-					continue;
+					return;
 				}
 
 				if (item) {
 					if (!ItemSerializationOTBM::unserializeItemNode(iomap, itemNode, *item)) {
 						item->setInvalidOTBMData(InvalidOTBMItemData {
 							.kind = InvalidOTBMItemKind::MissingItem,
-							.rawNode = capturePreservedNode(itemNode),
+							.rawNode = itemNode.capturePreserved(),
 						});
-						tile->addItem(std::move(item));
+						tile->addItemFast(std::move(item));
 					} else {
-						tile->addItem(std::move(item));
+						tile->addItemFast(std::move(item));
 					}
 				}
 			} else {
-				tile->addOpaqueChildNode(capturePreservedNode(itemNode));
+				tile->addOpaqueChildNode(itemNode.capturePreserved());
 			}
-		}
+		});
 
 		TileOperations::update(tile);
-		if (house) {
-			house->addTile(tile);
+		if (house_id != 0) {
+			out_house_tiles.emplace_back(house_id, tile);
 		}
-	}
+	});
 }
 
 void TileSerializationOTBM::writeTileData(const IOMapOTBM& iomap, const Map& map, NodeFileWriteHandle& f, const std::function<void(int)>& progressCb) {

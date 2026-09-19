@@ -347,6 +347,40 @@ MapNode* SpatialHashGrid::getLeafForce(int x, int y) {
 	return node.get();
 }
 
+MapNode* SpatialHashGrid::getLeafForceInCell(size_t cell_idx, int x, int y) {
+	if (cell_idx >= cells_.size() || !cells_[cell_idx].cell) {
+		return nullptr;
+	}
+	int nx = (x >> NODE_SHIFT) & (NODES_PER_CELL - 1);
+	int ny = (y >> NODE_SHIFT) & (NODES_PER_CELL - 1);
+	auto& node = cells_[cell_idx].cell->nodes[ny * NODES_PER_CELL + nx];
+	if (!node) {
+		node = std::make_unique<MapNode>(map);
+	}
+	return node.get();
+}
+
+void SpatialHashGrid::preallocateCells(std::vector<uint64_t>& keys) {
+	if (keys.empty()) {
+		return;
+	}
+	std::ranges::sort(keys);
+	auto [first, last] = std::ranges::unique(keys);
+	keys.erase(first, last);
+
+	if (cells_.empty()) {
+		cells_.reserve(keys.size());
+		for (uint64_t key : keys) {
+			cells_.push_back(CellEntry{ key, std::make_unique<GridCell>() });
+		}
+	} else {
+		for (uint64_t key : keys) {
+			findOrInsertCell(key);
+		}
+	}
+	last_valid_ = false;
+}
+
 void SpatialHashGrid::clearVisible(uint32_t mask) {
 	for (auto& entry : cells_) {
 		if (!entry.cell) {

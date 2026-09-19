@@ -53,6 +53,7 @@
 #include <wx/snglinst.h>
 #include <wx/stdpaths.h>
 #include <spdlog/spdlog.h>
+#include <chrono>
 #include <thread>
 #include <chrono>
 
@@ -138,34 +139,34 @@ bool Application::OnInit() {
 	// Tell that we are the real thing
 	wxAppConsole::SetInstance(this);
 
-#if defined(__LINUX__) || defined(__WINDOWS__)
-	int argc = 1;
-	char* argv[1] = { wxString(this->argv[0]).char_str() };
-	// glutInit(&argc, argv);
-#endif
-
 	// Load some internal stuff
 	// g_settings.load(); - Already loaded above
 	FixVersionDiscrapencies();
 	g_hotkeys.LoadHotkeys();
 	ClientVersion::loadVersions();
 
+
 #ifdef _USE_PROCESS_COM
 	m_single_instance_checker = newd wxSingleInstanceChecker; // Instance checker has to stay alive throughout the applications lifetime
 	if (g_settings.getInteger(Config::ONLY_ONE_INSTANCE) && m_single_instance_checker->IsAnotherRunning()) {
 		RMEProcessClient client;
+		wxLogNull nolog; // Prevent wxWidgets popup dialog on connection failure
 		wxConnectionBase* connection = client.MakeConnection("localhost", "rme_host", "rme_talk");
 		if (connection) {
 			wxString fileName;
 			if (ParseCommandLineMap(fileName)) {
-				wxLogNull nolog; // We might get a timeout message if the file fails to open on the running instance. Let's not show that message.
 				connection->Execute(fileName);
 			}
 			connection->Disconnect();
 			wxDELETE(connection);
+			wxDELETE(m_single_instance_checker);
+			return false; // Since we return false - OnExit is never called
+		} else {
+			// Another instance was reported running but not responding (stale lock after crash or shutdown).
+			// Proceed to launch as primary instance instead of failing.
+			spdlog::warn("Another instance was reported running but IPC connection failed. Continuing as new instance.");
+			wxDELETE(m_single_instance_checker);
 		}
-		wxDELETE(m_single_instance_checker);
-		return false; // Since we return false - OnExit is never called
 	}
 	// We act as server then
 	m_proc_server = newd RMEProcessServer();

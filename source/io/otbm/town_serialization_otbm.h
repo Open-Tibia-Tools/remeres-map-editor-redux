@@ -20,11 +20,12 @@
 
 class Map;
 class BinaryNode;
+class FastOTBMNode;
 class NodeFileWriteHandle;
 
 class TownSerializationOTBM {
 public:
-	static void readTowns(Map& map, BinaryNode* mapNode);
+	static void readTowns(Map& map, FastOTBMNode& mapNode);
 	static void writeTowns(const Map& map, NodeFileWriteHandle& f);
 };
 

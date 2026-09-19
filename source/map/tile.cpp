@@ -360,6 +360,32 @@ void Tile::addItem(std::unique_ptr<Item> item) {
 	TileOperations::update(this);
 }
 
+void Tile::setGroundFast(std::unique_ptr<Item> item) {
+	ground = std::move(item);
+}
+
+void Tile::addItemFast(std::unique_ptr<Item> item) {
+	if (!item) {
+		return;
+	}
+	if (item->isGroundTile()) {
+		ground = std::move(item);
+		return;
+	}
+	auto it = items.begin();
+	if (item->isAlwaysOnBottom()) {
+		it = std::ranges::find_if(items, [&](const std::unique_ptr<Item>& i) {
+			if (!i->isAlwaysOnBottom()) {
+				return true;
+			}
+			return item->getTopOrder() < i->getTopOrder();
+		});
+	} else {
+		it = items.end();
+	}
+	items.insert(it, std::move(item));
+}
+
 uint8_t Tile::getMiniMapColor() const {
 	if (minimapColor != INVALID_MINIMAP_COLOR) {
 		return minimapColor;
