@@ -19,30 +19,13 @@
 #include "ui/gui.h"
 #include "ui/main_toolbar.h"
 #include "rendering/core/light_defaults.h"
+#include "rendering/core/drawing_options.h"
 #include <algorithm>
 #include <array>
 
 BrushManager g_brush_manager;
 
 BrushManager::BrushManager() :
-	house_brush(nullptr),
-	house_exit_brush(nullptr),
-	waypoint_brush(nullptr),
-	optional_brush(nullptr),
-	eraser(nullptr),
-	normal_door_brush(nullptr),
-	locked_door_brush(nullptr),
-	magic_door_brush(nullptr),
-	quest_door_brush(nullptr),
-	hatch_door_brush(nullptr),
-	window_door_brush(nullptr),
-	normal_door_alt_brush(nullptr),
-	archway_door_brush(nullptr),
-	pz_brush(nullptr),
-	rook_brush(nullptr),
-	nolog_brush(nullptr),
-	pvp_brush(nullptr),
-
 	current_brush(nullptr),
 	previous_brush(nullptr),
 	brush_shape(BRUSHSHAPE_SQUARE),
@@ -184,8 +167,7 @@ void BrushManager::SetBrushSizeInternal(int nz) {
 		brush_size_y = normalized_size;
 		exact_brush_size = false;
 		aspect_ratio_locked = true;
-		g_doodad_preview.FillBuffer();
-		g_gui.SetCurrentMapSecondaryMap(g_doodad_preview.GetBufferMap());
+		UpdateDoodadPreview();
 	} else {
 		brush_size_x = normalized_size;
 		brush_size_y = normalized_size;
@@ -311,7 +293,7 @@ void BrushManager::SetBrushThickness(bool on, int x, int y) {
 	}
 
 	if (current_brush && current_brush->is<DoodadBrush>()) {
-		g_doodad_preview.FillBuffer();
+		FillDoodadPreviewBuffer();
 	}
 
 	g_gui.RefreshView();
@@ -321,7 +303,7 @@ void BrushManager::SetBrushThickness(int low, int ceil) {
 	custom_thickness_mod = static_cast<float>(std::max(low, 1)) / static_cast<float>(std::max(ceil, 1));
 
 	if (use_custom_thickness && current_brush && current_brush->is<DoodadBrush>()) {
-		g_doodad_preview.FillBuffer();
+		FillDoodadPreviewBuffer();
 	}
 
 	g_gui.RefreshView();
@@ -381,9 +363,38 @@ void BrushManager::SetSpawnTime(int time) {
 }
 
 void BrushManager::FillDoodadPreviewBuffer() {
-	g_doodad_preview.FillBuffer();
+	if (!current_brush || !current_brush->is<DoodadBrush>()) {
+		return;
+	}
+	g_doodad_preview.FillBuffer(
+		current_brush->as<DoodadBrush>(),
+		GetBrushVariation(),
+		GetBrushFootprint(),
+		UseCustomThickness(),
+		GetCustomThicknessMod()
+	);
 }
 void BrushManager::UpdateDoodadPreview() {
-	g_doodad_preview.FillBuffer();
+	FillDoodadPreviewBuffer();
 	g_gui.SetCurrentMapSecondaryMap(g_doodad_preview.GetBufferMap());
+}
+
+void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_manager) {
+	Update(settings, brush_manager.GetLightIntensity(), brush_manager.GetServerLightColor(), brush_manager.GetAmbientLightLevel());
+}
+
+void DrawingOptions::UpdateIfNeeded(const Settings& settings, const BrushManager& brush_manager) {
+	if (dirty_) {
+		Update(settings, brush_manager);
+	}
+}
+
+void DrawingOptions::Update() {
+	Update(g_settings, g_brush_manager);
+}
+
+void DrawingOptions::UpdateIfNeeded() {
+	if (dirty_) {
+		Update();
+	}
 }

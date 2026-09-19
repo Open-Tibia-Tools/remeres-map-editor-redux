@@ -30,7 +30,6 @@
 #include "brushes/table/table_brush.h"
 #include "brushes/wall/wall_brush.h"
 #include "brushes/waypoint/waypoint_brush.h"
-#include "brushes/managers/brush_manager.h"
 
 #include "brushes/flag/flag_brush.h"
 #include "brushes/door/door_brush.h"
@@ -64,6 +63,25 @@ Brushes::~Brushes() {
 }
 
 void Brushes::clear() {
+	house_brush = nullptr;
+	house_exit_brush = nullptr;
+	waypoint_brush = nullptr;
+	optional_brush = nullptr;
+	eraser = nullptr;
+	spawn_brush = nullptr;
+	normal_door_brush = nullptr;
+	locked_door_brush = nullptr;
+	magic_door_brush = nullptr;
+	quest_door_brush = nullptr;
+	hatch_door_brush = nullptr;
+	normal_door_alt_brush = nullptr;
+	archway_door_brush = nullptr;
+	window_door_brush = nullptr;
+	pz_brush = nullptr;
+	rook_brush = nullptr;
+	nolog_brush = nullptr;
+	pvp_brush = nullptr;
+
 	for (auto& entry : brushes) {
 		entry.second.reset();
 	}
@@ -76,27 +94,27 @@ void Brushes::clear() {
 }
 
 void Brushes::init() {
-	addManagedBrush(g_brush_manager.optional_brush);
-	addManagedBrush(g_brush_manager.eraser);
-	addManagedBrush(g_brush_manager.spawn_brush);
+	addManagedBrush(optional_brush);
+	addManagedBrush(eraser);
+	addManagedBrush(spawn_brush);
 
-	addManagedBrush(g_brush_manager.normal_door_brush, WALL_DOOR_NORMAL);
-	addManagedBrush(g_brush_manager.locked_door_brush, WALL_DOOR_LOCKED);
-	addManagedBrush(g_brush_manager.magic_door_brush, WALL_DOOR_MAGIC);
-	addManagedBrush(g_brush_manager.quest_door_brush, WALL_DOOR_QUEST);
-	addManagedBrush(g_brush_manager.hatch_door_brush, WALL_HATCH_WINDOW);
-	addManagedBrush(g_brush_manager.archway_door_brush, WALL_ARCHWAY);
-	addManagedBrush(g_brush_manager.normal_door_alt_brush, WALL_DOOR_NORMAL_ALT);
-	addManagedBrush(g_brush_manager.window_door_brush, WALL_WINDOW);
+	addManagedBrush(normal_door_brush, WALL_DOOR_NORMAL);
+	addManagedBrush(locked_door_brush, WALL_DOOR_LOCKED);
+	addManagedBrush(magic_door_brush, WALL_DOOR_MAGIC);
+	addManagedBrush(quest_door_brush, WALL_DOOR_QUEST);
+	addManagedBrush(hatch_door_brush, WALL_HATCH_WINDOW);
+	addManagedBrush(archway_door_brush, WALL_ARCHWAY);
+	addManagedBrush(normal_door_alt_brush, WALL_DOOR_NORMAL_ALT);
+	addManagedBrush(window_door_brush, WALL_WINDOW);
 
-	addManagedBrush(g_brush_manager.house_brush);
-	addManagedBrush(g_brush_manager.house_exit_brush);
-	addManagedBrush(g_brush_manager.waypoint_brush);
+	addManagedBrush(house_brush);
+	addManagedBrush(house_exit_brush);
+	addManagedBrush(waypoint_brush);
 
-	addManagedBrush(g_brush_manager.pz_brush, TILESTATE_PROTECTIONZONE);
-	addManagedBrush(g_brush_manager.rook_brush, TILESTATE_NOPVP);
-	addManagedBrush(g_brush_manager.nolog_brush, TILESTATE_NOLOGOUT);
-	addManagedBrush(g_brush_manager.pvp_brush, TILESTATE_PVPZONE);
+	addManagedBrush(pz_brush, TILESTATE_PROTECTIONZONE);
+	addManagedBrush(rook_brush, TILESTATE_NOPVP);
+	addManagedBrush(nolog_brush, TILESTATE_NOLOGOUT);
+	addManagedBrush(pvp_brush, TILESTATE_PVPZONE);
 
 	GroundBrush::init();
 	WallBrush::init();

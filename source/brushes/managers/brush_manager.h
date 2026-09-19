@@ -6,6 +6,7 @@
 #define RME_BRUSH_MANAGER_H_
 
 #include "app/definitions.h"
+#include "brushes/brush.h"
 #include "brushes/brush_enums.h"
 #include "brushes/brush_footprint.h"
 
@@ -122,24 +123,24 @@ public:
 
 public:
 	// Brush references
-	HouseBrush* house_brush;
-	HouseExitBrush* house_exit_brush;
-	WaypointBrush* waypoint_brush;
-	OptionalBorderBrush* optional_brush;
-	EraserBrush* eraser;
-	SpawnBrush* spawn_brush;
-	DoorBrush* normal_door_brush;
-	DoorBrush* locked_door_brush;
-	DoorBrush* magic_door_brush;
-	DoorBrush* quest_door_brush;
-	DoorBrush* hatch_door_brush;
-	DoorBrush* normal_door_alt_brush;
-	DoorBrush* archway_door_brush;
-	DoorBrush* window_door_brush;
-	FlagBrush* pz_brush;
-	FlagBrush* rook_brush;
-	FlagBrush* nolog_brush;
-	FlagBrush* pvp_brush;
+	HouseBrush*& house_brush = g_brushes.house_brush;
+	HouseExitBrush*& house_exit_brush = g_brushes.house_exit_brush;
+	WaypointBrush*& waypoint_brush = g_brushes.waypoint_brush;
+	OptionalBorderBrush*& optional_brush = g_brushes.optional_brush;
+	EraserBrush*& eraser = g_brushes.eraser;
+	SpawnBrush*& spawn_brush = g_brushes.spawn_brush;
+	DoorBrush*& normal_door_brush = g_brushes.normal_door_brush;
+	DoorBrush*& locked_door_brush = g_brushes.locked_door_brush;
+	DoorBrush*& magic_door_brush = g_brushes.magic_door_brush;
+	DoorBrush*& quest_door_brush = g_brushes.quest_door_brush;
+	DoorBrush*& hatch_door_brush = g_brushes.hatch_door_brush;
+	DoorBrush*& normal_door_alt_brush = g_brushes.normal_door_alt_brush;
+	DoorBrush*& archway_door_brush = g_brushes.archway_door_brush;
+	DoorBrush*& window_door_brush = g_brushes.window_door_brush;
+	FlagBrush*& pz_brush = g_brushes.pz_brush;
+	FlagBrush*& rook_brush = g_brushes.rook_brush;
+	FlagBrush*& nolog_brush = g_brushes.nolog_brush;
+	FlagBrush*& pvp_brush = g_brushes.pvp_brush;
 
 private:
 	Brush* current_brush;

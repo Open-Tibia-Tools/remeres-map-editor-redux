@@ -5,7 +5,7 @@
 #ifndef RME_RENDERING_BRUSH_OVERLAY_DRAWER_H_
 #define RME_RENDERING_BRUSH_OVERLAY_DRAWER_H_
 
-#include "map/position.h"
+#include "rendering/core/render_interaction_state.h"
 #include <glm/glm.hpp>
 
 class BrushCursorDrawer;
@@ -23,12 +23,6 @@ class CreatureDrawer;
 class SpriteBatch;
 class PrimitiveRenderer;
 class AtlasManager;
-
-struct BrushOverlayDragState {
-	bool is_dragging_draw = false;
-	int last_click_map_x = 0;
-	int last_click_map_y = 0;
-};
 
 class BrushOverlayDrawer {
 public:
