@@ -352,7 +352,6 @@ void Settings::IO(IOMode mode) {
 	Bool(EXT_HOUSE_SHADER, true);
 	Bool(DRAW_LOCKED_DOOR, false);
 	Bool(SHOW_AS_MINIMAP, false);
-	Bool(USE_CHUNK_CACHE, true);
 
 	section("General");
 	Bool(GOTO_WEBSITE_ON_BOOT, false);
