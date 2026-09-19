@@ -26,6 +26,7 @@
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/render_frame_context.h"
+#include "app/settings.h"
 
 #include <cmath>
 #include <limits>
@@ -168,7 +169,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		});
 	};
 
-	const bool use_chunk_cache = (chunk_cache != nullptr && chunk_cache->isValid() && !live_client && !options.show_as_minimap && !options.show_only_colors);
+	const bool use_chunk_cache = (chunk_cache != nullptr && chunk_cache->isValid() && !live_client && !options.show_as_minimap && !options.show_only_colors && g_settings.getBoolean(Config::USE_CHUNK_CACHE));
 
 	if (use_chunk_cache) {
 		// 1. Flush any pending batch geometry before chunk cache pass

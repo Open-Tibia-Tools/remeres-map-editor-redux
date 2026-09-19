@@ -62,7 +62,7 @@ bool SpriteAtlasLUT::initialize(size_t initial_capacity) {
 		return false;
 	}
 
-	glCreateTextures(GL_TEXTURE_BUFFER, 1, &texture_);
+	glGenTextures(1, &texture_);
 	if (texture_ == 0) {
 		spdlog::error("[SpriteAtlasLUT] Failed to create texture buffer");
 		glDeleteBuffers(1, &buffer_);
@@ -71,7 +71,11 @@ bool SpriteAtlasLUT::initialize(size_t initial_capacity) {
 	}
 
 	glNamedBufferData(buffer_, static_cast<GLsizeiptr>(cpu_entries_.size() * sizeof(SpriteLUTEntry)), cpu_entries_.data(), GL_DYNAMIC_DRAW);
-	glTextureBuffer(texture_, GL_RGBA32F, buffer_);
+
+	// Explicit target binding for texture buffers ensures robust association on Intel Windows drivers
+	glBindTexture(GL_TEXTURE_BUFFER, texture_);
+	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, buffer_);
+	glBindTexture(GL_TEXTURE_BUFFER, 0);
 
 	gpu_capacity_ = cpu_entries_.size();
 	has_dirty_entries_ = false;
@@ -117,7 +121,9 @@ void SpriteAtlasLUT::ensureCapacity(size_t required_capacity) {
 	if (buffer_ != 0) {
 		glNamedBufferData(buffer_, static_cast<GLsizeiptr>(cpu_entries_.size() * sizeof(SpriteLUTEntry)), cpu_entries_.data(), GL_DYNAMIC_DRAW);
 		if (texture_ != 0) {
-			glTextureBuffer(texture_, GL_RGBA32F, buffer_);
+			glBindTexture(GL_TEXTURE_BUFFER, texture_);
+			glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, buffer_);
+			glBindTexture(GL_TEXTURE_BUFFER, 0);
 		}
 		gpu_capacity_ = cpu_entries_.size();
 		has_dirty_entries_ = false;
@@ -191,12 +197,16 @@ void SpriteAtlasLUT::bind(GLuint texture_unit) {
 		if (has_dirty_entries_) {
 			flush();
 		}
-		glBindTextureUnit(texture_unit, texture_);
+		glActiveTexture(GL_TEXTURE0 + texture_unit);
+		glBindTexture(GL_TEXTURE_BUFFER, texture_);
+		glActiveTexture(GL_TEXTURE0);
 	}
 }
 
 void SpriteAtlasLUT::unbind(GLuint texture_unit) const {
-	glBindTextureUnit(texture_unit, 0);
+	glActiveTexture(GL_TEXTURE0 + texture_unit);
+	glBindTexture(GL_TEXTURE_BUFFER, 0);
+	glActiveTexture(GL_TEXTURE0);
 }
 
 const SpriteLUTEntry* SpriteAtlasLUT::getEntry(uint32_t sprite_id) const {
