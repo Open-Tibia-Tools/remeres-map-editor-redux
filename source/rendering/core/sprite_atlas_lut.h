@@ -97,6 +97,10 @@ public:
 		return cpu_entries_.size();
 	}
 
+	size_t getMaxSupportedEntries() const noexcept {
+		return max_supported_entries_;
+	}
+
 	GLuint getBufferID() const noexcept {
 		return buffer_;
 	}
@@ -118,6 +122,7 @@ private:
 	GLuint texture_ = 0;
 	std::vector<SpriteLUTEntry> cpu_entries_;
 	size_t gpu_capacity_ = 0;
+	size_t max_supported_entries_ = MAX_SUPPORTED_SPRITES;
 	uint32_t dirty_min_id_ = UINT32_MAX;
 	uint32_t dirty_max_id_ = 0;
 	bool has_dirty_entries_ = false;

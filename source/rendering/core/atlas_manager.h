@@ -113,7 +113,7 @@ public:
 	}
 
 	/**
-	 * Get the GPU SpriteAtlasLUT for SSBO sprite coordinate indirection.
+	 * Get the GPU SpriteAtlasLUT for Texture Buffer (TBO) sprite coordinate indirection.
 	 */
 	SpriteAtlasLUT& getLUT() noexcept {
 		return lut_;

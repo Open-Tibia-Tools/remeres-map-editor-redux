@@ -106,7 +106,7 @@ struct CachedChunk {
  * High-performance Chunk Cache Manager.
  *
  * Implements per-chunk VBO caching (parity with Imgui Map Editor architecture),
- * instanced rendering, shader SSBO indirection via SpriteAtlasLUT,
+ * instanced rendering, shader Texture Buffer (TBO) indirection via SpriteAtlasLUT,
  * and floor-aware smart eviction.
  */
 class ChunkCacheManager {
