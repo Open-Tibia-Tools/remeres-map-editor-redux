@@ -36,16 +36,7 @@ layout(location = 3) in uint aSpriteId;
 layout(location = 4) in uint aFlags;
 layout(location = 5) in vec4 aTint;
 
-struct SpriteLUTEntry {
-	vec4 uv_rect;
-	float layer;
-	float valid;
-	vec2 _pad;
-};
-
-layout(std430, binding = 2) readonly buffer AtlasLUT {
-	SpriteLUTEntry lutEntries[];
-};
+uniform samplerBuffer uAtlasLUT;
 
 uniform mat4 uMVP;
 uniform vec4 uGlobalTint;
@@ -63,9 +54,11 @@ void main() {
 		vTexCoord = vec3(0.0);
 		vColor = aTint * uGlobalTint;
 	} else {
-		SpriteLUTEntry entry = lutEntries[aSpriteId];
-		vec2 uv = mix(entry.uv_rect.xy, entry.uv_rect.zw, aTexCoord);
-		vTexCoord = vec3(uv, entry.layer);
+		int baseTexel = int(aSpriteId) * 2;
+		vec4 uvRect = texelFetch(uAtlasLUT, baseTexel);
+		vec4 meta = texelFetch(uAtlasLUT, baseTexel + 1);
+		vec2 uv = mix(uvRect.xy, uvRect.zw, aTexCoord);
+		vTexCoord = vec3(uv, meta.x);
 		vColor = aTint * uGlobalTint;
 	}
 }
@@ -791,10 +784,11 @@ void ChunkCacheManager::renderFloor(
 	shader_.Use();
 	shader_.SetMat4("uMVP", floor_mvp);
 	shader_.SetInt("uAtlas", 0);
+	shader_.SetInt("uAtlasLUT", SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 	shader_.SetVec4("uGlobalTint", glm::vec4(1.0f));
 
 	atlas.bind(0);
-	atlas.bindLUT(SpriteAtlasLUT::SSBO_BINDING_INDEX);
+	atlas.bindLUT(SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 
 	glBindVertexArray(vao_);
 
