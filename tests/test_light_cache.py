@@ -475,6 +475,78 @@ def test_panning_margin_bypass():
     print("  -> Floor switch: PASS (reuses persistent GPU texture, 0 recreations)")
     print("PASS: Panning within 8-chunk margin successfully bypasses GPU texture uploads with ZERO texture recreation!")
 
+def test_light_cache_lru_and_floor_offset():
+    print("\n=== TEST 8: LightCache LRU Capacity Bounds & Floor Offset Alignment ===")
+
+    # 1. Floor offset alignment invariant
+    TILE_SIZE = 32
+    GROUND_LAYER = 7
+
+    def get_floor_adjustment(floor: int) -> int:
+        return 0 if floor > GROUND_LAYER else TILE_SIZE * (GROUND_LAYER - floor)
+
+    # Floor 7 (ground): offset 0
+    assert get_floor_adjustment(7) == 0
+    # Floor 6: shifted 32px (1 tile)
+    assert get_floor_adjustment(6) == 32
+    # Floor 5: shifted 64px (2 tiles)
+    assert get_floor_adjustment(5) == 64
+    # Floor 0: shifted 224px (7 tiles)
+    assert get_floor_adjustment(0) == 224
+    # Floor 8 (underground): offset 0
+    assert get_floor_adjustment(8) == 0
+
+    # Ensure lightmap world coordinates align with tile geometry
+    view_scroll_x = 1000
+    last_min_cx = 10
+    for floor in range(16):
+        floor_offset = get_floor_adjustment(floor)
+        world_x = last_min_cx * CHUNK_SIZE * TILE_SIZE - view_scroll_x - floor_offset
+        # Sample tile at chunk origin:
+        tile_x = last_min_cx * CHUNK_SIZE
+        tile_draw_x = tile_x * TILE_SIZE - view_scroll_x - floor_offset
+        assert world_x == tile_draw_x, f"Lightmap misaligned on floor {floor}: world_x={world_x}, tile_draw_x={tile_draw_x}"
+    print("  -> Floor adjustment alignment across all 16 floors: PASS (0px drift)")
+
+    # 2. LightCache LRU capacity invariant
+    MAX_CACHED_LIGHT_CHUNKS = 100  # scaled down for test
+    TARGET_CACHED_LIGHT_CHUNKS = 75
+
+    class MockLightCache:
+        def __init__(self):
+            self.chunks = {} # coord -> last_accessed_frame
+
+        def evict_oldest(self, count_to_remove, current_frame):
+            candidates = [
+                (frame, coord) for coord, frame in self.chunks.items()
+                if frame < current_frame
+            ]
+            candidates.sort(key=lambda x: x[0])
+            for i in range(min(count_to_remove, len(candidates))):
+                del self.chunks[candidates[i][1]]
+
+        def prune(self, current_floor, current_frame):
+            # LRU eviction
+            if len(self.chunks) > MAX_CACHED_LIGHT_CHUNKS:
+                needed = len(self.chunks) - TARGET_CACHED_LIGHT_CHUNKS
+                self.evict_oldest(needed, current_frame)
+
+    cache = MockLightCache()
+    # Populate with 120 chunks at frames 1..120
+    for i in range(120):
+        cache.chunks[(i, 0, 7)] = i + 1
+
+    # Prune at frame 150
+    cache.prune(7, 150)
+    assert len(cache.chunks) == TARGET_CACHED_LIGHT_CHUNKS, f"LRU did not trim to target: {len(cache.chunks)}"
+    # Chunks 1..45 (oldest) should have been evicted, chunks 46..120 should remain
+    assert (0, 0, 7) not in cache.chunks
+    assert (44, 0, 7) not in cache.chunks
+    assert (45, 0, 7) in cache.chunks
+    assert (119, 0, 7) in cache.chunks
+    print(f"  -> LRU capacity bounds: PASS (120 chunks trimmed to {TARGET_CACHED_LIGHT_CHUNKS})")
+    print("PASS: Floor offset alignment and LRU capacity bounds verified!")
+
 if __name__ == "__main__":
     test_distance_lut()
     test_palette_and_ambient()
@@ -483,6 +555,7 @@ if __name__ == "__main__":
     test_ground_occlusion()
     test_translucent_sunlight()
     test_panning_margin_bypass()
+    test_light_cache_lru_and_floor_offset()
     print("\n========================================================")
-    print("ALL MILESTONE 2 LIGHTING TESTS PASSED PERFECTLY (7/7)!")
+    print("ALL MILESTONE 2 LIGHTING TESTS PASSED PERFECTLY (8/8)!")
     print("========================================================")

@@ -549,8 +549,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			// 1. Static & animated terrain ground (water, grass, dirt, lava, etc.)
 			if (tile->ground) {
 				const ItemDefinitionView git = tile->ground->getDefinition();
-				const uint16_t ground_client_id = git ? git.clientId() : 0;
-				const uint16_t ground_server_id = tile->ground->getID();
+				const ClientItemId ground_client_id = git ? git.clientId() : 0;
+				const ServerItemId ground_server_id = tile->ground->getID();
 
 				if (ctx.options.show_tech_items && !ctx.options.ingame && (ground_server_id == 459 || ground_client_id == 469)) {
 					pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 1.0f, 0.0f, 170.0f / 255.0f);
@@ -602,8 +602,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				if (!it) {
 					continue;
 				}
-				const uint16_t item_client_id = it.clientId();
-				const uint16_t item_server_id = item->getID();
+				const ClientItemId item_client_id = it.clientId();
+				const ServerItemId item_server_id = item->getID();
 
 				if (ctx.options.show_tech_items && !ctx.options.ingame) {
 					if (item_server_id == 459 || item_client_id == 469) {
@@ -666,8 +666,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					continue;
 				}
 				const ItemDefinitionView it = item->getDefinition();
-				const uint16_t item_client_id = it ? it.clientId() : 0;
-				const uint16_t item_server_id = item->getID();
+				const ClientItemId item_client_id = it ? it.clientId() : 0;
+				const ServerItemId item_server_id = item->getID();
 
 				if (ctx.options.show_tech_items && !ctx.options.ingame) {
 					if (item_server_id == 459 || item_client_id == 469) {

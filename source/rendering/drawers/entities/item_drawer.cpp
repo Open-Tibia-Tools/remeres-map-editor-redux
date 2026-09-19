@@ -107,8 +107,8 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 			return;
 		}
 
-		const uint16_t client_id = it.clientId();
-		const uint16_t server_id = item ? item->getID() : 0;
+		const ClientItemId client_id = it.clientId();
+		const ServerItemId server_id = item ? item->getID() : 0;
 
 		// Yellow invisible stairs tile (server 459 / client 469)
 		if (server_id == 459 || client_id == 469) {
@@ -129,7 +129,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		}
 
 		// primal light
-		if (it.clientId() >= 39092 && it.clientId() <= 39100 || it.clientId() == 39236 || it.clientId() == 39367 || it.clientId() == 39368) {
+		if ((it.clientId() >= 39092 && it.clientId() <= 39100) || it.clientId() == 39236 || it.clientId() == 39367 || it.clientId() == 39368) {
 			spr = resolveSprite(SPRITE_LIGHTSOURCE, params.ctx);
 			red = 0;
 			alpha = 180;
