@@ -156,15 +156,12 @@ public:
 	// OTBM map interface
 	// Serialize and unserialize (for save/load)
 	// Used internally
-	virtual bool readItemAttribute_OTBM(const IOMap& maphandle, OTBM_ItemAttribute attr, BinaryNode* stream);
-	virtual bool unserializeAttributes_OTBM(const IOMap& maphandle, BinaryNode* stream);
 	virtual bool unserializeItemNode_OTBM(const IOMap& maphandle, BinaryNode* node);
 
 	// Will return a node containing this item
 	virtual bool serializeItemNode_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f) const;
 	// Will write this item to the stream supplied in the argument
 	virtual void serializeItemCompact_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f) const;
-	virtual void serializeItemAttributes_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f) const;
 
 	// Static conversions
 	static std::string_view LiquidID2Name(uint16_t id);

@@ -104,6 +104,7 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/waypoint_serialization_otbm.h
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/tile_serialization_otbm.h
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/town_serialization_otbm.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/otbm/fast_otbm_reader.h
     ${CMAKE_CURRENT_LIST_DIR}/io/templates.h
     ${CMAKE_CURRENT_LIST_DIR}/map/basemap.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map.h
@@ -295,6 +296,7 @@ set(rme_core_SRC
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/waypoint_serialization_otbm.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/tile_serialization_otbm.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/town_serialization_otbm.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/otbm/fast_otbm_reader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/basemap.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/map.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/operations/map_processor.cpp

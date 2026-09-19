@@ -155,6 +155,11 @@ public:
 	Item* getItemAt(int index) const;
 	void setGround(std::unique_ptr<Item> item);
 	void addItem(std::unique_ptr<Item> item);
+	void setGroundFast(std::unique_ptr<Item> item);
+	void addItemFast(std::unique_ptr<Item> item);
+	void reserveItems(size_t count) {
+		items.reserve(count);
+	}
 	InvalidZoneState& getOrCreateInvalidZones();
 	void clearInvalidZones();
 	void addOpaqueTileAttribute(OpaqueTileAttributeRecord record);

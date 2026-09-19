@@ -50,6 +50,8 @@ public:
 	const MapNode* getLeaf(int x, int y) const;
 	// Forces leaf creation. Throws std::bad_alloc on memory failure.
 	MapNode* getLeafForce(int x, int y);
+	MapNode* getLeafForceInCell(size_t cell_idx, int x, int y);
+	void preallocateCells(std::vector<uint64_t>& keys);
 
 	void clear();
 	void clearVisible(uint32_t mask);

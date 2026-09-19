@@ -18,48 +18,41 @@
 #include "town_serialization_otbm.h"
 #include "map/map.h"
 #include "game/town.h"
+#include "io/otbm/fast_otbm_reader.h"
 #include <spdlog/spdlog.h>
 
-void TownSerializationOTBM::readTowns(Map& map, BinaryNode* mapNode) {
+void TownSerializationOTBM::readTowns(Map& map, FastOTBMNode& mapNode) {
 	spdlog::debug("Reading OTBM_TOWNS...");
-	for (BinaryNode* townNode = mapNode->getChild(); townNode != nullptr; townNode = townNode->advance()) {
-		uint8_t town_type;
-		if (!townNode->getByte(town_type)) {
-			spdlog::warn("Invalid town node: failed to read type byte");
-			continue;
-		}
-		if (town_type != OTBM_TOWN) {
-			spdlog::warn("Invalid town node type: {} (expected {})", static_cast<int>(town_type), static_cast<int>(OTBM_TOWN));
-			continue;
+	mapNode.forEachChild([&](FastOTBMNode& townNode) {
+		if (townNode.type != OTBM_TOWN) {
+			return;
 		}
 		uint32_t town_id;
-		if (!townNode->getU32(town_id)) {
-			spdlog::warn("Failed to read town ID");
-			continue;
+		if (!townNode.stream.getU32(town_id)) {
+			return;
 		}
 
 		if (const auto* existing_town = map.towns.getTown(town_id)) {
 			spdlog::warn("Duplicate town ID {}, discarding duplicate", town_id);
-			continue;
+			return;
 		}
 
 		std::string town_name;
-		if (!townNode->getString(town_name) || town_name.empty()) {
+		if (!townNode.stream.getString(town_name) || town_name.empty()) {
 			spdlog::warn("Failed to read valid town name for ID {}", town_id);
-			continue;
+			return;
 		}
 
-		Position pos;
 		uint16_t x, y;
 		uint8_t z;
-		if (!townNode->getU16(x) || !townNode->getU16(y) || !townNode->getU8(z)) {
+		if (!townNode.stream.getU16(x) || !townNode.stream.getU16(y) || !townNode.stream.getU8(z)) {
 			spdlog::warn("Invalid temple position for town '{}' (ID {})", town_name, town_id);
-			continue;
+			return;
 		}
-		pos = { x, y, z };
+		Position pos = { x, y, z };
 		if (pos.x == 0 || pos.y == 0) {
 			spdlog::warn("Invalid temple position {}:{}:{} for town '{}' (ID {})", pos.x, pos.y, pos.z, town_name, town_id);
-			continue;
+			return;
 		}
 
 		auto new_town = std::make_unique<Town>(town_id);
@@ -68,7 +61,7 @@ void TownSerializationOTBM::readTowns(Map& map, BinaryNode* mapNode) {
 
 		if (!map.towns.addTown(std::move(new_town))) {
 			spdlog::error("Failed to add town {} to map", town_id);
-			continue;
+			return;
 		}
 
 		if (auto* tile = map.getOrCreateTile(pos)) {
@@ -76,7 +69,7 @@ void TownSerializationOTBM::readTowns(Map& map, BinaryNode* mapNode) {
 				location->increaseTownCount();
 			}
 		}
-	}
+	});
 }
 
 void TownSerializationOTBM::writeTowns(const Map& map, NodeFileWriteHandle& f) {

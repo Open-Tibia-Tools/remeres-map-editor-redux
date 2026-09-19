@@ -95,6 +95,7 @@ public:
 
 	// these functions take a position and returns a tile on the map
 	Tile* createTile(int x, int y, int z);
+	Tile* createTileInCell(size_t cell_idx, int x, int y, int z);
 	Tile* getTile(int x, int y, int z);
 	Tile* getTile(const Position& pos);
 	Tile* getOrCreateTile(const Position& pos);
