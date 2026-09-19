@@ -11,8 +11,8 @@
 class Brush;
 class RAWBrush;
 
-using ServerItemId = uint16_t;
-using ClientItemId = uint16_t;
+using ServerItemId = uint32_t;
+using ClientItemId = uint32_t;
 using DefinitionId = uint32_t;
 
 enum ItemGroup_t {

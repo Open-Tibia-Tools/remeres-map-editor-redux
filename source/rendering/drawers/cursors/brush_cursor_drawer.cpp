@@ -1,7 +1,3 @@
-#include "app/main.h"
-
-// glut include removed
-
 #include "rendering/drawers/cursors/brush_cursor_drawer.h"
 #include "brushes/brush.h"
 #include "app/definitions.h" // For PI
@@ -9,9 +5,8 @@
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/core/graphics.h"
-#include "ui/gui.h"
 
-void BrushCursorDrawer::draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primitive_renderer, int x, int y, Brush* brush, uint8_t r, uint8_t g, uint8_t b) {
+void BrushCursorDrawer::draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primitive_renderer, const AtlasManager& atlas, int x, int y, Brush* brush, uint8_t r, uint8_t g, uint8_t b) {
 	x += (TILE_SIZE / 2);
 	y += (TILE_SIZE / 2);
 
@@ -60,10 +55,7 @@ void BrushCursorDrawer::draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primi
 	// Box: (-15, -20) to (15, -5). width=30, height=15.
 	// Top Left of box relative to x,y: (-15, -20).
 	// But coordinates seem to be relative offset.
-	if (g_gui.gfx.ensureAtlasManager()) {
-		const AtlasManager& atlas = *g_gui.gfx.getAtlasManager();
-		sprite_batch.drawRect((float)(x - 15), (float)(y - 20), (float)30, (float)15, bgColor, atlas);
-	}
+	sprite_batch.drawRect((float)(x - 15), (float)(y - 20), (float)30, (float)15, bgColor, atlas);
 
 	// Tip Triangle: (-5, -5), (0,0), (5, -5) relative to x,y
 	// Tip Triangle: (-5, -5), (0,0), (5, -5) relative to x,y

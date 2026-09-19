@@ -15,11 +15,9 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
 #include "rendering/core/texture_garbage_collector.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/image.h"
-#include "app/settings.h"
 #include <algorithm>
 #include <chrono>
 
@@ -34,7 +32,6 @@ TextureGarbageCollector::~TextureGarbageCollector() {
 void TextureGarbageCollector::Clear() {
 	loaded_textures = 0;
 	lastclean = time(nullptr);
-	cleanup_list.clear();
 	resident_image_cursor = 0;
 	resident_sprite_cursor = 0;
 	sweep_in_progress = false;
@@ -48,34 +45,16 @@ void TextureGarbageCollector::NotifyTextureUnloaded() {
 	loaded_textures--;
 }
 
-// Minimal threshold before we even consider reliable cleanup
-const int MIN_CLEAN_THRESHOLD = 100;
-
-void TextureGarbageCollector::AddSpriteToCleanup(GameSprite* spr) {
-	cleanup_list.push_back(spr);
-	// Clean if needed
-	const size_t clean_threshold = static_cast<size_t>(std::max(MIN_CLEAN_THRESHOLD, g_settings.getInteger(Config::SOFTWARE_CLEAN_THRESHOLD)));
-	if (cleanup_list.size() > clean_threshold) {
-		const auto software_clean_size = std::max(0, g_settings.getInteger(Config::SOFTWARE_CLEAN_SIZE));
-		const auto cleanup_count = std::min(cleanup_list.size(), static_cast<size_t>(software_clean_size));
-
-		for (size_t i = 0; i < cleanup_count; ++i) {
-			cleanup_list.front()->unloadDC();
-			cleanup_list.pop_front();
-		}
-	}
-}
-
 void TextureGarbageCollector::GarbageCollect(std::vector<GameSprite*>& resident_game_sprites, std::vector<void*>& resident_images, time_t current_time) {
-	if (!g_settings.getInteger(Config::TEXTURE_MANAGEMENT)) {
+	if (!options_.enabled) {
 		sweep_in_progress = false;
 		resident_image_cursor = 0;
 		resident_sprite_cursor = 0;
 		return;
 	}
 
-	const int clean_threshold = g_settings.getInteger(Config::TEXTURE_CLEAN_THRESHOLD);
-	const int clean_pulse = g_settings.getInteger(Config::TEXTURE_CLEAN_PULSE);
+	const int clean_threshold = options_.clean_threshold;
+	const int clean_pulse = options_.clean_pulse;
 	if (!sweep_in_progress) {
 		if (loaded_textures <= clean_threshold || current_time - lastclean <= clean_pulse) {
 			return;
@@ -86,7 +65,7 @@ void TextureGarbageCollector::GarbageCollect(std::vector<GameSprite*>& resident_
 		resident_sprite_cursor = resident_game_sprites.size();
 	}
 
-	const int longevity = g_settings.getInteger(Config::TEXTURE_LONGEVITY);
+	const int longevity = options_.longevity;
 	const auto sweep_start = std::chrono::steady_clock::now();
 	constexpr auto TIME_BUDGET = std::chrono::microseconds(1000);
 	constexpr size_t CHECK_INTERVAL = 128;
@@ -149,12 +128,4 @@ void TextureGarbageCollector::GarbageCollect(std::vector<GameSprite*>& resident_
 
 	sweep_in_progress = false;
 	lastclean = current_time;
-}
-
-void TextureGarbageCollector::CleanSoftwareSprites(std::vector<std::unique_ptr<Sprite>>& sprite_space) {
-	for (auto& sprite_ptr : sprite_space) {
-		if (sprite_ptr) {
-			sprite_ptr->unloadDC();
-		}
-	}
 }

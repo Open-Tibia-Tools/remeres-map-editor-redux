@@ -58,7 +58,7 @@ public:
 	~GraphicManager();
 
 	void clear();
-	void cleanSoftwareSprites();
+	void cleanSoftwareSprites() {}
 
 	Sprite* getSprite(int id);
 	void updateTime();
@@ -88,18 +88,20 @@ public:
 	uint16_t getItemSpriteMaxID() const;
 	uint16_t getCreatureSpriteMaxID() const;
 
-	// This is part of the binary
-	bool loadEditorSprites();
-
 	// Cleans old & unused textures according to config settings
 	void garbageCollection();
-	void addSpriteToCleanup(GameSprite* spr);
-
-	wxFileName getMetadataFileName() const {
-		return client_version ? client_version->getMetadataPath() : wxFileName();
+	void setGCOptions(const TextureGCOptions& options) {
+		collector.SetOptions(options);
 	}
-	wxFileName getSpritesFileName() const {
-		return client_version ? client_version->getSpritesPath() : wxFileName();
+	[[nodiscard]] const TextureGCOptions& getGCOptions() const {
+		return collector.GetOptions();
+	}
+
+	std::filesystem::path getMetadataPath() const {
+		return client_version ? std::filesystem::path(client_version->getMetadataPath().GetFullPath().ToStdString()) : std::filesystem::path();
+	}
+	std::filesystem::path getSpritesPath() const {
+		return client_version ? std::filesystem::path(client_version->getSpritesPath().GetFullPath().ToStdString()) : std::filesystem::path();
 	}
 
 	bool hasTransparency() const;
@@ -141,9 +143,6 @@ private:
 	using ImageVector = std::vector<std::unique_ptr<Image>>;
 	ImageVector image_space;
 
-	// Editor sprites use negative IDs, so they need a separate map
-	std::unordered_map<int, std::unique_ptr<Sprite>> editor_sprite_space;
-
 	// Active Resident Sets: Track only what's currently occupying memory/VRAM
 	// This avoids O(N) scans of the entire database.
 	std::vector<void*> resident_images;
@@ -169,5 +168,7 @@ private:
 };
 
 #include "minimap_colors.h"
+
+extern GraphicManager g_graphics;
 
 #endif

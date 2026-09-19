@@ -2,7 +2,7 @@
 
 #include "app/definitions.h"
 #include "io/filehandle.h"
-#include "rendering/core/game_sprite.h"
+#include "rendering/core/sprite_decoder.h"
 #include "rendering/core/image.h"
 #include "util/json.h"
 
@@ -16,8 +16,6 @@
 #include <span>
 #include <utility>
 #include <lzma.h>
-#include <wx/filename.h>
-#include <wx/string.h>
 
 namespace {
 	constexpr uint32_t kLegacySpriteDataOffset = 3;
@@ -81,10 +79,10 @@ SpriteArchive::SpriteArchive(std::string filename, uint32_t sprite_count, std::v
 	protobuf_sheet_lookup_(std::move(sheet_lookup)) {
 }
 
-std::shared_ptr<SpriteArchive> SpriteArchive::load(const wxFileName& path, bool is_extended, wxString& error, std::vector<std::string>& warnings) {
-	FileReadHandle file(path.GetFullPath().ToStdString());
+std::shared_ptr<SpriteArchive> SpriteArchive::load(const std::filesystem::path& path, bool is_extended, std::string& error, std::vector<std::string>& warnings) {
+	FileReadHandle file(path.string());
 	if (!file.isOk()) {
-		error = wxString::FromUTF8(std::format("Failed to open {} for reading: {}", path.GetFullPath().utf8_string(), file.getErrorMessage()));
+		error = std::format("Failed to open {} for reading: {}", path.string(), file.getErrorMessage());
 		return nullptr;
 	}
 
@@ -96,7 +94,7 @@ std::shared_ptr<SpriteArchive> SpriteArchive::load(const wxFileName& path, bool 
 	}
 	(void)signature;
 	if (sprite_count > MAX_SPRITES) {
-		error = wxString::FromUTF8(std::format("Sprite count {} exceeds MAX_SPRITES={}.", sprite_count, MAX_SPRITES));
+		error = std::format("Sprite count {} exceeds MAX_SPRITES={}.", sprite_count, MAX_SPRITES);
 		return nullptr;
 	}
 
@@ -110,13 +108,13 @@ std::shared_ptr<SpriteArchive> SpriteArchive::load(const wxFileName& path, bool 
 		warnings.push_back("Sprite archive contains zero sprites.");
 	}
 
-	return std::shared_ptr<SpriteArchive>(new SpriteArchive(path.GetFullPath().ToStdString(), is_extended, sprite_count, std::move(offsets)));
+	return std::shared_ptr<SpriteArchive>(new SpriteArchive(path.string(), is_extended, sprite_count, std::move(offsets)));
 }
 
-std::shared_ptr<SpriteArchive> SpriteArchive::loadProtobuf(const wxFileName& catalog_path, wxString& error, std::vector<std::string>& warnings) {
-	std::ifstream file(catalog_path.GetFullPath().ToStdString(), std::ios::in | std::ios::binary);
+std::shared_ptr<SpriteArchive> SpriteArchive::loadProtobuf(const std::filesystem::path& catalog_path, std::string& error, std::vector<std::string>& warnings) {
+	std::ifstream file(catalog_path, std::ios::in | std::ios::binary);
 	if (!file.is_open()) {
-		error = wxString::FromUTF8(std::format("Failed to open protobuf catalog {}.", catalog_path.GetFullPath().utf8_string()));
+		error = std::format("Failed to open protobuf catalog {}.", catalog_path.string());
 		return nullptr;
 	}
 
@@ -137,18 +135,18 @@ std::shared_ptr<SpriteArchive> SpriteArchive::loadProtobuf(const wxFileName& cat
 		sheet.first_id = entry.value("firstspriteid", 0u);
 		sheet.last_id = entry.value("lastspriteid", 0u);
 		sheet.layout = static_cast<ProtobufSpriteLayout>(entry.value("spritetype", 0));
-		sheet.path = wxFileName(catalog_path.GetPath(), wxString::FromUTF8(entry.value("file", std::string {}))).GetFullPath().ToStdString();
+		sheet.path = (catalog_path.parent_path() / entry.value("file", std::string {})).string();
 		if (sheet.last_id < sheet.first_id || sheet.path.empty()) {
 			warnings.push_back("Skipping invalid protobuf sprite sheet entry in catalog-content.json.");
 			continue;
 		}
 		if (sheet.last_id > MAX_SPRITES) {
-			error = wxString::FromUTF8(std::format(
+			error = std::format(
 				"Protobuf sprite sheet {} exceeds MAX_SPRITES={} with last sprite id {}.",
 				sheet.path,
 				MAX_SPRITES,
 				sheet.last_id
-			));
+			);
 			return nullptr;
 		}
 
@@ -168,7 +166,7 @@ std::shared_ptr<SpriteArchive> SpriteArchive::loadProtobuf(const wxFileName& cat
 		}
 	}
 
-	return std::shared_ptr<SpriteArchive>(new SpriteArchive(catalog_path.GetFullPath().ToStdString(), sprite_count, std::move(sheets), std::move(sheet_lookup)));
+	return std::shared_ptr<SpriteArchive>(new SpriteArchive(catalog_path.string(), sprite_count, std::move(sheets), std::move(sheet_lookup)));
 }
 
 ImageDimensions SpriteArchive::spriteDimensions(uint32_t sprite_id) const {
@@ -244,7 +242,7 @@ bool SpriteArchive::readLegacyRgba(uint32_t sprite_id, bool use_alpha, std::uniq
 		return true;
 	}
 
-	target = GameSprite::Decompress(std::span { compressed.get(), compressed_size }, use_alpha, static_cast<int>(sprite_id));
+	target = SpriteDecoder::DecodeRle(std::span { compressed.get(), compressed_size }, use_alpha, static_cast<int>(sprite_id));
 	return target != nullptr;
 }
 

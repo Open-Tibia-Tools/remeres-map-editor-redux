@@ -1,7 +1,8 @@
 #ifndef RME_RENDERING_CORE_TEXTURE_ARRAY_H_
 #define RME_RENDERING_CORE_TEXTURE_ARRAY_H_
 
-#include "app/main.h"
+#include <glad/glad.h>
+#include <cstdint>
 #include <vector>
 #include <memory>
 

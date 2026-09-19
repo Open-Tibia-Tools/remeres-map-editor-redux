@@ -35,6 +35,7 @@ struct DrawingOptions;
 
 class Item;
 class Creature;
+class BaseMap;
 class MapWindow;
 class MapDrawer;
 class SelectionController;
@@ -170,11 +171,6 @@ public:
 
 	FPSCounter fps_counter;
 
-	friend class MapDrawer;
-	friend class SelectionDrawer;
-	friend class BrushOverlayDrawer;
-	friend class DragShadowDrawer;
-	friend class PreviewDrawer;
 	friend class SelectionController;
 	friend class DrawingController;
 
@@ -191,6 +187,7 @@ private:
 	void PerformGarbageCollection();
 
 	MapWindow* GetMapWindow() const;
+	BaseMap* GetSecondaryMap() const;
 	bool renderer_initialized = false;
 	long m_last_gc_time = 0;
 	bool hover_preview_active_ = false;

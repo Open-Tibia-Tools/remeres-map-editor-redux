@@ -1,7 +1,7 @@
 #ifndef RME_RENDERING_CORE_TEXTURE_ATLAS_H_
 #define RME_RENDERING_CORE_TEXTURE_ATLAS_H_
 
-#include "app/main.h"
+#include <glad/glad.h>
 #include "rendering/core/pixel_buffer_object.h"
 #include "rendering/core/gl_resources.h"
 #include <optional>
@@ -91,8 +91,22 @@ public:
 	/**
 	 * Get layer count.
 	 */
-	int getLayerCount() const {
+	int getLayerCount() const noexcept {
 		return layer_count_;
+	}
+
+	/**
+	 * Get allocated layer capacity.
+	 */
+	int getAllocatedLayers() const noexcept {
+		return allocated_layers_;
+	}
+
+	/**
+	 * Get total count of sprites stored in atlas.
+	 */
+	int getTotalSpriteCount() const noexcept {
+		return total_sprite_count_;
 	}
 
 	/**

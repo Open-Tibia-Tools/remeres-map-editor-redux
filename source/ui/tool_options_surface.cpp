@@ -14,6 +14,8 @@
 #include "game/sprites.h"
 #include "palette/palette_window.h"
 #include "rendering/core/game_sprite.h"
+#include "ui/icons/sprite_icon_service.h"
+#include "ui/icons/editor_icon_registry.h"
 #include "ui/gui.h"
 #include "util/image_manager.h"
 
@@ -509,8 +511,24 @@ wxBitmap ToolOptionsSurface::CreateBrushBitmap(Brush* brush) const {
 		return wxBitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
 	}
 
+	if (brush->getLookID() < 0) {
+		if (wxBitmap* icon_bmp = EditorIconRegistry::GetBitmap(brush->getLookID(), SPRITE_SIZE_32x32)) {
+			if (icon_bmp->IsOk()) {
+				wxBitmap bitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
+				wxMemoryDC dc(bitmap);
+				dc.SetBackground(*wxWHITE_BRUSH);
+				dc.Clear();
+				const int x_offset = (bitmap.GetWidth() - BRUSH_ICON_SIZE) / 2;
+				const int y_offset = (bitmap.GetHeight() - BRUSH_ICON_SIZE) / 2;
+				dc.DrawBitmap(*icon_bmp, x_offset, y_offset, true);
+				dc.SelectObject(wxNullBitmap);
+				return bitmap;
+			}
+		}
+	}
+
 	Sprite* sprite = brush->getSprite();
-	if (!sprite && brush->getLookID() != 0) {
+	if (!sprite && brush->getLookID() > 0) {
 		sprite = g_gui.gfx.getSprite(brush->getLookID());
 	}
 
@@ -521,7 +539,7 @@ wxBitmap ToolOptionsSurface::CreateBrushBitmap(Brush* brush) const {
 		dc.Clear();
 		const int x_offset = (bitmap.GetWidth() - BRUSH_ICON_SIZE) / 2;
 		const int y_offset = (bitmap.GetHeight() - BRUSH_ICON_SIZE) / 2;
-		sprite->DrawTo(&dc, SPRITE_SIZE_32x32, x_offset, y_offset, BRUSH_ICON_SIZE, BRUSH_ICON_SIZE);
+		SpriteIconService::DrawTo(sprite, &dc, SPRITE_SIZE_32x32, x_offset, y_offset, BRUSH_ICON_SIZE, BRUSH_ICON_SIZE);
 		dc.SelectObject(wxNullBitmap);
 		return bitmap;
 	}

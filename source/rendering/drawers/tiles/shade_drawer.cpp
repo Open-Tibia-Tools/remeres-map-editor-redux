@@ -1,17 +1,12 @@
-#include "app/main.h"
-
-// glut include removed
-
 #include "rendering/drawers/tiles/shade_drawer.h"
+#include "rendering/core/sprite_batch.h"
+#include "rendering/core/atlas_manager.h"
 
 ShadeDrawer::ShadeDrawer() {
 }
 
 ShadeDrawer::~ShadeDrawer() {
 }
-
-#include "rendering/core/sprite_batch.h"
-#include "rendering/core/atlas_manager.h"
 
 void ShadeDrawer::draw(SpriteBatch& sprite_batch, const RenderView& view, const DrawingOptions& options, const AtlasManager& atlas) {
 	if (view.start_z != view.end_z && options.show_shade) {

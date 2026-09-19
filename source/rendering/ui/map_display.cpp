@@ -64,7 +64,6 @@
 #include "rendering/ui/selection_controller.h"
 #include "rendering/ui/drawing_controller.h"
 #include "rendering/ui/map_menu_handler.h"
-#include "rendering/drawers/overlays/lua_overlay_drawer.h"
 
 #include "brushes/doodad/doodad_brush.h"
 #include "brushes/house/house_exit_brush.h"
@@ -125,7 +124,7 @@ MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
 
 	popup_menu = std::make_unique<MapPopupMenu>(editor);
 	animation_timer = std::make_unique<AnimationTimer>(this);
-	drawer = std::make_unique<MapDrawer>(this);
+	drawer = std::make_unique<MapDrawer>(editor);
 	selection_controller = std::make_unique<SelectionController>(this, editor);
 	drawing_controller = std::make_unique<DrawingController>(this, editor);
 	screenshot_controller = std::make_unique<ScreenshotController>(this);
@@ -242,12 +241,21 @@ MapWindow* MapCanvas::GetMapWindow() const {
 	return wxDynamicCast(GetParent(), MapWindow);
 }
 
+BaseMap* MapCanvas::GetSecondaryMap() const {
+	if (auto* map_tab = dynamic_cast<MapTab*>(GetMapWindow())) {
+		if (auto* session = map_tab->GetSession()) {
+			return session->secondary_map;
+		}
+	}
+	return nullptr;
+}
+
 void MapCanvas::EnsureNanoVG() {
 	if (!m_nvg) {
 		if (!gladLoadGL()) {
 			spdlog::error("MapCanvas: Failed to initialize GLAD");
 		}
-		m_nvg.reset(nvgCreateGL3(NVG_ANTIALIAS | NVG_STENCIL_STROKES));
+		m_nvg.reset(nvgCreateGL3(NVG_ANTIALIAS));
 		if (m_nvg) {
 			TextRenderer::LoadFont(m_nvg.get());
 		} else {
@@ -268,7 +276,6 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
-	glClear(GL_STENCIL_BUFFER_BIT);
 	TextRenderer::BeginFrame(vg, GetSize().x, GetSize().y, GetContentScaleFactor());
 
 	if (options.show_creatures) {
@@ -283,15 +290,26 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 	if (options.highlight_locked_doors) {
 		drawer->DrawDoorIndicators(vg);
 	}
-	if (drawer->getLuaOverlayDrawer()) {
-		drawer->getLuaOverlayDrawer()->DrawUI(vg, drawer->getView(), options);
-	}
+	drawer->DrawUIOverlays(vg);
 
 	TextRenderer::EndFrame(vg);
 
 	// Sanitize state after NanoVG to avoid polluting the next frame or other tabs
 	glUseProgram(0);
 	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+	glDisable(GL_STENCIL_TEST);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquation(GL_FUNC_ADD);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 }
 
 void MapCanvas::PerformGarbageCollection() {
@@ -327,6 +345,7 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 
 		options.dragging = selection_controller->IsDragging();
 		options.boundbox_selection = selection_controller->IsBoundboxSelection();
+		options.is_drawing_mode = g_gui.IsDrawingMode();
 
 		if (options.show_preview) {
 			animation_timer->Start();
@@ -337,11 +356,40 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 			last_animation_refresh_time_ = {};
 		}
 
-		// BatchRenderer calls removed - MapDrawer handles its own renderers
+		ViewportParameters vp;
+		MouseToMap(&vp.mouse_map_x, &vp.mouse_map_y);
+		GetViewBox(&vp.view_scroll_x, &vp.view_scroll_y, &vp.screensize_x, &vp.screensize_y);
+		vp.zoom = static_cast<float>(GetZoom());
+		vp.floor = GetFloor();
+		GetScreenCenter(&vp.camera_pos.x, &vp.camera_pos.y);
+		vp.camera_pos.z = vp.floor;
+		vp.light_origin = GetLightVisibilityOrigin();
+		vp.content_scale_factor = static_cast<float>(GetContentScaleFactor());
 
-		drawer->SetupVars();
+		InteractionRenderState interaction;
+		if (options.boundbox_selection) {
+			interaction.selection_bounds = MapBounds {
+				.x1 = std::min(last_click_map_x, last_cursor_map_x),
+				.y1 = std::min(last_click_map_y, last_cursor_map_y),
+				.x2 = std::max(last_click_map_x, last_cursor_map_x),
+				.y2 = std::max(last_click_map_y, last_cursor_map_y)
+			};
+		}
+		if (selection_controller) {
+			interaction.drag_start_position = selection_controller->GetDragStartPosition();
+		}
+		if (drawing_controller) {
+			interaction.brush_drag_state.is_dragging_draw = drawing_controller->IsDraggingDraw();
+		}
+		interaction.brush_drag_state.last_click_map_x = last_click_map_x;
+		interaction.brush_drag_state.last_click_map_y = last_click_map_y;
+		interaction.secondary_map = GetSecondaryMap();
+		interaction.is_pasting = isPasting();
+		interaction.current_brush = g_brush_manager.GetCurrentBrush();
+
+		drawer->SetupVars(vp);
 		drawer->SetupGL();
-		drawer->Draw();
+		drawer->Draw(interaction);
 
 		if (screenshot_controller->IsCapturing()) {
 			drawer->TakeScreenshot(screenshot_controller->GetBuffer());

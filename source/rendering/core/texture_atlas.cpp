@@ -1,4 +1,5 @@
 #include "rendering/core/texture_atlas.h"
+#include "rendering/core/hardware_profile.h"
 #include <algorithm>
 #include <cstring>
 #include <spdlog/spdlog.h>
@@ -82,7 +83,8 @@ bool TextureAtlas::initialize(int initial_layers) {
 	}
 #endif
 
-	spdlog::info("TextureAtlas created: {}x{} x {} layers, id={}", ATLAS_SIZE, ATLAS_SIZE, initial_layers, texture_id_->GetID());
+	spdlog::info("[TextureAtlas] Initialized: {}x{} with {} initial layers (capacity: {} sprites) | Texture ID: {}",
+		ATLAS_SIZE, ATLAS_SIZE, initial_layers, initial_layers * SLOTS_PER_LAYER, texture_id_->GetID());
 	return true;
 }
 
@@ -94,11 +96,8 @@ bool TextureAtlas::addLayer() {
 
 	// If we need more layers than allocated, reallocate
 	if (layer_count_ >= allocated_layers_) {
-		// Linear growth to prevent massive VRAM spikes
-		// 4 layers = ~268 MB VRAM
-		const int new_allocated = std::min(allocated_layers_ + 4, MAX_LAYERS);
-
-		spdlog::info("TextureAtlas: Expanding {} -> {} layers", allocated_layers_, new_allocated);
+		const int step = HardwareProfileManager::get().getActiveBudget().atlas_expansion_step;
+		const int new_allocated = std::min(allocated_layers_ + step, MAX_LAYERS);
 
 		// Create new larger texture array
 		auto new_texture = std::make_unique<GLTextureResource>(GL_TEXTURE_2D_ARRAY);
@@ -129,12 +128,17 @@ bool TextureAtlas::addLayer() {
 		// Removed glFinish() - it causes main thread to freeze waiting for GPU
 		// The driver should handle synchronization implicitly for the next draw call
 
+		spdlog::warn("[TextureAtlas] Expanding GPU texture array storage: {} -> {} layers (~{:.1f} MB VRAM) | ID: {} -> {}",
+			allocated_layers_, new_allocated, new_allocated * 67.1, texture_id_->GetID(), new_texture->GetID());
+
 		texture_id_ = std::move(new_texture);
 		allocated_layers_ = new_allocated;
 		occupancy_.resize(static_cast<size_t>(new_allocated) * SLOTS_PER_LAYER, 0);
 	}
 
 	layer_count_++;
+	spdlog::info("[TextureAtlas] Activated layer {}/{} (allocated: {}, sprites stored: {})",
+		layer_count_, MAX_LAYERS, allocated_layers_, total_sprite_count_);
 	return true;
 }
 
@@ -258,6 +262,11 @@ std::optional<AtlasRegion> TextureAtlas::addSprite(const uint8_t* rgba_data, int
 	setAreaOccupied(layer, placement->slot_x, placement->slot_y, slot_width, slot_height, true);
 	total_sprite_count_++;
 
+	if (total_sprite_count_ % 10000 == 0) {
+		spdlog::info("[TextureAtlas] Milestone: {} total sprites stored across {} active layers (allocated: {})",
+			total_sprite_count_, layer_count_, allocated_layers_);
+	}
+
 	// Upload sprite data to texture array
 	bool uploaded = false;
 	if (pbo_) {
@@ -350,7 +359,8 @@ void TextureAtlas::unbind(uint32_t slot) const {
 
 void TextureAtlas::release() {
 	if (texture_id_) {
-		spdlog::info("TextureAtlas releasing resources [ID={}]", texture_id_->GetID());
+		spdlog::info("[TextureAtlas] Released GPU texture array (was {} layers, {} sprites, ID={})",
+			layer_count_, total_sprite_count_, texture_id_->GetID());
 	}
 	texture_id_.reset();
 	layer_count_ = 0;

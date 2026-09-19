@@ -9,10 +9,11 @@
 #include "rendering/drawers/minimap_renderer.h"
 #include "rendering/core/floor_visibility_mode.h"
 
+#include <glm/glm.hpp>
 #include <memory>
 
 class Editor;
-class MapCanvas;
+struct ViewportParameters;
 class PrimitiveRenderer;
 
 struct MinimapDrawOptions {
@@ -26,7 +27,7 @@ public:
 	MinimapDrawer();
 	~MinimapDrawer();
 
-	void Draw(const wxSize& size, Editor& editor, MapCanvas& canvas, const MinimapViewportState& viewport_state, MinimapDrawOptions options = {});
+	void Draw(const glm::ivec2& size, Editor& editor, const ViewportParameters* camera_viewport, const MinimapViewportState& viewport_state, MinimapDrawOptions options = {});
 	void ReleaseGL();
 
 	void ScreenToMap(int screen_x, int screen_y, int& map_x, int& map_y);
@@ -51,10 +52,10 @@ private:
 		double height = 1.0;
 	};
 
-	VisibleWorldRect BuildVisibleWorldRect(const wxSize& size, Editor& editor, const MinimapViewportState& viewport_state);
-	void DrawFloorShade(const glm::mat4& projection, const wxSize& size);
-	void DrawMainCameraBox(const glm::mat4& projection, const wxSize& size, MapCanvas& canvas, const VisibleWorldRect& visible_rect);
-	void DrawMapBoundsBorder(const glm::mat4& projection, const wxSize& size, const Editor& editor, const VisibleWorldRect& visible_rect);
+	VisibleWorldRect BuildVisibleWorldRect(const glm::ivec2& size, const MinimapViewportState& viewport_state);
+	void DrawFloorShade(const glm::mat4& projection, const glm::ivec2& size);
+	void DrawMainCameraBox(const glm::mat4& projection, const glm::ivec2& size, const ViewportParameters& camera_viewport, const VisibleWorldRect& visible_rect);
+	void DrawMapBoundsBorder(const glm::mat4& projection, const glm::ivec2& size, const Editor& editor, const VisibleWorldRect& visible_rect);
 
 	std::unique_ptr<MinimapRenderer> renderer;
 	std::unique_ptr<PrimitiveRenderer> primitive_renderer;

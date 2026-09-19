@@ -322,16 +322,13 @@ void ContainerGridCanvas::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 
 					// Overlays for selected
 					if (is_selected && g_settings.getInteger(Config::USE_GUI_SELECTION_SHADOW)) {
-						Sprite* overlay = g_gui.gfx.getSprite(EDITOR_SPRITE_SELECTION_MARKER);
-						if (overlay) {
-							int overlayTex = GetOrCreateSpriteTexture(vg, overlay);
-							if (overlayTex > 0) {
-								NVGpaint ovPaint = nvgImagePattern(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size, 0, overlayTex, 1.0f);
-								nvgBeginPath(vg);
-								nvgRect(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size);
-								nvgFillPaint(vg, ovPaint);
-								nvgFill(vg);
-							}
+						int overlayTex = GetOrCreateEditorIconTexture(vg, EDITOR_SPRITE_SELECTION_MARKER, (img_size <= 16) ? SPRITE_SIZE_16x16 : SPRITE_SIZE_32x32);
+						if (overlayTex > 0) {
+							NVGpaint ovPaint = nvgImagePattern(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size, 0, overlayTex, 1.0f);
+							nvgBeginPath(vg);
+							nvgRect(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size);
+							nvgFillPaint(vg, ovPaint);
+							nvgFill(vg);
 						}
 					}
 

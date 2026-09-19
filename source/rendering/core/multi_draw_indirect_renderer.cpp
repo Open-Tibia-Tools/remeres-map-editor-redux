@@ -4,7 +4,7 @@
 #include <utility>
 
 MultiDrawIndirectRenderer::MultiDrawIndirectRenderer() {
-	commands_.reserve(MAX_COMMANDS);
+	commands_.reserve(DEFAULT_MAX_COMMANDS);
 }
 
 MultiDrawIndirectRenderer::~MultiDrawIndirectRenderer() {
@@ -14,7 +14,10 @@ MultiDrawIndirectRenderer::~MultiDrawIndirectRenderer() {
 MultiDrawIndirectRenderer::MultiDrawIndirectRenderer(MultiDrawIndirectRenderer&& other) noexcept
 	:
 	commands_(std::move(other.commands_)),
-	command_buffer_(std::move(other.command_buffer_)), available_(other.available_), initialized_(other.initialized_) {
+	command_buffer_(std::move(other.command_buffer_)),
+	max_commands_(other.max_commands_),
+	available_(other.available_),
+	initialized_(other.initialized_) {
 	other.available_ = false;
 	other.initialized_ = false;
 }
@@ -24,6 +27,7 @@ MultiDrawIndirectRenderer& MultiDrawIndirectRenderer::operator=(MultiDrawIndirec
 		cleanup();
 		commands_ = std::move(other.commands_);
 		command_buffer_ = std::move(other.command_buffer_);
+		max_commands_ = other.max_commands_;
 		available_ = other.available_;
 		initialized_ = other.initialized_;
 		other.available_ = false;
@@ -32,10 +36,13 @@ MultiDrawIndirectRenderer& MultiDrawIndirectRenderer::operator=(MultiDrawIndirec
 	return *this;
 }
 
-bool MultiDrawIndirectRenderer::initialize() {
+bool MultiDrawIndirectRenderer::initialize(int max_commands) {
 	if (initialized_) {
 		return true;
 	}
+
+	max_commands_ = max_commands > 0 ? max_commands : DEFAULT_MAX_COMMANDS;
+	commands_.reserve(max_commands_);
 
 	// Runtime-only check - function pointer is set by GLAD if GL 4.3+ is available
 	available_ = (glMultiDrawElementsIndirect != nullptr);
@@ -49,7 +56,7 @@ bool MultiDrawIndirectRenderer::initialize() {
 	command_buffer_ = std::make_unique<GLBuffer>();
 
 	// Pre-allocate buffer storage
-	glNamedBufferStorage(command_buffer_->GetID(), MAX_COMMANDS * sizeof(DrawElementsIndirectCommand), nullptr, GL_DYNAMIC_STORAGE_BIT);
+	glNamedBufferStorage(command_buffer_->GetID(), max_commands_ * sizeof(DrawElementsIndirectCommand), nullptr, GL_DYNAMIC_STORAGE_BIT);
 
 	initialized_ = true;
 	return true;
@@ -66,7 +73,7 @@ void MultiDrawIndirectRenderer::clear() {
 }
 
 void MultiDrawIndirectRenderer::addDrawCommand(GLuint count, GLuint instanceCount, GLuint firstIndex, GLuint baseVertex, GLuint baseInstance) {
-	if (commands_.size() >= MAX_COMMANDS) {
+	if (static_cast<int>(commands_.size()) >= max_commands_) {
 		// Max commands reached, ignoring
 		return;
 	}

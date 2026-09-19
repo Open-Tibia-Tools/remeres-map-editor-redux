@@ -250,6 +250,7 @@ void Action::commit(DirtyList* dirty_list) {
 					dirty_list->AddChange(c);
 				}
 				if (type != ACTION_SELECT) {
+					editor.map.getChangeTracker().markTileDirty(pos);
 					g_minimap.MarkTileDirty(editor.map, pos);
 				}
 				break;
@@ -430,6 +431,7 @@ void Action::undo(DirtyList* dirty_list) {
 					dirty_list->AddChange(c);
 				}
 				if (type != ACTION_SELECT) {
+					editor.map.getChangeTracker().markTileDirty(pos);
 					g_minimap.MarkTileDirty(editor.map, pos);
 				}
 				break;

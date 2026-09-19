@@ -1,5 +1,3 @@
-#include "app/main.h"
-
 #include "rendering/drawers/minimap_cache.h"
 
 #include "map/map.h"

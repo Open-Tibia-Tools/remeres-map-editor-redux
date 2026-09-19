@@ -20,7 +20,7 @@
 
 #include "map/position.h"
 #include "map/tile.h"
-#include "map/spatial_hash_grid.h"
+#include "app/definitions.h"
 #include <utility>
 #include <unordered_map>
 #include <array>
@@ -29,6 +29,7 @@ class Tile;
 class Floor;
 class BaseMap;
 class MapNode;
+class SpatialHashGrid;
 
 class TileLocation {
 public:

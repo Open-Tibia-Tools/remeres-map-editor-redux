@@ -5,7 +5,10 @@
 #ifndef RME_RENDERING_DRAG_SHADOW_DRAWER_H_
 #define RME_RENDERING_DRAG_SHADOW_DRAWER_H_
 
-class MapDrawer;
+#include "map/position.h"
+#include <optional>
+
+class Editor;
 struct RenderView;
 struct DrawingOptions;
 
@@ -21,7 +24,7 @@ public:
 	DragShadowDrawer();
 	~DragShadowDrawer();
 
-	void draw(SpriteBatch& sprite_batch, MapDrawer* drawer, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options, const RenderFrameContext* ctx = nullptr);
+	void draw(SpriteBatch& sprite_batch, Editor& editor, const std::optional<Position>& drag_start, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options, const RenderFrameContext* ctx = nullptr);
 };
 
 #endif

@@ -153,6 +153,7 @@ namespace {
 			fragment.flags |= flagMask(ItemFlag::AlwaysOnBottom);
 		}
 		if (flags.clip()) {
+			fragment.flags |= flagMask(ItemFlag::IsBorder);
 			fragment.always_on_top_order = 1;
 		} else if (flags.bottom()) {
 			fragment.always_on_top_order = 2;
@@ -384,10 +385,6 @@ bool ProtobufItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatC
 		error = "The protobuf appearances file does not contain a valid item id range.";
 		return false;
 	}
-	if (item_count > std::numeric_limits<uint16_t>::max() || creature_count > std::numeric_limits<uint16_t>::max()) {
-		error = "The protobuf appearances file contains ids outside the supported catalog range.";
-		return false;
-	}
 
 	catalog = {};
 	catalog.format = DAT_FORMAT_1057;
@@ -395,9 +392,8 @@ bool ProtobufItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatC
 	catalog.has_transparency = true;
 	catalog.has_frame_durations = true;
 	catalog.has_frame_groups = true;
-	catalog.item_count = static_cast<uint16_t>(std::min<uint32_t>(item_count, std::numeric_limits<uint16_t>::max()));
-
-	catalog.creature_count = static_cast<uint16_t>(std::min<uint32_t>(creature_count, std::numeric_limits<uint16_t>::max()));
+	catalog.item_count = item_count;
+	catalog.creature_count = creature_count;
 	catalog.entries.resize(static_cast<size_t>(item_count + creature_count) + 1);
 
 	for (const auto& object : appearances.object()) {

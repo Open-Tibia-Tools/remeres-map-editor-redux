@@ -1,19 +1,17 @@
-#include "app/main.h"
 #include "rendering/drawers/minimap_drawer.h"
 
+#include "app/definitions.h"
 #include "editor/editor.h"
 #include "map/map.h"
 #include "rendering/core/map_view_math.h"
 #include "rendering/core/floor_visibility_mode.h"
 #include "rendering/core/primitive_renderer.h"
-#include "rendering/ui/map_display.h"
-#include "ui/gui.h"
+#include "rendering/core/render_view.h"
 #include "ui/managers/minimap_manager.h"
 
 #include <algorithm>
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
-#include <wx/settings.h>
 
 namespace {
 
@@ -41,16 +39,6 @@ struct MinimapFloorRenderRange {
 	};
 }
 
-[[nodiscard]] glm::vec4 wxColourToVec4(const wxColour& color) {
-	constexpr float channelScale = 1.0f / 255.0f;
-	return {
-		static_cast<float>(color.Red()) * channelScale,
-		static_cast<float>(color.Green()) * channelScale,
-		static_cast<float>(color.Blue()) * channelScale,
-		static_cast<float>(color.Alpha()) * channelScale,
-	};
-}
-
 } // namespace
 
 MinimapDrawer::MinimapDrawer() :
@@ -70,10 +58,10 @@ void MinimapDrawer::ReleaseGL() {
 	initialized_ = false;
 }
 
-MinimapDrawer::VisibleWorldRect MinimapDrawer::BuildVisibleWorldRect(const wxSize& size, Editor& editor, const MinimapViewportState& viewport_state) {
+MinimapDrawer::VisibleWorldRect MinimapDrawer::BuildVisibleWorldRect(const glm::ivec2& size, const MinimapViewportState& viewport_state) {
 	const double zoom_factor = MinimapViewport::GetZoomFactor(viewport_state.zoom_step);
-	const double visible_map_width = std::max(1.0, size.GetWidth() * zoom_factor);
-	const double visible_map_height = std::max(1.0, size.GetHeight() * zoom_factor);
+	const double visible_map_width = std::max(1.0, size.x * zoom_factor);
+	const double visible_map_height = std::max(1.0, size.y * zoom_factor);
 
 	return {
 		.start_x = viewport_state.center_x - visible_map_width / 2.0,
@@ -83,25 +71,19 @@ MinimapDrawer::VisibleWorldRect MinimapDrawer::BuildVisibleWorldRect(const wxSiz
 	};
 }
 
-void MinimapDrawer::DrawMainCameraBox(const glm::mat4& projection, const wxSize& size, MapCanvas& canvas, const VisibleWorldRect& visible_rect) {
-	int view_scroll_x = 0;
-	int view_scroll_y = 0;
-	int screensize_x = 0;
-	int screensize_y = 0;
-	canvas.GetViewBox(&view_scroll_x, &view_scroll_y, &screensize_x, &screensize_y);
-
+void MinimapDrawer::DrawMainCameraBox(const glm::mat4& projection, const glm::ivec2& size, const ViewportParameters& camera_viewport, const VisibleWorldRect& visible_rect) {
 	const MainMapVisibleRect camera_rect = MainMapViewMath::GetVisibleRect({
-		.view_scroll_x = view_scroll_x,
-		.view_scroll_y = view_scroll_y,
-		.pixel_width = screensize_x,
-		.pixel_height = screensize_y,
-		.zoom = canvas.GetZoom(),
-		.floor = canvas.GetFloor(),
-		.scale_factor = canvas.GetContentScaleFactor(),
+		.view_scroll_x = camera_viewport.view_scroll_x,
+		.view_scroll_y = camera_viewport.view_scroll_y,
+		.pixel_width = camera_viewport.screensize_x,
+		.pixel_height = camera_viewport.screensize_y,
+		.zoom = camera_viewport.zoom,
+		.floor = camera_viewport.floor,
+		.scale_factor = camera_viewport.content_scale_factor,
 	});
 
-	const float scale_x = static_cast<float>(size.GetWidth() / visible_rect.width);
-	const float scale_y = static_cast<float>(size.GetHeight() / visible_rect.height);
+	const float scale_x = static_cast<float>(size.x / visible_rect.width);
+	const float scale_y = static_cast<float>(size.y / visible_rect.height);
 	const float x = static_cast<float>((camera_rect.start_x - visible_rect.start_x) * scale_x);
 	const float y = static_cast<float>((camera_rect.start_y - visible_rect.start_y) * scale_y);
 	const float w = static_cast<float>(camera_rect.width * scale_x);
@@ -116,24 +98,24 @@ void MinimapDrawer::DrawMainCameraBox(const glm::mat4& projection, const wxSize&
 	primitive_renderer->flush();
 }
 
-void MinimapDrawer::DrawFloorShade(const glm::mat4& projection, const wxSize& size) {
+void MinimapDrawer::DrawFloorShade(const glm::mat4& projection, const glm::ivec2& size) {
 	primitive_renderer->setProjectionMatrix(projection);
 	primitive_renderer->drawRect(
-		glm::vec4(0.0f, 0.0f, static_cast<float>(size.GetWidth()), static_cast<float>(size.GetHeight())),
+		glm::vec4(0.0f, 0.0f, static_cast<float>(size.x), static_cast<float>(size.y)),
 		glm::vec4(0.0f, 0.0f, 0.0f, 0.45f));
 	primitive_renderer->flush();
 }
 
-void MinimapDrawer::DrawMapBoundsBorder(const glm::mat4& projection, const wxSize& size, const Editor& editor, const VisibleWorldRect& visible_rect) {
-	const float scale_x = static_cast<float>(size.GetWidth() / visible_rect.width);
-	const float scale_y = static_cast<float>(size.GetHeight() / visible_rect.height);
+void MinimapDrawer::DrawMapBoundsBorder(const glm::mat4& projection, const glm::ivec2& size, const Editor& editor, const VisibleWorldRect& visible_rect) {
+	const float scale_x = static_cast<float>(size.x / visible_rect.width);
+	const float scale_y = static_cast<float>(size.y / visible_rect.height);
 	const float x = static_cast<float>((0.0 - visible_rect.start_x) * scale_x);
 	const float y = static_cast<float>((0.0 - visible_rect.start_y) * scale_y);
 	const float w = static_cast<float>(editor.map.getWidth() * scale_x);
 	const float h = static_cast<float>(editor.map.getHeight() * scale_y);
 
 	primitive_renderer->setProjectionMatrix(projection);
-	const glm::vec4 color = wxColourToVec4(wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT));
+	const glm::vec4 color(0.5f, 0.5f, 0.5f, 1.0f);
 	primitive_renderer->drawLine(glm::vec2(x, y), glm::vec2(x + w, y), color);
 	primitive_renderer->drawLine(glm::vec2(x, y + h), glm::vec2(x + w, y + h), color);
 	primitive_renderer->drawLine(glm::vec2(x, y), glm::vec2(x, y + h), color);
@@ -141,9 +123,9 @@ void MinimapDrawer::DrawMapBoundsBorder(const glm::mat4& projection, const wxSiz
 	primitive_renderer->flush();
 }
 
-void MinimapDrawer::Draw(const wxSize& size, Editor& editor, MapCanvas& canvas, const MinimapViewportState& viewport_state, MinimapDrawOptions options) {
-	const int window_width = size.GetWidth();
-	const int window_height = size.GetHeight();
+void MinimapDrawer::Draw(const glm::ivec2& size, Editor& editor, const ViewportParameters* camera_viewport, const MinimapViewportState& viewport_state, MinimapDrawOptions options) {
+	const int window_width = size.x;
+	const int window_height = size.y;
 	if (window_width <= 0 || window_height <= 0) {
 		last_viewport_.valid = false;
 		return;
@@ -167,7 +149,7 @@ void MinimapDrawer::Draw(const wxSize& size, Editor& editor, MapCanvas& canvas, 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	const VisibleWorldRect visible_rect = BuildVisibleWorldRect(size, editor, viewport_state);
+	const VisibleWorldRect visible_rect = BuildVisibleWorldRect(size, viewport_state);
 	const double start_x = visible_rect.start_x;
 	const double start_y = visible_rect.start_y;
 
@@ -195,10 +177,6 @@ void MinimapDrawer::Draw(const wxSize& size, Editor& editor, MapCanvas& canvas, 
 		}
 	}
 
-	if (!g_gui.IsRenderingEnabled()) {
-		return;
-	}
-
 	const auto floor_range = getFloorRenderRange(viewport_state, options.floor_visibility_mode);
 	const MinimapDirtyRect visible_rect_pixels = {
 		.x = static_cast<int>(std::floor(visible_rect.start_x)),
@@ -219,8 +197,8 @@ void MinimapDrawer::Draw(const wxSize& size, Editor& editor, MapCanvas& canvas, 
 	if (options.drawBoundsBorder) {
 		DrawMapBoundsBorder(projection, size, editor, visible_rect);
 	}
-	if (options.drawCameraBox) {
-		DrawMainCameraBox(projection, size, canvas, visible_rect);
+	if (options.drawCameraBox && camera_viewport != nullptr) {
+		DrawMainCameraBox(projection, size, *camera_viewport, visible_rect);
 	}
 }
 

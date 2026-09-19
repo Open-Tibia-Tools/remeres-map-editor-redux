@@ -20,6 +20,8 @@
 #include "app/settings.h"
 
 #include "ui/dcbutton.h"
+#include "ui/icons/editor_icon.h"
+#include "ui/icons/editor_icon_registry.h"
 #include "game/sprites.h"
 #include "ui/gui.h"
 
@@ -73,21 +75,40 @@ DCButton::~DCButton() {
 }
 
 void DCButton::SetSprite(int _sprid) {
-	if (_sprid != 0) {
+	if (_sprid < 0) {
+		editor_icon = EditorIconRegistry::GetIcon(_sprid);
+		sprite = nullptr;
+	} else if (_sprid != 0) {
 		sprite = g_gui.gfx.getSprite(_sprid);
+		editor_icon = nullptr;
 	} else {
 		sprite = nullptr;
+		editor_icon = nullptr;
 	}
 	Refresh();
 }
 
 void DCButton::SetSprite(Sprite* _sprite) {
 	sprite = _sprite;
+	editor_icon = nullptr;
+	Refresh();
+}
+
+void DCButton::SetEditorIcon(EditorIcon* icon) {
+	editor_icon = icon;
+	sprite = nullptr;
 	Refresh();
 }
 
 void DCButton::SetOverlay(Sprite* espr) {
 	overlay = espr;
+	editor_overlay = nullptr;
+	Refresh();
+}
+
+void DCButton::SetEditorOverlay(EditorIcon* icon) {
+	editor_overlay = icon;
+	overlay = nullptr;
 	Refresh();
 }
 
@@ -97,9 +118,10 @@ void DCButton::SetValue(bool val) {
 	state = val;
 	if (state != oldval) {
 		if (GetValue() && g_settings.getInteger(Config::USE_GUI_SELECTION_SHADOW)) {
-			SetOverlay(g_gui.gfx.getSprite(EDITOR_SPRITE_SELECTION_MARKER));
+			SetEditorOverlay(EditorIconRegistry::GetIcon(EDITOR_SPRITE_SELECTION_MARKER));
 		} else {
 			SetOverlay(nullptr);
+			SetEditorOverlay(nullptr);
 		}
 		Refresh();
 	}
@@ -150,33 +172,43 @@ void DCButton::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 		DrawRaisedBorder(vg, static_cast<float>(size_x), static_cast<float>(size_y));
 	}
 
-	if (sprite) {
-		int tex = GetOrCreateSpriteTexture(vg, sprite);
-		if (tex > 0) {
-			int imgSize = 32;
-			if (size == RENDER_SIZE_16x16) {
-				imgSize = 16;
-			} else if (size == RENDER_SIZE_32x32) {
-				imgSize = 32;
-			} else if (size == RENDER_SIZE_64x64) {
-				imgSize = 64; // Not supported in original?
+	const SpriteSize sprite_sz = (size == RENDER_SIZE_16x16) ? SPRITE_SIZE_16x16 : SPRITE_SIZE_32x32;
+	int tex = 0;
+	if (editor_icon) {
+		tex = GetOrCreateEditorIconTexture(vg, editor_icon, sprite_sz);
+	} else if (sprite) {
+		tex = GetOrCreateSpriteTexture(vg, sprite);
+	}
+
+	if (tex > 0) {
+		int imgSize = 32;
+		if (size == RENDER_SIZE_16x16) {
+			imgSize = 16;
+		} else if (size == RENDER_SIZE_32x32) {
+			imgSize = 32;
+		} else if (size == RENDER_SIZE_64x64) {
+			imgSize = 64; // Not supported in original?
+		}
+
+		NVGpaint imgPaint = nvgImagePattern(vg, 2, 2, imgSize, imgSize, 0, tex, 1.0f);
+		nvgBeginPath(vg);
+		nvgRect(vg, 2, 2, imgSize, imgSize);
+		nvgFillPaint(vg, imgPaint);
+		nvgFill(vg);
+
+		if (type == DC_BTN_TOGGLE && GetValue()) {
+			int overlayTex = 0;
+			if (editor_overlay) {
+				overlayTex = GetOrCreateEditorIconTexture(vg, editor_overlay, sprite_sz);
+			} else if (overlay) {
+				overlayTex = GetOrCreateSpriteTexture(vg, overlay);
 			}
-
-			NVGpaint imgPaint = nvgImagePattern(vg, 2, 2, imgSize, imgSize, 0, tex, 1.0f);
-			nvgBeginPath(vg);
-			nvgRect(vg, 2, 2, imgSize, imgSize);
-			nvgFillPaint(vg, imgPaint);
-			nvgFill(vg);
-
-			if (overlay && type == DC_BTN_TOGGLE && GetValue()) {
-				int overlayTex = GetOrCreateSpriteTexture(vg, overlay);
-				if (overlayTex > 0) {
-					NVGpaint ovPaint = nvgImagePattern(vg, 2, 2, imgSize, imgSize, 0, overlayTex, 1.0f);
-					nvgBeginPath(vg);
-					nvgRect(vg, 2, 2, imgSize, imgSize);
-					nvgFillPaint(vg, ovPaint);
-					nvgFill(vg);
-				}
+			if (overlayTex > 0) {
+				NVGpaint ovPaint = nvgImagePattern(vg, 2, 2, imgSize, imgSize, 0, overlayTex, 1.0f);
+				nvgBeginPath(vg);
+				nvgRect(vg, 2, 2, imgSize, imgSize);
+				nvgFillPaint(vg, ovPaint);
+				nvgFill(vg);
 			}
 		}
 	}

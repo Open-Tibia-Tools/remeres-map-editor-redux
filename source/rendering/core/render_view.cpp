@@ -1,33 +1,33 @@
-#include "app/main.h"
 #include "rendering/core/render_view.h"
-
-#include "editor/editor.h"
-#include "rendering/ui/map_display.h"
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/floor_visibility_mode.h"
 #include "app/definitions.h" // For TILE_SIZE, GROUND_LAYER, MAP_MAX_LAYER
 #include "ingame_preview/floor_visibility_calculator.h"
-
+#include <glad/glad.h>
 #include <algorithm>
 
-void RenderView::Setup(MapCanvas* canvas, const DrawingOptions& options) {
-	canvas->MouseToMap(&mouse_map_x, &mouse_map_y);
-	canvas->GetViewBox(&view_scroll_x, &view_scroll_y, &screensize_x, &screensize_y);
+void RenderView::Setup(const ViewportParameters& params, const DrawingOptions& options, const BaseMap* map) {
+	mouse_map_x = params.mouse_map_x;
+	mouse_map_y = params.mouse_map_y;
+	view_scroll_x = params.view_scroll_x;
+	view_scroll_y = params.view_scroll_y;
+	screensize_x = params.screensize_x;
+	screensize_y = params.screensize_y;
 	viewport_x = 0;
 	viewport_y = 0;
 
-	zoom = static_cast<float>(canvas->GetZoom());
+	zoom = params.zoom;
 	tile_size = std::max(1, static_cast<int>(TILE_SIZE / zoom)); // after zoom
-	floor = canvas->GetFloor();
-	canvas->GetScreenCenter(&camera_pos.x, &camera_pos.y);
+	floor = params.floor;
+	camera_pos = params.camera_pos;
 	camera_pos.z = floor;
 	draw_all_visited_floors = false;
 
 	if (options.show_lights) {
 		IngamePreview::FloorVisibilityCalculator floor_visibility;
 		start_z = floor_visibility.CalcLastVisibleFloor(floor);
-		const Position light_origin = canvas->GetLightVisibilityOrigin().value_or(camera_pos);
-		superend_z = floor_visibility.CalcFirstVisibleFloor(canvas->editor.map, light_origin.x, light_origin.y, floor);
+		const Position light_origin = params.light_origin.value_or(camera_pos);
+		superend_z = map ? floor_visibility.CalcFirstVisibleFloor(*map, light_origin.x, light_origin.y, floor) : floor;
 	} else {
 		const auto floor_range = BuildFloorVisibilityRange(floor, options.show_all_floors, options.floor_visibility_mode);
 		start_z = floor_range.start_floor;

@@ -5,13 +5,12 @@
 #ifndef RME_RENDERING_CORE_RENDER_TIMER_H_
 #define RME_RENDERING_CORE_RENDER_TIMER_H_
 
-#include "app/main.h"
-#include <wx/stopwatch.h>
+#include <chrono>
 
 class RenderTimer {
 public:
 	RenderTimer();
-	~RenderTimer();
+	~RenderTimer() = default;
 
 	void Start();
 	void Pause();
@@ -19,7 +18,8 @@ public:
 	long getElapsedTime() const;
 
 private:
-	std::unique_ptr<wxStopWatch> timer;
+	std::chrono::steady_clock::time_point start_time_{};
+	std::chrono::steady_clock::duration accumulated_duration_{std::chrono::steady_clock::duration::zero()};
 	bool is_paused = false;
 };
 

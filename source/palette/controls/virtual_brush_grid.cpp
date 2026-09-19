@@ -337,12 +337,18 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 	// Draw brush sprite
 	Brush* brush = (i < static_cast<int>(m_display_brushes.size())) ? m_display_brushes[i] : nullptr;
 	if (brush) {
-		Sprite* spr = brush->getSprite();
-		if (!spr) {
-			spr = g_gui.gfx.getSprite(brush->getLookID());
+		int tex = 0;
+		if (Sprite* spr = brush->getSprite()) {
+			tex = GetOrCreateSpriteTexture(vg, spr);
+		} else {
+			int look_id = brush->getLookID();
+			if (look_id < 0) {
+				tex = GetOrCreateEditorIconTexture(vg, look_id);
+			} else if (look_id > 0) {
+				spr = g_gui.gfx.getSprite(look_id);
+				tex = spr ? GetOrCreateSpriteTexture(vg, spr) : 0;
+			}
 		}
-
-		int tex = spr ? GetOrCreateSpriteTexture(vg, spr) : 0;
 		int iconSize = (display_mode == DisplayMode::List) ? GRID_ITEM_SIZE_BASE : (item_size - 2 * ICON_OFFSET);
 		int iconX = (display_mode == DisplayMode::List) ? (rect.x + ICON_OFFSET) : (rect.x + (rect.width - iconSize) / 2);
 		int iconY = rect.y + ICON_OFFSET;

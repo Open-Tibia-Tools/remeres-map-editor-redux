@@ -18,29 +18,25 @@
 #ifndef RME_MAP_LAYER_DRAWER_H
 #define RME_MAP_LAYER_DRAWER_H
 
-#include <iosfwd>
-
-class Editor;
+class Map;
+class LiveClient;
 class TileRenderer;
 class GridDrawer;
-struct RenderView;
-struct DrawingOptions;
-struct LightBuffer;
 struct RenderFrameContext;
 class SpriteBatch;
-class PrimitiveRenderer;
+class ChunkCacheManager;
 
 class MapLayerDrawer {
 public:
-	MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Editor* editor);
+	MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Map& map);
 	~MapLayerDrawer();
 
-	void Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderFrameContext& ctx, LightBuffer& light_buffer, bool light_collection_only = false);
+	void Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx, ChunkCacheManager* chunk_cache = nullptr);
 
 private:
 	TileRenderer* tile_renderer;
 	GridDrawer* grid_drawer;
-	Editor* editor;
+	Map& map;
 };
 
 #endif

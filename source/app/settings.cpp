@@ -438,7 +438,7 @@ void Settings::IO(IOMode mode) {
 	Bool(SHOW_FPS_COUNTER, false);
 	Int(VSYNC_MODE, static_cast<int>(VSyncMode::On));
 	Int(ANTI_ALIASING, 0);
-	String(SCREEN_SHADER, "None");
+	Int(HARDWARE_PROFILE_MODE, 0);
 
 	Int(CURSOR_RED, 0);
 	Int(CURSOR_GREEN, 166);

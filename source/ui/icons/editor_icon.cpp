@@ -1,0 +1,10 @@
+#include "ui/icons/editor_icon.h"
+
+EditorIcon::EditorIcon(std::unique_ptr<wxBitmap> b16x16, std::unique_ptr<wxBitmap> b32x32) {
+	bm[SPRITE_SIZE_16x16] = std::move(b16x16);
+	bm[SPRITE_SIZE_32x32] = std::move(b32x32);
+}
+
+EditorIcon::EditorIcon(std::unique_ptr<wxBitmap> b32x32) {
+	bm[SPRITE_SIZE_32x32] = std::move(b32x32);
+}

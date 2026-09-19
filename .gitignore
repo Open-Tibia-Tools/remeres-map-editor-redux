@@ -78,6 +78,7 @@ cmake-build-*/
 .gemini/
 .qwen/
 .agent/
+.agents/
 /.agent/rules
 .codex/local.toml
 .codex/*.local.toml

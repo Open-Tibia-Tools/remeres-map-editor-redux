@@ -20,6 +20,7 @@
 #include "ui/dat_debug_view.h"
 
 #include "rendering/core/graphics.h"
+#include "ui/icons/sprite_icon_service.h"
 #include "ui/gui.h"
 
 // ============================================================================
@@ -56,7 +57,7 @@ DatDebugViewListBox::~DatDebugViewListBox() {
 
 void DatDebugViewListBox::OnDrawItem(wxDC& dc, const wxRect& rect, size_t n) const {
 	if (n < sprites.size()) {
-		sprites[n]->DrawTo(&dc, SPRITE_SIZE_32x32, rect.GetX(), rect.GetY(), rect.GetWidth(), rect.GetHeight());
+		SpriteIconService::DrawTo(sprites[n], &dc, SPRITE_SIZE_32x32, rect.GetX(), rect.GetY(), rect.GetWidth(), rect.GetHeight());
 	}
 
 	if (IsSelected(n)) {

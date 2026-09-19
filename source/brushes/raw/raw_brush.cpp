@@ -26,7 +26,7 @@
 //=============================================================================
 // RAW brush
 
-RAWBrush::RAWBrush(uint16_t itemid) :
+RAWBrush::RAWBrush(ServerItemId itemid) :
 	Brush(),
 	item_id(itemid) {
 }
@@ -42,7 +42,7 @@ int RAWBrush::getLookID() const {
 	return 0;
 }
 
-uint16_t RAWBrush::getItemID() const {
+ServerItemId RAWBrush::getItemID() const {
 	return item_id;
 }
 

@@ -58,10 +58,10 @@ struct DatCatalog {
 	bool has_transparency = false;
 	bool has_frame_durations = false;
 	bool has_frame_groups = false;
-	uint16_t item_count = 0;
-	uint16_t creature_count = 0;
-	uint16_t effect_count = 0;
-	uint16_t distance_count = 0;
+	uint32_t item_count = 0;
+	uint32_t creature_count = 0;
+	uint32_t effect_count = 0;
+	uint32_t distance_count = 0;
 	uint32_t max_sprite_id = 0;
 	std::vector<DatCatalogEntry> entries;
 	std::vector<DatSpriteDimensions> sprite_dimensions;

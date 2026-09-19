@@ -13,6 +13,7 @@
 
 #include "editor/editor.h"
 #include "rendering/drawers/minimap_drawer.h"
+#include "rendering/core/render_view.h"
 #include "rendering/io/screen_capture.h"
 #include "rendering/ui/map_display.h"
 #include "rendering/ui/minimap_viewport.h"
@@ -474,7 +475,7 @@ bool MinimapCanvas::SaveCleanScreenshot(const wxFileName& file) {
 	}
 
 	ClampViewportState(*state);
-	drawer->Draw(size, *editor, *active_canvas, *state, {
+	drawer->Draw(glm::ivec2(width, height), *editor, nullptr, *state, {
 		.drawCameraBox = false,
 		.drawBoundsBorder = false,
 		.floor_visibility_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE)),
@@ -516,7 +517,7 @@ void MinimapCanvas::OnPaint(wxPaintEvent& event) {
 		glad_initialized = true;
 	}
 
-	if (g_gui.IsLoading() || !g_gui.IsEditorOpen()) {
+	if (g_gui.IsLoading() || !g_gui.IsEditorOpen() || !g_gui.IsRenderingEnabled()) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		SwapBuffers();
@@ -534,7 +535,14 @@ void MinimapCanvas::OnPaint(wxPaintEvent& event) {
 	}
 
 	ClampViewportState(*state);
-	drawer->Draw(GetClientSize(), *editor, *active_canvas, *state, {
+	ViewportParameters camera_viewport;
+	active_canvas->GetViewBox(&camera_viewport.view_scroll_x, &camera_viewport.view_scroll_y, &camera_viewport.screensize_x, &camera_viewport.screensize_y);
+	camera_viewport.zoom = active_canvas->GetZoom();
+	camera_viewport.floor = active_canvas->GetFloor();
+	camera_viewport.content_scale_factor = active_canvas->GetContentScaleFactor();
+
+	const wxSize client_size = GetClientSize();
+	drawer->Draw(glm::ivec2(client_size.GetWidth(), client_size.GetHeight()), *editor, &camera_viewport, *state, {
 		.drawCameraBox = g_settings.getBoolean(Config::MINIMAP_VIEW_BOX),
 		.drawBoundsBorder = true,
 		.floor_visibility_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE)),

@@ -1,20 +1,13 @@
-#include "app/main.h"
-
-// glut include removed
-
 #include "rendering/drawers/overlays/preview_drawer.h"
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/core/render_frame_context.h"
-#include "rendering/ui/map_display.h"
 #include "rendering/drawers/entities/item_drawer.h"
 #include "rendering/drawers/entities/creature_drawer.h"
-#include "ui/gui.h"
 #include "brushes/brush.h"
 #include "editor/copybuffer.h"
 #include "editor/editor.h"
 #include "map/map_region.h"
-#include "ui/map_tab.h"
 
 PreviewDrawer::PreviewDrawer() {
 }
@@ -22,14 +15,14 @@ PreviewDrawer::PreviewDrawer() {
 PreviewDrawer::~PreviewDrawer() {
 }
 
-void PreviewDrawer::draw(SpriteBatch& sprite_batch, MapCanvas* canvas, BaseMap* secondary_map, const RenderView& view, int map_z, const DrawingOptions& options, Editor& editor, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, uint32_t current_house_id, const RenderFrameContext* ctx) {
+void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* secondary_map, const RenderView& view, int map_z, const DrawingOptions& options, Editor& editor, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, uint32_t current_house_id, Brush* current_brush, const RenderFrameContext* ctx) {
 	if (secondary_map != nullptr && !options.ingame) {
-		Brush* brush = g_gui.GetCurrentBrush();
+		Brush* brush = current_brush;
 
 		Position normalPos;
 		Position to(view.mouse_map_x, view.mouse_map_y, view.floor);
 
-		if (canvas->isPasting()) {
+		if (is_pasting) {
 			normalPos = editor.copybuffer.getPosition();
 		} else if (brush && brush->is<DoodadBrush>()) {
 			normalPos = Position(0x8000, 0x8000, 0x8);
@@ -44,7 +37,7 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, MapCanvas* canvas, BaseMap* 
 			const int source_end_x = normalPos.x + view.end_x - to.x;
 			const int source_end_y = normalPos.y + view.end_y - to.y;
 			const int offset = map_z <= GROUND_LAYER ? (GROUND_LAYER - map_z) * TILE_SIZE : TILE_SIZE * (view.floor - map_z);
-			const uint8_t base_alpha = canvas->isPasting() ? 128 : 255;
+			const uint8_t base_alpha = is_pasting ? 128 : 255;
 
 			auto drawPreviewTile = [&](Tile* tile, int map_x, int map_y) {
 				int draw_x = ((map_x * TILE_SIZE) - view.view_scroll_x) - offset;
@@ -152,7 +145,7 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, MapCanvas* canvas, BaseMap* 
 			int draw_x = ((mousePos.x * TILE_SIZE) - view.view_scroll_x) - offset;
 			int draw_y = ((mousePos.y * TILE_SIZE) - view.view_scroll_y) - offset;
 
-			const AtlasManager* atlas = ctx ? &ctx->atlas : (g_gui.gfx.hasAtlasManager() ? g_gui.gfx.getAtlasManager() : nullptr);
+			const AtlasManager* atlas = ctx ? &ctx->atlas : nullptr;
 			if (atlas) {
 				// Draw a semi-transparent white box over the tile
 				const glm::vec4 highlightColor(1.0f, 1.0f, 1.0f, 0.25f); // 25% white

@@ -22,7 +22,6 @@
 
 #include "game/creatures.h"
 #include "rendering/drawers/entities/creature_drawer.h"
-#include "rendering/utilities/sprite_icon_generator.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/outfit_colors.h"
 #include "rendering/core/outfit_colorizer.h"

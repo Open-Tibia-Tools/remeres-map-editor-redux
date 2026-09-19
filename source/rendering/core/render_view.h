@@ -1,12 +1,27 @@
 #ifndef RME_RENDERING_RENDER_VIEW_H_
 #define RME_RENDERING_RENDER_VIEW_H_
 
-class MapCanvas;
+class BaseMap;
 struct DrawingOptions;
 
 #include <glm/glm.hpp>
 #include "map/position.h"
 #include "app/definitions.h"
+#include <optional>
+
+struct ViewportParameters {
+	int mouse_map_x = 0;
+	int mouse_map_y = 0;
+	int view_scroll_x = 0;
+	int view_scroll_y = 0;
+	int screensize_x = 0;
+	int screensize_y = 0;
+	float zoom = 1.0f;
+	int floor = GROUND_LAYER;
+	float content_scale_factor = 1.0f;
+	Position camera_pos;
+	std::optional<Position> light_origin;
+};
 
 struct ViewBounds {
 	int start_x = 0;
@@ -34,7 +49,7 @@ struct RenderView {
 	glm::mat4 projectionMatrix;
 	glm::mat4 viewMatrix;
 
-	void Setup(MapCanvas* canvas, const DrawingOptions& options);
+	void Setup(const ViewportParameters& params, const DrawingOptions& options, const BaseMap* map = nullptr);
 	// Negative extra_margin_tiles values are clamped to zero.
 	[[nodiscard]] ViewBounds getBoundsForFloor(int map_z, int extra_margin_tiles = 0) const;
 	void SetupGL();

@@ -38,6 +38,7 @@ void BaseMap::clear(bool del) {
 			--tilecount;
 		}
 	});
+	change_tracker.markAllDirty();
 }
 
 void BaseMap::clearVisible(uint32_t mask) {
@@ -121,6 +122,7 @@ std::unique_ptr<Tile> BaseMap::setTile(int x, int y, int z, std::unique_ptr<Tile
 	ASSERT(!newtile || newtile->getY() == int(y));
 	ASSERT(!newtile || newtile->getZ() == int(z));
 
+	change_tracker.markTileDirty(x, y, z);
 	MapNode* leaf = grid.getLeafForce(x, y);
 	return leaf->setTile(x, y, z, std::move(newtile));
 }
@@ -131,6 +133,7 @@ std::unique_ptr<Tile> BaseMap::swapTile(int x, int y, int z, std::unique_ptr<Til
 	ASSERT(!newtile || newtile->getY() == int(y));
 	ASSERT(!newtile || newtile->getZ() == int(z));
 
+	change_tracker.markTileDirty(x, y, z);
 	MapNode* leaf = grid.getLeafForce(x, y);
 	return leaf->setTile(x, y, z, std::move(newtile));
 }

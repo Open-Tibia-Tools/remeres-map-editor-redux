@@ -2,8 +2,6 @@
 #include "rendering/core/graphics.h"
 #include "game/sprites.h"
 #include "item_definitions/core/item_definition_store.h"
-
-#include "ui/gui.h"
 #include <spdlog/spdlog.h>
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/atlas_manager.h"
@@ -41,44 +39,30 @@ void SpriteDrawer::glBlitAtlasQuad(SpriteBatch& sprite_batch, int sx, int sy, co
 #include "rendering/core/render_frame_context.h"
 
 void SpriteDrawer::glBlitSquare(SpriteBatch& sprite_batch, int sx, int sy, DrawColor color, int size, const AtlasManager* atlas) {
+	if (!atlas) {
+		return;
+	}
 	if (size == 0) {
 		size = TILE_SIZE;
 	}
 
-	const AtlasManager* atlas_mgr = atlas;
-	if (!atlas_mgr && g_gui.gfx.hasAtlasManager()) {
-		atlas_mgr = g_gui.gfx.getAtlasManager();
-	}
-	if (atlas_mgr) {
-		sprite_batch.drawRect(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(size), static_cast<float>(size), glm::vec4(COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]), *atlas_mgr);
-	}
+	sprite_batch.drawRect(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(size), static_cast<float>(size), glm::vec4(COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]), *atlas);
 }
 
 void SpriteDrawer::glDrawBox(SpriteBatch& sprite_batch, int sx, int sy, int width, int height, DrawColor color, const AtlasManager* atlas) {
-	const AtlasManager* atlas_mgr = atlas;
-	if (!atlas_mgr && g_gui.gfx.hasAtlasManager()) {
-		atlas_mgr = g_gui.gfx.getAtlasManager();
+	if (!atlas) {
+		return;
 	}
-	if (atlas_mgr) {
-		sprite_batch.drawRectLines(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(width), static_cast<float>(height), glm::vec4(COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]), *atlas_mgr);
-	}
-}
 
-void SpriteDrawer::glSetColor(wxColor color) {
-	// Not needed with BatchRenderer automatic color handling in DrawQuad,
-	// but if used for stateful drawing elsewhere, we might need a state setter.
-	// For now, ignoring as glBlitTexture/Square takes explicit color.
+	sprite_batch.drawRectLines(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(width), static_cast<float>(height), glm::vec4(COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]), *atlas);
 }
 
 void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, ServerItemId server_item_id, DrawColor color, const RenderFrameContext* ctx) {
-	GameSprite* spr = nullptr;
-	if (ctx) {
-		const auto definition = ctx->item_definitions.get(server_item_id);
-		spr = definition ? ctx->gfx.getGameSprite(definition.clientId()) : nullptr;
-	} else {
-		const auto definition = g_item_definitions.get(server_item_id);
-		spr = definition ? g_gui.gfx.getGameSprite(definition.clientId()) : nullptr;
+	if (!ctx) {
+		return;
 	}
+	const auto definition = ctx->item_definitions.get(server_item_id);
+	GameSprite* spr = definition ? ctx->gfx.getGameSprite(definition.clientId()) : nullptr;
 	if (spr == nullptr) {
 		return;
 	}

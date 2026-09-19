@@ -151,6 +151,7 @@ set(rme_H
 
     ${CMAKE_CURRENT_LIST_DIR}/map/position.h
     ${CMAKE_CURRENT_LIST_DIR}/map/spatial_hash_grid.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/spatial_change_tracker.h
     ${CMAKE_CURRENT_LIST_DIR}/map/tile.h
     ${CMAKE_CURRENT_LIST_DIR}/map/tile_operations.h
     ${CMAKE_CURRENT_LIST_DIR}/net/net_connection.h
@@ -167,32 +168,43 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/animator.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/atlas_manager.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_cache_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/coordinate_mapper.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_view_math.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/drawing_options.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/floor_visibility_mode.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/editor_sprite.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon_registry.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/game_sprite.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics_assembler.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/image.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/normal_image.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_archive.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_decoder.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_layout_calculator.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/template_image.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_preloader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_buffer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_types.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_palette.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_gatherer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_cache.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/minimap_colors.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/multi_draw_indirect_renderer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colorizer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colors.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/pixel_buffer_object.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/primitive_renderer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_interaction_state.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_timer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_view.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/ring_buffer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shader_program.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shared_geometry.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_batch.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_atlas_lut.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/tile_instance.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_instance.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_light.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sync_handle.h
@@ -215,6 +227,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/grid_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/hook_indicator_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/door_indicator_drawer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/map_overlay_collector.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/lua_overlay_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/marker_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/preview_drawer.h
@@ -223,7 +236,6 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/shade_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_color_calculator.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_renderer.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/io/editor_sprite_loader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/screen_capture.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/screenshot_saver.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/map_drawer.h
@@ -242,12 +254,9 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/tooltip_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/zoom_controller.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/fps_counter.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/frame_pacer.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_calculator.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_drawer.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/sprite_icon_generator.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/sprite_icon_service.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/tile_describer.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/postprocess/post_process_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/about_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/browse_tile_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/item_buttons.h
@@ -537,6 +546,7 @@ set(rme_SRC
 
     ${CMAKE_CURRENT_LIST_DIR}/map/tile.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/tile_operations.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/map/spatial_change_tracker.cpp
     ${CMAKE_CURRENT_LIST_DIR}/mkpch.cpp
     ${CMAKE_CURRENT_LIST_DIR}/net/net_connection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/net/process_com.cpp
@@ -552,20 +562,27 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/animator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/atlas_manager.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_cache_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/coordinate_mapper.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_view_math.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/drawing_options.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/floor_visibility_mode.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/editor_sprite.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon_registry.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/game_sprite.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics_assembler.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/image.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/normal_image.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_archive.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_decoder.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_layout_calculator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/template_image.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_preloader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_buffer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_gatherer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_cache.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/hardware_profile.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/multi_draw_indirect_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colorizer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colors.cpp
@@ -576,6 +593,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/ring_buffer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shader_program.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shared_geometry.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_atlas_lut.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_batch.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/text_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_array.cpp
@@ -596,6 +614,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/grid_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/hook_indicator_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/door_indicator_drawer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/map_overlay_collector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/lua_overlay_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/marker_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/preview_drawer.cpp
@@ -604,7 +623,6 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/shade_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_color_calculator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_renderer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/io/editor_sprite_loader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/screen_capture.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/io/screenshot_saver.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/map_drawer.cpp
@@ -623,17 +641,11 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/tooltip_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/zoom_controller.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/fps_counter.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/frame_pacer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/icon_renderer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/icon_renderer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_calculator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_drawer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/sprite_icon_generator.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/sprite_icon_service.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/tile_describer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/postprocess/post_process_manager.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/postprocess/effects/screen.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/postprocess/effects/scanline.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/postprocess/effects/xbrz.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/about_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/browse_tile_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/outfit_color_palette.cpp
@@ -756,6 +768,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_surface.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/file_system.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/util/system_specs.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/image_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_algo.cpp

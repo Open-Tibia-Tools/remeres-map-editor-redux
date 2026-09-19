@@ -24,7 +24,7 @@
 #include "brushes/wall/wall_brush.h"
 
 // Container
-Container::Container(const uint16_t type) :
+Container::Container(const ServerItemId type) :
 	Item(type, 0) {
 	////
 }
@@ -72,7 +72,7 @@ uint32_t Container::memsize() const {
 }
 
 // Teleport
-Teleport::Teleport(const uint16_t type) :
+Teleport::Teleport(const ServerItemId type) :
 	Item(type, 0),
 	destination(0, 0, 0) {
 	////
@@ -87,7 +87,7 @@ std::unique_ptr<Item> Teleport::deepCopy() const {
 }
 
 // Door
-Door::Door(const uint16_t type) :
+Door::Door(const ServerItemId type) :
 	Item(type, 0),
 	doorId(0) {
 	////
@@ -136,7 +136,7 @@ DoorType Door::getDoorType() const {
 }
 
 // Depot
-Depot::Depot(const uint16_t type) :
+Depot::Depot(const ServerItemId type) :
 	Item(type, 0),
 	depotId(0) {
 	////
@@ -151,7 +151,7 @@ std::unique_ptr<Item> Depot::deepCopy() const {
 }
 
 // Podium
-Podium::Podium(const uint16_t type) :
+Podium::Podium(const ServerItemId type) :
 	Item(type, 0),
 	outfit(Outfit()), direction(0), showOutfit(true), showMount(true), showPlatform(true) {
 	////

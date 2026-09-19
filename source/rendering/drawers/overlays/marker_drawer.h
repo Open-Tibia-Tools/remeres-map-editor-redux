@@ -8,7 +8,7 @@ class SpriteDrawer;
 class Tile;
 class Waypoint;
 
-class Editor;
+class Map;
 class SpriteBatch;
 struct RenderFrameContext;
 
@@ -17,7 +17,7 @@ public:
 	MarkerDrawer();
 	~MarkerDrawer();
 
-	void draw(SpriteBatch& sprite_batch, SpriteDrawer* drawer, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, uint32_t current_house_id, Editor& editor, const DrawingOptions& options, const RenderFrameContext* ctx = nullptr);
+	void draw(SpriteBatch& sprite_batch, SpriteDrawer* drawer, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, uint32_t current_house_id, Map& map, const DrawingOptions& options, const RenderFrameContext& ctx);
 };
 
 #endif

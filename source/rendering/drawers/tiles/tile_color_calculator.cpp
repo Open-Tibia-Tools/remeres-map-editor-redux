@@ -1,4 +1,3 @@
-#include "app/main.h"
 #include "rendering/drawers/tiles/tile_color_calculator.h"
 #include "map/tile.h"
 #include "game/item.h"
@@ -44,22 +43,6 @@ void TileColorCalculator::Calculate(const Tile* tile, const DrawingOptions& opti
 		r = static_cast<uint8_t>((r * hr + r) >> 8);
 		g = static_cast<uint8_t>((g * hg + g) >> 8);
 		b = static_cast<uint8_t>((b * hb + b) >> 8);
-
-		if (static_cast<int>(house_id) == current_house_id) {
-			// Pulse Effect on top of the unique color
-			// We want to make it pulse brighter/intense
-			// options.highlight_pulse [0.0, 1.0]
-
-			// Simple intensity boost
-			// When pulse is high, we brighten the color towards white
-			if (options.highlight_pulse > 0.0f) {
-				float boost = options.highlight_pulse * 0.6f; // Max 60% boost towards white
-
-				r = static_cast<uint8_t>(std::min(255, static_cast<int>(r + (255 - r) * boost)));
-				g = static_cast<uint8_t>(std::min(255, static_cast<int>(g + (255 - g) * boost)));
-				b = static_cast<uint8_t>(std::min(255, static_cast<int>(b + (255 - b) * boost)));
-			}
-		}
 	} else if (showspecial && tile->isPZ()) {
 		r >>= 1;
 		b >>= 1;

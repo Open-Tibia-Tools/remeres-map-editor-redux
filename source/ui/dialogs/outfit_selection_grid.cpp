@@ -1,6 +1,6 @@
 #include "ui/dialogs/outfit_selection_grid.h"
 #include "ui/dialogs/outfit_chooser_dialog.h"
-#include "rendering/utilities/sprite_icon_generator.h"
+#include "ui/icons/sprite_icon_service.h"
 #include "rendering/core/graphics.h"
 #include "ui/gui.h"
 #include "ui/theme.h"
@@ -111,7 +111,7 @@ int OutfitSelectionGrid::GetOrCreateOutfitImage(NVGcontext* vg, int lookType, co
 		return 0;
 	}
 
-	wxBitmap bmp = SpriteIconGenerator::Generate(spr, SPRITE_SIZE_64x64, outfit);
+	wxBitmap bmp = SpriteIconService::Generate(spr, SPRITE_SIZE_64x64, outfit);
 	wxImage img = bmp.ConvertToImage();
 
 	if (!img.IsOk()) {

@@ -1,5 +1,4 @@
-#include "app/main.h"
-
+#include "app/definitions.h"
 #include "rendering/core/map_view_math.h"
 
 #include <algorithm>

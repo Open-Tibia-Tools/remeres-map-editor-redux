@@ -1,7 +1,7 @@
 #ifndef RME_RENDERING_CORE_PRIMITIVE_RENDERER_H_
 #define RME_RENDERING_CORE_PRIMITIVE_RENDERER_H_
 
-#include "app/main.h"
+#include <glad/glad.h>
 #include "rendering/core/shader_program.h"
 #include "rendering/core/gl_resources.h"
 #include "rendering/core/ring_buffer.h"

@@ -19,6 +19,8 @@
 #define RME_CREATURE_H_
 
 #include "game/creatures.h"
+#include <list>
+#include <vector>
 
 enum Direction {
 	NORTH = 0,

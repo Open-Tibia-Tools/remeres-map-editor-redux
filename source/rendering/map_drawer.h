@@ -17,122 +17,93 @@
 
 #ifndef RME_MAP_DRAWER_H_
 #define RME_MAP_DRAWER_H_
-#include <memory>
-class GameSprite;
 
-struct NVGcontext;
-struct RenderFrameContext;
-class TooltipDrawer;
-class HookIndicatorDrawer;
-class DoorIndicatorDrawer;
+#include <cstdint>
 
-// Storage during drawing, for option caching
-#include "rendering/core/drawing_options.h"
-#include "rendering/core/light_buffer.h"
 #include "app/definitions.h"
 #include "app/settings.h"
-#include "game/outfit.h"
-#include "game/creature.h"
-
+#include "rendering/core/drawing_options.h"
+#include "rendering/core/chunk_cache_manager.h"
+#include "rendering/core/primitive_renderer.h"
+#include "rendering/core/render_interaction_state.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/sprite_batch.h"
-#include "rendering/core/primitive_renderer.h"
-#include "rendering/core/gl_resources.h"
-#include "rendering/core/shader_program.h"
+#include "rendering/drawers/cursors/brush_cursor_drawer.h"
+#include "rendering/drawers/cursors/drag_shadow_drawer.h"
+#include "rendering/drawers/cursors/live_cursor_drawer.h"
+#include "rendering/drawers/entities/creature_drawer.h"
+#include "rendering/drawers/entities/creature_name_drawer.h"
+#include "rendering/drawers/entities/item_drawer.h"
+#include "rendering/drawers/entities/sprite_drawer.h"
+#include "rendering/drawers/map_layer_drawer.h"
+#include "rendering/drawers/overlays/brush_overlay_drawer.h"
+#include "rendering/drawers/overlays/door_indicator_drawer.h"
+#include "rendering/drawers/overlays/grid_drawer.h"
+#include "rendering/drawers/overlays/hook_indicator_drawer.h"
+#include "rendering/drawers/overlays/lua_overlay_drawer.h"
+#include "rendering/drawers/overlays/marker_drawer.h"
+#include "rendering/drawers/overlays/preview_drawer.h"
+#include "rendering/drawers/overlays/selection_drawer.h"
+#include "rendering/drawers/tiles/floor_drawer.h"
+#include "rendering/drawers/tiles/shade_drawer.h"
+#include "rendering/drawers/tiles/tile_renderer.h"
+#include "rendering/ui/tooltip_drawer.h"
+#include "rendering/utilities/light_drawer.h"
 
-class GridDrawer;
-
-class MapCanvas;
-class LightDrawer;
-class LiveCursorDrawer;
-class SelectionDrawer;
-class BrushCursorDrawer;
-class BrushOverlayDrawer;
-class DragShadowDrawer;
-class FloorDrawer;
-class SpriteDrawer;
-class ItemDrawer;
-class MapLayerDrawer;
-class CreatureDrawer;
-class MarkerDrawer;
-class PreviewDrawer;
-class ShadeDrawer;
-class TileRenderer;
-class CreatureNameDrawer;
-class HookIndicatorDrawer;
-class DoorIndicatorDrawer;
-class LuaOverlayDrawer;
+class Editor;
+struct NVGcontext;
+struct RenderFrameContext;
 
 class MapDrawer {
-	MapCanvas* canvas;
 	Editor& editor;
 	DrawingOptions options;
 	RenderView view;
-	std::shared_ptr<LightDrawer> light_drawer;
-	LightBuffer light_buffer;
-	std::unique_ptr<TooltipDrawer> tooltip_drawer;
-	std::unique_ptr<GridDrawer> grid_drawer;
-	std::unique_ptr<LiveCursorDrawer> live_cursor_drawer;
-	std::unique_ptr<SelectionDrawer> selection_drawer;
-	std::unique_ptr<BrushCursorDrawer> brush_cursor_drawer;
-	std::unique_ptr<BrushOverlayDrawer> brush_overlay_drawer;
-	std::unique_ptr<DragShadowDrawer> drag_shadow_drawer;
-	std::unique_ptr<FloorDrawer> floor_drawer;
-	std::unique_ptr<SpriteDrawer> sprite_drawer;
-	std::unique_ptr<MapLayerDrawer> map_layer_drawer;
-	std::unique_ptr<CreatureDrawer> creature_drawer;
-	std::unique_ptr<ItemDrawer> item_drawer;
-	std::unique_ptr<MarkerDrawer> marker_drawer;
-	std::unique_ptr<PreviewDrawer> preview_drawer;
-	std::unique_ptr<ShadeDrawer> shade_drawer;
-	std::unique_ptr<TileRenderer> tile_renderer;
-	std::unique_ptr<CreatureNameDrawer> creature_name_drawer;
-	std::unique_ptr<HookIndicatorDrawer> hook_indicator_drawer;
-	std::unique_ptr<DoorIndicatorDrawer> door_indicator_drawer;
-	std::unique_ptr<LuaOverlayDrawer> lua_overlay_drawer;
-	std::unique_ptr<SpriteBatch> sprite_batch;
-	std::unique_ptr<PrimitiveRenderer> primitive_renderer;
-
-	// Post-processing
-	std::unique_ptr<GLFramebuffer> scale_fbo;
-	std::unique_ptr<GLTextureResource> scale_texture;
-	int fbo_width = 0;
-	int fbo_height = 0;
-	bool m_lastAaMode = false;
-
-	std::unique_ptr<GLVertexArray> pp_vao;
-	std::unique_ptr<GLBuffer> pp_vbo;
-	std::unique_ptr<GLBuffer> pp_ebo;
-
-	void InitPostProcess();
-	void DrawPostProcess(const RenderView& view, const DrawingOptions& options);
-	void UpdateFBO(const RenderView& view, const DrawingOptions& options);
-
-protected:
-	friend class BrushOverlayDrawer;
-	friend class DragShadowDrawer;
-	friend class FloorDrawer;
+	SpriteBatch sprite_batch;
+	PrimitiveRenderer primitive_renderer;
+	LightDrawer light_drawer;
+	TooltipDrawer tooltip_drawer;
+	GridDrawer grid_drawer;
+	LiveCursorDrawer live_cursor_drawer;
+	SelectionDrawer selection_drawer;
+	BrushCursorDrawer brush_cursor_drawer;
+	BrushOverlayDrawer brush_overlay_drawer;
+	DragShadowDrawer drag_shadow_drawer;
+	FloorDrawer floor_drawer;
+	SpriteDrawer sprite_drawer;
+	CreatureDrawer creature_drawer;
+	CreatureNameDrawer creature_name_drawer;
+	HookIndicatorDrawer hook_indicator_drawer;
+	DoorIndicatorDrawer door_indicator_drawer;
+	ItemDrawer item_drawer;
+	MarkerDrawer marker_drawer;
+	PreviewDrawer preview_drawer;
+	ShadeDrawer shade_drawer;
+	TileRenderer tile_renderer;
+	MapLayerDrawer map_layer_drawer;
+	LuaOverlayDrawer lua_overlay_drawer;
+	ChunkCacheManager chunk_cache_manager;
 
 public:
-	MapDrawer(MapCanvas* canvas);
+	explicit MapDrawer(Editor& editor);
 	~MapDrawer();
 
-	void SetupVars();
+	void SetupVars(const ViewportParameters& vp);
 	void SetupGL();
 	void Release();
 
-	void Draw();
+	void Draw(const InteractionRenderState& interaction);
 	void DrawBackground();
-	void DrawMap(const RenderFrameContext& ctx);
-	void DrawIngameBox(const ViewBounds& bounds);
+	void DrawMap(const RenderFrameContext& ctx, const InteractionRenderState& interaction);
+	void DrawIngameBox(const ViewBounds& bounds, const AtlasManager& atlas);
 
-	void DrawGrid(const ViewBounds& bounds);
+	void DrawGrid(const ViewBounds& bounds, const AtlasManager& atlas);
 	void DrawTooltips(NVGcontext* vg);
 	void DrawHookIndicators(NVGcontext* vg);
 	void DrawDoorIndicators(NVGcontext* vg);
+	void DrawUIOverlays(NVGcontext* vg);
 	void ClearFrameOverlays();
 	void DrawCreatureNames(NVGcontext* vg);
-	bool hasOverlays() const;
+	bool hasOverlays();
 
 	void DrawLight();
 
@@ -142,28 +113,93 @@ public:
 		return options;
 	}
 
+	Editor& getEditor() {
+		return editor;
+	}
+
 	SpriteBatch* getSpriteBatch() {
-		return sprite_batch.get();
+		return &sprite_batch;
 	}
 	PrimitiveRenderer* getPrimitiveRenderer() {
-		return primitive_renderer.get();
+		return &primitive_renderer;
 	}
 	TileRenderer* getTileRenderer() {
-		return tile_renderer.get();
+		return &tile_renderer;
 	}
 	DoorIndicatorDrawer* getDoorIndicatorDrawer() {
-		return door_indicator_drawer.get();
+		return &door_indicator_drawer;
 	}
 	LuaOverlayDrawer* getLuaOverlayDrawer() {
-		return lua_overlay_drawer.get();
+		return &lua_overlay_drawer;
+	}
+	TooltipDrawer* getTooltipDrawer() {
+		return &tooltip_drawer;
+	}
+	HookIndicatorDrawer* getHookIndicatorDrawer() {
+		return &hook_indicator_drawer;
+	}
+	ChunkCacheManager& getChunkCacheManager() {
+		return chunk_cache_manager;
+	}
+	const ChunkCacheManager& getChunkCacheManager() const {
+		return chunk_cache_manager;
 	}
 	const RenderView& getView() const {
 		return view;
 	}
 
+	void InvalidateOverlays() noexcept {
+		overlay_cache.invalidate();
+	}
+
 private:
-	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, bool light_collection_only = false);
+	struct OverlayCacheState {
+		int floor = -1;
+		float zoom = -1.0f;
+		ViewBounds bounds{};
+		bool show_tooltips = false;
+		bool show_hooks = false;
+		bool highlight_locked_doors = false;
+		uint64_t map_generation = 0;
+		bool valid = false;
+
+		[[nodiscard]] bool isValid(
+			int cur_floor,
+			float cur_zoom,
+			const ViewBounds& cur_bounds,
+			bool opt_tooltips,
+			bool opt_hooks,
+			bool opt_doors,
+			uint64_t cur_gen
+		) const noexcept {
+			if (!valid) {
+				return false;
+			}
+			if (floor != cur_floor || zoom != cur_zoom) {
+				return false;
+			}
+			if (show_tooltips != opt_tooltips || show_hooks != opt_hooks || highlight_locked_doors != opt_doors) {
+				return false;
+			}
+			if (map_generation != cur_gen) {
+				return false;
+			}
+			if (cur_bounds.start_x < bounds.start_x || cur_bounds.end_x > bounds.end_x ||
+				cur_bounds.start_y < bounds.start_y || cur_bounds.end_y > bounds.end_y) {
+				return false;
+			}
+			return true;
+		}
+
+		void invalidate() noexcept {
+			valid = false;
+		}
+	};
+
+	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client);
+	void CollectOverlays();
 	bool renderers_initialized = false;
+	OverlayCacheState overlay_cache;
 	Settings::ObserverId settings_observer_id_ = 0;
 };
 

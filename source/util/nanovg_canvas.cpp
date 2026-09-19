@@ -12,6 +12,9 @@
 #include "util/nvg_utils.h"
 #include <nanovg_gl.h>
 #include "rendering/core/graphics.h"
+#include "ui/icons/sprite_icon_service.h"
+#include "ui/icons/editor_icon.h"
+#include "ui/icons/editor_icon_registry.h"
 #include "ui/gui.h"
 
 #include <wx/dcclient.h>
@@ -244,6 +247,71 @@ int NanoVGCanvas::GetOrCreateSpriteTexture(NVGcontext* vg, Sprite* sprite) {
 	return tex;
 }
 
+int NanoVGCanvas::GetOrCreateEditorIconTexture(NVGcontext* vg, int editor_icon_id, SpriteSize size) {
+	EditorIcon* icon = EditorIconRegistry::GetIcon(editor_icon_id);
+	return GetOrCreateEditorIconTexture(vg, icon, size);
+}
+
+int NanoVGCanvas::GetOrCreateEditorIconTexture(NVGcontext* vg, EditorIcon* icon, SpriteSize size) {
+	if (!icon) {
+		return 0;
+	}
+
+	uint64_t iconId = reinterpret_cast<uint64_t>(icon) ^ (static_cast<uint64_t>(size) << 32);
+	int existingTex = GetCachedImage(iconId);
+	if (existingTex != 0) {
+		return (existingTex > 0) ? existingTex : 0;
+	}
+
+	wxBitmap* bmp = icon->getBitmap(size);
+	if (!bmp || !bmp->IsOk()) {
+		bmp = icon->getBitmap(SPRITE_SIZE_32x32);
+		if (!bmp || !bmp->IsOk()) {
+			AddCachedImage(iconId, -1);
+			return 0;
+		}
+	}
+
+	wxImage img = bmp->ConvertToImage();
+	if (!img.IsOk()) {
+		AddCachedImage(iconId, -1);
+		return 0;
+	}
+
+	int w = img.GetWidth();
+	int h = img.GetHeight();
+	std::vector<uint8_t> rgba(w * h * 4);
+	const uint8_t* data = img.GetData();
+	const uint8_t* alpha = img.GetAlpha();
+	bool hasAlpha = img.HasAlpha();
+
+	std::span<uint8_t> dest(rgba);
+	std::span<const uint8_t> src(data, w * h * 3);
+
+	if (hasAlpha && alpha) {
+		for (int i : std::views::iota(0, w * h)) {
+			dest[i * 4 + 0] = src[i * 3 + 0];
+			dest[i * 4 + 1] = src[i * 3 + 1];
+			dest[i * 4 + 2] = src[i * 3 + 2];
+			dest[i * 4 + 3] = alpha[i];
+		}
+	} else {
+		for (int i : std::views::iota(0, w * h)) {
+			dest[i * 4 + 0] = src[i * 3 + 0];
+			dest[i * 4 + 1] = src[i * 3 + 1];
+			dest[i * 4 + 2] = src[i * 3 + 2];
+			dest[i * 4 + 3] = 255;
+		}
+	}
+
+	int tex = GetOrCreateImage(iconId, rgba.data(), w, h);
+	if (tex <= 0) {
+		AddCachedImage(iconId, -1);
+		return 0;
+	}
+	return tex;
+}
+
 int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64_t spriteId) {
 	// Calculate composite size
 	const int pattern_x = (gs->pattern_x >= 3) ? 2 : 0;
@@ -333,9 +401,9 @@ int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64
 }
 
 int NanoVGCanvas::CreateGenericSpriteTexture(NVGcontext* vg, Sprite* sprite, uint64_t spriteId) {
-	wxSize sz = sprite->GetSize();
-	int w = sz.x;
-	int h = sz.y;
+	ImageDimensions sz = sprite->GetSize();
+	int w = sz.width;
+	int h = sz.height;
 
 	// Determine best SpriteSize for DrawTo
 	SpriteSize drawSize = SPRITE_SIZE_32x32;
@@ -353,7 +421,7 @@ int NanoVGCanvas::CreateGenericSpriteTexture(NVGcontext* vg, Sprite* sprite, uin
 		mdc.SetBackground(wxBrush(wxColor(0, 0, 0), wxBRUSHSTYLE_TRANSPARENT));
 		mdc.Clear();
 		// Draw at 0,0 with its size
-		sprite->DrawTo(&mdc, drawSize, 0, 0, w, h);
+		SpriteIconService::DrawTo(sprite, &mdc, drawSize, 0, 0, w, h);
 	}
 
 	wxImage img = bmp.ConvertToImage();

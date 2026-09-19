@@ -1,8 +1,8 @@
 #include "app/main.h"
 #include "ui/managers/gl_context_manager.h"
-
 #include "app/settings.h"
-
+#include "util/system_specs.h"
+#include "rendering/core/hardware_profile.h"
 #include <spdlog/spdlog.h>
 
 #ifdef __WXMSW__
@@ -78,6 +78,8 @@ wxGLContext* GLContextManager::GetGLContext(wxGLCanvas* win) {
 					spdlog::error("GLContextManager: Failed to initialize GLAD!");
 				} else {
 					spdlog::info("GLContextManager: GLAD initialized successfully");
+					const auto gl_specs = SystemSpecsDetector::detect(true);
+					HardwareProfileManager::get().updateSpecs(gl_specs);
 				}
 			}
 		}

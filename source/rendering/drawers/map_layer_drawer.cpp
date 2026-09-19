@@ -15,38 +15,51 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
-#include "ui/gui.h"
-#include "app/definitions.h"
 #include "rendering/drawers/map_layer_drawer.h"
+#include "rendering/core/chunk_cache_manager.h"
+#include "app/definitions.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
 #include "rendering/drawers/overlays/grid_drawer.h"
-#include "editor/editor.h"
 #include "live/live_client.h"
 #include "map/map.h"
-#include "map/map_region.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
-#include "rendering/core/light_buffer.h"
 #include "rendering/core/sprite_batch.h"
-#include "rendering/core/primitive_renderer.h"
-#include "rendering/core/sprite_preloader.h"
 #include "rendering/core/render_frame_context.h"
-#include "item_definitions/core/item_definition_store.h"
 
 #include <cmath>
 #include <limits>
+#include <array>
 
-MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Editor* editor) :
+namespace {
+	struct DiagonalTileIndex {
+		uint8_t dx;
+		uint8_t dy;
+		uint8_t index; // dx * 4 + dy
+	};
+
+	// 4x4 diagonal order (d = dx + dy from 0 to 6, traversing North-West to South-East)
+	constexpr std::array<DiagonalTileIndex, 16> kDiagonalTileIndices = {{
+		{0, 0, 0},
+		{1, 0, 4}, {0, 1, 1},
+		{2, 0, 8}, {1, 1, 5}, {0, 2, 2},
+		{3, 0, 12}, {2, 1, 9}, {1, 2, 6}, {0, 3, 3},
+		{3, 1, 13}, {2, 2, 10}, {1, 3, 7},
+		{3, 2, 14}, {2, 3, 11},
+		{3, 3, 15}
+	}};
+}
+
+MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Map& map) :
 	tile_renderer(tile_renderer),
 	grid_drawer(grid_drawer),
-	editor(editor) {
+	map(map) {
 }
 
 MapLayerDrawer::~MapLayerDrawer() {
 }
 
-void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client, const RenderFrameContext& ctx, LightBuffer& light_buffer, bool light_collection_only) {
+void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx, ChunkCacheManager* chunk_cache) {
 	const RenderView& view = ctx.view;
 	const DrawingOptions& options = ctx.options;
 
@@ -58,41 +71,18 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		? (GROUND_LAYER - map_z) * TILE_SIZE
 		: TILE_SIZE * (view.floor - map_z);
 
-	int nd_start_x = 0;
-	int nd_start_y = 0;
-	int nd_end_x = 0;
-	int nd_end_y = 0;
-	int visibility_margin_pixels = PAINTERS_ALGORITHM_SAFETY_MARGIN_PIXELS;
-
-	if (light_collection_only) {
-		constexpr int light_collection_margin_pixels = TILE_SIZE * 16;
-		visibility_margin_pixels = light_collection_margin_pixels;
-		const int camera_offset = (view.floor <= GROUND_LAYER)
-			? (GROUND_LAYER - view.floor) * TILE_SIZE
-			: 0;
-		const int max_floor_offset = std::max(std::abs(offset - camera_offset), TILE_SIZE * MAP_MAX_LAYER);
-		const int start_x = static_cast<int>(std::floor((view.view_scroll_x - light_collection_margin_pixels - max_floor_offset) / static_cast<float>(TILE_SIZE)));
-		const int start_y = static_cast<int>(std::floor((view.view_scroll_y - light_collection_margin_pixels - max_floor_offset) / static_cast<float>(TILE_SIZE)));
-		const int end_x = static_cast<int>(std::ceil((view.view_scroll_x + view.logical_width + light_collection_margin_pixels + max_floor_offset) / static_cast<float>(TILE_SIZE)));
-		const int end_y = static_cast<int>(std::ceil((view.view_scroll_y + view.logical_height + light_collection_margin_pixels + max_floor_offset) / static_cast<float>(TILE_SIZE)));
-
-		nd_start_x = start_x & ~3;
-		nd_start_y = start_y & ~3;
-		nd_end_x = (end_x & ~3) + 4;
-		nd_end_y = (end_y & ~3) + 4;
-	} else {
-		nd_start_x = view.start_x & ~3;
-		nd_start_y = view.start_y & ~3;
-		nd_end_x = (view.end_x & ~3) + 4;
-		nd_end_y = (view.end_y & ~3) + 4;
-	}
+	const int nd_start_x = view.start_x & ~3;
+	const int nd_start_y = view.start_y & ~3;
+	const int nd_end_x = (view.end_x & ~3) + 4;
+	const int nd_end_y = (view.end_y & ~3) + 4;
+	const int visibility_margin_pixels = PAINTERS_ALGORITHM_SAFETY_MARGIN_PIXELS;
 
 	const int visibility_margin_tiles = std::max(1, (visibility_margin_pixels + TILE_SIZE - 1) / TILE_SIZE);
 
 	const int base_screen_x = -view.view_scroll_x - offset;
 	const int base_screen_y = -view.view_scroll_y - offset;
 
-	bool draw_lights = options.isDrawLight() && view.zoom <= 10.0;
+	bool draw_lights = options.isDrawLight();
 
 	const int max_logical_w = static_cast<int>(view.logical_width);
 	const int max_logical_h = static_cast<int>(view.logical_height);
@@ -114,12 +104,12 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		if (live && !nd->isVisible(map_z > GROUND_LAYER)) {
 			if (!nd->isRequested(map_z > GROUND_LAYER)) {
 				// Request the node
-				if (editor->live_manager.GetClient()) {
-					editor->live_manager.GetClient()->queryNode(nd_map_x, nd_map_y, map_z > GROUND_LAYER);
+				if (live_client) {
+					live_client->queryNode(nd_map_x, nd_map_y, map_z > GROUND_LAYER);
 				}
 				nd->setRequested(map_z > GROUND_LAYER, true);
 			}
-			grid_drawer->DrawNodeLoadingPlaceholder(sprite_batch, nd_map_x, nd_map_y, view);
+			grid_drawer->DrawNodeLoadingPlaceholder(sprite_batch, nd_map_x, nd_map_y, view, ctx.atlas);
 			return;
 		}
 
@@ -132,26 +122,23 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		}
 
 		Floor* floor_above = (map_z == GROUND_LAYER + 1) ? nd->getFloor(GROUND_LAYER) : nullptr;
-		TileLocation* location = floor->locs.data();
-		TileLocation* loc_above = floor_above ? floor_above->locs.data() : nullptr;
-		int draw_x_base = node_draw_x;
-		for (int map_x = 0; map_x < 4; ++map_x, draw_x_base += TILE_SIZE) {
-			int draw_y = node_draw_y;
-			for (int map_y = 0; map_y < 4; ++map_y, ++location, draw_y += TILE_SIZE) {
-				const Tile* tile_above = loc_above ? (loc_above++)->get() : nullptr;
-
-				if (!location->get()) {
-					continue;
-				}
-
-				// Culling: Skip tiles that are far outside the viewport (fast integer AABB).
-				if (!fully_inside && (draw_x_base < min_visible_draw_x || draw_x_base > max_visible_draw_x ||
-					draw_y < min_visible_draw_y || draw_y > max_visible_draw_y)) {
-					continue;
-				}
-
-				visitor(location, draw_x_base, draw_y, tile_above);
+		for (const auto& [dx, dy, idx] : kDiagonalTileIndices) {
+			TileLocation* location = &floor->locs[idx];
+			if (!location->get()) {
+				continue;
 			}
+
+			const int draw_x = node_draw_x + dx * TILE_SIZE;
+			const int draw_y = node_draw_y + dy * TILE_SIZE;
+
+			// Culling: Skip tiles that are far outside the viewport (fast integer AABB).
+			if (!fully_inside && (draw_x < min_visible_draw_x || draw_x > max_visible_draw_x ||
+				draw_y < min_visible_draw_y || draw_y > max_visible_draw_y)) {
+				continue;
+			}
+
+			const Tile* tile_above = floor_above ? floor_above->locs[idx].get() : nullptr;
+			visitor(location, draw_x, draw_y, tile_above);
 		}
 	};
 
@@ -159,10 +146,11 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		if (live_client) {
 			for (int nd_map_x = nd_start_x; nd_map_x <= nd_end_x; nd_map_x += 4) {
 				for (int nd_map_y = nd_start_y; nd_map_y <= nd_end_y; nd_map_y += 4) {
-					MapNode* nd = editor->map.getLeaf(nd_map_x, nd_map_y);
+					MapNode* nd = map.getLeaf(nd_map_x, nd_map_y);
 					if (!nd) {
-						nd = editor->map.createLeaf(nd_map_x, nd_map_y);
-						nd->setVisible(false, false);
+						live_client->queryNode(nd_map_x, nd_map_y, map_z > GROUND_LAYER);
+						grid_drawer->DrawNodeLoadingPlaceholder(sprite_batch, nd_map_x, nd_map_y, view, ctx.atlas);
+						continue;
 					}
 					visitNodeTiles(nd, nd_map_x, nd_map_y, true, visitor);
 				}
@@ -175,21 +163,30 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, bool live_client
 		int safe_end_x = nd_end_x + visibility_margin_tiles;
 		int safe_end_y = nd_end_y + visibility_margin_tiles;
 
-		editor->map.visitLeaves(safe_start_x, safe_start_y, safe_end_x, safe_end_y, [&](MapNode* nd, int nd_map_x, int nd_map_y) {
+		map.visitLeaves(safe_start_x, safe_start_y, safe_end_x, safe_end_y, [&](MapNode* nd, int nd_map_x, int nd_map_y) {
 			visitNodeTiles(nd, nd_map_x, nd_map_y, false, visitor);
 		});
 	};
 
-	// OTClient floor-aware light occlusion: capture light count at START of each floor,
-	// so opaque ground tiles can record it during DrawTile to block light from floors below
-	if (draw_lights && !light_collection_only) {
-		light_buffer.SetFloorLightStart();
+	const bool use_chunk_cache = (chunk_cache != nullptr && chunk_cache->isValid() && !live_client && !options.show_as_minimap && !options.show_only_colors);
+
+	if (use_chunk_cache) {
+		// 1. Flush any pending batch geometry before chunk cache pass
+		sprite_batch.flush(ctx.atlas);
+
+		// 2. Chunk Cache static terrain & static items pass (instanced per-chunk VBOs)
+		chunk_cache->renderFloor(map_z, map, ctx, view.projectionMatrix, ctx.atlas);
+
+		// 3. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!
+		chunk_cache->renderDynamicOverlays(map_z, map, ctx, sprite_batch, *tile_renderer);
+
+		// 4. Flush dynamic overlays for this floor so depth order across floors is preserved
+		sprite_batch.flush(ctx.atlas);
+	} else {
+		// Classic full-tile traversal fallback:
+		// Strict tile-by-tile diagonal Painter's Algorithm order
+		visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
+			tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
+		});
 	}
-
-	LightBuffer* active_light_buffer = draw_lights ? &light_buffer : nullptr;
-	auto drawVisibleTiles = [&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
-		tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, active_light_buffer, light_collection_only, tile_above);
-	};
-
-	visitAllVisibleNodes(drawVisibleTiles);
 }

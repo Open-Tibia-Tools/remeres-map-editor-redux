@@ -225,11 +225,11 @@ namespace {
 					std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
 					TileOperations::cleanWalls(new_tile.get(), brush);
 					brush->draw(draw_map, new_tile.get(), nullptr);
-					draw_map->setTile(drawPos, std::move(new_tile));
+					(void)draw_map->setTile(drawPos, std::move(new_tile));
 				} else {
 					std::unique_ptr<Tile> new_tile(editor.map.allocator(location));
 					brush->draw(draw_map, new_tile.get(), nullptr);
-					draw_map->setTile(drawPos, std::move(new_tile));
+					(void)draw_map->setTile(drawPos, std::move(new_tile));
 				}
 			}
 			// Iterate over the map instead of tilestodraw to avoid duplicates!

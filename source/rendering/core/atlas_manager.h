@@ -2,6 +2,7 @@
 #define RME_RENDERING_CORE_ATLAS_MANAGER_H_
 
 #include "rendering/core/texture_atlas.h"
+#include "rendering/core/sprite_atlas_lut.h"
 #include <cstdint>
 #include <deque>
 #include <unordered_map>
@@ -91,6 +92,44 @@ public:
 	}
 
 	/**
+	 * Get number of active texture layers.
+	 */
+	int getLayerCount() const noexcept {
+		return atlas_.getLayerCount();
+	}
+
+	/**
+	 * Get number of allocated GPU texture layers.
+	 */
+	int getAllocatedLayers() const noexcept {
+		return atlas_.getAllocatedLayers();
+	}
+
+	/**
+	 * Get total count of sprites stored in the texture atlas.
+	 */
+	int getTotalSpriteCount() const noexcept {
+		return atlas_.getTotalSpriteCount();
+	}
+
+	/**
+	 * Get the GPU SpriteAtlasLUT for SSBO sprite coordinate indirection.
+	 */
+	SpriteAtlasLUT& getLUT() noexcept {
+		return lut_;
+	}
+	const SpriteAtlasLUT& getLUT() const noexcept {
+		return lut_;
+	}
+
+	/**
+	 * Bind the GPU LUT buffer to an SSBO binding index.
+	 */
+	void bindLUT(GLuint binding_point = SpriteAtlasLUT::SSBO_BINDING_INDEX) {
+		lut_.bind(binding_point);
+	}
+
+	/**
 	 * Clear atlas and mappings.
 	 */
 	void clear();
@@ -102,6 +141,7 @@ public:
 
 private:
 	TextureAtlas atlas_;
+	SpriteAtlasLUT lut_;
 
 	// Stable storage for AtlasRegions (deque doesn't invalidate pointers)
 	std::deque<AtlasRegion> region_storage_;

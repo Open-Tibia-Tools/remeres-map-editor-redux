@@ -10,7 +10,7 @@
 #include "game/spawn.h"
 #include "game/creature.h"
 #include "ui/gui_ids.h"
-#include "rendering/utilities/sprite_icon_generator.h"
+#include "ui/icons/sprite_icon_service.h"
 #include "ui/gui.h"
 
 SpawnCreaturePanel::SpawnCreaturePanel(wxWindow* parent) :
@@ -63,7 +63,7 @@ void SpawnCreaturePanel::SetTile(Tile* tile) {
 		creature_text->SetLabelText(wxString(tile->creature->getName()));
 		GameSprite* spr = g_gui.gfx.getCreatureSprite(tile->creature->getLookType().lookType);
 		if (spr) {
-			wxBitmap bmp = SpriteIconGenerator::Generate(spr, SPRITE_SIZE_32x32, tile->creature->getLookType(), false, SOUTH);
+			wxBitmap bmp = SpriteIconService::Generate(spr, SPRITE_SIZE_32x32, tile->creature->getLookType(), false, SOUTH);
 			creature_bitmap->SetBitmap(bmp);
 		} else {
 			creature_bitmap->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_DRAGON, FROM_DIP(this, wxSize(32, 32))));

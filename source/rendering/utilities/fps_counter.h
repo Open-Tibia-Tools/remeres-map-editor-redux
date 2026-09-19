@@ -6,8 +6,7 @@
 #define RME_RENDERING_FPS_COUNTER_H_
 
 #include <chrono>
-
-#include <wx/string.h>
+#include <string>
 
 class FPSCounter {
 public:
@@ -23,7 +22,7 @@ public:
 	int GetFPS() const;
 
 	// Get formatted status string
-	wxString GetStatusString() const;
+	std::string GetStatusString() const;
 
 	// Limit the frame rate if needed (sleeps thread)
 	void LimitFPS(int limit);

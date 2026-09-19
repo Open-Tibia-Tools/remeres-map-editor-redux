@@ -2,22 +2,55 @@
 #define RME_RENDERING_DRAWING_OPTIONS_H_
 
 #include <cstdint>
-#include <wx/wx.h>
-#include <string>
 #include <optional>
 #include "map/position.h"
 #include "rendering/core/floor_visibility_mode.h"
 #include "rendering/core/sprite_light.h"
+
+class Settings;
+class BrushManager;
 
 struct DrawingOptions {
 	DrawingOptions();
 
 	void SetIngame();
 	void SetDefault();
+	void Update(const Settings& settings, const BrushManager& brush_manager);
+	void UpdateIfNeeded(const Settings& settings, const BrushManager& brush_manager);
 	void Update();
 	void UpdateIfNeeded();
-	void MarkDirty() noexcept { dirty_ = true; }
-	[[nodiscard]] bool isDirty() const noexcept { return dirty_; }
+
+	// Granular Dirty Tracking
+	void MarkChunkBakeDirty() noexcept { chunk_bake_dirty_ = true; dirty_ = true; }
+	[[nodiscard]] bool isChunkBakeDirty() const noexcept { return chunk_bake_dirty_; }
+	void clearChunkBakeDirty() noexcept { chunk_bake_dirty_ = false; }
+
+	void MarkLightingDirty() noexcept { lighting_dirty_ = true; dirty_ = true; }
+	[[nodiscard]] bool isLightingDirty() const noexcept { return lighting_dirty_; }
+	void clearLightingDirty() noexcept { lighting_dirty_ = false; }
+
+	void MarkVisualDirty() noexcept { visual_dirty_ = true; dirty_ = true; }
+	[[nodiscard]] bool isVisualDirty() const noexcept { return visual_dirty_; }
+	void clearVisualDirty() noexcept { visual_dirty_ = false; }
+
+	void MarkSettingDirty(uint32_t key) noexcept;
+
+	// Backward compatibility
+	void MarkDirty() noexcept {
+		chunk_bake_dirty_ = true;
+		lighting_dirty_ = true;
+		visual_dirty_ = true;
+		dirty_ = true;
+	}
+	[[nodiscard]] bool isDirty() const noexcept {
+		return chunk_bake_dirty_ || lighting_dirty_ || visual_dirty_ || dirty_;
+	}
+	void clearDirty() noexcept {
+		chunk_bake_dirty_ = false;
+		lighting_dirty_ = false;
+		visual_dirty_ = false;
+		dirty_ = false;
+	}
 	bool isDrawLight() const noexcept;
 
 	bool transparent_floors;
@@ -30,6 +63,7 @@ struct DrawingOptions {
 	bool show_invalid_zones;
 	bool show_waypoints;
 	bool ingame;
+	bool is_drawing_mode;
 	bool dragging;
 	bool boundbox_selection;
 
@@ -69,13 +103,14 @@ struct DrawingOptions {
 
 	bool anti_aliasing;
 
-	std::string screen_shader_name;
-
 	[[nodiscard]] bool hasTileColorModifiers() const noexcept {
 		return show_blocking || highlight_items || show_spawns || show_houses || show_special_tiles || show_only_colors;
 	}
 
 private:
+	bool chunk_bake_dirty_ = true;
+	bool lighting_dirty_ = true;
+	bool visual_dirty_ = true;
 	bool dirty_ = true;
 };
 

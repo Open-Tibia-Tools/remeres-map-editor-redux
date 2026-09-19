@@ -1,17 +1,30 @@
 #include "rendering/core/template_image.h"
 #include "rendering/core/game_sprite.h"
 #include "rendering/core/normal_image.h"
+#include "rendering/core/outfit_colorizer.h"
 #include "rendering/core/outfit_colors.h"
-#include "app/settings.h"
-#include "ui/gui.h"
+#include "rendering/core/graphics.h"
 #include <atomic>
 #include <spdlog/spdlog.h>
 
-static std::atomic<uint32_t> template_id_generator(0x1000000);
+namespace {
+	constexpr uint32_t TEMPLATE_ID_START = 1'000'000;
+	constexpr uint32_t TEMPLATE_ID_MAX = 1'999'999;
+	std::atomic<uint32_t> template_id_generator(TEMPLATE_ID_START);
+
+	uint32_t get_next_template_id() {
+		uint32_t id = template_id_generator.fetch_add(1, std::memory_order_relaxed);
+		if (id > TEMPLATE_ID_MAX) {
+			template_id_generator.store(TEMPLATE_ID_START + 1, std::memory_order_relaxed);
+			id = TEMPLATE_ID_START;
+		}
+		return id;
+	}
+}
 
 TemplateImage::TemplateImage(GameSprite* parent, int v, const Outfit& outfit) :
 	atlas_region(nullptr),
-	texture_id(template_id_generator.fetch_add(1)), // Generate unique ID for Atlas
+	texture_id(get_next_template_id()), // Generate unique ID for Atlas (< DIRECT_LOOKUP_SIZE / MAX_SUPPORTED_SPRITES)
 	parent(parent),
 	sprite_index(v),
 	lookHead(outfit.lookHead),
@@ -22,25 +35,24 @@ TemplateImage::TemplateImage(GameSprite* parent, int v, const Outfit& outfit) :
 
 TemplateImage::~TemplateImage() {
 	if (isGLLoaded) {
-		if (g_gui.gfx.hasAtlasManager()) {
-			g_gui.gfx.getAtlasManager()->removeSprite(texture_id);
+		if (g_graphics.hasAtlasManager()) {
+			g_graphics.getAtlasManager()->removeSprite(texture_id);
 		}
 	}
 }
 
 void TemplateImage::clean(time_t time, int longevity) {
-	// Evict from atlas if expired
-	if (longevity == -1) {
-		longevity = g_settings.getInteger(Config::TEXTURE_LONGEVITY);
+	if (longevity <= 0) {
+		return;
 	}
 	if (isGLLoaded && time - static_cast<time_t>(lastaccess.load(std::memory_order_relaxed)) > longevity) {
-		if (g_gui.gfx.hasAtlasManager()) {
-			g_gui.gfx.getAtlasManager()->removeSprite(texture_id);
+		if (g_graphics.hasAtlasManager()) {
+			g_graphics.getAtlasManager()->removeSprite(texture_id);
 		}
 		isGLLoaded = false;
 		atlas_region = nullptr;
 		generation_id++;
-		g_gui.gfx.collector.NotifyTextureUnloaded();
+		g_graphics.collector.NotifyTextureUnloaded();
 	}
 }
 
@@ -131,7 +143,7 @@ std::unique_ptr<uint8_t[]> TemplateImage::getRGBData() {
 
 	clampTemplateLookValues(this);
 
-	GameSprite::ColorizeTemplatePixels(rgbdata.get(), template_rgbdata.get(), base_dimensions.pixelCount(), lookHead, lookBody, lookLegs, lookFeet, false);
+	OutfitColorizer::ColorizeTemplatePixels(rgbdata.get(), template_rgbdata.get(), base_dimensions.pixelCount(), lookHead, lookBody, lookLegs, lookFeet, false);
 
 	return rgbdata;
 }
@@ -170,7 +182,7 @@ std::unique_ptr<uint8_t[]> TemplateImage::getRGBAData() {
 	clampTemplateLookValues(this);
 
 	// Note: the base data is RGBA (4 channels) while the mask data is RGB (3 channels).
-	GameSprite::ColorizeTemplatePixels(rgbadata.get(), template_rgbdata.get(), base_dimensions.pixelCount(), lookHead, lookBody, lookLegs, lookFeet, true);
+	OutfitColorizer::ColorizeTemplatePixels(rgbadata.get(), template_rgbdata.get(), base_dimensions.pixelCount(), lookHead, lookBody, lookLegs, lookFeet, true);
 
 	return rgbadata;
 }
