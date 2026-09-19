@@ -325,6 +325,21 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		}
 	};
 
+	auto pushColorRect = [&](int rx, int ry, int rw, int rh, float rf, float gf, float bf, float af) {
+		TileInstance inst;
+		inst.x = static_cast<float>(rx);
+		inst.y = static_cast<float>(ry);
+		inst.w = static_cast<float>(rw);
+		inst.h = static_cast<float>(rh);
+		inst.sprite_id = SpriteAtlasLUT::WHITE_PIXEL_LUT_INDEX;
+		inst.flags = 0;
+		inst.r = rf;
+		inst.g = gf;
+		inst.b = bf;
+		inst.a = af;
+		bake_buffer_.push_back(inst);
+	};
+
 	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af) {
 		const bool is_simple = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
 		if (is_simple) {
@@ -519,7 +534,16 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			// 1. Static & animated terrain ground (water, grass, dirt, lava, etc.)
 			if (tile->ground) {
 				const ItemDefinitionView git = tile->ground->getDefinition();
-				if (git) {
+				const uint16_t ground_client_id = git ? git.clientId() : 0;
+				const uint16_t ground_server_id = tile->ground->getID();
+
+				if (ctx.options.show_tech_items && !ctx.options.ingame && (ground_server_id == 459 || ground_client_id == 469)) {
+					pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 1.0f, 0.0f, 170.0f / 255.0f);
+				} else if (ctx.options.show_tech_items && !ctx.options.ingame && (ground_server_id == 460 || ground_client_id == 470 || ground_client_id == 17970 || ground_client_id == 20028 || ground_client_id == 34168)) {
+					pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 0.0f, 0.0f, 170.0f / 255.0f);
+				} else if (ctx.options.show_tech_items && !ctx.options.ingame && (ground_server_id == 1548 || ground_client_id == 2187)) {
+					pushColorRect(x * 32, y * 32, 32, 32, 0.0f, 1.0f, 1.0f, 80.0f / 255.0f);
+				} else if (git) {
 					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
 					if (gspr) {
 						if (gspr->isAnimated()) {
@@ -609,6 +633,24 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					continue;
 				}
 				const ItemDefinitionView it = item->getDefinition();
+				const uint16_t item_client_id = it ? it.clientId() : 0;
+				const uint16_t item_server_id = item->getID();
+
+				if (ctx.options.show_tech_items && !ctx.options.ingame) {
+					if (item_server_id == 459 || item_client_id == 469) {
+						pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 1.0f, 0.0f, 170.0f / 255.0f);
+						continue;
+					}
+					if (item_server_id == 460 || item_client_id == 470 || item_client_id == 17970 || item_client_id == 20028 || item_client_id == 34168) {
+						pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 0.0f, 0.0f, 170.0f / 255.0f);
+						continue;
+					}
+					if (item_server_id == 1548 || item_client_id == 2187) {
+						pushColorRect(x * 32, y * 32, 32, 32, 0.0f, 1.0f, 1.0f, 80.0f / 255.0f);
+						continue;
+					}
+				}
+
 				if (!it) {
 					continue;
 				}
@@ -640,6 +682,10 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					b >>= 1;
 				} else if (ctx.options.extended_house_shader && ctx.options.show_houses && tile->isHouseTile()) {
 					TileColorCalculator::GetHouseColor(tile->getHouseID(), r, g, b);
+				}
+
+				if (ctx.options.transparent_items && (!it.isGroundTile() || ispr->width > 1 || ispr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || ispr->width > 1 || ispr->height > 1)) {
+					a >>= 1;
 				}
 
 				pushSpriteInstances(ispr, i_pat, item_x, item_y,

@@ -107,26 +107,25 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 			return;
 		}
 
-		switch (it.clientId()) {
-			// Yellow invisible stairs tile (459)
-			case 469:
-				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, green, 0, (alpha * 171) >> 8), 0, atlas);
-				return;
-			// Red invisible walkable tile (460)
-			case 470:
-			case 17970:
-			case 20028:
-			case 34168:
-				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, (alpha * 171) >> 8), 0, atlas);
-				return;
+		const uint16_t client_id = it.clientId();
+		const uint16_t server_id = item ? item->getID() : 0;
 
-			// Cyan invisible wall (1548)
-			case 2187:
-				sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(0, green, blue, 80), 0, atlas);
-				return;
+		// Yellow invisible stairs tile (server 459 / client 469)
+		if (server_id == 459 || client_id == 469) {
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, green, 0, (alpha * 171) >> 8), 0, atlas);
+			return;
+		}
 
-			default:
-				break;
+		// Red invisible walkable tile (server 460 / client 470, 17970, 20028, 34168)
+		if (server_id == 460 || client_id == 470 || client_id == 17970 || client_id == 20028 || client_id == 34168) {
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, (alpha * 171) >> 8), 0, atlas);
+			return;
+		}
+
+		// Cyan invisible wall (server 1548 / client 2187)
+		if (server_id == 1548 || client_id == 2187) {
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(0, green, blue, 80), 0, atlas);
+			return;
 		}
 
 		// primal light

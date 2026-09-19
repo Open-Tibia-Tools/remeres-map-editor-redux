@@ -168,7 +168,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		});
 	};
 
-	const bool use_chunk_cache = (chunk_cache != nullptr && chunk_cache->isValid() && !live_client);
+	const bool use_chunk_cache = (chunk_cache != nullptr && chunk_cache->isValid() && !live_client && !options.show_as_minimap && !options.show_only_colors);
 
 	if (use_chunk_cache) {
 		// 1. Flush any pending batch geometry before chunk cache pass

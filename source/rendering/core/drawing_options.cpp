@@ -125,6 +125,7 @@ void DrawingOptions::MarkSettingDirty(uint32_t key) noexcept {
 		case Config::SHOW_ONLY_MODIFIED_TILES:
 		case Config::SHOW_ITEMS:
 		case Config::SHOW_AS_MINIMAP:
+		case Config::SHOW_TECHNICAL_ITEMS:
 			chunk_bake_dirty_ = true;
 			break;
 
@@ -192,7 +193,8 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 		new_show_only_colors != show_only_colors ||
 		new_show_only_modified != show_only_modified ||
 		new_show_items != show_items ||
-		new_show_as_minimap != show_as_minimap) {
+		new_show_as_minimap != show_as_minimap ||
+		new_show_tech_items != show_tech_items) {
 		chunk_bake_dirty_ = true;
 	}
 

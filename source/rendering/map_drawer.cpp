@@ -248,11 +248,7 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx, const InteractionRenderSt
 			ctx.current_house_id
 		};
 
-		if (options.isDrawLight() && options.draw_floor_shadow && view.end_z >= GROUND_LAYER + 1 && map_z == view.end_z) {
-			sprite_batch.drawRect(0.0f, 0.0f, floor_view.screensize_x * floor_view.zoom, floor_view.screensize_y * floor_view.zoom, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f), ctx.atlas);
-		}
-
-		if (!options.isDrawLight() && map_z == view.end_z && view.start_z != view.end_z) {
+		if (map_z == view.end_z && view.start_z != view.end_z) {
 			shade_drawer.draw(sprite_batch, floor_view, options, ctx.atlas);
 		}
 
