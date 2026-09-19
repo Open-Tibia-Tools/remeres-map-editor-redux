@@ -18,8 +18,8 @@ struct alignas(16) TileInstance {
 	float y = 0.0f;          // Byte 4-7: Screen Y
 	float w = 32.0f;         // Byte 8-11: Width
 	float h = 32.0f;         // Byte 12-15: Height
-	uint32_t sprite_id = 0;  // Byte 16-19: Stable sprite ID (O(1) LUT lookup in GPU SSBO)
-	uint32_t flags = 0;      // Byte 20-23: Bit 0-7: frame, Bit 8: selected, Bit 9: highlight, etc.
+	float sprite_id = 0.0f;  // Byte 16-19: float avoids glVertexArrayAttribIFormat driver bugs
+	float flags = 0.0f;      // Byte 20-23: float avoids glVertexArrayAttribIFormat driver bugs
 	float r = 1.0f;          // Byte 24-27: Red tint [0.0, 1.0]
 	float g = 1.0f;          // Byte 28-31: Green tint [0.0, 1.0]
 	float b = 1.0f;          // Byte 32-35: Blue tint [0.0, 1.0]

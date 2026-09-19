@@ -32,25 +32,16 @@ namespace {
 layout(location = 0) in vec2 aPos;
 layout(location = 1) in vec2 aTexCoord;
 layout(location = 2) in vec4 aRect;
-layout(location = 3) in uint aSpriteId;
-layout(location = 4) in uint aFlags;
+layout(location = 3) in float aSpriteId;
+layout(location = 4) in float aFlags;
 layout(location = 5) in vec4 aTint;
 
-struct SpriteLUTEntry {
-	vec4 uv_rect;
-	float layer;
-	float valid;
-	vec2 _pad;
-};
-
-layout(std430, binding = 2) readonly buffer AtlasLUT {
-	SpriteLUTEntry lutEntries[];
-};
+uniform samplerBuffer uAtlasLUT;
 
 uniform mat4 uMVP;
 uniform vec4 uGlobalTint;
 
-flat out uint vFlags;
+flat out float vFlags;
 out vec3 vTexCoord;
 out vec4 vColor;
 
@@ -59,20 +50,22 @@ void main() {
 	gl_Position = uMVP * vec4(worldPos, 0.0, 1.0);
 
 	vFlags = aFlags;
-	if ((aFlags & 1u) != 0u) {
+	vColor = aTint * uGlobalTint;
+
+	if (aFlags > 0.5) {
 		vTexCoord = vec3(0.0);
-		vColor = aTint * uGlobalTint;
 	} else {
-		SpriteLUTEntry entry = lutEntries[aSpriteId];
-		vec2 uv = mix(entry.uv_rect.xy, entry.uv_rect.zw, aTexCoord);
-		vTexCoord = vec3(uv, entry.layer);
-		vColor = aTint * uGlobalTint;
+		int baseTexel = int(aSpriteId + 0.5) * 2;
+		vec4 uvRect = texelFetch(uAtlasLUT, baseTexel);
+		vec4 meta = texelFetch(uAtlasLUT, baseTexel + 1);
+		vec2 uv = mix(uvRect.xy, uvRect.zw, aTexCoord);
+		vTexCoord = vec3(uv, meta.x);
 	}
 }
 )";
 
 	constexpr const char* CHUNK_FRAG_SHADER = R"(#version 430 core
-flat in uint vFlags;
+flat in float vFlags;
 in vec3 vTexCoord;
 in vec4 vColor;
 out vec4 FragColor;
@@ -80,7 +73,7 @@ out vec4 FragColor;
 uniform sampler2DArray uAtlas;
 
 void main() {
-	if ((vFlags & 1u) != 0u) {
+	if (vFlags > 0.5) {
 		FragColor = vColor;
 		if (FragColor.a < 0.01) {
 			discard;
@@ -147,14 +140,14 @@ bool ChunkCacheManager::initialize() {
 	glVertexArrayAttribFormat(vao_, 2, 4, GL_FLOAT, GL_FALSE, offsetof(TileInstance, x));
 	glVertexArrayAttribBinding(vao_, 2, 1);
 
-	// Loc 3: aSpriteId (uint)
+	// Loc 3: aSpriteId (float)
 	glEnableVertexArrayAttrib(vao_, 3);
-	glVertexArrayAttribIFormat(vao_, 3, 1, GL_UNSIGNED_INT, offsetof(TileInstance, sprite_id));
+	glVertexArrayAttribFormat(vao_, 3, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, sprite_id));
 	glVertexArrayAttribBinding(vao_, 3, 1);
 
-	// Loc 4: aFlags (uint)
+	// Loc 4: aFlags (float)
 	glEnableVertexArrayAttrib(vao_, 4);
-	glVertexArrayAttribIFormat(vao_, 4, 1, GL_UNSIGNED_INT, offsetof(TileInstance, flags));
+	glVertexArrayAttribFormat(vao_, 4, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, flags));
 	glVertexArrayAttribBinding(vao_, 4, 1);
 
 	// Loc 5: aTint (vec4: r, g, b, a)
@@ -330,8 +323,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			inst.y = static_cast<float>(draw_y);
 			inst.w = static_cast<float>(reg->pixel_width);
 			inst.h = static_cast<float>(reg->pixel_height);
-			inst.sprite_id = reg->debug_sprite_id;
-			inst.flags = 0;
+			inst.sprite_id = static_cast<float>(reg->debug_sprite_id);
+			inst.flags = 0.0f;
 			inst.r = rf;
 			inst.g = gf;
 			inst.b = bf;
@@ -346,8 +339,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		inst.y = static_cast<float>(ry);
 		inst.w = static_cast<float>(rw);
 		inst.h = static_cast<float>(rh);
-		inst.sprite_id = 0;
-		inst.flags = 1; // SOLID_COLOR: direct color quad, bypasses texture atlas and LUT
+		inst.sprite_id = 0.0f;
+		inst.flags = 1.0f; // SOLID_COLOR: direct color quad, bypasses texture atlas and LUT
 		inst.r = rf;
 		inst.g = gf;
 		inst.b = bf;
@@ -791,10 +784,11 @@ void ChunkCacheManager::renderFloor(
 	shader_.Use();
 	shader_.SetMat4("uMVP", floor_mvp);
 	shader_.SetInt("uAtlas", 0);
+	shader_.SetInt("uAtlasLUT", SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 	shader_.SetVec4("uGlobalTint", glm::vec4(1.0f));
 
 	atlas.bind(0);
-	atlas.bindLUT(SpriteAtlasLUT::SSBO_BINDING_INDEX);
+	atlas.bindLUT(SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 
 	glBindVertexArray(vao_);
 

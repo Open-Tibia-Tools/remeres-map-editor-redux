@@ -12,7 +12,11 @@
 struct AtlasRegion;
 
 /**
- * 32-byte GPU-aligned lookup entry for std430 SSBO layout.
+ * 32-byte GPU-aligned lookup entry.
+ * When bound as a GL_RGBA32F texture buffer (16 bytes per texel),
+ * each entry corresponds to 2 texels:
+ *   Texel 2*i + 0: (u_min, v_min, u_max, v_max)
+ *   Texel 2*i + 1: (layer, valid, _pad[0], _pad[1])
  */
 struct alignas(16) SpriteLUTEntry {
 	float u_min = 0.0f;
@@ -26,16 +30,19 @@ struct alignas(16) SpriteLUTEntry {
 static_assert(sizeof(SpriteLUTEntry) == 32, "SpriteLUTEntry must be exactly 32 bytes");
 
 /**
- * SpriteAtlasLUT manages a GPU Shader Storage Buffer Object (SSBO)
+ * SpriteAtlasLUT manages a GPU Texture Buffer Object (TBO)
  * providing O(1) sprite UV/layer resolution by sprite_id.
  *
  * Decouples chunk geometry buffers from texture atlas placement,
  * ensuring zero chunk re-baking when background sprites finish loading
  * or when the atlas repacks.
+ *
+ * Uses GL_TEXTURE_BUFFER / samplerBuffer for universal cross-vendor
+ * compatibility (including Intel integrated graphics).
  */
 class SpriteAtlasLUT {
 public:
-	static constexpr GLuint SSBO_BINDING_INDEX = 2;
+	static constexpr GLuint TEXTURE_UNIT_INDEX = 1;
 	static constexpr size_t DEFAULT_INITIAL_CAPACITY = 65536;
 	static constexpr uint32_t WHITE_PIXEL_LUT_INDEX = 0;
 	static constexpr uint32_t MAX_SUPPORTED_SPRITES = 2000000;
@@ -50,7 +57,7 @@ public:
 	SpriteAtlasLUT& operator=(SpriteAtlasLUT&& other) noexcept;
 
 	/**
-	 * Initialize the GPU SSBO.
+	 * Initialize the GPU Texture Buffer.
 	 * @param initial_capacity Initial number of sprite entries to allocate
 	 * @return true if successful
 	 */
@@ -67,19 +74,19 @@ public:
 	void invalidateSprite(uint32_t sprite_id);
 
 	/**
-	 * Upload pending changes to GPU SSBO.
+	 * Upload pending changes to GPU buffer.
 	 */
 	void flush();
 
 	/**
-	 * Bind the SSBO to the designated binding slot (default 2).
+	 * Bind the texture buffer to the designated texture unit (default 1).
 	 */
-	void bind(GLuint binding_point = SSBO_BINDING_INDEX);
+	void bind(GLuint texture_unit = TEXTURE_UNIT_INDEX);
 
 	/**
-	 * Unbind the SSBO.
+	 * Unbind the texture buffer from the designated texture unit.
 	 */
-	void unbind(GLuint binding_point = SSBO_BINDING_INDEX) const;
+	void unbind(GLuint texture_unit = TEXTURE_UNIT_INDEX) const;
 
 	/**
 	 * Get direct entry on CPU for inspection/tests.
@@ -90,12 +97,20 @@ public:
 		return cpu_entries_.size();
 	}
 
+	size_t getMaxSupportedEntries() const noexcept {
+		return max_supported_entries_;
+	}
+
 	GLuint getBufferID() const noexcept {
-		return ssbo_;
+		return buffer_;
+	}
+
+	GLuint getTextureID() const noexcept {
+		return texture_;
 	}
 
 	bool isValid() const noexcept {
-		return ssbo_ != 0;
+		return texture_ != 0 && buffer_ != 0;
 	}
 
 	void release();
@@ -103,9 +118,11 @@ public:
 private:
 	void ensureCapacity(size_t required_capacity);
 
-	GLuint ssbo_ = 0;
+	GLuint buffer_ = 0;
+	GLuint texture_ = 0;
 	std::vector<SpriteLUTEntry> cpu_entries_;
 	size_t gpu_capacity_ = 0;
+	size_t max_supported_entries_ = MAX_SUPPORTED_SPRITES;
 	uint32_t dirty_min_id_ = UINT32_MAX;
 	uint32_t dirty_max_id_ = 0;
 	bool has_dirty_entries_ = false;
