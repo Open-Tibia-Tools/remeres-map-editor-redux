@@ -12,6 +12,8 @@ class IOMap;
 class Item;
 class BinaryNode;
 class NodeFileWriteHandle;
+class FastOTBMStream;
+class FastOTBMNode;
 
 /**
  * @brief Utility for OTBM-specific item serialization.
@@ -20,11 +22,17 @@ class NodeFileWriteHandle;
 class ItemSerializationOTBM {
 public:
 	static constexpr int MAX_CONTAINER_DEPTH = 256;
-	// Reading
+	// Reading (Legacy BinaryNode)
 	static std::unique_ptr<Item> createFromStream(const IOMap& maphandle, BinaryNode* stream);
 	static bool unserializeItemNode(const IOMap& maphandle, BinaryNode* node, Item& item, int depth = 0);
 	static bool unserializeAttributes(const IOMap& maphandle, BinaryNode* stream, Item& item);
 	static bool readAttribute(const IOMap& maphandle, OTBM_ItemAttribute attr, BinaryNode* stream, Item& item);
+
+	// Reading (Fast zero-copy)
+	static std::unique_ptr<Item> createFromStream(const IOMap& maphandle, FastOTBMStream& stream);
+	static bool unserializeItemNode(const IOMap& maphandle, FastOTBMNode& node, Item& item, int depth = 0);
+	static bool unserializeAttributes(const IOMap& maphandle, FastOTBMStream& stream, Item& item);
+	static bool readAttribute(const IOMap& maphandle, OTBM_ItemAttribute attr, FastOTBMStream& stream, Item& item);
 
 	// Writing
 	static bool serializeItemNode(const IOMap& maphandle, NodeFileWriteHandle& f, const Item& item);

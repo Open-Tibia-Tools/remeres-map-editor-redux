@@ -19,6 +19,7 @@
 
 #include "game/item_attributes.h"
 #include "io/filehandle.h"
+#include "io/otbm/fast_otbm_reader.h"
 #include <cstring>
 #include <spdlog/spdlog.h>
 
@@ -264,6 +265,27 @@ bool ItemAttributes::unserializeAttributeMap(const IOMap& maphandle, BinaryNode*
 	return true;
 }
 
+bool ItemAttributes::unserializeAttributeMap(const IOMap& maphandle, FastOTBMStream& stream) {
+	uint16_t n;
+	if (stream.getU16(n)) {
+		createAttributes();
+
+		std::string key;
+		ItemAttribute attrib;
+
+		while (n--) {
+			if (!stream.getString(key)) {
+				return false;
+			}
+			if (!attrib.unserialize(maphandle, stream)) {
+				return false;
+			}
+			(*attributes)[key] = attrib;
+		}
+	}
+	return true;
+}
+
 void ItemAttributes::serializeAttributeMap(const IOMap& maphandle, NodeFileWriteHandle& f) const {
 	// Maximum of 65535 attributes per item
 	f.addU16(std::min((size_t)0xFFFF, attributes->size()));
@@ -332,6 +354,63 @@ bool ItemAttribute::unserialize(const IOMap& maphandle, BinaryNode* stream) {
 		case BOOLEAN: {
 			uint8_t b;
 			if (!stream->getU8(b)) {
+				return false;
+			}
+			set(b != 0);
+			break;
+		}
+		default:
+			break;
+	}
+	return true;
+}
+
+bool ItemAttribute::unserialize(const IOMap& maphandle, FastOTBMStream& stream) {
+	uint8_t rtype;
+	if (!stream.getU8(rtype)) {
+		return false;
+	}
+
+	switch (rtype) {
+		case STRING: {
+			std::string str;
+			if (!stream.getLongString(str)) {
+				return false;
+			}
+			set(str);
+			break;
+		}
+		case INTEGER: {
+			uint32_t u32;
+			if (!stream.getU32(u32)) {
+				return false;
+			}
+			set(static_cast<int32_t>(u32));
+			break;
+		}
+		case FLOAT: {
+			uint32_t u32;
+			if (!stream.getU32(u32)) {
+				return false;
+			}
+			float f;
+			std::memcpy(&f, &u32, sizeof(float));
+			set(static_cast<double>(f));
+			break;
+		}
+		case DOUBLE: {
+			uint64_t u64;
+			if (!stream.getU64(u64)) {
+				return false;
+			}
+			double d;
+			std::memcpy(&d, &u64, sizeof(double));
+			set(d);
+			break;
+		}
+		case BOOLEAN: {
+			uint8_t b;
+			if (!stream.getU8(b)) {
 				return false;
 			}
 			set(b != 0);

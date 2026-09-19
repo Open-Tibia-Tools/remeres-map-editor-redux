@@ -28,6 +28,7 @@
 
 class IOMap;
 class ItemAttribute;
+class FastOTBMStream;
 
 class PropWriteStream;
 class PropStream;
@@ -54,6 +55,7 @@ public:
 
 	void serialize(const IOMap& maphandle, NodeFileWriteHandle& f) const;
 	bool unserialize(const IOMap& maphandle, BinaryNode* f);
+	bool unserialize(const IOMap& maphandle, FastOTBMStream& f);
 
 	void clear();
 
@@ -82,6 +84,7 @@ public:
 	// Save / load
 	void serializeAttributeMap(const IOMap& maphandle, NodeFileWriteHandle& f) const;
 	bool unserializeAttributeMap(const IOMap& maphandle, BinaryNode* node);
+	bool unserializeAttributeMap(const IOMap& maphandle, FastOTBMStream& stream);
 
 public:
 	void setAttribute(const std::string& key, const ItemAttribute& attr);

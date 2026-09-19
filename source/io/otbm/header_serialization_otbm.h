@@ -23,6 +23,7 @@ struct OTBMStartupPeekResult;
 class Map;
 class NodeFileReadHandle;
 class BinaryNode;
+class FastOTBMStream;
 
 class HeaderSerializationOTBM {
 public:
@@ -30,6 +31,7 @@ public:
 	static bool peekStartupInfo(NodeFileReadHandle& f, OTBMStartupPeekResult& out_info);
 	static bool loadMapRoot(Map& map, NodeFileReadHandle& f, MapVersion& version, BinaryNode*& root, BinaryNode*& mapHeaderNode);
 	static bool readMapAttributes(Map& map, BinaryNode* mapHeaderNode);
+	static bool readMapAttributesFast(Map& map, FastOTBMStream& stream);
 };
 
 #endif

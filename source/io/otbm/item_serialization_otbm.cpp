@@ -9,6 +9,7 @@
 #include "item_definitions/core/item_definition_store.h"
 #include "map/tile.h"
 #include "io/filehandle.h"
+#include "io/otbm/fast_otbm_reader.h"
 #include <spdlog/spdlog.h>
 
 std::unique_ptr<Item> ItemSerializationOTBM::createFromStream(const IOMap& maphandle, BinaryNode* stream) {
@@ -225,6 +226,220 @@ bool ItemSerializationOTBM::readAttribute(const IOMap& maphandle, OTBM_ItemAttri
 				podium->setOutfit(newOutfit);
 			} else {
 				return stream->skip(15);
+			}
+			break;
+		}
+		default:
+			return false;
+	}
+	return true;
+}
+
+std::unique_ptr<Item> ItemSerializationOTBM::createFromStream(const IOMap& maphandle, FastOTBMStream& stream) {
+	uint16_t _id;
+	if (!stream.getU16(_id)) {
+		return nullptr;
+	}
+
+	uint8_t _count = 0;
+	const auto iType = g_item_definitions.get(_id);
+	if (maphandle.version.otbm == MAP_OTBM_1) {
+		if (!iType) {
+			return nullptr;
+		}
+		if (iType.hasFlag(ItemFlag::Stackable) || iType.isSplash() || iType.isFluidContainer()) {
+			if (!stream.getU8(_count)) {
+				return nullptr;
+			}
+		}
+	}
+	return Item::Create(_id, _count);
+}
+
+bool ItemSerializationOTBM::unserializeItemNode(const IOMap& maphandle, FastOTBMNode& node, Item& item, int depth) {
+	if (depth >= MAX_CONTAINER_DEPTH) {
+		return false;
+	}
+
+	if (!unserializeAttributes(maphandle, node.stream, item)) {
+		return false;
+	}
+
+	if (auto container = item.asContainer()) {
+		node.forEachChild([&](FastOTBMNode& child) {
+			if (child.type != OTBM_ITEM) {
+				return;
+			}
+
+			auto childItem = createFromStream(maphandle, child.stream);
+			if (!childItem) {
+				return;
+			}
+
+			if (!unserializeItemNode(maphandle, child, *childItem, depth + 1)) {
+				return;
+			}
+
+			container->getVector().push_back(std::move(childItem));
+		});
+	}
+	return true;
+}
+
+bool ItemSerializationOTBM::unserializeAttributes(const IOMap& maphandle, FastOTBMStream& stream, Item& item) {
+	uint8_t attribute;
+	while (stream.getU8(attribute)) {
+		if (attribute == OTBM_ATTR_ATTRIBUTE_MAP) {
+			if (!item.unserializeAttributeMap(maphandle, stream)) {
+				spdlog::warn("Failed to read attribute map for item id={} ('{}')", item.getID(), item.getName());
+				return false;
+			}
+			const int32_t* serverIdAttr = item.getIntegerAttribute("serverId");
+			if (serverIdAttr && *serverIdAttr > 0) {
+				item.setID(static_cast<ServerItemId>(*serverIdAttr));
+			}
+		} else if (!readAttribute(maphandle, static_cast<OTBM_ItemAttribute>(attribute), stream, item)) {
+			break;
+		}
+	}
+	return true;
+}
+
+bool ItemSerializationOTBM::readAttribute(const IOMap& maphandle, OTBM_ItemAttribute attr, FastOTBMStream& stream, Item& item) {
+	switch (attr) {
+		case OTBM_ATTR_COUNT: {
+			uint8_t subtype;
+			if (!stream.getU8(subtype)) {
+				return false;
+			}
+			item.setSubtype(subtype);
+			break;
+		}
+		case OTBM_ATTR_ACTION_ID: {
+			uint16_t aid;
+			if (!stream.getU16(aid)) {
+				return false;
+			}
+			item.setActionID(aid);
+			break;
+		}
+		case OTBM_ATTR_UNIQUE_ID: {
+			uint16_t uid;
+			if (!stream.getU16(uid)) {
+				return false;
+			}
+			item.setUniqueID(uid);
+			break;
+		}
+		case OTBM_ATTR_CHARGES: {
+			uint16_t charges;
+			if (!stream.getU16(charges)) {
+				return false;
+			}
+			item.setSubtype(charges);
+			break;
+		}
+		case OTBM_ATTR_TEXT: {
+			std::string text;
+			if (!stream.getString(text)) {
+				return false;
+			}
+			item.setText(text);
+			break;
+		}
+		case OTBM_ATTR_DESC: {
+			std::string desc;
+			if (!stream.getString(desc)) {
+				return false;
+			}
+			item.setDescription(desc);
+			break;
+		}
+		case OTBM_ATTR_TIER: {
+			uint8_t tier;
+			if (!stream.getU8(tier)) {
+				return false;
+			}
+			item.setTier(static_cast<uint16_t>(tier));
+			break;
+		}
+		case OTBM_ATTR_TELE_DEST: {
+			if (auto tele = item.asTeleport()) {
+				uint16_t x, y;
+				uint8_t z;
+				if (!stream.getU16(x) || !stream.getU16(y) || !stream.getU8(z)) {
+					return false;
+				}
+				tele->setDestination(Position(x, y, z));
+			} else {
+				return stream.skip(5);
+			}
+			break;
+		}
+		case OTBM_ATTR_HOUSEDOORID: {
+			if (auto door = item.asDoor()) {
+				uint8_t id;
+				if (!stream.getU8(id)) {
+					return false;
+				}
+				door->setDoorID(id);
+			} else {
+				return stream.skip(1);
+			}
+			break;
+		}
+		case OTBM_ATTR_DEPOT_ID: {
+			if (auto depot = item.asDepot()) {
+				uint16_t id;
+				if (!stream.getU16(id)) {
+					return false;
+				}
+				if (id > 255) {
+					spdlog::error("ItemSerializationOTBM: Depot ID too large: {}", id);
+					return false;
+				}
+				depot->setDepotID(static_cast<uint8_t>(id));
+			} else {
+				return stream.skip(2);
+			}
+			break;
+		}
+		case OTBM_ATTR_PODIUMOUTFIT: {
+			if (auto podium = item.asPodium()) {
+				uint8_t flags;
+				uint8_t direction;
+				if (!stream.getU8(flags) || !stream.getU8(direction)) {
+					return false;
+				}
+
+				uint16_t lookType, lookMount;
+				uint8_t lookHead, lookBody, lookLegs, lookFeet, lookAddon;
+				uint8_t lookMountHead, lookMountBody, lookMountLegs, lookMountFeet;
+
+				if (!stream.getU16(lookType) || !stream.getU8(lookHead) || !stream.getU8(lookBody) || !stream.getU8(lookLegs) || !stream.getU8(lookFeet) || !stream.getU8(lookAddon) || !stream.getU16(lookMount) || !stream.getU8(lookMountHead) || !stream.getU8(lookMountBody) || !stream.getU8(lookMountLegs) || !stream.getU8(lookMountFeet)) {
+					return false;
+				}
+
+				Outfit newOutfit;
+				newOutfit.lookType = lookType;
+				newOutfit.lookHead = lookHead;
+				newOutfit.lookBody = lookBody;
+				newOutfit.lookLegs = lookLegs;
+				newOutfit.lookFeet = lookFeet;
+				newOutfit.lookAddon = lookAddon;
+				newOutfit.lookMount = lookMount;
+				newOutfit.lookMountHead = lookMountHead;
+				newOutfit.lookMountBody = lookMountBody;
+				newOutfit.lookMountLegs = lookMountLegs;
+				newOutfit.lookMountFeet = lookMountFeet;
+
+				podium->setShowOutfit((flags & PODIUM_SHOW_OUTFIT) != 0);
+				podium->setShowMount((flags & PODIUM_SHOW_MOUNT) != 0);
+				podium->setShowPlatform((flags & PODIUM_SHOW_PLATFORM) != 0);
+				podium->setDirection(direction);
+				podium->setOutfit(newOutfit);
+			} else {
+				return stream.skip(15);
 			}
 			break;
 		}

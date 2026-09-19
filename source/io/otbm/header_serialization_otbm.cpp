@@ -1,6 +1,7 @@
 #include "header_serialization_otbm.h"
 
 #include "io/iomap_otbm.h"
+#include "io/otbm/fast_otbm_reader.h"
 
 #include "map/map.h"
 #include "item_definitions/core/item_definition_store.h"
@@ -223,6 +224,49 @@ bool HeaderSerializationOTBM::readMapAttributes(Map& map, BinaryNode* mapHeaderN
 				// compatibility: skip Canary RME NPC spawn file tag
 				std::string stringToSkip;
 				if (!mapHeaderNode->getString(stringToSkip)) {
+					spdlog::warn("Invalid map NPC spawnfile tag");
+					return true;
+				}
+				break;
+			}
+			default: {
+				spdlog::warn("Unknown header attribute: {}. Continuing map load without parsing the remaining header attributes.", static_cast<int>(attribute));
+				return true;
+			}
+		}
+	}
+	return true;
+}
+
+bool HeaderSerializationOTBM::readMapAttributesFast(Map& map, FastOTBMStream& stream) {
+	uint8_t attribute;
+	while (stream.getU8(attribute)) {
+		switch (attribute) {
+			case OTBM_ATTR_DESCRIPTION: {
+				if (!stream.getString(map.description)) {
+					spdlog::warn("Invalid map description tag");
+					return true;
+				}
+				break;
+			}
+			case OTBM_ATTR_EXT_SPAWN_FILE: {
+				if (!stream.getString(map.spawnfile)) {
+					spdlog::warn("Invalid map spawnfile tag");
+					return true;
+				}
+				break;
+			}
+			case OTBM_ATTR_EXT_HOUSE_FILE: {
+				if (!stream.getString(map.housefile)) {
+					spdlog::warn("Invalid map housefile tag");
+					return true;
+				}
+				break;
+			}
+			case OTBM_ATTR_EXT_SPAWN_NPC_FILE: {
+				// compatibility: skip Canary RME NPC spawn file tag
+				std::string stringToSkip;
+				if (!stream.getString(stringToSkip)) {
 					spdlog::warn("Invalid map NPC spawnfile tag");
 					return true;
 				}
