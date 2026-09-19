@@ -18,19 +18,17 @@
 #ifndef RME_HEADER_SERIALIZATION_OTBM_H_
 #define RME_HEADER_SERIALIZATION_OTBM_H_
 
-#include <wx/filename.h>
-using FileName = wxFileName;
-
 struct MapVersion;
 struct OTBMStartupPeekResult;
 class Map;
+class NodeFileReadHandle;
+class BinaryNode;
 class FastOTBMStream;
 
 class HeaderSerializationOTBM {
 public:
-	static bool getVersionInfo(const FileName& filename, MapVersion& out_ver);
-	static bool getVersionInfo(const uint8_t* data, size_t size, MapVersion& out_ver);
-	static bool peekStartupInfo(const FileName& identifier, OTBMStartupPeekResult& out_info);
+	static bool getVersionInfo(NodeFileReadHandle& f, MapVersion& out_ver);
+	static bool peekStartupInfo(NodeFileReadHandle& f, OTBMStartupPeekResult& out_info);
 	static bool readMapAttributes(Map& map, FastOTBMStream& stream);
 };
 

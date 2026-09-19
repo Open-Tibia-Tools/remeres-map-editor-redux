@@ -10,6 +10,7 @@
 
 class IOMap;
 class Item;
+class BinaryNode;
 class NodeFileWriteHandle;
 class FastOTBMStream;
 class FastOTBMNode;
@@ -21,6 +22,11 @@ class FastOTBMNode;
 class ItemSerializationOTBM {
 public:
 	static constexpr int MAX_CONTAINER_DEPTH = 256;
+	// Reading (Legacy BinaryNode)
+	static std::unique_ptr<Item> createFromStream(const IOMap& maphandle, BinaryNode* stream);
+	static bool unserializeItemNode(const IOMap& maphandle, BinaryNode* node, Item& item, int depth = 0);
+	static bool unserializeAttributes(const IOMap& maphandle, BinaryNode* stream, Item& item);
+	static bool readAttribute(const IOMap& maphandle, OTBM_ItemAttribute attr, BinaryNode* stream, Item& item);
 
 	// Reading (Fast zero-copy)
 	static std::unique_ptr<Item> createFromStream(const IOMap& maphandle, FastOTBMStream& stream);

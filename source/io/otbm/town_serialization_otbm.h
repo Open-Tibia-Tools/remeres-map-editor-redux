@@ -19,6 +19,7 @@
 #define RME_TOWN_SERIALIZATION_OTBM_H_
 
 class Map;
+class BinaryNode;
 class FastOTBMNode;
 class NodeFileWriteHandle;
 

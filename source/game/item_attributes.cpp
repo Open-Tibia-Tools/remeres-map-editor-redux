@@ -241,6 +241,29 @@ const bool* ItemAttribute::getBoolean() const {
 	return std::get_if<bool>(&m_value);
 }
 
+bool ItemAttributes::unserializeAttributeMap(const IOMap& maphandle, BinaryNode* stream) {
+	uint16_t n;
+	if (stream->getU16(n)) {
+		spdlog::debug("unserializeAttributeMap: reading {} attributes", n);
+		createAttributes();
+
+		std::string key;
+		ItemAttribute attrib;
+
+		while (n--) {
+			if (!stream->getString(key)) {
+				spdlog::warn("unserializeAttributeMap: failed to read key (remaining={})", n + 1);
+				return false;
+			}
+			if (!attrib.unserialize(maphandle, stream)) {
+				spdlog::warn("unserializeAttributeMap: failed to unserialize value for key='{}' (remaining={})", key, n + 1);
+				return false;
+			}
+			(*attributes)[key] = attrib;
+		}
+	}
+	return true;
+}
 
 bool ItemAttributes::unserializeAttributeMap(const IOMap& maphandle, FastOTBMStream& stream) {
 	uint16_t n;
@@ -282,6 +305,65 @@ void ItemAttributes::serializeAttributeMap(const IOMap& maphandle, NodeFileWrite
 	}
 }
 
+bool ItemAttribute::unserialize(const IOMap& maphandle, BinaryNode* stream) {
+	// Read type
+	uint8_t rtype;
+	stream->getU8(rtype);
+
+	// Read contents
+	switch (rtype) {
+		case STRING: {
+			std::string str;
+			if (!stream->getLongString(str)) {
+				return false;
+			}
+			set(str);
+			break;
+		}
+		case INTEGER: {
+			uint32_t u32;
+			if (!stream->getU32(u32)) {
+				return false;
+			}
+			// Safe conversion from u32 to int32_t (2's complement)
+			set(static_cast<int32_t>(u32));
+			break;
+		}
+		case FLOAT: {
+			uint32_t u32;
+			if (!stream->getU32(u32)) {
+				return false;
+			}
+			// Safe type punning
+			float f;
+			std::memcpy(&f, &u32, sizeof(float));
+			set(static_cast<double>(f));
+			break;
+		}
+		case DOUBLE: {
+			uint64_t u64;
+			if (!stream->getU64(u64)) {
+				return false;
+			}
+			// Safe type punning
+			double d;
+			std::memcpy(&d, &u64, sizeof(double));
+			set(d);
+			break;
+		}
+		case BOOLEAN: {
+			uint8_t b;
+			if (!stream->getU8(b)) {
+				return false;
+			}
+			set(b != 0);
+			break;
+		}
+		default:
+			break;
+	}
+	return true;
+}
 
 bool ItemAttribute::unserialize(const IOMap& maphandle, FastOTBMStream& stream) {
 	uint8_t rtype;

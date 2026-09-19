@@ -61,13 +61,25 @@
 #include <unordered_map>
 #include <chrono>
 
-// Item OTBM serialization operations delegated to ItemSerializationOTBM
+// Item OTBM operations delegated to ItemSerializationOTBM (used by LiveSocket)
+std::unique_ptr<Item> Item::Create_OTBM(const IOMap& maphandle, BinaryNode* stream) {
+	return ItemSerializationOTBM::createFromStream(maphandle, stream);
+}
+
+bool Item::unserializeItemNode_OTBM(const IOMap& maphandle, BinaryNode* node) {
+	return ItemSerializationOTBM::unserializeItemNode(maphandle, node, *this);
+}
+
 void Item::serializeItemCompact_OTBM(const IOMap& maphandle, NodeFileWriteHandle& stream) const {
 	ItemSerializationOTBM::serializeItemCompact(maphandle, stream, *this);
 }
 
 bool Item::serializeItemNode_OTBM(const IOMap& maphandle, NodeFileWriteHandle& file) const {
 	return ItemSerializationOTBM::serializeItemNode(maphandle, file, *this);
+}
+
+bool Container::unserializeItemNode_OTBM(const IOMap& maphandle, BinaryNode* node) {
+	return ItemSerializationOTBM::unserializeItemNode(maphandle, node, *this);
 }
 
 bool Container::serializeItemNode_OTBM(const IOMap& maphandle, NodeFileWriteHandle& file) const {
@@ -77,11 +89,41 @@ bool Container::serializeItemNode_OTBM(const IOMap& maphandle, NodeFileWriteHand
 /* Entry level calls */
 
 bool IOMapOTBM::getVersionInfo(const FileName& filename, MapVersion& out_ver) {
-	return HeaderSerializationOTBM::getVersionInfo(filename, out_ver);
+
+	DiskNodeFileReadHandle f(nstr(filename.GetFullPath()), StringVector(1, "OTBM"));
+	if (!f.isOk()) {
+		return false;
+	}
+	return getVersionInfo(&f, out_ver);
+}
+
+bool IOMapOTBM::getVersionInfo(NodeFileReadHandle* f, MapVersion& out_ver) {
+	return HeaderSerializationOTBM::getVersionInfo(*f, out_ver);
 }
 
 bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResult& out_info) {
-	return HeaderSerializationOTBM::peekStartupInfo(identifier, out_info);
+	out_info = {};
+	out_info.map_name = identifier.GetName();
+
+	wxDateTime modified_time;
+	if (identifier.GetTimes(nullptr, &modified_time, nullptr)) {
+		out_info.modified_time = modified_time;
+	}
+
+	DiskNodeFileReadHandle handle(nstr(identifier.GetFullPath()), StringVector(1, "OTBM"));
+	if (!handle.isOk()) {
+		out_info.has_error = true;
+		out_info.error_message = wxstr(handle.getErrorMessage());
+		return false;
+	}
+
+	if (!HeaderSerializationOTBM::peekStartupInfo(handle, out_info)) {
+		out_info.has_error = true;
+		out_info.error_message = "Could not read the OTBM header.";
+		return false;
+	}
+
+	return true;
 }
 
 bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {

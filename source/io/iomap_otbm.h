@@ -24,6 +24,8 @@
 #include "io/filehandle.h"
 #include "io/otbm/otbm_types.h"
 
+class BinaryNode;
+
 // Pragma pack is VERY important since otherwise it won't be able to load the structs correctly
 #pragma pack(1)
 
@@ -104,8 +106,9 @@ public:
 	bool saveMap(Map& map, const FileName& identifier) override;
 
 protected:
-	bool loadMapFromDisk(Map& map, const FileName& identifier);
+	static bool getVersionInfo(NodeFileReadHandle* f, MapVersion& out_ver);
 
+	bool loadMapFromDisk(Map& map, const FileName& identifier);
 	bool loadMapFast(Map& map, const uint8_t* data, size_t size);
 
 
