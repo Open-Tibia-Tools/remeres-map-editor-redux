@@ -189,39 +189,27 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 		return false;
 	}
 
-	// Memory optimization: larger than 2GB, stream from disk
-	if (size > 2048ULL * 1024 * 1024) {
-		DiskNodeFileReadHandle f(nstr(filename.GetFullPath()), StringVector(1, "OTBM"));
-		if (!f.isOk()) {
-			spdlog::error("{}", f.getErrorMessage());
-			return false;
-		}
-		if (!loadMap(map, f)) {
-			return false;
-		}
-	} else {
-		std::ifstream file(path, std::ios::binary);
-		if (!file.is_open()) {
-			spdlog::error("Couldn't open file for reading: {}", filename.GetFullPath().ToStdString());
-			return false;
-		}
+	std::ifstream file(path, std::ios::binary);
+	if (!file.is_open()) {
+		spdlog::error("Couldn't open file for reading: {}", filename.GetFullPath().ToStdString());
+		return false;
+	}
 
-		std::vector<uint8_t> buffer(static_cast<size_t>(size));
-		if (!file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(size))) {
-			spdlog::error("Failed to read file.");
-			return false;
-		}
+	std::vector<uint8_t> buffer(static_cast<size_t>(size));
+	if (!file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(size))) {
+		spdlog::error("Failed to read file.");
+		return false;
+	}
 
-		std::string_view magic(reinterpret_cast<const char*>(buffer.data()), 4);
-		if (magic != "OTBM" && magic != std::string_view("\0\0\0\0", 4)) {
-			spdlog::error("File magic number not recognized");
-			return false;
-		}
+	std::string_view magic(reinterpret_cast<const char*>(buffer.data()), 4);
+	if (magic != "OTBM" && magic != std::string_view("\0\0\0\0", 4)) {
+		spdlog::error("File magic number not recognized");
+		return false;
+	}
 
-		if (!loadMapFast(map, buffer.data() + 4, size - 4)) {
-			spdlog::error("Failed to load OTBM map: {}", filename.GetFullPath().ToStdString());
-			return false;
-		}
+	if (!loadMapFast(map, buffer.data() + 4, size - 4)) {
+		spdlog::error("Failed to load OTBM map: {}", filename.GetFullPath().ToStdString());
+		return false;
 	}
 
 	// Read auxiliary files
@@ -394,7 +382,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 	}
 
 	// Read header attributes
-	if (!HeaderSerializationOTBM::readMapAttributesFast(map, stream)) {
+	if (!HeaderSerializationOTBM::readMapAttributes(map, stream)) {
 		return false;
 	}
 
@@ -480,11 +468,11 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 			}
 		} else if (child_type == OTBM_TOWNS) {
 			FastOTBMNode townsNode(OTBM_TOWNS, stream.p, stream.end);
-			TownSerializationOTBM::readTownsFast(map, townsNode);
+			TownSerializationOTBM::readTowns(map, townsNode);
 			stream.p = townsNode.stream.p;
 		} else if (child_type == OTBM_WAYPOINTS) {
 			FastOTBMNode waypointsNode(OTBM_WAYPOINTS, stream.p, stream.end);
-			WaypointSerializationOTBM::readWaypointsFast(map, waypointsNode);
+			WaypointSerializationOTBM::readWaypoints(map, waypointsNode);
 			stream.p = waypointsNode.stream.p;
 		} else {
 			stream.skipNode();
@@ -538,7 +526,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 				auto& bucket = block_buckets[bidx];
 				for (const auto& job : bucket.jobs) {
 					FastOTBMNode areaNode(OTBM_TILE_AREA, job.node_start, job.node_end);
-					TileSerializationOTBM::readTileAreaFast(*this, map, areaNode, &bucket.cell_indices, house_tiles, tile_count);
+					TileSerializationOTBM::readTileArea(*this, map, areaNode, &bucket.cell_indices, house_tiles, tile_count);
 				}
 			}
 		});
@@ -568,7 +556,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 		auto& tile_count = thread_tile_counts[0];
 		for (const auto& job : unaligned_jobs) {
 			FastOTBMNode areaNode(OTBM_TILE_AREA, job.node_start, job.node_end);
-			TileSerializationOTBM::readTileAreaFast(*this, map, areaNode, nullptr, house_tiles, tile_count);
+			TileSerializationOTBM::readTileArea(*this, map, areaNode, nullptr, house_tiles, tile_count);
 		}
 	}
 
@@ -605,76 +593,6 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 
 bool IOMapOTBM::loadMap(Map& map, const FileName& filename) {
 	return loadMapFromDisk(map, filename);
-}
-
-bool IOMapOTBM::loadMapRoot(Map& map, NodeFileReadHandle& f, BinaryNode*& root, BinaryNode*& mapHeaderNode) {
-	return HeaderSerializationOTBM::loadMapRoot(map, f, version, root, mapHeaderNode);
-}
-
-bool IOMapOTBM::readMapAttributes(Map& map, BinaryNode* mapHeaderNode) {
-	return HeaderSerializationOTBM::readMapAttributes(map, mapHeaderNode);
-}
-
-void IOMapOTBM::readMapNodes(Map& map, NodeFileReadHandle& f, BinaryNode* mapHeaderNode) {
-	spdlog::debug("Starting to read map nodes...");
-	int nodes_loaded = 0;
-
-	for (BinaryNode* mapNode = mapHeaderNode->getChild(); mapNode != nullptr; mapNode = mapNode->advance()) {
-		if (++nodes_loaded % 2048 == 0) {
-			g_gui.SetLoadDone(static_cast<int32_t>(100.0 * f.tell() / f.size()));
-		}
-
-		uint8_t node_type;
-		if (!mapNode->getByte(node_type)) {
-			spdlog::warn("Invalid map node encountered (failed to read type byte)");
-			continue;
-		}
-
-		switch (node_type) {
-			case OTBM_TILE_AREA:
-				readTileArea(map, mapNode);
-				break;
-			case OTBM_TOWNS:
-				readTowns(map, mapNode);
-				break;
-			case OTBM_WAYPOINTS:
-				readWaypoints(map, mapNode);
-				break;
-			default:
-				break;
-		}
-	}
-}
-
-void IOMapOTBM::readTileArea(Map& map, BinaryNode* mapNode) {
-	TileSerializationOTBM::readTileArea(*this, map, mapNode);
-}
-
-void IOMapOTBM::readTowns(Map& map, BinaryNode* mapNode) {
-	TownSerializationOTBM::readTowns(map, mapNode);
-}
-
-void IOMapOTBM::readWaypoints(Map& map, BinaryNode* mapNode) {
-	WaypointSerializationOTBM::readWaypoints(map, mapNode);
-}
-
-bool IOMapOTBM::loadMap(Map& map, NodeFileReadHandle& f) {
-	BinaryNode* root = nullptr;
-	BinaryNode* mapHeaderNode = nullptr;
-
-	if (!loadMapRoot(map, f, root, mapHeaderNode)) {
-		return false;
-	}
-
-	if (!readMapAttributes(map, mapHeaderNode)) {
-		return false;
-	}
-	readMapNodes(map, f, mapHeaderNode);
-
-	if (!f.isOk()) {
-		spdlog::warn(f.getErrorMessage());
-	}
-	return true;
 }
 
 bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {

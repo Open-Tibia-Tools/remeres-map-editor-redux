@@ -29,9 +29,7 @@ class HeaderSerializationOTBM {
 public:
 	static bool getVersionInfo(NodeFileReadHandle& f, MapVersion& out_ver);
 	static bool peekStartupInfo(NodeFileReadHandle& f, OTBMStartupPeekResult& out_info);
-	static bool loadMapRoot(Map& map, NodeFileReadHandle& f, MapVersion& version, BinaryNode*& root, BinaryNode*& mapHeaderNode);
-	static bool readMapAttributes(Map& map, BinaryNode* mapHeaderNode);
-	static bool readMapAttributesFast(Map& map, FastOTBMStream& stream);
+	static bool readMapAttributes(Map& map, FastOTBMStream& stream);
 };
 
 #endif

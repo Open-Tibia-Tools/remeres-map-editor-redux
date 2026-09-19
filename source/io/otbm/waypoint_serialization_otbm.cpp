@@ -4,39 +4,8 @@
 #include "io/otbm/fast_otbm_reader.h"
 #include <spdlog/spdlog.h>
 
-void WaypointSerializationOTBM::readWaypoints(Map& map, BinaryNode* mapNode) {
+void WaypointSerializationOTBM::readWaypoints(Map& map, FastOTBMNode& mapNode) {
 	spdlog::debug("Reading OTBM_WAYPOINTS...");
-	for (BinaryNode* waypointNode = mapNode->getChild(); waypointNode != nullptr; waypointNode = waypointNode->advance()) {
-		uint8_t waypointType;
-		if (!waypointNode->getByte(waypointType)) {
-			spdlog::warn("Invalid waypoint node: failed to read type byte");
-			continue;
-		}
-		if (waypointType != OTBM_WAYPOINT) {
-			spdlog::warn("Invalid waypoint node type: {} (expected {})", static_cast<int>(waypointType), static_cast<int>(OTBM_WAYPOINT));
-			continue;
-		}
-
-		Waypoint wp;
-		if (!waypointNode->getString(wp.name)) {
-			spdlog::warn("Failed to read waypoint name");
-			continue;
-		}
-
-		uint16_t x, y;
-		uint8_t z;
-		if (!waypointNode->getU16(x) || !waypointNode->getU16(y) || !waypointNode->getU8(z)) {
-			spdlog::warn("Invalid position for waypoint '{}'", wp.name);
-			continue;
-		}
-		wp.pos = { x, y, z };
-
-		map.waypoints.addWaypoint(std::make_unique<Waypoint>(std::move(wp)));
-	}
-}
-
-void WaypointSerializationOTBM::readWaypointsFast(Map& map, FastOTBMNode& mapNode) {
-	spdlog::debug("Reading OTBM_WAYPOINTS (fast)...");
 	mapNode.forEachChild([&](FastOTBMNode& waypointNode) {
 		if (waypointNode.type != OTBM_WAYPOINT) {
 			return;

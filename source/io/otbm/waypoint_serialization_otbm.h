@@ -11,8 +11,7 @@ struct MapVersion;
 
 class WaypointSerializationOTBM {
 public:
-	static void readWaypoints(Map& map, BinaryNode* mapNode);
-	static void readWaypointsFast(Map& map, FastOTBMNode& mapNode);
+	static void readWaypoints(Map& map, FastOTBMNode& mapNode);
 	static OTBMWriteResult writeWaypoints(const Map& map, NodeFileWriteHandle& f, MapVersion mapVersion);
 };
 
