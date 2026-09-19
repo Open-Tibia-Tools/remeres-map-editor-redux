@@ -219,11 +219,8 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 		}
 
 		if (!loadMapFast(map, buffer.data() + 4, size - 4)) {
-			spdlog::warn("Fast OTBM load failed or incomplete, falling back to legacy loader");
-			MemoryNodeFileReadHandle f(buffer.data() + 4, size - 4);
-			if (!loadMap(map, f)) {
-				return false;
-			}
+			spdlog::error("Failed to load OTBM map: {}", filename.GetFullPath().ToStdString());
+			return false;
 		}
 	}
 

@@ -145,34 +145,6 @@ bool Application::OnInit() {
 	g_hotkeys.LoadHotkeys();
 	ClientVersion::loadVersions();
 
-	// Check for benchmark mode before any single instance check or IPC server creation
-	for (int i = 1; i < argc; ++i) {
-		if (wxString(argv[i]) == "--benchmark" && i + 1 < argc) {
-			wxString mapPath = wxString(argv[i + 1]);
-			spdlog::info("========================================");
-			spdlog::info("BENCHMARK: Loading map {}", mapPath.ToStdString());
-			spdlog::info("========================================");
-
-			Map benchmarkMap;
-			IOMapOTBM maploader(benchmarkMap.getVersion());
-			auto t_start = std::chrono::high_resolution_clock::now();
-			bool ok = maploader.loadMap(benchmarkMap, FileName(mapPath));
-			auto t_end = std::chrono::high_resolution_clock::now();
-			double elapsed_ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
-
-			spdlog::info("========================================");
-			if (ok) {
-				spdlog::info("BENCHMARK RESULT: SUCCESS in {:.2f} ms ({:.3f} s)", elapsed_ms, elapsed_ms / 1000.0);
-				spdlog::info("BENCHMARK STATS: tiles={}, houses={}, towns={}, waypoints={}",
-					benchmarkMap.getTileCount(), benchmarkMap.houses.count(),
-					benchmarkMap.towns.count(), benchmarkMap.waypoints.size());
-			} else {
-				spdlog::error("BENCHMARK RESULT: FAILED: {}", maploader.getError().ToStdString());
-			}
-			spdlog::info("========================================");
-			return false; // Exit immediately without launching GUI or creating DDE objects
-		}
-	}
 
 #ifdef _USE_PROCESS_COM
 	m_single_instance_checker = newd wxSingleInstanceChecker; // Instance checker has to stay alive throughout the applications lifetime
