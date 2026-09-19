@@ -185,6 +185,22 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/tile_describer.h
     ${CMAKE_CURRENT_LIST_DIR}/util/common.h
     ${CMAKE_CURRENT_LIST_DIR}/util/json.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/editor.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/clean_operations.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/search_operations.h
+    ${CMAKE_CURRENT_LIST_DIR}/ext/fast_noise_lite.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/otbm/invalid_otbm_content.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/otbm/otbm_types.h
+    ${CMAKE_CURRENT_LIST_DIR}/item_definitions/core/missing_item_report.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/gl_resources.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/gl_scoped_state.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/hardware_profile.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_defaults.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_overlay.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_frame_context.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/minimap_rect.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/pattern_calculator.h
+    ${CMAKE_CURRENT_LIST_DIR}/util/system_specs.h
 )
 
 set(rme_core_SRC
@@ -391,7 +407,6 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/live/live_tab.h
     ${CMAKE_CURRENT_LIST_DIR}/net/net_connection.h
     ${CMAKE_CURRENT_LIST_DIR}/net/process_com.h
-    ${CMAKE_CURRENT_LIST_DIR}/palette/palette_brushlist.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_common.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/hardcoded_palette_registry.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_waypoints.h
@@ -432,8 +447,6 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/browse_tile_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/item_buttons.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/outfit_color_palette.h
-    ${CMAKE_CURRENT_LIST_DIR}/ui/controls/sortable_list_box.h
-    ${CMAKE_CURRENT_LIST_DIR}/ui/controls/modern_button.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/goto_position_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/object_properties_base.h
@@ -518,7 +531,6 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/old_properties_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/properties_window.h
     ${CMAKE_CURRENT_LIST_DIR}/util/image_manager.h
-    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_items_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/item_grid_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/library_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_card_renderer.h
@@ -545,6 +557,33 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_canvas.h
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_listbox.h
     ${CMAKE_CURRENT_LIST_DIR}/util/virtual_item_grid.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/map_session.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_algo.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_app.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_brush.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_color.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_creature.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_geo.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_http.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_image.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_item.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_json.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_map.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_noise.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_position.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_selection.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_tile.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_dialog.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_engine.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_script.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_script_manager.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_scripts_window.h
+    ${CMAKE_CURRENT_LIST_DIR}/lua/lua_sol_config.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/minimap_viewport.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/menubar/script_menu_handler.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/positionctrl.h
+    ${CMAKE_CURRENT_LIST_DIR}/util/nvg_utils.h
 )
 
 set(rme_ui_SRC
@@ -580,7 +619,6 @@ set(rme_ui_SRC
     ${CMAKE_CURRENT_LIST_DIR}/mkpch.cpp
     ${CMAKE_CURRENT_LIST_DIR}/net/net_connection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/net/process_com.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/palette/palette_brushlist.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_common.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/hardcoded_palette_registry.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_waypoints.cpp
@@ -622,8 +660,6 @@ set(rme_ui_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/about_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/browse_tile_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/outfit_color_palette.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ui/controls/sortable_list_box.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ui/controls/modern_button.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/goto_position_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/object_properties_base.cpp
@@ -708,7 +744,6 @@ set(rme_ui_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/old_properties_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/positionctrl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/properties_window.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_items_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/item_grid_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/library_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_card_renderer.cpp
