@@ -113,7 +113,7 @@ public:
 	}
 
 	/**
-	 * Get the GPU SpriteAtlasLUT for SSBO sprite coordinate indirection.
+	 * Get the GPU SpriteAtlasLUT for Texture Buffer (TBO) sprite coordinate indirection.
 	 */
 	SpriteAtlasLUT& getLUT() noexcept {
 		return lut_;
@@ -123,10 +123,10 @@ public:
 	}
 
 	/**
-	 * Bind the GPU LUT buffer to an SSBO binding index.
+	 * Bind the GPU LUT texture buffer to a texture unit.
 	 */
-	void bindLUT(GLuint binding_point = SpriteAtlasLUT::SSBO_BINDING_INDEX) {
-		lut_.bind(binding_point);
+	void bindLUT(GLuint texture_unit = SpriteAtlasLUT::TEXTURE_UNIT_INDEX) {
+		lut_.bind(texture_unit);
 	}
 
 	/**
