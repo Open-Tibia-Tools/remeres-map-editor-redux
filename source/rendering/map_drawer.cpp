@@ -33,6 +33,7 @@
 #include "rendering/drawers/overlays/map_overlay_collector.h"
 #include "rendering/io/screen_capture.h"
 #include "rendering/core/gl_resources.h"
+#include "rendering/shaders/sprite_batch_shader.h"
 
 MapDrawer::MapDrawer(Editor& editor) :
 	editor(editor),
@@ -166,7 +167,8 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 
 	// Begin Batches
 	sprite_batch.begin(view.projectionMatrix, *atlas);
-	sprite_batch.setZoneAndIndicatorOptions(
+	rme::rendering::shaders::SetSpriteBatchOverlayUniforms(
+		*sprite_batch.getShader(),
 		static_cast<uint32_t>(options.current_house_id),
 		options.show_houses,
 		options.show_spawns,
@@ -195,7 +197,8 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 
 	// Resume Batch for Overlays
 	sprite_batch.begin(view.projectionMatrix, *atlas);
-	sprite_batch.setZoneAndIndicatorOptions(
+	rme::rendering::shaders::SetSpriteBatchOverlayUniforms(
+		*sprite_batch.getShader(),
 		static_cast<uint32_t>(options.current_house_id),
 		options.show_houses,
 		options.show_spawns,

@@ -1,7 +1,10 @@
 #ifndef RME_RENDERING_INDICATORS_TECHNICAL_ITEM_REGISTRY_H_
 #define RME_RENDERING_INDICATORS_TECHNICAL_ITEM_REGISTRY_H_
 
+#include <array>
 #include <cstdint>
+
+class Brush;
 
 namespace rme::rendering {
 
@@ -31,6 +34,19 @@ inline constexpr float INDICATOR_TECH_BLOCK_BASE  = 7000000.0f;
 inline constexpr float INDICATOR_TECH_LIGHT_BASE  = 8000000.0f;
 
 /**
+ * @brief Known item IDs for technical and utility items across client versions.
+ */
+namespace ProtocolItems {
+	inline constexpr std::array<uint16_t, 2> INVISIBLE_STAIRS  = { 459, 469 };
+	inline constexpr std::array<uint16_t, 5> INVISIBLE_WALKABLE = { 460, 470, 17970, 20028, 34168 };
+	inline constexpr std::array<uint16_t, 2> INVISIBLE_WALLS    = { 1548, 2187 };
+
+	inline constexpr uint16_t PRIMAL_LIGHT_MIN = 39092;
+	inline constexpr uint16_t PRIMAL_LIGHT_MAX = 39100;
+	inline constexpr std::array<uint16_t, 3> PRIMAL_LIGHT_EXTRA = { 39236, 39367, 39368 };
+} // namespace ProtocolItems
+
+/**
  * @brief Centralized registry of technical and utility items.
  *
  * Maps server/client item IDs to high-performance shader indicator types,
@@ -38,30 +54,36 @@ inline constexpr float INDICATOR_TECH_LIGHT_BASE  = 8000000.0f;
  */
 class TechnicalItemRegistry {
 public:
+	template <size_t N>
+	[[nodiscard]] static constexpr bool MatchesAny(uint16_t server_id, uint16_t client_id, const std::array<uint16_t, N>& list) noexcept {
+		for (uint16_t id : list) {
+			if (server_id == id || client_id == id) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	[[nodiscard]] static constexpr TileIndicatorType Classify(uint16_t server_id, uint16_t client_id) noexcept {
 		// Invisible stairs (yellow: Server 459 / Client 469)
-		if (server_id == 459 || client_id == 459 || server_id == 469 || client_id == 469) {
+		if (MatchesAny(server_id, client_id, ProtocolItems::INVISIBLE_STAIRS)) {
 			return TileIndicatorType::TechInvisibleStair;
 		}
 
 		// Invisible walkable (cyan: Server 460 / Client 470, 17970, 20028, 34168)
-		if (server_id == 460 || client_id == 460 || server_id == 470 || client_id == 470 ||
-		    server_id == 17970 || client_id == 17970 ||
-		    server_id == 20028 || client_id == 20028 ||
-		    server_id == 34168 || client_id == 34168) {
+		if (MatchesAny(server_id, client_id, ProtocolItems::INVISIBLE_WALKABLE)) {
 			return TileIndicatorType::TechInvisibleWalkable;
 		}
 
 		// Invisible wall / magic blocker (red: Server 1548 / Client 2187)
-		if (server_id == 1548 || client_id == 1548 || server_id == 2187 || client_id == 2187) {
+		if (MatchesAny(server_id, client_id, ProtocolItems::INVISIBLE_WALLS)) {
 			return TileIndicatorType::TechInvisibleWall;
 		}
 
 		// Primal light / light sources (sky blue: Client 39092-39100, 39236, 39367, 39368)
-		if ((client_id >= 39092 && client_id <= 39100) || (server_id >= 39092 && server_id <= 39100) ||
-		    client_id == 39236 || server_id == 39236 ||
-		    client_id == 39367 || server_id == 39367 ||
-		    client_id == 39368 || server_id == 39368) {
+		if ((client_id >= ProtocolItems::PRIMAL_LIGHT_MIN && client_id <= ProtocolItems::PRIMAL_LIGHT_MAX) ||
+		    (server_id >= ProtocolItems::PRIMAL_LIGHT_MIN && server_id <= ProtocolItems::PRIMAL_LIGHT_MAX) ||
+		    MatchesAny(server_id, client_id, ProtocolItems::PRIMAL_LIGHT_EXTRA)) {
 			return TileIndicatorType::TechPrimalLight;
 		}
 
@@ -84,6 +106,11 @@ public:
 			default: return 0.0f;
 		}
 	}
+
+	/**
+	 * @brief Maps a palette brush to its corresponding tile indicator type.
+	 */
+	[[nodiscard]] static TileIndicatorType GetBrushIndicatorType(const Brush* brush);
 };
 
 struct IndicatorBadgeStyle {

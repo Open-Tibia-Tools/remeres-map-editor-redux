@@ -67,10 +67,11 @@ public:
 	void draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id = 0.0f, float zone_flags = 0.0f);
 
 	/**
-	 * Set house and zone indicator options for shaders.
+	 * Access the underlying shader program for domain-specific uniform configuration.
 	 */
-	void setZoneAndIndicatorOptions(uint32_t current_house_id, bool show_houses, bool show_spawns, bool show_towns, bool show_waypoints, bool show_tech_items, bool show_blocking, bool show_special_tiles);
-	void setHouseOptions(uint32_t current_house_id, bool show_houses);
+	[[nodiscard]] ShaderProgram* getShader() const {
+		return shader_.get();
+	}
 
 	/**
 	 * Draw a solid rectangle using the white pixel from the atlas.
@@ -135,14 +136,6 @@ private:
 
 	int draw_call_count_ = 0;
 	int sprite_count_ = 0;
-	uint32_t current_house_id_ = 0;
-	bool show_houses_ = false;
-	bool show_spawns_ = false;
-	bool show_towns_ = false;
-	bool show_waypoints_ = false;
-	bool show_tech_items_ = false;
-	bool show_blocking_ = false;
-	bool show_special_tiles_ = false;
 };
 
 #endif

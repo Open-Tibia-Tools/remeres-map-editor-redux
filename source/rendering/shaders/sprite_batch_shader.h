@@ -1,6 +1,7 @@
 #ifndef RME_RENDERING_SHADERS_SPRITE_BATCH_SHADER_H_
 #define RME_RENDERING_SHADERS_SPRITE_BATCH_SHADER_H_
 
+#include "rendering/core/shader_program.h"
 #include "rendering/shaders/indicator_shader.h"
 #include "rendering/shaders/house_shader.h"
 #include "rendering/shaders/zone_shader.h"
@@ -97,6 +98,33 @@ void main() {
     applyHouseOverlay(FragColor, vWorldPos, vHouseId, uCurrentHouseId, uShowHouses);
 }
 )";
+}
+
+/**
+ * @brief Sets domain-specific uniform values for the SpriteBatch shader.
+ *
+ * Keeps SpriteBatch decoupled from OTBM domain concepts (houses, spawns, zones).
+ */
+inline void SetSpriteBatchOverlayUniforms(
+	ShaderProgram& shader,
+	uint32_t current_house_id,
+	bool show_houses,
+	bool show_spawns,
+	bool show_towns,
+	bool show_waypoints,
+	bool show_tech_items,
+	bool show_blocking,
+	bool show_special_tiles)
+{
+	shader.Use();
+	shader.SetUint("uCurrentHouseId", current_house_id);
+	shader.SetInt("uShowHouses", show_houses ? 1 : 0);
+	shader.SetInt("uShowSpawns", show_spawns ? 1 : 0);
+	shader.SetInt("uShowTowns", show_towns ? 1 : 0);
+	shader.SetInt("uShowWaypoints", show_waypoints ? 1 : 0);
+	shader.SetInt("uShowTechItems", show_tech_items ? 1 : 0);
+	shader.SetInt("uShowBlocking", show_blocking ? 1 : 0);
+	shader.SetInt("uShowSpecialTiles", show_special_tiles ? 1 : 0);
 }
 
 } // namespace rme::rendering::shaders

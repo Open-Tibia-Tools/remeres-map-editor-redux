@@ -12,6 +12,81 @@ namespace rme::rendering::shaders {
  *        and Pathing / Blocking (translucent red wash + outer connected borders).
  */
 inline constexpr std::string_view ZONE_SHADER_GLSL = R"(
+void blendOverlayLayer(inout vec4 baseColor, inout bool hasOverlay, vec4 layerColor) {
+    if (hasOverlay) {
+        baseColor.rgb = mix(baseColor.rgb, layerColor.rgb, layerColor.a);
+        baseColor.a = max(baseColor.a, layerColor.a);
+    } else {
+        baseColor = layerColor;
+        hasOverlay = true;
+    }
+}
+
+bool evaluateSpecialZones(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, out vec4 outLayer) {
+    vec4 zWash = vec4(0.0);
+    vec4 zBorder = vec4(0.0);
+    bool hasZone = false;
+
+    if ((flags & 4u) != 0u) {
+        // PZ: Vibrant emerald green wash + border
+        hasZone = true;
+        zWash = vec4(0.15, 0.90, 0.20, 0.28);
+        zBorder = vec4(0.20, 1.00, 0.30, 0.95);
+    } else if ((flags & 8u) != 0u) {
+        // No-PvP: Golden yellow wash + border
+        hasZone = true;
+        zWash = vec4(0.95, 0.85, 0.10, 0.28);
+        zBorder = vec4(1.00, 0.90, 0.10, 0.95);
+    } else if ((flags & 16u) != 0u) {
+        // No-Logout: Warm orange wash + border
+        hasZone = true;
+        zWash = vec4(1.00, 0.50, 0.05, 0.28);
+        zBorder = vec4(1.00, 0.55, 0.10, 0.95);
+    } else if ((flags & 32u) != 0u) {
+        // PvP Zone: Crimson red wash + border
+        hasZone = true;
+        zWash = vec4(0.85, 0.05, 0.25, 0.28);
+        zBorder = vec4(1.00, 0.15, 0.30, 0.95);
+    }
+
+    if (!hasZone) {
+        return false;
+    }
+
+    bool isBorder = (bNorth && (flags & 1024u) != 0u) ||
+                    (bSouth && (flags & 2048u) != 0u) ||
+                    (bWest  && (flags & 4096u) != 0u) ||
+                    (bEast  && (flags & 8192u) != 0u);
+    outLayer = isBorder ? zBorder : zWash;
+    return true;
+}
+
+bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, out vec4 outLayer) {
+    if ((flags & 2u) == 0u) {
+        return false;
+    }
+    vec4 spawnWash = vec4(0.85, 0.15, 0.85, 0.25);
+    vec4 spawnBorder = vec4(1.00, 0.20, 1.00, 0.95);
+    bool isBorder = (bNorth && (flags & 16384u) != 0u) ||
+                    (bSouth && (flags & 32768u) != 0u) ||
+                    (bWest  && (flags & 65536u) != 0u) ||
+                    (bEast  && (flags & 131072u) != 0u);
+    outLayer = isBorder ? spawnBorder : spawnWash;
+    return true;
+}
+
+bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, out vec4 outLayer) {
+    if ((flags & 1u) == 0u) {
+        return false;
+    }
+    bool isBorder = (bNorth && (flags & 64u) != 0u) ||
+                    (bSouth && (flags & 128u) != 0u) ||
+                    (bWest  && (flags & 256u) != 0u) ||
+                    (bEast  && (flags & 512u) != 0u);
+    outLayer = isBorder ? vec4(1.00, 0.15, 0.15, 0.95) : vec4(0.95, 0.15, 0.15, 0.28);
+    return true;
+}
+
 bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zoneFlags,
                          int showBlocking, int showSpawns, int showSpecialTiles,
                          out vec4 outColor) {
@@ -32,79 +107,21 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zon
 
     vec4 color = vec4(0.0);
     bool hasOverlay = false;
+    vec4 layer;
 
     // 1. Special Zones (showSpecialTiles)
-    if (showSpecialTiles != 0) {
-        vec4 zWash = vec4(0.0);
-        vec4 zBorder = vec4(0.0);
-        bool hasZone = false;
-
-        if ((flags & 4u) != 0u) {
-            // PZ: Vibrant emerald green wash + border
-            hasZone = true;
-            zWash = vec4(0.15, 0.90, 0.20, 0.28);
-            zBorder = vec4(0.20, 1.00, 0.30, 0.95);
-        } else if ((flags & 8u) != 0u) {
-            // No-PvP: Golden yellow wash + border
-            hasZone = true;
-            zWash = vec4(0.95, 0.85, 0.10, 0.28);
-            zBorder = vec4(1.00, 0.90, 0.10, 0.95);
-        } else if ((flags & 16u) != 0u) {
-            // No-Logout: Warm orange wash + border
-            hasZone = true;
-            zWash = vec4(1.00, 0.50, 0.05, 0.28);
-            zBorder = vec4(1.00, 0.55, 0.10, 0.95);
-        } else if ((flags & 32u) != 0u) {
-            // PvP Zone: Crimson red wash + border
-            hasZone = true;
-            zWash = vec4(0.85, 0.05, 0.25, 0.28);
-            zBorder = vec4(1.00, 0.15, 0.30, 0.95);
-        }
-
-        if (hasZone) {
-            bool isBorder = (bNorth && (flags & 1024u) != 0u) ||
-                            (bSouth && (flags & 2048u) != 0u) ||
-                            (bWest  && (flags & 4096u) != 0u) ||
-                            (bEast  && (flags & 8192u) != 0u);
-            color = isBorder ? zBorder : zWash;
-            hasOverlay = true;
-        }
+    if (showSpecialTiles != 0 && evaluateSpecialZones(flags, bNorth, bSouth, bWest, bEast, layer)) {
+        blendOverlayLayer(color, hasOverlay, layer);
     }
 
-    // 2. Spawn Radius (showSpawns) - Clean wash + separate outer boundary borders for each spawn
-    if (showSpawns != 0 && (flags & 2u) != 0u) {
-        vec4 spawnWash = vec4(0.85, 0.15, 0.85, 0.25);
-        vec4 spawnBorder = vec4(1.00, 0.20, 1.00, 0.95);
-        bool isBorder = (bNorth && (flags & 16384u) != 0u) ||
-                        (bSouth && (flags & 32768u) != 0u) ||
-                        (bWest  && (flags & 65536u) != 0u) ||
-                        (bEast  && (flags & 131072u) != 0u);
-        vec4 c = isBorder ? spawnBorder : spawnWash;
-        if (hasOverlay) {
-            color.rgb = mix(color.rgb, c.rgb, c.a);
-            color.a = max(color.a, c.a);
-        } else {
-            color = c;
-            hasOverlay = true;
-        }
+    // 2. Spawn Radius (showSpawns)
+    if (showSpawns != 0 && evaluateSpawnOverlay(flags, bNorth, bSouth, bWest, bEast, layer)) {
+        blendOverlayLayer(color, hasOverlay, layer);
     }
 
-    // 3. Pathing / Blocking (showBlocking) - Red wash + 1px connected outer border
-    if (showBlocking != 0 && (flags & 1u) != 0u) {
-        bool isBorder = (bNorth && (flags & 64u) != 0u) ||
-                        (bSouth && (flags & 128u) != 0u) ||
-                        (bWest  && (flags & 256u) != 0u) ||
-                        (bEast  && (flags & 512u) != 0u);
-
-        vec4 c = isBorder ? vec4(1.00, 0.15, 0.15, 0.95) : vec4(0.95, 0.15, 0.15, 0.28);
-
-        if (hasOverlay) {
-            color.rgb = mix(color.rgb, c.rgb, c.a);
-            color.a = max(color.a, c.a);
-        } else {
-            color = c;
-            hasOverlay = true;
-        }
+    // 3. Pathing / Blocking (showBlocking)
+    if (showBlocking != 0 && evaluateBlockingOverlay(flags, bNorth, bSouth, bWest, bEast, layer)) {
+        blendOverlayLayer(color, hasOverlay, layer);
     }
 
     if (!hasOverlay) {

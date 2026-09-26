@@ -2,7 +2,7 @@
 #include "util/nvg_utils.h"
 #include "util/common.h"
 #include "item_definitions/core/item_definition_store.h"
-#include "rendering/indicators/technical_item_registry.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include "ui/theme.h"
 #include <algorithm>
 #include <format>
@@ -255,37 +255,7 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 			const float iconSize = 32.0f;
 			const float bx = x + (w - iconSize) / 2.0f;
 			const float by = y + 8.0f;
-			const auto style = rme::rendering::GetIndicatorBadgeStyle(tech);
-
-			// 1. Background wash
-			nvgBeginPath(vg);
-			nvgRoundedRect(vg, bx, by, iconSize, iconSize, 3.0f);
-			nvgFillColor(vg, nvgRGBA(style.bg_r, style.bg_g, style.bg_b, style.bg_a));
-			nvgFill(vg);
-
-			// 2. Vibrant 1px border
-			nvgBeginPath(vg);
-			nvgRoundedRect(vg, bx + 0.5f, by + 0.5f, iconSize - 1.0f, iconSize - 1.0f, 3.0f);
-			nvgStrokeColor(vg, nvgRGBA(style.border_r, style.border_g, style.border_b, 255));
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStroke(vg);
-
-			// 3. Crisp centered typography
-			nvgFontSize(vg, 9.0f);
-			nvgFontFace(vg, "sans");
-			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-
-			const float cx = bx + iconSize * 0.5f;
-			const float cy = by + iconSize * 0.5f;
-
-			nvgFillColor(vg, nvgRGBA(style.outline_r, style.outline_g, style.outline_b, 240));
-			nvgText(vg, cx + 1.0f, cy, style.text, nullptr);
-			nvgText(vg, cx - 1.0f, cy, style.text, nullptr);
-			nvgText(vg, cx, cy + 1.0f, style.text, nullptr);
-			nvgText(vg, cx, cy - 1.0f, style.text, nullptr);
-
-			nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
-			nvgText(vg, cx, cy, style.text, nullptr);
+			rme::rendering::DrawNanoVGIndicatorBadge(vg, tech, bx, by, iconSize);
 		} else {
 			int tex = GetOrCreateItemTexture(vg, id);
 			if (tex > 0) {

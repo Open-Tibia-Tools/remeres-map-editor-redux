@@ -14,8 +14,8 @@ namespace rme::rendering::shaders {
  * - TOWN   (Town temple: Gold/Amber)
  * - WAYPT  (Waypoint: Cyan)
  * - STAIR  (Technical invisible stairs: Yellow)
- * - WALK   (Technical invisible walkable: Red)
- * - BLOCK  (Technical invisible wall: Cyan)
+ * - WALK   (Technical invisible walkable: Cyan)
+ * - BLOCK  (Technical invisible wall: Red)
  * - LIGHT  (Technical primal light source: Sky Blue)
  */
 inline constexpr std::string_view INDICATOR_SHADER_GLSL = R"(

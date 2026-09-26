@@ -74,41 +74,6 @@ namespace {
 		sizer->Add(window, proportion, flags, border);
 	}
 
-	rme::rendering::TileIndicatorType GetBrushIndicatorType(const Brush* brush) {
-		if (!brush) {
-			return rme::rendering::TileIndicatorType::None;
-		}
-		if (brush->is<SpawnBrush>()) {
-			return rme::rendering::TileIndicatorType::Spawn;
-		}
-		if (brush->is<WaypointBrush>()) {
-			return rme::rendering::TileIndicatorType::Waypoint;
-		}
-		if (brush->is<HouseExitBrush>()) {
-			return rme::rendering::TileIndicatorType::HouseEntry;
-		}
-		if (const auto* raw = dynamic_cast<const RAWBrush*>(brush)) {
-			uint16_t s_id = raw->getItemID();
-			uint16_t c_id = static_cast<uint16_t>(raw->getLookID());
-			auto tech = rme::rendering::TechnicalItemRegistry::Classify(s_id, c_id);
-			if (tech != rme::rendering::TileIndicatorType::None) {
-				return tech;
-			}
-		}
-		int look_id = brush->getLookID();
-		if (look_id > 0) {
-			auto tech = rme::rendering::TechnicalItemRegistry::Classify(static_cast<uint16_t>(look_id), static_cast<uint16_t>(look_id));
-			if (tech != rme::rendering::TileIndicatorType::None) {
-				return tech;
-			}
-		}
-		const std::string& bname = brush->getName();
-		if (bname == "stairs" || bname == "invisible stairs" || bname == "stair") {
-			return rme::rendering::TileIndicatorType::TechInvisibleStair;
-		}
-		return rme::rendering::TileIndicatorType::None;
-	}
-
 	wxColour GetIndicatorColor(rme::rendering::TileIndicatorType type) {
 		const auto style = rme::rendering::GetIndicatorBadgeStyle(type);
 		return wxColour(style.border_r, style.border_g, style.border_b);
@@ -558,7 +523,7 @@ wxBitmap ToolOptionsSurface::CreateBrushBitmap(Brush* brush) const {
 		return wxBitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
 	}
 
-	const auto indType = GetBrushIndicatorType(brush);
+	const auto indType = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(brush);
 	if (indType != rme::rendering::TileIndicatorType::None) {
 		wxBitmap bitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
 		wxMemoryDC dc(bitmap);

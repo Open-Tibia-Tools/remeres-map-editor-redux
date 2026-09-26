@@ -119,40 +119,6 @@ void SpriteBatch::begin(const glm::mat4& projection, const AtlasManager& atlas_m
 	shader_->SetMat4("uMVP", projection_);
 	shader_->SetInt("uAtlas", 0);
 	shader_->SetVec4("uGlobalTint", global_tint_);
-	shader_->SetUint("uCurrentHouseId", current_house_id_);
-	shader_->SetInt("uShowHouses", show_houses_ ? 1 : 0);
-	shader_->SetInt("uShowSpawns", show_spawns_ ? 1 : 0);
-	shader_->SetInt("uShowTowns", show_towns_ ? 1 : 0);
-	shader_->SetInt("uShowWaypoints", show_waypoints_ ? 1 : 0);
-	shader_->SetInt("uShowTechItems", show_tech_items_ ? 1 : 0);
-	shader_->SetInt("uShowBlocking", show_blocking_ ? 1 : 0);
-	shader_->SetInt("uShowSpecialTiles", show_special_tiles_ ? 1 : 0);
-}
-
-void SpriteBatch::setZoneAndIndicatorOptions(uint32_t current_house_id, bool show_houses, bool show_spawns, bool show_towns, bool show_waypoints, bool show_tech_items, bool show_blocking, bool show_special_tiles) {
-	current_house_id_ = current_house_id;
-	show_houses_ = show_houses;
-	show_spawns_ = show_spawns;
-	show_towns_ = show_towns;
-	show_waypoints_ = show_waypoints;
-	show_tech_items_ = show_tech_items;
-	show_blocking_ = show_blocking;
-	show_special_tiles_ = show_special_tiles;
-	if (shader_ && shader_->IsValid()) {
-		shader_->Use();
-		shader_->SetUint("uCurrentHouseId", current_house_id_);
-		shader_->SetInt("uShowHouses", show_houses_ ? 1 : 0);
-		shader_->SetInt("uShowSpawns", show_spawns_ ? 1 : 0);
-		shader_->SetInt("uShowTowns", show_towns_ ? 1 : 0);
-		shader_->SetInt("uShowWaypoints", show_waypoints_ ? 1 : 0);
-		shader_->SetInt("uShowTechItems", show_tech_items_ ? 1 : 0);
-		shader_->SetInt("uShowBlocking", show_blocking_ ? 1 : 0);
-		shader_->SetInt("uShowSpecialTiles", show_special_tiles_ ? 1 : 0);
-	}
-}
-
-void SpriteBatch::setHouseOptions(uint32_t current_house_id, bool show_houses) {
-	setZoneAndIndicatorOptions(current_house_id, show_houses, show_spawns_, show_towns_, show_waypoints_, show_tech_items_, show_blocking_, show_special_tiles_);
 }
 
 void SpriteBatch::setGlobalTint(float r, float g, float b, float a, const AtlasManager& atlas_manager) {
@@ -243,14 +209,6 @@ void SpriteBatch::flush(const AtlasManager& atlas_manager) {
 	shader_->SetMat4("uMVP", projection_);
 	shader_->SetInt("uAtlas", 0);
 	shader_->SetVec4("uGlobalTint", global_tint_);
-	shader_->SetUint("uCurrentHouseId", current_house_id_);
-	shader_->SetInt("uShowHouses", show_houses_ ? 1 : 0);
-	shader_->SetInt("uShowSpawns", show_spawns_ ? 1 : 0);
-	shader_->SetInt("uShowTowns", show_towns_ ? 1 : 0);
-	shader_->SetInt("uShowWaypoints", show_waypoints_ ? 1 : 0);
-	shader_->SetInt("uShowTechItems", show_tech_items_ ? 1 : 0);
-	shader_->SetInt("uShowBlocking", show_blocking_ ? 1 : 0);
-	shader_->SetInt("uShowSpecialTiles", show_special_tiles_ ? 1 : 0);
 
 	atlas_manager.bind(0);
 
