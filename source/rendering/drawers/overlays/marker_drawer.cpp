@@ -36,7 +36,7 @@ void MarkerDrawer::draw(SpriteBatch& sprite_batch, SpriteDrawer* /*drawer*/, int
 	}
 
 	// Town temple ("TOWN")
-	if (options.show_towns && tile->isTownExit(map)) {
+	if (options.show_towns && tile->isTownExit()) {
 		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
 			rme::rendering::INDICATOR_TOWN_BASE);
 	}

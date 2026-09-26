@@ -18,7 +18,6 @@ layout (location = 3) in float aSpriteId;
 layout (location = 4) in float aFlags;
 layout (location = 5) in vec4 aTint;
 layout (location = 6) in float aHouseId;
-layout (location = 7) in float aZoneFlags;
 
 out vec2 vWorldPos;
 out vec2 vQuadCoord;
@@ -26,7 +25,6 @@ out vec3 vTexCoord;
 out vec4 vColor;
 flat out float vFlags;
 flat out float vHouseId;
-flat out float vZoneFlags;
 
 uniform mat4 uMVP;
 uniform vec4 uGlobalTint;
@@ -38,7 +36,6 @@ void main() {
 
 	vFlags = aFlags;
 	vHouseId = aHouseId;
-	vZoneFlags = aZoneFlags;
 	vWorldPos = worldPos;
 	vQuadCoord = aPos;
 	vColor = aTint * uGlobalTint;
@@ -63,7 +60,6 @@ inline std::string GetChunkFragShader() {
 	return std::string(R"(#version 430 core
 flat in float vFlags;
 flat in float vHouseId;
-flat in float vZoneFlags;
 in vec2 vWorldPos;
 in vec2 vQuadCoord;
 in vec3 vTexCoord;

@@ -24,7 +24,6 @@
 #include "rendering/core/sprite_preloader.h"
 #include "rendering/shaders/chunk_shader.h"
 #include "rendering/indicators/technical_item_registry.h"
-#include "rendering/indicators/zone_flags.h"
 #include <spdlog/spdlog.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
@@ -100,11 +99,6 @@ bool ChunkCacheManager::initialize() {
 	glEnableVertexArrayAttrib(vao_, 6);
 	glVertexArrayAttribFormat(vao_, 6, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, house_id));
 	glVertexArrayAttribBinding(vao_, 6, 1);
-
-	// Loc 7: aZoneFlags (float)
-	glEnableVertexArrayAttrib(vao_, 7);
-	glVertexArrayAttribFormat(vao_, 7, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, zone_flags));
-	glVertexArrayAttribBinding(vao_, 7, 1);
 
 	applyBudget(HardwareProfileManager::get().getActiveBudget());
 
@@ -268,13 +262,13 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		return;
 	}
 
-	auto pushRegionInstance = [&](const AtlasRegion* reg, int draw_x, int draw_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float zone_flags = 0.0f) {
+	auto pushRegionInstance = [&](const AtlasRegion* reg, int draw_x, int draw_y, float rf, float gf, float bf, float af, float house_id = 0.0f) {
 		if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
 			TileInstance inst;
 			inst.x = static_cast<float>(draw_x);
 			inst.y = static_cast<float>(draw_y);
-			inst.w = (house_id >= 1000000.0f || zone_flags > 0.0f) ? 32.0f : static_cast<float>(reg->pixel_width);
-			inst.h = (house_id >= 1000000.0f || zone_flags > 0.0f) ? 32.0f : static_cast<float>(reg->pixel_height);
+			inst.w = (house_id >= 1000000.0f) ? 32.0f : static_cast<float>(reg->pixel_width);
+			inst.h = (house_id >= 1000000.0f) ? 32.0f : static_cast<float>(reg->pixel_height);
 			inst.sprite_id = static_cast<float>(reg->debug_sprite_id);
 			inst.flags = 0.0f;
 			inst.r = rf;
@@ -282,7 +276,6 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			inst.b = bf;
 			inst.a = af;
 			inst.house_id = house_id;
-			inst.zone_flags = zone_flags;
 			bake_buffer_.push_back(inst);
 		}
 	};
@@ -300,11 +293,10 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		inst.b = bf;
 		inst.a = af;
 		inst.house_id = 0.0f;
-		inst.zone_flags = 0.0f;
 		bake_buffer_.push_back(inst);
 	};
 
-	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float zone_flags = 0.0f) {
+	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f) {
 		const bool is_simple = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
 		if (is_simple) {
 			const AtlasRegion* reg = nullptr;
@@ -314,7 +306,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			if (!reg) {
 				reg = spr->getAtlasRegion(0, 0, 0, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
 			}
-			pushRegionInstance(reg, draw_base_x, draw_base_y, rf, gf, bf, af, house_id, zone_flags);
+			pushRegionInstance(reg, draw_base_x, draw_base_y, rf, gf, bf, af, house_id);
 		} else {
 			const auto composite_metrics = spr->getPlainLayoutMetrics(pat.subtype, pat.x, pat.y, pat.z, pat.frame);
 			int x_offset = 0;
@@ -323,7 +315,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
 					for (int cf = 0; cf < spr->layers; ++cf) {
 						const AtlasRegion* reg = spr->getAtlasRegion(cx, cy, cf, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
-						pushRegionInstance(reg, draw_base_x - x_offset, draw_base_y - y_offset, rf, gf, bf, af, house_id, zone_flags);
+						pushRegionInstance(reg, draw_base_x - x_offset, draw_base_y - y_offset, rf, gf, bf, af, house_id);
 					}
 					y_offset += composite_metrics.row_heights[cy];
 				}
@@ -543,8 +535,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 							static_cast<float>(g) * (1.0f / 255.0f),
 							static_cast<float>(b) * (1.0f / 255.0f),
 							1.0f,
-							-tile_house_id,
-							0.0f);
+							-tile_house_id);
 					}
 				}
 			}
@@ -603,8 +594,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					static_cast<float>(g) * (1.0f / 255.0f),
 					static_cast<float>(b) * (1.0f / 255.0f),
 					1.0f,
-					-tile_house_id,
-					0.0f);
+					-tile_house_id);
 			}
 
 			// 3. Static items & structures with elevation stacking
@@ -684,8 +674,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					static_cast<float>(g) * (1.0f / 255.0f),
 					static_cast<float>(b) * (1.0f / 255.0f),
 					static_cast<float>(a) * (1.0f / 255.0f),
-					item_house_id,
-					0.0f);
+					item_house_id);
 
 				if (ispr->hasElevation()) {
 					elev += ispr->draw_height;

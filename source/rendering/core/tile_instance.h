@@ -25,7 +25,7 @@ struct alignas(16) TileInstance {
 	float b = 1.0f;          // Byte 32-35: Blue tint [0.0, 1.0]
 	float a = 1.0f;          // Byte 36-39: Alpha [0.0, 1.0]
 	float house_id = 0.0f;   // Byte 40-43: House ID for overlay shader (Location 6)
-	float zone_flags = 0.0f; // Byte 44-47: Zone and pathing flags for overlay shader (Location 7)
+	float _pad = 0.0f;       // Byte 44-47: Padding to maintain 16-byte alignment
 };
 
 static_assert(sizeof(TileInstance) == 48, "TileInstance must be exactly 48 bytes");
