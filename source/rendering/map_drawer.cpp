@@ -207,7 +207,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	);
 
 	if (!options.ingame) {
-		zone_overlay_drawer.draw(sprite_batch, view, editor.map, options, *atlas);
+		zone_overlay_drawer.draw(sprite_batch, view, editor.map, interaction.secondary_map, options, *atlas);
 	}
 
 	drag_shadow_drawer.draw(sprite_batch, editor, interaction.drag_start_position, &item_drawer, &sprite_drawer, &creature_drawer, view, options, &ctx);

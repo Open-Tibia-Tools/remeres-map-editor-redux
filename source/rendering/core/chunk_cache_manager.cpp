@@ -498,7 +498,9 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				const uint16_t ground_client_id = git ? git.clientId() : 0;
 				const uint16_t ground_server_id = tile->ground->getID();
 
-				const auto tech_type = rme::rendering::TechnicalItemRegistry::Classify(ground_server_id, ground_client_id);
+				const auto tech_type = (ctx.options.show_tech_items && !ctx.options.ingame)
+					? rme::rendering::TechnicalItemRegistry::Classify(ground_server_id, ground_client_id)
+					: rme::rendering::TileIndicatorType::None;
 				if (tech_type != rme::rendering::TileIndicatorType::None) {
 					const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
 					if (white_pixel) {
@@ -552,7 +554,9 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				const uint16_t item_client_id = it.clientId();
 				const uint16_t item_server_id = item->getID();
 
-				const auto tech_type = rme::rendering::TechnicalItemRegistry::Classify(item_server_id, item_client_id);
+				const auto tech_type = (ctx.options.show_tech_items && !ctx.options.ingame)
+					? rme::rendering::TechnicalItemRegistry::Classify(item_server_id, item_client_id)
+					: rme::rendering::TileIndicatorType::None;
 				if (tech_type != rme::rendering::TileIndicatorType::None) {
 					const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
 					if (white_pixel) {
@@ -611,7 +615,9 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				const uint16_t item_client_id = it ? it.clientId() : 0;
 				const uint16_t item_server_id = item->getID();
 
-				const auto tech_type = rme::rendering::TechnicalItemRegistry::Classify(item_server_id, item_client_id);
+				const auto tech_type = (ctx.options.show_tech_items && !ctx.options.ingame)
+					? rme::rendering::TechnicalItemRegistry::Classify(item_server_id, item_client_id)
+					: rme::rendering::TileIndicatorType::None;
 				if (tech_type != rme::rendering::TileIndicatorType::None) {
 					const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
 					if (white_pixel) {
@@ -686,13 +692,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			if (white_pixel) {
 				if (tile->isHouseExit()) {
 					const HouseExitList* exits = tile->getHouseExits();
-					const uint32_t exit_house_id = (tile->hasHouseExit(ctx.current_house_id) && ctx.current_house_id > 0)
-						? ctx.current_house_id
-						: ((exits && !exits->empty()) ? exits->front() : 1);
+					const uint32_t exit_house_id = (exits && !exits->empty()) ? exits->front() : 1;
 					pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::INDICATOR_HOUSE_ENTRY_BASE + static_cast<float>(exit_house_id));
-				}
-				if (tile->spawn) {
-					pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::INDICATOR_SPAWN_BASE);
 				}
 				if (loc->getTownCount() > 0) {
 					pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::INDICATOR_TOWN_BASE);

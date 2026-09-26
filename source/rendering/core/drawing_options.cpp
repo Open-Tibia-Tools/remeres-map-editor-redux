@@ -119,6 +119,7 @@ void DrawingOptions::MarkSettingDirty(uint32_t key) noexcept {
 		case Config::SHOW_ONLY_MODIFIED_TILES:
 		case Config::SHOW_ITEMS:
 		case Config::SHOW_AS_MINIMAP:
+		case Config::SHOW_TECHNICAL_ITEMS:
 			chunk_bake_dirty_ = true;
 			break;
 

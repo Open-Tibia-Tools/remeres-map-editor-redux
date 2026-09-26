@@ -4,6 +4,7 @@
 class SpriteBatch;
 struct RenderView;
 class Map;
+class BaseMap;
 struct DrawingOptions;
 class AtlasManager;
 
@@ -25,6 +26,7 @@ public:
 	void draw(SpriteBatch& sprite_batch,
 	          const RenderView& view,
 	          const Map& map,
+	          const BaseMap* secondary_map,
 	          const DrawingOptions& options,
 	          const AtlasManager& atlas);
 };

@@ -21,18 +21,9 @@ void MarkerDrawer::draw(SpriteBatch& sprite_batch, SpriteDrawer* /*drawer*/, int
 	// House entry ("ENTRY")
 	if (options.show_houses && tile->isHouseExit()) {
 		const HouseExitList* exits = tile->getHouseExits();
-		const uint32_t exit_house_id = (tile->hasHouseExit(current_house_id) && current_house_id > 0)
-			? current_house_id
-			: ((exits && !exits->empty()) ? exits->front() : 1);
+		const uint32_t exit_house_id = (exits && !exits->empty()) ? exits->front() : 1;
 		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
 			rme::rendering::INDICATOR_HOUSE_ENTRY_BASE + static_cast<float>(exit_house_id));
-	}
-
-	// Spawn center ("SPAWN")
-	if (options.show_spawns && tile->spawn) {
-		const float alpha = tile->spawn->isSelected() ? 0.65f : 1.0f;
-		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, alpha,
-			rme::rendering::INDICATOR_SPAWN_BASE);
 	}
 
 	// Town temple ("TOWN")
