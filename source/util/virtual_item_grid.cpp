@@ -2,6 +2,7 @@
 #include "util/nvg_utils.h"
 #include "util/common.h"
 #include "item_definitions/core/item_definition_store.h"
+#include "rendering/indicators/technical_item_registry.h"
 #include "ui/theme.h"
 #include <algorithm>
 #include <format>
@@ -249,28 +250,66 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 
 		// Draw Item Icon (Fixed 32x32 size for consistency)
 		uint16_t id = GetItem(i);
-		int tex = GetOrCreateItemTexture(vg, id);
-		if (tex > 0) {
-			// Fixed 32x32 rendering area
-			float iconSize = 32.0f;
-			int tw, th;
-			nvgImageSize(vg, tex, &tw, &th);
+		const auto tech = rme::rendering::TechnicalItemRegistry::Classify(id, 0);
+		if (tech != rme::rendering::TileIndicatorType::None) {
+			const float iconSize = 32.0f;
+			const float bx = x + (w - iconSize) / 2.0f;
+			const float by = y + 8.0f;
+			const auto style = rme::rendering::GetIndicatorBadgeStyle(tech);
 
-			float scale = iconSize / std::max(tw, th);
-			if (scale > 1.0f && std::max(tw, th) >= 32) {
-				scale = 1.0f;
-			}
-
-			float dw = tw * scale;
-			float dh = th * scale;
-			float dx = x + (w - dw) / 2.0f;
-			float dy = y + 8.0f; // Top padding
-
-			NVGpaint imgPaint = nvgImagePattern(vg, dx, dy, dw, dh, 0.0f, tex, 1.0f);
+			// 1. Background wash
 			nvgBeginPath(vg);
-			nvgRect(vg, dx, dy, dw, dh);
-			nvgFillPaint(vg, imgPaint);
+			nvgRoundedRect(vg, bx, by, iconSize, iconSize, 3.0f);
+			nvgFillColor(vg, nvgRGBA(style.bg_r, style.bg_g, style.bg_b, style.bg_a));
 			nvgFill(vg);
+
+			// 2. Vibrant 1px border
+			nvgBeginPath(vg);
+			nvgRoundedRect(vg, bx + 0.5f, by + 0.5f, iconSize - 1.0f, iconSize - 1.0f, 3.0f);
+			nvgStrokeColor(vg, nvgRGBA(style.border_r, style.border_g, style.border_b, 255));
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStroke(vg);
+
+			// 3. Crisp centered typography
+			nvgFontSize(vg, 9.0f);
+			nvgFontFace(vg, "sans");
+			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+
+			const float cx = bx + iconSize * 0.5f;
+			const float cy = by + iconSize * 0.5f;
+
+			nvgFillColor(vg, nvgRGBA(style.outline_r, style.outline_g, style.outline_b, 240));
+			nvgText(vg, cx + 1.0f, cy, style.text, nullptr);
+			nvgText(vg, cx - 1.0f, cy, style.text, nullptr);
+			nvgText(vg, cx, cy + 1.0f, style.text, nullptr);
+			nvgText(vg, cx, cy - 1.0f, style.text, nullptr);
+
+			nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
+			nvgText(vg, cx, cy, style.text, nullptr);
+		} else {
+			int tex = GetOrCreateItemTexture(vg, id);
+			if (tex > 0) {
+				// Fixed 32x32 rendering area
+				float iconSize = 32.0f;
+				int tw, th;
+				nvgImageSize(vg, tex, &tw, &th);
+
+				float scale = iconSize / std::max(tw, th);
+				if (scale > 1.0f && std::max(tw, th) >= 32) {
+					scale = 1.0f;
+				}
+
+				float dw = tw * scale;
+				float dh = th * scale;
+				float dx = x + (w - dw) / 2.0f;
+				float dy = y + 8.0f; // Top padding
+
+				NVGpaint imgPaint = nvgImagePattern(vg, dx, dy, dw, dh, 0.0f, tex, 1.0f);
+				nvgBeginPath(vg);
+				nvgRect(vg, dx, dy, dw, dh);
+				nvgFillPaint(vg, imgPaint);
+				nvgFill(vg);
+			}
 		}
 
 		// Draw Text (2 Lines)

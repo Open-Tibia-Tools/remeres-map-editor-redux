@@ -18,6 +18,7 @@
 #include "game/sprites.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
+#include "rendering/indicators/technical_item_registry.h"
 
 namespace {
 	GameSprite* resolveSprite(const ItemDefinitionView& definition, const RenderFrameContext* ctx) {
@@ -98,8 +99,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	const AtlasManager* atlas = params.ctx ? &params.ctx->atlas : nullptr;
 
-	// Display invisible and invalid items
-	// Ugly hacks. :)
+	// Display invisible and invalid items via technical item shader indicators
 	if (options.show_tech_items && !options.ingame) {
 		// Red invalid client id
 		if (!it) {
@@ -109,30 +109,13 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 		const uint16_t client_id = it.clientId();
 		const uint16_t server_id = item ? item->getID() : 0;
-
-		// Yellow invisible stairs tile (server 459 / client 469)
-		if (server_id == 459 || client_id == 469) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, green, 0, (alpha * 171) >> 8), 0, atlas);
+		const auto tech_type = rme::rendering::TechnicalItemRegistry::Classify(server_id, client_id);
+		if (tech_type != rme::rendering::TileIndicatorType::None) {
+			const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;
+			if (white_pixel) {
+				sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, static_cast<float>(alpha) / 255.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type));
+			}
 			return;
-		}
-
-		// Red invisible walkable tile (server 460 / client 470, 17970, 20028, 34168)
-		if (server_id == 460 || client_id == 470 || client_id == 17970 || client_id == 20028 || client_id == 34168) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, (alpha * 171) >> 8), 0, atlas);
-			return;
-		}
-
-		// Cyan invisible wall (server 1548 / client 2187)
-		if (server_id == 1548 || client_id == 2187) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(0, green, blue, 80), 0, atlas);
-			return;
-		}
-
-		// primal light
-		if (it.clientId() >= 39092 && it.clientId() <= 39100 || it.clientId() == 39236 || it.clientId() == 39367 || it.clientId() == 39368) {
-			spr = resolveSprite(SPRITE_LIGHTSOURCE, params.ctx);
-			red = 0;
-			alpha = 180;
 		}
 	}
 
@@ -196,7 +179,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 				}
 			}
 #endif
-			sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx, screeny, region, DrawColor(red, green, blue, alpha));
+			sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx, screeny, region, DrawColor(red, green, blue, alpha), params.house_id, params.zone_flags);
 		}
 	} else {
 		const auto composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
@@ -207,7 +190,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 				for (int cf = 0; cf != spr->layers; cf++) {
 					const AtlasRegion* region = spr->getAtlasRegion(cx, cy, cf, subtype, pattern_x, pattern_y, pattern_z, frame);
 					if (region) {
-						sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx - x_offset, screeny - y_offset, region, DrawColor(red, green, blue, alpha));
+						sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx - x_offset, screeny - y_offset, region, DrawColor(red, green, blue, alpha), params.house_id, params.zone_flags);
 					}
 				}
 				y_offset += composite_metrics.row_heights[cy];
@@ -266,43 +249,18 @@ void ItemDrawer::DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_dr
 		return;
 	}
 	const auto definition = ctx->item_definitions.get(item_id);
-	GameSprite* spr = resolveSprite(definition, ctx);
 	uint16_t cid = definition ? definition.clientId() : 0;
 
-	switch (cid) {
-		// Yellow invisible stairs tile
-		case 469:
-			b = 0;
-			alpha = (alpha * 171) >> 8;
-			spr = resolveSprite(SPRITE_ZONE, ctx);
-			break;
-
-		// Red invisible walkable tile
-		case 470:
-			g = 0;
-			b = 0;
-			alpha = (alpha * 171) >> 8;
-			spr = resolveSprite(SPRITE_ZONE, ctx);
-			break;
-
-		// Cyan invisible wall
-		case 2187:
-			r = 0;
-			alpha = alpha / 3;
-			spr = resolveSprite(SPRITE_ZONE, ctx);
-			break;
-
-		default:
-			break;
+	const auto tech_type = rme::rendering::TechnicalItemRegistry::Classify(item_id, cid);
+	if (tech_type != rme::rendering::TileIndicatorType::None) {
+		const AtlasRegion* white_pixel = ctx->atlas.getWhitePixel();
+		if (white_pixel) {
+			sprite_batch.draw(static_cast<float>(screenx), static_cast<float>(screeny), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, static_cast<float>(alpha) / 255.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type));
+		}
+		return;
 	}
 
-	// primal light
-	if (cid >= 39092 && cid <= 39100 || cid == 39236 || cid == 39367 || cid == 39368) {
-		spr = resolveSprite(SPRITE_LIGHTSOURCE, ctx);
-		r = 0;
-		alpha = (alpha * 171) >> 8;
-	}
-
+	GameSprite* spr = resolveSprite(definition, ctx);
 	if (spr) {
 		sprite_drawer->BlitSprite(sprite_batch, screenx, screeny, spr, DrawColor(r, g, b, alpha), ctx);
 	}

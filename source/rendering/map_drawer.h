@@ -44,6 +44,7 @@
 #include "rendering/drawers/overlays/marker_drawer.h"
 #include "rendering/drawers/overlays/preview_drawer.h"
 #include "rendering/drawers/overlays/selection_drawer.h"
+#include "rendering/drawers/overlays/zone_overlay_drawer.h"
 #include "rendering/drawers/tiles/floor_drawer.h"
 #include "rendering/drawers/tiles/shade_drawer.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
@@ -67,6 +68,7 @@ class MapDrawer {
 	SelectionDrawer selection_drawer;
 	BrushCursorDrawer brush_cursor_drawer;
 	BrushOverlayDrawer brush_overlay_drawer;
+	rme::rendering::ZoneOverlayDrawer zone_overlay_drawer;
 	DragShadowDrawer drag_shadow_drawer;
 	FloorDrawer floor_drawer;
 	SpriteDrawer sprite_drawer;

@@ -14,6 +14,10 @@
 #include "ui/theme.h"
 #include "brushes/raw/raw_brush.h"
 #include "brushes/creature/creature_brush.h"
+#include "brushes/spawn/spawn_brush.h"
+#include "brushes/waypoint/waypoint_brush.h"
+#include "brushes/house/house_exit_brush.h"
+#include "rendering/indicators/technical_item_registry.h"
 #include "game/creatures.h"
 #include "ui/find_item_window_model.h"
 
@@ -53,6 +57,78 @@ namespace {
 			return static_cast<uint32_t>(brush->getLookID());
 		}
 		return brush->getID();
+	}
+
+	rme::rendering::TileIndicatorType GetBrushIndicatorType(const Brush* brush) {
+		if (!brush) {
+			return rme::rendering::TileIndicatorType::None;
+		}
+		if (brush->is<SpawnBrush>()) {
+			return rme::rendering::TileIndicatorType::Spawn;
+		}
+		if (brush->is<WaypointBrush>()) {
+			return rme::rendering::TileIndicatorType::Waypoint;
+		}
+		if (brush->is<HouseExitBrush>()) {
+			return rme::rendering::TileIndicatorType::HouseEntry;
+		}
+		if (const auto* raw = dynamic_cast<const RAWBrush*>(brush)) {
+			uint16_t s_id = raw->getItemID();
+			uint16_t c_id = static_cast<uint16_t>(raw->getLookID());
+			auto tech = rme::rendering::TechnicalItemRegistry::Classify(s_id, c_id);
+			if (tech != rme::rendering::TileIndicatorType::None) {
+				return tech;
+			}
+		}
+		int look_id = brush->getLookID();
+		if (look_id > 0) {
+			auto tech = rme::rendering::TechnicalItemRegistry::Classify(static_cast<uint16_t>(look_id), static_cast<uint16_t>(look_id));
+			if (tech != rme::rendering::TileIndicatorType::None) {
+				return tech;
+			}
+		}
+		const std::string& bname = brush->getName();
+		if (bname == "stairs" || bname == "invisible stairs" || bname == "stair") {
+			return rme::rendering::TileIndicatorType::TechInvisibleStair;
+		}
+		return rme::rendering::TileIndicatorType::None;
+	}
+
+	void DrawIndicatorBadge(NVGcontext* vg, rme::rendering::TileIndicatorType type, float bx, float by, float bsize) {
+		const auto style = rme::rendering::GetIndicatorBadgeStyle(type);
+
+		// 1. Background wash
+		nvgBeginPath(vg);
+		nvgRoundedRect(vg, bx, by, bsize, bsize, 3.0f);
+		nvgFillColor(vg, nvgRGBA(style.bg_r, style.bg_g, style.bg_b, style.bg_a));
+		nvgFill(vg);
+
+		// 2. Vibrant 1px border
+		nvgBeginPath(vg);
+		nvgRoundedRect(vg, bx + 0.5f, by + 0.5f, bsize - 1.0f, bsize - 1.0f, 3.0f);
+		nvgStrokeColor(vg, nvgRGBA(style.border_r, style.border_g, style.border_b, 255));
+		nvgStrokeWidth(vg, 1.0f);
+		nvgStroke(vg);
+
+		// 3. Crisp centered typography with text shadow
+		const float fontSize = std::clamp(bsize * 0.28f, 9.0f, 18.0f);
+		nvgFontSize(vg, fontSize);
+		nvgFontFace(vg, "sans");
+		nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+
+		const float cx = bx + bsize * 0.5f;
+		const float cy = by + bsize * 0.5f;
+
+		// Dark contrast outline
+		nvgFillColor(vg, nvgRGBA(style.outline_r, style.outline_g, style.outline_b, 240));
+		nvgText(vg, cx + 1.0f, cy, style.text, nullptr);
+		nvgText(vg, cx - 1.0f, cy, style.text, nullptr);
+		nvgText(vg, cx, cy + 1.0f, style.text, nullptr);
+		nvgText(vg, cx, cy - 1.0f, style.text, nullptr);
+
+		// White foreground text
+		nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
+		nvgText(vg, cx, cy, style.text, nullptr);
 	}
 }
 
@@ -337,30 +413,35 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 	// Draw brush sprite
 	Brush* brush = (i < static_cast<int>(m_display_brushes.size())) ? m_display_brushes[i] : nullptr;
 	if (brush) {
-		int tex = 0;
-		if (Sprite* spr = brush->getSprite()) {
-			tex = GetOrCreateSpriteTexture(vg, spr);
-		} else {
-			int look_id = brush->getLookID();
-			if (look_id < 0) {
-				tex = GetOrCreateEditorIconTexture(vg, look_id);
-			} else if (look_id > 0) {
-				spr = g_gui.gfx.getSprite(look_id);
-				tex = spr ? GetOrCreateSpriteTexture(vg, spr) : 0;
-			}
-		}
 		int iconSize = (display_mode == DisplayMode::List) ? GRID_ITEM_SIZE_BASE : (item_size - 2 * ICON_OFFSET);
 		int iconX = (display_mode == DisplayMode::List) ? (rect.x + ICON_OFFSET) : (rect.x + (rect.width - iconSize) / 2);
 		int iconY = rect.y + ICON_OFFSET;
 
-		if (tex > 0) {
-			NVGpaint imgPaint = nvgImagePattern(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 0.0f, tex, 1.0f);
-
-			nvgBeginPath(vg);
-			nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
-			nvgFillPaint(vg, imgPaint);
-			nvgFill(vg);
+		const auto indType = GetBrushIndicatorType(brush);
+		if (indType != rme::rendering::TileIndicatorType::None) {
+			DrawIndicatorBadge(vg, indType, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize));
 		} else {
+			int tex = 0;
+			if (Sprite* spr = brush->getSprite()) {
+				tex = GetOrCreateSpriteTexture(vg, spr);
+			} else {
+				int look_id = brush->getLookID();
+				if (look_id < 0) {
+					tex = GetOrCreateEditorIconTexture(vg, look_id);
+				} else if (look_id > 0) {
+					spr = g_gui.gfx.getSprite(look_id);
+					tex = spr ? GetOrCreateSpriteTexture(vg, spr) : 0;
+				}
+			}
+
+			if (tex > 0) {
+				NVGpaint imgPaint = nvgImagePattern(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 0.0f, tex, 1.0f);
+
+				nvgBeginPath(vg);
+				nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
+				nvgFillPaint(vg, imgPaint);
+				nvgFill(vg);
+			} else {
 			// Placeholder box for entries without sprite (e.g. completely transparent tile or missing sprite)
 			const wxColour textCol = Theme::Get(Theme::Role::Text);
 			nvgBeginPath(vg);
@@ -377,6 +458,7 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 			nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 120));
 			nvgText(vg, iconX + iconSize / 2.0f, iconY + iconSize / 2.0f, "?", nullptr);
 		}
+	}
 
 		if (display_mode == DisplayMode::List) {
 			nvgFontSize(vg, 14.0f);

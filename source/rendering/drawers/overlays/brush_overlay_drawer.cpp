@@ -36,6 +36,8 @@
 #include "brushes/door/door_brush.h"
 #include "brushes/flag/flag_brush.h"
 #include "brushes/border/optional_border_brush.h"
+#include "rendering/indicators/technical_item_registry.h"
+#include "rendering/indicators/zone_flags.h"
 
 // Helper to get color from config
 glm::vec4 BrushOverlayDrawer::get_brush_color(BrushColor color, const Settings& settings) {
@@ -211,6 +213,36 @@ void BrushOverlayDrawer::draw(
 							}
 						}
 					}
+				} else if (brush->is<FlagBrush>()) {
+					FlagBrush* flag_brush = brush->as<FlagBrush>();
+					float zf = 0.0f;
+					switch (flag_brush->getFlag()) {
+						case TILESTATE_PROTECTIONZONE: zf = rme::rendering::ZONE_FLAG_PZ; break;
+						case TILESTATE_NOPVP:          zf = rme::rendering::ZONE_FLAG_NOPVP; break;
+						case TILESTATE_NOLOGOUT:       zf = rme::rendering::ZONE_FLAG_NOLOGOUT; break;
+						case TILESTATE_PVPZONE:        zf = rme::rendering::ZONE_FLAG_PVPZONE; break;
+					}
+					const AtlasRegion* white_pixel = atlas.getWhitePixel();
+					if (white_pixel && zf > 0.0f) {
+						int start_x = std::min(drag_state.last_click_map_x, view.mouse_map_x);
+						int end_x = std::max(drag_state.last_click_map_x, view.mouse_map_x);
+						int start_y = std::min(drag_state.last_click_map_y, view.mouse_map_y);
+						int end_y = std::max(drag_state.last_click_map_y, view.mouse_map_y);
+
+						for (int y = start_y; y <= end_y; ++y) {
+							int cy = y * TILE_SIZE - view.view_scroll_y - view.getFloorAdjustment();
+							for (int x = start_x; x <= end_x; ++x) {
+								int cx = x * TILE_SIZE - view.view_scroll_x - view.getFloorAdjustment();
+								float border_flags = 0.0f;
+								if (y == start_y) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
+								if (y == end_y)   border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_S;
+								if (x == start_x) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
+								if (x == end_x)   border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
+
+								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags);
+							}
+						}
+					}
 				} else {
 					int last_click_start_map_x = std::min(drag_state.last_click_map_x, view.mouse_map_x);
 					int last_click_start_map_y = std::min(drag_state.last_click_map_y, view.mouse_map_y);
@@ -286,6 +318,30 @@ void BrushOverlayDrawer::draw(
 						if (distance < radii) {
 							if (brush->is<RAWBrush>()) {
 								item_drawer->DrawRawBrush(sprite_batch, sprite_drawer, cx, cy, raw_brush->getItemID(), 160, 160, 160, 160, &ctx);
+							} else if (brush->is<FlagBrush>()) {
+								FlagBrush* flag_brush = brush->as<FlagBrush>();
+								float zf = 0.0f;
+								switch (flag_brush->getFlag()) {
+									case TILESTATE_PROTECTIONZONE: zf = rme::rendering::ZONE_FLAG_PZ; break;
+									case TILESTATE_NOPVP:          zf = rme::rendering::ZONE_FLAG_NOPVP; break;
+									case TILESTATE_NOLOGOUT:       zf = rme::rendering::ZONE_FLAG_NOLOGOUT; break;
+									case TILESTATE_PVPZONE:        zf = rme::rendering::ZONE_FLAG_PVPZONE; break;
+								}
+								const AtlasRegion* white_pixel = atlas.getWhitePixel();
+								if (white_pixel && zf > 0.0f) {
+									auto inCircle = [&](int nx, int ny) {
+										float cdx = static_cast<float>(center_x - nx);
+										float cdy = static_cast<float>(center_y - ny);
+										return sqrt(cdx * cdx + cdy * cdy) < radii;
+									};
+									float border_flags = 0.0f;
+									if (!inCircle(x, y - 1)) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
+									if (!inCircle(x, y + 1)) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_S;
+									if (!inCircle(x - 1, y)) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
+									if (!inCircle(x + 1, y)) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
+
+									sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags);
+								}
 							} else {
 								sprite_batch.drawRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), brushColor, atlas);
 							}
@@ -364,20 +420,58 @@ void BrushOverlayDrawer::draw(
 
 					if (brush->is<RAWBrush>()) {
 						item_drawer->DrawRawBrush(sprite_batch, sprite_drawer, cx, cy, raw_brush->getItemID(), 160, 160, 160, 160, &ctx);
-					} else {
-						if (brush->is<WaypointBrush>()) {
-							if (brush_cursor_drawer) {
-								uint8_t r, g, b;
-								get_color(brush, editor, Position(view.mouse_map_x + x, view.mouse_map_y + y, view.floor), r, g, b);
-								brush_cursor_drawer->draw(sprite_batch, primitive_renderer, atlas, cx, cy, brush, r, g, b);
+					} else if (brush->is<SpawnBrush>()) {
+						const AtlasRegion* white_pixel = atlas.getWhitePixel();
+						if (white_pixel) {
+							if (x == 0 && y == 0) {
+								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, rme::rendering::INDICATOR_SPAWN_BASE);
+							} else {
+								float border_flags = 0.0f;
+								if (y == footprint.min_offset_y) border_flags += rme::rendering::ZONE_FLAG_SPAWN_BORDER_N;
+								if (y == footprint.max_offset_y) border_flags += rme::rendering::ZONE_FLAG_SPAWN_BORDER_S;
+								if (x == footprint.min_offset_x) border_flags += rme::rendering::ZONE_FLAG_SPAWN_BORDER_W;
+								if (x == footprint.max_offset_x) border_flags += rme::rendering::ZONE_FLAG_SPAWN_BORDER_E;
+								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, rme::rendering::ZONE_FLAG_SPAWN + border_flags);
 							}
-						} else {
-							glm::vec4 c = brushColor;
-							if (brush->is<HouseExitBrush>() || brush->is<OptionalBorderBrush>()) {
-								c = get_check_color(brush, editor, Position(view.mouse_map_x + x, view.mouse_map_y + y, view.floor), cfg);
-							}
-							sprite_batch.drawRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), c, atlas);
 						}
+					} else if (brush->is<WaypointBrush>()) {
+						const AtlasRegion* white_pixel = atlas.getWhitePixel();
+						if (white_pixel) {
+							sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, rme::rendering::INDICATOR_WAYPOINT_BASE);
+						}
+					} else if (brush->is<HouseExitBrush>()) {
+						const AtlasRegion* white_pixel = atlas.getWhitePixel();
+						if (white_pixel) {
+							uint32_t hid = options.current_house_id > 0 ? options.current_house_id : 1;
+							sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, rme::rendering::INDICATOR_HOUSE_ENTRY_BASE + static_cast<float>(hid));
+						}
+					} else if (brush->is<FlagBrush>()) {
+						const AtlasRegion* white_pixel = atlas.getWhitePixel();
+						if (white_pixel) {
+							FlagBrush* flag_brush = brush->as<FlagBrush>();
+							float zf = 0.0f;
+							switch (flag_brush->getFlag()) {
+								case TILESTATE_PROTECTIONZONE: zf = rme::rendering::ZONE_FLAG_PZ; break;
+								case TILESTATE_NOPVP:          zf = rme::rendering::ZONE_FLAG_NOPVP; break;
+								case TILESTATE_NOLOGOUT:       zf = rme::rendering::ZONE_FLAG_NOLOGOUT; break;
+								case TILESTATE_PVPZONE:        zf = rme::rendering::ZONE_FLAG_PVPZONE; break;
+							}
+							if (zf > 0.0f) {
+								float border_flags = 0.0f;
+								if (y == footprint.min_offset_y) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
+								if (y == footprint.max_offset_y) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_S;
+								if (x == footprint.min_offset_x) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
+								if (x == footprint.max_offset_x) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
+
+								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags);
+							}
+						}
+					} else {
+						glm::vec4 c = brushColor;
+						if (brush->is<OptionalBorderBrush>()) {
+							c = get_check_color(brush, editor, Position(view.mouse_map_x + x, view.mouse_map_y + y, view.floor), cfg);
+						}
+						sprite_batch.drawRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), c, atlas);
 					}
 				}
 			}

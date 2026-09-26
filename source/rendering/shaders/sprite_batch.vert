@@ -9,18 +9,22 @@ layout (location = 2) in vec4 aRect;      // x, y, w, h
 layout (location = 3) in vec4 aUV;        // u_min, v_min, u_max, v_max
 layout (location = 4) in vec4 aTint;      // r, g, b, a
 layout (location = 5) in float aLayer;    // texture array layer
+layout (location = 6) in float aHouseId;
 
+out vec2 vWorldPos;
+out vec2 vQuadCoord;
 out vec3 TexCoord;
 out vec4 Tint;
+flat out float vHouseId;
 
 uniform mat4 uMVP;
 
 void main() {
-    // Transform unit quad to screen position
     vec2 pos = aRect.xy + aPos * aRect.zw;
     gl_Position = uMVP * vec4(pos, 0.0, 1.0);
-    
-    // Interpolate UVs and pass layer
+    vWorldPos = pos;
+    vQuadCoord = aPos;
     TexCoord = vec3(mix(aUV.xy, aUV.zw, aTexCoord), aLayer);
     Tint = aTint;
+    vHouseId = aHouseId;
 }

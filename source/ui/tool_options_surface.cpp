@@ -11,6 +11,8 @@
 #include "brushes/house/house_exit_brush.h"
 #include "brushes/spawn/spawn_brush.h"
 #include "brushes/waypoint/waypoint_brush.h"
+#include "brushes/raw/raw_brush.h"
+#include "rendering/indicators/technical_item_registry.h"
 #include "game/sprites.h"
 #include "palette/palette_window.h"
 #include "rendering/core/game_sprite.h"
@@ -70,6 +72,51 @@ namespace {
 
 		window->Show();
 		sizer->Add(window, proportion, flags, border);
+	}
+
+	rme::rendering::TileIndicatorType GetBrushIndicatorType(const Brush* brush) {
+		if (!brush) {
+			return rme::rendering::TileIndicatorType::None;
+		}
+		if (brush->is<SpawnBrush>()) {
+			return rme::rendering::TileIndicatorType::Spawn;
+		}
+		if (brush->is<WaypointBrush>()) {
+			return rme::rendering::TileIndicatorType::Waypoint;
+		}
+		if (brush->is<HouseExitBrush>()) {
+			return rme::rendering::TileIndicatorType::HouseEntry;
+		}
+		if (const auto* raw = dynamic_cast<const RAWBrush*>(brush)) {
+			uint16_t s_id = raw->getItemID();
+			uint16_t c_id = static_cast<uint16_t>(raw->getLookID());
+			auto tech = rme::rendering::TechnicalItemRegistry::Classify(s_id, c_id);
+			if (tech != rme::rendering::TileIndicatorType::None) {
+				return tech;
+			}
+		}
+		int look_id = brush->getLookID();
+		if (look_id > 0) {
+			auto tech = rme::rendering::TechnicalItemRegistry::Classify(static_cast<uint16_t>(look_id), static_cast<uint16_t>(look_id));
+			if (tech != rme::rendering::TileIndicatorType::None) {
+				return tech;
+			}
+		}
+		const std::string& bname = brush->getName();
+		if (bname == "stairs" || bname == "invisible stairs" || bname == "stair") {
+			return rme::rendering::TileIndicatorType::TechInvisibleStair;
+		}
+		return rme::rendering::TileIndicatorType::None;
+	}
+
+	wxColour GetIndicatorColor(rme::rendering::TileIndicatorType type) {
+		const auto style = rme::rendering::GetIndicatorBadgeStyle(type);
+		return wxColour(style.border_r, style.border_g, style.border_b);
+	}
+
+	wxString GetIndicatorText(rme::rendering::TileIndicatorType type) {
+		const auto style = rme::rendering::GetIndicatorBadgeStyle(type);
+		return wxString(style.text);
 	}
 }
 
@@ -509,6 +556,27 @@ wxBitmap ToolOptionsSurface::CreateToolBitmap(const ToolButtonEntry& entry) cons
 wxBitmap ToolOptionsSurface::CreateBrushBitmap(Brush* brush) const {
 	if (!brush) {
 		return wxBitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
+	}
+
+	const auto indType = GetBrushIndicatorType(brush);
+	if (indType != rme::rendering::TileIndicatorType::None) {
+		wxBitmap bitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
+		wxMemoryDC dc(bitmap);
+		dc.SetBackground(wxBrush(wxColour(30, 30, 35)));
+		dc.Clear();
+		const int bw = bitmap.GetWidth();
+		const int bh = bitmap.GetHeight();
+		const wxColour col = GetIndicatorColor(indType);
+		dc.SetBrush(wxBrush(wxColour(col.Red() / 3, col.Green() / 3, col.Blue() / 3)));
+		dc.SetPen(wxPen(col, 1));
+		dc.DrawRectangle(1, 1, bw - 2, bh - 2);
+		dc.SetFont(wxFont(FromDIP(7), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
+		dc.SetTextForeground(*wxWHITE);
+		const wxString txt = GetIndicatorText(indType);
+		const wxSize sz = dc.GetTextExtent(txt);
+		dc.DrawText(txt, (bw - sz.GetWidth()) / 2, (bh - sz.GetHeight()) / 2);
+		dc.SelectObject(wxNullBitmap);
+		return bitmap;
 	}
 
 	if (brush->getLookID() < 0) {

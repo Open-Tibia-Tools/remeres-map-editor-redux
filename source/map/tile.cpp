@@ -492,7 +492,11 @@ void Tile::setHouseID(uint32_t newHouseId) {
 	house_id = newHouseId;
 }
 
-bool Tile::isTownExit(Map& map) const {
+bool Tile::isTownExit(const Map& map) const {
+	return isTownExit();
+}
+
+bool Tile::isTownExit() const {
 	const TileLocation* loc = location ? location : ownedLocation;
 	return loc && loc->getTownCount() > 0;
 }

@@ -1,45 +1,10 @@
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/shared_geometry.h"
+#include "rendering/shaders/sprite_batch_shader.h"
 #include <iostream>
 #include <cstring>
 #include <utility>
 #include <spdlog/spdlog.h>
-
-const char* sprite_batch_vert = R"(
-#version 450 core
-layout (location = 0) in vec2 aPos;
-layout (location = 1) in vec2 aTexCoord;
-layout (location = 2) in vec4 aRect;
-layout (location = 3) in vec4 aUV;
-layout (location = 4) in vec4 aTint;
-layout (location = 5) in float aLayer;
-
-out vec3 TexCoord;
-out vec4 Tint;
-
-uniform mat4 uMVP;
-
-void main() {
-    vec2 pos = aRect.xy + aPos * aRect.zw;
-    gl_Position = uMVP * vec4(pos, 0.0, 1.0);
-    TexCoord = vec3(mix(aUV.xy, aUV.zw, aTexCoord), aLayer);
-    Tint = aTint;
-}
-)";
-
-const char* sprite_batch_frag = R"(
-#version 450 core
-in vec3 TexCoord;
-in vec4 Tint;
-out vec4 FragColor;
-
-uniform sampler2DArray uAtlas;
-uniform vec4 uGlobalTint;
-
-void main() {
-    FragColor = texture(uAtlas, TexCoord) * Tint * uGlobalTint;
-}
-)";
 
 SpriteBatch::SpriteBatch() {
 	pending_sprites_.reserve(MAX_SPRITES_PER_BATCH);
@@ -56,7 +21,7 @@ SpriteBatch& SpriteBatch::operator=(SpriteBatch&& other) noexcept = default;
 bool SpriteBatch::initialize() {
 	// Load shader
 	shader_ = std::make_unique<ShaderProgram>();
-	if (!shader_->Load(sprite_batch_vert, sprite_batch_frag)) {
+	if (!shader_->Load(rme::rendering::shaders::SPRITE_BATCH_VERT_SHADER, rme::rendering::shaders::GetSpriteBatchFragShader())) {
 		spdlog::error("SpriteBatch: Failed to load shader");
 		return false;
 	}
@@ -114,6 +79,16 @@ bool SpriteBatch::initialize() {
 	glVertexArrayAttribFormat(vao_->GetID(), 5, 1, GL_FLOAT, GL_FALSE, offsetof(SpriteInstance, atlas_layer));
 	glVertexArrayAttribBinding(vao_->GetID(), 5, 1);
 
+	// Loc 6: house_id (float) - instance
+	glEnableVertexArrayAttrib(vao_->GetID(), 6);
+	glVertexArrayAttribFormat(vao_->GetID(), 6, 1, GL_FLOAT, GL_FALSE, offsetof(SpriteInstance, house_id));
+	glVertexArrayAttribBinding(vao_->GetID(), 6, 1);
+
+	// Loc 7: zone_flags (float) - instance
+	glEnableVertexArrayAttrib(vao_->GetID(), 7);
+	glVertexArrayAttribFormat(vao_->GetID(), 7, 1, GL_FLOAT, GL_FALSE, offsetof(SpriteInstance, zone_flags));
+	glVertexArrayAttribBinding(vao_->GetID(), 7, 1);
+
 	// Initialize MDI
 	if (mdi_renderer_.initialize()) {
 		use_mdi_ = true;
@@ -144,6 +119,40 @@ void SpriteBatch::begin(const glm::mat4& projection, const AtlasManager& atlas_m
 	shader_->SetMat4("uMVP", projection_);
 	shader_->SetInt("uAtlas", 0);
 	shader_->SetVec4("uGlobalTint", global_tint_);
+	shader_->SetUint("uCurrentHouseId", current_house_id_);
+	shader_->SetInt("uShowHouses", show_houses_ ? 1 : 0);
+	shader_->SetInt("uShowSpawns", show_spawns_ ? 1 : 0);
+	shader_->SetInt("uShowTowns", show_towns_ ? 1 : 0);
+	shader_->SetInt("uShowWaypoints", show_waypoints_ ? 1 : 0);
+	shader_->SetInt("uShowTechItems", show_tech_items_ ? 1 : 0);
+	shader_->SetInt("uShowBlocking", show_blocking_ ? 1 : 0);
+	shader_->SetInt("uShowSpecialTiles", show_special_tiles_ ? 1 : 0);
+}
+
+void SpriteBatch::setZoneAndIndicatorOptions(uint32_t current_house_id, bool show_houses, bool show_spawns, bool show_towns, bool show_waypoints, bool show_tech_items, bool show_blocking, bool show_special_tiles) {
+	current_house_id_ = current_house_id;
+	show_houses_ = show_houses;
+	show_spawns_ = show_spawns;
+	show_towns_ = show_towns;
+	show_waypoints_ = show_waypoints;
+	show_tech_items_ = show_tech_items;
+	show_blocking_ = show_blocking;
+	show_special_tiles_ = show_special_tiles;
+	if (shader_ && shader_->IsValid()) {
+		shader_->Use();
+		shader_->SetUint("uCurrentHouseId", current_house_id_);
+		shader_->SetInt("uShowHouses", show_houses_ ? 1 : 0);
+		shader_->SetInt("uShowSpawns", show_spawns_ ? 1 : 0);
+		shader_->SetInt("uShowTowns", show_towns_ ? 1 : 0);
+		shader_->SetInt("uShowWaypoints", show_waypoints_ ? 1 : 0);
+		shader_->SetInt("uShowTechItems", show_tech_items_ ? 1 : 0);
+		shader_->SetInt("uShowBlocking", show_blocking_ ? 1 : 0);
+		shader_->SetInt("uShowSpecialTiles", show_special_tiles_ ? 1 : 0);
+	}
+}
+
+void SpriteBatch::setHouseOptions(uint32_t current_house_id, bool show_houses) {
+	setZoneAndIndicatorOptions(current_house_id, show_houses, show_spawns_, show_towns_, show_waypoints_, show_tech_items_, show_blocking_, show_special_tiles_);
 }
 
 void SpriteBatch::setGlobalTint(float r, float g, float b, float a, const AtlasManager& atlas_manager) {
@@ -167,10 +176,10 @@ void SpriteBatch::ensureCapacity(size_t capacity) {
 }
 
 void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region) {
-	draw(x, y, w, h, region, 1.0f, 1.0f, 1.0f, 1.0f);
+	draw(x, y, w, h, region, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f);
 }
 
-void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a) {
+void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id, float zone_flags) {
 	if (!in_batch_) {
 		return;
 	}
@@ -193,6 +202,8 @@ void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& re
 	inst.b = b;
 	inst.a = a;
 	inst.atlas_layer = static_cast<float>(region.atlas_index);
+	inst.house_id = house_id;
+	inst.zone_flags = zone_flags;
 }
 
 void SpriteBatch::drawRect(float x, float y, float w, float h, const glm::vec4& color, const AtlasManager& atlas_manager) {
@@ -232,6 +243,14 @@ void SpriteBatch::flush(const AtlasManager& atlas_manager) {
 	shader_->SetMat4("uMVP", projection_);
 	shader_->SetInt("uAtlas", 0);
 	shader_->SetVec4("uGlobalTint", global_tint_);
+	shader_->SetUint("uCurrentHouseId", current_house_id_);
+	shader_->SetInt("uShowHouses", show_houses_ ? 1 : 0);
+	shader_->SetInt("uShowSpawns", show_spawns_ ? 1 : 0);
+	shader_->SetInt("uShowTowns", show_towns_ ? 1 : 0);
+	shader_->SetInt("uShowWaypoints", show_waypoints_ ? 1 : 0);
+	shader_->SetInt("uShowTechItems", show_tech_items_ ? 1 : 0);
+	shader_->SetInt("uShowBlocking", show_blocking_ ? 1 : 0);
+	shader_->SetInt("uShowSpecialTiles", show_special_tiles_ ? 1 : 0);
 
 	atlas_manager.bind(0);
 

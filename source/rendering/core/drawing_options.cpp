@@ -52,7 +52,6 @@ void DrawingOptions::SetDefault() {
 		.color = rme::lighting::DEFAULT_SERVER_LIGHT_COLOR
 	};
 	minimum_ambient_light = rme::lighting::DEFAULT_MINIMUM_AMBIENT_LIGHT;
-	highlight_pulse = 0.0f;
 	anti_aliasing = false;
 
 	chunk_bake_dirty_ = true;
@@ -115,17 +114,11 @@ void DrawingOptions::MarkSettingDirty(uint32_t key) noexcept {
 	switch (key) {
 		case Config::SHOW_CREATURES:
 		case Config::TRANSPARENT_ITEMS:
-		case Config::SHOW_SPECIAL_TILES:
-		case Config::SHOW_HOUSES:
-		case Config::EXT_HOUSE_SHADER:
-		case Config::SHOW_BLOCKING:
-		case Config::SHOW_SPAWNS:
 		case Config::HIGHLIGHT_ITEMS:
 		case Config::SHOW_ONLY_TILEFLAGS:
 		case Config::SHOW_ONLY_MODIFIED_TILES:
 		case Config::SHOW_ITEMS:
 		case Config::SHOW_AS_MINIMAP:
-		case Config::SHOW_TECHNICAL_ITEMS:
 			chunk_bake_dirty_ = true;
 			break;
 

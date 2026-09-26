@@ -68,17 +68,6 @@ void MapDrawer::SetupVars(const ViewportParameters& vp) {
 		}
 	}
 
-	// Calculate pulse for house highlighting
-	// Period is 1 second (1000ms)
-	// Range is [0.0, 1.0]
-	// Using a sine wave for smooth transition
-	// (sin(t) + 1) / 2
-	const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-		std::chrono::steady_clock::now().time_since_epoch()
-	).count();
-	const double speed = 0.005;
-	options.highlight_pulse = static_cast<float>((std::sin(static_cast<double>(now_ms) * speed) + 1.0) * 0.5);
-
 	view.Setup(vp, options, &editor.map);
 }
 
@@ -177,6 +166,16 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 
 	// Begin Batches
 	sprite_batch.begin(view.projectionMatrix, *atlas);
+	sprite_batch.setZoneAndIndicatorOptions(
+		static_cast<uint32_t>(options.current_house_id),
+		options.show_houses,
+		options.show_spawns,
+		options.show_towns,
+		options.show_waypoints,
+		options.show_tech_items && !options.ingame,
+		options.show_blocking,
+		options.show_special_tiles
+	);
 	primitive_renderer.setProjectionMatrix(view.projectionMatrix);
 
 	DrawBackground();
@@ -196,6 +195,20 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 
 	// Resume Batch for Overlays
 	sprite_batch.begin(view.projectionMatrix, *atlas);
+	sprite_batch.setZoneAndIndicatorOptions(
+		static_cast<uint32_t>(options.current_house_id),
+		options.show_houses,
+		options.show_spawns,
+		options.show_towns,
+		options.show_waypoints,
+		options.show_tech_items && !options.ingame,
+		options.show_blocking,
+		options.show_special_tiles
+	);
+
+	if (!options.ingame) {
+		zone_overlay_drawer.draw(sprite_batch, view, editor.map, options, *atlas);
+	}
 
 	drag_shadow_drawer.draw(sprite_batch, editor, interaction.drag_start_position, &item_drawer, &sprite_drawer, &creature_drawer, view, options, &ctx);
 

@@ -18,6 +18,7 @@
 #include "game/item.h"
 #include "game/creature.h"
 #include "game/spawn.h"
+#include "rendering/indicators/technical_item_registry.h"
 
 DragShadowDrawer::DragShadowDrawer() {
 }
@@ -96,7 +97,10 @@ void DragShadowDrawer::draw(SpriteBatch& sprite_batch, Editor& editor, const std
 						});
 					}
 					if (tile->spawn && tile->spawn->isSelected()) {
-						sprite_drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_SPAWN, DrawColor(160, 160, 160, 160), ctx);
+						const AtlasRegion* white_pixel = ctx ? ctx->atlas.getWhitePixel() : nullptr;
+						if (white_pixel) {
+							sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.65f, rme::rendering::INDICATOR_SPAWN_BASE);
+						}
 					}
 				}
 			}
