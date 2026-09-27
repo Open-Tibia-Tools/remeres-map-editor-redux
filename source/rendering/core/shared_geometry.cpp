@@ -3,6 +3,7 @@
 #ifdef _WIN32
 	#include <windows.h>
 #elif defined(__linux__)
+	#include <EGL/egl.h>
 	#include <GL/glx.h>
 #elif defined(__APPLE__)
 	#include <OpenGL/OpenGL.h>
@@ -12,7 +13,12 @@ void* GetCurrentGLContext() {
 #ifdef _WIN32
 	return (void*)wglGetCurrentContext();
 #elif defined(__linux__)
-	return (void*)glXGetCurrentContext();
+	// wxGLCanvas on Wayland is EGL. glXGetCurrentContext() is null there even while GL calls succeed.
+	const EGLContext egl_context = eglGetCurrentContext();
+	if (egl_context != EGL_NO_CONTEXT) {
+		return static_cast<void*>(egl_context);
+	}
+	return static_cast<void*>(glXGetCurrentContext());
 #elif defined(__APPLE__)
 	return (void*)CGLGetCurrentContext();
 #else

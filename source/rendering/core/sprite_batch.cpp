@@ -123,6 +123,7 @@ bool SpriteBatch::initialize() {
 	}
 
 	spdlog::info("SpriteBatch initialized successfully (VAO: {})", vao_->GetID());
+	ready_ = true;
 	return true;
 }
 
@@ -223,7 +224,8 @@ void SpriteBatch::drawRectLines(float x, float y, float w, float h, const glm::v
 }
 
 void SpriteBatch::flush(const AtlasManager& atlas_manager) {
-	if (pending_sprites_.empty()) {
+	if (!ready_ || pending_sprites_.empty()) {
+		pending_sprites_.clear();
 		return;
 	}
 

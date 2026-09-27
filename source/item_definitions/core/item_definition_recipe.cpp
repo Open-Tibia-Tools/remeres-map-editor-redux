@@ -31,6 +31,12 @@ const ItemDefinitionRecipe& ItemDefinitionRecipeRegistry::get(ItemDefinitionMode
 		.source_count = 2,
 		.runnable = true,
 	};
+	static const ItemDefinitionRecipe dat_ron {
+		.mode = ItemDefinitionMode::DatRon,
+		.sources = { ItemDefinitionSourceKind::Dat, ItemDefinitionSourceKind::Ron, ItemDefinitionSourceKind::Ron },
+		.source_count = 2,
+		.runnable = true,
+	};
 
 	switch (mode) {
 		case ItemDefinitionMode::DatOtb:
@@ -43,6 +49,8 @@ const ItemDefinitionRecipe& ItemDefinitionRecipeRegistry::get(ItemDefinitionMode
 			return protobuf_otb;
 		case ItemDefinitionMode::ProtobufOnly:
 			return protobuf_only;
+		case ItemDefinitionMode::DatRon:
+			return dat_ron;
 		default:
 			return dat_otb;
 	}

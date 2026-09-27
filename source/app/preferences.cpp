@@ -33,12 +33,22 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 	book = new wxListbook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBK_LEFT);
 	book->SetBackgroundColour(Theme::Get(Theme::Role::PanelBackground));
 
-	auto* image_list = new wxImageList(18, 18);
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_GEAR, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_PEN_TO_SQUARE, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_IMAGE, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_WINDOW_MAXIMIZE, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_GAMEPAD, wxSize(18, 18)));
+	// SVG bundles are 16px. Requesting another size only changes the scale
+	// factor, so the logical size stays 16 and an 18px image list rejects
+	// every icon. Painting those empty slots asserts in wxBitmap::Draw.
+	auto* image_list = new wxImageList(16, 16);
+	auto add_icon = [&](std::string_view icon) {
+		const wxBitmap bitmap = IMAGE_MANAGER.GetBitmap(icon);
+		if (!bitmap.IsOk() || bitmap.GetLogicalSize() != wxSize(16, 16)) {
+			return -1;
+		}
+		return image_list->Add(bitmap);
+	};
+	const int general_icon = add_icon(ICON_GEAR);
+	const int editor_icon = add_icon(ICON_PEN_TO_SQUARE);
+	const int graphics_icon = add_icon(ICON_IMAGE);
+	const int interface_icon = add_icon(ICON_WINDOW_MAXIMIZE);
+	const int client_icon = add_icon(ICON_GAMEPAD);
 	book->AssignImageList(image_list);
 
 	general_page = new GeneralPage(book);
@@ -47,18 +57,22 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 	interface_page = new InterfacePage(book);
 	client_version_page = new ClientVersionPage(book);
 
-	book->AddPage(general_page, "General", false, 0);
-	book->AddPage(editor_page, "Editor", false, 1);
-	book->AddPage(graphics_page, "Graphics", false, 2);
-	book->AddPage(interface_page, "Interface", false, 3);
-	book->AddPage(client_version_page, "Client Version", false, 4);
+	book->AddPage(general_page, "General", false, general_icon);
+	book->AddPage(editor_page, "Editor", false, editor_icon);
+	book->AddPage(graphics_page, "Graphics", false, graphics_icon);
+	book->AddPage(interface_page, "Interface", false, interface_icon);
+	book->AddPage(client_version_page, "Client Version", false, client_icon);
 	book->SetSelection(clientVersionSelected ? 4 : 0);
 
 	if (auto* list_view = book->GetListView()) {
 		list_view->SetMinSize(wxSize(FromDIP(170), -1));
 		list_view->SetBackgroundColour(Theme::Get(Theme::Role::RaisedSurface));
 		list_view->SetTextColour(Theme::Get(Theme::Role::Text));
-		list_view->SetColumnWidth(0, FromDIP(150));
+		// wxGTK listbooks are wxLC_LIST and have no columns. SetColumnWidth(0)
+		// asserts, and the assert dialog then aborts while painting.
+		if (list_view->GetColumnCount() > 0) {
+			list_view->SetColumnWidth(0, FromDIP(150));
+		}
 	}
 
 	sizer->Add(book, 1, wxEXPAND | wxALL, FromDIP(10));

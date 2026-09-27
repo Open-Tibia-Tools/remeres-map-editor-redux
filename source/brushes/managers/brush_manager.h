@@ -142,6 +142,7 @@ public:
 	FlagBrush* rook_brush;
 	FlagBrush* nolog_brush;
 	FlagBrush* pvp_brush;
+	FlagBrush* refresh_brush;
 
 private:
 	Brush* current_brush;

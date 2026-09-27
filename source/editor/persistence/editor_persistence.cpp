@@ -14,6 +14,7 @@
 #include "editor/selection.h"
 #include "map/map.h"
 #include "io/iomap.h"
+#include "io/map_xml_io.h"
 #include "app/settings.h"
 #include "app/managers/version_manager.h"
 #include "ui/gui.h"
@@ -33,6 +34,8 @@ void EditorPersistence::loadMap(Editor& editor, const FileName& fn, const MapLoa
 	if (g_version.GetCurrentVersion().getProtocolID() != ver.client && !load_options.force_client_mismatch) {
 		throw std::runtime_error(std::format("Client version mismatch. Expected protocol {} but got protocol {}", ver.client, g_version.GetCurrentVersion().getProtocolID()));
 	}
+
+	MapXMLIO::setSpreadRandomizedSpawns(g_settings.getBoolean(Config::SPREAD_RANDOMIZED_SPAWNS));
 
 	ScopedLoadingBar loadingBar("Loading OTBM map...");
 	editor.map.open(nstr(fn.GetFullPath()));

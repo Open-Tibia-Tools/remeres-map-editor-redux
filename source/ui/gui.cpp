@@ -588,8 +588,8 @@ std::unique_ptr<LiveClient> GUI::PopPendingLiveClient(LiveClient* ptr) {
 	return nullptr;
 }
 
-bool GUI::NewMap() {
-	return g_editors.NewMap();
+bool GUI::NewMap(ClientVersionID preferred) {
+	return g_editors.NewMap(preferred);
 }
 void GUI::OpenMap() {
 	g_editors.OpenMap();

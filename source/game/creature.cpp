@@ -72,6 +72,9 @@ std::unique_ptr<Creature> Creature::deepCopy() const {
 	copy->direction = direction;
 	copy->selected = selected;
 	copy->saved = saved;
+	copy->has_spawn_file_offset = has_spawn_file_offset;
+	copy->spawn_file_x = spawn_file_x;
+	copy->spawn_file_y = spawn_file_y;
 	return copy;
 }
 

@@ -3,6 +3,7 @@
 #include "game/item.h"
 #include "rendering/core/drawing_options.h"
 #include "app/definitions.h"
+#include <algorithm>
 #include <array>
 
 void TileColorCalculator::Calculate(const Tile* tile, const DrawingOptions& options, uint32_t current_house_id, int spawn_count, uint8_t& r, uint8_t& g, uint8_t& b) {
@@ -59,6 +60,12 @@ void TileColorCalculator::Calculate(const Tile* tile, const DrawingOptions& opti
 
 	if (showspecial && tile->getMapFlags() & TILESTATE_NOPVP) {
 		g >>= 1;
+	}
+
+	if (showspecial && tile->getMapFlags() & TILESTATE_REFRESH) {
+		r = static_cast<uint8_t>((r * 180) >> 8);
+		b >>= 1;
+		g = static_cast<uint8_t>(std::min(255, static_cast<int>(g) + 48));
 	}
 }
 

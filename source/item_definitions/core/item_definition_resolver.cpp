@@ -95,6 +95,9 @@ bool ItemDefinitionResolver::resolve(const ItemDefinitionLoadInput& input, const
 		case ItemDefinitionMode::DatSrv:
 			error = "Selected item definition mode is not implemented yet.";
 			return false;
+
+		case ItemDefinitionMode::DatRon:
+			return resolveDatRon(input, fragments, rows, error, warnings, missingReport);
 	}
 	error = "Unknown item definition mode.";
 	return false;
@@ -241,6 +244,82 @@ bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input,
 
 	if (rows.empty()) {
 		error = "No item definitions were resolved from DAT/OTB/XML.";
+		return false;
+	}
+	return true;
+}
+
+bool ItemDefinitionResolver::resolveDatRon(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, wxString& error, std::vector<std::string>& warnings, MissingItemReport* missingReport) {
+	(void)warnings;
+	rows.reserve(fragments.otb.size());
+	std::unordered_set<ClientItemId> referenced_client_ids;
+
+	for (const auto& [server_id, ron] : fragments.otb) {
+		if (ron.client_id == 0) {
+			continue;
+		}
+
+		const auto dat_it = fragments.dat.find(ron.client_id);
+		if (dat_it == fragments.dat.end()) {
+			if (missingReport) {
+				missingReport->missing_in_dat.push_back({
+					.server_id = server_id,
+					.client_id = ron.client_id,
+					.name = ron.name,
+					.description = ron.description
+				});
+				continue;
+			}
+			error = wxString::FromUTF8(std::format("Missing DAT definition for client id {}.", ron.client_id));
+			return false;
+		}
+
+		ResolvedItemDefinitionRow row;
+		row.server_id = server_id;
+		row.client_id = ron.client_id;
+		row.group = ron.group;
+		row.type = ron.type;
+		row.flags = ron.flags;
+		row.volume = ron.volume;
+		row.max_text_len = ron.max_text_len;
+		row.slot_position = ron.slot_position;
+		row.weapon_type = ron.weapon_type;
+		row.weight = ron.weight;
+		row.attack = ron.attack;
+		row.defense = ron.defense;
+		row.armor = ron.armor;
+		row.charges = ron.charges;
+		row.rotate_to = ron.rotate_to;
+		row.way_speed = ron.way_speed;
+		row.always_on_top_order = ron.always_on_top_order;
+		row.name = ron.name;
+		row.editor_suffix = ron.editor_suffix;
+		row.description = ron.description;
+		row.flags |= dat_it->second.flags & ~flagMask(ItemFlag::Moveable);
+		row.passive_metadata_json = dat_it->second.passive_metadata_json;
+		finalizeDerivedProperties(row);
+		referenced_client_ids.insert(ron.client_id);
+		rows.push_back(std::move(row));
+	}
+
+	if (missingReport) {
+		for (const auto& [client_id, dat] : fragments.dat) {
+			if (isDatItemEmptyOrInvalid(dat, input.dat_catalog, client_id)) {
+				continue;
+			}
+			if (!referenced_client_ids.contains(client_id)) {
+				missingReport->missing_in_otb.push_back({
+					.server_id = 0,
+					.client_id = client_id,
+					.name = "",
+					.description = ""
+				});
+			}
+		}
+	}
+
+	if (rows.empty()) {
+		error = "No item definitions were resolved from DAT/items.ron.";
 		return false;
 	}
 	return true;

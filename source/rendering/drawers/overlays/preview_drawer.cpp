@@ -1,4 +1,5 @@
 #include "rendering/drawers/overlays/preview_drawer.h"
+#include <algorithm>
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/primitive_renderer.h"
 #include "rendering/core/render_frame_context.h"
@@ -73,6 +74,11 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 					}
 					if (options.show_special_tiles && tile->getMapFlags() & TILESTATE_NOPVP) {
 						g /= 2;
+					}
+					if (options.show_special_tiles && tile->getMapFlags() & TILESTATE_REFRESH) {
+						r = r * 180 / 255;
+						b /= 2;
+						g = std::min(255, g + 48);
 					}
 
 					BlitItemParams params(tile, tile->ground.get(), options);

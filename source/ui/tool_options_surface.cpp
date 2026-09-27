@@ -474,6 +474,9 @@ std::vector<Brush*> ToolOptionsSurface::GetDefaultTools() const {
 	if (g_brush_manager.pvp_brush) {
 		brushes.push_back(g_brush_manager.pvp_brush);
 	}
+	if (g_brush_manager.refresh_brush) {
+		brushes.push_back(g_brush_manager.refresh_brush);
+	}
 	if (g_brush_manager.normal_door_brush) {
 		brushes.push_back(g_brush_manager.normal_door_brush);
 	}

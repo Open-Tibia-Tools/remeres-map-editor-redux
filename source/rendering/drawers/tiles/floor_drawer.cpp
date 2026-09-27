@@ -41,6 +41,10 @@ void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, Sprit
 							params.red = 128;
 							params.green = 255;
 							params.blue = 128;
+						} else if (tile->getMapFlags() & TILESTATE_REFRESH) {
+							params.red = 180;
+							params.green = 255;
+							params.blue = 64;
 						} else {
 							params.red = 255;
 							params.green = 255;

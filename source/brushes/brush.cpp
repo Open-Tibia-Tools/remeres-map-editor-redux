@@ -99,6 +99,7 @@ void Brushes::init() {
 	addManagedBrush(g_brush_manager.rook_brush, TILESTATE_NOPVP);
 	addManagedBrush(g_brush_manager.nolog_brush, TILESTATE_NOLOGOUT);
 	addManagedBrush(g_brush_manager.pvp_brush, TILESTATE_PVPZONE);
+	addManagedBrush(g_brush_manager.refresh_brush, TILESTATE_REFRESH);
 
 	GroundBrush::init();
 	WallBrush::init();

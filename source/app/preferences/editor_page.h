@@ -24,6 +24,8 @@ private:
 	wxCheckBox* allow_multiple_orderitems_chkbox = nullptr;
 	wxCheckBox* merge_move_chkbox = nullptr;
 	wxCheckBox* merge_paste_chkbox = nullptr;
+	wxCheckBox* use_items_ron_chkbox = nullptr;
+	wxCheckBox* spread_randomized_spawns_chkbox = nullptr;
 };
 
 #endif

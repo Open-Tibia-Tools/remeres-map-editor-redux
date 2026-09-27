@@ -19,10 +19,11 @@ FlagBrush::FlagBrush(uint32_t flag) :
 }
 
 std::string FlagBrush::getName() const {
-	static constexpr std::array<std::pair<uint32_t, std::string_view>, 4> flagNames = { { { TILESTATE_PROTECTIONZONE, "PZ brush (0x01)" },
+	static constexpr std::array<std::pair<uint32_t, std::string_view>, 5> flagNames = { { { TILESTATE_PROTECTIONZONE, "PZ brush (0x01)" },
 																						  { TILESTATE_NOPVP, "No combat zone brush (0x04)" },
 																						  { TILESTATE_NOLOGOUT, "No logout zone brush (0x08)" },
-																						  { TILESTATE_PVPZONE, "PVP Zone brush (0x10)" } } };
+																						  { TILESTATE_PVPZONE, "PVP Zone brush (0x10)" },
+																						  { TILESTATE_REFRESH, "Refresh brush (0x20)" } } };
 
 	auto it = std::ranges::find_if(flagNames, [this](const auto& p) { return p.first == flag; });
 	if (it != flagNames.end()) {
@@ -32,10 +33,11 @@ std::string FlagBrush::getName() const {
 }
 
 int FlagBrush::getLookID() const {
-	static constexpr std::array<std::pair<uint32_t, int>, 4> flagSprites = { { { TILESTATE_PROTECTIONZONE, EDITOR_SPRITE_PZ_TOOL },
+	static constexpr std::array<std::pair<uint32_t, int>, 5> flagSprites = { { { TILESTATE_PROTECTIONZONE, EDITOR_SPRITE_PZ_TOOL },
 																			   { TILESTATE_NOPVP, EDITOR_SPRITE_NOPVP_TOOL },
 																			   { TILESTATE_NOLOGOUT, EDITOR_SPRITE_NOLOG_TOOL },
-																			   { TILESTATE_PVPZONE, EDITOR_SPRITE_PVPZ_TOOL } } };
+																			   { TILESTATE_PVPZONE, EDITOR_SPRITE_PVPZ_TOOL },
+																			   { TILESTATE_REFRESH, EDITOR_SPRITE_REFRESH_TOOL } } };
 
 	auto it = std::ranges::find_if(flagSprites, [this](const auto& p) { return p.first == flag; });
 	if (it != flagSprites.end()) {

@@ -110,6 +110,8 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/otb/otb_item_parser.h
 	${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/protobuf/protobuf_item_parser.h
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/xml/xml_item_parser.h
+    ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/ron/ron_item_parser.h
+    ${CMAKE_CURRENT_LIST_DIR}/game/material_server_ids.h
 
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/floor_visibility_calculator.h
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/ingame_preview_renderer.h
@@ -509,6 +511,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/otb/otb_item_parser.cpp
 	${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/protobuf/protobuf_item_parser.cpp
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/xml/xml_item_parser.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/ron/ron_item_parser.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/game/material_server_ids.cpp
 
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/floor_visibility_calculator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/ingame_preview_renderer.cpp

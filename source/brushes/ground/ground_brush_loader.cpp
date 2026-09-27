@@ -7,6 +7,7 @@
 #include "brushes/ground/auto_border.h"
 #include "brushes/brush.h"
 #include "item_definitions/core/item_definition_store.h"
+#include "game/material_server_ids.h"
 #include "ext/pugixml.hpp"
 #include <wx/string.h>
 
@@ -24,7 +25,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 	}
 
 	if ((attribute = node.attribute("server_lookid"))) {
-		const auto definition = g_item_definitions.get(attribute.as_ushort());
+		const auto definition = g_item_definitions.get(materialClientId(attribute.as_ushort()));
 		if (!definition) {
 			warnings.push_back("Invalid server_lookid " + std::to_string(attribute.as_ushort()) + " for ground brush");
 		} else {
@@ -47,7 +48,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 	for (pugi::xml_node childNode : node.children()) {
 		std::string_view childName = childNode.name();
 		if (std::ranges::equal(childName, std::string_view("item"), iequal)) {
-			uint16_t itemId = childNode.attribute("id").as_ushort();
+			uint16_t itemId = materialClientId(childNode.attribute("id").as_ushort());
 			int32_t chance = 1;
 			if (auto attribute = childNode.attribute("chance")) {
 				chance = attribute.as_int();
@@ -89,7 +90,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 			}
 
 			if ((attribute = childNode.attribute("ground_equivalent"))) {
-				const uint16_t border_base_ground_id = attribute.as_ushort();
+				const uint16_t border_base_ground_id = materialClientId(attribute.as_ushort());
 
 				// Load from inline definition
 				const auto definition = g_item_definitions.get(border_base_ground_id);
@@ -134,7 +135,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 					continue;
 				}
 
-				const uint16_t border_base_ground_id = attribute.as_ushort();
+				const uint16_t border_base_ground_id = materialClientId(attribute.as_ushort());
 				const auto definition = g_item_definitions.get(border_base_ground_id);
 				bool valid = true;
 				if (!definition) {
@@ -285,7 +286,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 									continue;
 								}
 
-								int32_t match_itemid = attribute.as_int();
+								int32_t match_itemid = materialClientId(static_cast<uint16_t>(attribute.as_uint()));
 								if (!specificCaseBlock) {
 									specificCaseBlock = std::make_unique<GroundBrush::SpecificCaseBlock>();
 								}
@@ -312,7 +313,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 									continue;
 								}
 
-								int32_t with_id = attribute.as_int();
+								int32_t with_id = materialClientId(static_cast<uint16_t>(attribute.as_uint()));
 								auto itt = g_brushes.borders.find(border_id);
 								if (itt == g_brushes.borders.end()) {
 									warnings.push_back("Unknown border id in specific case match block " + std::to_string(border_id));
@@ -339,12 +340,12 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 									continue;
 								}
 
-								int32_t to_replace_id = attribute.as_int();
+								int32_t to_replace_id = materialClientId(static_cast<uint16_t>(attribute.as_uint()));
 								if (!(attribute = actionChild.attribute("with"))) {
 									continue;
 								}
 
-								int32_t with_id = attribute.as_int();
+								int32_t with_id = materialClientId(static_cast<uint16_t>(attribute.as_uint()));
 								if (!g_item_definitions.exists(with_id)) {
 									warnings.push_back("Unknown item replacement id " + std::to_string(with_id));
 									return false;

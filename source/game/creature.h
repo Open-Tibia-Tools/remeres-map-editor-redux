@@ -20,6 +20,7 @@
 
 #include "game/creatures.h"
 #include <list>
+#include <memory>
 #include <vector>
 
 enum Direction {
@@ -81,12 +82,32 @@ public:
 		this->direction = direction;
 	}
 
+	// XML offset from a randomized spawn file. Save writes this instead of the
+	// tile the editor placed the creature on.
+	void setSpawnFileOffset(int x, int y) {
+		has_spawn_file_offset = true;
+		spawn_file_x = x;
+		spawn_file_y = y;
+	}
+	bool hasSpawnFileOffset() const {
+		return has_spawn_file_offset;
+	}
+	int getSpawnFileOffsetX() const {
+		return spawn_file_x;
+	}
+	int getSpawnFileOffsetY() const {
+		return spawn_file_y;
+	}
+
 protected:
 	std::string type_name;
 	Direction direction;
 	int spawntime;
 	bool saved;
 	bool selected;
+	bool has_spawn_file_offset = false;
+	int spawn_file_x = 0;
+	int spawn_file_y = 0;
 };
 
 inline void Creature::save() {

@@ -515,6 +515,8 @@ void Settings::IO(IOMode mode) {
 	// Missing items report (added at end to preserve enum stability)
 	section("Editor");
 	Bool(SHOW_MISSING_ITEMS_WARNING, false);
+	Bool(USE_ITEMS_RON, false);
+	Bool(SPREAD_RANDOMIZED_SPAWNS, false);
 	Int(FLOOR_VISIBILITY_MODE, 0);
 	section("UI");
 	String(PALETTE_DYNAMIC_STYLE, "32x32 px");

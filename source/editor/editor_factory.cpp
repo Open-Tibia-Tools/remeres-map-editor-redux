@@ -44,11 +44,13 @@ void SetupCallbacks(Editor* editor) {
 	};
 }
 
-std::unique_ptr<Editor> EditorFactory::CreateEmpty(CopyBuffer& copybuffer) {
-	ClientVersionID defaultVersion = CLIENT_VERSION_NONE;
-	ClientVersion* latest = ClientVersion::getLatestVersion();
-	if (latest) {
-		defaultVersion = latest->getID();
+std::unique_ptr<Editor> EditorFactory::CreateEmpty(CopyBuffer& copybuffer, ClientVersionID preferred) {
+	ClientVersionID defaultVersion = preferred;
+	if (defaultVersion.empty()) {
+		ClientVersion* latest = ClientVersion::getLatestVersion();
+		if (latest) {
+			defaultVersion = latest->getID();
+		}
 	}
 
 	if (defaultVersion == CLIENT_VERSION_NONE) {
@@ -58,6 +60,17 @@ std::unique_ptr<Editor> EditorFactory::CreateEmpty(CopyBuffer& copybuffer) {
 			if (match) {
 				defaultVersion = match->getID();
 			}
+		}
+	}
+
+	if (ClientVersion* client = ClientVersion::get(defaultVersion)) {
+		wxString error;
+		std::vector<std::string> warnings;
+		if (!g_version.setStartupCatalog(client, g_settings.getBoolean(Config::USE_ITEMS_RON), error, warnings)) {
+			throw std::runtime_error(nstr(error));
+		}
+		if (!warnings.empty()) {
+			DialogUtil::ListDialog("Warnings", warnings);
 		}
 	}
 

@@ -21,6 +21,7 @@
 #include "item_definitions/core/item_definition_store.h"
 #include "game/creatures.h"
 #include "game/material_include_resolver.h"
+#include "game/material_server_ids.h"
 
 #include "ui/gui.h"
 #include "game/materials.h"
@@ -101,7 +102,7 @@ bool Materials::unserializeMaterials(const FileName& filename, pugi::xml_node no
 		const std::string childName = as_lower_str(childNode.name());
 		if (childName == "metaitem") {
 			if (const auto attribute = childNode.attribute("id")) {
-				g_item_definitions.ensureMetaItem(attribute.as_ushort());
+				g_item_definitions.ensureMetaItem(materialClientId(attribute.as_ushort()));
 			}
 		} else if (childName == "tileset") {
 			error = "Legacy <tileset> nodes are not supported by the modular material loader.";
@@ -328,10 +329,11 @@ static void loadTilesetItemEntry(pugi::xml_node node, DynamicTilesetDefinition& 
 		return;
 	}
 
-	for (uint32_t id = fromId; id <= toId; ++id) {
+	for (uint32_t rawId = fromId; rawId <= toId; ++rawId) {
+		const uint32_t id = materialClientId(static_cast<uint16_t>(rawId));
 		const auto definition = g_item_definitions.get(static_cast<ServerItemId>(id));
 		if (!definition) {
-			warnings.push_back(std::format("tileset_item_references: tileset=\"{}\" missing_id={}", tileset.name, id));
+			warnings.push_back(std::format("tileset_item_references: tileset=\"{}\" missing_id={} xml_id={}", tileset.name, id, rawId));
 			continue;
 		}
 		RAWBrush* brush = ensureRawBrush(static_cast<ServerItemId>(id));

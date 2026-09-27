@@ -7,6 +7,7 @@
 #include "brushes/carpet/carpet_brush.h"
 #include "brushes/ground/auto_border.h"
 #include "item_definitions/core/item_definition_store.h"
+#include "game/material_server_ids.h"
 #include <string_view>
 #include <charconv>
 #include <algorithm>
@@ -24,7 +25,7 @@ bool CarpetBrushLoader::load(CarpetBrush& brush, pugi::xml_node node, std::vecto
 	}
 
 	if ((attribute = node.attribute("server_lookid"))) {
-		const auto definition = g_item_definitions.get(attribute.as_ushort());
+		const auto definition = g_item_definitions.get(materialClientId(attribute.as_ushort()));
 		if (!definition) {
 			warnings.push_back("Invalid server_lookid " + std::to_string(attribute.as_ushort()) + " for carpet brush");
 		} else {
@@ -66,7 +67,7 @@ bool CarpetBrushLoader::load(CarpetBrush& brush, pugi::xml_node node, std::vecto
 				continue;
 			}
 
-			int32_t id = attribute.as_int();
+			int32_t id = materialClientId(static_cast<uint16_t>(attribute.as_uint()));
 			if (id <= 0) {
 				warnings.push_back("Invalid id for item node: " + std::to_string(id));
 				continue;
@@ -99,7 +100,7 @@ bool CarpetBrushLoader::load(CarpetBrush& brush, pugi::xml_node node, std::vecto
 				continue;
 			}
 
-			uint16_t id = attribute.as_ushort();
+			uint16_t id = materialClientId(attribute.as_ushort());
 
 			const auto definition = g_item_definitions.get(id);
 			if (!definition) {

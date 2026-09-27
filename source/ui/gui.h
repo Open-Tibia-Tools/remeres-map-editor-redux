@@ -310,7 +310,7 @@ public:
 	bool ShouldSave();
 	void SaveCurrentMap(FileName filename, bool showdialog);
 	void SaveCurrentMap(bool showdialog = true);
-	bool NewMap();
+	bool NewMap(ClientVersionID preferred = {});
 	void OpenMap();
 	void SaveMap();
 	void SaveMapAs();

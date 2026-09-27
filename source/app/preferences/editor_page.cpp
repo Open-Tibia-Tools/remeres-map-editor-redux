@@ -120,6 +120,25 @@ EditorPage::EditorPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 	);
 	page_sizer->Add(merge_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
 
+	auto* load_section = new PreferencesSectionPanel(
+		GetScrollWindow(),
+		"Map Load",
+		"Choose the item catalog and spawn placement used when a map opens."
+	);
+	use_items_ron_chkbox = PreferencesLayout::AddCheckBoxRow(
+		load_section,
+		"Use items.ron",
+		"Load the merged items.ron catalog. Leave this off to load items.xml and items.otb.",
+		g_settings.getBoolean(Config::USE_ITEMS_RON)
+	);
+	spread_randomized_spawns_chkbox = PreferencesLayout::AddCheckBoxRow(
+		load_section,
+		"Randomized spawns",
+		"Place creatures on free tiles inside the spawn radius. Leave this off to keep the spawn file offsets. Saving still writes those offsets.",
+		g_settings.getBoolean(Config::SPREAD_RANDOMIZED_SPAWNS)
+	);
+	page_sizer->Add(load_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+
 	FinishLayout();
 }
 
@@ -138,6 +157,8 @@ void EditorPage::Apply() {
 	g_settings.setInteger(Config::RAW_LIKE_SIMONE, allow_multiple_orderitems_chkbox->GetValue());
 	g_settings.setInteger(Config::MERGE_MOVE, merge_move_chkbox->GetValue());
 	g_settings.setInteger(Config::MERGE_PASTE, merge_paste_chkbox->GetValue());
+	g_settings.setInteger(Config::USE_ITEMS_RON, use_items_ron_chkbox->GetValue());
+	g_settings.setInteger(Config::SPREAD_RANDOMIZED_SPAWNS, spread_randomized_spawns_chkbox->GetValue());
 
 	if (previous_floor_visibility_mode != g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE)) {
 		g_gui.RefreshView();

@@ -94,10 +94,10 @@ void MapDrawer::SetupGL() {
 
 	// Ensure renderers are initialized
 	if (!renderers_initialized) {
-		sprite_batch.initialize();
+		const bool sprites_ready = sprite_batch.initialize();
 		primitive_renderer.initialize();
 		chunk_cache_manager.initialize();
-		renderers_initialized = true;
+		renderers_initialized = sprites_ready;
 	}
 }
 

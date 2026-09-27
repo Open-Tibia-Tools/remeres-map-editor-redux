@@ -22,6 +22,7 @@
 #include "live/live_tab.h"
 #include "live/live_client.h"
 #include "io/iomap_otbm.h"
+#include "app/settings.h"
 
 #include <set>
 #include <sstream>
@@ -206,13 +207,13 @@ void EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
 	g_gui.root->Refresh();
 }
 
-bool EditorManager::NewMap() {
+bool EditorManager::NewMap(ClientVersionID preferred) {
 	spdlog::info("EditorManager::NewMap - Creating new map");
 	g_gui.FinishWelcomeDialog();
 
 	std::unique_ptr<Editor> editor;
 	try {
-		editor = EditorFactory::CreateEmpty(g_gui.copybuffer);
+		editor = EditorFactory::CreateEmpty(g_gui.copybuffer, preferred);
 	} catch (std::runtime_error& e) {
 		DialogUtil::PopupDialog(g_gui.root, "Error!", wxString(e.what(), wxConvUTF8), wxOK);
 		return false;
@@ -305,6 +306,19 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 			target = ClientVersion::getBestMatch(ver.client);
 			if (!target) {
 				throw std::runtime_error(std::format("Unsupported client version (OtbId: {})", static_cast<int>(ver.client)));
+			}
+		}
+
+		{
+			wxString catalog_error;
+			std::vector<std::string> catalog_warnings;
+			if (!g_version.setStartupCatalog(target, g_settings.getBoolean(Config::USE_ITEMS_RON), catalog_error, catalog_warnings)) {
+				g_status.SetStatusText("Failed to load map.");
+				DialogUtil::PopupDialog("Error", catalog_error, wxOK);
+				return false;
+			}
+			if (!catalog_warnings.empty()) {
+				DialogUtil::ListDialog("Warnings", catalog_warnings);
 			}
 		}
 

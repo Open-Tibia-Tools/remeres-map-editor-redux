@@ -125,6 +125,7 @@ private:
 	std::optional<ScopedGLBlend> blend_func_;
 
 	bool in_batch_ = false;
+	bool ready_ = false;
 	bool use_mdi_ = false;
 
 	int draw_call_count_ = 0;
