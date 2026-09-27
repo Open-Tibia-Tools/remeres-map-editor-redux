@@ -50,10 +50,10 @@ inline constexpr float INDICATOR_INVALID_ZONE_BASE    = 11000000.0f;
  * @brief Separate Server and Client ID filters for technical items.
  */
 struct TechnicalIdFilter {
-	std::vector<uint16_t> server_ids;
-	std::vector<uint16_t> client_ids;
+	std::vector<uint32_t> server_ids;
+	std::vector<uint32_t> client_ids;
 
-	[[nodiscard]] bool matches(uint16_t sid, uint16_t cid) const noexcept;
+	[[nodiscard]] bool matches(uint32_t sid, uint32_t cid) const noexcept;
 	void sort_and_dedup();
 };
 
@@ -79,9 +79,9 @@ public:
 	static void SetLists(TechnicalItemLists lists);
 	[[nodiscard]] static const TechnicalItemLists& GetLists() noexcept;
 
-	[[nodiscard]] static TileIndicatorType Classify(uint16_t server_id, uint16_t client_id) noexcept;
+	[[nodiscard]] static TileIndicatorType Classify(uint32_t server_id, uint32_t client_id) noexcept;
 
-	[[nodiscard]] static bool IsTechnical(uint16_t server_id, uint16_t client_id) noexcept {
+	[[nodiscard]] static bool IsTechnical(uint32_t server_id, uint32_t client_id) noexcept {
 		return Classify(server_id, client_id) != TileIndicatorType::None;
 	}
 
@@ -109,6 +109,7 @@ public:
 
 struct IndicatorBadgeStyle {
 	const char* text;
+	const char* short_text;
 	uint8_t border_r, border_g, border_b;
 	uint8_t bg_r, bg_g, bg_b, bg_a;
 	uint8_t outline_r, outline_g, outline_b;
@@ -117,29 +118,29 @@ struct IndicatorBadgeStyle {
 inline constexpr IndicatorBadgeStyle GetIndicatorBadgeStyle(TileIndicatorType type) noexcept {
 	switch (type) {
 		case TileIndicatorType::HouseEntry:
-			return { "ENTRY", 38, 128, 255, 20, 80, 200, 110, 5, 25, 80 };
+			return { "ENTRY", "E", 38, 128, 255, 20, 80, 200, 110, 5, 25, 80 };
 		case TileIndicatorType::Spawn:
-			return { "SPAWN", 255, 51, 255, 210, 35, 210, 110, 60, 5, 60 };
+			return { "SPAWN", "S", 255, 51, 255, 210, 35, 210, 110, 60, 5, 60 };
 		case TileIndicatorType::TownTemple:
-			return { "TOWN", 255, 215, 0, 255, 180, 20, 110, 80, 40, 0 };
+			return { "TOWN", "T", 255, 215, 0, 255, 180, 20, 110, 80, 40, 0 };
 		case TileIndicatorType::Waypoint:
-			return { "WAYPT", 0, 255, 255, 15, 200, 220, 110, 0, 50, 60 };
+			return { "WAYPT", "W", 0, 255, 255, 15, 200, 220, 110, 0, 50, 60 };
 		case TileIndicatorType::TechInvisibleStair:
-			return { "STAIR", 255, 240, 30, 255, 220, 30, 110, 80, 60, 0 };
+			return { "STAIR", "S", 255, 240, 30, 255, 220, 30, 110, 80, 60, 0 };
 		case TileIndicatorType::TechInvisibleWalkable:
-			return { "WALK", 0, 240, 240, 0, 200, 210, 110, 0, 50, 60 };
+			return { "WALK", "W", 0, 240, 240, 0, 200, 210, 110, 0, 50, 60 };
 		case TileIndicatorType::TechInvisibleWall:
-			return { "BLOCK", 255, 40, 40, 230, 40, 40, 110, 80, 5, 5 };
+			return { "BLOCK", "B", 255, 40, 40, 230, 40, 40, 110, 80, 5, 5 };
 		case TileIndicatorType::TechPrimalLight:
-			return { "LIGHT", 90, 220, 255, 70, 180, 240, 110, 10, 40, 90 };
+			return { "LIGHT", "L", 90, 220, 255, 70, 180, 240, 110, 10, 40, 90 };
 		case TileIndicatorType::InvalidGround:
-			return { "", 255, 0, 0, 255, 0, 0, 171, 0, 0, 0 };
+			return { "", "", 255, 0, 0, 255, 0, 0, 171, 0, 0, 0 };
 		case TileIndicatorType::InvalidItem:
-			return { "", 255, 165, 0, 255, 165, 0, 171, 0, 0, 0 };
+			return { "", "", 255, 165, 0, 255, 165, 0, 171, 0, 0, 0 };
 		case TileIndicatorType::InvalidZone:
-			return { "", 255, 0, 255, 255, 0, 255, 171, 0, 0, 0 };
+			return { "", "", 255, 0, 255, 255, 0, 255, 171, 0, 0, 0 };
 		default:
-			return { "?", 200, 200, 200, 100, 100, 100, 100, 0, 0, 0 };
+			return { "?", "?", 200, 200, 200, 100, 100, 100, 100, 0, 0, 0 };
 	}
 }
 

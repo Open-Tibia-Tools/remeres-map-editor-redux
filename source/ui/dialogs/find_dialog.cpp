@@ -358,9 +358,9 @@ void FindDialogListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t n)
 		auto tech = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(brush);
 		if (tech == rme::rendering::TileIndicatorType::None && brush && brush->is<RAWBrush>()) {
 			const auto* raw = brush->as<RAWBrush>();
-			const uint16_t sid = raw->getItemID();
+			const ServerItemId sid = raw->getItemID();
 			const auto def = g_item_definitions.get(sid);
-			const uint16_t cid = def ? def.clientId() : 0;
+			const ClientItemId cid = def ? def.clientId() : 0;
 			tech = rme::rendering::TechnicalItemRegistry::Classify(sid, cid);
 		}
 		if (tech != rme::rendering::TileIndicatorType::None) {

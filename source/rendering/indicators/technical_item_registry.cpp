@@ -7,6 +7,7 @@
 
 #include <toml++/toml.h>
 #include <algorithm>
+#include <limits>
 #include <ranges>
 
 namespace rme::rendering {
@@ -15,7 +16,7 @@ namespace {
 	TechnicalItemLists s_technical_lists;
 }
 
-bool TechnicalIdFilter::matches(uint16_t sid, uint16_t cid) const noexcept {
+bool TechnicalIdFilter::matches(uint32_t sid, uint32_t cid) const noexcept {
 	if (sid != 0 && !server_ids.empty() && std::ranges::binary_search(server_ids, sid)) {
 		return true;
 	}
@@ -26,7 +27,7 @@ bool TechnicalIdFilter::matches(uint16_t sid, uint16_t cid) const noexcept {
 }
 
 void TechnicalIdFilter::sort_and_dedup() {
-	auto clean = [](std::vector<uint16_t>& vec) {
+	auto clean = [](std::vector<uint32_t>& vec) {
 		std::ranges::sort(vec);
 		auto [first, last] = std::ranges::unique(vec);
 		vec.erase(first, last);
@@ -40,14 +41,14 @@ void TechnicalItemRegistry::Initialize(const toml::table& config_table) {
 
 	const auto* tech_section = config_table.get_as<toml::table>("technical_items");
 	if (tech_section) {
-		auto read_id_array = [](const toml::table& tbl, std::string_view key, std::vector<uint16_t>& dest) {
+		auto read_id_array = [](const toml::table& tbl, std::string_view key, std::vector<uint32_t>& dest) {
 			const auto* arr = tbl.get_as<toml::array>(key);
 			if (arr) {
 				dest.reserve(dest.size() + arr->size());
 				for (const auto& elem : *arr) {
 					if (auto opt = elem.value<int64_t>()) {
-						if (*opt >= 0 && *opt <= 65535) {
-							dest.push_back(static_cast<uint16_t>(*opt));
+						if (*opt >= 0 && *opt <= static_cast<int64_t>(std::numeric_limits<uint32_t>::max())) {
+							dest.push_back(static_cast<uint32_t>(*opt));
 						}
 					}
 				}
@@ -87,7 +88,7 @@ const TechnicalItemLists& TechnicalItemRegistry::GetLists() noexcept {
 	return s_technical_lists;
 }
 
-TileIndicatorType TechnicalItemRegistry::Classify(uint16_t server_id, uint16_t client_id) noexcept {
+TileIndicatorType TechnicalItemRegistry::Classify(uint32_t server_id, uint32_t client_id) noexcept {
 	if (s_technical_lists.invisible_stairs.matches(server_id, client_id)) {
 		return TileIndicatorType::TechInvisibleStair;
 	}
@@ -119,8 +120,8 @@ TileIndicatorType TechnicalItemRegistry::GetBrushIndicatorType(const Brush* brus
 	}
 	if (brush->is<RAWBrush>()) {
 		const auto* raw = brush->as<RAWBrush>();
-		uint16_t s_id = raw->getItemID();
-		uint16_t c_id = static_cast<uint16_t>(raw->getLookID());
+		const uint32_t s_id = static_cast<uint32_t>(raw->getItemID());
+		const uint32_t c_id = raw->getLookID() > 0 ? static_cast<uint32_t>(raw->getLookID()) : 0;
 		auto tech = Classify(s_id, c_id);
 		if (tech != TileIndicatorType::None) {
 			return tech;
@@ -128,7 +129,7 @@ TileIndicatorType TechnicalItemRegistry::GetBrushIndicatorType(const Brush* brus
 	}
 	int look_id = brush->getLookID();
 	if (look_id > 0) {
-		auto tech = Classify(0, static_cast<uint16_t>(look_id));
+		auto tech = Classify(0, static_cast<uint32_t>(look_id));
 		if (tech != TileIndicatorType::None) {
 			return tech;
 		}

@@ -318,7 +318,8 @@ void ContainerGridCanvas::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 					tech,
 					slot_x + offset_x,
 					slot_y + offset_y,
-					static_cast<float>(img_size)
+					static_cast<float>(img_size),
+					!m_large
 				);
 			} else {
 				Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());

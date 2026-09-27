@@ -176,8 +176,8 @@ void AdvancedFinderResultsView::drawSpriteBadge(NVGcontext* vg, const wxRect& re
 void AdvancedFinderResultsView::drawRowBadge(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row) const {
 	if (row.isItem()) {
 		auto tech = rme::rendering::TechnicalItemRegistry::Classify(
-			static_cast<uint16_t>(row.server_id),
-			static_cast<uint16_t>(row.client_id)
+			row.server_id,
+			row.client_id
 		);
 		if (tech == rme::rendering::TileIndicatorType::None && row.brush) {
 			tech = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(row.brush);

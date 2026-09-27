@@ -92,14 +92,14 @@ class TechnicalItemRegistry:
             if isinstance(sub, dict):
                 s_arr = sub.get("server_ids", [])
                 c_arr = sub.get("client_ids", [])
-                filter_obj.server_ids.extend([int(x) for x in s_arr if 0 <= int(x) <= 65535])
-                filter_obj.client_ids.extend([int(x) for x in c_arr if 0 <= int(x) <= 65535])
+                filter_obj.server_ids.extend([int(x) for x in s_arr if 0 <= int(x) <= 0xFFFFFFFF])
+                filter_obj.client_ids.extend([int(x) for x in c_arr if 0 <= int(x) <= 0xFFFFFFFF])
 
             # 2. Also check flat keys in [technical_items]: <key>_server_ids, <key>_client_ids
             flat_s = tech_section.get(f"{key}_server_ids", [])
             flat_c = tech_section.get(f"{key}_client_ids", [])
-            filter_obj.server_ids.extend([int(x) for x in flat_s if 0 <= int(x) <= 65535])
-            filter_obj.client_ids.extend([int(x) for x in flat_c if 0 <= int(x) <= 65535])
+            filter_obj.server_ids.extend([int(x) for x in flat_s if 0 <= int(x) <= 0xFFFFFFFF])
+            filter_obj.client_ids.extend([int(x) for x in flat_c if 0 <= int(x) <= 0xFFFFFFFF])
 
             return filter_obj
 
@@ -161,19 +161,19 @@ class TechnicalItemRegistry:
     @staticmethod
     def get_badge_style(ind_type: TileIndicatorType):
         styles = {
-            TileIndicatorType.HOUSE_ENTRY: {"text": "ENTRY", "border": (38, 128, 255)},
-            TileIndicatorType.SPAWN: {"text": "SPAWN", "border": (255, 51, 255)},
-            TileIndicatorType.TOWN_TEMPLE: {"text": "TOWN", "border": (255, 215, 0)},
-            TileIndicatorType.WAYPOINT: {"text": "WAYPT", "border": (0, 255, 255)},
-            TileIndicatorType.TECH_INVISIBLE_STAIR: {"text": "STAIR", "border": (255, 240, 30)},
-            TileIndicatorType.TECH_INVISIBLE_WALKABLE: {"text": "WALK", "border": (0, 240, 240)},
-            TileIndicatorType.TECH_INVISIBLE_WALL: {"text": "BLOCK", "border": (255, 40, 40)},
-            TileIndicatorType.TECH_PRIMAL_LIGHT: {"text": "LIGHT", "border": (90, 220, 255)},
-            TileIndicatorType.INVALID_GROUND: {"text": "", "border": (255, 0, 0)},
-            TileIndicatorType.INVALID_ITEM: {"text": "", "border": (255, 165, 0)},
-            TileIndicatorType.INVALID_ZONE: {"text": "", "border": (255, 0, 255)},
+            TileIndicatorType.HOUSE_ENTRY: {"text": "ENTRY", "short_text": "E", "border": (38, 128, 255)},
+            TileIndicatorType.SPAWN: {"text": "SPAWN", "short_text": "S", "border": (255, 51, 255)},
+            TileIndicatorType.TOWN_TEMPLE: {"text": "TOWN", "short_text": "T", "border": (255, 215, 0)},
+            TileIndicatorType.WAYPOINT: {"text": "WAYPT", "short_text": "W", "border": (0, 255, 255)},
+            TileIndicatorType.TECH_INVISIBLE_STAIR: {"text": "STAIR", "short_text": "S", "border": (255, 240, 30)},
+            TileIndicatorType.TECH_INVISIBLE_WALKABLE: {"text": "WALK", "short_text": "W", "border": (0, 240, 240)},
+            TileIndicatorType.TECH_INVISIBLE_WALL: {"text": "BLOCK", "short_text": "B", "border": (255, 40, 40)},
+            TileIndicatorType.TECH_PRIMAL_LIGHT: {"text": "LIGHT", "short_text": "L", "border": (90, 220, 255)},
+            TileIndicatorType.INVALID_GROUND: {"text": "", "short_text": "", "border": (255, 0, 0)},
+            TileIndicatorType.INVALID_ITEM: {"text": "", "short_text": "", "border": (255, 165, 0)},
+            TileIndicatorType.INVALID_ZONE: {"text": "", "short_text": "", "border": (255, 0, 255)},
         }
-        return styles.get(ind_type, {"text": "?", "border": (200, 200, 200)})
+        return styles.get(ind_type, {"text": "?", "short_text": "?", "border": (200, 200, 200)})
 
 
 @pytest.fixture(autouse=True)
@@ -307,9 +307,13 @@ def test_marker_ids():
 
 def test_badge_styles():
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_STAIR)["text"] == "STAIR"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_STAIR)["short_text"] == "S"
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALKABLE)["text"] == "WALK"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALKABLE)["short_text"] == "W"
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALL)["text"] == "BLOCK"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALL)["short_text"] == "B"
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_PRIMAL_LIGHT)["text"] == "LIGHT"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_PRIMAL_LIGHT)["short_text"] == "L"
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["text"] == ""
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["text"] == ""
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["text"] == ""
@@ -338,4 +342,26 @@ def test_search_dialog_catalog_row_badge_classification():
     # Regular items do not display technical badges
     normal_type = TechnicalItemRegistry.classify(2160, 3031)
     assert normal_type == TileIndicatorType.NONE
+
+def test_full_width_32bit_ids():
+    """Verify that full-width 32-bit item IDs (> 65535) are supported without narrowing or truncation."""
+    config_32bit = {
+        "technical_items": {
+            "invisible_stairs": {
+                "server_ids": [100000],
+                "client_ids": [200000],
+            },
+            "invisible_walls": {
+                "server_ids": [0xFFFFFF00],
+            }
+        }
+    }
+    TechnicalItemRegistry.initialize(config_32bit)
+    assert TechnicalItemRegistry.classify(100000, 0) == TileIndicatorType.TECH_INVISIBLE_STAIR
+    assert TechnicalItemRegistry.classify(0, 200000) == TileIndicatorType.TECH_INVISIBLE_STAIR
+    assert TechnicalItemRegistry.classify(0xFFFFFF00, 0) == TileIndicatorType.TECH_INVISIBLE_WALL
+    # Values narrowed to 16 bits must NOT falsely classify
+    assert TechnicalItemRegistry.classify(100000 & 0xFFFF, 0) == TileIndicatorType.NONE
+    assert TechnicalItemRegistry.classify(0, 200000 & 0xFFFF) == TileIndicatorType.NONE
+
 
