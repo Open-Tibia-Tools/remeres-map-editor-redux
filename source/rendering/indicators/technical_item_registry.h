@@ -1,7 +1,6 @@
 #ifndef RME_RENDERING_INDICATORS_TECHNICAL_ITEM_REGISTRY_H_
 #define RME_RENDERING_INDICATORS_TECHNICAL_ITEM_REGISTRY_H_
 
-#include <array>
 #include <cstdint>
 #include <vector>
 

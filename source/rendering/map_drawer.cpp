@@ -220,7 +220,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	drag_shadow_drawer.draw(sprite_batch, editor, interaction.drag_start_position, &item_drawer, &sprite_drawer, &creature_drawer, view, options, &ctx);
 
 	live_cursor_drawer.draw(sprite_batch, view, editor, options, *atlas);
-	brush_overlay_drawer.draw(sprite_batch, primitive_renderer, &brush_cursor_drawer, interaction.brush_drag_state, &item_drawer, &sprite_drawer, &creature_drawer, view, options, editor, *atlas, ctx);
+	brush_overlay_drawer.draw(sprite_batch, interaction.brush_drag_state, &item_drawer, &sprite_drawer, &creature_drawer, view, options, editor, *atlas, ctx);
 	selection_drawer.draw(primitive_renderer, view, options);
 
 	if (options.show_grid) {

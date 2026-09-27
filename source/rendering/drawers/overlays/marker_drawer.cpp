@@ -2,14 +2,13 @@
 #include "rendering/core/sprite_batch.h"
 #include "rendering/indicators/technical_item_registry.h"
 #include "map/tile.h"
-#include "game/spawn.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/core/render_frame_context.h"
 
 MarkerDrawer::MarkerDrawer() = default;
 MarkerDrawer::~MarkerDrawer() = default;
 
-void MarkerDrawer::draw(SpriteBatch& sprite_batch, SpriteDrawer* /*drawer*/, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, uint32_t current_house_id, Map& map, const DrawingOptions& options, const RenderFrameContext& ctx) {
+void MarkerDrawer::draw(SpriteBatch& sprite_batch, SpriteDrawer* /*drawer*/, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, uint32_t /*current_house_id*/, Map& /*map*/, const DrawingOptions& options, const RenderFrameContext& ctx) {
 	const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
 	if (!white_pixel || !tile) {
 		return;

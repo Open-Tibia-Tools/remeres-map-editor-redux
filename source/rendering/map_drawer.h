@@ -28,7 +28,6 @@
 #include "rendering/core/render_interaction_state.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/sprite_batch.h"
-#include "rendering/drawers/cursors/brush_cursor_drawer.h"
 #include "rendering/drawers/cursors/drag_shadow_drawer.h"
 #include "rendering/drawers/cursors/live_cursor_drawer.h"
 #include "rendering/drawers/entities/creature_drawer.h"
@@ -67,7 +66,6 @@ class MapDrawer {
 	GridDrawer grid_drawer;
 	LiveCursorDrawer live_cursor_drawer;
 	SelectionDrawer selection_drawer;
-	BrushCursorDrawer brush_cursor_drawer;
 	BrushOverlayDrawer brush_overlay_drawer;
 	rme::rendering::ZoneOverlayDrawer zone_overlay_drawer;
 	DragShadowDrawer drag_shadow_drawer;

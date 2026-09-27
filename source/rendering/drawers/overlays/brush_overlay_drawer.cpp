@@ -8,9 +8,7 @@
 #include "rendering/drawers/entities/creature_drawer.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
-#include "rendering/drawers/cursors/brush_cursor_drawer.h"
 #include "rendering/core/sprite_batch.h"
-#include "rendering/core/primitive_renderer.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
 #include "app/settings.h"
@@ -38,6 +36,23 @@
 #include "brushes/border/optional_border_brush.h"
 #include "rendering/indicators/technical_item_registry.h"
 #include "rendering/indicators/zone_flags.h"
+
+namespace {
+
+float getZoneFlagForBrush(const FlagBrush* flag_brush) noexcept {
+	if (!flag_brush) {
+		return 0.0f;
+	}
+	switch (flag_brush->getFlag()) {
+		case TILESTATE_PROTECTIONZONE: return rme::rendering::ZONE_FLAG_PZ;
+		case TILESTATE_NOPVP:          return rme::rendering::ZONE_FLAG_NOPVP;
+		case TILESTATE_NOLOGOUT:       return rme::rendering::ZONE_FLAG_NOLOGOUT;
+		case TILESTATE_PVPZONE:        return rme::rendering::ZONE_FLAG_PVPZONE;
+		default:                       return 0.0f;
+	}
+}
+
+} // namespace
 
 // Helper to get color from config
 glm::vec4 BrushOverlayDrawer::get_brush_color(BrushColor color, const Settings& settings) {
@@ -87,16 +102,12 @@ glm::vec4 BrushOverlayDrawer::get_check_color(Brush* brush, Editor& editor, cons
 	}
 }
 
-BrushOverlayDrawer::BrushOverlayDrawer() {
-}
+BrushOverlayDrawer::BrushOverlayDrawer() = default;
 
-BrushOverlayDrawer::~BrushOverlayDrawer() {
-}
+BrushOverlayDrawer::~BrushOverlayDrawer() = default;
 
 void BrushOverlayDrawer::draw(
 	SpriteBatch& sprite_batch,
-	PrimitiveRenderer& primitive_renderer,
-	BrushCursorDrawer* brush_cursor_drawer,
 	const BrushOverlayDragState& drag_state,
 	ItemDrawer* item_drawer,
 	SpriteDrawer* sprite_drawer,
@@ -175,8 +186,6 @@ void BrushOverlayDrawer::draw(
 				sprite_batch.drawRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy + TILE_SIZE), static_cast<float>(TILE_SIZE), h, brushColor, atlas);
 			}
 		} else {
-			// if (brush->is<RAWBrush>()) { glEnable(GL_TEXTURE_2D); } -> handled by DrawRawBrush or BatchRenderer
-
 			if (bm.GetBrushShape() == BRUSHSHAPE_SQUARE || brush->is<SpawnBrush>()) {
 				if (brush->is<RAWBrush>() || brush->is<OptionalBorderBrush>()) {
 					int start_x, end_x;
@@ -214,14 +223,7 @@ void BrushOverlayDrawer::draw(
 						}
 					}
 				} else if (brush->is<FlagBrush>()) {
-					FlagBrush* flag_brush = brush->as<FlagBrush>();
-					float zf = 0.0f;
-					switch (flag_brush->getFlag()) {
-						case TILESTATE_PROTECTIONZONE: zf = rme::rendering::ZONE_FLAG_PZ; break;
-						case TILESTATE_NOPVP:          zf = rme::rendering::ZONE_FLAG_NOPVP; break;
-						case TILESTATE_NOLOGOUT:       zf = rme::rendering::ZONE_FLAG_NOLOGOUT; break;
-						case TILESTATE_PVPZONE:        zf = rme::rendering::ZONE_FLAG_PVPZONE; break;
-					}
+					const float zf = getZoneFlagForBrush(brush->as<FlagBrush>());
 					const AtlasRegion* white_pixel = atlas.getWhitePixel();
 					if (white_pixel && zf > 0.0f) {
 						int start_x = std::min(drag_state.last_click_map_x, view.mouse_map_x);
@@ -319,14 +321,7 @@ void BrushOverlayDrawer::draw(
 							if (brush->is<RAWBrush>()) {
 								item_drawer->DrawRawBrush(sprite_batch, sprite_drawer, cx, cy, raw_brush->getItemID(), 160, 160, 160, 160, &ctx);
 							} else if (brush->is<FlagBrush>()) {
-								FlagBrush* flag_brush = brush->as<FlagBrush>();
-								float zf = 0.0f;
-								switch (flag_brush->getFlag()) {
-									case TILESTATE_PROTECTIONZONE: zf = rme::rendering::ZONE_FLAG_PZ; break;
-									case TILESTATE_NOPVP:          zf = rme::rendering::ZONE_FLAG_NOPVP; break;
-									case TILESTATE_NOLOGOUT:       zf = rme::rendering::ZONE_FLAG_NOLOGOUT; break;
-									case TILESTATE_PVPZONE:        zf = rme::rendering::ZONE_FLAG_PVPZONE; break;
-								}
+								const float zf = getZoneFlagForBrush(brush->as<FlagBrush>());
 								const AtlasRegion* white_pixel = atlas.getWhitePixel();
 								if (white_pixel && zf > 0.0f) {
 									auto inCircle = [&](int nx, int ny) {
@@ -349,8 +344,6 @@ void BrushOverlayDrawer::draw(
 					}
 				}
 			}
-
-			// if (brush->is<RAWBrush>()) { glDisable(GL_TEXTURE_2D); }
 		}
 	} else {
 		const BrushFootprint footprint = bm.GetBrushFootprint();
@@ -393,7 +386,6 @@ void BrushOverlayDrawer::draw(
 
 			sprite_batch.drawRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), get_check_color(brush, editor, Position(view.mouse_map_x, view.mouse_map_y, view.floor), cfg), atlas);
 		} else if (brush->is<CreatureBrush>()) {
-			// glEnable(GL_TEXTURE_2D);
 			int cy = (view.mouse_map_y) * TILE_SIZE - view.view_scroll_y - view.getFloorAdjustment();
 			int cx = (view.mouse_map_x) * TILE_SIZE - view.view_scroll_x - view.getFloorAdjustment();
 			CreatureBrush* creature_brush = brush->as<CreatureBrush>();
@@ -402,11 +394,9 @@ void BrushOverlayDrawer::draw(
 			} else {
 				creature_drawer->BlitCreature(sprite_batch, sprite_drawer, cx, cy, creature_brush->getType()->outfit, SOUTH, CreatureDrawOptions { .color = DrawColor(255, 64, 64, 160), .ctx = &ctx });
 			}
-			// glDisable(GL_TEXTURE_2D);
 		} else if (!brush->is<DoodadBrush>()) {
 			RAWBrush* raw_brush = nullptr;
-			if (brush->is<RAWBrush>()) { // Textured brush
-				// glEnable(GL_TEXTURE_2D);
+			if (brush->is<RAWBrush>()) {
 				raw_brush = brush->as<RAWBrush>();
 			}
 
@@ -448,14 +438,7 @@ void BrushOverlayDrawer::draw(
 					} else if (brush->is<FlagBrush>()) {
 						const AtlasRegion* white_pixel = atlas.getWhitePixel();
 						if (white_pixel) {
-							FlagBrush* flag_brush = brush->as<FlagBrush>();
-							float zf = 0.0f;
-							switch (flag_brush->getFlag()) {
-								case TILESTATE_PROTECTIONZONE: zf = rme::rendering::ZONE_FLAG_PZ; break;
-								case TILESTATE_NOPVP:          zf = rme::rendering::ZONE_FLAG_NOPVP; break;
-								case TILESTATE_NOLOGOUT:       zf = rme::rendering::ZONE_FLAG_NOLOGOUT; break;
-								case TILESTATE_PVPZONE:        zf = rme::rendering::ZONE_FLAG_PVPZONE; break;
-							}
+							const float zf = getZoneFlagForBrush(brush->as<FlagBrush>());
 							if (zf > 0.0f) {
 								float border_flags = 0.0f;
 								if (y == footprint.min_offset_y) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
@@ -475,25 +458,6 @@ void BrushOverlayDrawer::draw(
 					}
 				}
 			}
-
-			// if (brush->is<RAWBrush>()) { // Textured brush
-			// 	glDisable(GL_TEXTURE_2D);
-			// }
 		}
-	}
-}
-
-void BrushOverlayDrawer::get_color(Brush* brush, Editor& editor, const Position& position, uint8_t& r, uint8_t& g, uint8_t& b) {
-	if (brush->canDraw(&editor.map, position)) {
-		if (brush->is<WaypointBrush>()) {
-			r = 0x00;
-			g = 0xff, b = 0x00;
-		} else {
-			r = 0x00;
-			g = 0x00, b = 0xff;
-		}
-	} else {
-		r = 0xff;
-		g = 0x00, b = 0x00;
 	}
 }

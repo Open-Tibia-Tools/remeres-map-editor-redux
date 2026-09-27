@@ -376,14 +376,18 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 			bool has_selected_invalid_item = false;
 
 			if (tile->ground && tile->ground->isInvalidOTBMItem()) {
-				invalid_indicator = rme::rendering::TileIndicatorType::InvalidGround;
+				invalid_indicator = (tile->ground->invalidOTBMMarkerColor() == InvalidOTBMItemMarkerColor::Orange)
+					? rme::rendering::TileIndicatorType::InvalidItem
+					: rme::rendering::TileIndicatorType::InvalidGround;
 				has_selected_invalid_item = tile->ground->isSelected();
 			}
 
 			for (const auto& item : tile->items) {
 				if (item->isInvalidOTBMItem()) {
 					if (invalid_indicator != rme::rendering::TileIndicatorType::InvalidGround) {
-						invalid_indicator = rme::rendering::TileIndicatorType::InvalidItem;
+						invalid_indicator = (item->invalidOTBMMarkerColor() == InvalidOTBMItemMarkerColor::Red)
+							? rme::rendering::TileIndicatorType::InvalidGround
+							: rme::rendering::TileIndicatorType::InvalidItem;
 					}
 					has_selected_invalid_item = has_selected_invalid_item || item->isSelected();
 				}

@@ -100,7 +100,8 @@ TileIndicatorType TechnicalItemRegistry::GetBrushIndicatorType(const Brush* brus
 	if (brush->is<HouseExitBrush>()) {
 		return TileIndicatorType::HouseEntry;
 	}
-	if (const auto* raw = dynamic_cast<const RAWBrush*>(brush)) {
+	if (brush->is<RAWBrush>()) {
+		const auto* raw = brush->as<RAWBrush>();
 		uint16_t s_id = raw->getItemID();
 		uint16_t c_id = static_cast<uint16_t>(raw->getLookID());
 		auto tech = Classify(s_id, c_id);

@@ -33,24 +33,26 @@ inline void DrawNanoVGIndicatorBadge(NVGcontext* vg, TileIndicatorType type, flo
 	nvgStroke(vg);
 
 	// 3. Crisp centered typography with text shadow
-	const float fontSize = std::clamp(bsize * 0.28f, 9.0f, 18.0f);
-	nvgFontSize(vg, fontSize);
-	nvgFontFace(vg, "sans");
-	nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+	if (style.text && style.text[0] != '\0') {
+		const float fontSize = std::clamp(bsize * 0.28f, 9.0f, 18.0f);
+		nvgFontSize(vg, fontSize);
+		nvgFontFace(vg, "sans");
+		nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 
-	const float cx = bx + bsize * 0.5f;
-	const float cy = by + bsize * 0.5f;
+		const float cx = bx + bsize * 0.5f;
+		const float cy = by + bsize * 0.5f;
 
-	// Dark contrast outline
-	nvgFillColor(vg, nvgRGBA(style.outline_r, style.outline_g, style.outline_b, 240));
-	nvgText(vg, cx + 1.0f, cy, style.text, nullptr);
-	nvgText(vg, cx - 1.0f, cy, style.text, nullptr);
-	nvgText(vg, cx, cy + 1.0f, style.text, nullptr);
-	nvgText(vg, cx, cy - 1.0f, style.text, nullptr);
+		// Dark contrast outline
+		nvgFillColor(vg, nvgRGBA(style.outline_r, style.outline_g, style.outline_b, 240));
+		nvgText(vg, cx + 1.0f, cy, style.text, nullptr);
+		nvgText(vg, cx - 1.0f, cy, style.text, nullptr);
+		nvgText(vg, cx, cy + 1.0f, style.text, nullptr);
+		nvgText(vg, cx, cy - 1.0f, style.text, nullptr);
 
-	// White foreground text
-	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
-	nvgText(vg, cx, cy, style.text, nullptr);
+		// White foreground text
+		nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
+		nvgText(vg, cx, cy, style.text, nullptr);
+	}
 }
 
 } // namespace rme::rendering
