@@ -250,7 +250,9 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 
 		// Draw Item Icon (Fixed 32x32 size for consistency)
 		uint16_t id = GetItem(i);
-		const auto tech = rme::rendering::TechnicalItemRegistry::Classify(id, 0);
+		const auto definition = g_item_definitions.get(id);
+		const uint16_t cid = definition ? definition.clientId() : 0;
+		const auto tech = rme::rendering::TechnicalItemRegistry::Classify(id, cid);
 		if (tech != rme::rendering::TileIndicatorType::None) {
 			const float iconSize = 32.0f;
 			const float bx = x + (w - iconSize) / 2.0f;

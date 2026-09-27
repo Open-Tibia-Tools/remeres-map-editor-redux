@@ -47,13 +47,24 @@ inline constexpr float INDICATOR_INVALID_ITEM_BASE    = 10000000.0f;
 inline constexpr float INDICATOR_INVALID_ZONE_BASE    = 11000000.0f;
 
 /**
+ * @brief Separate Server and Client ID filters for technical items.
+ */
+struct TechnicalIdFilter {
+	std::vector<uint16_t> server_ids;
+	std::vector<uint16_t> client_ids;
+
+	[[nodiscard]] bool matches(uint16_t sid, uint16_t cid) const noexcept;
+	void sort_and_dedup();
+};
+
+/**
  * @brief Runtime lists of technical item IDs populated dynamically from config.toml.
  */
 struct TechnicalItemLists {
-	std::vector<uint16_t> invisible_stairs;
-	std::vector<uint16_t> invisible_walkable;
-	std::vector<uint16_t> invisible_walls;
-	std::vector<uint16_t> primal_lights;
+	TechnicalIdFilter invisible_stairs;
+	TechnicalIdFilter invisible_walkable;
+	TechnicalIdFilter invisible_walls;
+	TechnicalIdFilter primal_lights;
 };
 
 /**
