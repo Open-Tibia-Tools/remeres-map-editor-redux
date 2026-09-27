@@ -102,6 +102,38 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 		return m;
 	};
 
+	auto overlaps = [&](float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) noexcept {
+		const float l1 = x1 - w1 * 0.5f - paddingX;
+		const float r1 = x1 + w1 * 0.5f + paddingX;
+		const float t1 = y1 - h1 - paddingY * 2.0f;
+		const float b1 = y1;
+
+		const float l2 = x2 - w2 * 0.5f - paddingX;
+		const float r2 = x2 + w2 * 0.5f + paddingX;
+		const float t2 = y2 - h2 - paddingY * 2.0f;
+		const float b2 = y2;
+
+		return (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2);
+	};
+
+	auto resolveCollision = [&](float x, float initialY, float w, float h) -> float {
+		float y = initialY;
+		bool shifted = true;
+		int iterations = 0;
+		while (shifted && iterations < 8) {
+			shifted = false;
+			++iterations;
+			for (const auto& existing : visible_labels) {
+				if (overlaps(x, y, w, h, existing.x, existing.y, existing.width, existing.height)) {
+					y = existing.y - existing.height - paddingY * 2.0f - 2.0f;
+					shifted = true;
+					break;
+				}
+			}
+		}
+		return y;
+	};
+
 	// 1. Collect Waypoints
 	if (show_wp) {
 		for (const auto& [wp_name, wp_ptr] : map.waypoints) {
@@ -124,9 +156,9 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 				continue;
 			}
 
-			const float labelX = screen_x + tile_size_screen * 0.5f;
-			const float labelY = screen_y - 3.0f;
 			const CachedMetrics m = getMetrics(wp_ptr->name);
+			const float labelX = screen_x + tile_size_screen * 0.5f;
+			const float labelY = resolveCollision(labelX, screen_y - 3.0f, m.width, m.height);
 
 			visible_labels.push_back(VisibleMarkerLabel {
 				.x = labelX,
@@ -168,14 +200,7 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 
 			const CachedMetrics m = getMetrics(label_text);
 			const float labelX = screen_x + tile_size_screen * 0.5f;
-			float labelY = screen_y - 3.0f;
-
-			// Stack marker labels vertically if sharing a tile with other markers
-			for (const auto& existing : visible_labels) {
-				if (std::abs(existing.x - labelX) < 2.0f) {
-					labelY = std::min(labelY, existing.y - existing.height - paddingY * 2.0f - 3.0f);
-				}
-			}
+			const float labelY = resolveCollision(labelX, screen_y - 3.0f, m.width, m.height);
 
 			visible_labels.push_back(VisibleMarkerLabel {
 				.x = labelX,
@@ -213,14 +238,7 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 			std::string label_text = std::format("R: {}", st->spawn->getSize());
 			const CachedMetrics m = getMetrics(label_text);
 			const float labelX = screen_x + tile_size_screen * 0.5f;
-			float labelY = screen_y - 3.0f;
-
-			// Stack marker labels vertically if sharing a tile with other markers
-			for (const auto& existing : visible_labels) {
-				if (std::abs(existing.x - labelX) < 2.0f) {
-					labelY = std::min(labelY, existing.y - existing.height - paddingY * 2.0f - 3.0f);
-				}
-			}
+			const float labelY = resolveCollision(labelX, screen_y - 3.0f, m.width, m.height);
 
 			visible_labels.push_back(VisibleMarkerLabel {
 				.x = labelX,

@@ -100,6 +100,36 @@ def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, op
     labels = []
     tile_size_screen = 32.0 / view.zoom
 
+    pad_x = 5.0
+    pad_y = 2.0
+
+    def overlaps(x1, y1, w1, h1, x2, y2, w2, h2):
+        l1 = x1 - w1 * 0.5 - pad_x
+        r1 = x1 + w1 * 0.5 + pad_x
+        t1 = y1 - h1 - pad_y * 2.0
+        b1 = y1
+
+        l2 = x2 - w2 * 0.5 - pad_x
+        r2 = x2 + w2 * 0.5 + pad_x
+        t2 = y2 - h2 - pad_y * 2.0
+        b2 = y2
+
+        return (l1 < r2 and r1 > l2 and t1 < b2 and b1 > t2)
+
+    def resolve_collision(x, initial_y, w, h):
+        y = initial_y
+        shifted = True
+        iterations = 0
+        while shifted and iterations < 8:
+            shifted = False
+            iterations += 1
+            for existing in labels:
+                if overlaps(x, y, w, h, existing['x'], existing['y'], existing['width'], existing['height']):
+                    y = existing['y'] - existing['height'] - pad_y * 2.0 - 2.0
+                    shifted = True
+                    break
+        return y
+
     # 1. Waypoints
     if options.show_waypoints:
         for wp in waypoints:
@@ -113,13 +143,16 @@ def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, op
             screen_x = wp.pos.x * tile_size_screen
             screen_y = wp.pos.y * tile_size_screen
             label_x = screen_x + tile_size_screen * 0.5
-            label_y = screen_y - 3.0
+            w = 30.0
+            h = 12.0
+            label_y = resolve_collision(label_x, screen_y - 3.0, w, h)
             labels.append({
                 'type': 'waypoint',
                 'text': wp.name,
                 'x': label_x,
                 'y': label_y,
-                'height': 12.0
+                'width': w,
+                'height': h
             })
 
     # 2. Towns
@@ -137,19 +170,17 @@ def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, op
             screen_x = pos.x * tile_size_screen
             screen_y = pos.y * tile_size_screen
             label_x = screen_x + tile_size_screen * 0.5
-            label_y = screen_y - 3.0
-
-            # Collision check with existing labels on same tile
-            for existing in labels:
-                if abs(existing['x'] - label_x) < 2.0:
-                    label_y = min(label_y, existing['y'] - existing['height'] - 4.0 - 3.0)
+            w = 30.0
+            h = 12.0
+            label_y = resolve_collision(label_x, screen_y - 3.0, w, h)
 
             labels.append({
                 'type': 'town',
                 'text': text,
                 'x': label_x,
                 'y': label_y,
-                'height': 12.0
+                'width': w,
+                'height': h
             })
 
     # 3. Spawns
@@ -167,19 +198,17 @@ def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, op
             screen_x = pos.x * tile_size_screen
             screen_y = pos.y * tile_size_screen
             label_x = screen_x + tile_size_screen * 0.5
-            label_y = screen_y - 3.0
-
-            # Collision check with existing labels on same tile
-            for existing in labels:
-                if abs(existing['x'] - label_x) < 2.0:
-                    label_y = min(label_y, existing['y'] - existing['height'] - 4.0 - 3.0)
+            w = 24.0
+            h = 12.0
+            label_y = resolve_collision(label_x, screen_y - 3.0, w, h)
 
             labels.append({
                 'type': 'spawn',
                 'text': text,
                 'x': label_x,
                 'y': label_y,
-                'height': 12.0
+                'width': w,
+                'height': h
             })
 
     return labels
@@ -350,4 +379,28 @@ def test_spawn_drag_preview_logic():
 
     assert "st->spawn->isSelected() && options.dragging" in zone_content, "Stationary spawn must detect when it is being dragged"
     assert "floor_alpha * 0.30f" in zone_content or "0.30f" in zone_content, "Stationary spawn must be dimmed during drag"
+
+
+def test_spawns_in_same_column_do_not_collide_and_both_show_labels():
+    # Regression test for the column-stacking bug:
+    # Two spawns in the exact same vertical X column but different Y rows
+    # must NOT collide or stack on top of each other.
+    pos_top = MockPosition(100, 100, 7)
+    pos_bottom = MockPosition(100, 120, 7)
+    spawn_top = MockSpawn(3, pos_top)
+    spawn_bottom = MockSpawn(3, pos_bottom)
+
+    view = MockRenderView(floor=7, zoom=1.0)
+    opts = MockDrawingOptions(show_waypoints=False, show_towns=False, show_spawns=True)
+
+    labels = collect_marker_labels([], [], view, opts, spawns=[spawn_top, spawn_bottom])
+    assert len(labels) == 2, "Both spawns must retain their labels"
+
+    top_lbl = next(l for l in labels if l['text'] == "R: 3" and abs(l['y'] - (100 * 32 - 3.0)) < 1.0)
+    bottom_lbl = next(l for l in labels if l['text'] == "R: 3" and abs(l['y'] - (120 * 32 - 3.0)) < 1.0)
+
+    assert top_lbl['x'] == bottom_lbl['x'], "Both spawns share the same X column"
+    assert top_lbl['y'] != bottom_lbl['y'], "Spawns must be positioned at their respective tiles, not stacked"
+    assert abs(bottom_lbl['y'] - top_lbl['y']) > 600.0, "Vertical distance between spawns must be preserved"
+
 
