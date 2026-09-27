@@ -1,14 +1,19 @@
 """
 Unit Test Suite for TechnicalItemRegistry and Tile Indicators
 Tests:
-1. Classification of technical items across Tibia protocol versions (stairs, walkable, walls, light).
-2. Unknown item fallback to None.
-3. Marker ID calculation idempotency.
-4. Badge style text and color validity.
+1. Classification of technical items loaded dynamically from config.toml (stairs, walkable, walls, light).
+2. Zero hardcoded fallbacks: when lists are empty, classify() returns NONE.
+3. Custom user-configured IDs from TOML config.
+4. Sorting, deduplication, and O(log N) lookup idempotency.
+5. Marker ID calculation idempotency.
+6. Badge style text and color validity.
 """
 
+import bisect
 import pytest
+from dataclasses import dataclass, field
 from enum import IntEnum
+from typing import List, Dict, Any
 
 class TileIndicatorType(IntEnum):
     NONE = 0
@@ -24,36 +29,85 @@ class TileIndicatorType(IntEnum):
     INVALID_ITEM = 10
     INVALID_ZONE = 11
 
-class ProtocolItems:
-    INVISIBLE_STAIRS = {459, 469}
-    INVISIBLE_WALKABLE = {460, 470, 17970, 20028, 34168}
-    INVISIBLE_WALLS = {1548, 2187}
-    PRIMAL_LIGHT_MIN = 39092
-    PRIMAL_LIGHT_MAX = 39100
-    PRIMAL_LIGHT_EXTRA = {39236, 39367, 39368}
+@dataclass
+class TechnicalItemLists:
+    invisible_stairs: List[int] = field(default_factory=list)
+    invisible_walkable: List[int] = field(default_factory=list)
+    invisible_walls: List[int] = field(default_factory=list)
+    primal_lights: List[int] = field(default_factory=list)
+
+DEFAULT_CONFIG_TECHNICAL_ITEMS = {
+    "invisible_stairs": [459, 469],
+    "invisible_walkable": [460, 470, 17970, 20028, 34168],
+    "invisible_walls": [1548, 2187],
+    "primal_lights": [
+        39092, 39093, 39094, 39095, 39096, 39097, 39098, 39099, 39100,
+        39236, 39367, 39368
+    ],
+}
 
 class TechnicalItemRegistry:
-    @staticmethod
-    def classify(server_id: int, client_id: int) -> TileIndicatorType:
-        if server_id in ProtocolItems.INVISIBLE_STAIRS or client_id in ProtocolItems.INVISIBLE_STAIRS:
+    _lists: TechnicalItemLists = TechnicalItemLists()
+
+    @classmethod
+    def initialize(cls, config: Dict[str, Any]):
+        tech_section = config.get("technical_items", {})
+        stairs = [int(x) for x in tech_section.get("invisible_stairs", []) if 0 <= int(x) <= 65535]
+        walkable = [int(x) for x in tech_section.get("invisible_walkable", []) if 0 <= int(x) <= 65535]
+        walls = [int(x) for x in tech_section.get("invisible_walls", []) if 0 <= int(x) <= 65535]
+        lights = [int(x) for x in tech_section.get("primal_lights", []) if 0 <= int(x) <= 65535]
+
+        cls.set_lists(TechnicalItemLists(
+            invisible_stairs=stairs,
+            invisible_walkable=walkable,
+            invisible_walls=walls,
+            primal_lights=lights,
+        ))
+
+    @classmethod
+    def set_lists(cls, lists: TechnicalItemLists):
+        def sort_and_dedup(lst: List[int]) -> List[int]:
+            return sorted(set(lst))
+
+        cls._lists = TechnicalItemLists(
+            invisible_stairs=sort_and_dedup(lists.invisible_stairs),
+            invisible_walkable=sort_and_dedup(lists.invisible_walkable),
+            invisible_walls=sort_and_dedup(lists.invisible_walls),
+            primal_lights=sort_and_dedup(lists.primal_lights),
+        )
+
+    @classmethod
+    def get_lists(cls) -> TechnicalItemLists:
+        return cls._lists
+
+    @classmethod
+    def classify(cls, server_id: int, client_id: int) -> TileIndicatorType:
+        def binary_contains(lst: List[int], val: int) -> bool:
+            if not lst or val == 0:
+                return False
+            idx = bisect.bisect_left(lst, val)
+            return idx < len(lst) and lst[idx] == val
+
+        def contains(lst: List[int]) -> bool:
+            return binary_contains(lst, server_id) or binary_contains(lst, client_id)
+
+        if contains(cls._lists.invisible_stairs):
             return TileIndicatorType.TECH_INVISIBLE_STAIR
 
-        if server_id in ProtocolItems.INVISIBLE_WALKABLE or client_id in ProtocolItems.INVISIBLE_WALKABLE:
+        if contains(cls._lists.invisible_walkable):
             return TileIndicatorType.TECH_INVISIBLE_WALKABLE
 
-        if server_id in ProtocolItems.INVISIBLE_WALLS or client_id in ProtocolItems.INVISIBLE_WALLS:
+        if contains(cls._lists.invisible_walls):
             return TileIndicatorType.TECH_INVISIBLE_WALL
 
-        if ((ProtocolItems.PRIMAL_LIGHT_MIN <= client_id <= ProtocolItems.PRIMAL_LIGHT_MAX) or
-            (ProtocolItems.PRIMAL_LIGHT_MIN <= server_id <= ProtocolItems.PRIMAL_LIGHT_MAX) or
-            server_id in ProtocolItems.PRIMAL_LIGHT_EXTRA or client_id in ProtocolItems.PRIMAL_LIGHT_EXTRA):
+        if contains(cls._lists.primal_lights):
             return TileIndicatorType.TECH_PRIMAL_LIGHT
 
         return TileIndicatorType.NONE
 
-    @staticmethod
-    def is_technical(server_id: int, client_id: int) -> bool:
-        return TechnicalItemRegistry.classify(server_id, client_id) != TileIndicatorType.NONE
+    @classmethod
+    def is_technical(cls, server_id: int, client_id: int) -> bool:
+        return cls.classify(server_id, client_id) != TileIndicatorType.NONE
 
     @staticmethod
     def get_marker_id(ind_type: TileIndicatorType) -> float:
@@ -89,6 +143,12 @@ class TechnicalItemRegistry:
         return styles.get(ind_type, {"text": "?", "border": (200, 200, 200)})
 
 
+@pytest.fixture(autouse=True)
+def setup_default_registry():
+    """Ensure registry is initialized with defaults for each test unless overridden."""
+    TechnicalItemRegistry.initialize({"technical_items": DEFAULT_CONFIG_TECHNICAL_ITEMS})
+
+
 def test_invisible_stairs_classification():
     assert TechnicalItemRegistry.classify(459, 0) == TileIndicatorType.TECH_INVISIBLE_STAIR
     assert TechnicalItemRegistry.classify(0, 469) == TileIndicatorType.TECH_INVISIBLE_STAIR
@@ -103,11 +163,49 @@ def test_invisible_wall_classification():
     assert TechnicalItemRegistry.classify(1548, 0) == TileIndicatorType.TECH_INVISIBLE_WALL
     assert TechnicalItemRegistry.classify(0, 2187) == TileIndicatorType.TECH_INVISIBLE_WALL
 
-def test_primal_light_range_classification():
+def test_primal_light_classification():
     for cid in range(39092, 39101):
         assert TechnicalItemRegistry.classify(0, cid) == TileIndicatorType.TECH_PRIMAL_LIGHT
     for extra in [39236, 39367, 39368]:
         assert TechnicalItemRegistry.classify(extra, 0) == TileIndicatorType.TECH_PRIMAL_LIGHT
+
+def test_zero_hardcoded_fallbacks_when_config_empty():
+    """Verify that if technical_items is empty in config, NO items match (zero C++ hardcoded fallback)."""
+    TechnicalItemRegistry.initialize({"technical_items": {}})
+    # Standard IDs should now classify as NONE
+    assert TechnicalItemRegistry.classify(459, 469) == TileIndicatorType.NONE
+    assert TechnicalItemRegistry.classify(460, 470) == TileIndicatorType.NONE
+    assert TechnicalItemRegistry.classify(1548, 2187) == TileIndicatorType.NONE
+    assert TechnicalItemRegistry.classify(39092, 39092) == TileIndicatorType.NONE
+    assert TechnicalItemRegistry.is_technical(459, 469) is False
+
+def test_custom_user_configured_ids():
+    """Verify that user-defined IDs added to config.toml are recognized properly."""
+    custom_config = {
+        "technical_items": {
+            "invisible_stairs": [9999],
+            "invisible_walls": [8888, 12345],
+        }
+    }
+    TechnicalItemRegistry.initialize(custom_config)
+    assert TechnicalItemRegistry.classify(9999, 0) == TileIndicatorType.TECH_INVISIBLE_STAIR
+    assert TechnicalItemRegistry.classify(0, 8888) == TileIndicatorType.TECH_INVISIBLE_WALL
+    assert TechnicalItemRegistry.classify(12345, 0) == TileIndicatorType.TECH_INVISIBLE_WALL
+    # Non-configured IDs are not classified
+    assert TechnicalItemRegistry.classify(459, 0) == TileIndicatorType.NONE
+
+def test_sorting_and_deduplication():
+    lists = TechnicalItemLists(
+        invisible_stairs=[500, 100, 500, 200],
+        invisible_walkable=[300, 300, 100],
+        invisible_walls=[],
+        primal_lights=[],
+    )
+    TechnicalItemRegistry.set_lists(lists)
+    stored = TechnicalItemRegistry.get_lists()
+    assert stored.invisible_stairs == [100, 200, 500]
+    assert stored.invisible_walkable == [100, 300]
+    assert TechnicalItemRegistry.classify(200, 0) == TileIndicatorType.TECH_INVISIBLE_STAIR
 
 def test_unknown_items():
     assert TechnicalItemRegistry.classify(0, 0) == TileIndicatorType.NONE
@@ -136,5 +234,3 @@ def test_badge_styles():
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["border"] == (255, 0, 0)
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["border"] == (255, 165, 0)
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["border"] == (255, 0, 255)
-
-

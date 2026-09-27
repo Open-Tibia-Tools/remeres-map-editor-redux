@@ -3,6 +3,14 @@
 
 #include <array>
 #include <cstdint>
+#include <vector>
+
+namespace toml {
+	inline namespace v3 {
+		class table;
+	}
+	using table = v3::table;
+}
 
 class Brush;
 
@@ -21,9 +29,9 @@ enum class TileIndicatorType : uint8_t {
 	TechInvisibleWalkable = 6,// "WALK"  - Cyan frame + wash
 	TechInvisibleWall = 7,   // "BLOCK" - Red frame + wash
 	TechPrimalLight = 8,     // "LIGHT" - Sky blue frame + wash
-	InvalidGround = 9,       // "INVALID" - Red frame + wash (Missing ground tile)
-	InvalidItem = 10,        // "INVALID" - Orange/Yellow frame + wash (Missing top item)
-	InvalidZone = 11         // "INVALID" - Magenta frame + wash (Invalid zone flags)
+	InvalidGround = 9,       // Flat red wash (Missing ground tile)
+	InvalidItem = 10,        // Flat orange wash (Missing top item)
+	InvalidZone = 11         // Flat magenta wash (Invalid zone flags)
 };
 
 // Base float IDs encoded in vertex attribute `house_id` / `marker_id`
@@ -40,63 +48,30 @@ inline constexpr float INDICATOR_INVALID_ITEM_BASE    = 10000000.0f;
 inline constexpr float INDICATOR_INVALID_ZONE_BASE    = 11000000.0f;
 
 /**
- * @brief Known item IDs for technical and utility items across client versions.
+ * @brief Runtime lists of technical item IDs populated dynamically from config.toml.
  */
-namespace ProtocolItems {
-	inline constexpr std::array<uint16_t, 2> INVISIBLE_STAIRS  = { 459, 469 };
-	inline constexpr std::array<uint16_t, 5> INVISIBLE_WALKABLE = { 460, 470, 17970, 20028, 34168 };
-	inline constexpr std::array<uint16_t, 2> INVISIBLE_WALLS    = { 1548, 2187 };
-
-	inline constexpr uint16_t PRIMAL_LIGHT_MIN = 39092;
-	inline constexpr uint16_t PRIMAL_LIGHT_MAX = 39100;
-	inline constexpr std::array<uint16_t, 3> PRIMAL_LIGHT_EXTRA = { 39236, 39367, 39368 };
-} // namespace ProtocolItems
+struct TechnicalItemLists {
+	std::vector<uint16_t> invisible_stairs;
+	std::vector<uint16_t> invisible_walkable;
+	std::vector<uint16_t> invisible_walls;
+	std::vector<uint16_t> primal_lights;
+};
 
 /**
  * @brief Centralized registry of technical and utility items.
  *
- * Maps server/client item IDs to high-performance shader indicator types,
- * eliminating hardcoded magic numbers across the rendering subsystem.
+ * Maps server/client item IDs to high-performance shader indicator types.
+ * All item IDs are loaded dynamically from config.toml with zero hardcoded IDs in C++.
  */
 class TechnicalItemRegistry {
 public:
-	template <size_t N>
-	[[nodiscard]] static constexpr bool MatchesAny(uint16_t server_id, uint16_t client_id, const std::array<uint16_t, N>& list) noexcept {
-		for (uint16_t id : list) {
-			if (server_id == id || client_id == id) {
-				return true;
-			}
-		}
-		return false;
-	}
+	static void Initialize(const toml::table& config_table);
+	static void SetLists(TechnicalItemLists lists);
+	[[nodiscard]] static const TechnicalItemLists& GetLists() noexcept;
 
-	[[nodiscard]] static constexpr TileIndicatorType Classify(uint16_t server_id, uint16_t client_id) noexcept {
-		// Invisible stairs (yellow: Server 459 / Client 469)
-		if (MatchesAny(server_id, client_id, ProtocolItems::INVISIBLE_STAIRS)) {
-			return TileIndicatorType::TechInvisibleStair;
-		}
+	[[nodiscard]] static TileIndicatorType Classify(uint16_t server_id, uint16_t client_id) noexcept;
 
-		// Invisible walkable (cyan: Server 460 / Client 470, 17970, 20028, 34168)
-		if (MatchesAny(server_id, client_id, ProtocolItems::INVISIBLE_WALKABLE)) {
-			return TileIndicatorType::TechInvisibleWalkable;
-		}
-
-		// Invisible wall / magic blocker (red: Server 1548 / Client 2187)
-		if (MatchesAny(server_id, client_id, ProtocolItems::INVISIBLE_WALLS)) {
-			return TileIndicatorType::TechInvisibleWall;
-		}
-
-		// Primal light / light sources (sky blue: Client 39092-39100, 39236, 39367, 39368)
-		if ((client_id >= ProtocolItems::PRIMAL_LIGHT_MIN && client_id <= ProtocolItems::PRIMAL_LIGHT_MAX) ||
-		    (server_id >= ProtocolItems::PRIMAL_LIGHT_MIN && server_id <= ProtocolItems::PRIMAL_LIGHT_MAX) ||
-		    MatchesAny(server_id, client_id, ProtocolItems::PRIMAL_LIGHT_EXTRA)) {
-			return TileIndicatorType::TechPrimalLight;
-		}
-
-		return TileIndicatorType::None;
-	}
-
-	[[nodiscard]] static constexpr bool IsTechnical(uint16_t server_id, uint16_t client_id) noexcept {
+	[[nodiscard]] static bool IsTechnical(uint16_t server_id, uint16_t client_id) noexcept {
 		return Classify(server_id, client_id) != TileIndicatorType::None;
 	}
 

@@ -20,6 +20,7 @@
 #include "app/client_version.h"
 #include "app/main.h"
 #include "ui/managers/vsync_policy.h"
+#include "rendering/indicators/technical_item_registry.h"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
@@ -206,6 +207,20 @@ static std::string toLower(std::string s) {
 	return s;
 }
 
+static void populateDefaultTechnicalItems(toml::table& table) {
+	if (!table.contains("technical_items")) {
+		toml::table tech_sec;
+		tech_sec.insert_or_assign("invisible_stairs", toml::array { 459, 469 });
+		tech_sec.insert_or_assign("invisible_walkable", toml::array { 460, 470, 17970, 20028, 34168 });
+		tech_sec.insert_or_assign("invisible_walls", toml::array { 1548, 2187 });
+		tech_sec.insert_or_assign("primal_lights", toml::array {
+			39092, 39093, 39094, 39095, 39096, 39097, 39098, 39099, 39100,
+			39236, 39367, 39368
+		});
+		table.insert_or_assign("technical_items", std::move(tech_sec));
+	}
+}
+
 void Settings::IO(IOMode mode) {
 	if (mode == LOAD) {
 		try {
@@ -215,6 +230,9 @@ void Settings::IO(IOMode mode) {
 		} catch (const std::exception& err) {
 			spdlog::error("Failed to load config.toml: {}", err.what());
 		}
+		rme::rendering::TechnicalItemRegistry::Initialize(g_settings_table);
+	} else if (mode == DEFAULT || mode == SAVE) {
+		populateDefaultTechnicalItems(g_settings_table);
 	}
 
 	toml::table* root = &g_settings_table;
