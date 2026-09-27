@@ -82,9 +82,9 @@ class TechnicalItemRegistry:
             TileIndicatorType.TECH_INVISIBLE_WALKABLE: {"text": "WALK", "border": (0, 240, 240)},
             TileIndicatorType.TECH_INVISIBLE_WALL: {"text": "BLOCK", "border": (255, 40, 40)},
             TileIndicatorType.TECH_PRIMAL_LIGHT: {"text": "LIGHT", "border": (90, 220, 255)},
-            TileIndicatorType.INVALID_GROUND: {"text": "INVALID", "border": (255, 38, 38)},
-            TileIndicatorType.INVALID_ITEM: {"text": "INVALID", "border": (255, 165, 0)},
-            TileIndicatorType.INVALID_ZONE: {"text": "INVALID", "border": (255, 0, 255)},
+            TileIndicatorType.INVALID_GROUND: {"text": "", "border": (255, 0, 0)},
+            TileIndicatorType.INVALID_ITEM: {"text": "", "border": (255, 165, 0)},
+            TileIndicatorType.INVALID_ZONE: {"text": "", "border": (255, 0, 255)},
         }
         return styles.get(ind_type, {"text": "?", "border": (200, 200, 200)})
 
@@ -130,29 +130,11 @@ def test_badge_styles():
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALKABLE)["text"] == "WALK"
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALL)["text"] == "BLOCK"
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_PRIMAL_LIGHT)["text"] == "LIGHT"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["text"] == "INVALID"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["text"] == "INVALID"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["text"] == "INVALID"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["border"] == (255, 38, 38)
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["text"] == ""
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["text"] == ""
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["text"] == ""
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["border"] == (255, 0, 0)
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["border"] == (255, 165, 0)
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["border"] == (255, 0, 255)
 
-def test_invalid_typography_bitmasks():
-    in_mask = [0x00000000, 0x0745D528, 0x09455568, 0x0945D5A8, 0x09455528, 0x075D4928, 0x00000000]
-    out_mask = [0x0FEFFFFC, 0x18AA2AD4, 0x16AAAA94, 0x16AA2A54, 0x16BAAAD4, 0x18A2B6D4, 0x0FFFFFFC]
-
-    # Verify rows 0 and 6 are empty padding
-    assert in_mask[0] == 0
-    assert in_mask[6] == 0
-
-    # Verify no pixel is simultaneously in text inside and text outline
-    for r in range(7):
-        assert (in_mask[r] & out_mask[r]) == 0, f"Row {r} has overlapping inside and outline masks"
-
-    # Verify all text bits stay within 32 columns and have safe margins from border (lx=0 and lx=31)
-    for r in range(7):
-        assert (in_mask[r] & 1) == 0, f"Row {r} touches left border (bit 0)"
-        assert (in_mask[r] & (1 << 31)) == 0, f"Row {r} touches right border (bit 31)"
-        assert (out_mask[r] & 1) == 0, f"Row {r} outline touches left border (bit 0)"
-        assert (out_mask[r] & (1 << 31)) == 0, f"Row {r} outline touches right border (bit 31)"
 
