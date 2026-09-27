@@ -103,7 +103,21 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	if (options.show_tech_items && !options.ingame) {
 		// Red invalid client id
 		if (!it) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, alpha), 0, atlas);
+			const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;
+			if (white_pixel) {
+				const float rf = static_cast<float>(red) / 255.0f;
+				const float gf = static_cast<float>(green) / 255.0f;
+				const float bf = static_cast<float>(blue) / 255.0f;
+				const float af = static_cast<float>(alpha) / 255.0f;
+				const auto invalid_type = (item && item->isGroundTile()) ? rme::rendering::TileIndicatorType::InvalidGround : rme::rendering::TileIndicatorType::InvalidItem;
+				sprite_batch.draw(
+					static_cast<float>(draw_x), static_cast<float>(draw_y),
+					32.0f, 32.0f,
+					*white_pixel,
+					rf, gf, bf, af,
+					rme::rendering::TechnicalItemRegistry::GetMarkerId(invalid_type)
+				);
+			}
 			return;
 		}
 

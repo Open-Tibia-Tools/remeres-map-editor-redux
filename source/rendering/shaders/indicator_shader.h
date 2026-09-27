@@ -17,11 +17,16 @@ namespace rme::rendering::shaders {
  * - WALK   (Technical invisible walkable: Cyan)
  * - BLOCK  (Technical invisible wall: Red)
  * - LIGHT  (Technical primal light source: Sky Blue)
+ * - INVALID (Missing ground: Red)
+ * - INVALID (Missing top item: Orange/Yellow)
+ * - INVALID (Invalid zone flags: Magenta)
  */
 inline constexpr std::string_view INDICATOR_SHADER_GLSL = R"(
 bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
                            int showHouses, int showSpawns, int showTowns,
                            int showWaypoints, int showTechItems,
+                           int showInvalidTiles, int showInvalidZones,
+                           vec4 tint,
                            out vec4 outColor) {
     if (markerId < 1000000.0) {
         return false;
@@ -95,7 +100,7 @@ bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
         textOutlineColor = vec4(0.30, 0.02, 0.02, 0.95);
         inMask = uint[7](0x09718270u, 0x050A4290u, 0x030A4290u, 0x030A4270u, 0x050A4290u, 0x090A4290u, 0x09719E70u);
         outMask = uint[7](0x168E6588u, 0x1AF5A568u, 0x0C95A568u, 0x0C95A588u, 0x1A95A568u, 0x16F5BD68u, 0x168E6188u);
-    } else {
+    } else if (markerId < 9000000.0) {
         // Primal Light ("LIGHT")
         if (showTechItems == 0) discard;
         outlineColor = vec4(0.35, 0.85, 1.00, 1.0);
@@ -103,6 +108,30 @@ bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
         textOutlineColor = vec4(0.05, 0.15, 0.35, 0.95);
         inMask = uint[7](0x0FA5CE10u, 0x02242410u, 0x02242410u, 0x023DA410u, 0x02252410u, 0x02252410u, 0x0225CEF0u);
         outMask = uint[7](0x105A3128u, 0x1DDBDB28u, 0x055BDA28u, 0x05425A28u, 0x055ADA28u, 0x055ADBE8u, 0x055A3108u);
+    } else if (markerId < 10000000.0) {
+        // Missing Ground Tile ("INVALID" - Red)
+        if (showInvalidTiles == 0) discard;
+        outlineColor = vec4(1.00, 0.15, 0.15, 1.0);
+        bgColor = vec4(0.90, 0.12, 0.12, 0.43);
+        textOutlineColor = vec4(0.30, 0.02, 0.02, 0.95);
+        inMask = uint[7](0x00000000u, 0x0745D528u, 0x09455568u, 0x0945D5A8u, 0x09455528u, 0x075D4928u, 0x00000000u);
+        outMask = uint[7](0x0FEFFFFCu, 0x18AA2AD4u, 0x16AAAA94u, 0x16AA2A54u, 0x16BAAAD4u, 0x18A2B6D4u, 0x0FFFFFFCu);
+    } else if (markerId < 11000000.0) {
+        // Missing Top Item ("INVALID" - Orange/Yellow)
+        if (showInvalidTiles == 0) discard;
+        outlineColor = vec4(1.00, 0.65, 0.00, 1.0);
+        bgColor = vec4(0.95, 0.55, 0.00, 0.43);
+        textOutlineColor = vec4(0.30, 0.15, 0.00, 0.95);
+        inMask = uint[7](0x00000000u, 0x0745D528u, 0x09455568u, 0x0945D5A8u, 0x09455528u, 0x075D4928u, 0x00000000u);
+        outMask = uint[7](0x0FEFFFFCu, 0x18AA2AD4u, 0x16AAAA94u, 0x16AA2A54u, 0x16BAAAD4u, 0x18A2B6D4u, 0x0FFFFFFCu);
+    } else {
+        // Invalid Zone Flags ("INVALID" - Magenta)
+        if (showInvalidZones == 0) discard;
+        outlineColor = vec4(1.00, 0.00, 1.00, 1.0);
+        bgColor = vec4(0.85, 0.08, 0.85, 0.43);
+        textOutlineColor = vec4(0.28, 0.02, 0.28, 0.95);
+        inMask = uint[7](0x00000000u, 0x0745D528u, 0x09455568u, 0x0945D5A8u, 0x09455528u, 0x075D4928u, 0x00000000u);
+        outMask = uint[7](0x0FEFFFFCu, 0x18AA2AD4u, 0x16AAAA94u, 0x16AA2A54u, 0x16BAAAD4u, 0x18A2B6D4u, 0x0FFFFFFCu);
     }
 
     bool isSquareOutline = (lx < bThick || lx >= 32 - bThick || ly < bThick || ly >= 32 - bThick);
@@ -124,6 +153,8 @@ bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
     } else {
         outColor = bgColor;
     }
+    outColor.rgb *= tint.rgb;
+    outColor.a *= tint.a;
     return true;
 }
 )";

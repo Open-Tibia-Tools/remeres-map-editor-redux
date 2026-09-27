@@ -765,6 +765,8 @@ void ChunkCacheManager::renderFloor(
 	shader_.SetInt("uShowTowns", ctx.options.show_towns ? 1 : 0);
 	shader_.SetInt("uShowWaypoints", (ctx.options.show_waypoints && !ctx.options.ingame) ? 1 : 0);
 	shader_.SetInt("uShowTechItems", (ctx.options.show_tech_items && !ctx.options.ingame) ? 1 : 0);
+	shader_.SetInt("uShowInvalidTiles", (ctx.options.show_invalid_tiles && !ctx.options.ingame) ? 1 : 0);
+	shader_.SetInt("uShowInvalidZones", (ctx.options.show_invalid_zones && !ctx.options.ingame) ? 1 : 0);
 
 	atlas.bind(0);
 	atlas.bindLUT(SpriteAtlasLUT::TEXTURE_UNIT_INDEX);

@@ -20,18 +20,24 @@ enum class TileIndicatorType : uint8_t {
 	TechInvisibleStair = 5,  // "STAIR" - Yellow frame + wash
 	TechInvisibleWalkable = 6,// "WALK"  - Cyan frame + wash
 	TechInvisibleWall = 7,   // "BLOCK" - Red frame + wash
-	TechPrimalLight = 8      // "LIGHT" - Sky blue frame + wash
+	TechPrimalLight = 8,     // "LIGHT" - Sky blue frame + wash
+	InvalidGround = 9,       // "INVALID" - Red frame + wash (Missing ground tile)
+	InvalidItem = 10,        // "INVALID" - Orange/Yellow frame + wash (Missing top item)
+	InvalidZone = 11         // "INVALID" - Magenta frame + wash (Invalid zone flags)
 };
 
 // Base float IDs encoded in vertex attribute `house_id` / `marker_id`
-inline constexpr float INDICATOR_HOUSE_ENTRY_BASE = 1000000.0f;
-inline constexpr float INDICATOR_SPAWN_BASE       = 2000000.0f;
-inline constexpr float INDICATOR_TOWN_BASE        = 3000000.0f;
-inline constexpr float INDICATOR_WAYPOINT_BASE    = 4000000.0f;
-inline constexpr float INDICATOR_TECH_STAIR_BASE  = 5000000.0f;
-inline constexpr float INDICATOR_TECH_WALK_BASE   = 6000000.0f;
-inline constexpr float INDICATOR_TECH_BLOCK_BASE  = 7000000.0f;
-inline constexpr float INDICATOR_TECH_LIGHT_BASE  = 8000000.0f;
+inline constexpr float INDICATOR_HOUSE_ENTRY_BASE     = 1000000.0f;
+inline constexpr float INDICATOR_SPAWN_BASE           = 2000000.0f;
+inline constexpr float INDICATOR_TOWN_BASE            = 3000000.0f;
+inline constexpr float INDICATOR_WAYPOINT_BASE        = 4000000.0f;
+inline constexpr float INDICATOR_TECH_STAIR_BASE      = 5000000.0f;
+inline constexpr float INDICATOR_TECH_WALK_BASE       = 6000000.0f;
+inline constexpr float INDICATOR_TECH_BLOCK_BASE      = 7000000.0f;
+inline constexpr float INDICATOR_TECH_LIGHT_BASE      = 8000000.0f;
+inline constexpr float INDICATOR_INVALID_GROUND_BASE  = 9000000.0f;
+inline constexpr float INDICATOR_INVALID_ITEM_BASE    = 10000000.0f;
+inline constexpr float INDICATOR_INVALID_ZONE_BASE    = 11000000.0f;
 
 /**
  * @brief Known item IDs for technical and utility items across client versions.
@@ -103,6 +109,9 @@ public:
 			case TileIndicatorType::TechInvisibleWalkable: return INDICATOR_TECH_WALK_BASE;
 			case TileIndicatorType::TechInvisibleWall:     return INDICATOR_TECH_BLOCK_BASE;
 			case TileIndicatorType::TechPrimalLight:       return INDICATOR_TECH_LIGHT_BASE;
+			case TileIndicatorType::InvalidGround:         return INDICATOR_INVALID_GROUND_BASE;
+			case TileIndicatorType::InvalidItem:           return INDICATOR_INVALID_ITEM_BASE;
+			case TileIndicatorType::InvalidZone:           return INDICATOR_INVALID_ZONE_BASE;
 			default: return 0.0f;
 		}
 	}
@@ -138,6 +147,12 @@ inline constexpr IndicatorBadgeStyle GetIndicatorBadgeStyle(TileIndicatorType ty
 			return { "BLOCK", 255, 40, 40, 230, 40, 40, 110, 80, 5, 5 };
 		case TileIndicatorType::TechPrimalLight:
 			return { "LIGHT", 90, 220, 255, 70, 180, 240, 110, 10, 40, 90 };
+		case TileIndicatorType::InvalidGround:
+			return { "INVALID", 255, 38, 38, 230, 30, 30, 110, 80, 5, 5 };
+		case TileIndicatorType::InvalidItem:
+			return { "INVALID", 255, 165, 0, 240, 140, 0, 110, 80, 45, 0 };
+		case TileIndicatorType::InvalidZone:
+			return { "INVALID", 255, 0, 255, 220, 20, 220, 110, 70, 5, 70 };
 		default:
 			return { "?", 200, 200, 200, 100, 100, 100, 100, 0, 0, 0 };
 	}

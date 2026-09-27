@@ -176,7 +176,9 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		options.show_waypoints,
 		options.show_tech_items && !options.ingame,
 		options.show_blocking,
-		options.show_special_tiles
+		options.show_special_tiles,
+		options.show_invalid_tiles && !options.ingame,
+		options.show_invalid_zones && !options.ingame
 	);
 	primitive_renderer.setProjectionMatrix(view.projectionMatrix);
 
@@ -206,7 +208,9 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		options.show_waypoints,
 		options.show_tech_items && !options.ingame,
 		options.show_blocking,
-		options.show_special_tiles
+		options.show_special_tiles,
+		options.show_invalid_tiles && !options.ingame,
+		options.show_invalid_zones && !options.ingame
 	);
 
 	if (!options.ingame) {

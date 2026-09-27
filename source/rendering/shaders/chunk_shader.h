@@ -72,13 +72,17 @@ uniform int uShowHouses;
 uniform int uShowTowns;
 uniform int uShowWaypoints;
 uniform int uShowTechItems;
+uniform int uShowInvalidTiles;
+uniform int uShowInvalidZones;
 
 )") + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + R"(
 
 void main() {
 	if (evaluateTileIndicator(vQuadCoord, vHouseId, uCurrentHouseId,
 	                          uShowHouses, 0, uShowTowns,
-	                          uShowWaypoints, uShowTechItems, FragColor)) {
+	                          uShowWaypoints, uShowTechItems,
+	                          uShowInvalidTiles, uShowInvalidZones,
+	                          vColor, FragColor)) {
 		return;
 	}
 

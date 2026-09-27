@@ -23,6 +23,7 @@
 #include "rendering/drawers/entities/creature_name_drawer.h"
 #include "rendering/drawers/tiles/floor_drawer.h"
 #include "rendering/drawers/overlays/marker_drawer.h"
+#include "rendering/indicators/technical_item_registry.h"
 #include "rendering/indicators/zone_flags.h"
 #include "rendering/utilities/pattern_calculator.h"
 #include "rendering/core/sprite_preloader.h"
@@ -31,24 +32,6 @@
 
 TileRenderer::TileRenderer(ItemDrawer* id, SpriteDrawer* sd, CreatureDrawer* cd, CreatureNameDrawer* cnd, FloorDrawer* fd, MarkerDrawer* md, Editor* ed) :
 	item_drawer(id), sprite_drawer(sd), creature_drawer(cd), floor_drawer(fd), marker_drawer(md), creature_name_drawer(cnd), editor(ed) {
-}
-
-static DrawColor invalidTileOverlayColor(InvalidOTBMItemMarkerColor markerColor, bool selected) {
-	uint8_t red = 255;
-	uint8_t green = 0;
-	uint8_t blue = 0;
-
-	if (markerColor == InvalidOTBMItemMarkerColor::Orange) {
-		green = 165;
-	}
-
-	if (selected) {
-		red = static_cast<uint8_t>(red / 2);
-		green = static_cast<uint8_t>(green / 2);
-		blue = static_cast<uint8_t>(blue / 2);
-	}
-
-	return DrawColor(red, green, blue, 171);
 }
 
 void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile* tile_above) const {
@@ -376,30 +359,51 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 			}
 		}
 
-		if (options.show_invalid_zones && !as_minimap && tile->hasInvalidZones()) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(255, 0, 255, 171), 0, &ctx.atlas);
+		const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
+
+		if (options.show_invalid_zones && !as_minimap && tile->hasInvalidZones() && white_pixel) {
+			sprite_batch.draw(
+				static_cast<float>(draw_x), static_cast<float>(draw_y),
+				32.0f, 32.0f,
+				*white_pixel,
+				1.0f, 1.0f, 1.0f, 1.0f,
+				rme::rendering::INDICATOR_INVALID_ZONE_BASE
+			);
 		}
 
-		InvalidOTBMItemMarkerColor invalid_tile_marker_color = InvalidOTBMItemMarkerColor::None;
-		bool has_selected_invalid_item = false;
-		if (options.show_invalid_tiles && tile->ground && tile->ground->isInvalidOTBMItem()) {
-			invalid_tile_marker_color = tile->ground->invalidOTBMMarkerColor();
-			has_selected_invalid_item = tile->ground->isSelected();
-		}
-		if (options.show_invalid_tiles) {
+		if (options.show_invalid_tiles && !as_minimap && white_pixel) {
+			rme::rendering::TileIndicatorType invalid_indicator = rme::rendering::TileIndicatorType::None;
+			bool has_selected_invalid_item = false;
+
+			if (tile->ground && tile->ground->isInvalidOTBMItem()) {
+				invalid_indicator = rme::rendering::TileIndicatorType::InvalidGround;
+				has_selected_invalid_item = tile->ground->isSelected();
+			}
+
 			for (const auto& item : tile->items) {
 				if (item->isInvalidOTBMItem()) {
-					if (invalid_tile_marker_color != InvalidOTBMItemMarkerColor::Red) {
-						invalid_tile_marker_color = item->invalidOTBMMarkerColor();
+					if (invalid_indicator != rme::rendering::TileIndicatorType::InvalidGround) {
+						invalid_indicator = rme::rendering::TileIndicatorType::InvalidItem;
 					}
 					has_selected_invalid_item = has_selected_invalid_item || item->isSelected();
 				}
 			}
-		}
 
-		if (options.show_invalid_tiles && !as_minimap && invalid_tile_marker_color != InvalidOTBMItemMarkerColor::None) {
-			const DrawColor overlay = invalidTileOverlayColor(invalid_tile_marker_color, has_selected_invalid_item);
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, overlay, 0, &ctx.atlas);
+			if (invalid_indicator != rme::rendering::TileIndicatorType::None) {
+				if (!has_selected_invalid_item && options.transient_selection_bounds) {
+					has_selected_invalid_item = options.transient_selection_bounds->contains(position.x, position.y);
+				}
+
+				const float tint = has_selected_invalid_item ? 0.5f : 1.0f;
+				const float marker_id = rme::rendering::TechnicalItemRegistry::GetMarkerId(invalid_indicator);
+				sprite_batch.draw(
+					static_cast<float>(draw_x), static_cast<float>(draw_y),
+					32.0f, 32.0f,
+					*white_pixel,
+					tint, tint, tint, 1.0f,
+					marker_id
+				);
+			}
 		}
 
 		const bool need_waypoint = !options.ingame && options.show_waypoints;

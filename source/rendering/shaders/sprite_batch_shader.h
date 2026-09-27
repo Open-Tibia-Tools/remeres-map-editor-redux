@@ -70,13 +70,17 @@ uniform int uShowWaypoints;
 uniform int uShowTechItems;
 uniform int uShowBlocking;
 uniform int uShowSpecialTiles;
+uniform int uShowInvalidTiles;
+uniform int uShowInvalidZones;
 
 )") + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(ZONE_SHADER_GLSL) + R"(
 
 void main() {
     if (evaluateTileIndicator(vQuadCoord, vHouseId, uCurrentHouseId,
                               uShowHouses, uShowSpawns, uShowTowns,
-                              uShowWaypoints, uShowTechItems, FragColor)) {
+                              uShowWaypoints, uShowTechItems,
+                              uShowInvalidTiles, uShowInvalidZones,
+                              Tint, FragColor)) {
         return;
     }
 
@@ -114,7 +118,9 @@ inline void SetSpriteBatchOverlayUniforms(
 	bool show_waypoints,
 	bool show_tech_items,
 	bool show_blocking,
-	bool show_special_tiles)
+	bool show_special_tiles,
+	bool show_invalid_tiles = true,
+	bool show_invalid_zones = true)
 {
 	shader.Use();
 	shader.SetUint("uCurrentHouseId", current_house_id);
@@ -125,6 +131,8 @@ inline void SetSpriteBatchOverlayUniforms(
 	shader.SetInt("uShowTechItems", show_tech_items ? 1 : 0);
 	shader.SetInt("uShowBlocking", show_blocking ? 1 : 0);
 	shader.SetInt("uShowSpecialTiles", show_special_tiles ? 1 : 0);
+	shader.SetInt("uShowInvalidTiles", show_invalid_tiles ? 1 : 0);
+	shader.SetInt("uShowInvalidZones", show_invalid_zones ? 1 : 0);
 }
 
 } // namespace rme::rendering::shaders
