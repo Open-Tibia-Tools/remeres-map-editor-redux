@@ -69,7 +69,6 @@ out vec4 FragColor;
 uniform sampler2DArray uAtlas;
 uniform uint uCurrentHouseId;
 uniform int uShowHouses;
-uniform int uShowSpawns;
 uniform int uShowTowns;
 uniform int uShowWaypoints;
 uniform int uShowTechItems;
@@ -78,7 +77,7 @@ uniform int uShowTechItems;
 
 void main() {
 	if (evaluateTileIndicator(vQuadCoord, vHouseId, uCurrentHouseId,
-	                          uShowHouses, uShowSpawns, uShowTowns,
+	                          uShowHouses, 0, uShowTowns,
 	                          uShowWaypoints, uShowTechItems, FragColor)) {
 		return;
 	}

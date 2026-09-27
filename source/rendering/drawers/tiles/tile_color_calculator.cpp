@@ -5,7 +5,7 @@
 #include "app/definitions.h"
 #include <array>
 
-void TileColorCalculator::Calculate(const Tile* tile, const DrawingOptions& options, uint32_t current_house_id, int spawn_count, uint8_t& r, uint8_t& g, uint8_t& b) {
+void TileColorCalculator::Calculate(const Tile* tile, const DrawingOptions& options, uint8_t& r, uint8_t& g, uint8_t& b) {
 	if (options.highlight_items && !tile->items.empty() && !tile->items.back()->isBorder()) {
 		int item_count = static_cast<int>(tile->items.size());
 		// Fixed point factors (x/256)

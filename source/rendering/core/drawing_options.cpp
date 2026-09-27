@@ -177,18 +177,15 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 
 	// Differential Change Detection: Only dirty when values actually change!
 	if (new_transparent_items != transparent_items ||
-		new_show_special_tiles != show_special_tiles ||
-		new_show_houses != show_houses ||
 		new_extended_house_shader != extended_house_shader ||
-		new_show_blocking != show_blocking ||
-		new_show_spawns != show_spawns ||
 		new_show_creatures != show_creatures ||
 		new_highlight_items != highlight_items ||
 		new_show_only_colors != show_only_colors ||
 		new_show_only_modified != show_only_modified ||
 		new_show_items != show_items ||
 		new_show_as_minimap != show_as_minimap ||
-		new_show_tech_items != show_tech_items) {
+		new_show_tech_items != show_tech_items ||
+		new_ingame != ingame) {
 		chunk_bake_dirty_ = true;
 	}
 

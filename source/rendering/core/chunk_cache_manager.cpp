@@ -483,13 +483,11 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				is_dynamic = true;
 			}
 
-			const float tile_house_id = (ctx.options.show_houses && tile->isHouseTile()) ? static_cast<float>(tile->getHouseID()) : 0.0f;
-
-
+			const float tile_house_id = tile->isHouseTile() ? static_cast<float>(tile->getHouseID()) : 0.0f;
 
 			uint8_t gr = 255, gg = 255, gb = 255;
-			if (!ctx.options.show_as_minimap && (ctx.options.hasTileColorModifiers() || loc->getSpawnCount() > 0)) {
-				TileColorCalculator::Calculate(tile, ctx.options, ctx.current_house_id, loc->getSpawnCount(), gr, gg, gb);
+			if (!ctx.options.show_as_minimap && ctx.options.hasTileColorModifiers()) {
+				TileColorCalculator::Calculate(tile, ctx.options, gr, gg, gb);
 			}
 
 			// 1. Static & animated terrain ground (water, grass, dirt, lava, etc.)
@@ -506,7 +504,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					if (white_pixel) {
 						pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type));
 					}
-				} else if (git) {
+				} else if (git && !git.isMetaItem()) {
 					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
 					if (gspr) {
 						if (gspr->isAnimated()) {
@@ -626,7 +624,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					continue;
 				}
 
-				if (!it) {
+				if (!it || it.isMetaItem() || (!ctx.options.show_items && it.hasFlag(ItemFlag::Pickupable))) {
 					continue;
 				}
 				GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
@@ -647,10 +645,6 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 							}
 						}
 					}
-				}
-
-				if (item->isInvalidOTBMItem()) {
-					is_dynamic = true;
 				}
 
 				const auto [draw_offset_x, draw_offset_y] = ispr->getDrawOffset();
@@ -768,9 +762,8 @@ void ChunkCacheManager::renderFloor(
 	shader_.SetVec4("uGlobalTint", glm::vec4(1.0f));
 	shader_.SetUint("uCurrentHouseId", ctx.current_house_id);
 	shader_.SetInt("uShowHouses", ctx.options.show_houses ? 1 : 0);
-	shader_.SetInt("uShowSpawns", ctx.options.show_spawns ? 1 : 0);
 	shader_.SetInt("uShowTowns", ctx.options.show_towns ? 1 : 0);
-	shader_.SetInt("uShowWaypoints", ctx.options.show_waypoints ? 1 : 0);
+	shader_.SetInt("uShowWaypoints", (ctx.options.show_waypoints && !ctx.options.ingame) ? 1 : 0);
 	shader_.SetInt("uShowTechItems", (ctx.options.show_tech_items && !ctx.options.ingame) ? 1 : 0);
 
 	atlas.bind(0);

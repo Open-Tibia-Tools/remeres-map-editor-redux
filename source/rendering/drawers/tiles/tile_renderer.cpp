@@ -81,8 +81,8 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 	uint8_t r = 255, g = 255, b = 255;
 
 	// begin filters for ground tile
-	if (!as_minimap && (options.hasTileColorModifiers() || location->getSpawnCount() > 0)) {
-		TileColorCalculator::Calculate(tile, options, current_house_id, location->getSpawnCount(), r, g, b);
+	if (!as_minimap && options.hasTileColorModifiers()) {
+		TileColorCalculator::Calculate(tile, options, r, g, b);
 	}
 
 	if (only_colors) {
@@ -213,8 +213,8 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 	constexpr uint8_t default_ir = 255, default_ig = 255, default_ib = 255;
 
 	uint8_t r = 255, g = 255, b = 255;
-	if (options.hasTileColorModifiers() || location->getSpawnCount() > 0) {
-		TileColorCalculator::Calculate(tile, options, ctx.current_house_id, location->getSpawnCount(), r, g, b);
+	if (options.hasTileColorModifiers()) {
+		TileColorCalculator::Calculate(tile, options, r, g, b);
 	}
 
 	BlitItemParams item_params(position, nullptr, options);
@@ -296,8 +296,8 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 	constexpr uint8_t default_ir = 255, default_ig = 255, default_ib = 255;
 
 	uint8_t r = 255, g = 255, b = 255;
-	if (options.hasTileColorModifiers() || location->getSpawnCount() > 0) {
-		TileColorCalculator::Calculate(tile, options, ctx.current_house_id, location->getSpawnCount(), r, g, b);
+	if (options.hasTileColorModifiers()) {
+		TileColorCalculator::Calculate(tile, options, r, g, b);
 	}
 
 	BlitItemParams item_params(position, nullptr, options);
