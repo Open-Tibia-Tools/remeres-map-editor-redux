@@ -67,11 +67,10 @@ class MockSpawn:
         return self.pos
 
 class MockDrawingOptions:
-    def __init__(self, show_waypoints: bool = True, show_towns: bool = True, show_spawns: bool = True,
+    def __init__(self, show_waypoints: bool = True, show_towns: bool = True,
                  ingame: bool = False, show_all_floors: bool = False):
         self.show_waypoints = show_waypoints
         self.show_towns = show_towns
-        self.show_spawns = show_spawns
         self.ingame = ingame
         self.show_all_floors = show_all_floors
 
@@ -84,14 +83,11 @@ def is_floor_visible(z: int, view: MockRenderView, options: MockDrawingOptions) 
     return False
 
 
-def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, options: MockDrawingOptions, spawns: list = None):
-    if spawns is None:
-        spawns = []
-
+def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, options: MockDrawingOptions):
     if options.ingame:
         return []
 
-    if not options.show_waypoints and not options.show_towns and not options.show_spawns:
+    if not options.show_waypoints and not options.show_towns:
         return []
 
     if view.zoom > 10.0:
@@ -176,34 +172,6 @@ def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, op
 
             labels.append({
                 'type': 'town',
-                'text': text,
-                'x': label_x,
-                'y': label_y,
-                'width': w,
-                'height': h
-            })
-
-    # 3. Spawns
-    if options.show_spawns:
-        for spawn in spawns:
-            if not spawn:
-                continue
-            pos = spawn.get_position()
-            if not is_floor_visible(pos.z, view, options):
-                continue
-            if not view.is_tile_visible(pos.x, pos.y, pos.z):
-                continue
-
-            text = f"R: {spawn.get_size()}"
-            screen_x = pos.x * tile_size_screen
-            screen_y = pos.y * tile_size_screen
-            label_x = screen_x + tile_size_screen * 0.5
-            w = 24.0
-            h = 12.0
-            label_y = resolve_collision(label_x, screen_y - 3.0, w, h)
-
-            labels.append({
-                'type': 'spawn',
                 'text': text,
                 'x': label_x,
                 'y': label_y,
@@ -304,40 +272,29 @@ def test_blocking_overlay_shader_colors():
     assert "0.40, 0.40, 0.40, 0.35" in fn_body or "0.4, 0.4, 0.4, 0.35" in fn_body, "Blocking background wash must be gray"
 
 
-def test_spawn_radius_marker_label():
+def test_marker_drawer_does_not_render_spawn_size_labels():
+    drawer_path = Path(__file__).parent.parent / "source" / "rendering" / "drawers" / "overlays" / "marker_label_drawer.cpp"
+    content = drawer_path.read_text(encoding="utf-8")
+
+    assert "MarkerLabelType::Spawn" not in content, "Spawn size labels must not be in MarkerLabelDrawer"
+    assert "Collect Spawns" not in content, "Spawns collection must be removed from MarkerLabelDrawer"
+
+
+def test_waypoint_and_town_2d_collision_stacking():
     pos = MockPosition(50, 50, 7)
-    spawn = MockSpawn(3, pos)
-    view = MockRenderView(floor=7, zoom=1.0)
-
-    # 1. Normal visibility
-    opts = MockDrawingOptions(show_waypoints=False, show_towns=False, show_spawns=True)
-    labels = collect_marker_labels([], [], view, opts, spawns=[spawn])
-    assert len(labels) == 1
-    assert labels[0]['type'] == 'spawn'
-    assert labels[0]['text'] == "R: 3"
-
-    # 2. Disabled via show_spawns = False
-    opts_off = MockDrawingOptions(show_waypoints=False, show_towns=False, show_spawns=False)
-    labels_off = collect_marker_labels([], [], view, opts_off, spawns=[spawn])
-    assert len(labels_off) == 0
-
-    # 3. Disabled in ingame view mode
-    opts_ingame = MockDrawingOptions(show_waypoints=False, show_towns=False, show_spawns=True, ingame=True)
-    labels_ingame = collect_marker_labels([], [], view, opts_ingame, spawns=[spawn])
-    assert len(labels_ingame) == 0
-
-    # 4. Multi-item stacking on same tile (Waypoint + Town + Spawn)
     wp = MockWaypoint("temple_wp", pos)
     town = MockTown(1, "Carlin", pos)
-    opts_all = MockDrawingOptions(show_waypoints=True, show_towns=True, show_spawns=True)
-    labels_all = collect_marker_labels([wp], [town], view, opts_all, spawns=[spawn])
-    assert len(labels_all) == 3
-    # Check vertical ordering (stacked upwards)
-    wp_lbl = next(l for l in labels_all if l['type'] == 'waypoint')
-    town_lbl = next(l for l in labels_all if l['type'] == 'town')
-    spawn_lbl = next(l for l in labels_all if l['type'] == 'spawn')
-    assert wp_lbl['y'] > town_lbl['y']
-    assert town_lbl['y'] > spawn_lbl['y']
+    view = MockRenderView(floor=7, zoom=1.0)
+    opts = MockDrawingOptions(show_waypoints=True, show_towns=True)
+
+    labels = collect_marker_labels([wp], [town], view, opts)
+    assert len(labels) == 2, "Both waypoint and town labels must be rendered"
+
+    wp_lbl = next(l for l in labels if l['type'] == 'waypoint')
+    town_lbl = next(l for l in labels if l['type'] == 'town')
+
+    assert wp_lbl['x'] == town_lbl['x'], "Both labels share the same X center"
+    assert town_lbl['y'] < wp_lbl['y'], "Town label must be stacked vertically higher than waypoint label"
 
 
 def test_creature_respawn_timer_formatting():
@@ -379,28 +336,5 @@ def test_spawn_drag_preview_logic():
 
     assert "st->spawn->isSelected() && options.dragging" in zone_content, "Stationary spawn must detect when it is being dragged"
     assert "floor_alpha * 0.30f" in zone_content or "0.30f" in zone_content, "Stationary spawn must be dimmed during drag"
-
-
-def test_spawns_in_same_column_do_not_collide_and_both_show_labels():
-    # Regression test for the column-stacking bug:
-    # Two spawns in the exact same vertical X column but different Y rows
-    # must NOT collide or stack on top of each other.
-    pos_top = MockPosition(100, 100, 7)
-    pos_bottom = MockPosition(100, 120, 7)
-    spawn_top = MockSpawn(3, pos_top)
-    spawn_bottom = MockSpawn(3, pos_bottom)
-
-    view = MockRenderView(floor=7, zoom=1.0)
-    opts = MockDrawingOptions(show_waypoints=False, show_towns=False, show_spawns=True)
-
-    labels = collect_marker_labels([], [], view, opts, spawns=[spawn_top, spawn_bottom])
-    assert len(labels) == 2, "Both spawns must retain their labels"
-
-    top_lbl = next(l for l in labels if l['text'] == "R: 3" and abs(l['y'] - (100 * 32 - 3.0)) < 1.0)
-    bottom_lbl = next(l for l in labels if l['text'] == "R: 3" and abs(l['y'] - (120 * 32 - 3.0)) < 1.0)
-
-    assert top_lbl['x'] == bottom_lbl['x'], "Both spawns share the same X column"
-    assert top_lbl['y'] != bottom_lbl['y'], "Spawns must be positioned at their respective tiles, not stacked"
-    assert abs(bottom_lbl['y'] - top_lbl['y']) > 600.0, "Vertical distance between spawns must be preserved"
 
 

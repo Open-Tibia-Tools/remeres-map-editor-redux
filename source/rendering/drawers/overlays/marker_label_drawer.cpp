@@ -4,7 +4,6 @@
 #include "map/map.h"
 #include "game/waypoints.h"
 #include "game/town.h"
-#include "game/spawn.h"
 #include <nanovg.h>
 #include <string>
 #include <vector>
@@ -24,8 +23,7 @@ struct CachedMetrics {
 
 enum class MarkerLabelType {
 	Waypoint,
-	Town,
-	Spawn
+	Town
 };
 
 struct VisibleMarkerLabel {
@@ -59,8 +57,7 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 
 	const bool show_wp = options.show_waypoints;
 	const bool show_towns = options.show_towns;
-	const bool show_spawns = options.show_spawns;
-	if (!show_wp && !show_towns && !show_spawns) {
+	if (!show_wp && !show_towns) {
 		return;
 	}
 
@@ -213,44 +210,6 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 		}
 	}
 
-	// 3. Collect Spawns
-	if (show_spawns) {
-		for (const Position& spos : map.spawns) {
-			if (!isFloorVisible(spos.z, view, options)) {
-				continue;
-			}
-			const Tile* st = map.getTile(spos);
-			if (!st || !st->spawn) {
-				continue;
-			}
-
-			int unscaled_x = 0, unscaled_y = 0;
-			if (!view.IsTileVisible(spos.x, spos.y, spos.z, unscaled_x, unscaled_y)) {
-				continue;
-			}
-
-			const float screen_x = static_cast<float>(unscaled_x) * inv_zoom;
-			const float screen_y = static_cast<float>(unscaled_y) * inv_zoom;
-			if (screen_x < -64.0f || screen_x > screen_max_x || screen_y < -64.0f || screen_y > screen_max_y) {
-				continue;
-			}
-
-			std::string label_text = std::format("R: {}", st->spawn->getSize());
-			const CachedMetrics m = getMetrics(label_text);
-			const float labelX = screen_x + tile_size_screen * 0.5f;
-			const float labelY = resolveCollision(labelX, screen_y - 3.0f, m.width, m.height);
-
-			visible_labels.push_back(VisibleMarkerLabel {
-				.x = labelX,
-				.y = labelY,
-				.width = m.width,
-				.height = m.height,
-				.text = std::move(label_text),
-				.type = MarkerLabelType::Spawn
-			});
-		}
-	}
-
 	if (visible_labels.empty()) {
 		return;
 	}
@@ -271,16 +230,10 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 			nvgStrokeColor(vg, nvgRGBA(0, 220, 245, 230));
 			nvgStrokeWidth(vg, 1.0f);
 			nvgStroke(vg);
-		} else if (vl.type == MarkerLabelType::Town) {
+		} else { // MarkerLabelType::Town
 			nvgFillColor(vg, nvgRGBA(32, 24, 10, 220));
 			nvgFill(vg);
 			nvgStrokeColor(vg, nvgRGBA(255, 190, 20, 230));
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStroke(vg);
-		} else { // MarkerLabelType::Spawn
-			nvgFillColor(vg, nvgRGBA(32, 10, 32, 220));
-			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(255, 60, 255, 230));
 			nvgStrokeWidth(vg, 1.0f);
 			nvgStroke(vg);
 		}
@@ -290,10 +243,8 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 	for (const auto& vl : visible_labels) {
 		if (vl.type == MarkerLabelType::Waypoint) {
 			nvgFillColor(vg, nvgRGBA(200, 245, 255, 255));
-		} else if (vl.type == MarkerLabelType::Town) {
+		} else { // MarkerLabelType::Town
 			nvgFillColor(vg, nvgRGBA(255, 240, 190, 255));
-		} else { // MarkerLabelType::Spawn
-			nvgFillColor(vg, nvgRGBA(255, 220, 255, 255));
 		}
 		nvgText(vg, vl.x, vl.y - paddingY, vl.text.c_str(), nullptr);
 	}
