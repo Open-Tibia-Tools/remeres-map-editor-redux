@@ -316,3 +316,26 @@ def test_badge_styles():
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["border"] == (255, 0, 0)
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["border"] == (255, 165, 0)
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["border"] == (255, 0, 255)
+
+def test_search_dialog_catalog_row_badge_classification():
+    # In Search for Item dialog (AdvancedFinderResultsView), rows with technical items must yield their badge
+    stair_type = TechnicalItemRegistry.classify(459, 469)
+    assert stair_type == TileIndicatorType.TECH_INVISIBLE_STAIR
+    assert TechnicalItemRegistry.get_badge_style(stair_type)["text"] == "STAIR"
+
+    walk_type = TechnicalItemRegistry.classify(460, 470)
+    assert walk_type == TileIndicatorType.TECH_INVISIBLE_WALKABLE
+    assert TechnicalItemRegistry.get_badge_style(walk_type)["text"] == "WALK"
+
+    wall_type = TechnicalItemRegistry.classify(1548, 2187)
+    assert wall_type == TileIndicatorType.TECH_INVISIBLE_WALL
+    assert TechnicalItemRegistry.get_badge_style(wall_type)["text"] == "BLOCK"
+
+    light_type = TechnicalItemRegistry.classify(0, 39092)
+    assert light_type == TileIndicatorType.TECH_PRIMAL_LIGHT
+    assert TechnicalItemRegistry.get_badge_style(light_type)["text"] == "LIGHT"
+
+    # Regular items do not display technical badges
+    normal_type = TechnicalItemRegistry.classify(2160, 3031)
+    assert normal_type == TileIndicatorType.NONE
+

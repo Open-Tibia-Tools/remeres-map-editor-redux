@@ -14,6 +14,7 @@
 #include "util/image_manager.h"
 #include "util/nanovg_listbox.h"
 #include "rendering/core/graphics.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include <glad/glad.h>
 #include <nanovg.h>
 #include <format>
@@ -83,16 +84,28 @@ void TilePropertiesListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_
 	}
 	Item* item = items[n];
 
-	Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());
-	if (sprite) {
-		int tex = GetOrCreateSpriteTexture(vg, sprite);
-		if (tex > 0) {
-			int icon_size = 32;
-			NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
-			nvgBeginPath(vg);
-			nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
-			nvgFillPaint(vg, imgPaint);
-			nvgFill(vg);
+	const auto tech = rme::rendering::TechnicalItemRegistry::Classify(item->getID(), item->getClientID());
+	if (tech != rme::rendering::TileIndicatorType::None) {
+		const int icon_size = 32;
+		rme::rendering::DrawNanoVGIndicatorBadge(
+			vg,
+			tech,
+			static_cast<float>(rect.x),
+			static_cast<float>(rect.y),
+			static_cast<float>(icon_size)
+		);
+	} else {
+		Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());
+		if (sprite) {
+			int tex = GetOrCreateSpriteTexture(vg, sprite);
+			if (tex > 0) {
+				int icon_size = 32;
+				NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
+				nvgBeginPath(vg);
+				nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
+				nvgFillPaint(vg, imgPaint);
+				nvgFill(vg);
+			}
 		}
 	}
 
