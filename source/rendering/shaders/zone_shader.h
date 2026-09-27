@@ -9,7 +9,7 @@ namespace rme::rendering::shaders {
  * @brief GLSL module providing dedicated on-top zone overlays:
  *        Special Zones (PZ, No-PvP, No-Logout, PvP Zone),
  *        Spawn Radius (clean translucent magenta wash + individual spawn boundary borders),
- *        and Pathing / Blocking (translucent red wash + outer connected borders).
+ *        and Pathing / Blocking (translucent gray wash + bright cyan outer connected borders).
  */
 inline constexpr std::string_view ZONE_SHADER_GLSL = R"(
 void blendOverlayLayer(inout vec4 baseColor, inout bool hasOverlay, vec4 layerColor) {
@@ -83,7 +83,7 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
                     (bSouth && (flags & 128u) != 0u) ||
                     (bWest  && (flags & 256u) != 0u) ||
                     (bEast  && (flags & 512u) != 0u);
-    outLayer = isBorder ? vec4(1.00, 0.15, 0.15, 0.95) : vec4(0.95, 0.15, 0.15, 0.28);
+    outLayer = isBorder ? vec4(0.00, 0.95, 1.00, 0.95) : vec4(0.40, 0.40, 0.40, 0.35);
     return true;
 }
 

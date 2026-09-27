@@ -377,9 +377,20 @@ void MapDrawer::DrawCreatureNames(NVGcontext* vg) {
 	}
 }
 
+void MapDrawer::DrawMarkerLabels(NVGcontext* vg) {
+	if (!options.ingame && (options.show_waypoints || options.show_towns) && view.zoom <= 10.0f) {
+		marker_label_drawer.draw(vg, editor.map, view, options);
+	}
+}
+
 bool MapDrawer::hasOverlays() {
 	const bool can_read_labels = view.zoom <= 10.0f;
 	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
+		return true;
+	}
+	if (!options.ingame && can_read_labels &&
+	    ((options.show_waypoints && !editor.map.waypoints.empty()) ||
+	     (options.show_towns && !editor.map.towns.empty()))) {
 		return true;
 	}
 	if (options.show_tooltips && !tooltip_drawer.empty() && can_read_labels) {
