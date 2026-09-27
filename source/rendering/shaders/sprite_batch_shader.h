@@ -90,6 +90,7 @@ void main() {
                                  FragColor)) {
             discard;
         }
+        FragColor.a *= Tint.a * uGlobalTint.a;
         return;
     }
 

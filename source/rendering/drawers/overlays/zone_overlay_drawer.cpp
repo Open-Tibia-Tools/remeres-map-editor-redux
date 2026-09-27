@@ -49,12 +49,16 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 	const int start_z = options.transparent_floors ? view.start_z : view.floor;
 	const int end_z = options.transparent_floors ? view.superend_z : view.floor;
 
+	std::vector<const Tile*> row_prev;
+	std::vector<const Tile*> row_curr;
+	std::vector<const Tile*> row_next;
+
 	for (int z = start_z; z >= end_z; --z) {
 		const ViewBounds bounds = view.getBoundsForFloor(z);
 		const float floor_alpha = (z == view.floor) ? 1.0f : std::max(0.25f, 1.0f - static_cast<float>(view.floor - z) * 0.20f);
 
 		// 1. Special Zones & Pathing / Blocking Pass
-		if (options.show_special_tiles || options.show_blocking) {
+		if ((options.show_special_tiles || options.show_blocking) && view.zoom <= 10.0f) {
 			const int min_x = bounds.start_x - 1;
 			const int max_x = bounds.end_x + 1;
 			const int row_width = max_x - min_x + 1;
@@ -72,10 +76,6 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 					row[x - min_x] = t;
 				}
 			};
-
-			std::vector<const Tile*> row_prev;
-			std::vector<const Tile*> row_curr;
-			std::vector<const Tile*> row_next;
 
 			fetchRow(bounds.start_y - 1, row_prev);
 			fetchRow(bounds.start_y, row_curr);

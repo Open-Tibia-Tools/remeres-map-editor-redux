@@ -88,8 +88,9 @@ def get_floor_range(view: MockMapView, options: MockDrawingOptions):
 
 def calculate_floor_alpha(view_floor: int, z: int) -> float:
     """Calculates floor alpha decay for lower floors."""
-    floor_diff = max(0, view_floor - z)
-    return max(0.20, 1.0 - floor_diff * 0.15)
+    if z == view_floor:
+        return 1.0
+    return max(0.25, 1.0 - (view_floor - z) * 0.20)
 
 
 def compute_border_mask(center_val: bool, north: bool, south: bool, west: bool, east: bool) -> int:
@@ -129,14 +130,14 @@ def test_floor_range_transparent_vs_single():
 def test_floor_alpha_decay():
     # Active floor = alpha 1.0
     assert calculate_floor_alpha(7, 7) == pytest.approx(1.0)
-    # 1 floor below = 0.85
-    assert calculate_floor_alpha(7, 8) == pytest.approx(1.0)  # max(0, 7-8) = 0
-    # Floor 6 when viewing 7
-    assert calculate_floor_alpha(7, 6) == pytest.approx(0.85)
-    # Floor 5 when viewing 7
-    assert calculate_floor_alpha(7, 5) == pytest.approx(0.70)
-    # Floor 0 when viewing 7 -> clamped at min 0.20
-    assert calculate_floor_alpha(7, 0) == pytest.approx(pytest.approx(max(0.20, 1.0 - 7 * 0.15)))
+    # Floor 6 when viewing 7 -> 1.0 - 1 * 0.20 = 0.80
+    assert calculate_floor_alpha(7, 6) == pytest.approx(0.80)
+    # Floor 5 when viewing 7 -> 1.0 - 2 * 0.20 = 0.60
+    assert calculate_floor_alpha(7, 5) == pytest.approx(0.60)
+    # Floor 4 when viewing 7 -> 1.0 - 3 * 0.20 = 0.40
+    assert calculate_floor_alpha(7, 4) == pytest.approx(0.40)
+    # Floor 0 when viewing 7 -> clamped at min 0.25
+    assert calculate_floor_alpha(7, 0) == pytest.approx(0.25)
 
 
 def test_cardinal_border_mask():

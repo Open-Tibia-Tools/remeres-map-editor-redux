@@ -50,10 +50,10 @@ public:
 			const uint16_t fluid = item ? item->getSubtype() : 0;
 			patterns.subtype = fluid;
 			if (spr->pattern_x > 0) {
-				patterns.x = (fluid % 4) % spr->pattern_x;
-			}
-			if (spr->pattern_y > 0) {
-				patterns.y = (fluid / 4) % spr->pattern_y;
+				patterns.x = fluid % spr->pattern_x;
+				if (spr->pattern_y > 0) {
+					patterns.y = (fluid / spr->pattern_x) % spr->pattern_y;
+				}
 			}
 		} else if (it.hasFlag(ItemFlag::IsHangable)) {
 			if (tile && tile->hasHookSouth()) {

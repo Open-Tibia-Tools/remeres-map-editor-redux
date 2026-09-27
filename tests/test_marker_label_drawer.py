@@ -43,7 +43,7 @@ class MockTown:
 
 class MockRenderView:
     def __init__(self, floor: int = 7, zoom: float = 1.0, screensize_x: int = 1920, screensize_y: int = 1080,
-                 start_z: int = 0, end_z: int = 7):
+                 start_z: int = 7, end_z: int = 0):
         self.floor = floor
         self.zoom = zoom
         self.screensize_x = screensize_x
@@ -78,7 +78,9 @@ class MockDrawingOptions:
 def is_floor_visible(z: int, view: MockRenderView, options: MockDrawingOptions) -> bool:
     if z == view.floor:
         return True
-    if options.show_all_floors and view.floor <= GROUND_LAYER and view.start_z <= z <= view.end_z:
+    min_z = min(view.start_z, view.end_z)
+    max_z = max(view.start_z, view.end_z)
+    if options.show_all_floors and view.floor <= GROUND_LAYER and min_z <= z <= max_z:
         return True
     return False
 
@@ -224,13 +226,19 @@ def test_marker_label_floor_visibility():
     assert len(labels) == 1
     assert labels[0]['text'] == "ground_wp"
 
-    # Multi floor surface mode (show_all_floors = True)
+    # Multi floor surface mode (show_all_floors = True) with descending bounds (RenderView convention: start_z=7, end_z=0)
     opts_multi = MockDrawingOptions(show_waypoints=True, show_all_floors=True)
     labels = collect_marker_labels([wp_ground, wp_roof, wp_underground], [], view, opts_multi)
     assert len(labels) == 2, "Surface floors (5 and 7) should be visible when show_all_floors is active"
     texts = {l['text'] for l in labels}
     assert "ground_wp" in texts and "roof_wp" in texts
     assert "cave_wp" not in texts, "Underground floor 9 should not be visible when viewing surface"
+
+    # Verify ascending bounds work identically
+    view_ascending = MockRenderView(floor=7, zoom=1.0, start_z=0, end_z=7)
+    labels_asc = collect_marker_labels([wp_ground, wp_roof, wp_underground], [], view_ascending, opts_multi)
+    assert len(labels_asc) == 2
+    assert {l['text'] for l in labels_asc} == {"ground_wp", "roof_wp"}
 
 
 def test_marker_label_zoom_lod():

@@ -208,40 +208,34 @@ static std::string toLower(std::string s) {
 }
 
 static void populateDefaultTechnicalItems(toml::table& table) {
-	bool needs_population = true;
-	if (auto* tech_section = table.get_as<toml::table>("technical_items")) {
-		if (tech_section->get_as<toml::table>("invisible_stairs") ||
-		    tech_section->contains("invisible_stairs_server_ids")) {
-			needs_population = false;
+	if (table.contains("technical_items")) {
+		return;
+	}
+
+	auto make_category = [](std::initializer_list<int64_t> server_ids, std::initializer_list<int64_t> client_ids) {
+		toml::table cat;
+		toml::array s_arr;
+		for (int64_t id : server_ids) {
+			s_arr.push_back(id);
 		}
-	}
+		toml::array c_arr;
+		for (int64_t id : client_ids) {
+			c_arr.push_back(id);
+		}
+		cat.insert_or_assign("server_ids", std::move(s_arr));
+		cat.insert_or_assign("client_ids", std::move(c_arr));
+		return cat;
+	};
 
-	if (needs_population) {
-		auto make_category = [](std::initializer_list<int64_t> server_ids, std::initializer_list<int64_t> client_ids) {
-			toml::table cat;
-			toml::array s_arr;
-			for (int64_t id : server_ids) {
-				s_arr.push_back(id);
-			}
-			toml::array c_arr;
-			for (int64_t id : client_ids) {
-				c_arr.push_back(id);
-			}
-			cat.insert_or_assign("server_ids", std::move(s_arr));
-			cat.insert_or_assign("client_ids", std::move(c_arr));
-			return cat;
-		};
-
-		toml::table tech_sec;
-		tech_sec.insert_or_assign("invisible_stairs", make_category({ 459 }, { 469 }));
-		tech_sec.insert_or_assign("invisible_walkable", make_category({ 460 }, { 470, 17970, 20028, 34168 }));
-		tech_sec.insert_or_assign("invisible_walls", make_category({ 1548 }, { 2187 }));
-		tech_sec.insert_or_assign("primal_lights", make_category({}, {
-			39092, 39093, 39094, 39095, 39096, 39097, 39098, 39099, 39100,
-			39236, 39367, 39368
-		}));
-		table.insert_or_assign("technical_items", std::move(tech_sec));
-	}
+	toml::table tech_sec;
+	tech_sec.insert_or_assign("invisible_stairs", make_category({ 459 }, { 469 }));
+	tech_sec.insert_or_assign("invisible_walkable", make_category({ 460 }, { 470, 17970, 20028, 34168 }));
+	tech_sec.insert_or_assign("invisible_walls", make_category({ 1548 }, { 2187 }));
+	tech_sec.insert_or_assign("primal_lights", make_category({}, {
+		39092, 39093, 39094, 39095, 39096, 39097, 39098, 39099, 39100,
+		39236, 39367, 39368
+	}));
+	table.insert_or_assign("technical_items", std::move(tech_sec));
 }
 
 void Settings::IO(IOMode mode) {

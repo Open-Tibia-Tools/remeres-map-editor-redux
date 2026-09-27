@@ -39,7 +39,9 @@ bool isFloorVisible(int z, const RenderView& view, const DrawingOptions& options
 	if (z == view.floor) {
 		return true;
 	}
-	if (options.show_all_floors && view.floor <= GROUND_LAYER && z >= view.start_z && z <= view.end_z) {
+	const int min_z = std::min(view.start_z, view.end_z);
+	const int max_z = std::max(view.start_z, view.end_z);
+	if (options.show_all_floors && view.floor <= GROUND_LAYER && z >= min_z && z <= max_z) {
 		return true;
 	}
 	return false;
