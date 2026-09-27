@@ -10,6 +10,7 @@
 #include "game/creature.h"
 
 #include <unordered_map>
+#include <format>
 
 CreatureNameDrawer::CreatureNameDrawer() {
 	labels.reserve(256);
@@ -63,8 +64,7 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		float y;
 		float width;
 		float height;
-		const char* text;
-		const char* text_end;
+		std::string text;
 	};
 	static thread_local std::vector<VisibleLabel> visible_labels;
 	visible_labels.clear();
@@ -94,9 +94,15 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		const float labelX = screen_x + tile_size_screen * 0.5f;
 		const float labelY = screen_y - 2.0f;
 
+		std::string full_text;
+		if (label.creature && !label.creature->isNpc() && label.creature->getSpawnTime() > 0) {
+			full_text = std::format("{} • {}s", label.name, label.creature->getSpawnTime());
+		} else {
+			full_text = std::string(label.name);
+		}
+
 		// Fast cached text bounds lookup (avoids CPU font glyph kerning loops per-instance)
-		const std::string name_key(label.name);
-		auto it = s_metrics_cache.find(name_key);
+		auto it = s_metrics_cache.find(full_text);
 		float textWidth = 0.0f;
 		float textHeight = 0.0f;
 
@@ -105,12 +111,10 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			textHeight = it->second.height;
 		} else {
 			float textBounds[4];
-			const char* text_start = label.name.data();
-			const char* text_end = text_start + label.name.size();
-			nvgTextBounds(vg, 0, 0, text_start, text_end, textBounds);
+			nvgTextBounds(vg, 0, 0, full_text.c_str(), nullptr, textBounds);
 			textWidth = textBounds[2] - textBounds[0];
 			textHeight = textBounds[3] - textBounds[1];
-			s_metrics_cache.emplace(name_key, CachedMetrics{ textWidth, textHeight });
+			s_metrics_cache.emplace(full_text, CachedMetrics{ textWidth, textHeight });
 		}
 
 		visible_labels.push_back(VisibleLabel {
@@ -118,8 +122,7 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			.y = labelY,
 			.width = textWidth,
 			.height = textHeight,
-			.text = label.name.data(),
-			.text_end = label.name.data() + label.name.size()
+			.text = std::move(full_text)
 		});
 	}
 
@@ -138,6 +141,6 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	// Pass 2: Draw all text labels with single color state
 	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
 	for (const auto& vl : visible_labels) {
-		nvgText(vg, vl.x, vl.y - paddingY, vl.text, vl.text_end);
+		nvgText(vg, vl.x, vl.y - paddingY, vl.text.c_str(), nullptr);
 	}
 }

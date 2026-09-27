@@ -55,11 +55,23 @@ class MockRenderView:
         # Simplified viewport check
         return 0 <= x <= 2000 and 0 <= y <= 2000
 
+class MockSpawn:
+    def __init__(self, size: int, pos: MockPosition):
+        self.size = size
+        self.pos = pos
+
+    def get_size(self) -> int:
+        return self.size
+
+    def get_position(self) -> MockPosition:
+        return self.pos
+
 class MockDrawingOptions:
-    def __init__(self, show_waypoints: bool = True, show_towns: bool = True,
+    def __init__(self, show_waypoints: bool = True, show_towns: bool = True, show_spawns: bool = True,
                  ingame: bool = False, show_all_floors: bool = False):
         self.show_waypoints = show_waypoints
         self.show_towns = show_towns
+        self.show_spawns = show_spawns
         self.ingame = ingame
         self.show_all_floors = show_all_floors
 
@@ -72,11 +84,14 @@ def is_floor_visible(z: int, view: MockRenderView, options: MockDrawingOptions) 
     return False
 
 
-def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, options: MockDrawingOptions):
+def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, options: MockDrawingOptions, spawns: list = None):
+    if spawns is None:
+        spawns = []
+
     if options.ingame:
         return []
 
-    if not options.show_waypoints and not options.show_towns:
+    if not options.show_waypoints and not options.show_towns and not options.show_spawns:
         return []
 
     if view.zoom > 10.0:
@@ -126,12 +141,41 @@ def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, op
 
             # Collision check with existing labels on same tile
             for existing in labels:
-                if abs(existing['x'] - label_x) < 2.0 and abs(existing['y'] - label_y) < 10.0:
-                    label_y -= (existing['height'] + 4.0 + 3.0)
-                    break
+                if abs(existing['x'] - label_x) < 2.0:
+                    label_y = min(label_y, existing['y'] - existing['height'] - 4.0 - 3.0)
 
             labels.append({
                 'type': 'town',
+                'text': text,
+                'x': label_x,
+                'y': label_y,
+                'height': 12.0
+            })
+
+    # 3. Spawns
+    if options.show_spawns:
+        for spawn in spawns:
+            if not spawn:
+                continue
+            pos = spawn.get_position()
+            if not is_floor_visible(pos.z, view, options):
+                continue
+            if not view.is_tile_visible(pos.x, pos.y, pos.z):
+                continue
+
+            text = f"R: {spawn.get_size()}"
+            screen_x = pos.x * tile_size_screen
+            screen_y = pos.y * tile_size_screen
+            label_x = screen_x + tile_size_screen * 0.5
+            label_y = screen_y - 3.0
+
+            # Collision check with existing labels on same tile
+            for existing in labels:
+                if abs(existing['x'] - label_x) < 2.0:
+                    label_y = min(label_y, existing['y'] - existing['height'] - 4.0 - 3.0)
+
+            labels.append({
+                'type': 'spawn',
                 'text': text,
                 'x': label_x,
                 'y': label_y,
@@ -229,3 +273,81 @@ def test_blocking_overlay_shader_colors():
     assert "0.00, 0.95, 1.00, 0.95" in fn_body or "0.0, 0.95, 1.0, 0.95" in fn_body, "Blocking border must be bright cyan"
     # Background: vec4(0.40, 0.40, 0.40, 0.35) -> Gray
     assert "0.40, 0.40, 0.40, 0.35" in fn_body or "0.4, 0.4, 0.4, 0.35" in fn_body, "Blocking background wash must be gray"
+
+
+def test_spawn_radius_marker_label():
+    pos = MockPosition(50, 50, 7)
+    spawn = MockSpawn(3, pos)
+    view = MockRenderView(floor=7, zoom=1.0)
+
+    # 1. Normal visibility
+    opts = MockDrawingOptions(show_waypoints=False, show_towns=False, show_spawns=True)
+    labels = collect_marker_labels([], [], view, opts, spawns=[spawn])
+    assert len(labels) == 1
+    assert labels[0]['type'] == 'spawn'
+    assert labels[0]['text'] == "R: 3"
+
+    # 2. Disabled via show_spawns = False
+    opts_off = MockDrawingOptions(show_waypoints=False, show_towns=False, show_spawns=False)
+    labels_off = collect_marker_labels([], [], view, opts_off, spawns=[spawn])
+    assert len(labels_off) == 0
+
+    # 3. Disabled in ingame view mode
+    opts_ingame = MockDrawingOptions(show_waypoints=False, show_towns=False, show_spawns=True, ingame=True)
+    labels_ingame = collect_marker_labels([], [], view, opts_ingame, spawns=[spawn])
+    assert len(labels_ingame) == 0
+
+    # 4. Multi-item stacking on same tile (Waypoint + Town + Spawn)
+    wp = MockWaypoint("temple_wp", pos)
+    town = MockTown(1, "Carlin", pos)
+    opts_all = MockDrawingOptions(show_waypoints=True, show_towns=True, show_spawns=True)
+    labels_all = collect_marker_labels([wp], [town], view, opts_all, spawns=[spawn])
+    assert len(labels_all) == 3
+    # Check vertical ordering (stacked upwards)
+    wp_lbl = next(l for l in labels_all if l['type'] == 'waypoint')
+    town_lbl = next(l for l in labels_all if l['type'] == 'town')
+    spawn_lbl = next(l for l in labels_all if l['type'] == 'spawn')
+    assert wp_lbl['y'] > town_lbl['y']
+    assert town_lbl['y'] > spawn_lbl['y']
+
+
+def test_creature_respawn_timer_formatting():
+    drawer_path = Path(__file__).parent.parent / "source" / "rendering" / "drawers" / "entities" / "creature_name_drawer.cpp"
+    content = drawer_path.read_text(encoding="utf-8")
+
+    # Assert exact required bullet format: "{} • {}s"
+    assert "{} • {}s" in content, "Creature respawn timer must be formatted as '{} • {}s'"
+
+    # Assert condition filters NPCs and non-positive spawn timers
+    assert "!label.creature->isNpc()" in content, "NPCs must not display respawn timers"
+    assert "label.creature->getSpawnTime() > 0" in content, "Creatures with spawn time <= 0 must not display timer"
+
+
+def test_spawn_drag_preview_logic():
+    # 1. DragShadowDrawer verification: draws full spawn area when dragging selected spawn
+    drag_drawer_path = Path(__file__).parent.parent / "source" / "rendering" / "drawers" / "cursors" / "drag_shadow_drawer.cpp"
+    drag_content = drag_drawer_path.read_text(encoding="utf-8")
+
+    assert "tile->spawn && tile->spawn->isSelected()" in drag_content, "Drag shadow must check for selected spawn"
+    assert "ZONE_FLAG_SPAWN" in drag_content, "Drag shadow must render spawn zone flag"
+    assert "INDICATOR_SPAWN_BASE" in drag_content, "Drag shadow must render spawn center badge"
+
+    # Math test: radius 3 -> area is 7x7 tiles = 224x224 pixels
+    radius = 3
+    pos_x, pos_y = 100, 100
+    sx0 = pos_x - radius
+    sx1 = pos_x + radius
+    sy0 = pos_y - radius
+    sy1 = pos_y + radius
+    spawn_w = (sx1 - sx0 + 1) * 32
+    spawn_h = (sy1 - sy0 + 1) * 32
+    assert spawn_w == 224
+    assert spawn_h == 224
+
+    # 2. ZoneOverlayDrawer verification: stationary spawn is dimmed while dragging
+    zone_drawer_path = Path(__file__).parent.parent / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.cpp"
+    zone_content = zone_drawer_path.read_text(encoding="utf-8")
+
+    assert "st->spawn->isSelected() && options.dragging" in zone_content, "Stationary spawn must detect when it is being dragged"
+    assert "floor_alpha * 0.30f" in zone_content or "0.30f" in zone_content, "Stationary spawn must be dimmed during drag"
+

@@ -174,15 +174,16 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 				                             static_cast<uint32_t>(ZONE_FLAG_SPAWN_BORDER_W) |
 				                             static_cast<uint32_t>(ZONE_FLAG_SPAWN_BORDER_E);
 
+				const float box_alpha = (st->spawn->isSelected() && options.dragging) ? (floor_alpha * 0.30f) : floor_alpha;
 				sprite_batch.draw(static_cast<float>(draw_x0), static_cast<float>(draw_y0),
-				                  spawn_w, spawn_h, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
+				                  spawn_w, spawn_h, *white_pixel, 1.0f, 1.0f, 1.0f, box_alpha,
 				                  0.0f, static_cast<float>(spawn_flags));
 
 				// Emit spawn center badge (32x32) with "SPAWN" text
 				int center_draw_x, center_draw_y;
 				view.getScreenPosition(spos.x, spos.y, z, center_draw_x, center_draw_y);
 				sprite_batch.draw(static_cast<float>(center_draw_x), static_cast<float>(center_draw_y),
-				                  32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
+				                  32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, box_alpha,
 				                  INDICATOR_SPAWN_BASE, 0.0f);
 			}
 		}
