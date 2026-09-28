@@ -49,11 +49,6 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 				uint8_t b = 255;
 
 				if (tile->ground) {
-					if (tile->isBlocking() && options.show_blocking) {
-						g = g / 3 * 2;
-						b = b / 3 * 2;
-					}
-
 					if (tile->isHouseTile() && options.show_houses) {
 						if (static_cast<int>(tile->getHouseID()) == current_house_id) {
 							r /= 2;
@@ -61,19 +56,6 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 							r /= 2;
 							g /= 2;
 						}
-					} else if (options.show_special_tiles && tile->isPZ()) {
-						r /= 2;
-						b /= 2;
-					}
-					if (options.show_special_tiles && tile->getMapFlags() & TILESTATE_PVPZONE) {
-						r = r / 3 * 2;
-						b = b / 3 * 2;
-					}
-					if (options.show_special_tiles && tile->getMapFlags() & TILESTATE_NOLOGOUT) {
-						b /= 2;
-					}
-					if (options.show_special_tiles && tile->getMapFlags() & TILESTATE_NOPVP) {
-						g /= 2;
 					}
 					if (options.show_special_tiles && tile->getMapFlags() & TILESTATE_REFRESH) {
 						r = r * 180 / 255;

@@ -1,6 +1,7 @@
 #include "ui/find_item_window_views.h"
 
 #include "brushes/creature/creature_brush.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include "ui/gui.h"
 #include "ui/theme.h"
 
@@ -172,6 +173,29 @@ void AdvancedFinderResultsView::drawSpriteBadge(NVGcontext* vg, const wxRect& re
 	}
 }
 
+void AdvancedFinderResultsView::drawRowBadge(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row) const {
+	if (row.isItem()) {
+		auto tech = rme::rendering::TechnicalItemRegistry::Classify(
+			row.server_id,
+			row.client_id
+		);
+		if (tech == rme::rendering::TileIndicatorType::None && row.brush) {
+			tech = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(row.brush);
+		}
+		if (tech != rme::rendering::TileIndicatorType::None) {
+			rme::rendering::DrawNanoVGIndicatorBadge(
+				vg,
+				tech,
+				static_cast<float>(rect.x),
+				static_cast<float>(rect.y),
+				static_cast<float>(rect.width)
+			);
+			return;
+		}
+	}
+	drawSpriteBadge(vg, rect, spriteForRow(row));
+}
+
 void AdvancedFinderResultsView::drawListRow(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row, bool selected, bool hovered) const {
 	const wxColour selected_fill = Theme::Get(Theme::Role::Accent);
 	const wxColour hover_fill = Theme::Get(Theme::Role::CardBaseHover);
@@ -211,7 +235,7 @@ void AdvancedFinderResultsView::drawListRow(NVGcontext* vg, const wxRect& rect, 
 		icon_well
 	);
 	const wxRect sprite_rect(icon_rect.x + (icon_rect.width - icon_size) / 2, icon_rect.y + (icon_rect.height - icon_size) / 2, icon_size, icon_size);
-	drawSpriteBadge(vg, sprite_rect, spriteForRow(row));
+	drawRowBadge(vg, sprite_rect, row);
 
 	nvgFontFace(vg, "sans");
 	nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
@@ -258,7 +282,7 @@ void AdvancedFinderResultsView::drawGridCard(NVGcontext* vg, const wxRect& rect,
 		FromDIP(32),
 		FromDIP(32)
 	);
-	drawSpriteBadge(vg, sprite_rect, spriteForRow(row));
+	drawRowBadge(vg, sprite_rect, row);
 }
 
 void AdvancedFinderResultsView::drawGridHoverInfo(NVGcontext* vg, int width, int height, int scroll_pos) const {

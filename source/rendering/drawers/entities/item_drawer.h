@@ -35,6 +35,8 @@ struct BlitItemParams {
 	int green = 255;
 	int blue = 255;
 	int alpha = 255;
+	float house_id = 0.0f;
+	float zone_flags = 0.0f;
 	const RenderView* view = nullptr;
 	const RenderFrameContext* ctx = nullptr;
 

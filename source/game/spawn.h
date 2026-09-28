@@ -95,6 +95,13 @@ public:
 		return spawns.find(pos);
 	}
 
+	[[nodiscard]] bool empty() const noexcept {
+		return spawns.empty();
+	}
+	[[nodiscard]] size_t size() const noexcept {
+		return spawns.size();
+	}
+
 private:
 	SpawnPositionList spawns;
 };
