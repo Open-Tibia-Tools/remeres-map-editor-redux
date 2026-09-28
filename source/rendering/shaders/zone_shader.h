@@ -7,7 +7,7 @@ namespace rme::rendering::shaders {
 
 /**
  * @brief GLSL module providing dedicated on-top zone overlays:
- *        Special Zones (PZ, No-PvP, No-Logout, PvP Zone),
+ *        Special Zones (PZ, No-PvP, No-Logout, PvP Zone, Refresh),
  *        Spawn Radius (clean translucent magenta wash + individual spawn boundary borders),
  *        and Pathing / Blocking (translucent gray wash + bright cyan outer connected borders).
  */
@@ -47,6 +47,11 @@ bool evaluateSpecialZones(uint flags, bool bNorth, bool bSouth, bool bWest, bool
         hasZone = true;
         zWash = vec4(0.85, 0.05, 0.25, 0.28);
         zBorder = vec4(1.00, 0.15, 0.30, 0.95);
+    } else if ((flags & 262144u) != 0u) {
+        // Refresh: Chartreuse wash + border
+        hasZone = true;
+        zWash = vec4(0.70, 1.00, 0.25, 0.28);
+        zBorder = vec4(0.78, 1.00, 0.20, 0.95);
     }
 
     if (!hasZone) {

@@ -48,6 +48,7 @@ float getZoneFlagForBrush(const FlagBrush* flag_brush) noexcept {
 		case TILESTATE_NOPVP:          return rme::rendering::ZONE_FLAG_NOPVP;
 		case TILESTATE_NOLOGOUT:       return rme::rendering::ZONE_FLAG_NOLOGOUT;
 		case TILESTATE_PVPZONE:        return rme::rendering::ZONE_FLAG_PVPZONE;
+		case TILESTATE_REFRESH:        return rme::rendering::ZONE_FLAG_REFRESH;
 		default:                       return 0.0f;
 	}
 }

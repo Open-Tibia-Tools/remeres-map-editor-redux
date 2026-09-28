@@ -32,12 +32,11 @@ void TileColorCalculator::Calculate(const Tile* tile, const DrawingOptions& opti
 		if (tile->getMapFlags() & TILESTATE_NOPVP) {
 			g >>= 1;
 		}
-	}
-
-	if ((options.show_only_colors || options.show_special_tiles) && (tile->getMapFlags() & TILESTATE_REFRESH)) {
-		r = static_cast<uint8_t>((r * 180) >> 8);
-		b >>= 1;
-		g = static_cast<uint8_t>(std::min(255, static_cast<int>(g) + 48));
+		if (tile->getMapFlags() & TILESTATE_REFRESH) {
+			r = static_cast<uint8_t>((r * 180) >> 8);
+			b >>= 1;
+			g = static_cast<uint8_t>(std::min(255, static_cast<int>(g) + 48));
+		}
 	}
 }
 

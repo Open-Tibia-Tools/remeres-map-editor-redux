@@ -37,12 +37,13 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 		return t && t->isBlocking() && (t->ground != nullptr || !t->items.empty());
 	};
 
-	auto sameZone = [](const Tile* t, bool pz, bool nopvp, bool nolog, bool pvp) -> bool {
+	auto sameZone = [](const Tile* t, bool pz, bool nopvp, bool nolog, bool pvp, bool refresh) -> bool {
 		if (!t) return false;
 		if (pz) return t->isPZ();
 		if (nopvp) return (t->getMapFlags() & TILESTATE_NOPVP) != 0;
 		if (nolog) return (t->getMapFlags() & TILESTATE_NOLOGOUT) != 0;
 		if (pvp) return (t->getMapFlags() & TILESTATE_PVPZONE) != 0;
+		if (refresh) return (t->getMapFlags() & TILESTATE_REFRESH) != 0;
 		return false;
 	};
 
@@ -101,12 +102,13 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 						if (!isPathBlocking(row_curr[idx + 1])) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_E);
 					}
 
-					// Special Zones (PZ, No-PvP, No-Logout, PvP Zone)
+					// Special Zones (PZ, No-PvP, No-Logout, PvP Zone, Refresh)
 					if (options.show_special_tiles) {
 						const bool has_pz = tile->isPZ();
 						const bool has_nopvp = (tile->getMapFlags() & TILESTATE_NOPVP) != 0;
 						const bool has_nolog = (tile->getMapFlags() & TILESTATE_NOLOGOUT) != 0;
 						const bool has_pvp = (tile->getMapFlags() & TILESTATE_PVPZONE) != 0;
+						const bool has_refresh = (tile->getMapFlags() & TILESTATE_REFRESH) != 0;
 
 						if (has_pz) {
 							tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PZ);
@@ -116,13 +118,15 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 							tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT);
 						} else if (has_pvp) {
 							tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PVPZONE);
+						} else if (has_refresh) {
+							tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_REFRESH);
 						}
 
-						if (has_pz || has_nopvp || has_nolog || has_pvp) {
-							if (!sameZone(row_prev[idx], has_pz, has_nopvp, has_nolog, has_pvp))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_N);
-							if (!sameZone(row_next[idx], has_pz, has_nopvp, has_nolog, has_pvp))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_S);
-							if (!sameZone(row_curr[idx - 1], has_pz, has_nopvp, has_nolog, has_pvp)) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_W);
-							if (!sameZone(row_curr[idx + 1], has_pz, has_nopvp, has_nolog, has_pvp)) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_E);
+						if (has_pz || has_nopvp || has_nolog || has_pvp || has_refresh) {
+							if (!sameZone(row_prev[idx], has_pz, has_nopvp, has_nolog, has_pvp, has_refresh))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_N);
+							if (!sameZone(row_next[idx], has_pz, has_nopvp, has_nolog, has_pvp, has_refresh))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_S);
+							if (!sameZone(row_curr[idx - 1], has_pz, has_nopvp, has_nolog, has_pvp, has_refresh)) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_W);
+							if (!sameZone(row_curr[idx + 1], has_pz, has_nopvp, has_nolog, has_pvp, has_refresh)) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_E);
 						}
 					}
 

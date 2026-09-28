@@ -11,6 +11,7 @@ inline constexpr float ZONE_FLAG_PZ             = 4.0f;     // Bit 2: Protection
 inline constexpr float ZONE_FLAG_NOPVP          = 8.0f;     // Bit 3: No-PvP Zone (Yellow wash)
 inline constexpr float ZONE_FLAG_NOLOGOUT       = 16.0f;    // Bit 4: No-Logout Zone (Orange wash)
 inline constexpr float ZONE_FLAG_PVPZONE        = 32.0f;    // Bit 5: PvP Zone (Crimson wash)
+inline constexpr float ZONE_FLAG_REFRESH        = 262144.0f;// Bit 18: Refresh Zone (Chartreuse wash)
 
 // Outer connected borders for blocking (Bits 6-9)
 inline constexpr float ZONE_FLAG_BLOCK_BORDER_N = 64.0f;    // Bit 6: North blocking border
