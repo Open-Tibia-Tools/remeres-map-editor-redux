@@ -50,6 +50,7 @@ void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 
 		if (tile->creature && tile->creature->isSelected()) {
 			copied_tile->creature = tile->creature->deepCopy();
+			copied_tile->creature->clearSpawnFileOffset();
 		}
 		if (tile->spawn && tile->spawn->isSelected()) {
 			copied_tile->spawn = tile->spawn->deepCopy();
@@ -110,6 +111,7 @@ void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 
 		if (newtile->creature && newtile->creature->isSelected()) {
 			copied_tile->creature = std::move(newtile->creature);
+			copied_tile->creature->clearSpawnFileOffset();
 		}
 
 		if (newtile->spawn && newtile->spawn->isSelected()) {
@@ -184,6 +186,9 @@ void CopyOperations::paste(Editor& editor, CopyBuffer& buffer, const Position& t
 
 		TileLocation* dest_location = editor.map.createTileL(pos);
 		std::unique_ptr<Tile> copy_tile = TileOperations::deepCopy(buffer_tile, editor.map);
+		if (copy_tile->creature) {
+			copy_tile->creature->clearSpawnFileOffset();
+		}
 		Tile* old_dest_tile = dest_location->get();
 		std::unique_ptr<Tile> new_dest_tile_ptr;
 		copy_tile->setLocation(dest_location);

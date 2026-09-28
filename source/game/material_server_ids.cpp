@@ -51,11 +51,11 @@ void clearMaterialServerIds() {
 	server_to_client.clear();
 }
 
-void loadMaterialServerIds(const wxFileName& otb_path, std::vector<std::string>& warnings) {
+bool loadMaterialServerIds(const wxFileName& otb_path, std::vector<std::string>& warnings) {
 	clearMaterialServerIds();
 	if (!otb_path.FileExists()) {
-		warnings.push_back("items.otb is missing; brush and tileset ids are used unchanged.");
-		return;
+		warnings.push_back("items.otb is missing; brush and tileset ids cannot be translated.");
+		return false;
 	}
 
 	ItemDefinitionLoadInput input;
@@ -66,7 +66,7 @@ void loadMaterialServerIds(const wxFileName& otb_path, std::vector<std::string>&
 	OtbItemParser parser;
 	if (!parser.parse(input, fragments, error, otb_warnings)) {
 		warnings.push_back("Couldn't read items.otb for brush id translation: " + error.ToStdString());
-		return;
+		return false;
 	}
 
 	server_to_client.reserve(fragments.otb.size());
@@ -77,4 +77,5 @@ void loadMaterialServerIds(const wxFileName& otb_path, std::vector<std::string>&
 		const uint16_t client_id = fragment.client_id == 0 ? static_cast<uint16_t>(server_id) : static_cast<uint16_t>(fragment.client_id);
 		server_to_client.emplace(static_cast<uint16_t>(server_id), client_id);
 	}
+	return true;
 }

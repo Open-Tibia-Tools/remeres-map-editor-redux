@@ -214,7 +214,7 @@ struct RonCursor {
 		return false;
 	}
 
-	[[nodiscard]] bool skipUntil(char end, std::string& error) {
+	[[nodiscard]] bool skipUntil([[maybe_unused]] char end, std::string& error) {
 		int depth = 1;
 		while (!eof() && depth > 0) {
 			skipWs();
@@ -231,9 +231,6 @@ struct RonCursor {
 				++depth;
 			} else if (ch == ')' || ch == ']') {
 				--depth;
-			}
-			if (depth == 1 && ch == end) {
-				return true;
 			}
 		}
 		if (depth == 0) {

@@ -92,6 +92,11 @@ public:
 	bool hasSpawnFileOffset() const {
 		return has_spawn_file_offset;
 	}
+	void clearSpawnFileOffset() {
+		has_spawn_file_offset = false;
+		spawn_file_x = 0;
+		spawn_file_y = 0;
+	}
 	int getSpawnFileOffsetX() const {
 		return spawn_file_x;
 	}

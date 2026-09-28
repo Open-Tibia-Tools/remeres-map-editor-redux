@@ -314,11 +314,11 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 				const int already_placed = isNpc ? 0 : placed_by_name[name];
 				const int signed_distance = signedSpawnSearchDistance(radius, already_placed);
 				const std::optional<Position> found = searchSpawnField(map, spawnPosition, signed_distance, place_in_pz, home_house_id, tie_roll);
-				if (!found) {
-					spdlog::warn("MapXMLIO: No free tile for '{}' in spawn {}:{}:{}", name, spawnPosition.x, spawnPosition.y, spawnPosition.z);
-					continue;
+				if (found) {
+					creaturePosition = *found;
+				} else {
+					spdlog::warn("MapXMLIO: No free tile for '{}' in spawn {}:{}:{}; using file offset", name, spawnPosition.x, spawnPosition.y, spawnPosition.z);
 				}
-				creaturePosition = *found;
 			}
 
 			Tile* creatureTile = (creaturePosition == spawnPosition) ? tile : map.getTile(creaturePosition);

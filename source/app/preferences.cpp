@@ -38,6 +38,11 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 	// every icon. Painting those empty slots asserts in wxBitmap::Draw.
 	auto* image_list = new wxImageList(16, 16);
 	auto add_icon = [&](std::string_view icon) {
+		// A missing asset still draws as a blank bitmap. The page list should
+		// omit that slot instead of showing an empty icon.
+		if (!IMAGE_MANAGER.GetBitmapBundle(icon).IsOk()) {
+			return -1;
+		}
 		const wxBitmap bitmap = IMAGE_MANAGER.GetBitmap(icon);
 		if (!bitmap.IsOk() || bitmap.GetLogicalSize() != wxSize(16, 16)) {
 			return -1;

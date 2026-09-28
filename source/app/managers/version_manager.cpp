@@ -111,13 +111,27 @@ bool VersionManager::setStartupCatalog(ClientVersion* client, bool use_items_ron
 		return true;
 	}
 
+	const ItemDefinitionMode configured = client->getItemDefinitionMode();
+	if (configured != ItemDefinitionMode::DatOtb && configured != ItemDefinitionMode::DatRon) {
+		return true;
+	}
+
 	const ItemDefinitionMode wanted = use_items_ron ? ItemDefinitionMode::DatRon : ItemDefinitionMode::DatOtb;
 	const bool override_applies = catalog_override.has_value() && catalog_override_version == client->getID();
-	const ItemDefinitionMode previous = override_applies ? *catalog_override : client->getItemDefinitionMode();
+	const ItemDefinitionMode previous = override_applies ? *catalog_override : configured;
+	const auto saved_override = catalog_override;
+	const auto saved_override_version = catalog_override_version;
 	catalog_override = wanted;
 	catalog_override_version = client->getID();
 	if (getLoadedVersion() != client || previous == wanted) {
 		return true;
+	}
+
+	if (g_gui.tabbook && !g_gui.CloseAllEditors()) {
+		catalog_override = saved_override;
+		catalog_override_version = saved_override_version;
+		error = "Changing the item catalog requires closing all open maps.";
+		return false;
 	}
 
 	return LoadVersion(client->getID(), error, warnings, true);
@@ -172,7 +186,11 @@ bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& wa
 	}
 
 	if (activeItemDefinitionMode() == ItemDefinitionMode::DatRon) {
-		loadMaterialServerIds(wxFileName(modular_data_path + "items.otb"), warnings);
+		if (!loadMaterialServerIds(wxFileName(modular_data_path + "items.otb"), warnings)) {
+			error = warnings.empty() ? wxString("items.otb is required to translate brush and tileset ids for items.ron.") : wxString::FromUTF8(warnings.back());
+			FailDataLoad();
+			return false;
+		}
 	} else {
 		clearMaterialServerIds();
 	}

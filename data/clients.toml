@@ -143,7 +143,7 @@ transparency = false
 version = 792
 
 [[clients]]
-configType = 'dat_ron'
+configType = 'dat_otb'
 datSignature = '467FD7E6'
 dataDirectory = '800'
 description = 'sample description'
