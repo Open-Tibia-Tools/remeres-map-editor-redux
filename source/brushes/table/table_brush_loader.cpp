@@ -6,6 +6,7 @@
 #include "brushes/table/table_brush.h"
 #include "brushes/table/table_brush_items.h"
 #include "item_definitions/core/item_definition_store.h"
+#include "game/material_server_ids.h"
 #include <utility>
 #include <string_view>
 #include <algorithm>
@@ -19,7 +20,7 @@ static const auto iequal = [](char a, char b) {
 bool TableBrushLoader::load(pugi::xml_node node, TableBrush& brush, TableBrushItems& items, std::vector<std::string>& warnings) {
 	uint16_t look_id = 0;
 	if (const pugi::xml_attribute attribute = node.attribute("server_lookid")) {
-		const auto definition = g_item_definitions.get(attribute.as_ushort());
+		const auto definition = g_item_definitions.get(materialClientId(attribute.as_ushort()));
 		if (!definition) {
 			warnings.push_back("Invalid server_lookid " + std::to_string(attribute.as_ushort()) + " for table brush");
 		} else {
@@ -54,7 +55,7 @@ bool TableBrushLoader::load(pugi::xml_node node, TableBrush& brush, TableBrushIt
 				continue;
 			}
 
-			uint16_t id = subChildNode.attribute("id").as_ushort();
+			uint16_t id = materialClientId(subChildNode.attribute("id").as_ushort());
 			if (id == 0) {
 				warnings.push_back("Could not read id tag of item node\n");
 				continue;

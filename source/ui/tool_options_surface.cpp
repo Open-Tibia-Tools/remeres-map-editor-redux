@@ -11,6 +11,8 @@
 #include "brushes/house/house_exit_brush.h"
 #include "brushes/spawn/spawn_brush.h"
 #include "brushes/waypoint/waypoint_brush.h"
+#include "brushes/raw/raw_brush.h"
+#include "rendering/indicators/technical_item_registry.h"
 #include "game/sprites.h"
 #include "palette/palette_window.h"
 #include "rendering/core/game_sprite.h"
@@ -70,6 +72,16 @@ namespace {
 
 		window->Show();
 		sizer->Add(window, proportion, flags, border);
+	}
+
+	wxColour GetIndicatorColor(rme::rendering::TileIndicatorType type) {
+		const auto style = rme::rendering::GetIndicatorBadgeStyle(type);
+		return wxColour(style.border_r, style.border_g, style.border_b);
+	}
+
+	wxString GetIndicatorText(rme::rendering::TileIndicatorType type) {
+		const auto style = rme::rendering::GetIndicatorBadgeStyle(type);
+		return wxString(style.text);
 	}
 }
 
@@ -474,6 +486,9 @@ std::vector<Brush*> ToolOptionsSurface::GetDefaultTools() const {
 	if (g_brush_manager.pvp_brush) {
 		brushes.push_back(g_brush_manager.pvp_brush);
 	}
+	if (g_brush_manager.refresh_brush) {
+		brushes.push_back(g_brush_manager.refresh_brush);
+	}
 	if (g_brush_manager.normal_door_brush) {
 		brushes.push_back(g_brush_manager.normal_door_brush);
 	}
@@ -509,6 +524,27 @@ wxBitmap ToolOptionsSurface::CreateToolBitmap(const ToolButtonEntry& entry) cons
 wxBitmap ToolOptionsSurface::CreateBrushBitmap(Brush* brush) const {
 	if (!brush) {
 		return wxBitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
+	}
+
+	const auto indType = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(brush);
+	if (indType != rme::rendering::TileIndicatorType::None) {
+		wxBitmap bitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
+		wxMemoryDC dc(bitmap);
+		dc.SetBackground(wxBrush(wxColour(30, 30, 35)));
+		dc.Clear();
+		const int bw = bitmap.GetWidth();
+		const int bh = bitmap.GetHeight();
+		const wxColour col = GetIndicatorColor(indType);
+		dc.SetBrush(wxBrush(wxColour(col.Red() / 3, col.Green() / 3, col.Blue() / 3)));
+		dc.SetPen(wxPen(col, 1));
+		dc.DrawRectangle(1, 1, bw - 2, bh - 2);
+		dc.SetFont(wxFont(FromDIP(7), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
+		dc.SetTextForeground(*wxWHITE);
+		const wxString txt = GetIndicatorText(indType);
+		const wxSize sz = dc.GetTextExtent(txt);
+		dc.DrawText(txt, (bw - sz.GetWidth()) / 2, (bh - sz.GetHeight()) / 2);
+		dc.SelectObject(wxNullBitmap);
+		return bitmap;
 	}
 
 	if (brush->getLookID() < 0) {

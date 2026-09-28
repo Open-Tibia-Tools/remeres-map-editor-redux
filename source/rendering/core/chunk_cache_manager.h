@@ -17,14 +17,13 @@ class Map;
 class AtlasManager;
 class SpriteBatch;
 class TileRenderer;
+#include <array>
+#include <bit>
+#include <cstdint>
+
 class GameSprite;
 struct RenderFrameContext;
 struct HardwareBudget;
-
-struct DynamicTileInfo {
-	uint8_t rel_x = 0;
-	uint8_t rel_y = 0;
-};
 
 struct CachedChunk {
 	ChunkCoord coord;
@@ -38,7 +37,21 @@ struct CachedChunk {
 	const GameSprite* sample_animated_sprite = nullptr;
 	int last_baked_frame = -1;
 	long last_baked_anim_time = 0;
-	std::vector<DynamicTileInfo> dynamic_tiles;
+	int min_anim_duration = 350;
+	std::array<uint64_t, 4> dynamic_tile_mask = {0, 0, 0, 0};
+
+	[[nodiscard]] bool hasDynamicTiles() const noexcept {
+		return (dynamic_tile_mask[0] | dynamic_tile_mask[1] | dynamic_tile_mask[2] | dynamic_tile_mask[3]) != 0;
+	}
+
+	void clearDynamicTiles() noexcept {
+		dynamic_tile_mask.fill(0);
+	}
+
+	void markDynamicTile(int tx, int ty) noexcept {
+		const int idx = ty * 16 + tx;
+		dynamic_tile_mask[idx >> 6] |= (uint64_t{1} << (idx & 63));
+	}
 
 	CachedChunk() = default;
 	~CachedChunk() {
@@ -60,7 +73,8 @@ struct CachedChunk {
 		sample_animated_sprite(other.sample_animated_sprite),
 		last_baked_frame(other.last_baked_frame),
 		last_baked_anim_time(other.last_baked_anim_time),
-		dynamic_tiles(std::move(other.dynamic_tiles)) {
+		min_anim_duration(other.min_anim_duration),
+		dynamic_tile_mask(other.dynamic_tile_mask) {
 		other.vbo = 0;
 		other.vbo_capacity = 0;
 		other.instance_count = 0;
@@ -68,6 +82,8 @@ struct CachedChunk {
 		other.sample_animated_sprite = nullptr;
 		other.last_baked_frame = -1;
 		other.last_baked_anim_time = 0;
+		other.min_anim_duration = 350;
+		other.dynamic_tile_mask.fill(0);
 	}
 
 	CachedChunk& operator=(CachedChunk&& other) noexcept {
@@ -86,7 +102,8 @@ struct CachedChunk {
 			sample_animated_sprite = other.sample_animated_sprite;
 			last_baked_frame = other.last_baked_frame;
 			last_baked_anim_time = other.last_baked_anim_time;
-			dynamic_tiles = std::move(other.dynamic_tiles);
+			min_anim_duration = other.min_anim_duration;
+			dynamic_tile_mask = other.dynamic_tile_mask;
 			other.vbo = 0;
 			other.vbo_capacity = 0;
 			other.instance_count = 0;
@@ -94,6 +111,8 @@ struct CachedChunk {
 			other.sample_animated_sprite = nullptr;
 			other.last_baked_frame = -1;
 			other.last_baked_anim_time = 0;
+			other.min_anim_duration = 350;
+			other.dynamic_tile_mask.fill(0);
 		}
 		return *this;
 	}

@@ -11,6 +11,7 @@
 #include "editor/selection.h"
 #include "map/map.h"
 #include "map/tile_operations.h"
+#include "game/creature.h"
 #include "brushes/ground/ground_brush.h"
 #include "app/settings.h"
 #include "ui/gui.h"
@@ -212,6 +213,9 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 		if (new_pos.z < 0 || new_pos.z > MAP_MAX_LAYER) {
 			delete tile;
 			continue;
+		}
+		if (new_pos != old_pos && tile->creature) {
+			tile->creature->clearSpawnFileOffset();
 		}
 		// Create the duplicate dest tile, which will replace the old one later
 		TileLocation* location = editor.map.createTileL(new_pos);

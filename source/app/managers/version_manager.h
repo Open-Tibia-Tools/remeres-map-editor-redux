@@ -9,6 +9,8 @@
 #include "app/client_version.h"
 #include "item_definitions/core/missing_item_report.h"
 
+#include <optional>
+
 struct MaterialManifestFiles;
 
 class VersionManager {
@@ -18,6 +20,11 @@ public:
 
 	void UnloadVersion();
 	bool LoadVersion(ClientVersionID ver, wxString& error, std::vector<std::string>& warnings, bool force = false);
+
+	// Welcome-screen catalog choice. True loads items.ron; false loads items.xml and items.otb.
+	// Reloads only when this client is already the loaded version and the mode changes.
+	bool setStartupCatalog(ClientVersion* client, bool use_items_ron, wxString& error, std::vector<std::string>& warnings);
+	[[nodiscard]] ItemDefinitionMode activeItemDefinitionMode() const;
 
 	// The current version loaded (returns CLIENT_VERSION_NONE if no version is loaded)
 	const ClientVersion& GetCurrentVersion() const;
@@ -53,6 +60,8 @@ private:
 	bool LoadModularMaterials(const FileName& materials_manifest, wxString& error, std::vector<std::string>& warnings);
 
 	ClientVersionID loaded_version;
+	ClientVersionID catalog_override_version;
+	std::optional<ItemDefinitionMode> catalog_override;
 	MissingItemReport last_missing_items;
 	bool last_load_has_otb = true;
 };

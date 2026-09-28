@@ -26,6 +26,7 @@
 #include "game/item.h"
 #include "brushes/managers/brush_manager.h"
 #include "item_definitions/core/item_definition_store.h"
+#include "game/material_server_ids.h"
 #include <unordered_map>
 
 #include "brushes/ground/ground_brush.h"
@@ -491,7 +492,7 @@ std::unique_ptr<Item> Item::Create(pugi::xml_node xml) {
 
 	int16_t id = 0;
 	if ((attribute = xml.attribute("id"))) {
-		id = attribute.as_ushort();
+		id = static_cast<int16_t>(materialClientId(attribute.as_ushort()));
 	}
 
 	int16_t count = 1;

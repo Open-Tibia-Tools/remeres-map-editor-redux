@@ -48,6 +48,7 @@ struct OtbItemFragment {
 	BorderType border_alignment = BORDER_NONE;
 	std::string name;
 	std::string description;
+	std::string editor_suffix;
 };
 
 struct XmlItemFragment {
@@ -122,6 +123,7 @@ struct ItemDefinitionLoadInput {
 	ClientVersion* client_version = nullptr;
 	GraphicManager* graphics = nullptr;
 	const DatCatalog* dat_catalog = nullptr;
+	wxFileName ron_path;
 };
 
 #endif

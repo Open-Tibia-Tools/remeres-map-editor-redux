@@ -33,6 +33,7 @@
 #include "rendering/drawers/overlays/map_overlay_collector.h"
 #include "rendering/io/screen_capture.h"
 #include "rendering/core/gl_resources.h"
+#include "rendering/shaders/sprite_batch_shader.h"
 
 MapDrawer::MapDrawer(Editor& editor) :
 	editor(editor),
@@ -68,17 +69,6 @@ void MapDrawer::SetupVars(const ViewportParameters& vp) {
 		}
 	}
 
-	// Calculate pulse for house highlighting
-	// Period is 1 second (1000ms)
-	// Range is [0.0, 1.0]
-	// Using a sine wave for smooth transition
-	// (sin(t) + 1) / 2
-	const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-		std::chrono::steady_clock::now().time_since_epoch()
-	).count();
-	const double speed = 0.005;
-	options.highlight_pulse = static_cast<float>((std::sin(static_cast<double>(now_ms) * speed) + 1.0) * 0.5);
-
 	view.Setup(vp, options, &editor.map);
 }
 
@@ -94,10 +84,10 @@ void MapDrawer::SetupGL() {
 
 	// Ensure renderers are initialized
 	if (!renderers_initialized) {
-		sprite_batch.initialize();
+		const bool sprites_ready = sprite_batch.initialize();
 		primitive_renderer.initialize();
 		chunk_cache_manager.initialize();
-		renderers_initialized = true;
+		renderers_initialized = sprites_ready;
 	}
 }
 
@@ -177,6 +167,19 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 
 	// Begin Batches
 	sprite_batch.begin(view.projectionMatrix, *atlas);
+	rme::rendering::shaders::SetSpriteBatchOverlayUniforms(
+		*sprite_batch.getShader(),
+		static_cast<uint32_t>(options.current_house_id),
+		options.show_houses,
+		options.show_spawns,
+		options.show_towns,
+		options.show_waypoints,
+		options.show_tech_items && !options.ingame,
+		options.show_blocking,
+		options.show_special_tiles,
+		options.show_invalid_tiles && !options.ingame,
+		options.show_invalid_zones && !options.ingame
+	);
 	primitive_renderer.setProjectionMatrix(view.projectionMatrix);
 
 	DrawBackground();
@@ -196,11 +199,28 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 
 	// Resume Batch for Overlays
 	sprite_batch.begin(view.projectionMatrix, *atlas);
+	rme::rendering::shaders::SetSpriteBatchOverlayUniforms(
+		*sprite_batch.getShader(),
+		static_cast<uint32_t>(options.current_house_id),
+		options.show_houses,
+		options.show_spawns,
+		options.show_towns,
+		options.show_waypoints,
+		options.show_tech_items && !options.ingame,
+		options.show_blocking,
+		options.show_special_tiles,
+		options.show_invalid_tiles && !options.ingame,
+		options.show_invalid_zones && !options.ingame
+	);
+
+	if (!options.ingame) {
+		zone_overlay_drawer.draw(sprite_batch, view, editor.map, interaction.secondary_map, options, *atlas);
+	}
 
 	drag_shadow_drawer.draw(sprite_batch, editor, interaction.drag_start_position, &item_drawer, &sprite_drawer, &creature_drawer, view, options, &ctx);
 
 	live_cursor_drawer.draw(sprite_batch, view, editor, options, *atlas);
-	brush_overlay_drawer.draw(sprite_batch, primitive_renderer, &brush_cursor_drawer, interaction.brush_drag_state, &item_drawer, &sprite_drawer, &creature_drawer, view, options, editor, *atlas, ctx);
+	brush_overlay_drawer.draw(sprite_batch, interaction.brush_drag_state, &item_drawer, &sprite_drawer, &creature_drawer, view, options, editor, *atlas, ctx);
 	selection_drawer.draw(primitive_renderer, view, options);
 
 	if (options.show_grid) {
@@ -361,9 +381,20 @@ void MapDrawer::DrawCreatureNames(NVGcontext* vg) {
 	}
 }
 
+void MapDrawer::DrawMarkerLabels(NVGcontext* vg) {
+	if (!options.ingame && (options.show_waypoints || options.show_towns) && view.zoom <= 10.0f) {
+		marker_label_drawer.draw(vg, editor.map, view, options);
+	}
+}
+
 bool MapDrawer::hasOverlays() {
 	const bool can_read_labels = view.zoom <= 10.0f;
 	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
+		return true;
+	}
+	if (!options.ingame && can_read_labels &&
+	    ((options.show_waypoints && !editor.map.waypoints.empty()) ||
+	     (options.show_towns && !editor.map.towns.empty()))) {
 		return true;
 	}
 	if (options.show_tooltips && !tooltip_drawer.empty() && can_read_labels) {

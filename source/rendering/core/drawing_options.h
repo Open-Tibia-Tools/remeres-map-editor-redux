@@ -99,12 +99,11 @@ struct DrawingOptions {
 	uint32_t current_house_id;
 	SpriteLight server_light;
 	float minimum_ambient_light;
-	float highlight_pulse;
 
 	bool anti_aliasing;
 
 	[[nodiscard]] bool hasTileColorModifiers() const noexcept {
-		return show_blocking || highlight_items || show_spawns || show_houses || show_special_tiles || show_only_colors;
+		return highlight_items || show_only_colors;
 	}
 
 private:

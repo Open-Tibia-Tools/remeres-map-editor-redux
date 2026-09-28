@@ -16,8 +16,183 @@
 
 #include <spdlog/spdlog.h>
 #include <format>
+#include <limits>
+#include <optional>
 #include <sstream>
+#include <unordered_map>
 #include <ranges>
+#include <vector>
+
+namespace {
+
+bool g_spread_randomized_spawns = false;
+
+struct SpawnTieRoll {
+	uint32_t state;
+
+	explicit SpawnTieRoll(uint32_t seed) :
+		state(seed == 0 ? 1u : seed) { }
+
+	int next() {
+		state = state * 1103515245u + 12345u;
+		return static_cast<int>((state >> 16) % 100u);
+	}
+};
+
+struct SpawnTileProbe {
+	bool login_possible = false;
+	bool login_clean = false;
+	bool expansion_ok = false;
+};
+
+int signedSpawnSearchDistance(int radius, int already_placed) {
+	int max_radius = radius < 0 ? 1 : radius;
+	if (max_radius > 10) {
+		max_radius = 10;
+	}
+	if (already_placed == 0) {
+		return std::min(max_radius, 1);
+	}
+	return -max_radius;
+}
+
+SpawnTileProbe probeSpawnTile(const Map& map, const Position& pos, bool place_in_pz, uint32_t home_house_id) {
+	const Tile* tile = map.getTile(pos);
+	if (tile == nullptr || tile->ground == nullptr) {
+		return {};
+	}
+
+	const uint32_t house_id = tile->getHouseID();
+	if (home_house_id == 0) {
+		if (house_id != 0) {
+			return {};
+		}
+	} else if (house_id != home_house_id) {
+		return {};
+	}
+
+	if (place_in_pz) {
+		if (!tile->isPZ()) {
+			return {};
+		}
+	} else if (tile->isPZ()) {
+		return {};
+	}
+
+	SpawnTileProbe probe;
+	probe.expansion_ok = true;
+	probe.login_possible = true;
+
+	bool login_bad = false;
+	if (tile->creature) {
+		probe.login_possible = false;
+	}
+
+	auto consider = [&](const Item* item) {
+		if (item == nullptr || !item->isBlocking()) {
+			return;
+		}
+		if (!item->isMoveable()) {
+			probe.expansion_ok = false;
+			probe.login_possible = false;
+		} else {
+			login_bad = true;
+		}
+	};
+	consider(tile->ground.get());
+	for (const auto& item : tile->items) {
+		consider(item.get());
+	}
+
+	probe.login_clean = probe.login_possible && !login_bad;
+	return probe;
+}
+
+std::optional<Position> searchSpawnField(const Map& map, const Position& center, int signed_distance, bool place_in_pz, uint32_t home_house_id, SpawnTieRoll& rolls) {
+	const bool minimize = signed_distance >= 0;
+	const int distance = std::min(std::abs(signed_distance), 30);
+	if (distance == 0) {
+		const SpawnTileProbe probe = probeSpawnTile(map, center, place_in_pz, home_house_id);
+		if (probe.login_possible) {
+			return center;
+		}
+		return std::nullopt;
+	}
+
+	const int grid = 2 * distance + 1;
+	std::vector<int> phases(static_cast<size_t>(grid) * static_cast<size_t>(grid), std::numeric_limits<int>::max());
+	const auto idx = [distance, grid](int ox, int oy) {
+		return static_cast<size_t>(oy + distance) * static_cast<size_t>(grid) + static_cast<size_t>(ox + distance);
+	};
+	phases[idx(0, 0)] = 0;
+
+	std::optional<Position> best_pos;
+	int best_tie = -1;
+	int expansion_phase = 0;
+
+	for (;;) {
+		bool found = false;
+		bool expanded = false;
+
+		for (int oy = -distance; oy <= distance; ++oy) {
+			for (int ox = -distance; ox <= distance; ++ox) {
+				if (phases[idx(ox, oy)] != expansion_phase) {
+					continue;
+				}
+
+				const Position pos(center.x + ox, center.y + oy, center.z);
+				const SpawnTileProbe probe = probeSpawnTile(map, pos, place_in_pz, home_house_id);
+
+				if (probe.expansion_ok || expansion_phase == 0) {
+					for (int ny = -1; ny <= 1; ++ny) {
+						for (int nx = -1; nx <= 1; ++nx) {
+							if (nx == 0 && ny == 0) {
+								continue;
+							}
+							const int nox = ox + nx;
+							const int noy = oy + ny;
+							if (nox < -distance || nox > distance || noy < -distance || noy > distance) {
+								continue;
+							}
+							const int step = std::abs(nox - ox) + std::abs(noy - oy);
+							const size_t neighbor = idx(nox, noy);
+							if (phases[neighbor] > expansion_phase + step) {
+								phases[neighbor] = expansion_phase + step;
+							}
+						}
+					}
+					expanded = true;
+				}
+
+				if (probe.login_possible) {
+					const int tie = rolls.next() + (probe.login_clean ? 100 : 0);
+					if (tie > best_tie) {
+						best_tie = tie;
+						best_pos = pos;
+					}
+					found = true;
+				}
+			}
+		}
+
+		if ((found && minimize) || !expanded) {
+			break;
+		}
+		++expansion_phase;
+	}
+
+	return best_pos;
+}
+
+} // namespace
+
+void MapXMLIO::setSpreadRandomizedSpawns(bool enabled) {
+	g_spread_randomized_spawns = enabled;
+}
+
+bool MapXMLIO::spreadRandomizedSpawns() {
+	return g_spread_randomized_spawns;
+}
 
 std::pair<std::string, std::string> MapXMLIO::normalizeMapFilePaths(const wxFileName& dir, const std::string& filename) {
 	std::string utf8_path = (const char*)(dir.GetPath(wxPATH_GET_SEPARATOR | wxPATH_GET_VOLUME).mb_str(wxConvUTF8));
@@ -61,9 +236,9 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 		}
 
 		int32_t radius = spawnNode.attribute("radius").as_int();
-		if (radius < 1) {
-			spdlog::warn("MapXMLIO: Invalid radius on spawn, discarding...");
-			continue;
+		// Radius 0 is a center-only zone. A missing value parses as 0.
+		if (radius < 0) {
+			radius = 0;
 		}
 
 		Tile* tile = map.getTile(spawnPosition);
@@ -83,6 +258,12 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 
 		tile->spawn = std::make_unique<Spawn>(radius);
 		map.addSpawn(tile);
+
+		const bool place_in_pz = tile->isPZ();
+		const uint32_t home_house_id = tile->getHouseID();
+		const uint32_t tie_seed = static_cast<uint32_t>(spawnPosition.x) * 73856093u ^ static_cast<uint32_t>(spawnPosition.y) * 19349663u ^ static_cast<uint32_t>(spawnPosition.z) * 83492791u;
+		SpawnTieRoll tie_roll(tie_seed);
+		std::unordered_map<std::string, int> placed_by_name;
 
 		for (auto creatureNode : spawnNode.children()) {
 			std::string nodeName = as_lower_str(creatureNode.name());
@@ -117,15 +298,28 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 				continue;
 			}
 
-			creaturePosition.x += xAttr.as_int();
-			creaturePosition.y += yAttr.as_int();
+			const int file_x = xAttr.as_int();
+			const int file_y = yAttr.as_int();
+			creaturePosition.x += file_x;
+			creaturePosition.y += file_y;
 
 			radius = std::clamp<int32_t>(
 				std::max({ radius, std::abs(creaturePosition.x - spawnPosition.x), std::abs(creaturePosition.y - spawnPosition.y) }),
-				1,
+				0,
 				g_settings.getInteger(Config::MAX_SPAWN_RADIUS)
 			);
 			tile->spawn->setSize(radius);
+
+			if (g_spread_randomized_spawns) {
+				const int already_placed = isNpc ? 0 : placed_by_name[name];
+				const int signed_distance = signedSpawnSearchDistance(radius, already_placed);
+				const std::optional<Position> found = searchSpawnField(map, spawnPosition, signed_distance, place_in_pz, home_house_id, tie_roll);
+				if (found) {
+					creaturePosition = *found;
+				} else {
+					spdlog::warn("MapXMLIO: No free tile for '{}' in spawn {}:{}:{}; using file offset", name, spawnPosition.x, spawnPosition.y, spawnPosition.z);
+				}
+			}
 
 			Tile* creatureTile = (creaturePosition == spawnPosition) ? tile : map.getTile(creaturePosition);
 
@@ -147,6 +341,12 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 			creatureTile->creature = std::make_unique<Creature>(type);
 			creatureTile->creature->setDirection(direction);
 			creatureTile->creature->setSpawnTime(spawntime);
+			if (g_spread_randomized_spawns) {
+				creatureTile->creature->setSpawnFileOffset(file_x, file_y);
+				if (!isNpc) {
+					placed_by_name[name] += 1;
+				}
+			}
 
 			if (creatureTile->getLocation()->getSpawnCount() == 0) {
 				if (!creatureTile->spawn) {
@@ -214,9 +414,11 @@ bool MapXMLIO::saveSpawns(const Map& map, pugi::xml_document& doc) {
 					Creature* creature = creatureTile->creature.get();
 					pugi::xml_node creatureNode = spawnNode.append_child(creature->isNpc() ? "npc" : "monster");
 
+					const int out_x = creature->hasSpawnFileOffset() ? creature->getSpawnFileOffsetX() : x;
+					const int out_y = creature->hasSpawnFileOffset() ? creature->getSpawnFileOffsetY() : y;
 					creatureNode.append_attribute("name") = creature->getName().c_str();
-					creatureNode.append_attribute("x") = x;
-					creatureNode.append_attribute("y") = y;
+					creatureNode.append_attribute("x") = out_x;
+					creatureNode.append_attribute("y") = out_y;
 					creatureNode.append_attribute("spawntime") = creature->getSpawnTime();
 
 					if (creature->getDirection() != NORTH) {

@@ -8,6 +8,7 @@
 #include "item_definitions/formats/otb/otb_item_parser.h"
 #include "item_definitions/formats/protobuf/protobuf_item_parser.h"
 #include "item_definitions/formats/xml/xml_item_parser.h"
+#include "item_definitions/formats/ron/ron_item_parser.h"
 
 #include <memory>
 
@@ -29,7 +30,8 @@ bool ItemDefinitionsLoader::assemble(const ItemDefinitionLoadInput& input, ItemD
 		return false;
 	}
 
-	if (input.xml_path.GetFullPath().IsEmpty() && input.xml_paths.empty()) {
+	const bool requires_xml = input.mode != ItemDefinitionMode::DatRon;
+	if (requires_xml && input.xml_path.GetFullPath().IsEmpty() && input.xml_paths.empty()) {
 		error = "items.xml path is missing.";
 		return false;
 	}
@@ -42,6 +44,7 @@ bool ItemDefinitionsLoader::assemble(const ItemDefinitionLoadInput& input, ItemD
 	OtbItemParser otb_parser;
 	ProtobufItemParser protobuf_parser;
 	XmlItemParser xml_parser;
+	RonItemParser ron_parser;
 
 	for (size_t i = 0; i < recipe.source_count; ++i) {
 		switch (recipe.sources[i]) {
@@ -68,6 +71,11 @@ bool ItemDefinitionsLoader::assemble(const ItemDefinitionLoadInput& input, ItemD
 			case ItemDefinitionSourceKind::Srv:
 				error = "Selected item definition mode is not implemented yet.";
 				return false;
+			case ItemDefinitionSourceKind::Ron:
+				if (!ron_parser.parse(input, fragments, error, warnings)) {
+					return false;
+				}
+				break;
             default:
 				error = "Invalid item definition mode selected.";
 				return false;

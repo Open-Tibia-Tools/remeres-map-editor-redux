@@ -23,6 +23,7 @@
 #include "brushes/raw/raw_brush.h"
 #include "map/tile.h"
 #include "rendering/core/graphics.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include "ui/gui.h"
 #include <wx/listbox.h>
 #include "ui/browse_tile_window.h"
@@ -70,16 +71,28 @@ BrowseTileListBox::~BrowseTileListBox() {
 void BrowseTileListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t n) {
 	Item* item = items[n];
 
-	Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());
-	if (sprite) {
-		int tex = GetOrCreateSpriteTexture(vg, sprite);
-		if (tex > 0) {
-			int icon_size = 32;
-			NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
-			nvgBeginPath(vg);
-			nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
-			nvgFillPaint(vg, imgPaint);
-			nvgFill(vg);
+	const auto tech = rme::rendering::TechnicalItemRegistry::Classify(item->getID(), item->getClientID());
+	if (tech != rme::rendering::TileIndicatorType::None) {
+		const int icon_size = 32;
+		rme::rendering::DrawNanoVGIndicatorBadge(
+			vg,
+			tech,
+			static_cast<float>(rect.x),
+			static_cast<float>(rect.y),
+			static_cast<float>(icon_size)
+		);
+	} else {
+		Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());
+		if (sprite) {
+			int tex = GetOrCreateSpriteTexture(vg, sprite);
+			if (tex > 0) {
+				int icon_size = 32;
+				NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
+				nvgBeginPath(vg);
+				nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
+				nvgFillPaint(vg, imgPaint);
+				nvgFill(vg);
+			}
 		}
 	}
 
@@ -202,6 +215,7 @@ BrowseTileWindow::BrowseTileWindow(wxWindow* parent, Tile* tile, wxPoint positio
 	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "No PvP:  " + b2yn(tile->getMapFlags() & TILESTATE_NOPVP)), wxSizerFlags(0).Left());
 	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "No logout:  " + b2yn(tile->getMapFlags() & TILESTATE_NOLOGOUT)), wxSizerFlags(0).Left());
 	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "PvP zone:  " + b2yn(tile->getMapFlags() & TILESTATE_PVPZONE)), wxSizerFlags(0).Left());
+	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "Refresh:  " + b2yn(tile->getMapFlags() & TILESTATE_REFRESH)), wxSizerFlags(0).Left());
 	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "House:  " + b2yn(tile->isHouseTile())), wxSizerFlags(0).Left());
 
 	sizer->Add(infoSizer, wxSizerFlags(0).Left().DoubleBorder());

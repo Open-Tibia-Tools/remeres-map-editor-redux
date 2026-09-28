@@ -19,6 +19,7 @@ namespace {
 			.client_version = request.client_version,
 			.graphics = nullptr,
 			.dat_catalog = &dat_catalog,
+			.ron_path = request.ron_path,
 		};
 	}
 }
@@ -36,6 +37,7 @@ bool AssetBundleLoader::load(const AssetLoadRequest& request, AssetBundle& bundl
 		.client_version = request.client_version,
 		.graphics = nullptr,
 		.dat_catalog = nullptr,
+		.ron_path = request.ron_path,
 	};
 
 	switch (request.mode) {
@@ -56,7 +58,8 @@ bool AssetBundleLoader::load(const AssetLoadRequest& request, AssetBundle& bundl
 		}
 		case ItemDefinitionMode::DatOtb:
 		case ItemDefinitionMode::DatOnly:
-		case ItemDefinitionMode::DatSrv: {
+		case ItemDefinitionMode::DatSrv:
+		case ItemDefinitionMode::DatRon: {
 			DatItemParser dat_parser;
 			if (!dat_parser.parseCatalog(definition_input, bundle.dat_catalog, error, warnings)) {
 				return false;

@@ -8,6 +8,7 @@
 #include "brushes/wall/wall_brush.h"
 #include "brushes/wall/wall_brush_items.h"
 #include "item_definitions/core/item_definition_store.h"
+#include "game/material_server_ids.h"
 #include "util/common.h"
 
 #include "wx/arrstr.h"
@@ -78,7 +79,7 @@ bool WallBrushLoader::load(WallBrush* brush, WallBrushItems& items, pugi::xml_no
 	}
 
 	if ((attribute = node.attribute("server_lookid"))) {
-		const auto definition = g_item_definitions.get(attribute.as_ushort());
+		const auto definition = g_item_definitions.get(materialClientId(attribute.as_ushort()));
 		if (!definition) {
 			warnings.push_back("There is no itemtype with id " + std::to_string(attribute.as_ushort()) + " for wall brush server_lookid");
 		} else {
@@ -110,7 +111,7 @@ bool WallBrushLoader::load(WallBrush* brush, WallBrushItems& items, pugi::xml_no
 				std::string_view subChildName = subChildNode.name();
 
 				if (std::ranges::equal(subChildName, std::string_view("item"), iequal)) {
-					uint16_t id = subChildNode.attribute("id").as_ushort();
+					uint16_t id = materialClientId(subChildNode.attribute("id").as_ushort());
 					if (id == 0) {
 						warnings.push_back("Could not read id tag of item node\n");
 						continue;
@@ -141,7 +142,7 @@ bool WallBrushLoader::load(WallBrush* brush, WallBrushItems& items, pugi::xml_no
 					items.addWallItem(alignment, id, chance);
 
 				} else if (std::ranges::equal(subChildName, std::string_view("door"), iequal)) {
-					uint16_t id = subChildNode.attribute("id").as_ushort();
+					uint16_t id = materialClientId(subChildNode.attribute("id").as_ushort());
 					if (id == 0) {
 						warnings.push_back("Could not read id tag of door node\n");
 						continue;

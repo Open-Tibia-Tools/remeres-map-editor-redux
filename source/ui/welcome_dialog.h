@@ -24,6 +24,7 @@ public:
 
 	std::optional<StartupLoadRequest> ConsumePendingLoadRequest();
 	void RefreshConfiguredClients();
+	[[nodiscard]] ClientVersion* selectedClient() const;
 
 private:
 	void BuildInterface(const wxString& title_text, const wxString& version_text, const wxBitmap& rme_logo);

@@ -14,6 +14,10 @@
 #include "ui/theme.h"
 #include "brushes/raw/raw_brush.h"
 #include "brushes/creature/creature_brush.h"
+#include "brushes/spawn/spawn_brush.h"
+#include "brushes/waypoint/waypoint_brush.h"
+#include "brushes/house/house_exit_brush.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include "game/creatures.h"
 #include "ui/find_item_window_model.h"
 
@@ -337,30 +341,35 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 	// Draw brush sprite
 	Brush* brush = (i < static_cast<int>(m_display_brushes.size())) ? m_display_brushes[i] : nullptr;
 	if (brush) {
-		int tex = 0;
-		if (Sprite* spr = brush->getSprite()) {
-			tex = GetOrCreateSpriteTexture(vg, spr);
-		} else {
-			int look_id = brush->getLookID();
-			if (look_id < 0) {
-				tex = GetOrCreateEditorIconTexture(vg, look_id);
-			} else if (look_id > 0) {
-				spr = g_gui.gfx.getSprite(look_id);
-				tex = spr ? GetOrCreateSpriteTexture(vg, spr) : 0;
-			}
-		}
 		int iconSize = (display_mode == DisplayMode::List) ? GRID_ITEM_SIZE_BASE : (item_size - 2 * ICON_OFFSET);
 		int iconX = (display_mode == DisplayMode::List) ? (rect.x + ICON_OFFSET) : (rect.x + (rect.width - iconSize) / 2);
 		int iconY = rect.y + ICON_OFFSET;
 
-		if (tex > 0) {
-			NVGpaint imgPaint = nvgImagePattern(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 0.0f, tex, 1.0f);
-
-			nvgBeginPath(vg);
-			nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
-			nvgFillPaint(vg, imgPaint);
-			nvgFill(vg);
+		const auto indType = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(brush);
+		if (indType != rme::rendering::TileIndicatorType::None) {
+			rme::rendering::DrawNanoVGIndicatorBadge(vg, indType, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize));
 		} else {
+			int tex = 0;
+			if (Sprite* spr = brush->getSprite()) {
+				tex = GetOrCreateSpriteTexture(vg, spr);
+			} else {
+				int look_id = brush->getLookID();
+				if (look_id < 0) {
+					tex = GetOrCreateEditorIconTexture(vg, look_id);
+				} else if (look_id > 0) {
+					spr = g_gui.gfx.getSprite(look_id);
+					tex = spr ? GetOrCreateSpriteTexture(vg, spr) : 0;
+				}
+			}
+
+			if (tex > 0) {
+				NVGpaint imgPaint = nvgImagePattern(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 0.0f, tex, 1.0f);
+
+				nvgBeginPath(vg);
+				nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
+				nvgFillPaint(vg, imgPaint);
+				nvgFill(vg);
+			} else {
 			// Placeholder box for entries without sprite (e.g. completely transparent tile or missing sprite)
 			const wxColour textCol = Theme::Get(Theme::Role::Text);
 			nvgBeginPath(vg);
@@ -377,6 +386,7 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 			nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 120));
 			nvgText(vg, iconX + iconSize / 2.0f, iconY + iconSize / 2.0f, "?", nullptr);
 		}
+	}
 
 		if (display_mode == DisplayMode::List) {
 			nvgFontSize(vg, 14.0f);

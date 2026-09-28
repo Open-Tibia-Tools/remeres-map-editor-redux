@@ -62,9 +62,16 @@ public:
 	void draw(float x, float y, float w, float h, const AtlasRegion& region);
 
 	/**
-	 * Queue a sprite with tint.
+	 * Queue a sprite with tint, optional house ID, and optional zone flags.
 	 */
-	void draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a);
+	void draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id = 0.0f, float zone_flags = 0.0f);
+
+	/**
+	 * Access the underlying shader program for domain-specific uniform configuration.
+	 */
+	[[nodiscard]] ShaderProgram* getShader() const {
+		return shader_.get();
+	}
 
 	/**
 	 * Draw a solid rectangle using the white pixel from the atlas.
@@ -125,6 +132,7 @@ private:
 	std::optional<ScopedGLBlend> blend_func_;
 
 	bool in_batch_ = false;
+	bool ready_ = false;
 	bool use_mdi_ = false;
 
 	int draw_call_count_ = 0;

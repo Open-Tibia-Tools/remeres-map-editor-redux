@@ -22,6 +22,7 @@ struct AssetLoadRequest {
 	// Preferred modular XML inputs. xmlInputPaths() uses these first and xml_path can be removed after migration.
 	std::vector<wxFileName> xml_paths;
 	ClientVersion* client_version = nullptr;
+	wxFileName ron_path;
 };
 
 struct AssetBundle {

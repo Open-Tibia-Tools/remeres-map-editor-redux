@@ -471,7 +471,11 @@ void NanoVGCanvas::UpdateScrollbar(int contentHeight) {
 	int h = GetClientSize().y;
 	int maxScroll = std::max(0, contentHeight - h);
 	m_scrollPos = std::clamp(m_scrollPos, 0, maxScroll);
-	SetScrollbar(wxVERTICAL, m_scrollPos, h, contentHeight);
+	// wxGLCanvas children created without wxVSCROLL have no scrollbar widget.
+	// SetScrollbar asserts on wxGTK and that assert aborts map-window layout.
+	if (HasFlag(wxVSCROLL)) {
+		SetScrollbar(wxVERTICAL, m_scrollPos, std::max(1, h), std::max(1, contentHeight));
+	}
 }
 
 int NanoVGCanvas::GetOrCreateImage(uint64_t id, const uint8_t* data, int width, int height) {

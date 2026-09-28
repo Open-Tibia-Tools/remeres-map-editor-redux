@@ -91,16 +91,27 @@ wxBitmapBundle ImageManager::GetBitmapBundle(std::string_view assetPath, const w
 	return bundle;
 }
 
+namespace {
+
+wxBitmap FallbackBitmap(const wxSize& size) {
+	const int width = size.GetWidth() > 0 ? size.GetWidth() : 16;
+	const int height = size.GetHeight() > 0 ? size.GetHeight() : 16;
+	return wxBitmap(width, height);
+}
+
+} // namespace
+
 wxBitmap ImageManager::GetBitmap(std::string_view assetPath, const wxSize& size, const wxColour& tint) {
 	wxBitmapBundle bundle = GetBitmapBundle(assetPath);
 	if (!bundle.IsOk()) {
-		return wxNullBitmap;
+		return FallbackBitmap(size);
 	}
 
 	wxSize actualSize = size == wxDefaultSize ? bundle.GetDefaultSize() : size;
 
 	if (!tint.IsOk()) {
-		return bundle.GetBitmap(actualSize);
+		wxBitmap bitmap = bundle.GetBitmap(actualSize);
+		return bitmap.IsOk() ? bitmap : FallbackBitmap(actualSize);
 	}
 
 	// For tinted bitmaps, use separate cache
@@ -110,15 +121,21 @@ wxBitmap ImageManager::GetBitmap(std::string_view assetPath, const wxSize& size,
 		return it->second;
 	}
 
-	wxImage img = bundle.GetBitmap(actualSize).ConvertToImage();
+	wxBitmap source = bundle.GetBitmap(actualSize);
+	if (!source.IsOk()) {
+		return FallbackBitmap(actualSize);
+	}
+	wxImage img = source.ConvertToImage();
 	if (img.IsOk()) {
 		img = TintImage(img, tint);
 		wxBitmap tintedBmp(img);
-		m_tintedBitmapCache[cacheKey] = tintedBmp;
-		return tintedBmp;
+		if (tintedBmp.IsOk()) {
+			m_tintedBitmapCache[cacheKey] = tintedBmp;
+			return tintedBmp;
+		}
 	}
 
-	return wxNullBitmap;
+	return FallbackBitmap(actualSize);
 }
 
 wxIconBundle ImageManager::GetIconBundle(std::string_view assetPath, const wxColour& tint) {

@@ -9,6 +9,7 @@
 // actually we just pass DoodadBrush*
 #include "game/item.h"
 #include "item_definitions/core/item_definition_store.h"
+#include "game/material_server_ids.h"
 #include "map/tile.h"
 
 #include "ext/pugixml.hpp"
@@ -33,7 +34,7 @@ bool DoodadBrushLoader::load(pugi::xml_node node, DoodadBrushItems& items, Dooda
 	}
 
 	if ((attribute = node.attribute("server_lookid"))) {
-		if (const auto definition = g_item_definitions.get(attribute.as_ushort())) {
+		if (const auto definition = g_item_definitions.get(materialClientId(attribute.as_ushort()))) {
 			if (definition.clientId() != 0) {
 				settings.look_id = definition.clientId();
 			} else {

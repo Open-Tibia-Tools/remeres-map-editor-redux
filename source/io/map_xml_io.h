@@ -17,6 +17,11 @@ class wxFileName;
  */
 class MapXMLIO {
 public:
+	// When set, spawn XML offsets are kept for save, and creatures are placed
+	// on a free tile inside the zone (radius search). Unset uses the file offsets.
+	static void setSpreadRandomizedSpawns(bool enabled);
+	[[nodiscard]] static bool spreadRandomizedSpawns();
+
 	// Spawns
 	static bool loadSpawns(Map& map, const wxFileName& dir);
 	static bool loadSpawns(Map& map, pugi::xml_document& doc);

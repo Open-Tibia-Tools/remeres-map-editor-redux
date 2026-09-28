@@ -12,6 +12,7 @@ enum class ItemDefinitionSourceKind : uint8_t {
 	Xml,
 	Srv,
 	Protobuf,
+	Ron,
 };
 
 struct ItemDefinitionRecipe {

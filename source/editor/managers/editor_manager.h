@@ -6,6 +6,7 @@
 #define RME_EDITOR_MANAGER_H_
 
 #include "app/main.h"
+#include "app/client_version.h"
 #include "editor/persistence/map_load_options.h"
 
 class Map;
@@ -37,7 +38,7 @@ public:
 	int GetOpenMapCount();
 	bool ShouldSave();
 	void SaveCurrentMap(FileName filename, bool showdialog);
-	bool NewMap();
+	bool NewMap(ClientVersionID preferred = {});
 	void OpenMap();
 	void SaveMap();
 	void SaveMapAs();

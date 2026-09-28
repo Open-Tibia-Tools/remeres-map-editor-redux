@@ -6,6 +6,7 @@
 #include "brushes/brush_enums.h"
 #include "brushes/ground/ground_brush.h"
 #include "item_definitions/core/item_definition_store.h"
+#include "game/material_server_ids.h"
 #include "ext/pugixml.hpp"
 #include <wx/string.h>
 #include <utility>
@@ -60,7 +61,7 @@ bool AutoBorder::load(pugi::xml_node node, std::vector<std::string>& warnings, G
 			continue;
 		}
 
-		uint16_t itemid = attribute.as_ushort();
+		uint16_t itemid = materialClientId(attribute.as_ushort());
 		if (!(attribute = childNode.attribute("edge"))) {
 			continue;
 		}

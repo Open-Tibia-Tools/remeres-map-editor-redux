@@ -2,6 +2,7 @@
 #include "util/nvg_utils.h"
 #include "util/common.h"
 #include "item_definitions/core/item_definition_store.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include "ui/theme.h"
 #include <algorithm>
 #include <format>
@@ -249,28 +250,38 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 
 		// Draw Item Icon (Fixed 32x32 size for consistency)
 		uint16_t id = GetItem(i);
-		int tex = GetOrCreateItemTexture(vg, id);
-		if (tex > 0) {
-			// Fixed 32x32 rendering area
-			float iconSize = 32.0f;
-			int tw, th;
-			nvgImageSize(vg, tex, &tw, &th);
+		const auto definition = g_item_definitions.get(id);
+		const uint16_t cid = definition ? definition.clientId() : 0;
+		const auto tech = rme::rendering::TechnicalItemRegistry::Classify(id, cid);
+		if (tech != rme::rendering::TileIndicatorType::None) {
+			const float iconSize = 32.0f;
+			const float bx = x + (w - iconSize) / 2.0f;
+			const float by = y + 8.0f;
+			rme::rendering::DrawNanoVGIndicatorBadge(vg, tech, bx, by, iconSize);
+		} else {
+			int tex = GetOrCreateItemTexture(vg, id);
+			if (tex > 0) {
+				// Fixed 32x32 rendering area
+				float iconSize = 32.0f;
+				int tw, th;
+				nvgImageSize(vg, tex, &tw, &th);
 
-			float scale = iconSize / std::max(tw, th);
-			if (scale > 1.0f && std::max(tw, th) >= 32) {
-				scale = 1.0f;
+				float scale = iconSize / std::max(tw, th);
+				if (scale > 1.0f && std::max(tw, th) >= 32) {
+					scale = 1.0f;
+				}
+
+				float dw = tw * scale;
+				float dh = th * scale;
+				float dx = x + (w - dw) / 2.0f;
+				float dy = y + 8.0f; // Top padding
+
+				NVGpaint imgPaint = nvgImagePattern(vg, dx, dy, dw, dh, 0.0f, tex, 1.0f);
+				nvgBeginPath(vg);
+				nvgRect(vg, dx, dy, dw, dh);
+				nvgFillPaint(vg, imgPaint);
+				nvgFill(vg);
 			}
-
-			float dw = tw * scale;
-			float dh = th * scale;
-			float dx = x + (w - dw) / 2.0f;
-			float dy = y + 8.0f; // Top padding
-
-			NVGpaint imgPaint = nvgImagePattern(vg, dx, dy, dw, dh, 0.0f, tex, 1.0f);
-			nvgBeginPath(vg);
-			nvgRect(vg, dx, dy, dw, dh);
-			nvgFillPaint(vg, imgPaint);
-			nvgFill(vg);
 		}
 
 		// Draw Text (2 Lines)

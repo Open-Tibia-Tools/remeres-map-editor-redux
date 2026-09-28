@@ -2,7 +2,10 @@
 #include "ui/gui.h"
 #include "ui/welcome_dialog.h"
 #include "ui/main_menubar.h"
+#include "ui/dialog_util.h"
 #include "app/main.h"
+#include "app/client_version.h"
+#include "app/managers/version_manager.h"
 
 WelcomeManager g_welcome;
 
@@ -43,7 +46,17 @@ void WelcomeManager::OnWelcomeDialogClosed(wxCloseEvent& event) {
 
 void WelcomeManager::OnWelcomeDialogAction(wxCommandEvent& event) {
 	if (event.GetId() == wxID_NEW) {
-		g_gui.NewMap();
+		ClientVersionID preferred;
+		if (welcomeDialog != nullptr) {
+			ClientVersion* client = welcomeDialog->selectedClient();
+			if (client == nullptr) {
+				client = ClientVersion::getLatestVersion();
+			}
+			if (client != nullptr) {
+				preferred = client->getID();
+			}
+		}
+		g_gui.NewMap(preferred);
 	} else if (event.GetId() == wxID_OPEN) {
 		if (welcomeDialog != nullptr) {
 			if (auto load_request = welcomeDialog->ConsumePendingLoadRequest()) {

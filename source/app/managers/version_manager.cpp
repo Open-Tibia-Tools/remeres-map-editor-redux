@@ -18,6 +18,7 @@
 #include "ui/tool_options_window.h"
 #include "item_definitions/core/asset_bundle_loader.h"
 #include "item_definitions/core/item_definition_store.h"
+#include "game/material_server_ids.h"
 #include "app/settings.h"
 
 #include <format>
@@ -105,6 +106,48 @@ bool VersionManager::LoadVersion(ClientVersionID version, wxString& error, std::
 	return true;
 }
 
+bool VersionManager::setStartupCatalog(ClientVersion* client, bool use_items_ron, wxString& error, std::vector<std::string>& warnings) {
+	if (client == nullptr) {
+		return true;
+	}
+
+	const ItemDefinitionMode configured = client->getItemDefinitionMode();
+	if (configured != ItemDefinitionMode::DatOtb && configured != ItemDefinitionMode::DatRon) {
+		return true;
+	}
+
+	const ItemDefinitionMode wanted = use_items_ron ? ItemDefinitionMode::DatRon : ItemDefinitionMode::DatOtb;
+	const bool override_applies = catalog_override.has_value() && catalog_override_version == client->getID();
+	const ItemDefinitionMode previous = override_applies ? *catalog_override : configured;
+	const auto saved_override = catalog_override;
+	const auto saved_override_version = catalog_override_version;
+	catalog_override = wanted;
+	catalog_override_version = client->getID();
+	if (getLoadedVersion() != client || previous == wanted) {
+		return true;
+	}
+
+	if (g_gui.tabbook && !g_gui.CloseAllEditors()) {
+		catalog_override = saved_override;
+		catalog_override_version = saved_override_version;
+		error = "Changing the item catalog requires closing all open maps.";
+		return false;
+	}
+
+	return LoadVersion(client->getID(), error, warnings, true);
+}
+
+ItemDefinitionMode VersionManager::activeItemDefinitionMode() const {
+	const ClientVersion* loaded = getLoadedVersion();
+	if (loaded == nullptr) {
+		return ItemDefinitionMode::DatOtb;
+	}
+	if (catalog_override.has_value() && catalog_override_version == loaded->getID()) {
+		return *catalog_override;
+	}
+	return loaded->getItemDefinitionMode();
+}
+
 ClientVersionID VersionManager::GetCurrentVersionID() const {
 	if (!loaded_version.empty()) {
 		return getLoadedVersion()->getID();
@@ -142,6 +185,16 @@ bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& wa
 		return false;
 	}
 
+	if (activeItemDefinitionMode() == ItemDefinitionMode::DatRon) {
+		if (!loadMaterialServerIds(wxFileName(modular_data_path + "items.otb"), warnings)) {
+			error = warnings.empty() ? wxString("items.otb is required to translate brush and tileset ids for items.ron.") : wxString::FromUTF8(warnings.back());
+			FailDataLoad();
+			return false;
+		}
+	} else {
+		clearMaterialServerIds();
+	}
+
 	if (!LoadCreatureFiles(manifest_files, error, warnings)) {
 		return false;
 	}
@@ -164,6 +217,7 @@ wxString VersionManager::GetModularDataPath() const {
 void VersionManager::FailDataLoad() {
 	last_missing_items = {};
 	last_load_has_otb = false;
+	clearMaterialServerIds();
 	g_loading.DestroyLoadBar();
 	UnloadVersion();
 }
@@ -178,15 +232,18 @@ bool VersionManager::LoadMaterialManifest(const FileName& materials_manifest, Ma
 
 bool VersionManager::LoadCanonicalAssets(const wxString& modular_data_path, const MaterialManifestFiles& manifest_files, wxString& error, std::vector<std::string>& warnings) {
 	AssetLoadRequest asset_request;
-	asset_request.mode = getLoadedVersion()->getItemDefinitionMode();
+	asset_request.mode = activeItemDefinitionMode();
 	asset_request.client_version = getLoadedVersion();
 	asset_request.dat_path = getLoadedVersion()->getMetadataPath();
 	asset_request.spr_path = getLoadedVersion()->getSpritesPath();
 	asset_request.otb_path = wxFileName(modular_data_path + "items.otb");
-	asset_request.xml_paths.assign(manifest_files.items.begin(), manifest_files.items.end());
+	asset_request.ron_path = wxFileName(modular_data_path + "items.ron");
+	if (asset_request.mode != ItemDefinitionMode::DatRon) {
+		asset_request.xml_paths.assign(manifest_files.items.begin(), manifest_files.items.end());
+	}
 
-	// Track whether this mode uses OTB
-	last_load_has_otb = (asset_request.mode != ItemDefinitionMode::DatOnly && asset_request.mode != ItemDefinitionMode::ProtobufOnly);
+	// Track whether this mode uses OTB as the item catalog
+	last_load_has_otb = asset_request.mode == ItemDefinitionMode::DatOtb || asset_request.mode == ItemDefinitionMode::ProtobufOtb;
 
 	AssetBundle bundle;
 	AssetBundleLoader bundle_loader;
@@ -230,7 +287,8 @@ void VersionManager::AppendMissingItemWarnings(std::vector<std::string>& warning
 		appendServerClientMissingItems(warnings, "Items missing from tibia.dat", last_missing_items.missing_in_dat);
 	}
 	if (!last_missing_items.missing_in_otb.empty()) {
-		const std::string missing_in_otb_label = last_load_has_otb ? "tibia.dat items not in items.otb" : "tibia.dat items not referenced by items.xml";
+		const ItemDefinitionMode mode = loaded_version.empty() ? ItemDefinitionMode::DatOtb : activeItemDefinitionMode();
+		const std::string missing_in_otb_label = mode == ItemDefinitionMode::DatRon ? "tibia.dat items not in items.ron" : last_load_has_otb ? "tibia.dat items not in items.otb" : "tibia.dat items not referenced by items.xml";
 		appendClientMissingItems(warnings, missing_in_otb_label, last_missing_items.missing_in_otb);
 	}
 	if (!last_missing_items.xml_no_otb.empty()) {
@@ -270,6 +328,7 @@ void VersionManager::UnloadVersion() {
 		g_gui.tool_options->Clear();
 	}
 	g_brush_manager.Clear();
+	clearMaterialServerIds();
 
 	if (!loaded_version.empty()) {
 		g_materials.clear();

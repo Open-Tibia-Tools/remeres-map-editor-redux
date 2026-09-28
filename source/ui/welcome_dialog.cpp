@@ -83,6 +83,10 @@ WelcomeDialog::WelcomeDialog(const wxString& title_text, const wxString& version
 	Centre();
 }
 
+ClientVersion* WelcomeDialog::selectedClient() const {
+	return GetSelectedClient();
+}
+
 std::optional<StartupLoadRequest> WelcomeDialog::ConsumePendingLoadRequest() {
 	auto request = m_pending_load_request;
 	m_pending_load_request.reset();

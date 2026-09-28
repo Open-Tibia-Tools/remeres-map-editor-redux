@@ -12,7 +12,7 @@ class LiveClient;
 class EditorFactory {
 public:
 	// Creates a new empty map, may prompt for version if not set
-	static std::unique_ptr<Editor> CreateEmpty(CopyBuffer& copybuffer);
+	static std::unique_ptr<Editor> CreateEmpty(CopyBuffer& copybuffer, ClientVersionID preferred = {});
 
 	// Loads a map from file, handles version checking/switching
 	static std::unique_ptr<Editor> LoadFromFile(CopyBuffer& copybuffer, const FileName& fn, const MapLoadOptions& load_options = {});

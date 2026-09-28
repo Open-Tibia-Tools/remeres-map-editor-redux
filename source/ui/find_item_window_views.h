@@ -84,6 +84,7 @@ private:
 	void drawGridCard(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row, bool selected, bool hovered) const;
 	void drawGridHoverInfo(NVGcontext* vg, int width, int height, int scroll_pos) const;
 	void drawSpriteBadge(NVGcontext* vg, const wxRect& rect, Sprite* sprite) const;
+	void drawRowBadge(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row) const;
 
 	EmptyState empty_state_ = EmptyState::Prompt;
 	std::string primary_message_;
