@@ -17,7 +17,7 @@
 namespace {
 
 	template <class Handle, class... Args>
-	void writeSampleMap(Args&&... args) {
+	void writeSampleMap(const std::string& description, Args&&... args) {
 		Handle f(std::forward<Args>(args)...);
 		assert(f.isOk());
 		f.addNode(0);
@@ -27,8 +27,10 @@ namespace {
 		f.addU32(3);
 		f.addU32(57);
 		f.addNode(2); // OTBM_MAP_DATA
-		f.addU8(1); // OTBM_ATTR_DESCRIPTION, contains bytes that need escaping
-		f.addString(std::string("desc \xFE\xFD\xFF end"));
+		f.addU8(1); // OTBM_ATTR_DESCRIPTION
+		f.addString(description);
+		f.addU8(11); // OTBM_ATTR_EXT_SPAWN_FILE
+		f.addString("spawn.xml");
 		for (int i = 0; i < 200000; ++i) {
 			f.addNode(4);
 			f.addU32(static_cast<uint32_t>(i));
@@ -48,8 +50,9 @@ int main() {
 	const auto plain = dir / "plain.otbm";
 	const auto packed = dir / L"packed_\u00f1.otbm";
 
-	writeSampleMap<DiskNodeFileWriteHandle>(plain.string(), std::string(4, '\0'));
-	writeSampleMap<GzipNodeFileWriteHandle>(packed, std::string(4, '\0'));
+	const std::string escaped_description("desc \xFE\xFD\xFF end");
+	writeSampleMap<DiskNodeFileWriteHandle>(escaped_description, plain.string(), std::string(4, '\0'));
+	writeSampleMap<GzipNodeFileWriteHandle>(escaped_description, packed, std::string(4, '\0'));
 
 	assert(!OTBMFileReader::isGzipFile(plain));
 	assert(OTBMFileReader::isGzipFile(packed));
@@ -76,7 +79,24 @@ int main() {
 	std::string description;
 	assert(map_data && map_data->getByte(type) && type == 2);
 	assert(map_data->getU8(type) && type == 1 && map_data->getString(description));
-	assert(description == std::string("desc \xFE\xFD\xFF end"));
+	assert(description == escaped_description);
+
+	// A max-length description of escaped bytes doubles on disk and overflows the 64 KiB
+	// header probe; the truncation must be reported so iomap_otbm retries with more bytes.
+	const auto long_map = dir / "long_description.otbm";
+	writeSampleMap<GzipNodeFileWriteHandle>(std::string(65535, '\xFE'), long_map, std::string(4, '\0'));
+	const auto readHeader = [&](size_t limit, std::string& spawn) {
+		const auto bytes = OTBMFileReader::readMapBytes(long_map, limit);
+		MemoryNodeFileReadHandle f(bytes->data() + 4, bytes->size() - 4);
+		BinaryNode* node = f.getRootNode()->getChild();
+		std::string text;
+		uint8_t attr = 0;
+		const bool ok = node->getByte(attr) && node->getU8(attr) && node->getString(text) && node->getU8(attr) && node->getString(spawn);
+		return std::pair { ok, f.error_code };
+	};
+	std::string spawn;
+	assert(readHeader(64 * 1024, spawn) == std::pair(false, FILE_PREMATURE_END));
+	assert(readHeader(256 * 1024, spawn) == std::pair(true, FILE_NO_ERROR) && spawn == "spawn.xml");
 
 	std::vector<uint8_t> corrupt = *OTBMFileReader::readMapBytes(plain, 16);
 	corrupt[0] = 'X';

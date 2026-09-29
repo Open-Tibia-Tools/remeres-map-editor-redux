@@ -85,29 +85,34 @@ bool Container::serializeItemNode_OTBM(const IOMap& maphandle, NodeFileWriteHand
 /* Entry level calls */
 
 namespace {
-	// Map header attributes (version, size, XML file names) sit well within this prefix.
+	// Initial prefix for header probes; grown when the header node does not fit
+	// (escaped descriptions can take up to ~128 KiB).
 	constexpr size_t kHeaderPeekBytes = 64 * 1024;
 
 	std::filesystem::path toPath(const FileName& filename) {
 		return std::filesystem::path(filename.GetFullPath().ToStdWstring());
 	}
 
-	std::optional<std::vector<uint8_t>> readHeaderBytes(const FileName& filename) {
-		auto bytes = OTBMFileReader::readMapBytes(toPath(filename), kHeaderPeekBytes);
-		if (!bytes || !OTBMFileReader::hasValidOtbmPrefix(*bytes)) {
-			return std::nullopt;
+	// Runs parse on a decompressed prefix; nullopt when the file is unreadable or not OTBM.
+	template <typename Parse>
+	std::optional<bool> parseHeaderPrefix(const FileName& filename, Parse&& parse) {
+		const auto path = toPath(filename);
+		for (size_t limit = kHeaderPeekBytes;; limit *= 4) {
+			const auto bytes = OTBMFileReader::readMapBytes(path, limit);
+			if (!bytes || !OTBMFileReader::hasValidOtbmPrefix(*bytes)) {
+				return std::nullopt;
+			}
+			MemoryNodeFileReadHandle handle(bytes->data() + 4, bytes->size() - 4);
+			const bool ok = parse(handle);
+			if (bytes->size() < limit || handle.error_code != FILE_PREMATURE_END) {
+				return ok;
+			}
 		}
-		return bytes;
 	}
 }
 
 bool IOMapOTBM::getVersionInfo(const FileName& filename, MapVersion& out_ver) {
-	const auto bytes = readHeaderBytes(filename);
-	if (!bytes) {
-		return false;
-	}
-	MemoryNodeFileReadHandle f(bytes->data() + 4, bytes->size() - 4);
-	return getVersionInfo(&f, out_ver);
+	return parseHeaderPrefix(filename, [&](NodeFileReadHandle& f) { return getVersionInfo(&f, out_ver); }).value_or(false);
 }
 
 bool IOMapOTBM::getVersionInfo(NodeFileReadHandle* f, MapVersion& out_ver) {
@@ -123,15 +128,14 @@ bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResul
 		out_info.modified_time = modified_time;
 	}
 
-	const auto bytes = readHeaderBytes(identifier);
-	if (!bytes) {
+	const auto parsed = parseHeaderPrefix(identifier, [&](NodeFileReadHandle& f) { return HeaderSerializationOTBM::peekStartupInfo(f, out_info); });
+	if (!parsed) {
 		out_info.has_error = true;
 		out_info.error_message = "Could not open the file or file magic number not recognized.";
 		return false;
 	}
 
-	MemoryNodeFileReadHandle handle(bytes->data() + 4, bytes->size() - 4);
-	if (!HeaderSerializationOTBM::peekStartupInfo(handle, out_info)) {
+	if (!*parsed) {
 		out_info.has_error = true;
 		out_info.error_message = "Could not read the OTBM header.";
 		return false;
