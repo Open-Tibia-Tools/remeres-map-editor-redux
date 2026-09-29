@@ -177,6 +177,7 @@ public:
 protected:
 	bool has_changed; // If the map has changed
 	bool unnamed; // If the map has yet to receive a name
+	bool compressed = false; // Loaded from a gzip-compressed OTBM, saved back the same way
 
 	friend class IOMapOTBM;
 	friend class Editor;

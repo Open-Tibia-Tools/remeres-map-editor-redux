@@ -18,10 +18,9 @@
 #include "app/main.h"
 
 #include <format>
-#include <fstream>
 #include <vector>
 #include <filesystem>
-#include <string_view>
+#include <optional>
 #include <spdlog/spdlog.h>
 
 #include "app/settings.h"
@@ -50,6 +49,7 @@
 #include "io/otbm/waypoint_serialization_otbm.h"
 #include "io/otbm/tile_serialization_otbm.h"
 #include "io/otbm/fast_otbm_reader.h"
+#include "io/otbm/otbm_file_reader.h"
 
 #include <thread>
 #include <atomic>
@@ -84,13 +84,35 @@ bool Container::serializeItemNode_OTBM(const IOMap& maphandle, NodeFileWriteHand
 
 /* Entry level calls */
 
-bool IOMapOTBM::getVersionInfo(const FileName& filename, MapVersion& out_ver) {
+namespace {
+	// Initial prefix for header probes; grown when the header node does not fit
+	// (escaped descriptions can take up to ~128 KiB).
+	constexpr size_t kHeaderPeekBytes = 64 * 1024;
 
-	DiskNodeFileReadHandle f(nstr(filename.GetFullPath()), StringVector(1, "OTBM"));
-	if (!f.isOk()) {
-		return false;
+	std::filesystem::path toPath(const FileName& filename) {
+		return std::filesystem::path(filename.GetFullPath().ToStdWstring());
 	}
-	return getVersionInfo(&f, out_ver);
+
+	// Runs parse on a decompressed prefix; nullopt when the file is unreadable or not OTBM.
+	template <typename Parse>
+	std::optional<bool> parseHeaderPrefix(const FileName& filename, Parse&& parse) {
+		const auto path = toPath(filename);
+		for (size_t limit = kHeaderPeekBytes;; limit *= 4) {
+			const auto bytes = OTBMFileReader::readMapBytes(path, limit);
+			if (!bytes || !OTBMFileReader::hasValidOtbmPrefix(*bytes)) {
+				return std::nullopt;
+			}
+			MemoryNodeFileReadHandle handle(bytes->data() + 4, bytes->size() - 4);
+			const bool ok = parse(handle);
+			if (bytes->size() < limit || handle.error_code != FILE_PREMATURE_END) {
+				return ok;
+			}
+		}
+	}
+}
+
+bool IOMapOTBM::getVersionInfo(const FileName& filename, MapVersion& out_ver) {
+	return parseHeaderPrefix(filename, [&](NodeFileReadHandle& f) { return getVersionInfo(&f, out_ver); }).value_or(false);
 }
 
 bool IOMapOTBM::getVersionInfo(NodeFileReadHandle* f, MapVersion& out_ver) {
@@ -106,14 +128,14 @@ bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResul
 		out_info.modified_time = modified_time;
 	}
 
-	DiskNodeFileReadHandle handle(nstr(identifier.GetFullPath()), StringVector(1, "OTBM"));
-	if (!handle.isOk()) {
+	const auto parsed = parseHeaderPrefix(identifier, [&](NodeFileReadHandle& f) { return HeaderSerializationOTBM::peekStartupInfo(f, out_info); });
+	if (!parsed) {
 		out_info.has_error = true;
-		out_info.error_message = wxstr(handle.getErrorMessage());
+		out_info.error_message = "Could not open the file or file magic number not recognized.";
 		return false;
 	}
 
-	if (!HeaderSerializationOTBM::peekStartupInfo(handle, out_info)) {
+	if (!*parsed) {
 		out_info.has_error = true;
 		out_info.error_message = "Could not read the OTBM header.";
 		return false;
@@ -124,39 +146,25 @@ bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResul
 
 bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	spdlog::debug("Loading OTBM map from disk: {}", filename.GetFullPath().ToStdString());
-	std::filesystem::path path(nstr(filename.GetFullPath()));
+	const auto path = toPath(filename);
 
-	std::error_code ec;
-	const auto size = std::filesystem::file_size(path, ec);
-	if (ec) {
-		spdlog::error("Couldn't get file size: {} ({})", path.string(), ec.message());
+	map.compressed = OTBMFileReader::isGzipFile(path);
+	if (map.compressed) {
+		g_gui.SetLoadDone(0, "Decompressing map...");
+	}
+
+	const auto buffer = OTBMFileReader::readMapBytes(path);
+	if (!buffer) {
+		spdlog::error("Couldn't read{} map file: {}", map.compressed ? " compressed" : "", filename.GetFullPath().ToStdString());
 		return false;
 	}
 
-	if (size < 4) {
-		spdlog::error("File is too short to be an OTBM file.");
-		return false;
-	}
-
-	std::ifstream file(path, std::ios::binary);
-	if (!file.is_open()) {
-		spdlog::error("Couldn't open file for reading: {}", filename.GetFullPath().ToStdString());
-		return false;
-	}
-
-	std::vector<uint8_t> buffer(static_cast<size_t>(size));
-	if (!file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(size))) {
-		spdlog::error("Failed to read file.");
-		return false;
-	}
-
-	std::string_view magic(reinterpret_cast<const char*>(buffer.data()), 4);
-	if (magic != "OTBM" && magic != std::string_view("\0\0\0\0", 4)) {
+	if (!OTBMFileReader::hasValidOtbmPrefix(*buffer)) {
 		spdlog::error("File magic number not recognized");
 		return false;
 	}
 
-	if (!loadMapFast(map, buffer.data() + 4, size - 4)) {
+	if (!loadMapFast(map, buffer->data() + 4, buffer->size() - 4)) {
 		spdlog::error("Failed to load OTBM map: {}", filename.GetFullPath().ToStdString());
 		return false;
 	}
@@ -589,18 +597,30 @@ bool IOMapOTBM::loadMap(Map& map, const FileName& filename) {
 }
 
 bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
-	DiskNodeFileWriteHandle f(
-		nstr(identifier.GetFullPath()),
-		(g_settings.getInteger(Config::SAVE_WITH_OTB_MAGIC_NUMBER) ? "OTBM" : std::string(4, '\0'))
-	);
+	const std::string magic = g_settings.getInteger(Config::SAVE_WITH_OTB_MAGIC_NUMBER) ? "OTBM" : std::string(4, '\0');
 
-	if (!f.isOk()) {
+	std::unique_ptr<NodeFileWriteHandle> f;
+	if (map.compressed) {
+		f = std::make_unique<GzipNodeFileWriteHandle>(toPath(identifier), magic);
+	} else {
+		f = std::make_unique<DiskNodeFileWriteHandle>(nstr(identifier.GetFullPath()), magic);
+	}
+
+	if (!f->isOk()) {
 		spdlog::error("Can not open file {} for writing", identifier.GetFullPath().ToStdString());
 		return false;
 	}
 
-	if (!saveMap(map, f)) {
+	if (!saveMap(map, *f)) {
 		return false;
+	}
+
+	if (map.compressed) {
+		f->close();
+		if (!f->isOk()) {
+			spdlog::error("Failed to write compressed map {}: {}", identifier.GetFullPath().ToStdString(), f->getErrorMessage());
+			return false;
+		}
 	}
 
 	g_gui.SetLoadDone(99, "Saving spawns...");
