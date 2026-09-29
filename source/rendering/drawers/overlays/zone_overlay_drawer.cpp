@@ -19,14 +19,22 @@ bool IsTilePathBlocking(const Tile* t) noexcept {
 	if (!t || !t->isBlocking() || (!t->ground && t->items.empty())) {
 		return false;
 	}
+
+	auto isInvisibleWall = [](uint32_t sid, uint32_t cid) noexcept -> bool {
+		if (sid == 1548 || cid == 2187) {
+			return true;
+		}
+		return TechnicalItemRegistry::Classify(sid, cid) == TileIndicatorType::TechInvisibleWall;
+	};
+
 	if (t->ground && t->ground->isBlocking()) {
-		if (TechnicalItemRegistry::Classify(t->ground->getID(), t->ground->getClientID()) != TileIndicatorType::TechInvisibleWall) {
+		if (!isInvisibleWall(t->ground->getID(), t->ground->getClientID())) {
 			return true;
 		}
 	}
 	for (const auto& item : t->items) {
 		if (item && item->isBlocking()) {
-			if (TechnicalItemRegistry::Classify(item->getID(), item->getClientID()) != TileIndicatorType::TechInvisibleWall) {
+			if (!isInvisibleWall(item->getID(), item->getClientID())) {
 				return true;
 			}
 		}
