@@ -22,42 +22,74 @@ void blendOverlayLayer(inout vec4 baseColor, inout bool hasOverlay, vec4 layerCo
     }
 }
 
-bool evaluateSpecialZones(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, out vec4 outLayer) {
-    vec4 zWash = vec4(0.0);
-    vec4 zBorder = vec4(0.0);
-    bool hasZone = false;
-
-    if ((flags & 4u) != 0u) {
-        // PZ: Golden yellow wash + border
-        hasZone = true;
-        zWash = vec4(0.95, 0.85, 0.10, 0.28);
-        zBorder = vec4(1.00, 0.90, 0.10, 0.95);
-    } else if ((flags & 8u) != 0u) {
-        // No-PvP: Vibrant emerald green wash + border
-        hasZone = true;
-        zWash = vec4(0.15, 0.90, 0.20, 0.28);
-        zBorder = vec4(0.20, 1.00, 0.30, 0.95);
-    } else if ((flags & 16u) != 0u) {
-        // No-Logout: Warm orange wash + border
-        hasZone = true;
-        zWash = vec4(1.00, 0.50, 0.05, 0.28);
-        zBorder = vec4(1.00, 0.55, 0.10, 0.95);
-    } else if ((flags & 32u) != 0u) {
-        // PvP Zone: Crimson red wash + border
-        hasZone = true;
-        zWash = vec4(0.85, 0.05, 0.25, 0.28);
-        zBorder = vec4(1.00, 0.15, 0.30, 0.95);
-    }
-
+bool evaluateSpecialZones(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, int lx, int ly, out vec4 outLayer) {
+    bool hasZone = ((flags & 60u) != 0u);
     if (!hasZone) {
         return false;
     }
 
+    // 1. Dedicated 4-corner micro-badges (High-contrast 2-tone with dark shadow)
+    // Top-Left: [PZ] (Yellow)
+    if ((flags & 4u) != 0u && lx >= 1 && lx <= 9 && ly >= 1 && ly <= 7) {
+        int r = ly - 2;
+        int c = lx - 2;
+        uint pzMask[5] = uint[5](0x77u, 0x51u, 0x72u, 0x44u, 0x47u);
+        bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((pzMask[r] >> (6 - c)) & 1u) != 0u);
+        outLayer = isText ? vec4(1.00, 0.90, 0.10, 0.98) : vec4(0.06, 0.06, 0.08, 0.92);
+        return true;
+    }
+
+    // Top-Right: [NP] (Emerald Green)
+    if ((flags & 8u) != 0u && lx >= 22 && lx <= 30 && ly >= 1 && ly <= 7) {
+        int r = ly - 2;
+        int c = lx - 23;
+        uint npMask[5] = uint[5](0x57u, 0x75u, 0x77u, 0x54u, 0x54u);
+        bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((npMask[r] >> (6 - c)) & 1u) != 0u);
+        outLayer = isText ? vec4(0.20, 1.00, 0.30, 0.98) : vec4(0.06, 0.06, 0.08, 0.92);
+        return true;
+    }
+
+    // Bottom-Left: [NL] (Warm Orange)
+    if ((flags & 16u) != 0u && lx >= 1 && lx <= 9 && ly >= 24 && ly <= 30) {
+        int r = ly - 25;
+        int c = lx - 2;
+        uint nlMask[5] = uint[5](0x54u, 0x74u, 0x74u, 0x54u, 0x57u);
+        bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((nlMask[r] >> (6 - c)) & 1u) != 0u);
+        outLayer = isText ? vec4(1.00, 0.55, 0.10, 0.98) : vec4(0.06, 0.06, 0.08, 0.92);
+        return true;
+    }
+
+    // Bottom-Right: [PvP] (Crimson Red)
+    if ((flags & 32u) != 0u && lx >= 18 && lx <= 30 && ly >= 24 && ly <= 30) {
+        int r = ly - 25;
+        int c = lx - 19;
+        uint pvpMask[5] = uint[5](0x707u, 0x505u, 0x757u, 0x454u, 0x424u);
+        bool isText = (r >= 0 && r < 5 && c >= 0 && c < 11) && (((pvpMask[r] >> (10 - c)) & 1u) != 0u);
+        outLayer = isText ? vec4(1.00, 0.15, 0.30, 0.98) : vec4(0.06, 0.06, 0.08, 0.92);
+        return true;
+    }
+
+    // 2. Zero-Fill Perimeter Contour Outer Borders
     bool isBorder = (bNorth && (flags & 1024u) != 0u) ||
                     (bSouth && (flags & 2048u) != 0u) ||
                     (bWest  && (flags & 4096u) != 0u) ||
                     (bEast  && (flags & 8192u) != 0u);
-    outLayer = isBorder ? zBorder : zWash;
+    if (!isBorder) {
+        return false;
+    }
+
+    vec4 zBorder = vec4(1.00, 0.90, 0.10, 0.95);
+    if ((flags & 4u) != 0u) {
+        zBorder = vec4(1.00, 0.90, 0.10, 0.95);
+    } else if ((flags & 8u) != 0u) {
+        zBorder = vec4(0.20, 1.00, 0.30, 0.95);
+    } else if ((flags & 16u) != 0u) {
+        zBorder = vec4(1.00, 0.55, 0.10, 0.95);
+    } else if ((flags & 32u) != 0u) {
+        zBorder = vec4(1.00, 0.15, 0.30, 0.95);
+    }
+
+    outLayer = zBorder;
     return true;
 }
 
@@ -65,13 +97,14 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
     if ((flags & 2u) == 0u) {
         return false;
     }
-    vec4 spawnWash = vec4(0.85, 0.15, 0.85, 0.25);
-    vec4 spawnBorder = vec4(1.00, 0.20, 1.00, 0.95);
     bool isBorder = (bNorth && (flags & 16384u) != 0u) ||
                     (bSouth && (flags & 32768u) != 0u) ||
                     (bWest  && (flags & 65536u) != 0u) ||
                     (bEast  && (flags & 131072u) != 0u);
-    outLayer = isBorder ? spawnBorder : spawnWash;
+    if (!isBorder) {
+        return false;
+    }
+    outLayer = vec4(1.00, 0.20, 1.00, 0.95);
     return true;
 }
 
@@ -83,7 +116,10 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
                     (bSouth && (flags & 128u) != 0u) ||
                     (bWest  && (flags & 256u) != 0u) ||
                     (bEast  && (flags & 512u) != 0u);
-    outLayer = isBorder ? vec4(0.00, 0.95, 1.00, 0.95) : vec4(0.40, 0.40, 0.40, 0.35);
+    if (!isBorder) {
+        return false;
+    }
+    outLayer = vec4(0.00, 0.95, 1.00, 0.95);
     return true;
 }
 
@@ -109,17 +145,17 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zon
     bool hasOverlay = false;
     vec4 layer;
 
-    // 1. Special Zones (showSpecialTiles)
-    if (showSpecialTiles != 0 && evaluateSpecialZones(flags, bNorth, bSouth, bWest, bEast, layer)) {
+    // 1. Special Zones (showSpecialTiles) with dedicated 4-corner micro-badges & perimeter contour
+    if (showSpecialTiles != 0 && evaluateSpecialZones(flags, bNorth, bSouth, bWest, bEast, lx, ly, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
-    // 2. Spawn Radius (showSpawns)
+    // 2. Spawn Radius (showSpawns) with perimeter contour only
     if (showSpawns != 0 && evaluateSpawnOverlay(flags, bNorth, bSouth, bWest, bEast, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
-    // 3. Pathing / Blocking (showBlocking)
+    // 3. Pathing / Blocking (showBlocking) with cyan perimeter contour only
     if (showBlocking != 0 && evaluateBlockingOverlay(flags, bNorth, bSouth, bWest, bEast, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }

@@ -27,17 +27,17 @@ void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint 
     ivec2 p = ivec2(floor(worldPos));
     bool isActive = (uHouseId == currentHouseId);
 
-    // Unified House Zone Hue Wash (ground and walls share the same background atmosphere)
-    vec4 zoneColor = isActive
-        ? vec4(0.20, 0.95, 0.20, 0.28)   // Active house: Vibrant Emerald Green
-        : vec4(1.00, 0.60, 0.00, 0.20);  // Inactive house: Warm Amber Orange
-
-    fragColor.rgb = mix(fragColor.rgb, zoneColor.rgb, zoneColor.a);
-
+    // Zero-Fill House Overlays: No background wash, floor sprites remain 100% natural and visible
     if (houseId < 0.0) {
-        // Base House Shader (ground): centered 'H' emblem (green for active, amber for inactive)
+        // Base House Shader (ground): corner brackets + centered 'H' emblem (zero background fill)
         int lx = p.x % 32; if (lx < 0) lx += 32;
         int ly = p.y % 32; if (ly < 0) ly += 32;
+
+        bool isCornerArm = (lx < 8 || lx >= 24) && (ly < 8 || ly >= 24);
+        bool isMidArm = (lx >= 13 && lx <= 18) || (ly >= 13 && ly <= 18);
+        bool isBorderEdge = (lx == 0 || lx == 31 || ly == 0 || ly == 31);
+        bool isBracket = isBorderEdge && (isCornerArm || isMidArm);
+
         int dx = abs(lx - 16);
         int dy = abs(ly - 16);
 
@@ -49,14 +49,19 @@ void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint 
 
         if (isInside) {
             vec4 insideColor = isActive
-                ? vec4(0.55, 1.00, 0.55, 0.95)   // Light neon green
-                : vec4(1.00, 0.80, 0.40, 0.95);  // Light amber / gold
+                ? vec4(0.55, 1.00, 0.55, 0.98)   // Light neon green
+                : vec4(1.00, 0.80, 0.40, 0.98);  // Light amber / gold
             fragColor.rgb = mix(fragColor.rgb, insideColor.rgb, insideColor.a);
         } else if (isOutline) {
             vec4 outlineColor = isActive
                 ? vec4(0.04, 0.32, 0.08, 0.95)   // Dark green outline
                 : vec4(0.40, 0.20, 0.00, 0.95);  // Dark amber outline
             fragColor.rgb = mix(fragColor.rgb, outlineColor.rgb, outlineColor.a);
+        } else if (isBracket) {
+            vec4 bracketColor = isActive
+                ? vec4(0.20, 0.95, 0.20, 0.95)   // Green bracket
+                : vec4(1.00, 0.60, 0.00, 0.90);  // Amber bracket
+            fragColor.rgb = mix(fragColor.rgb, bracketColor.rgb, bracketColor.a);
         }
     } else {
         // Extended House Shader (items/walls): extremely dark diagonal lines from right to left
