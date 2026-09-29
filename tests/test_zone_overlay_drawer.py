@@ -170,29 +170,61 @@ def test_secondary_map_precedence():
     assert other is None
 
 
-def test_zone_shader_pz_and_nopvp_colors():
-    """Verify that in zone_shader.h, PZ is yellow and No-PvP is green."""
+def test_zone_shader_zero_wash_and_colors():
+    """Verify that in zone_shader.h, washes are eliminated, PZ is yellow, No-PvP is green,
+    and dedicated 4-corner micro-badges are implemented."""
     from pathlib import Path
     shader_path = Path(__file__).parent.parent / "source" / "rendering" / "shaders" / "zone_shader.h"
     content = shader_path.read_text(encoding="utf-8")
 
     assert "evaluateSpecialZones" in content
     idx = content.find("evaluateSpecialZones")
-    fn_body = content[idx:idx + 1200]
+    end_idx = content.find("bool evaluateSpawnOverlay")
+    fn_body = content[idx:end_idx]
 
-    # PZ (flags & 4u) must be yellow wash + yellow border
+    # Zero wash: evaluateSpecialZones must NOT contain non-zero translucent washes
+    assert "0.95, 0.85, 0.10, 0.28" not in fn_body, "PZ wash must be eliminated"
+    assert "0.15, 0.90, 0.20, 0.28" not in fn_body, "No-PvP wash must be eliminated"
+
+    # PZ (flags & 4u) must have yellow border and yellow micro-badge text
     assert "flags & 4u" in fn_body
     pz_idx = fn_body.find("flags & 4u")
-    pz_body = fn_body[pz_idx:pz_idx + 250]
-    assert "0.95, 0.85, 0.10, 0.28" in pz_body, "PZ wash must be golden yellow"
-    assert "1.00, 0.90, 0.10, 0.95" in pz_body, "PZ border must be yellow"
+    pz_body = fn_body[pz_idx:pz_idx + 450]
+    assert "1.00, 0.90, 0.10, 0.98" in pz_body, "PZ badge text must be bright yellow"
+    assert "1.00, 0.90, 0.10, 0.95" in fn_body, "PZ border must be yellow"
 
-    # No-PvP (flags & 8u) must be green wash + green border
+    # No-PvP (flags & 8u) must have emerald green border and green micro-badge text
     assert "flags & 8u" in fn_body
     nopvp_idx = fn_body.find("flags & 8u")
-    nopvp_body = fn_body[nopvp_idx:nopvp_idx + 250]
-    assert "0.15, 0.90, 0.20, 0.28" in nopvp_body, "No-PvP wash must be emerald green"
-    assert "0.20, 1.00, 0.30, 0.95" in nopvp_body, "No-PvP border must be green"
+    nopvp_body = fn_body[nopvp_idx:nopvp_idx + 450]
+    assert "0.20, 1.00, 0.30, 0.98" in nopvp_body, "No-PvP badge text must be emerald green"
+    assert "0.20, 1.00, 0.30, 0.95" in fn_body, "No-PvP border must be green"
+
+    # No-Logout (flags & 16u) must have orange border and orange micro-badge text
+    assert "flags & 16u" in fn_body
+    nolog_idx = fn_body.find("flags & 16u")
+    nolog_body = fn_body[nolog_idx:nolog_idx + 450]
+    assert "1.00, 0.55, 0.10, 0.98" in nolog_body, "No-Logout badge text must be orange"
+
+    # PvP Zone (flags & 32u) must have crimson border and red micro-badge text
+    assert "flags & 32u" in fn_body
+    pvp_idx = fn_body.find("flags & 32u")
+    pvp_body = fn_body[pvp_idx:pvp_idx + 450]
+    assert "1.00, 0.15, 0.30, 0.98" in pvp_body, "PvP Zone badge text must be crimson red"
+
+    # Blocking overlay must have cyan border and zero wash
+    assert "evaluateBlockingOverlay" in content
+    b_idx = content.find("evaluateBlockingOverlay")
+    b_body = content[b_idx:b_idx + 600]
+    assert "0.40, 0.40, 0.40, 0.35" not in b_body, "Blocking wash must be eliminated"
+    assert "0.00, 0.95, 1.00, 0.95" in b_body, "Blocking border must be cyan"
+
+    # Spawn overlay must have magenta border and zero wash
+    assert "evaluateSpawnOverlay" in content
+    s_idx = content.find("evaluateSpawnOverlay")
+    s_body = content[s_idx:s_idx + 600]
+    assert "0.85, 0.15, 0.85, 0.25" not in s_body, "Spawn wash must be eliminated"
+    assert "1.00, 0.20, 1.00, 0.95" in s_body, "Spawn border must be magenta"
 
 
 def test_is_tile_path_blocking_excludes_invisible_wall():

@@ -276,8 +276,8 @@ def test_blocking_overlay_shader_colors():
 
     # Border: vec4(0.00, 0.95, 1.00, 0.95) -> Bright cyan
     assert "0.00, 0.95, 1.00, 0.95" in fn_body or "0.0, 0.95, 1.0, 0.95" in fn_body, "Blocking border must be bright cyan"
-    # Background: vec4(0.40, 0.40, 0.40, 0.35) -> Gray
-    assert "0.40, 0.40, 0.40, 0.35" in fn_body or "0.4, 0.4, 0.4, 0.35" in fn_body, "Blocking background wash must be gray"
+    # Zero-fill: gray wash eliminated
+    assert "0.40, 0.40, 0.40, 0.35" not in fn_body, "Blocking background wash must be eliminated"
 
 
 def test_marker_drawer_does_not_render_spawn_size_labels():
