@@ -1132,6 +1132,26 @@ spritesFile = 'Tibia.spr'
 transparency = true
 version = 1320
 
+# Crystal Server / Canary maps: their editor writes a fixed 4/4 items version in the OTBM header.
+# The appearances file name is resolved from catalog-content.json at load time.
+[[clients]]
+configType = 'protobuf_only'
+datSignature = '0'
+dataDirectory = '1330'
+description = 'Crystal Server / Canary protobuf assets'
+extended = true
+frameDurations = true
+frameGroups = true
+metadataFile = 'appearances.dat'
+name = '15.25'
+otbId = 4
+otbMajor = 4
+otbmVersions = [ 4 ]
+sprSignature = '0'
+spritesFile = 'catalog-content.json'
+transparency = true
+version = 1525
+
 [[clients]]
 configType = 'dat_otb'
 datSignature = '4A10'
