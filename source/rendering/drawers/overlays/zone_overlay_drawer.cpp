@@ -143,10 +143,18 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 						}
 
 						if (has_pz || has_nopvp || has_nolog || has_pvp) {
-							if (!sameZone(row_prev[idx], has_pz, has_nopvp, has_nolog, has_pvp))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_N);
-							if (!sameZone(row_next[idx], has_pz, has_nopvp, has_nolog, has_pvp))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_S);
-							if (!sameZone(row_curr[idx - 1], has_pz, has_nopvp, has_nolog, has_pvp)) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_W);
-							if (!sameZone(row_curr[idx + 1], has_pz, has_nopvp, has_nolog, has_pvp)) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_E);
+							auto checkNeighbor = [&](const Tile* neighbor, uint32_t global_bit, uint32_t internal_bit) {
+								if (!neighbor || (!neighbor->isPZ() && (neighbor->getMapFlags() & (TILESTATE_NOPVP | TILESTATE_NOLOGOUT | TILESTATE_PVPZONE)) == 0)) {
+									tile_zone_flags |= global_bit;
+								} else if (!sameZone(neighbor, has_pz, has_nopvp, has_nolog, has_pvp)) {
+									tile_zone_flags |= internal_bit;
+								}
+							};
+
+							checkNeighbor(row_prev[idx],     static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_N), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_N));
+							checkNeighbor(row_next[idx],     static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_S), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_S));
+							checkNeighbor(row_curr[idx - 1], static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_W), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_W));
+							checkNeighbor(row_curr[idx + 1], static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_E), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_E));
 						}
 					}
 

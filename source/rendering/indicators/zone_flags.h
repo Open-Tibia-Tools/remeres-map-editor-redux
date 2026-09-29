@@ -29,6 +29,12 @@ inline constexpr float ZONE_FLAG_SPAWN_BORDER_N = 16384.0f; // Bit 14: North spa
 inline constexpr float ZONE_FLAG_SPAWN_BORDER_S = 32768.0f; // Bit 15: South spawn border
 inline constexpr float ZONE_FLAG_SPAWN_BORDER_W = 65536.0f; // Bit 16: West spawn border
 inline constexpr float ZONE_FLAG_SPAWN_BORDER_E = 131072.0f;// Bit 17: East spawn border
+
+// Internal inter-zone borders for special zones (Bits 18-21) - Transition between different zones
+inline constexpr float ZONE_FLAG_ZONE_INTERNAL_N = 262144.0f; // Bit 18: North internal inter-zone border
+inline constexpr float ZONE_FLAG_ZONE_INTERNAL_S = 524288.0f; // Bit 19: South internal inter-zone border
+inline constexpr float ZONE_FLAG_ZONE_INTERNAL_W = 1048576.0f;// Bit 20: West internal inter-zone border
+inline constexpr float ZONE_FLAG_ZONE_INTERNAL_E = 2097152.0f;// Bit 21: East internal inter-zone border
 } // namespace rme::rendering
 
 #endif // RME_RENDERING_INDICATORS_ZONE_FLAGS_H_
