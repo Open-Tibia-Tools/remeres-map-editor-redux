@@ -200,9 +200,15 @@ def test_zone_shader_3d_bevel_and_colors():
     assert "flags & 32u" in fn_body
     assert "0.92, 0.12, 0.24, 0.28" in fn_body, "PvP Zone wash must be crimson red"
 
-    # Internal inter-zone bevels must be present
-    assert "bNorthInner" in fn_body and "bSouthInner" in fn_body
-    assert "bWestInner" in fn_body and "bEastInner" in fn_body
+    # Dedicated 4-corner micro-badges must be present
+    assert "pzMask" in fn_body and "npMask" in fn_body
+    assert "nlMask" in fn_body and "pvpMask" in fn_body
+
+    # Inside 3D kitchen tile bevels must be present
+    assert "!bNorthOuter && tile_ly == 0" in fn_body
+    assert "!bWestOuter && tile_lx == 0" in fn_body
+    assert "!bSouthOuter && tile_ly == 31" in fn_body
+    assert "!bEastOuter && tile_lx == 31" in fn_body
 
     # Blocking overlay must have cyan border
     assert "evaluateBlockingOverlay" in content
