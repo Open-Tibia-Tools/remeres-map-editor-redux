@@ -273,3 +273,46 @@ def test_is_tile_path_blocking_excludes_invisible_wall():
     # Tile with water ground (blocking ground)
     water = MockItem(server_id=4608, client_id=4608, is_blocking=True)
     assert is_tile_path_blocking(water, []), "Water ground tile MUST be path-blocking"
+
+
+def test_ground_level_render_order_and_subpass_partitioning():
+    """Verify that zone overlays are rendered at ground level between terrain and items."""
+    from pathlib import Path
+    root = Path(__file__).parent.parent
+
+    # 1. Verify chunk_cache_manager.h declares terrain and item instance counts and methods
+    ccm_h = (root / "source" / "rendering" / "core" / "chunk_cache_manager.h").read_text(encoding="utf-8")
+    assert "uint32_t terrain_instance_count" in ccm_h
+    assert "uint32_t item_instance_count" in ccm_h
+    assert "void renderFloorTerrain" in ccm_h
+    assert "void renderFloorItems" in ccm_h
+
+    # 2. Verify zone_overlay_drawer.h declares drawFloor
+    zod_h = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.h").read_text(encoding="utf-8")
+    assert "void drawFloor(" in zod_h
+
+    # 3. Verify map_layer_drawer.cpp invokes drawFloor between renderFloorTerrain and renderFloorItems
+    mld_cpp = (root / "source" / "rendering" / "drawers" / "map_layer_drawer.cpp").read_text(encoding="utf-8")
+    terrain_pos = mld_cpp.find("renderFloorTerrain")
+    zone_pos = mld_cpp.find("zone_overlay_drawer->drawFloor")
+    items_pos = mld_cpp.find("renderFloorItems")
+
+    assert terrain_pos != -1, "renderFloorTerrain must be called"
+    assert zone_pos != -1, "zone_overlay_drawer->drawFloor must be called"
+    assert items_pos != -1, "renderFloorItems must be called"
+
+    assert terrain_pos < zone_pos < items_pos, (
+        "Strict Ground-Level Draw Order: renderFloorTerrain -> zone_overlay_drawer->drawFloor -> renderFloorItems"
+    )
+
+    # 4. Verify post-map overlay pass in map_drawer.cpp does NOT draw zone overlays on top of items
+    md_cpp = (root / "source" / "rendering" / "map_drawer.cpp").read_text(encoding="utf-8")
+    draw_render_frame_idx = md_cpp.find("void MapDrawer::DrawRenderFrame")
+    post_map_batch_resume = md_cpp.find("// Resume Batch for Overlays", draw_render_frame_idx)
+    post_map_end = md_cpp.find("// End Batches and Flush", post_map_batch_resume)
+    post_map_chunk = md_cpp[post_map_batch_resume:post_map_end]
+
+    assert "zone_overlay_drawer.draw(" not in post_map_chunk, (
+        "zone_overlay_drawer must NOT be called in post-map pass to avoid tinting walls, tables, and items"
+    )
+

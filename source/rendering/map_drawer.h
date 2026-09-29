@@ -199,7 +199,7 @@ private:
 		}
 	};
 
-	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client);
+	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, const BaseMap* secondary_map = nullptr);
 	void CollectOverlays();
 	bool renderers_initialized = false;
 	OverlayCacheState overlay_cache;

@@ -38,7 +38,7 @@
 MapDrawer::MapDrawer(Editor& editor) :
 	editor(editor),
 	tile_renderer(&item_drawer, &sprite_drawer, &creature_drawer, &creature_name_drawer, &floor_drawer, &marker_drawer, &editor),
-	map_layer_drawer(&tile_renderer, &grid_drawer, editor.map),
+	map_layer_drawer(&tile_renderer, &grid_drawer, &zone_overlay_drawer, editor.map),
 	lua_overlay_drawer(editor) {
 
 	options.Update();
@@ -200,10 +200,6 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	// Resume Batch for Overlays
 	sprite_batch.begin(view.projectionMatrix, *atlas);
 
-	if (!options.ingame) {
-		zone_overlay_drawer.draw(sprite_batch, view, editor.map, interaction.secondary_map, options, *atlas);
-	}
-
 	drag_shadow_drawer.draw(sprite_batch, editor, interaction.drag_start_position, &item_drawer, &sprite_drawer, &creature_drawer, view, options, &ctx);
 
 	live_cursor_drawer.draw(sprite_batch, view, editor, options, *atlas);
@@ -260,7 +256,7 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx, const InteractionRenderSt
 		}
 
 		if (view.draw_all_visited_floors || map_z >= view.end_z) {
-			DrawMapLayer(sprite_batch, floor_ctx, map_z, live_client);
+			DrawMapLayer(sprite_batch, floor_ctx, map_z, live_client, secondary_map);
 		}
 
 		if (secondary_map) {
@@ -399,9 +395,9 @@ bool MapDrawer::hasOverlays() {
 	return false;
 }
 
-void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client) {
+void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, const BaseMap* secondary_map) {
 	LiveClient* live_client_service = live_client ? editor.live_manager.GetClient() : nullptr;
-	map_layer_drawer.Draw(batch, map_z, live_client_service, floor_ctx, &chunk_cache_manager);
+	map_layer_drawer.Draw(batch, map_z, live_client_service, floor_ctx, &chunk_cache_manager, secondary_map);
 }
 
 void MapDrawer::DrawLight() {

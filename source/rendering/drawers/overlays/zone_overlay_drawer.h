@@ -32,6 +32,14 @@ public:
 	ZoneOverlayDrawer() = default;
 	~ZoneOverlayDrawer() = default;
 
+	void drawFloor(SpriteBatch& sprite_batch,
+	               int z,
+	               const RenderView& view,
+	               const Map& map,
+	               const BaseMap* secondary_map,
+	               const DrawingOptions& options,
+	               const AtlasManager& atlas);
+
 	void draw(SpriteBatch& sprite_batch,
 	          const RenderView& view,
 	          const Map& map,

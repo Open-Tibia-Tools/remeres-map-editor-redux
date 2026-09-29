@@ -30,6 +30,8 @@ struct CachedChunk {
 	GLuint vbo = 0;
 	size_t vbo_capacity = 0; // in bytes
 	uint32_t instance_count = 0;
+	uint32_t terrain_instance_count = 0;
+	uint32_t item_instance_count = 0;
 	uint64_t last_accessed_frame = 0;
 	bool is_dirty = true;
 	bool is_empty = false;
@@ -66,6 +68,8 @@ struct CachedChunk {
 		vbo(other.vbo),
 		vbo_capacity(other.vbo_capacity),
 		instance_count(other.instance_count),
+		terrain_instance_count(other.terrain_instance_count),
+		item_instance_count(other.item_instance_count),
 		last_accessed_frame(other.last_accessed_frame),
 		is_dirty(other.is_dirty),
 		is_empty(other.is_empty),
@@ -78,6 +82,8 @@ struct CachedChunk {
 		other.vbo = 0;
 		other.vbo_capacity = 0;
 		other.instance_count = 0;
+		other.terrain_instance_count = 0;
+		other.item_instance_count = 0;
 		other.has_animated_terrain = false;
 		other.sample_animated_sprite = nullptr;
 		other.last_baked_frame = -1;
@@ -95,6 +101,8 @@ struct CachedChunk {
 			vbo = other.vbo;
 			vbo_capacity = other.vbo_capacity;
 			instance_count = other.instance_count;
+			terrain_instance_count = other.terrain_instance_count;
+			item_instance_count = other.item_instance_count;
 			last_accessed_frame = other.last_accessed_frame;
 			is_dirty = other.is_dirty;
 			is_empty = other.is_empty;
@@ -107,6 +115,8 @@ struct CachedChunk {
 			other.vbo = 0;
 			other.vbo_capacity = 0;
 			other.instance_count = 0;
+			other.terrain_instance_count = 0;
+			other.item_instance_count = 0;
 			other.has_animated_terrain = false;
 			other.sample_animated_sprite = nullptr;
 			other.last_baked_frame = -1;
@@ -166,7 +176,30 @@ public:
 	void invalidateChunk(int32_t cx, int32_t cy, int32_t z);
 
 	/**
-	 * Render all cached static geometry for visible chunks on floor map_z.
+	 * Render static terrain & borders for visible chunks on floor map_z.
+	 * Bakes dirty chunks and populates active_visible_chunks_.
+	 */
+	void renderFloorTerrain(
+		int map_z,
+		const Map& map,
+		const RenderFrameContext& ctx,
+		const glm::mat4& projection,
+		AtlasManager& atlas
+	);
+
+	/**
+	 * Render static items & structures for visible chunks on floor map_z.
+	 * Uses active_visible_chunks_ gathered during renderFloorTerrain.
+	 */
+	void renderFloorItems(
+		int map_z,
+		const RenderFrameContext& ctx,
+		const glm::mat4& projection,
+		AtlasManager& atlas
+	);
+
+	/**
+	 * Render all cached static geometry (terrain + items) for visible chunks on floor map_z.
 	 */
 	void renderFloor(
 		int map_z,
