@@ -125,6 +125,7 @@ struct MapVersion {
 		otbm(m), client(c) { }
 	MapVersionID otbm;
 	OtbVersionID client;
+	uint32_t items_major = 0; // OTB format version stored in the header; disambiguates clients sharing an OTB id
 };
 
 enum OtbFormatVersion : uint32_t {

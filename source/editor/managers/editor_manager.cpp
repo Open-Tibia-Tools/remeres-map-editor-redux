@@ -302,7 +302,10 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 				throw std::runtime_error(std::format("Unsupported client selection: {}", load_options.selected_client_id));
 			}
 		} else {
-			target = ClientVersion::getBestMatch(ver.client);
+			target = ClientVersion::getByItemsVersion(ver.items_major, ver.client);
+			if (!target) {
+				target = ClientVersion::getBestMatch(ver.client);
+			}
 			if (!target) {
 				throw std::runtime_error(std::format("Unsupported client version (OtbId: {})", static_cast<int>(ver.client)));
 			}
