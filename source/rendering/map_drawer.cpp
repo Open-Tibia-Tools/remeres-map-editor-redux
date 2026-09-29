@@ -199,19 +199,6 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 
 	// Resume Batch for Overlays
 	sprite_batch.begin(view.projectionMatrix, *atlas);
-	rme::rendering::shaders::SetSpriteBatchOverlayUniforms(
-		*sprite_batch.getShader(),
-		static_cast<uint32_t>(options.current_house_id),
-		options.show_houses,
-		options.show_spawns,
-		options.show_towns,
-		options.show_waypoints,
-		options.show_tech_items && !options.ingame,
-		options.show_blocking,
-		options.show_special_tiles,
-		options.show_invalid_tiles && !options.ingame,
-		options.show_invalid_zones && !options.ingame
-	);
 
 	if (!options.ingame) {
 		zone_overlay_drawer.draw(sprite_batch, view, editor.map, interaction.secondary_map, options, *atlas);

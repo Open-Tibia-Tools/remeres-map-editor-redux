@@ -120,6 +120,7 @@ void DrawingOptions::MarkSettingDirty(uint32_t key) noexcept {
 		case Config::SHOW_ITEMS:
 		case Config::SHOW_AS_MINIMAP:
 		case Config::SHOW_TECHNICAL_ITEMS:
+		case Config::EXT_HOUSE_SHADER:
 			chunk_bake_dirty_ = true;
 			break;
 

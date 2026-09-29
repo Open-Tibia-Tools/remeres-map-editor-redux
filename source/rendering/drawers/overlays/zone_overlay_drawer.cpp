@@ -135,8 +135,8 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 					}
 				}
 
-				row_prev = std::move(row_curr);
-				row_curr = std::move(row_next);
+				std::swap(row_prev, row_curr);
+				std::swap(row_curr, row_next);
 			}
 		}
 

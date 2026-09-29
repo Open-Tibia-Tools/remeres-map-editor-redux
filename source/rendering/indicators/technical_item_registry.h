@@ -87,6 +87,7 @@ public:
 
 	[[nodiscard]] static constexpr float GetMarkerId(TileIndicatorType type) noexcept {
 		switch (type) {
+			case TileIndicatorType::HouseEntry:            return INDICATOR_HOUSE_ENTRY_BASE;
 			case TileIndicatorType::Spawn:                 return INDICATOR_SPAWN_BASE;
 			case TileIndicatorType::TownTemple:            return INDICATOR_TOWN_BASE;
 			case TileIndicatorType::Waypoint:              return INDICATOR_WAYPOINT_BASE;

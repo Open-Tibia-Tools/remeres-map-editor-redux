@@ -418,7 +418,7 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 
 		// markers (waypoint, house exit, town temple, spawn)
 		if (editor && render_markers) {
-			marker_drawer->draw(sprite_batch, sprite_drawer, draw_x, draw_y, tile, waypoint, ctx.current_house_id, editor->map, options, ctx);
+			marker_drawer->draw(sprite_batch, draw_x, draw_y, tile, waypoint, options, ctx);
 		}
 	}
 }

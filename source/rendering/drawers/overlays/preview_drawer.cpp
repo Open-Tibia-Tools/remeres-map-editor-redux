@@ -8,6 +8,7 @@
 #include "editor/copybuffer.h"
 #include "editor/editor.h"
 #include "map/map_region.h"
+#include "rendering/indicators/zone_flags.h"
 
 PreviewDrawer::PreviewDrawer() {
 }
@@ -47,6 +48,22 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 				uint8_t g = 255;
 				uint8_t b = 255;
 
+				uint32_t tile_zone_flags = 0;
+				if (options.show_special_tiles) {
+					if (tile->isPZ()) {
+						tile_zone_flags |= static_cast<uint32_t>(rme::rendering::ZONE_FLAG_PZ);
+					} else if ((tile->getMapFlags() & TILESTATE_NOPVP) != 0) {
+						tile_zone_flags |= static_cast<uint32_t>(rme::rendering::ZONE_FLAG_NOPVP);
+					} else if ((tile->getMapFlags() & TILESTATE_NOLOGOUT) != 0) {
+						tile_zone_flags |= static_cast<uint32_t>(rme::rendering::ZONE_FLAG_NOLOGOUT);
+					} else if ((tile->getMapFlags() & TILESTATE_PVPZONE) != 0) {
+						tile_zone_flags |= static_cast<uint32_t>(rme::rendering::ZONE_FLAG_PVPZONE);
+					}
+				}
+				if (options.show_blocking && tile->isBlocking() && (tile->ground != nullptr || !tile->items.empty())) {
+					tile_zone_flags |= static_cast<uint32_t>(rme::rendering::ZONE_FLAG_BLOCKING);
+				}
+
 				if (tile->ground) {
 					if (tile->isHouseTile() && options.show_houses) {
 						if (static_cast<int>(tile->getHouseID()) == current_house_id) {
@@ -63,6 +80,7 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 					params.green = g;
 					params.blue = b;
 					params.alpha = base_alpha;
+					params.zone_flags = static_cast<float>(tile_zone_flags);
 					params.ctx = ctx;
 					item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 				}

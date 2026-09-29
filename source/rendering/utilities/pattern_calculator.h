@@ -86,9 +86,9 @@ public:
 			patterns.subtype = exactCount;
 			if (spr->pattern_x > 0) {
 				patterns.x = exactCount % spr->pattern_x;
-			}
-			if (spr->pattern_y > 0) {
-				patterns.y = (exactCount / spr->pattern_x) % spr->pattern_y;
+				if (spr->pattern_y > 0) {
+					patterns.y = (exactCount / spr->pattern_x) % spr->pattern_y;
+				}
 			}
 		}
 

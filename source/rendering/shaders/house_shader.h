@@ -6,61 +6,14 @@
 namespace rme::rendering::shaders {
 
 /**
- * @brief GLSL module providing house zoning and house entry evaluation routines.
+ * @brief GLSL module providing house zoning and overlay evaluation routines.
  *
  * Implements:
- * 1. evaluateHouseEntry: Evaluates the ground-level house entry indicator (square frame,
- *    translucent blue background, and centered 'ENTRY' bitmask pixel font).
- * 2. applyHouseOverlay: Evaluates house zoning atmosphere wash, centered 'H' ground emblem,
- *    and 45-degree dark diagonal hatching for walls and extended items.
+ * applyHouseOverlay: Evaluates house zoning atmosphere wash, centered 'H' ground emblem,
+ * and 45-degree dark diagonal hatching for walls and extended items.
+ * (Note: House Entry tile indicators are evaluated centrally via indicator_shader.h)
  */
 inline constexpr std::string_view HOUSE_SHADER_GLSL = R"(
-bool evaluateHouseEntry(vec2 quadCoord, float houseId, uint currentHouseId, int showHouses, out vec4 outColor) {
-    if (houseId < 1000000.0) {
-        return false;
-    }
-    if (showHouses == 0) {
-        discard;
-    }
-
-    uint exitHouseId = uint(houseId - 1000000.0 + 0.5);
-    bool isActive = (currentHouseId > 0u && exitHouseId == currentHouseId);
-
-    int lx = clamp(int(floor(quadCoord.x * 32.0)), 0, 31);
-    int ly = clamp(int(floor(quadCoord.y * 32.0)), 0, 31);
-
-    int bThick = isActive ? 2 : 1;
-    bool isSquareOutline = (lx < bThick || lx >= 32 - bThick || ly < bThick || ly >= 32 - bThick);
-    vec4 outlineColor = isActive ? vec4(0.04, 0.15, 0.55, 0.95) : vec4(0.02, 0.10, 0.40, 0.95);
-    vec4 bgColor = isActive ? vec4(0.12, 0.45, 0.95, 0.38) : vec4(0.08, 0.25, 0.70, 0.25);
-
-    const uint insideMask[7] = uint[7](
-        0x00000000u, 0x0519CA70u, 0x05288E10u, 0x02188A30u, 0x02288A10u, 0x02288A70u, 0x00000000u
-    );
-    const uint outlineMask[7] = uint[7](
-        0x0FBFFFF8u, 0x0AE63588u, 0x0AD771E8u, 0x0DE55548u, 0x055555E8u, 0x05555588u, 0x077DDFF8u
-    );
-
-    int row = ly - 12;
-    bool isTextInside = false;
-    bool isTextOutline = false;
-    if (row >= 0 && row < 7) {
-        isTextInside = ((insideMask[row] >> lx) & 1u) != 0u;
-        isTextOutline = ((outlineMask[row] >> lx) & 1u) != 0u;
-    }
-
-    if (isTextInside) {
-        outColor = vec4(1.0, 1.0, 1.0, 0.98);
-    } else if (isTextOutline) {
-        outColor = vec4(0.02, 0.05, 0.15, 0.95);
-    } else if (isSquareOutline) {
-        outColor = outlineColor;
-    } else {
-        outColor = bgColor;
-    }
-    return true;
-}
-
 void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint currentHouseId, int showHouses) {
     if (showHouses == 0 || houseId >= 1000000.0) {
         return;

@@ -370,23 +370,23 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 				nvgFillPaint(vg, imgPaint);
 				nvgFill(vg);
 			} else {
-			// Placeholder box for entries without sprite (e.g. completely transparent tile or missing sprite)
-			const wxColour textCol = Theme::Get(Theme::Role::Text);
-			nvgBeginPath(vg);
-			nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
-			nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 12));
-			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 40));
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStroke(vg);
+				// Placeholder box for entries without sprite (e.g. completely transparent tile or missing sprite)
+				const wxColour textCol = Theme::Get(Theme::Role::Text);
+				nvgBeginPath(vg);
+				nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
+				nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 12));
+				nvgFill(vg);
+				nvgStrokeColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 40));
+				nvgStrokeWidth(vg, 1.0f);
+				nvgStroke(vg);
 
-			nvgFontSize(vg, static_cast<float>(iconSize) * 0.45f);
-			nvgFontFace(vg, "sans");
-			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-			nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 120));
-			nvgText(vg, iconX + iconSize / 2.0f, iconY + iconSize / 2.0f, "?", nullptr);
+				nvgFontSize(vg, static_cast<float>(iconSize) * 0.45f);
+				nvgFontFace(vg, "sans");
+				nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+				nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 120));
+				nvgText(vg, iconX + iconSize / 2.0f, iconY + iconSize / 2.0f, "?", nullptr);
+			}
 		}
-	}
 
 		if (display_mode == DisplayMode::List) {
 			nvgFontSize(vg, 14.0f);

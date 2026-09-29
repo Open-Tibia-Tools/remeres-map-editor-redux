@@ -145,6 +145,7 @@ class TechnicalItemRegistry:
     @staticmethod
     def get_marker_id(ind_type: TileIndicatorType) -> float:
         mapping = {
+            TileIndicatorType.HOUSE_ENTRY: 1000000.0,
             TileIndicatorType.SPAWN: 2000000.0,
             TileIndicatorType.TOWN_TEMPLE: 3000000.0,
             TileIndicatorType.WAYPOINT: 4000000.0,
@@ -296,6 +297,7 @@ def test_unknown_items():
     assert TechnicalItemRegistry.is_technical(2160, 0) is False
 
 def test_marker_ids():
+    assert TechnicalItemRegistry.get_marker_id(TileIndicatorType.HOUSE_ENTRY) == 1000000.0
     assert TechnicalItemRegistry.get_marker_id(TileIndicatorType.TECH_INVISIBLE_STAIR) == 5000000.0
     assert TechnicalItemRegistry.get_marker_id(TileIndicatorType.TECH_INVISIBLE_WALKABLE) == 6000000.0
     assert TechnicalItemRegistry.get_marker_id(TileIndicatorType.TECH_INVISIBLE_WALL) == 7000000.0

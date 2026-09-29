@@ -64,10 +64,14 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		float y;
 		float width;
 		float height;
-		std::string text;
+		const char* text_begin = nullptr;
+		const char* text_end = nullptr;
 	};
 	static thread_local std::vector<VisibleLabel> visible_labels;
 	visible_labels.clear();
+
+	static thread_local std::vector<std::string> s_formatted_strings;
+	s_formatted_strings.clear();
 
 	const float screen_max_x = static_cast<float>(view.screensize_x) + 64.0f;
 	const float screen_max_y = static_cast<float>(view.screensize_y) + 64.0f;
@@ -94,15 +98,24 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		const float labelX = screen_x + tile_size_screen * 0.5f;
 		const float labelY = screen_y - 2.0f;
 
-		std::string full_text;
+		const char* t_begin = nullptr;
+		const char* t_end = nullptr;
+		std::string_view lookup_key;
+
 		if (label.creature && !label.creature->isNpc() && label.creature->getSpawnTime() > 0) {
-			full_text = std::format("{} • {}s", label.name, label.creature->getSpawnTime());
+			s_formatted_strings.push_back(std::format("{} • {}s", label.name, label.creature->getSpawnTime()));
+			const auto& formatted = s_formatted_strings.back();
+			t_begin = formatted.data();
+			t_end = formatted.data() + formatted.size();
+			lookup_key = formatted;
 		} else {
-			full_text = std::string(label.name);
+			t_begin = label.name.data();
+			t_end = label.name.data() + label.name.size();
+			lookup_key = label.name;
 		}
 
 		// Fast cached text bounds lookup (avoids CPU font glyph kerning loops per-instance)
-		auto it = s_metrics_cache.find(full_text);
+		auto it = s_metrics_cache.find(std::string(lookup_key));
 		float textWidth = 0.0f;
 		float textHeight = 0.0f;
 
@@ -111,10 +124,10 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			textHeight = it->second.height;
 		} else {
 			float textBounds[4];
-			nvgTextBounds(vg, 0, 0, full_text.c_str(), nullptr, textBounds);
+			nvgTextBounds(vg, 0, 0, t_begin, t_end, textBounds);
 			textWidth = textBounds[2] - textBounds[0];
 			textHeight = textBounds[3] - textBounds[1];
-			s_metrics_cache.emplace(full_text, CachedMetrics{ textWidth, textHeight });
+			s_metrics_cache.emplace(std::string(lookup_key), CachedMetrics{ textWidth, textHeight });
 		}
 
 		visible_labels.push_back(VisibleLabel {
@@ -122,7 +135,8 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			.y = labelY,
 			.width = textWidth,
 			.height = textHeight,
-			.text = std::move(full_text)
+			.text_begin = t_begin,
+			.text_end = t_end
 		});
 	}
 
@@ -141,6 +155,6 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	// Pass 2: Draw all text labels with single color state
 	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
 	for (const auto& vl : visible_labels) {
-		nvgText(vg, vl.x, vl.y - paddingY, vl.text.c_str(), nullptr);
+		nvgText(vg, vl.x, vl.y - paddingY, vl.text_begin, vl.text_end);
 	}
 }
