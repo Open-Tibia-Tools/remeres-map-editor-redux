@@ -22,7 +22,7 @@ void blendOverlayLayer(inout vec4 baseColor, inout bool hasOverlay, vec4 layerCo
     }
 }
 
-bool evaluateSpecialZones(uint flags, int lx, int ly, out vec4 outLayer) {
+bool evaluateSpecialZones(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, int lx, int ly, out vec4 outLayer) {
     bool hasZone = ((flags & 60u) != 0u);
     if (!hasZone) {
         return false;
@@ -72,69 +72,180 @@ bool evaluateSpecialZones(uint flags, int lx, int ly, out vec4 outLayer) {
         return true;
     }
 
-    // 2. Zero-Fill Brackets on every zone tile with dark shadow
-    bool isCore, isShadow;
-    evaluateTileBracket(tile_lx, tile_ly, isCore, isShadow);
-
-    if (isCore) {
-        vec4 zBorder = vec4(1.00, 0.90, 0.10, 0.95);
-        if ((flags & 4u) != 0u) {
-            zBorder = vec4(1.00, 0.90, 0.10, 0.95);
-        } else if ((flags & 8u) != 0u) {
-            zBorder = vec4(0.20, 1.00, 0.30, 0.95);
-        } else if ((flags & 16u) != 0u) {
-            zBorder = vec4(1.00, 0.55, 0.10, 0.95);
-        } else if ((flags & 32u) != 0u) {
-            zBorder = vec4(1.00, 0.15, 0.30, 0.95);
-        }
-        outLayer = zBorder;
-        return true;
-    } else if (isShadow) {
-        outLayer = vec4(0.04, 0.04, 0.06, 0.95);
-        return true;
+    // 2. Zone Colors & Ambient Sunlight Lifts
+    vec4 zBorder = vec4(1.00, 0.90, 0.10, 0.95);
+    vec4 zSunlight = vec4(1.00, 0.92, 0.40, 0.12);
+    if ((flags & 4u) != 0u) {
+        zBorder = vec4(1.00, 0.90, 0.10, 0.95);      // PZ: Golden Yellow
+        zSunlight = vec4(1.00, 0.92, 0.40, 0.12);    // PZ: Warm golden sunlight lift
+    } else if ((flags & 8u) != 0u) {
+        zBorder = vec4(0.20, 1.00, 0.30, 0.95);      // No-PvP: Emerald Green
+        zSunlight = vec4(0.20, 1.00, 0.35, 0.10);    // No-PvP: Fresh cool emerald light
+    } else if ((flags & 16u) != 0u) {
+        zBorder = vec4(1.00, 0.55, 0.10, 0.95);      // No-Logout: Warm Orange
+        zSunlight = vec4(1.00, 0.55, 0.10, 0.12);    // No-Logout: Amber glow
+    } else if ((flags & 32u) != 0u) {
+        zBorder = vec4(1.00, 0.15, 0.30, 0.95);      // PvP Zone: Crimson Red
+        zSunlight = vec4(1.00, 0.15, 0.25, 0.12);    // PvP Zone: Crimson shadow contrast
     }
 
-    return false;
+    vec4 zShadow = vec4(0.04, 0.04, 0.06, 0.95);
+
+    // 3. Continuous SDF Rounded Silhouette along cluster perimeter
+    if (bNorth && bWest && tile_lx < 4 && tile_ly < 4) {
+        float d = length(vec2(3.5 - float(tile_lx), 3.5 - float(tile_ly)));
+        if (d > 4.3) return false;
+        if (d >= 3.0) { outLayer = zShadow; return true; }
+        if (d >= 1.9) { outLayer = zBorder; return true; }
+        outLayer = zSunlight; return true;
+    }
+    if (bNorth && bEast && tile_lx >= 28 && tile_ly < 4) {
+        float d = length(vec2(float(tile_lx) - 27.5, 3.5 - float(tile_ly)));
+        if (d > 4.3) return false;
+        if (d >= 3.0) { outLayer = zShadow; return true; }
+        if (d >= 1.9) { outLayer = zBorder; return true; }
+        outLayer = zSunlight; return true;
+    }
+    if (bSouth && bWest && tile_lx < 4 && tile_ly >= 28) {
+        float d = length(vec2(3.5 - float(tile_lx), float(tile_ly) - 27.5));
+        if (d > 4.3) return false;
+        if (d >= 3.0) { outLayer = zShadow; return true; }
+        if (d >= 1.9) { outLayer = zBorder; return true; }
+        outLayer = zSunlight; return true;
+    }
+    if (bSouth && bEast && tile_lx >= 28 && tile_ly >= 28) {
+        float d = length(vec2(float(tile_lx) - 27.5, float(tile_ly) - 27.5));
+        if (d > 4.3) return false;
+        if (d >= 3.0) { outLayer = zShadow; return true; }
+        if (d >= 1.9) { outLayer = zBorder; return true; }
+        outLayer = zSunlight; return true;
+    }
+
+    // Straight cluster perimeter edges with 1px outer shadow & 1px core
+    if (bNorth && tile_ly == 0) { outLayer = zShadow; return true; }
+    if (bNorth && tile_ly == 1) { outLayer = zBorder; return true; }
+    if (bSouth && tile_ly == 31) { outLayer = zShadow; return true; }
+    if (bSouth && tile_ly == 30) { outLayer = zBorder; return true; }
+    if (bWest  && tile_lx == 0) { outLayer = zShadow; return true; }
+    if (bWest  && tile_lx == 1) { outLayer = zBorder; return true; }
+    if (bEast  && tile_lx == 31) { outLayer = zShadow; return true; }
+    if (bEast  && tile_lx == 30) { outLayer = zBorder; return true; }
+
+    // 4. Seamless interior: Warm sunlight color grade (zero lines, zero clutter!)
+    outLayer = zSunlight;
+    return true;
 }
 
-bool evaluateSpawnOverlay(uint flags, int lx, int ly, out vec4 outLayer) {
+bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, int lx, int ly, int maxX, int maxY, out vec4 outLayer) {
     if ((flags & 2u) == 0u) {
         return false;
     }
-    int tile_lx = lx % 32;
-    int tile_ly = ly % 32;
 
-    bool isCore, isShadow;
-    evaluateTileBracket(tile_lx, tile_ly, isCore, isShadow);
+    vec4 sBorder = vec4(1.00, 0.20, 1.00, 0.95);
+    vec4 sShadow = vec4(0.04, 0.04, 0.06, 0.95);
+    vec4 sSunlight = vec4(1.00, 0.20, 1.00, 0.09);
 
-    if (isCore) {
-        outLayer = vec4(1.00, 0.20, 1.00, 0.95);
-        return true;
-    } else if (isShadow) {
-        outLayer = vec4(0.04, 0.04, 0.06, 0.95);
-        return true;
+    float fMaxX = float(maxX);
+    float fMaxY = float(maxY);
+
+    // Rounded outer corners (radius = 5.0 px)
+    if (bNorth && bWest && lx < 6 && ly < 6) {
+        float d = length(vec2(5.0 - float(lx), 5.0 - float(ly)));
+        if (d > 5.8) return false;
+        if (d >= 4.5) { outLayer = sShadow; return true; }
+        if (d >= 3.2) { outLayer = sBorder; return true; }
+        outLayer = sSunlight; return true;
     }
-    return false;
+    if (bNorth && bEast && lx >= maxX - 5 && ly < 6) {
+        float d = length(vec2(float(lx) - (fMaxX - 5.0), 5.0 - float(ly)));
+        if (d > 5.8) return false;
+        if (d >= 4.5) { outLayer = sShadow; return true; }
+        if (d >= 3.2) { outLayer = sBorder; return true; }
+        outLayer = sSunlight; return true;
+    }
+    if (bSouth && bWest && lx < 6 && ly >= maxY - 5) {
+        float d = length(vec2(5.0 - float(lx), float(ly) - (fMaxY - 5.0)));
+        if (d > 5.8) return false;
+        if (d >= 4.5) { outLayer = sShadow; return true; }
+        if (d >= 3.2) { outLayer = sBorder; return true; }
+        outLayer = sSunlight; return true;
+    }
+    if (bSouth && bEast && lx >= maxX - 5 && ly >= maxY - 5) {
+        float d = length(vec2(float(lx) - (fMaxX - 5.0), float(ly) - (fMaxY - 5.0)));
+        if (d > 5.8) return false;
+        if (d >= 4.5) { outLayer = sShadow; return true; }
+        if (d >= 3.2) { outLayer = sBorder; return true; }
+        outLayer = sSunlight; return true;
+    }
+
+    // Straight perimeter edges
+    if (bNorth && ly == 0) { outLayer = sShadow; return true; }
+    if (bNorth && ly == 1) { outLayer = sBorder; return true; }
+    if (bSouth && ly == maxY) { outLayer = sShadow; return true; }
+    if (bSouth && ly == maxY - 1) { outLayer = sBorder; return true; }
+    if (bWest  && lx == 0) { outLayer = sShadow; return true; }
+    if (bWest  && lx == 1) { outLayer = sBorder; return true; }
+    if (bEast  && lx == maxX) { outLayer = sShadow; return true; }
+    if (bEast  && lx == maxX - 1) { outLayer = sBorder; return true; }
+
+    outLayer = sSunlight;
+    return true;
 }
 
-bool evaluateBlockingOverlay(uint flags, int lx, int ly, out vec4 outLayer) {
+bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, int lx, int ly, out vec4 outLayer) {
     if ((flags & 1u) == 0u) {
         return false;
     }
+
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    bool isCore, isShadow;
-    evaluateTileBracket(tile_lx, tile_ly, isCore, isShadow);
+    vec4 bBorder = vec4(0.00, 0.95, 1.00, 0.95);
+    vec4 bShadow = vec4(0.04, 0.04, 0.06, 0.95);
+    vec4 bSunlight = vec4(0.00, 0.95, 1.00, 0.09);
 
-    if (isCore) {
-        outLayer = vec4(0.00, 0.95, 1.00, 0.95);
-        return true;
-    } else if (isShadow) {
-        outLayer = vec4(0.04, 0.04, 0.06, 0.95);
-        return true;
+    // Rounded outer corners (radius = 3.5 px)
+    if (bNorth && bWest && tile_lx < 4 && tile_ly < 4) {
+        float d = length(vec2(3.5 - float(tile_lx), 3.5 - float(tile_ly)));
+        if (d > 4.3) return false;
+        if (d >= 3.0) { outLayer = bShadow; return true; }
+        if (d >= 1.9) { outLayer = bBorder; return true; }
+        outLayer = bSunlight; return true;
     }
-    return false;
+    if (bNorth && bEast && tile_lx >= 28 && tile_ly < 4) {
+        float d = length(vec2(float(tile_lx) - 27.5, 3.5 - float(tile_ly)));
+        if (d > 4.3) return false;
+        if (d >= 3.0) { outLayer = bShadow; return true; }
+        if (d >= 1.9) { outLayer = bBorder; return true; }
+        outLayer = bSunlight; return true;
+    }
+    if (bSouth && bWest && tile_lx < 4 && tile_ly >= 28) {
+        float d = length(vec2(3.5 - float(tile_lx), float(tile_ly) - 27.5));
+        if (d > 4.3) return false;
+        if (d >= 3.0) { outLayer = bShadow; return true; }
+        if (d >= 1.9) { outLayer = bBorder; return true; }
+        outLayer = bSunlight; return true;
+    }
+    if (bSouth && bEast && tile_lx >= 28 && tile_ly >= 28) {
+        float d = length(vec2(float(tile_lx) - 27.5, float(tile_ly) - 27.5));
+        if (d > 4.3) return false;
+        if (d >= 3.0) { outLayer = bShadow; return true; }
+        if (d >= 1.9) { outLayer = bBorder; return true; }
+        outLayer = bSunlight; return true;
+    }
+
+    // Straight perimeter edges
+    if (bNorth && tile_ly == 0) { outLayer = bShadow; return true; }
+    if (bNorth && tile_ly == 1) { outLayer = bBorder; return true; }
+    if (bSouth && tile_ly == 31) { outLayer = bShadow; return true; }
+    if (bSouth && tile_ly == 30) { outLayer = bBorder; return true; }
+    if (bWest  && tile_lx == 0) { outLayer = bShadow; return true; }
+    if (bWest  && tile_lx == 1) { outLayer = bBorder; return true; }
+    if (bEast  && tile_lx == 31) { outLayer = bShadow; return true; }
+    if (bEast  && tile_lx == 30) { outLayer = bBorder; return true; }
+
+    outLayer = bSunlight;
+    return true;
 }
 
 bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zoneFlags,
@@ -154,18 +265,33 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zon
     bool hasOverlay = false;
     vec4 layer;
 
-    // 1. Special Zones (showSpecialTiles) with dedicated 4-corner micro-badges & zero-fill brackets
-    if (showSpecialTiles != 0 && evaluateSpecialZones(flags, lx, ly, layer)) {
+    // 1. Special Zones (showSpecialTiles) with continuous SDF rounded silhouette & sunlight color grading
+    bool bNorthZone = (flags & 1024u) != 0u;
+    bool bSouthZone = (flags & 2048u) != 0u;
+    bool bWestZone  = (flags & 4096u) != 0u;
+    bool bEastZone  = (flags & 8192u) != 0u;
+
+    if (showSpecialTiles != 0 && evaluateSpecialZones(flags, bNorthZone, bSouthZone, bWestZone, bEastZone, lx, ly, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
-    // 2. Spawn Radius (showSpawns) with magenta zero-fill brackets
-    if (showSpawns != 0 && evaluateSpawnOverlay(flags, lx, ly, layer)) {
+    // 2. Spawn Radius (showSpawns) with continuous SDF rounded silhouette & magenta sunlight lift
+    bool bNorthSpawn = (ly <= 1) && (flags & 16384u) != 0u;
+    bool bSouthSpawn = (ly >= maxY - 1) && (flags & 32768u) != 0u;
+    bool bWestSpawn  = (lx <= 1) && (flags & 65536u) != 0u;
+    bool bEastSpawn  = (lx >= maxX - 1) && (flags & 131072u) != 0u;
+
+    if (showSpawns != 0 && evaluateSpawnOverlay(flags, bNorthSpawn, bSouthSpawn, bWestSpawn, bEastSpawn, lx, ly, maxX, maxY, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
-    // 3. Pathing / Blocking (showBlocking) with cyan zero-fill brackets
-    if (showBlocking != 0 && evaluateBlockingOverlay(flags, lx, ly, layer)) {
+    // 3. Pathing / Blocking (showBlocking) with continuous SDF rounded silhouette & cyan lift
+    bool bNorthBlock = (flags & 64u) != 0u;
+    bool bSouthBlock = (flags & 128u) != 0u;
+    bool bWestBlock  = (flags & 256u) != 0u;
+    bool bEastBlock  = (flags & 512u) != 0u;
+
+    if (showBlocking != 0 && evaluateBlockingOverlay(flags, bNorthBlock, bSouthBlock, bWestBlock, bEastBlock, lx, ly, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
