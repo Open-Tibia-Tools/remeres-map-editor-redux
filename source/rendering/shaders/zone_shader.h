@@ -22,17 +22,20 @@ void blendOverlayLayer(inout vec4 baseColor, inout bool hasOverlay, vec4 layerCo
     }
 }
 
-bool evaluateSpecialZones(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, int lx, int ly, out vec4 outLayer) {
+bool evaluateSpecialZones(uint flags, int lx, int ly, out vec4 outLayer) {
     bool hasZone = ((flags & 60u) != 0u);
     if (!hasZone) {
         return false;
     }
 
+    int tile_lx = lx % 32;
+    int tile_ly = ly % 32;
+
     // 1. Dedicated 4-corner micro-badges (High-contrast 2-tone with dark shadow)
     // Top-Left: [PZ] (Yellow)
-    if ((flags & 4u) != 0u && lx >= 1 && lx <= 9 && ly >= 1 && ly <= 7) {
-        int r = ly - 2;
-        int c = lx - 2;
+    if ((flags & 4u) != 0u && tile_lx >= 1 && tile_lx <= 9 && tile_ly >= 1 && tile_ly <= 7) {
+        int r = tile_ly - 2;
+        int c = tile_lx - 2;
         uint pzMask[5] = uint[5](0x77u, 0x51u, 0x72u, 0x44u, 0x47u);
         bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((pzMask[r] >> (6 - c)) & 1u) != 0u);
         outLayer = isText ? vec4(1.00, 0.90, 0.10, 0.98) : vec4(0.06, 0.06, 0.08, 0.92);
@@ -40,9 +43,9 @@ bool evaluateSpecialZones(uint flags, bool bNorth, bool bSouth, bool bWest, bool
     }
 
     // Top-Right: [NP] (Emerald Green)
-    if ((flags & 8u) != 0u && lx >= 22 && lx <= 30 && ly >= 1 && ly <= 7) {
-        int r = ly - 2;
-        int c = lx - 23;
+    if ((flags & 8u) != 0u && tile_lx >= 22 && tile_lx <= 30 && tile_ly >= 1 && tile_ly <= 7) {
+        int r = tile_ly - 2;
+        int c = tile_lx - 23;
         uint npMask[5] = uint[5](0x57u, 0x75u, 0x77u, 0x54u, 0x54u);
         bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((npMask[r] >> (6 - c)) & 1u) != 0u);
         outLayer = isText ? vec4(0.20, 1.00, 0.30, 0.98) : vec4(0.06, 0.06, 0.08, 0.92);
@@ -50,9 +53,9 @@ bool evaluateSpecialZones(uint flags, bool bNorth, bool bSouth, bool bWest, bool
     }
 
     // Bottom-Left: [NL] (Warm Orange)
-    if ((flags & 16u) != 0u && lx >= 1 && lx <= 9 && ly >= 24 && ly <= 30) {
-        int r = ly - 25;
-        int c = lx - 2;
+    if ((flags & 16u) != 0u && tile_lx >= 1 && tile_lx <= 9 && tile_ly >= 24 && tile_ly <= 30) {
+        int r = tile_ly - 25;
+        int c = tile_lx - 2;
         uint nlMask[5] = uint[5](0x54u, 0x74u, 0x74u, 0x54u, 0x57u);
         bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((nlMask[r] >> (6 - c)) & 1u) != 0u);
         outLayer = isText ? vec4(1.00, 0.55, 0.10, 0.98) : vec4(0.06, 0.06, 0.08, 0.92);
@@ -60,67 +63,78 @@ bool evaluateSpecialZones(uint flags, bool bNorth, bool bSouth, bool bWest, bool
     }
 
     // Bottom-Right: [PvP] (Crimson Red)
-    if ((flags & 32u) != 0u && lx >= 18 && lx <= 30 && ly >= 24 && ly <= 30) {
-        int r = ly - 25;
-        int c = lx - 19;
+    if ((flags & 32u) != 0u && tile_lx >= 18 && tile_lx <= 30 && tile_ly >= 24 && tile_ly <= 30) {
+        int r = tile_ly - 25;
+        int c = tile_lx - 19;
         uint pvpMask[5] = uint[5](0x707u, 0x505u, 0x757u, 0x454u, 0x424u);
         bool isText = (r >= 0 && r < 5 && c >= 0 && c < 11) && (((pvpMask[r] >> (10 - c)) & 1u) != 0u);
         outLayer = isText ? vec4(1.00, 0.15, 0.30, 0.98) : vec4(0.06, 0.06, 0.08, 0.92);
         return true;
     }
 
-    // 2. Zero-Fill Perimeter Contour Outer Borders
-    bool isBorder = (bNorth && (flags & 1024u) != 0u) ||
-                    (bSouth && (flags & 2048u) != 0u) ||
-                    (bWest  && (flags & 4096u) != 0u) ||
-                    (bEast  && (flags & 8192u) != 0u);
-    if (!isBorder) {
-        return false;
+    // 2. Zero-Fill Brackets on every zone tile with dark shadow
+    bool isCore, isShadow;
+    evaluateTileBracket(tile_lx, tile_ly, isCore, isShadow);
+
+    if (isCore) {
+        vec4 zBorder = vec4(1.00, 0.90, 0.10, 0.95);
+        if ((flags & 4u) != 0u) {
+            zBorder = vec4(1.00, 0.90, 0.10, 0.95);
+        } else if ((flags & 8u) != 0u) {
+            zBorder = vec4(0.20, 1.00, 0.30, 0.95);
+        } else if ((flags & 16u) != 0u) {
+            zBorder = vec4(1.00, 0.55, 0.10, 0.95);
+        } else if ((flags & 32u) != 0u) {
+            zBorder = vec4(1.00, 0.15, 0.30, 0.95);
+        }
+        outLayer = zBorder;
+        return true;
+    } else if (isShadow) {
+        outLayer = vec4(0.04, 0.04, 0.06, 0.95);
+        return true;
     }
 
-    vec4 zBorder = vec4(1.00, 0.90, 0.10, 0.95);
-    if ((flags & 4u) != 0u) {
-        zBorder = vec4(1.00, 0.90, 0.10, 0.95);
-    } else if ((flags & 8u) != 0u) {
-        zBorder = vec4(0.20, 1.00, 0.30, 0.95);
-    } else if ((flags & 16u) != 0u) {
-        zBorder = vec4(1.00, 0.55, 0.10, 0.95);
-    } else if ((flags & 32u) != 0u) {
-        zBorder = vec4(1.00, 0.15, 0.30, 0.95);
-    }
-
-    outLayer = zBorder;
-    return true;
+    return false;
 }
 
-bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, out vec4 outLayer) {
+bool evaluateSpawnOverlay(uint flags, int lx, int ly, out vec4 outLayer) {
     if ((flags & 2u) == 0u) {
         return false;
     }
-    bool isBorder = (bNorth && (flags & 16384u) != 0u) ||
-                    (bSouth && (flags & 32768u) != 0u) ||
-                    (bWest  && (flags & 65536u) != 0u) ||
-                    (bEast  && (flags & 131072u) != 0u);
-    if (!isBorder) {
-        return false;
+    int tile_lx = lx % 32;
+    int tile_ly = ly % 32;
+
+    bool isCore, isShadow;
+    evaluateTileBracket(tile_lx, tile_ly, isCore, isShadow);
+
+    if (isCore) {
+        outLayer = vec4(1.00, 0.20, 1.00, 0.95);
+        return true;
+    } else if (isShadow) {
+        outLayer = vec4(0.04, 0.04, 0.06, 0.95);
+        return true;
     }
-    outLayer = vec4(1.00, 0.20, 1.00, 0.95);
-    return true;
+    return false;
 }
 
-bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, out vec4 outLayer) {
+bool evaluateBlockingOverlay(uint flags, int lx, int ly, out vec4 outLayer) {
     if ((flags & 1u) == 0u) {
         return false;
     }
-    bool isBorder = (bNorth && (flags & 64u) != 0u) ||
-                    (bSouth && (flags & 128u) != 0u) ||
-                    (bWest  && (flags & 256u) != 0u) ||
-                    (bEast  && (flags & 512u) != 0u);
-    if (!isBorder) {
-        return false;
+    int tile_lx = lx % 32;
+    int tile_ly = ly % 32;
+
+    bool isCore, isShadow;
+    evaluateTileBracket(tile_lx, tile_ly, isCore, isShadow);
+
+    if (isCore) {
+        outLayer = vec4(0.00, 0.95, 1.00, 0.95);
+        return true;
+    } else if (isShadow) {
+        outLayer = vec4(0.04, 0.04, 0.06, 0.95);
+        return true;
     }
-    outLayer = vec4(0.00, 0.95, 1.00, 0.95);
-    return true;
+    return false;
 }
 
 bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zoneFlags,
@@ -136,27 +150,22 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zon
     int lx = clamp(int(floor(quadCoord.x * quadSize.x)), 0, maxX);
     int ly = clamp(int(floor(quadCoord.y * quadSize.y)), 0, maxY);
 
-    bool bNorth = (ly == 0);
-    bool bSouth = (ly == maxY);
-    bool bWest  = (lx == 0);
-    bool bEast  = (lx == maxX);
-
     vec4 color = vec4(0.0);
     bool hasOverlay = false;
     vec4 layer;
 
-    // 1. Special Zones (showSpecialTiles) with dedicated 4-corner micro-badges & perimeter contour
-    if (showSpecialTiles != 0 && evaluateSpecialZones(flags, bNorth, bSouth, bWest, bEast, lx, ly, layer)) {
+    // 1. Special Zones (showSpecialTiles) with dedicated 4-corner micro-badges & zero-fill brackets
+    if (showSpecialTiles != 0 && evaluateSpecialZones(flags, lx, ly, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
-    // 2. Spawn Radius (showSpawns) with perimeter contour only
-    if (showSpawns != 0 && evaluateSpawnOverlay(flags, bNorth, bSouth, bWest, bEast, layer)) {
+    // 2. Spawn Radius (showSpawns) with magenta zero-fill brackets
+    if (showSpawns != 0 && evaluateSpawnOverlay(flags, lx, ly, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
-    // 3. Pathing / Blocking (showBlocking) with cyan perimeter contour only
-    if (showBlocking != 0 && evaluateBlockingOverlay(flags, bNorth, bSouth, bWest, bEast, layer)) {
+    // 3. Pathing / Blocking (showBlocking) with cyan zero-fill brackets
+    if (showBlocking != 0 && evaluateBlockingOverlay(flags, lx, ly, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 

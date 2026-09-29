@@ -22,6 +22,28 @@ namespace rme::rendering::shaders {
  * - INVALID (Invalid zone flags: Magenta)
  */
 inline constexpr std::string_view INDICATOR_SHADER_GLSL = R"(
+void evaluateTileBracket(int lx, int ly, out bool isCore, out bool isShadow) {
+    bool isCornerX = (lx < 8 || lx >= 24);
+    bool isCornerY = (ly < 8 || ly >= 24);
+    bool isMidX    = (lx >= 13 && lx <= 18);
+    bool isMidY    = (ly >= 13 && ly <= 18);
+
+    bool isCoreEdgeX = (lx == 0 || lx == 31);
+    bool isCoreEdgeY = (ly == 0 || ly == 31);
+    isCore = (isCoreEdgeX && (isCornerY || isMidY)) || (isCoreEdgeY && (isCornerX || isMidX));
+
+    bool isCapX = (lx == 8 || lx == 23 || lx == 12 || lx == 19);
+    bool isCapY = (ly == 8 || ly == 23 || ly == 12 || ly == 19);
+
+    bool isShadowEdgeX = (lx == 1 || lx == 30);
+    bool isShadowEdgeY = (ly == 1 || ly == 30);
+
+    bool isShadowInner = (isShadowEdgeX && (isCornerY || isMidY || isCapY)) ||
+                         (isShadowEdgeY && (isCornerX || isMidX || isCapX));
+    bool isShadowCap   = (isCoreEdgeX && isCapY) || (isCoreEdgeY && isCapX);
+    isShadow = (isShadowInner || isShadowCap) && !isCore;
+}
+
 bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
                            int showHouses, int showSpawns, int showTowns,
                            int showWaypoints, int showTechItems,
@@ -57,7 +79,6 @@ bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
 
     vec4 outlineColor;
     vec4 textOutlineColor = vec4(0.02, 0.05, 0.15, 0.95);
-    int bThick = 1;
     uint inMask[7];
     uint outMask[7];
 
@@ -121,11 +142,9 @@ bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
         outMask = uint[7](0x105A3128u, 0x1DDBDB28u, 0x055BDA28u, 0x05425A28u, 0x055ADA28u, 0x055ADBE8u, 0x055A3108u);
     }
 
-    // 4-corner brackets (8px arm length) + midpoint ticks (6px dash centered at 13..18)
-    bool isCornerArm = (lx < 8 || lx >= 24) && (ly < 8 || ly >= 24);
-    bool isMidArm = (lx >= 13 && lx <= 18) || (ly >= 13 && ly <= 18);
-    bool isBorderEdge = (lx < bThick || lx >= 32 - bThick || ly < bThick || ly >= 32 - bThick);
-    bool isBracket = isBorderEdge && (isCornerArm || isMidArm);
+    // 4-corner brackets (8px arm length) + midpoint ticks (6px dash centered at 13..18) with dark drop-shadow
+    bool isCore, isShadow;
+    evaluateTileBracket(lx, ly, isCore, isShadow);
 
     int row = ly - 12;
     bool isTextInside = false;
@@ -139,10 +158,12 @@ bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
         outColor = vec4(1.0, 1.0, 1.0, 0.98);
     } else if (isTextOutline) {
         outColor = textOutlineColor;
-    } else if (isBracket) {
+    } else if (isCore) {
         outColor = outlineColor;
+    } else if (isShadow) {
+        outColor = vec4(0.04, 0.04, 0.06, 0.95);
     } else {
-        return false;
+        discard;
     }
     outColor.rgb *= tint.rgb;
     outColor.a *= tint.a;

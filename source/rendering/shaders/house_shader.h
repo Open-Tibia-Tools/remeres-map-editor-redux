@@ -33,10 +33,8 @@ void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint 
         int lx = p.x % 32; if (lx < 0) lx += 32;
         int ly = p.y % 32; if (ly < 0) ly += 32;
 
-        bool isCornerArm = (lx < 8 || lx >= 24) && (ly < 8 || ly >= 24);
-        bool isMidArm = (lx >= 13 && lx <= 18) || (ly >= 13 && ly <= 18);
-        bool isBorderEdge = (lx == 0 || lx == 31 || ly == 0 || ly == 31);
-        bool isBracket = isBorderEdge && (isCornerArm || isMidArm);
+        bool isCore, isShadow;
+        evaluateTileBracket(lx, ly, isCore, isShadow);
 
         int dx = abs(lx - 16);
         int dy = abs(ly - 16);
@@ -57,11 +55,14 @@ void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint 
                 ? vec4(0.04, 0.32, 0.08, 0.95)   // Dark green outline
                 : vec4(0.40, 0.20, 0.00, 0.95);  // Dark amber outline
             fragColor.rgb = mix(fragColor.rgb, outlineColor.rgb, outlineColor.a);
-        } else if (isBracket) {
+        } else if (isCore) {
             vec4 bracketColor = isActive
                 ? vec4(0.20, 0.95, 0.20, 0.95)   // Green bracket
                 : vec4(1.00, 0.60, 0.00, 0.90);  // Amber bracket
             fragColor.rgb = mix(fragColor.rgb, bracketColor.rgb, bracketColor.a);
+        } else if (isShadow) {
+            vec4 shadowColor = vec4(0.04, 0.04, 0.06, 0.95);
+            fragColor.rgb = mix(fragColor.rgb, shadowColor.rgb, shadowColor.a);
         }
     } else {
         // Extended House Shader (items/walls): extremely dark diagonal lines from right to left

@@ -226,6 +226,23 @@ def test_zone_shader_zero_wash_and_colors():
     assert "0.85, 0.15, 0.85, 0.25" not in s_body, "Spawn wash must be eliminated"
     assert "1.00, 0.20, 1.00, 0.95" in s_body, "Spawn border must be magenta"
 
+    # Dark drop shadow check for all 3 overlay functions
+    assert "0.04, 0.04, 0.06, 0.95" in fn_body, "Special zones must evaluate dark drop shadow"
+    assert "0.04, 0.04, 0.06, 0.95" in b_body, "Blocking overlay must evaluate dark drop shadow"
+    assert "0.04, 0.04, 0.06, 0.95" in s_body, "Spawn overlay must evaluate dark drop shadow"
+
+
+def test_indicator_shader_zero_fill_and_brackets():
+    """Verify that indicator_shader.h defines evaluateTileBracket with shadows and discards non-indicator pixels."""
+    from pathlib import Path
+    shader_path = Path(__file__).parent.parent / "source" / "rendering" / "shaders" / "indicator_shader.h"
+    content = shader_path.read_text(encoding="utf-8")
+
+    assert "void evaluateTileBracket" in content, "evaluateTileBracket helper must be defined"
+    assert "isShadow = (isShadowInner || isShadowCap) && !isCore;" in content, "Bracket shadow logic must be implemented"
+    assert "outColor = vec4(0.04, 0.04, 0.06, 0.95);" in content, "Dark drop shadow color must be set"
+    assert "discard;" in content, "Non-indicator pixels must be discarded to guarantee zero white background"
+
 
 def test_is_tile_path_blocking_excludes_invisible_wall():
     """Verify that invisible walls (1548) are excluded from pathing blocking overlay."""
