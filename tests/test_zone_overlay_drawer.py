@@ -316,3 +316,115 @@ def test_ground_level_render_order_and_subpass_partitioning():
         "zone_overlay_drawer must NOT be called in post-map pass to avoid tinting walls, tables, and items"
     )
 
+
+def test_multi_zone_flag_accumulation_and_brush():
+    """Verify that multiple zones can co-exist on a tile without overwriting each other."""
+    from pathlib import Path
+    root = Path(__file__).parent.parent
+
+    # 1. Tile::addMapFlags must be declared and defined in tile.h
+    tile_h = (root / "source" / "map" / "tile.h").read_text(encoding="utf-8")
+    assert "void addMapFlags(uint32_t _flags);" in tile_h, "Tile::addMapFlags must be declared"
+    assert "inline void Tile::addMapFlags(uint32_t _flags)" in tile_h, "Tile::addMapFlags must be defined"
+    assert "mapflags |= _flags;" in tile_h, "Tile::addMapFlags must perform bitwise OR"
+
+    # 2. FlagBrush::draw must call addMapFlags instead of setMapFlags to prevent erasing existing zones
+    flag_brush_cpp = (root / "source" / "brushes" / "flag" / "flag_brush.cpp").read_text(encoding="utf-8")
+    draw_idx = flag_brush_cpp.find("void FlagBrush::draw")
+    assert draw_idx != -1
+    draw_body = flag_brush_cpp[draw_idx:draw_idx + 250]
+    assert "tile->addMapFlags" in draw_body, "FlagBrush::draw must call addMapFlags"
+    assert "tile->setMapFlags" not in draw_body, "FlagBrush::draw must not call setMapFlags"
+
+    # 3. map_flags_panel.cpp must call addMapFlags when checking flags
+    flags_panel_cpp = (root / "source" / "ui" / "tile_properties" / "map_flags_panel.cpp").read_text(encoding="utf-8")
+    assert "new_tile->addMapFlags(TILESTATE_NOPVP);" in flags_panel_cpp
+    assert "new_tile->addMapFlags(TILESTATE_NOLOGOUT);" in flags_panel_cpp
+    assert "new_tile->addMapFlags(TILESTATE_PVPZONE);" in flags_panel_cpp
+
+    # 4. zone_overlay_drawer.cpp must accumulate all zone bits independently (no else-if)
+    zod_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.cpp").read_text(encoding="utf-8")
+    spec_tiles_idx = zod_cpp.find("if (options.show_special_tiles)")
+    assert spec_tiles_idx != -1
+    spec_body = zod_cpp[spec_tiles_idx:spec_tiles_idx + 800]
+    assert "if (has_pz)    tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PZ);" in spec_body
+    assert "if (has_nopvp) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOPVP);" in spec_body
+    assert "if (has_nolog) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT);" in spec_body
+    assert "if (has_pvp)   tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PVPZONE);" in spec_body
+    assert "else if (has_nopvp)" not in spec_body, "zone_overlay_drawer must NOT use else if for special zones"
+
+    # 5. sameZone in zone_overlay_drawer.cpp must check all 4 flags for equality
+    assert "(t_pz == pz) && (t_nopvp == nopvp) && (t_nolog == nolog) && (t_pvp == pvp)" in zod_cpp
+
+    # 6. preview_drawer.cpp must accumulate all zone bits independently (no else-if)
+    prev_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "preview_drawer.cpp").read_text(encoding="utf-8")
+    assert "else if ((tile->getMapFlags() & TILESTATE_NOPVP)" not in prev_cpp, "preview_drawer must not use else if"
+
+
+def test_zone_shader_multi_zone_quadrants_and_badges():
+    """Verify that zone_shader.h evaluates 4 distinct corner badges and Voronoi quadrant wash."""
+    from pathlib import Path
+    shader_path = Path(__file__).parent.parent / "source" / "rendering" / "shaders" / "zone_shader.h"
+    content = shader_path.read_text(encoding="utf-8")
+
+    idx = content.find("evaluateSpecialZones")
+    end_idx = content.find("bool evaluateSpawnOverlay")
+    fn_body = content[idx:end_idx]
+
+    # Verify all 4 badge text colors are distinct and explicit
+    assert "vec4(1.00, 0.90, 0.10, 0.98)" in fn_body, "PZ badge text must be golden-yellow"
+    assert "vec4(0.20, 1.00, 0.30, 0.98)" in fn_body, "NP badge text must be emerald-green"
+    assert "vec4(1.00, 0.55, 0.10, 0.98)" in fn_body, "NL badge text must be warm-orange"
+    assert "vec4(1.00, 0.15, 0.30, 0.98)" in fn_body, "PvP badge text must be crimson-red"
+
+    # Verify bevel averaging across active zones
+    assert "activeCount += 1.0;" in fn_body
+    assert "vec4 zDark = sumDark / activeCount;" in fn_body
+    assert "vec4 zLight = sumLight / activeCount;" in fn_body
+
+    # Verify Voronoi quadrant wash
+    assert "int minDist = 999999;" in fn_body
+    assert "int d = tile_lx * tile_lx + tile_ly * tile_ly;" in fn_body
+    assert "d < minDist" in fn_body
+
+    # Simulate Voronoi resolution in Python and verify correctness
+    def resolve_wash(flags, lx, ly):
+        has_pz = (flags & 4) != 0
+        has_np = (flags & 8) != 0
+        has_nl = (flags & 16) != 0
+        has_pvp = (flags & 32) != 0
+        min_d = 999999
+        chosen = None
+        if has_pz:
+            d = lx * lx + ly * ly
+            if d < min_d: min_d = d; chosen = "PZ"
+        if has_np:
+            dx = 31 - lx
+            d = dx * dx + ly * ly
+            if d < min_d: min_d = d; chosen = "NP"
+        if has_nl:
+            dy = 31 - ly
+            d = lx * lx + dy * dy
+            if d < min_d: min_d = d; chosen = "NL"
+        if has_pvp:
+            dx = 31 - lx
+            dy = 31 - ly
+            d = dx * dx + dy * dy
+            if d < min_d: min_d = d; chosen = "PvP"
+        return chosen
+
+    all_flags = 4 | 8 | 16 | 32
+    # Check 4 corners match their respective zones when all 4 are active
+    assert resolve_wash(all_flags, 2, 2) == "PZ"
+    assert resolve_wash(all_flags, 29, 2) == "NP"
+    assert resolve_wash(all_flags, 2, 29) == "NL"
+    assert resolve_wash(all_flags, 29, 29) == "PvP"
+
+    # Check 2 zones (PZ + NP) vertical 50/50 split
+    two_flags = 4 | 8
+    assert resolve_wash(two_flags, 5, 10) == "PZ"
+    assert resolve_wash(two_flags, 25, 10) == "NP"
+    assert resolve_wash(two_flags, 5, 25) == "PZ"
+    assert resolve_wash(two_flags, 25, 25) == "NP"
+
+

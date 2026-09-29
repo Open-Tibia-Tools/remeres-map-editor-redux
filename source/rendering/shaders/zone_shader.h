@@ -35,44 +35,45 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
     // zWash:    Base translucent wash (Vanilla RME style, ~28% alpha)
     // zDark:    3D shadow bevel color (darker shade of the zone color)
     // zLight:   3D highlight bevel color (lighter tint of the zone color)
-    // zBadgeFg: Micro-badge text color
-    vec4 zWash    = vec4(0.0);
-    vec4 zDark    = vec4(0.0);
-    vec4 zLight   = vec4(0.0);
-    vec4 zBadgeFg = vec4(0.0);
+    vec4 pzWash  = vec4(1.00, 0.88, 0.12, 0.28);
+    vec4 pzDark  = vec4(0.55, 0.40, 0.00, 0.95);
+    vec4 pzLight = vec4(1.00, 0.98, 0.70, 0.85);
 
-    if ((flags & 4u) != 0u) {
-        // Protection Zone: Golden Yellow
-        zWash    = vec4(1.00, 0.88, 0.12, 0.28);
-        zDark    = vec4(0.55, 0.40, 0.00, 0.95);
-        zLight   = vec4(1.00, 0.98, 0.70, 0.85);
-        zBadgeFg = vec4(1.00, 0.90, 0.10, 0.98);
-    } else if ((flags & 8u) != 0u) {
-        // No-PvP: Emerald Green
-        zWash    = vec4(0.12, 0.85, 0.24, 0.26);
-        zDark    = vec4(0.00, 0.38, 0.08, 0.95);
-        zLight   = vec4(0.72, 1.00, 0.78, 0.85);
-        zBadgeFg = vec4(0.20, 1.00, 0.30, 0.98);
-    } else if ((flags & 16u) != 0u) {
-        // No-Logout: Warm Orange
-        zWash    = vec4(1.00, 0.52, 0.06, 0.28);
-        zDark    = vec4(0.52, 0.18, 0.00, 0.95);
-        zLight   = vec4(1.00, 0.78, 0.50, 0.85);
-        zBadgeFg = vec4(1.00, 0.55, 0.10, 0.98);
-    } else if ((flags & 32u) != 0u) {
-        // PvP Zone: Crimson Red
-        zWash    = vec4(0.92, 0.12, 0.24, 0.28);
-        zDark    = vec4(0.44, 0.02, 0.08, 0.95);
-        zLight   = vec4(1.00, 0.60, 0.68, 0.85);
-        zBadgeFg = vec4(1.00, 0.15, 0.30, 0.98);
-    }
+    vec4 npWash  = vec4(0.12, 0.85, 0.24, 0.26);
+    vec4 npDark  = vec4(0.00, 0.38, 0.08, 0.95);
+    vec4 npLight = vec4(0.72, 1.00, 0.78, 0.85);
+
+    vec4 nlWash  = vec4(1.00, 0.52, 0.06, 0.28);
+    vec4 nlDark  = vec4(0.52, 0.18, 0.00, 0.95);
+    vec4 nlLight = vec4(1.00, 0.78, 0.50, 0.85);
+
+    vec4 pvpWash  = vec4(0.92, 0.12, 0.24, 0.28);
+    vec4 pvpDark  = vec4(0.44, 0.02, 0.08, 0.95);
+    vec4 pvpLight = vec4(1.00, 0.60, 0.68, 0.85);
+
+    bool hasPz  = ((flags & 4u) != 0u);
+    bool hasNp  = ((flags & 8u) != 0u);
+    bool hasNl  = ((flags & 16u) != 0u);
+    bool hasPvp = ((flags & 32u) != 0u);
+
+    // Compute averaged bevel colors across active zones
+    vec4 sumDark = vec4(0.0);
+    vec4 sumLight = vec4(0.0);
+    float activeCount = 0.0;
+    if (hasPz)  { sumDark += pzDark;  sumLight += pzLight;  activeCount += 1.0; }
+    if (hasNp)  { sumDark += npDark;  sumLight += npLight;  activeCount += 1.0; }
+    if (hasNl)  { sumDark += nlDark;  sumLight += nlLight;  activeCount += 1.0; }
+    if (hasPvp) { sumDark += pvpDark; sumLight += pvpLight; activeCount += 1.0; }
+
+    vec4 zDark = sumDark / activeCount;
+    vec4 zLight = sumLight / activeCount;
 
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98); // 2px solid black global outer outline
     vec4 zBadgeBg = vec4(0.06, 0.06, 0.08, 0.92);
 
     // 1. Dedicated 4-corner micro-badges (High-contrast 2-tone with dark shadow)
     // Top-Left: [PZ] (Yellow)
-    if ((flags & 4u) != 0u && tile_lx >= 1 && tile_lx <= 9 && tile_ly >= 1 && tile_ly <= 7) {
+    if (hasPz && tile_lx >= 1 && tile_lx <= 9 && tile_ly >= 1 && tile_ly <= 7) {
         if ((bNorthOuter && (tile_ly == 0 || tile_ly == 1)) || (bWestOuter && (tile_lx == 0 || tile_lx == 1))) {
             outLayer = zBlack;
             return true;
@@ -81,12 +82,12 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
         int c = tile_lx - 2;
         uint pzMask[5] = uint[5](0x77u, 0x51u, 0x72u, 0x44u, 0x47u);
         bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((pzMask[r] >> (6 - c)) & 1u) != 0u);
-        outLayer = isText ? zBadgeFg : zBadgeBg;
+        outLayer = isText ? vec4(1.00, 0.90, 0.10, 0.98) : zBadgeBg;
         return true;
     }
 
     // Top-Right: [NP] (Emerald Green)
-    if ((flags & 8u) != 0u && tile_lx >= 22 && tile_lx <= 30 && tile_ly >= 1 && tile_ly <= 7) {
+    if (hasNp && tile_lx >= 22 && tile_lx <= 30 && tile_ly >= 1 && tile_ly <= 7) {
         if ((bNorthOuter && (tile_ly == 0 || tile_ly == 1)) || (bEastOuter && (tile_lx == 31 || tile_lx == 30))) {
             outLayer = zBlack;
             return true;
@@ -95,12 +96,12 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
         int c = tile_lx - 23;
         uint npMask[5] = uint[5](0x57u, 0x75u, 0x77u, 0x54u, 0x54u);
         bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((npMask[r] >> (6 - c)) & 1u) != 0u);
-        outLayer = isText ? zBadgeFg : zBadgeBg;
+        outLayer = isText ? vec4(0.20, 1.00, 0.30, 0.98) : zBadgeBg;
         return true;
     }
 
     // Bottom-Left: [NL] (Warm Orange)
-    if ((flags & 16u) != 0u && tile_lx >= 1 && tile_lx <= 9 && tile_ly >= 24 && tile_ly <= 30) {
+    if (hasNl && tile_lx >= 1 && tile_lx <= 9 && tile_ly >= 24 && tile_ly <= 30) {
         if ((bSouthOuter && (tile_ly == 31 || tile_ly == 30)) || (bWestOuter && (tile_lx == 0 || tile_lx == 1))) {
             outLayer = zBlack;
             return true;
@@ -109,12 +110,12 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
         int c = tile_lx - 2;
         uint nlMask[5] = uint[5](0x54u, 0x74u, 0x74u, 0x54u, 0x57u);
         bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((nlMask[r] >> (6 - c)) & 1u) != 0u);
-        outLayer = isText ? zBadgeFg : zBadgeBg;
+        outLayer = isText ? vec4(1.00, 0.55, 0.10, 0.98) : zBadgeBg;
         return true;
     }
 
     // Bottom-Right: [PvP] (Crimson Red)
-    if ((flags & 32u) != 0u && tile_lx >= 18 && tile_lx <= 30 && tile_ly >= 24 && tile_ly <= 30) {
+    if (hasPvp && tile_lx >= 18 && tile_lx <= 30 && tile_ly >= 24 && tile_ly <= 30) {
         if ((bSouthOuter && (tile_ly == 31 || tile_ly == 30)) || (bEastOuter && (tile_lx == 31 || tile_lx == 30))) {
             outLayer = zBlack;
             return true;
@@ -123,7 +124,7 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
         int c = tile_lx - 19;
         uint pvpMask[5] = uint[5](0x707u, 0x505u, 0x757u, 0x454u, 0x424u);
         bool isText = (r >= 0 && r < 5 && c >= 0 && c < 11) && (((pvpMask[r] >> (10 - c)) & 1u) != 0u);
-        outLayer = isText ? zBadgeFg : zBadgeBg;
+        outLayer = isText ? vec4(1.00, 0.15, 0.30, 0.98) : zBadgeBg;
         return true;
     }
 
@@ -186,7 +187,30 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
         return true;
     }
 
-    // 5. INTERIOR: Clean translucent color wash (Vanilla RME style)
+    // 5. INTERIOR: Voronoi quadrant wash (nearest active zone corner)
+    vec4 zWash = vec4(0.0);
+    int minDist = 999999;
+    if (hasPz) {
+        int d = tile_lx * tile_lx + tile_ly * tile_ly;
+        if (d < minDist) { minDist = d; zWash = pzWash; }
+    }
+    if (hasNp) {
+        int dx = 31 - tile_lx;
+        int d = dx * dx + tile_ly * tile_ly;
+        if (d < minDist) { minDist = d; zWash = npWash; }
+    }
+    if (hasNl) {
+        int dy = 31 - tile_ly;
+        int d = tile_lx * tile_lx + dy * dy;
+        if (d < minDist) { minDist = d; zWash = nlWash; }
+    }
+    if (hasPvp) {
+        int dx = 31 - tile_lx;
+        int dy = 31 - tile_ly;
+        int d = dx * dx + dy * dy;
+        if (d < minDist) { minDist = d; zWash = pvpWash; }
+    }
+
     outLayer = zWash;
     return true;
 }

@@ -53,11 +53,14 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 				if (options.show_special_tiles) {
 					if (tile->isPZ()) {
 						tile_zone_flags |= static_cast<uint32_t>(rme::rendering::ZONE_FLAG_PZ);
-					} else if ((tile->getMapFlags() & TILESTATE_NOPVP) != 0) {
+					}
+					if ((tile->getMapFlags() & TILESTATE_NOPVP) != 0) {
 						tile_zone_flags |= static_cast<uint32_t>(rme::rendering::ZONE_FLAG_NOPVP);
-					} else if ((tile->getMapFlags() & TILESTATE_NOLOGOUT) != 0) {
+					}
+					if ((tile->getMapFlags() & TILESTATE_NOLOGOUT) != 0) {
 						tile_zone_flags |= static_cast<uint32_t>(rme::rendering::ZONE_FLAG_NOLOGOUT);
-					} else if ((tile->getMapFlags() & TILESTATE_PVPZONE) != 0) {
+					}
+					if ((tile->getMapFlags() & TILESTATE_PVPZONE) != 0) {
 						tile_zone_flags |= static_cast<uint32_t>(rme::rendering::ZONE_FLAG_PVPZONE);
 					}
 				}

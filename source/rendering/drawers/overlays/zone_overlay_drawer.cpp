@@ -64,11 +64,11 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 
 	auto sameZone = [](const Tile* t, bool pz, bool nopvp, bool nolog, bool pvp) -> bool {
 		if (!t) return false;
-		if (pz) return t->isPZ();
-		if (nopvp) return (t->getMapFlags() & TILESTATE_NOPVP) != 0;
-		if (nolog) return (t->getMapFlags() & TILESTATE_NOLOGOUT) != 0;
-		if (pvp) return (t->getMapFlags() & TILESTATE_PVPZONE) != 0;
-		return false;
+		const bool t_pz = t->isPZ();
+		const bool t_nopvp = (t->getMapFlags() & TILESTATE_NOPVP) != 0;
+		const bool t_nolog = (t->getMapFlags() & TILESTATE_NOLOGOUT) != 0;
+		const bool t_pvp = (t->getMapFlags() & TILESTATE_PVPZONE) != 0;
+		return (t_pz == pz) && (t_nopvp == nopvp) && (t_nolog == nolog) && (t_pvp == pvp);
 	};
 
 	const ViewBounds bounds = view.getBoundsForFloor(z);
@@ -129,15 +129,10 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 					const bool has_nolog = (tile->getMapFlags() & TILESTATE_NOLOGOUT) != 0;
 					const bool has_pvp = (tile->getMapFlags() & TILESTATE_PVPZONE) != 0;
 
-					if (has_pz) {
-						tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PZ);
-					} else if (has_nopvp) {
-						tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOPVP);
-					} else if (has_nolog) {
-						tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT);
-					} else if (has_pvp) {
-						tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PVPZONE);
-					}
+					if (has_pz)    tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PZ);
+					if (has_nopvp) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOPVP);
+					if (has_nolog) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT);
+					if (has_pvp)   tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PVPZONE);
 
 					if (has_pz || has_nopvp || has_nolog || has_pvp) {
 						auto checkNeighbor = [&](const Tile* neighbor, uint32_t global_bit, uint32_t internal_bit) {

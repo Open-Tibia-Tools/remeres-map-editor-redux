@@ -236,6 +236,7 @@ public: // Functions
 
 	// Mapflags (PZ, PVPZONE etc.)
 	void setMapFlags(uint32_t _flags);
+	void addMapFlags(uint32_t _flags);
 	void unsetMapFlags(uint32_t _flags);
 	uint32_t getMapFlags() const;
 
@@ -309,6 +310,10 @@ inline bool Tile::hasInvalidZones() const {
 inline void Tile::setMapFlags(uint32_t _flags) {
 	const uint32_t preservedUnknownBits = invalidZones ? invalidZones->unknownMapFlagBits : 0;
 	mapflags = _flags | preservedUnknownBits;
+}
+
+inline void Tile::addMapFlags(uint32_t _flags) {
+	mapflags |= _flags;
 }
 
 inline void Tile::unsetMapFlags(uint32_t _flags) {
