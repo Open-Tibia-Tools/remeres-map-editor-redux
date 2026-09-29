@@ -18,7 +18,6 @@ void TileColorCalculator::Calculate(const Tile* tile, const DrawingOptions& opti
 
 	if (options.show_only_colors) {
 		if (tile->isPZ()) {
-			r >>= 1;
 			b >>= 1;
 		}
 		if (tile->getMapFlags() & TILESTATE_PVPZONE) {
@@ -29,7 +28,8 @@ void TileColorCalculator::Calculate(const Tile* tile, const DrawingOptions& opti
 			b >>= 1;
 		}
 		if (tile->getMapFlags() & TILESTATE_NOPVP) {
-			g >>= 1;
+			r >>= 1;
+			b >>= 1;
 		}
 	}
 }

@@ -7,8 +7,8 @@ namespace rme::rendering {
 // Up to 24 bits representable with bit-exact precision in IEEE-754 float
 inline constexpr float ZONE_FLAG_BLOCKING       = 1.0f;     // Bit 0: Pathing blocking (Red wash)
 inline constexpr float ZONE_FLAG_SPAWN          = 2.0f;     // Bit 1: Spawn radius (Magenta wash)
-inline constexpr float ZONE_FLAG_PZ             = 4.0f;     // Bit 2: Protection Zone (Green wash)
-inline constexpr float ZONE_FLAG_NOPVP          = 8.0f;     // Bit 3: No-PvP Zone (Yellow wash)
+inline constexpr float ZONE_FLAG_PZ             = 4.0f;     // Bit 2: Protection Zone (Yellow wash)
+inline constexpr float ZONE_FLAG_NOPVP          = 8.0f;     // Bit 3: No-PvP Zone (Green wash)
 inline constexpr float ZONE_FLAG_NOLOGOUT       = 16.0f;    // Bit 4: No-Logout Zone (Orange wash)
 inline constexpr float ZONE_FLAG_PVPZONE        = 32.0f;    // Bit 5: PvP Zone (Crimson wash)
 

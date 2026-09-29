@@ -7,8 +7,17 @@ class Map;
 class BaseMap;
 struct DrawingOptions;
 class AtlasManager;
+class Tile;
 
 namespace rme::rendering {
+
+/**
+ * @brief Evaluates whether a tile is considered path-blocking for map navigation overlays.
+ *
+ * Excludes technical invisible wall items (e.g. Server ID 1548 / TechInvisibleWall),
+ * which have their own dedicated indicator badge ("BLOCK") and are not terrain/pathing obstacles.
+ */
+[[nodiscard]] bool IsTilePathBlocking(const Tile* t) noexcept;
 
 /**
  * @brief Dedicated OpenGL On-Top Overlay Drawer for:

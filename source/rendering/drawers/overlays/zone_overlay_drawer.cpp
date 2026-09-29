@@ -8,11 +8,31 @@
 #include "map/map.h"
 #include "map/basemap.h"
 #include "map/tile.h"
+#include "game/item.h"
 #include "game/spawn.h"
 #include <algorithm>
 #include <vector>
 
 namespace rme::rendering {
+
+bool IsTilePathBlocking(const Tile* t) noexcept {
+	if (!t || !t->isBlocking() || (!t->ground && t->items.empty())) {
+		return false;
+	}
+	if (t->ground && t->ground->isBlocking()) {
+		if (TechnicalItemRegistry::Classify(t->ground->getID(), t->ground->getClientID()) != TileIndicatorType::TechInvisibleWall) {
+			return true;
+		}
+	}
+	for (const auto& item : t->items) {
+		if (item && item->isBlocking()) {
+			if (TechnicalItemRegistry::Classify(item->getID(), item->getClientID()) != TileIndicatorType::TechInvisibleWall) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
 
 void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
                              const RenderView& view,
@@ -32,10 +52,6 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 	if (!white_pixel) {
 		return;
 	}
-
-	auto isPathBlocking = [](const Tile* t) -> bool {
-		return t && t->isBlocking() && (t->ground != nullptr || !t->items.empty());
-	};
 
 	auto sameZone = [](const Tile* t, bool pz, bool nopvp, bool nolog, bool pvp) -> bool {
 		if (!t) return false;
@@ -93,12 +109,12 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 					uint32_t tile_zone_flags = 0;
 
 					// Pathing / Blocking
-					if (options.show_blocking && isPathBlocking(tile)) {
+					if (options.show_blocking && IsTilePathBlocking(tile)) {
 						tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCKING);
-						if (!isPathBlocking(row_prev[idx]))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_N);
-						if (!isPathBlocking(row_next[idx]))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_S);
-						if (!isPathBlocking(row_curr[idx - 1])) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_W);
-						if (!isPathBlocking(row_curr[idx + 1])) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_E);
+						if (!IsTilePathBlocking(row_prev[idx]))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_N);
+						if (!IsTilePathBlocking(row_next[idx]))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_S);
+						if (!IsTilePathBlocking(row_curr[idx - 1])) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_W);
+						if (!IsTilePathBlocking(row_curr[idx + 1])) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_E);
 					}
 
 					// Special Zones (PZ, No-PvP, No-Logout, PvP Zone)

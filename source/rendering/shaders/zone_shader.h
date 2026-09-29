@@ -28,15 +28,15 @@ bool evaluateSpecialZones(uint flags, bool bNorth, bool bSouth, bool bWest, bool
     bool hasZone = false;
 
     if ((flags & 4u) != 0u) {
-        // PZ: Vibrant emerald green wash + border
-        hasZone = true;
-        zWash = vec4(0.15, 0.90, 0.20, 0.28);
-        zBorder = vec4(0.20, 1.00, 0.30, 0.95);
-    } else if ((flags & 8u) != 0u) {
-        // No-PvP: Golden yellow wash + border
+        // PZ: Golden yellow wash + border
         hasZone = true;
         zWash = vec4(0.95, 0.85, 0.10, 0.28);
         zBorder = vec4(1.00, 0.90, 0.10, 0.95);
+    } else if ((flags & 8u) != 0u) {
+        // No-PvP: Vibrant emerald green wash + border
+        hasZone = true;
+        zWash = vec4(0.15, 0.90, 0.20, 0.28);
+        zBorder = vec4(0.20, 1.00, 0.30, 0.95);
     } else if ((flags & 16u) != 0u) {
         // No-Logout: Warm orange wash + border
         hasZone = true;

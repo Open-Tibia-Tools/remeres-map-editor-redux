@@ -9,6 +9,7 @@
 #include "editor/editor.h"
 #include "map/map_region.h"
 #include "rendering/indicators/zone_flags.h"
+#include "rendering/drawers/overlays/zone_overlay_drawer.h"
 
 PreviewDrawer::PreviewDrawer() {
 }
@@ -60,7 +61,7 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 						tile_zone_flags |= static_cast<uint32_t>(rme::rendering::ZONE_FLAG_PVPZONE);
 					}
 				}
-				if (options.show_blocking && tile->isBlocking() && (tile->ground != nullptr || !tile->items.empty())) {
+				if (options.show_blocking && rme::rendering::IsTilePathBlocking(tile)) {
 					tile_zone_flags |= static_cast<uint32_t>(rme::rendering::ZONE_FLAG_BLOCKING);
 				}
 

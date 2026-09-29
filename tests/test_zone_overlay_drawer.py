@@ -168,3 +168,66 @@ def test_secondary_map_precedence():
     # Coordinate outside secondary map uses base map
     other = resolve_tile(base_map, secondary_map, (101, 100, 7))
     assert other is None
+
+
+def test_zone_shader_pz_and_nopvp_colors():
+    """Verify that in zone_shader.h, PZ is yellow and No-PvP is green."""
+    from pathlib import Path
+    shader_path = Path(__file__).parent.parent / "source" / "rendering" / "shaders" / "zone_shader.h"
+    content = shader_path.read_text(encoding="utf-8")
+
+    assert "evaluateSpecialZones" in content
+    idx = content.find("evaluateSpecialZones")
+    fn_body = content[idx:idx + 1200]
+
+    # PZ (flags & 4u) must be yellow wash + yellow border
+    assert "flags & 4u" in fn_body
+    pz_idx = fn_body.find("flags & 4u")
+    pz_body = fn_body[pz_idx:pz_idx + 250]
+    assert "0.95, 0.85, 0.10, 0.28" in pz_body, "PZ wash must be golden yellow"
+    assert "1.00, 0.90, 0.10, 0.95" in pz_body, "PZ border must be yellow"
+
+    # No-PvP (flags & 8u) must be green wash + green border
+    assert "flags & 8u" in fn_body
+    nopvp_idx = fn_body.find("flags & 8u")
+    nopvp_body = fn_body[nopvp_idx:nopvp_idx + 250]
+    assert "0.15, 0.90, 0.20, 0.28" in nopvp_body, "No-PvP wash must be emerald green"
+    assert "0.20, 1.00, 0.30, 0.95" in nopvp_body, "No-PvP border must be green"
+
+
+def test_is_tile_path_blocking_excludes_invisible_wall():
+    """Verify that invisible walls (1548) are excluded from pathing blocking overlay."""
+    class MockItem:
+        def __init__(self, server_id: int, client_id: int, is_blocking: bool):
+            self.server_id = server_id
+            self.client_id = client_id
+            self.blocking = is_blocking
+
+    def is_invisible_wall(item: MockItem) -> bool:
+        return item.server_id == 1548 or item.client_id == 2187
+
+    def is_tile_path_blocking(ground: MockItem | None, items: list[MockItem]) -> bool:
+        if not ground and not items:
+            return False
+        if ground and ground.blocking and not is_invisible_wall(ground):
+            return True
+        for item in items:
+            if item.blocking and not is_invisible_wall(item):
+                return True
+        return False
+
+    # Tile with grass ground (not blocking) and invisible wall 1548
+    grass = MockItem(server_id=101, client_id=101, is_blocking=False)
+    invis_wall = MockItem(server_id=1548, client_id=2187, is_blocking=True)
+    assert not is_tile_path_blocking(grass, [invis_wall]), "Tile with only invisible wall must NOT be path-blocking"
+
+    # Tile with stone wall (blocking)
+    stone_wall = MockItem(server_id=1025, client_id=1025, is_blocking=True)
+    assert is_tile_path_blocking(grass, [stone_wall]), "Tile with stone wall MUST be path-blocking"
+
+    # Tile with stone wall AND invisible wall
+    assert is_tile_path_blocking(grass, [stone_wall, invis_wall]), "Tile with stone wall and invisible wall MUST be path-blocking"
+
+    # Tile with water ground (blocking ground)
+    water = MockItem(server_id=4608, client_id=4608, is_blocking=True)
+    assert is_tile_path_blocking(water, []), "Water ground tile MUST be path-blocking"
