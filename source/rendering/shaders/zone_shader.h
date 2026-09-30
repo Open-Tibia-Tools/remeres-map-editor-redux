@@ -66,99 +66,99 @@ bool evaluateClusterBadge(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 ou
     bool isText = false;
 
     if ((flags & 4u) != 0u) {
-        // "Protection Zone" (82px text width)
-        int totalW = 82;
+        // "Protection Zone" (99px text width)
+        int totalW = 99;
         int tx0 = (w - totalW) / 2;
         int ty0 = (h - charH) / 2;
         int rx = lx - tx0;
         int ry = ly - ty0;
         if (ly >= ty0 && ly < ty0 + charH) {
-            uint pMask[10] = uint[10](0x3Eu, 0x21u, 0x21u, 0x21u, 0x3Eu, 0x20u, 0x20u, 0x20u, 0x20u, 0x20u); // P (w=6)
-            uint rMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x0Fu, 0x09u, 0x08u, 0x08u, 0x08u, 0x08u); // r (w=4)
-            uint oMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x0Eu, 0x11u, 0x11u, 0x11u, 0x11u, 0x0Eu); // o (w=5)
-            uint tMask[10] = uint[10](0x00u, 0x00u, 0x04u, 0x0Eu, 0x04u, 0x04u, 0x04u, 0x04u, 0x05u, 0x02u); // t (w=4)
-            uint eMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x0Eu, 0x11u, 0x1Fu, 0x10u, 0x11u, 0x0Eu); // e (w=5)
-            uint cMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x0Eu, 0x11u, 0x10u, 0x10u, 0x11u, 0x0Eu); // c (w=5)
-            uint iMask[10] = uint[10](0x00u, 0x00u, 0x02u, 0x00u, 0x02u, 0x02u, 0x02u, 0x02u, 0x02u, 0x02u); // i (w=2)
-            uint nMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x16u, 0x19u, 0x11u, 0x11u, 0x11u, 0x11u); // n (w=5)
-            uint zMask[10] = uint[10](0x3Fu, 0x02u, 0x04u, 0x04u, 0x08u, 0x08u, 0x10u, 0x10u, 0x20u, 0x3Fu); // Z (w=6)
+            uint pMask[10] = uint[10](0x7Eu, 0x63u, 0x63u, 0x63u, 0x7Eu, 0x60u, 0x60u, 0x60u, 0x60u, 0x60u); // P (w=7)
+            uint rMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x1Eu, 0x1Bu, 0x18u, 0x18u, 0x18u, 0x18u); // r (w=5)
+            uint oMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x1Eu, 0x33u, 0x33u, 0x33u, 0x33u, 0x1Eu); // o (w=6)
+            uint tMask[10] = uint[10](0x00u, 0x00u, 0x0Cu, 0x1Fu, 0x0Cu, 0x0Cu, 0x0Cu, 0x0Cu, 0x0Eu, 0x06u); // t (w=5)
+            uint eMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x1Eu, 0x33u, 0x3Fu, 0x30u, 0x33u, 0x1Eu); // e (w=6)
+            uint cMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x1Eu, 0x33u, 0x30u, 0x30u, 0x33u, 0x1Eu); // c (w=6)
+            uint iMask[10] = uint[10](0x00u, 0x00u, 0x06u, 0x00u, 0x06u, 0x06u, 0x06u, 0x06u, 0x06u, 0x06u); // i (w=3)
+            uint nMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x36u, 0x3Bu, 0x33u, 0x33u, 0x33u, 0x33u); // n (w=6)
+            uint zMask[10] = uint[10](0x7Fu, 0x07u, 0x0Eu, 0x1Cu, 0x38u, 0x38u, 0x70u, 0x70u, 0x78u, 0x7Fu); // Z (w=7)
 
-            if (rx >= 0 && rx < 6)        isText = (((pMask[ry] >> (5 - rx)) & 1u) != 0u);
-            else if (rx >= 7 && rx < 11)  isText = (((rMask[ry] >> (3 - (rx - 7))) & 1u) != 0u);
-            else if (rx >= 12 && rx < 17) isText = (((oMask[ry] >> (4 - (rx - 12))) & 1u) != 0u);
-            else if (rx >= 18 && rx < 22) isText = (((tMask[ry] >> (3 - (rx - 18))) & 1u) != 0u);
-            else if (rx >= 23 && rx < 28) isText = (((eMask[ry] >> (4 - (rx - 23))) & 1u) != 0u);
-            else if (rx >= 29 && rx < 34) isText = (((cMask[ry] >> (4 - (rx - 29))) & 1u) != 0u);
-            else if (rx >= 35 && rx < 39) isText = (((tMask[ry] >> (3 - (rx - 35))) & 1u) != 0u);
-            else if (rx >= 40 && rx < 42) isText = (((iMask[ry] >> (1 - (rx - 40))) & 1u) != 0u);
-            else if (rx >= 43 && rx < 48) isText = (((oMask[ry] >> (4 - (rx - 43))) & 1u) != 0u);
-            else if (rx >= 49 && rx < 54) isText = (((nMask[ry] >> (4 - (rx - 49))) & 1u) != 0u);
-            else if (rx >= 58 && rx < 64) isText = (((zMask[ry] >> (5 - (rx - 58))) & 1u) != 0u);
-            else if (rx >= 65 && rx < 70) isText = (((oMask[ry] >> (4 - (rx - 65))) & 1u) != 0u);
-            else if (rx >= 71 && rx < 76) isText = (((nMask[ry] >> (4 - (rx - 71))) & 1u) != 0u);
-            else if (rx >= 77 && rx < 82) isText = (((eMask[ry] >> (4 - (rx - 77))) & 1u) != 0u);
+            if (rx >= 0 && rx < 7)        isText = (((pMask[ry] >> (6 - rx)) & 1u) != 0u);
+            else if (rx >= 8 && rx < 13)  isText = (((rMask[ry] >> (4 - (rx - 8))) & 1u) != 0u);
+            else if (rx >= 14 && rx < 20) isText = (((oMask[ry] >> (5 - (rx - 14))) & 1u) != 0u);
+            else if (rx >= 21 && rx < 26) isText = (((tMask[ry] >> (4 - (rx - 21))) & 1u) != 0u);
+            else if (rx >= 27 && rx < 33) isText = (((eMask[ry] >> (5 - (rx - 27))) & 1u) != 0u);
+            else if (rx >= 34 && rx < 40) isText = (((cMask[ry] >> (5 - (rx - 34))) & 1u) != 0u);
+            else if (rx >= 41 && rx < 46) isText = (((tMask[ry] >> (4 - (rx - 41))) & 1u) != 0u);
+            else if (rx >= 47 && rx < 50) isText = (((iMask[ry] >> (2 - (rx - 47))) & 1u) != 0u);
+            else if (rx >= 51 && rx < 57) isText = (((oMask[ry] >> (5 - (rx - 51))) & 1u) != 0u);
+            else if (rx >= 58 && rx < 64) isText = (((nMask[ry] >> (5 - (rx - 58))) & 1u) != 0u);
+            else if (rx >= 70 && rx < 77) isText = (((zMask[ry] >> (6 - (rx - 70))) & 1u) != 0u);
+            else if (rx >= 78 && rx < 84) isText = (((oMask[ry] >> (5 - (rx - 78))) & 1u) != 0u);
+            else if (rx >= 85 && rx < 91) isText = (((nMask[ry] >> (5 - (rx - 85))) & 1u) != 0u);
+            else if (rx >= 92 && rx < 98) isText = (((eMask[ry] >> (5 - (rx - 92))) & 1u) != 0u);
         }
     } else if ((flags & 8u) != 0u) {
-        // "Non-PvP" (43px text width)
-        int totalW = 43;
-        int tx0 = (w - totalW) / 2;
-        int ty0 = (h - charH) / 2;
-        int rx = lx - tx0;
-        int ry = ly - ty0;
-        if (ly >= ty0 && ly < ty0 + charH) {
-            uint nCapMask[10] = uint[10](0x21u, 0x31u, 0x29u, 0x29u, 0x25u, 0x25u, 0x23u, 0x23u, 0x21u, 0x21u); // N (w=6)
-            uint oMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x0Eu, 0x11u, 0x11u, 0x11u, 0x11u, 0x0Eu); // o (w=5)
-            uint nMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x16u, 0x19u, 0x11u, 0x11u, 0x11u, 0x11u); // n (w=5)
-            uint dashMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x0Fu, 0x0Fu, 0x00u, 0x00u); // - (w=4)
-            uint pMask[10]    = uint[10](0x3Eu, 0x21u, 0x21u, 0x21u, 0x3Eu, 0x20u, 0x20u, 0x20u, 0x20u, 0x20u); // P (w=6)
-            uint vMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x11u, 0x11u, 0x11u, 0x0Au, 0x0Au, 0x04u); // v (w=5)
-
-            if (rx >= 0 && rx < 6)        isText = (((nCapMask[ry] >> (5 - rx)) & 1u) != 0u);
-            else if (rx >= 7 && rx < 12)  isText = (((oMask[ry] >> (4 - (rx - 7))) & 1u) != 0u);
-            else if (rx >= 13 && rx < 18) isText = (((nMask[ry] >> (4 - (rx - 13))) & 1u) != 0u);
-            else if (rx >= 19 && rx < 23) isText = (((dashMask[ry] >> (3 - (rx - 19))) & 1u) != 0u);
-            else if (rx >= 24 && rx < 30) isText = (((pMask[ry] >> (5 - (rx - 24))) & 1u) != 0u);
-            else if (rx >= 31 && rx < 36) isText = (((vMask[ry] >> (4 - (rx - 31))) & 1u) != 0u);
-            else if (rx >= 37 && rx < 43) isText = (((pMask[ry] >> (5 - (rx - 37))) & 1u) != 0u);
-        }
-    } else if ((flags & 16u) != 0u) {
-        // "No Logout" (50px text width)
+        // "Non-PvP" (50px text width)
         int totalW = 50;
         int tx0 = (w - totalW) / 2;
         int ty0 = (h - charH) / 2;
         int rx = lx - tx0;
         int ry = ly - ty0;
         if (ly >= ty0 && ly < ty0 + charH) {
-            uint nCapMask[10] = uint[10](0x21u, 0x31u, 0x29u, 0x29u, 0x25u, 0x25u, 0x23u, 0x23u, 0x21u, 0x21u); // N (w=6)
-            uint oMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x0Eu, 0x11u, 0x11u, 0x11u, 0x11u, 0x0Eu); // o (w=5)
-            uint lMask[10]    = uint[10](0x10u, 0x10u, 0x10u, 0x10u, 0x10u, 0x10u, 0x10u, 0x10u, 0x10u, 0x1Fu); // L (w=5)
-            uint gMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x0Eu, 0x11u, 0x11u, 0x0Fu, 0x01u, 0x11u, 0x0Eu); // g (w=5)
-            uint uMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x11u, 0x11u, 0x11u, 0x11u, 0x13u, 0x0Du); // u (w=5)
-            uint tMask[10]    = uint[10](0x00u, 0x00u, 0x04u, 0x0Eu, 0x04u, 0x04u, 0x04u, 0x04u, 0x05u, 0x02u); // t (w=4)
+            uint nCapMask[10] = uint[10](0x63u, 0x73u, 0x73u, 0x5Bu, 0x4Fu, 0x4Fu, 0x67u, 0x63u, 0x63u, 0x63u); // N (w=7)
+            uint oMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x1Eu, 0x33u, 0x33u, 0x33u, 0x33u, 0x1Eu); // o (w=6)
+            uint nMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x36u, 0x3Bu, 0x33u, 0x33u, 0x33u, 0x33u); // n (w=6)
+            uint dashMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x1Fu, 0x1Fu, 0x00u, 0x00u, 0x00u); // - (w=5)
+            uint pMask[10]    = uint[10](0x7Eu, 0x63u, 0x63u, 0x63u, 0x7Eu, 0x60u, 0x60u, 0x60u, 0x60u, 0x60u); // P (w=7)
+            uint vMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x33u, 0x33u, 0x33u, 0x1Eu, 0x1Eu, 0x0Cu); // v (w=6)
 
-            if (rx >= 0 && rx < 6)        isText = (((nCapMask[ry] >> (5 - rx)) & 1u) != 0u);
-            else if (rx >= 7 && rx < 12)  isText = (((oMask[ry] >> (4 - (rx - 7))) & 1u) != 0u);
-            else if (rx >= 16 && rx < 21) isText = (((lMask[ry] >> (4 - (rx - 16))) & 1u) != 0u);
-            else if (rx >= 22 && rx < 27) isText = (((oMask[ry] >> (4 - (rx - 22))) & 1u) != 0u);
-            else if (rx >= 28 && rx < 33) isText = (((gMask[ry] >> (4 - (rx - 28))) & 1u) != 0u);
-            else if (rx >= 34 && rx < 39) isText = (((oMask[ry] >> (4 - (rx - 34))) & 1u) != 0u);
-            else if (rx >= 40 && rx < 45) isText = (((uMask[ry] >> (4 - (rx - 40))) & 1u) != 0u);
-            else if (rx >= 46 && rx < 50) isText = (((tMask[ry] >> (3 - (rx - 46))) & 1u) != 0u);
+            if (rx >= 0 && rx < 7)        isText = (((nCapMask[ry] >> (6 - rx)) & 1u) != 0u);
+            else if (rx >= 8 && rx < 14)  isText = (((oMask[ry] >> (5 - (rx - 8))) & 1u) != 0u);
+            else if (rx >= 15 && rx < 21) isText = (((nMask[ry] >> (5 - (rx - 15))) & 1u) != 0u);
+            else if (rx >= 22 && rx < 27) isText = (((dashMask[ry] >> (4 - (rx - 22))) & 1u) != 0u);
+            else if (rx >= 28 && rx < 35) isText = (((pMask[ry] >> (6 - (rx - 28))) & 1u) != 0u);
+            else if (rx >= 36 && rx < 42) isText = (((vMask[ry] >> (5 - (rx - 36))) & 1u) != 0u);
+            else if (rx >= 43 && rx < 50) isText = (((pMask[ry] >> (6 - (rx - 43))) & 1u) != 0u);
         }
-    } else if ((flags & 32u) != 0u) {
-        // "PvP" (19px text width)
-        int totalW = 19;
+    } else if ((flags & 16u) != 0u) {
+        // "No Logout" (61px text width)
+        int totalW = 61;
         int tx0 = (w - totalW) / 2;
         int ty0 = (h - charH) / 2;
         int rx = lx - tx0;
         int ry = ly - ty0;
         if (ly >= ty0 && ly < ty0 + charH) {
-            uint pMask[10] = uint[10](0x3Eu, 0x21u, 0x21u, 0x21u, 0x3Eu, 0x20u, 0x20u, 0x20u, 0x20u, 0x20u); // P (w=6)
-            uint vMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x11u, 0x11u, 0x11u, 0x0Au, 0x0Au, 0x04u); // v (w=5)
+            uint nCapMask[10] = uint[10](0x63u, 0x73u, 0x73u, 0x5Bu, 0x4Fu, 0x4Fu, 0x67u, 0x63u, 0x63u, 0x63u); // N (w=7)
+            uint oMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x1Eu, 0x33u, 0x33u, 0x33u, 0x33u, 0x1Eu); // o (w=6)
+            uint lMask[10]    = uint[10](0x30u, 0x30u, 0x30u, 0x30u, 0x30u, 0x30u, 0x30u, 0x30u, 0x3Fu, 0x3Fu); // L (w=6)
+            uint gMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x1Eu, 0x33u, 0x33u, 0x1Fu, 0x03u, 0x33u, 0x1Eu); // g (w=6)
+            uint uMask[10]    = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x33u, 0x33u, 0x33u, 0x33u, 0x37u, 0x1Eu); // u (w=6)
+            uint tMask[10]    = uint[10](0x00u, 0x00u, 0x0Cu, 0x1Fu, 0x0Cu, 0x0Cu, 0x0Cu, 0x0Cu, 0x0Eu, 0x06u); // t (w=5)
 
-            if (rx >= 0 && rx < 6)        isText = (((pMask[ry] >> (5 - rx)) & 1u) != 0u);
-            else if (rx >= 7 && rx < 12)  isText = (((vMask[ry] >> (4 - (rx - 7))) & 1u) != 0u);
-            else if (rx >= 13 && rx < 19) isText = (((pMask[ry] >> (5 - (rx - 13))) & 1u) != 0u);
+            if (rx >= 0 && rx < 7)        isText = (((nCapMask[ry] >> (6 - rx)) & 1u) != 0u);
+            else if (rx >= 8 && rx < 14)  isText = (((oMask[ry] >> (5 - (rx - 8))) & 1u) != 0u);
+            else if (rx >= 20 && rx < 26) isText = (((lMask[ry] >> (5 - (rx - 20))) & 1u) != 0u);
+            else if (rx >= 27 && rx < 33) isText = (((oMask[ry] >> (5 - (rx - 27))) & 1u) != 0u);
+            else if (rx >= 34 && rx < 40) isText = (((gMask[ry] >> (5 - (rx - 34))) & 1u) != 0u);
+            else if (rx >= 41 && rx < 47) isText = (((oMask[ry] >> (5 - (rx - 41))) & 1u) != 0u);
+            else if (rx >= 48 && rx < 54) isText = (((uMask[ry] >> (5 - (rx - 48))) & 1u) != 0u);
+            else if (rx >= 55 && rx < 60) isText = (((tMask[ry] >> (4 - (rx - 55))) & 1u) != 0u);
+        }
+    } else if ((flags & 32u) != 0u) {
+        // "PvP" (22px text width)
+        int totalW = 22;
+        int tx0 = (w - totalW) / 2;
+        int ty0 = (h - charH) / 2;
+        int rx = lx - tx0;
+        int ry = ly - ty0;
+        if (ly >= ty0 && ly < ty0 + charH) {
+            uint pMask[10] = uint[10](0x7Eu, 0x63u, 0x63u, 0x63u, 0x7Eu, 0x60u, 0x60u, 0x60u, 0x60u, 0x60u); // P (w=7)
+            uint vMask[10] = uint[10](0x00u, 0x00u, 0x00u, 0x00u, 0x33u, 0x33u, 0x33u, 0x1Eu, 0x1Eu, 0x0Cu); // v (w=6)
+
+            if (rx >= 0 && rx < 7)        isText = (((pMask[ry] >> (6 - rx)) & 1u) != 0u);
+            else if (rx >= 8 && rx < 14)  isText = (((vMask[ry] >> (5 - (rx - 8))) & 1u) != 0u);
+            else if (rx >= 15 && rx < 22) isText = (((pMask[ry] >> (6 - (rx - 15))) & 1u) != 0u);
         }
     }
 

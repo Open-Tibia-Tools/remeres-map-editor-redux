@@ -199,17 +199,9 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 			}
 
 			// 3. Dynamic badge scaling based on cluster size & clearance
+			// Uniform badge size across all zone types, adjusted to the largest label ("Protection Zone")
 			const int tile_count = static_cast<int>(cluster_tiles.size());
-			float base_w = 33.0f;
-			if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_PZ)) {
-				base_w = 96.0f; // "Protection Zone" (82px text + 14px pad)
-			} else if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT)) {
-				base_w = 64.0f; // "No Logout" (50px text + 14px pad)
-			} else if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_NOPVP)) {
-				base_w = 57.0f; // "Non-PvP" (43px text + 14px pad)
-			} else if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_PVPZONE)) {
-				base_w = 33.0f; // "PvP" (19px text + 14px pad)
-			}
+			const float base_w = 112.0f;
 
 			float bw = base_w;
 			float bh = 24.0f;
