@@ -182,20 +182,12 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		}
 	}
 
-	// 2. Fixed World Center Cluster Badges Pass
+	// 2. Pre-calculate Cluster Badges
 	if (options.show_special_tiles && !visible_zone_tiles.empty() && view.zoom <= 10.0f) {
-		const auto& badges = cluster_finder_.findClusters(z, bounds, visible_zone_tiles);
-		for (const auto& badge : badges) {
-			int draw_x, draw_y;
-			view.getScreenPosition(badge.center_x, badge.center_y, z, draw_x, draw_y);
-			const float px = static_cast<float>(draw_x) + 16.0f - (badge.width * 0.5f) + badge.offset_x;
-			const float py = static_cast<float>(draw_y) + 16.0f - (badge.height * 0.5f) + badge.offset_y;
-			sprite_batch.draw(px, py, badge.width, badge.height, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-			                  0.0f, static_cast<float>(static_cast<uint32_t>(ZONE_FLAG_CLUSTER_BADGE) | badge.zone_flag));
-		}
+		cluster_finder_.findClusters(z, bounds, visible_zone_tiles);
 	}
 
-	// 3. Spawns Pass
+	// 3. Spawns Perimeter Box Pass (Ground level)
 	if (options.show_spawns) {
 		for (const Position& spos : map.spawns) {
 			if (spos.z != z) {
@@ -233,10 +225,69 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			sprite_batch.draw(static_cast<float>(draw_x0), static_cast<float>(draw_y0),
 			                  spawn_w, spawn_h, *white_pixel, 1.0f, 1.0f, 1.0f, box_alpha,
 			                  0.0f, static_cast<float>(spawn_flags));
+		}
+	}
+}
 
-			// Emit spawn center badge (32x32) with "SPAWN" text
+void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
+                                        int z,
+                                        const RenderView& view,
+                                        const Map& map,
+                                        const BaseMap* /*secondary_map*/,
+                                        const DrawingOptions& options,
+                                        const AtlasManager& atlas) {
+	if (options.ingame) {
+		return;
+	}
+
+	const AtlasRegion* white_pixel = atlas.getWhitePixel();
+	if (!white_pixel) {
+		return;
+	}
+
+	const ViewBounds bounds = view.getBoundsForFloor(z);
+	const float floor_alpha = (z == view.floor) ? 1.0f : std::max(0.25f, 1.0f - static_cast<float>(view.floor - z) * 0.20f);
+
+	// 1. Cluster Zone Badges Pass (Rendered on top of items, tables, walls, and statues)
+	if (options.show_special_tiles && view.zoom <= 10.0f) {
+		const auto& badges = cluster_finder_.getLastBadges();
+		for (const auto& badge : badges) {
+			if (badge.z != z) {
+				continue;
+			}
+			int draw_x, draw_y;
+			view.getScreenPosition(badge.center_x, badge.center_y, z, draw_x, draw_y);
+			const float px = static_cast<float>(draw_x) + 16.0f - (badge.width * 0.5f) + badge.offset_x;
+			const float py = static_cast<float>(draw_y) + 16.0f - (badge.height * 0.5f) + badge.offset_y;
+			sprite_batch.draw(px, py, badge.width, badge.height, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
+			                  0.0f, static_cast<float>(static_cast<uint32_t>(ZONE_FLAG_CLUSTER_BADGE) | badge.zone_flag));
+		}
+	}
+
+	// 2. Spawn Center Badges (Rendered on top of items)
+	if (options.show_spawns) {
+		for (const Position& spos : map.spawns) {
+			if (spos.z != z) {
+				continue;
+			}
+			const Tile* st = map.getTile(spos);
+			if (!st || !st->spawn) {
+				continue;
+			}
+			const int radius = st->spawn->getSize();
+			const int sx0 = spos.x - radius;
+			const int sx1 = spos.x + radius;
+			const int sy0 = spos.y - radius;
+			const int sy1 = spos.y + radius;
+
+			if (sx1 < bounds.start_x || sx0 > bounds.end_x ||
+			    sy1 < bounds.start_y || sy0 > bounds.end_y) {
+				continue;
+			}
+
 			int center_draw_x, center_draw_y;
 			view.getScreenPosition(spos.x, spos.y, z, center_draw_x, center_draw_y);
+			const float box_alpha = (st->spawn->isSelected() && options.dragging) ? (floor_alpha * 0.30f) : floor_alpha;
 			sprite_batch.draw(static_cast<float>(center_draw_x), static_cast<float>(center_draw_y),
 			                  32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, box_alpha,
 			                  INDICATOR_SPAWN_BASE, 0.0f);
@@ -259,6 +310,7 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 
 	for (int z = start_z; z >= end_z; --z) {
 		drawFloor(sprite_batch, z, view, map, secondary_map, options, atlas);
+		drawFloorBadges(sprite_batch, z, view, map, secondary_map, options, atlas);
 	}
 }
 

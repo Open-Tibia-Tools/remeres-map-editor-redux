@@ -62,6 +62,10 @@ public:
 		std::span<const VisibleZoneTile> visible_tiles
 	);
 
+	[[nodiscard]] const std::vector<ZoneClusterBadge>& getLastBadges() const noexcept {
+		return visible_badges_result_;
+	}
+
 	void invalidate() noexcept {
 		visible_badges_result_.clear();
 		tile_grid_.clear();

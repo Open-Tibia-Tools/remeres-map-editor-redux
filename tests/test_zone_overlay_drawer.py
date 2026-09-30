@@ -287,22 +287,25 @@ def test_ground_level_render_order_and_subpass_partitioning():
     assert "void renderFloorTerrain" in ccm_h
     assert "void renderFloorItems" in ccm_h
 
-    # 2. Verify zone_overlay_drawer.h declares drawFloor
+    # 2. Verify zone_overlay_drawer.h declares drawFloor and drawFloorBadges
     zod_h = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.h").read_text(encoding="utf-8")
     assert "void drawFloor(" in zod_h
+    assert "void drawFloorBadges(" in zod_h
 
-    # 3. Verify map_layer_drawer.cpp invokes drawFloor between renderFloorTerrain and renderFloorItems
+    # 3. Verify map_layer_drawer.cpp invokes drawFloor between renderFloorTerrain and renderFloorItems, and drawFloorBadges after renderFloorItems
     mld_cpp = (root / "source" / "rendering" / "drawers" / "map_layer_drawer.cpp").read_text(encoding="utf-8")
     terrain_pos = mld_cpp.find("renderFloorTerrain")
     zone_pos = mld_cpp.find("zone_overlay_drawer->drawFloor")
     items_pos = mld_cpp.find("renderFloorItems")
+    badges_pos = mld_cpp.find("zone_overlay_drawer->drawFloorBadges")
 
     assert terrain_pos != -1, "renderFloorTerrain must be called"
     assert zone_pos != -1, "zone_overlay_drawer->drawFloor must be called"
     assert items_pos != -1, "renderFloorItems must be called"
+    assert badges_pos != -1, "zone_overlay_drawer->drawFloorBadges must be called"
 
-    assert terrain_pos < zone_pos < items_pos, (
-        "Strict Ground-Level Draw Order: renderFloorTerrain -> zone_overlay_drawer->drawFloor -> renderFloorItems"
+    assert terrain_pos < zone_pos < items_pos < badges_pos, (
+        "Strict Order: renderFloorTerrain -> drawFloor -> renderFloorItems -> drawFloorBadges"
     )
 
     # 4. Verify post-map overlay pass in map_drawer.cpp does NOT draw zone overlays on top of items

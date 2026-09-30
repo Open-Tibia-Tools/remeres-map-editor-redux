@@ -191,7 +191,12 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		// 5. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!
 		chunk_cache->renderDynamicOverlays(map_z, map, ctx, sprite_batch, *tile_renderer);
 
-		// 6. Flush dynamic overlays for this floor so depth order across floors is preserved
+		// 6. On-Top Badges pass: Cluster zone badges & spawn badges on top of items
+		if (zone_overlay_drawer && !options.ingame) {
+			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+		}
+
+		// 7. Flush dynamic overlays and badges for this floor so depth order across floors is preserved
 		sprite_batch.flush(ctx.atlas);
 	} else {
 		// Classic full-tile traversal fallback:
@@ -217,6 +222,12 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 
 			tile_renderer->RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, true, true);
 		});
+
+		// 4. On-Top Badges pass
+		if (zone_overlay_drawer && !options.ingame) {
+			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+		}
+
 		sprite_batch.flush(ctx.atlas);
 	}
 }
