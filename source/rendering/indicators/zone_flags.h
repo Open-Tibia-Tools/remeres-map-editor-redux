@@ -38,6 +38,9 @@ inline constexpr float ZONE_FLAG_ZONE_INTERNAL_E = 2097152.0f;// Bit 21: East in
 
 // Dedicated cluster badge indicator quad (Bit 22)
 inline constexpr float ZONE_FLAG_CLUSTER_BADGE  = 4194304.0f;// Bit 22: Fixed World Center cluster badge quad
+
+// Dedicated perimeter connection node indicator quad (Bit 23)
+inline constexpr float ZONE_FLAG_PERIMETER_NODE = 8388608.0f;// Bit 23: Perimeter connection node square
 } // namespace rme::rendering
 
 #endif // RME_RENDERING_INDICATORS_ZONE_FLAGS_H_

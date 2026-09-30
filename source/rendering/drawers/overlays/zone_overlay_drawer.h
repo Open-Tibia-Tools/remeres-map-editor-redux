@@ -2,6 +2,7 @@
 #define RME_RENDERING_DRAWERS_OVERLAYS_ZONE_OVERLAY_DRAWER_H_
 
 #include "rendering/indicators/zone_cluster_finder.h"
+#include <vector>
 
 class SpriteBatch;
 struct RenderView;
@@ -62,7 +63,14 @@ public:
 	}
 
 private:
+	struct PerimeterNodeInstance {
+		float x;
+		float y;
+		float flags;
+	};
+
 	ZoneClusterFinder cluster_finder_;
+	std::vector<PerimeterNodeInstance> perimeter_nodes_;
 };
 
 } // namespace rme::rendering

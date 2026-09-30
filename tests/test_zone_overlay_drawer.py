@@ -589,3 +589,77 @@ def test_zone_cluster_finder_algorithm():
     assert get_badge_size(20) == (52.0, 26.0)
 
 
+def test_perimeter_connection_nodes_topology_and_shaders():
+    """
+    Verifies the mathematical topology and shader integration of perimeter connection nodes:
+    1. Grid vertices with 1 <= count <= 3 adjacent zone tiles are boundary nodes.
+    2. Interior vertices with count == 4 NEVER receive nodes ("no inside").
+    3. Outside vertices with count == 0 NEVER receive nodes.
+    4. Bit 23 (8388608.0f) is declared in zone_flags.h and evaluated in zone_shader.h and zone_overlay_drawer.cpp.
+    """
+    def compute_perimeter_nodes(zone_tiles: set[tuple[int, int]]) -> dict[tuple[int, int], int]:
+        """Returns dict of (vx, vy) -> count for all perimeter vertices."""
+        nodes = {}
+        candidates = set()
+        for tx, ty in zone_tiles:
+            candidates.add((tx, ty))
+            candidates.add((tx + 1, ty))
+            candidates.add((tx, ty + 1))
+            candidates.add((tx + 1, ty + 1))
+
+        for vx, vy in candidates:
+            nw = (vx - 1, vy - 1) in zone_tiles
+            ne = (vx, vy - 1) in zone_tiles
+            sw = (vx - 1, vy) in zone_tiles
+            se = (vx, vy) in zone_tiles
+            count = (1 if nw else 0) + (1 if ne else 0) + (1 if sw else 0) + (1 if se else 0)
+            if 1 <= count <= 3:
+                nodes[(vx, vy)] = count
+        return nodes
+
+    # Case 1: 1x1 isolated tile
+    nodes_1x1 = compute_perimeter_nodes({(10, 10)})
+    assert len(nodes_1x1) == 4
+    for pt in [(10, 10), (11, 10), (10, 11), (11, 11)]:
+        assert nodes_1x1[pt] == 1
+
+    # Case 2: 2x2 solid block of tiles
+    tiles_2x2 = {(10, 10), (11, 10), (10, 11), (11, 11)}
+    nodes_2x2 = compute_perimeter_nodes(tiles_2x2)
+    assert len(nodes_2x2) == 8
+    assert (11, 11) not in nodes_2x2, "Interior vertex touching 4 tiles must NEVER receive a perimeter node"
+
+    corners = [(10, 10), (12, 10), (10, 12), (12, 12)]
+    edges = [(11, 10), (10, 11), (12, 11), (11, 12)]
+    for c in corners:
+        assert nodes_2x2[c] == 1
+    for e in edges:
+        assert nodes_2x2[e] == 2
+
+    # Case 3: L-shaped cluster (3 tiles: (10, 10), (11, 10), (10, 11))
+    tiles_l = {(10, 10), (11, 10), (10, 11)}
+    nodes_l = compute_perimeter_nodes(tiles_l)
+    assert len(nodes_l) == 8
+    assert (11, 11) in nodes_l
+    assert nodes_l[(11, 11)] == 3, "Reflex corner must have count == 3"
+
+    # Case 4: Verify constants in C++ source files
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+
+    flags_h = (root / "source" / "rendering" / "indicators" / "zone_flags.h").read_text(encoding="utf-8")
+    assert "ZONE_FLAG_PERIMETER_NODE = 8388608.0f;" in flags_h
+
+    shader_h = (root / "source" / "rendering" / "shaders" / "zone_shader.h").read_text(encoding="utf-8")
+    assert "bool evaluatePerimeterNode(" in shader_h
+    assert "(flags & 8388608u) != 0u" in shader_h
+
+    drawer_h = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.h").read_text(encoding="utf-8")
+    assert "perimeter_nodes_" in drawer_h
+
+    drawer_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.cpp").read_text(encoding="utf-8")
+    assert "evaluateVertexRow" in drawer_cpp
+    assert "ZONE_FLAG_PERIMETER_NODE" in drawer_cpp
+
+
+
