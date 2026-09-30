@@ -1,6 +1,8 @@
 #ifndef RME_RENDERING_DRAWERS_OVERLAYS_ZONE_OVERLAY_DRAWER_H_
 #define RME_RENDERING_DRAWERS_OVERLAYS_ZONE_OVERLAY_DRAWER_H_
 
+#include "rendering/indicators/zone_cluster_finder.h"
+
 class SpriteBatch;
 struct RenderView;
 class Map;
@@ -46,6 +48,13 @@ public:
 	          const BaseMap* secondary_map,
 	          const DrawingOptions& options,
 	          const AtlasManager& atlas);
+
+	void invalidateClusters() noexcept {
+		cluster_finder_.invalidate();
+	}
+
+private:
+	ZoneClusterFinder cluster_finder_;
 };
 
 } // namespace rme::rendering

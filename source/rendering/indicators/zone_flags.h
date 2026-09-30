@@ -35,6 +35,9 @@ inline constexpr float ZONE_FLAG_ZONE_INTERNAL_N = 262144.0f; // Bit 18: North i
 inline constexpr float ZONE_FLAG_ZONE_INTERNAL_S = 524288.0f; // Bit 19: South internal inter-zone border
 inline constexpr float ZONE_FLAG_ZONE_INTERNAL_W = 1048576.0f;// Bit 20: West internal inter-zone border
 inline constexpr float ZONE_FLAG_ZONE_INTERNAL_E = 2097152.0f;// Bit 21: East internal inter-zone border
+
+// Dedicated cluster badge indicator quad (Bit 22)
+inline constexpr float ZONE_FLAG_CLUSTER_BADGE  = 4194304.0f;// Bit 22: Fixed World Center cluster badge quad
 } // namespace rme::rendering
 
 #endif // RME_RENDERING_INDICATORS_ZONE_FLAGS_H_

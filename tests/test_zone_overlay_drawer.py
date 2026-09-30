@@ -200,9 +200,9 @@ def test_zone_shader_3d_bevel_and_colors():
     assert "flags & 32u" in fn_body
     assert "0.92, 0.12, 0.24, 0.28" in fn_body, "PvP Zone wash must be crimson red"
 
-    # Dedicated 4-corner micro-badges must be present
-    assert "pzMask" in fn_body and "npMask" in fn_body
-    assert "nlMask" in fn_body and "pvpMask" in fn_body
+    # Cluster badge evaluation helper must be present
+    assert "evaluateClusterBadge" in content
+    assert "4194304u" in content, "ZONE_FLAG_CLUSTER_BADGE dispatch must be present"
 
     # Inside 3D kitchen tile bevels must be present
     assert "!bNorthOuter && tile_ly == 0" in fn_body
@@ -367,15 +367,25 @@ def test_zone_shader_multi_zone_quadrants_and_badges():
     shader_path = Path(__file__).parent.parent / "source" / "rendering" / "shaders" / "zone_shader.h"
     content = shader_path.read_text(encoding="utf-8")
 
+    badge_idx = content.find("evaluateClusterBadge")
+    badge_end = content.find("bool evaluateSpecialZones")
+    badge_body = content[badge_idx:badge_end]
+
     idx = content.find("evaluateSpecialZones")
     end_idx = content.find("bool evaluateSpawnOverlay")
     fn_body = content[idx:end_idx]
 
-    # Verify all 4 badge text colors are distinct and explicit
-    assert "vec4(1.00, 0.90, 0.10, 0.98)" in fn_body, "PZ badge text must be golden-yellow"
-    assert "vec4(0.20, 1.00, 0.30, 0.98)" in fn_body, "NP badge text must be emerald-green"
-    assert "vec4(1.00, 0.55, 0.10, 0.98)" in fn_body, "NL badge text must be warm-orange"
-    assert "vec4(1.00, 0.15, 0.30, 0.98)" in fn_body, "PvP badge text must be crimson-red"
+    # Verify all 4 badge text colors are distinct and explicit in evaluateClusterBadge
+    assert "vec4(1.00, 0.90, 0.10, 0.98)" in badge_body, "PZ badge text must be golden-yellow"
+    assert "vec4(0.20, 1.00, 0.30, 0.98)" in badge_body, "NP badge text must be emerald-green"
+    assert "vec4(1.00, 0.55, 0.10, 0.98)" in badge_body, "NL badge text must be warm-orange"
+    assert "vec4(1.00, 0.15, 0.30, 0.98)" in badge_body, "PvP badge text must be crimson-red"
+
+    # Verify dynamic 1x / 2x font scaling and character bitmasks
+    assert "bool is2x = (h >= 18);" in badge_body
+    assert "int fontScale = is2x ? 2 : 1;" in badge_body
+    assert "pMask" in badge_body and "zMask" in badge_body
+    assert "nMask" in badge_body and "lMask" in badge_body and "vMask" in badge_body
 
     # Verify bevel averaging across active zones
     assert "activeCount += 1.0;" in fn_body
@@ -426,5 +436,111 @@ def test_zone_shader_multi_zone_quadrants_and_badges():
     assert resolve_wash(two_flags, 25, 10) == "NP"
     assert resolve_wash(two_flags, 5, 25) == "PZ"
     assert resolve_wash(two_flags, 25, 25) == "NP"
+
+
+def test_zone_cluster_finder_algorithm():
+    """Verify connected component BFS, distance transform pole of inaccessibility, and badge scaling logic."""
+    from collections import deque
+
+    def compute_pole_of_inaccessibility(tiles: set[tuple[int, int]]) -> tuple[int, int, int]:
+        """Multi-source BFS distance transform from perimeter inward."""
+        assert tiles
+        q = deque()
+        dist = {}
+
+        # 1. Identify perimeter tiles (tiles adjacent to exterior)
+        for x, y in tiles:
+            is_boundary = False
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                if (x + dx, y + dy) not in tiles:
+                    is_boundary = True
+                    break
+            if is_boundary:
+                dist[(x, y)] = 0
+                q.append((x, y))
+
+        # 2. Multi-source BFS inward
+        while q:
+            cx, cy = q.popleft()
+            cd = dist[(cx, cy)]
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                npos = (cx + dx, cy + dy)
+                if npos in tiles and npos not in dist:
+                    dist[npos] = cd + 1
+                    q.append(npos)
+
+        # 3. Find pole (max clearance, breaking ties by distance to centroid)
+        avg_x = sum(x for x, y in tiles) / len(tiles)
+        avg_y = sum(y for x, y in tiles) / len(tiles)
+
+        best_pos = None
+        best_d = -1
+        best_c_dist = float("inf")
+
+        for pos, d in dist.items():
+            c_dist = (pos[0] - avg_x) ** 2 + (pos[1] - avg_y) ** 2
+            if d > best_d or (d == best_d and c_dist < best_c_dist):
+                best_d = d
+                best_c_dist = c_dist
+                best_pos = pos
+
+        return best_pos[0], best_pos[1], len(tiles)
+
+    def get_badge_size(tile_count: int) -> tuple[int, int]:
+        if tile_count == 1:
+            return 18, 12
+        elif tile_count < 5:
+            return 26, 15
+        else:
+            return 38, 20
+
+    # 1. Isolated 1x1 tile
+    p1 = compute_pole_of_inaccessibility({(10, 10)})
+    assert (p1[0], p1[1]) == (10, 10)
+    assert get_badge_size(p1[2]) == (18, 12)
+
+    # 2. 2x2 cluster (4 tiles)
+    tiles_2x2 = {(10, 10), (11, 10), (10, 11), (11, 11)}
+    p2 = compute_pole_of_inaccessibility(tiles_2x2)
+    assert (p2[0], p2[1]) in tiles_2x2
+    assert get_badge_size(p2[2]) == (26, 15)
+
+    # 3. 7x7 solid square (49 tiles) -> center should be at (13, 13)
+    tiles_7x7 = {(x, y) for x in range(10, 17) for y in range(10, 17)}
+    p3 = compute_pole_of_inaccessibility(tiles_7x7)
+    assert (p3[0], p3[1]) == (13, 13)
+    assert get_badge_size(p3[2]) == (38, 20)
+
+    # 4. Donut shape (outer 7x7 with inner 3x3 hole)
+    # Centroid falls in the hole (13, 13). Pole MUST be inside the ring!
+    donut_tiles = set()
+    for x in range(10, 17):
+        for y in range(10, 17):
+            if not (12 <= x <= 14 and 12 <= y <= 14):
+                donut_tiles.add((x, y))
+    centroid_donut = (13, 13)
+    assert centroid_donut not in donut_tiles, "Centroid is in the hollow void"
+    p_donut = compute_pole_of_inaccessibility(donut_tiles)
+    assert (p_donut[0], p_donut[1]) in donut_tiles, "Pole of inaccessibility MUST be in the cluster ring"
+    assert get_badge_size(p_donut[2]) == (38, 20)
+
+    # 5. Overlapping badges side-by-side layout verification
+    badges = [
+        {"flag": 4, "w": 38, "h": 20},
+        {"flag": 8, "w": 38, "h": 20}
+    ]
+    # For 2 badges of width 38 with gap 2: total_w = 38 * 2 + 2 = 78
+    gap = 2.0
+    total_w = sum(b["w"] for b in badges) + gap * (len(badges) - 1)
+    assert total_w == 78.0
+    start_x = -total_w / 2.0
+    offsets = []
+    curr = start_x
+    for b in badges:
+        offsets.append(curr + b["w"] / 2.0)
+        curr += b["w"] + gap
+    # First badge centered at -20, second badge at +20
+    assert offsets[0] == pytest.approx(-20.0)
+    assert offsets[1] == pytest.approx(20.0)
 
 

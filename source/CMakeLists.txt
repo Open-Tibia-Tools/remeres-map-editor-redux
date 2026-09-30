@@ -221,6 +221,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/technical_item_registry.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/indicator_drawing_utils.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/zone_flags.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/zone_cluster_finder.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/drag_shadow_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/live_cursor_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/entities/creature_drawer.h
@@ -632,6 +633,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/selection_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/zone_overlay_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/technical_item_registry.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/zone_cluster_finder.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/floor_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/shade_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_color_calculator.cpp

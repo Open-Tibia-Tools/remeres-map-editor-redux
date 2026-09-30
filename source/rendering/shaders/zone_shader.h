@@ -22,6 +22,122 @@ void blendOverlayLayer(inout vec4 baseColor, inout bool hasOverlay, vec4 layerCo
     }
 }
 
+bool evaluateClusterBadge(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 outColor) {
+    int w = int(quadSize.x);
+    int h = int(quadSize.y);
+    int lx = clamp(int(floor(quadCoord.x * quadSize.x)), 0, w - 1);
+    int ly = clamp(int(floor(quadCoord.y * quadSize.y)), 0, h - 1);
+
+    // Rounded corners: discard the 4 outer corner pixels
+    if ((lx == 0 && ly == 0) || (lx == w - 1 && ly == 0) ||
+        (lx == 0 && ly == h - 1) || (lx == w - 1 && ly == h - 1)) {
+        return false;
+    }
+
+    vec4 fg;
+    vec4 border;
+    if ((flags & 4u) != 0u) {
+        fg = vec4(1.00, 0.90, 0.10, 0.98);
+        border = vec4(1.00, 0.88, 0.12, 0.98);
+    } else if ((flags & 8u) != 0u) {
+        fg = vec4(0.20, 1.00, 0.30, 0.98);
+        border = vec4(0.12, 0.85, 0.24, 0.98);
+    } else if ((flags & 16u) != 0u) {
+        fg = vec4(1.00, 0.55, 0.10, 0.98);
+        border = vec4(1.00, 0.52, 0.06, 0.98);
+    } else if ((flags & 32u) != 0u) {
+        fg = vec4(1.00, 0.15, 0.30, 0.98);
+        border = vec4(0.92, 0.12, 0.24, 0.98);
+    } else {
+        return false;
+    }
+
+    vec4 bg = vec4(0.06, 0.06, 0.09, 0.95);
+    vec4 shadow = vec4(0.02, 0.02, 0.03, 0.80);
+
+    bool isEdge = (lx == 0 || lx == w - 1 || ly == 0 || ly == h - 1);
+    if (isEdge) {
+        outColor = (ly == h - 1 || lx == w - 1) ? shadow : border;
+        return true;
+    }
+
+    bool is2x = (h >= 18);
+    int fontScale = is2x ? 2 : 1;
+    int charH = 5 * fontScale;
+
+    bool isText = false;
+    if ((flags & 4u) != 0u) {
+        // "PZ"
+        int totalW = 9 * fontScale;
+        int tx0 = (w - totalW) / 2;
+        int ty0 = (h - charH) / 2;
+        int rx = (lx - tx0) / fontScale;
+        int ry = (ly - ty0) / fontScale;
+        if (ly >= ty0 && ly < ty0 + charH) {
+            uint pMask[5] = uint[5](0xEu, 0x9u, 0xEu, 0x8u, 0x8u);
+            uint zMask[5] = uint[5](0xFu, 0x2u, 0x4u, 0x8u, 0xFu);
+            if (rx >= 0 && rx < 4) {
+                isText = (((pMask[ry] >> (3 - rx)) & 1u) != 0u);
+            } else if (rx >= 5 && rx < 9) {
+                isText = (((zMask[ry] >> (3 - (rx - 5))) & 1u) != 0u);
+            }
+        }
+    } else if ((flags & 8u) != 0u) {
+        // "NP"
+        int totalW = 9 * fontScale;
+        int tx0 = (w - totalW) / 2;
+        int ty0 = (h - charH) / 2;
+        int rx = (lx - tx0) / fontScale;
+        int ry = (ly - ty0) / fontScale;
+        if (ly >= ty0 && ly < ty0 + charH) {
+            uint nMask[5] = uint[5](0x9u, 0xDu, 0xBu, 0x9u, 0x9u);
+            uint pMask[5] = uint[5](0xEu, 0x9u, 0xEu, 0x8u, 0x8u);
+            if (rx >= 0 && rx < 4) {
+                isText = (((nMask[ry] >> (3 - rx)) & 1u) != 0u);
+            } else if (rx >= 5 && rx < 9) {
+                isText = (((pMask[ry] >> (3 - (rx - 5))) & 1u) != 0u);
+            }
+        }
+    } else if ((flags & 16u) != 0u) {
+        // "NL"
+        int totalW = 9 * fontScale;
+        int tx0 = (w - totalW) / 2;
+        int ty0 = (h - charH) / 2;
+        int rx = (lx - tx0) / fontScale;
+        int ry = (ly - ty0) / fontScale;
+        if (ly >= ty0 && ly < ty0 + charH) {
+            uint nMask[5] = uint[5](0x9u, 0xDu, 0xBu, 0x9u, 0x9u);
+            uint lMask[5] = uint[5](0x8u, 0x8u, 0x8u, 0x8u, 0xFu);
+            if (rx >= 0 && rx < 4) {
+                isText = (((nMask[ry] >> (3 - rx)) & 1u) != 0u);
+            } else if (rx >= 5 && rx < 9) {
+                isText = (((lMask[ry] >> (3 - (rx - 5))) & 1u) != 0u);
+            }
+        }
+    } else if ((flags & 32u) != 0u) {
+        // "PvP"
+        int totalW = 13 * fontScale;
+        int tx0 = (w - totalW) / 2;
+        int ty0 = (h - charH) / 2;
+        int rx = (lx - tx0) / fontScale;
+        int ry = (ly - ty0) / fontScale;
+        if (ly >= ty0 && ly < ty0 + charH) {
+            uint pMask[5] = uint[5](0xEu, 0x9u, 0xEu, 0x8u, 0x8u);
+            uint vMask[5] = uint[5](0x0u, 0x5u, 0x5u, 0x2u, 0x0u);
+            if (rx >= 0 && rx < 4) {
+                isText = (((pMask[ry] >> (3 - rx)) & 1u) != 0u);
+            } else if (rx >= 5 && rx < 8) {
+                isText = (((vMask[ry] >> (2 - (rx - 5))) & 1u) != 0u);
+            } else if (rx >= 9 && rx < 13) {
+                isText = (((pMask[ry] >> (3 - (rx - 9))) & 1u) != 0u);
+            }
+        }
+    }
+
+    outColor = isText ? fg : bg;
+    return true;
+}
+
 bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool bWestOuter, bool bEastOuter, int lx, int ly, out vec4 outLayer) {
     bool hasZone = ((flags & 60u) != 0u);
     if (!hasZone) {
@@ -69,66 +185,8 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
     vec4 zLight = sumLight / activeCount;
 
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98); // 2px solid black global outer outline
-    vec4 zBadgeBg = vec4(0.06, 0.06, 0.08, 0.92);
 
-    // 1. Dedicated 4-corner micro-badges (High-contrast 2-tone with dark shadow)
-    // Top-Left: [PZ] (Yellow)
-    if (hasPz && tile_lx >= 1 && tile_lx <= 9 && tile_ly >= 1 && tile_ly <= 7) {
-        if ((bNorthOuter && (tile_ly == 0 || tile_ly == 1)) || (bWestOuter && (tile_lx == 0 || tile_lx == 1))) {
-            outLayer = zBlack;
-            return true;
-        }
-        int r = tile_ly - 2;
-        int c = tile_lx - 2;
-        uint pzMask[5] = uint[5](0x77u, 0x51u, 0x72u, 0x44u, 0x47u);
-        bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((pzMask[r] >> (6 - c)) & 1u) != 0u);
-        outLayer = isText ? vec4(1.00, 0.90, 0.10, 0.98) : zBadgeBg;
-        return true;
-    }
-
-    // Top-Right: [NP] (Emerald Green)
-    if (hasNp && tile_lx >= 22 && tile_lx <= 30 && tile_ly >= 1 && tile_ly <= 7) {
-        if ((bNorthOuter && (tile_ly == 0 || tile_ly == 1)) || (bEastOuter && (tile_lx == 31 || tile_lx == 30))) {
-            outLayer = zBlack;
-            return true;
-        }
-        int r = tile_ly - 2;
-        int c = tile_lx - 23;
-        uint npMask[5] = uint[5](0x57u, 0x75u, 0x77u, 0x54u, 0x54u);
-        bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((npMask[r] >> (6 - c)) & 1u) != 0u);
-        outLayer = isText ? vec4(0.20, 1.00, 0.30, 0.98) : zBadgeBg;
-        return true;
-    }
-
-    // Bottom-Left: [NL] (Warm Orange)
-    if (hasNl && tile_lx >= 1 && tile_lx <= 9 && tile_ly >= 24 && tile_ly <= 30) {
-        if ((bSouthOuter && (tile_ly == 31 || tile_ly == 30)) || (bWestOuter && (tile_lx == 0 || tile_lx == 1))) {
-            outLayer = zBlack;
-            return true;
-        }
-        int r = tile_ly - 25;
-        int c = tile_lx - 2;
-        uint nlMask[5] = uint[5](0x54u, 0x74u, 0x74u, 0x54u, 0x57u);
-        bool isText = (r >= 0 && r < 5 && c >= 0 && c < 7) && (((nlMask[r] >> (6 - c)) & 1u) != 0u);
-        outLayer = isText ? vec4(1.00, 0.55, 0.10, 0.98) : zBadgeBg;
-        return true;
-    }
-
-    // Bottom-Right: [PvP] (Crimson Red)
-    if (hasPvp && tile_lx >= 18 && tile_lx <= 30 && tile_ly >= 24 && tile_ly <= 30) {
-        if ((bSouthOuter && (tile_ly == 31 || tile_ly == 30)) || (bEastOuter && (tile_lx == 31 || tile_lx == 30))) {
-            outLayer = zBlack;
-            return true;
-        }
-        int r = tile_ly - 25;
-        int c = tile_lx - 19;
-        uint pvpMask[5] = uint[5](0x707u, 0x505u, 0x757u, 0x454u, 0x424u);
-        bool isText = (r >= 0 && r < 5 && c >= 0 && c < 11) && (((pvpMask[r] >> (10 - c)) & 1u) != 0u);
-        outLayer = isText ? vec4(1.00, 0.15, 0.30, 0.98) : zBadgeBg;
-        return true;
-    }
-
-    // 2. GLOBAL OUTER OUTLINE (2px solid black)
+    // 1. GLOBAL OUTER OUTLINE (2px solid black)
     // Only applied where neighbor is NOT a special zone!
     if (bNorthOuter && (tile_ly == 0 || tile_ly == 1)) {
         outLayer = zBlack;
@@ -335,6 +393,15 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zon
     }
 
     uint flags = uint(zoneFlags + 0.5);
+
+    // Dedicated cluster badge indicator quad (Bit 22 = 4194304u)
+    if ((flags & 4194304u) != 0u) {
+        if (showSpecialTiles == 0) {
+            return false;
+        }
+        return evaluateClusterBadge(quadCoord, quadSize, flags, outColor);
+    }
+
     int maxX = int(max(quadSize.x - 1.0, 0.0));
     int maxY = int(max(quadSize.y - 1.0, 0.0));
     int lx = clamp(int(floor(quadCoord.x * quadSize.x)), 0, maxX);

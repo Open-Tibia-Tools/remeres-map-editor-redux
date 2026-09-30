@@ -164,7 +164,21 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		}
 	}
 
-	// 2. Spawns Pass
+	// 2. Fixed World Center Cluster Badges Pass
+	if (options.show_special_tiles && view.zoom <= 10.0f) {
+		const uint64_t cur_gen = map.getChangeTracker().getGeneration();
+		const auto& badges = cluster_finder_.getVisibleBadges(z, bounds, map, secondary_map, cur_gen);
+		for (const auto& badge : badges) {
+			int draw_x, draw_y;
+			view.getScreenPosition(badge.center_x, badge.center_y, z, draw_x, draw_y);
+			const float px = static_cast<float>(draw_x) + 16.0f - (badge.width * 0.5f) + badge.offset_x;
+			const float py = static_cast<float>(draw_y) + 16.0f - (badge.height * 0.5f) + badge.offset_y;
+			sprite_batch.draw(px, py, badge.width, badge.height, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
+			                  0.0f, static_cast<float>(static_cast<uint32_t>(ZONE_FLAG_CLUSTER_BADGE) | badge.zone_flag));
+		}
+	}
+
+	// 3. Spawns Pass
 	if (options.show_spawns) {
 		for (const Position& spos : map.spawns) {
 			if (spos.z != z) {
