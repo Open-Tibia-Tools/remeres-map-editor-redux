@@ -183,9 +183,8 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	}
 
 	// 2. Pre-calculate Cluster Badges
-	if (options.show_special_tiles && view.zoom <= 10.0f) {
-		const uint64_t current_generation = map.getChangeTracker().getGeneration();
-		cluster_finder_.updateAndGetVisibleBadges(z, bounds, visible_zone_tiles, map, secondary_map, current_generation);
+	if (options.show_special_tiles && !visible_zone_tiles.empty() && view.zoom <= 10.0f) {
+		cluster_finder_.findClusters(z, bounds, visible_zone_tiles);
 	}
 
 	// 3. Spawns Perimeter Box Pass (Ground level)
