@@ -238,9 +238,9 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 	if (visible_badges_result_.size() > 1) {
 		std::unordered_map<uint64_t, std::vector<size_t>> badges_by_pos;
 		for (size_t i = 0; i < visible_badges_result_.size(); ++i) {
-			const uint64_t ux = static_cast<uint16_t>(visible_badges_result_[i].center_x);
-			const uint64_t uy = static_cast<uint16_t>(visible_badges_result_[i].center_y);
-			uint64_t pos_key = (ux << 16) | uy;
+			const uint64_t ux = static_cast<uint32_t>(visible_badges_result_[i].center_x);
+			const uint64_t uy = static_cast<uint32_t>(visible_badges_result_[i].center_y);
+			uint64_t pos_key = (ux << 32) | uy;
 			badges_by_pos[pos_key].push_back(i);
 		}
 

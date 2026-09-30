@@ -165,7 +165,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 					checkNeighbor(row_curr[idx + 1], static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_E), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_E));
 
 					uint8_t zmask = (ct.is_pz ? 1 : 0) | (ct.is_nopvp ? 2 : 0) | (ct.is_nolog ? 4 : 0) | (ct.is_pvp ? 8 : 0);
-					visible_zone_tiles.push_back({ static_cast<int16_t>(x), static_cast<int16_t>(y), zmask });
+					visible_zone_tiles.push_back({ x, y, zmask });
 				}
 
 				if (tile_zone_flags > 0) {

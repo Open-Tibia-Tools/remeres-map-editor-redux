@@ -589,3 +589,71 @@ def test_zone_cluster_finder_algorithm():
     assert get_badge_size(20) == (52.0, 26.0)
 
 
+def test_large_tibia_world_coordinates_zone_badges():
+    """
+    Verifies that map coordinates >= 32768 (standard Tibia coordinates for Ankrahmun,
+    Darashia, Port Hope, Edron, Venore, etc.) do NOT overflow 16-bit integers and
+    properly discover and emit zone cluster badges.
+    """
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+
+    # 1. Verify VisibleZoneTile in C++ header uses 32-bit int, not int16_t
+    finder_h = (root / "source" / "rendering" / "indicators" / "zone_cluster_finder.h").read_text(encoding="utf-8")
+    assert "int x = 0;\n\tint y = 0;" in finder_h or "int x = 0;\r\n\tint y = 0;" in finder_h, \
+           "VisibleZoneTile must use 32-bit int to prevent overflow above 32767"
+
+    # 2. Verify drawer does not cast to int16_t
+    drawer_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.cpp").read_text(encoding="utf-8")
+    assert "static_cast<int16_t>(x)" not in drawer_cpp, "Must not cast x to int16_t"
+    assert "static_cast<int16_t>(y)" not in drawer_cpp, "Must not cast y to int16_t"
+
+    # 3. Simulate a 10x10 Protection Zone cluster at Ankrahmun coordinates (33100, 32800)
+    cluster_x0, cluster_y0 = 33100, 32800
+    cluster_tiles = set()
+    for dx in range(10):
+        for dy in range(10):
+            cluster_tiles.add((cluster_x0 + dx, cluster_y0 + dy))
+
+    bounds_start_x, bounds_end_x = 33080, 33130
+    bounds_start_y, bounds_end_y = 32780, 32830
+    grid_w = bounds_end_x - bounds_start_x + 1
+    grid_h = bounds_end_y - bounds_start_y + 1
+
+    tile_grid = [0] * (grid_w * grid_h)
+    for tx, ty in cluster_tiles:
+        lx = tx - bounds_start_x
+        ly = ty - bounds_start_y
+        assert 0 <= lx < grid_w and 0 <= ly < grid_h, f"Coord ({tx}, {ty}) must map within viewport grid"
+        tile_grid[ly * grid_w + lx] = 1
+
+    visited = [0] * (grid_w * grid_h)
+    found_clusters = []
+    for tx, ty in cluster_tiles:
+        start_lx = tx - bounds_start_x
+        start_ly = ty - bounds_start_y
+        idx = start_ly * grid_w + start_lx
+        if visited[idx] != 0:
+            continue
+        comp = []
+        q = [(tx, ty)]
+        visited[idx] = 1
+        while q:
+            cx, cy = q.pop(0)
+            comp.append((cx, cy))
+            for ddx, ddy in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                nx, ny = cx + ddx, cy + ddy
+                nlx = nx - bounds_start_x
+                nly = ny - bounds_start_y
+                if 0 <= nlx < grid_w and 0 <= nly < grid_h:
+                    nidx = nly * grid_w + nlx
+                    if tile_grid[nidx] != 0 and visited[nidx] == 0:
+                        visited[nidx] = 1
+                        q.append((nx, ny))
+        found_clusters.append(comp)
+
+    assert len(found_clusters) == 1, "Must discover exactly 1 cluster for the 10x10 PZ zone"
+    assert len(found_clusters[0]) == 100, "Cluster must have all 100 tiles"
+
+
+

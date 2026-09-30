@@ -14,8 +14,8 @@ namespace rme::rendering {
  * @brief Record of a visible zone tile discovered during the floor rendering pass.
  */
 struct VisibleZoneTile {
-	int16_t x = 0;
-	int16_t y = 0;
+	int x = 0;
+	int y = 0;
 	uint8_t flags = 0; // Bit 0: PZ, Bit 1: NOPVP, Bit 2: NOLOGOUT, Bit 3: PVPZONE
 };
 
