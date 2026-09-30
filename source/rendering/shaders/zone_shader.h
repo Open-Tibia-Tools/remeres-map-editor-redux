@@ -67,70 +67,101 @@ bool evaluateClusterBadge(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 ou
 
     bool isText = false;
     if ((flags & 4u) != 0u) {
-        // "PZ"
-        int totalW = 9 * fontScale;
+        // "Protection Zone"
+        int totalW = 56 * fontScale;
         int tx0 = (w - totalW) / 2;
         int ty0 = (h - charH) / 2;
         int rx = (lx - tx0) / fontScale;
         int ry = (ly - ty0) / fontScale;
         if (ly >= ty0 && ly < ty0 + charH) {
-            uint pMask[5] = uint[5](0xEu, 0x9u, 0xEu, 0x8u, 0x8u);
-            uint zMask[5] = uint[5](0xFu, 0x2u, 0x4u, 0x8u, 0xFu);
-            if (rx >= 0 && rx < 4) {
-                isText = (((pMask[ry] >> (3 - rx)) & 1u) != 0u);
-            } else if (rx >= 5 && rx < 9) {
-                isText = (((zMask[ry] >> (3 - (rx - 5))) & 1u) != 0u);
-            }
+            uint pMask[5] = uint[5](0x7u, 0x5u, 0x7u, 0x4u, 0x4u); // P
+            uint rMask[5] = uint[5](0x0u, 0x0u, 0x3u, 0x6u, 0x4u); // r
+            uint oMask[5] = uint[5](0x0u, 0x0u, 0x7u, 0x5u, 0x7u); // o
+            uint tMask[5] = uint[5](0x2u, 0x7u, 0x2u, 0x2u, 0x3u); // t
+            uint eMask[5] = uint[5](0x0u, 0x0u, 0x7u, 0x6u, 0x7u); // e
+            uint cMask[5] = uint[5](0x0u, 0x0u, 0x7u, 0x4u, 0x7u); // c
+            uint iMask[5] = uint[5](0x1u, 0x0u, 0x1u, 0x1u, 0x1u); // i
+            uint nMask[5] = uint[5](0x0u, 0x0u, 0x6u, 0x5u, 0x5u); // n
+            uint zMask[5] = uint[5](0xFu, 0x2u, 0x4u, 0x8u, 0xFu); // Z
+
+            if (rx >= 0 && rx < 3)        isText = (((pMask[ry] >> (2 - rx)) & 1u) != 0u);
+            else if (rx >= 4 && rx < 7)   isText = (((rMask[ry] >> (2 - (rx - 4))) & 1u) != 0u);
+            else if (rx >= 8 && rx < 11)  isText = (((oMask[ry] >> (2 - (rx - 8))) & 1u) != 0u);
+            else if (rx >= 12 && rx < 15) isText = (((tMask[ry] >> (2 - (rx - 12))) & 1u) != 0u);
+            else if (rx >= 16 && rx < 19) isText = (((eMask[ry] >> (2 - (rx - 16))) & 1u) != 0u);
+            else if (rx >= 20 && rx < 23) isText = (((cMask[ry] >> (2 - (rx - 20))) & 1u) != 0u);
+            else if (rx >= 24 && rx < 27) isText = (((tMask[ry] >> (2 - (rx - 24))) & 1u) != 0u);
+            else if (rx == 28)            isText = (iMask[ry] != 0u);
+            else if (rx >= 30 && rx < 33) isText = (((oMask[ry] >> (2 - (rx - 30))) & 1u) != 0u);
+            else if (rx >= 34 && rx < 37) isText = (((nMask[ry] >> (2 - (rx - 34))) & 1u) != 0u);
+            else if (rx >= 40 && rx < 44) isText = (((zMask[ry] >> (3 - (rx - 40))) & 1u) != 0u);
+            else if (rx >= 45 && rx < 48) isText = (((oMask[ry] >> (2 - (rx - 45))) & 1u) != 0u);
+            else if (rx >= 49 && rx < 52) isText = (((nMask[ry] >> (2 - (rx - 49))) & 1u) != 0u);
+            else if (rx >= 53 && rx < 56) isText = (((eMask[ry] >> (2 - (rx - 53))) & 1u) != 0u);
         }
     } else if ((flags & 8u) != 0u) {
-        // "NP"
-        int totalW = 9 * fontScale;
+        // "Non-PvP"
+        int totalW = 28 * fontScale;
         int tx0 = (w - totalW) / 2;
         int ty0 = (h - charH) / 2;
         int rx = (lx - tx0) / fontScale;
         int ry = (ly - ty0) / fontScale;
         if (ly >= ty0 && ly < ty0 + charH) {
-            uint nMask[5] = uint[5](0x9u, 0xDu, 0xBu, 0x9u, 0x9u);
-            uint pMask[5] = uint[5](0xEu, 0x9u, 0xEu, 0x8u, 0x8u);
-            if (rx >= 0 && rx < 4) {
-                isText = (((nMask[ry] >> (3 - rx)) & 1u) != 0u);
-            } else if (rx >= 5 && rx < 9) {
-                isText = (((pMask[ry] >> (3 - (rx - 5))) & 1u) != 0u);
-            }
+            uint nCapMask[5] = uint[5](0x9u, 0xDu, 0xBu, 0x9u, 0x9u); // N
+            uint oMask[5]    = uint[5](0x0u, 0x0u, 0x7u, 0x5u, 0x7u); // o
+            uint nMask[5]    = uint[5](0x0u, 0x0u, 0x6u, 0x5u, 0x5u); // n
+            uint dashMask[5] = uint[5](0x0u, 0x0u, 0x7u, 0x0u, 0x0u); // -
+            uint pMask[5]    = uint[5](0x7u, 0x5u, 0x7u, 0x4u, 0x4u); // P
+            uint vMask[5]    = uint[5](0x0u, 0x0u, 0x5u, 0x5u, 0x2u); // v
+
+            if (rx >= 0 && rx < 4)        isText = (((nCapMask[ry] >> (3 - rx)) & 1u) != 0u);
+            else if (rx >= 5 && rx < 8)   isText = (((oMask[ry] >> (2 - (rx - 5))) & 1u) != 0u);
+            else if (rx >= 9 && rx < 12)  isText = (((nMask[ry] >> (2 - (rx - 9))) & 1u) != 0u);
+            else if (rx >= 13 && rx < 16) isText = (((dashMask[ry] >> (2 - (rx - 13))) & 1u) != 0u);
+            else if (rx >= 17 && rx < 20) isText = (((pMask[ry] >> (2 - (rx - 17))) & 1u) != 0u);
+            else if (rx >= 21 && rx < 24) isText = (((vMask[ry] >> (2 - (rx - 21))) & 1u) != 0u);
+            else if (rx >= 25 && rx < 28) isText = (((pMask[ry] >> (2 - (rx - 25))) & 1u) != 0u);
         }
     } else if ((flags & 16u) != 0u) {
-        // "NL"
-        int totalW = 9 * fontScale;
+        // "No-Logout"
+        int totalW = 36 * fontScale;
         int tx0 = (w - totalW) / 2;
         int ty0 = (h - charH) / 2;
         int rx = (lx - tx0) / fontScale;
         int ry = (ly - ty0) / fontScale;
         if (ly >= ty0 && ly < ty0 + charH) {
-            uint nMask[5] = uint[5](0x9u, 0xDu, 0xBu, 0x9u, 0x9u);
-            uint lMask[5] = uint[5](0x8u, 0x8u, 0x8u, 0x8u, 0xFu);
-            if (rx >= 0 && rx < 4) {
-                isText = (((nMask[ry] >> (3 - rx)) & 1u) != 0u);
-            } else if (rx >= 5 && rx < 9) {
-                isText = (((lMask[ry] >> (3 - (rx - 5))) & 1u) != 0u);
-            }
+            uint nCapMask[5] = uint[5](0x9u, 0xDu, 0xBu, 0x9u, 0x9u); // N
+            uint oMask[5]    = uint[5](0x0u, 0x0u, 0x7u, 0x5u, 0x7u); // o
+            uint dashMask[5] = uint[5](0x0u, 0x0u, 0x7u, 0x0u, 0x0u); // -
+            uint lMask[5]    = uint[5](0x4u, 0x4u, 0x4u, 0x4u, 0x7u); // L
+            uint gMask[5]    = uint[5](0x0u, 0x0u, 0x7u, 0x5u, 0x3u); // g
+            uint uMask[5]    = uint[5](0x0u, 0x0u, 0x5u, 0x5u, 0x7u); // u
+            uint tMask[5]    = uint[5](0x2u, 0x7u, 0x2u, 0x2u, 0x3u); // t
+
+            if (rx >= 0 && rx < 4)        isText = (((nCapMask[ry] >> (3 - rx)) & 1u) != 0u);
+            else if (rx >= 5 && rx < 8)   isText = (((oMask[ry] >> (2 - (rx - 5))) & 1u) != 0u);
+            else if (rx >= 9 && rx < 12)  isText = (((dashMask[ry] >> (2 - (rx - 9))) & 1u) != 0u);
+            else if (rx >= 13 && rx < 16) isText = (((lMask[ry] >> (2 - (rx - 13))) & 1u) != 0u);
+            else if (rx >= 17 && rx < 20) isText = (((oMask[ry] >> (2 - (rx - 17))) & 1u) != 0u);
+            else if (rx >= 21 && rx < 24) isText = (((gMask[ry] >> (2 - (rx - 21))) & 1u) != 0u);
+            else if (rx >= 25 && rx < 28) isText = (((oMask[ry] >> (2 - (rx - 25))) & 1u) != 0u);
+            else if (rx >= 29 && rx < 32) isText = (((uMask[ry] >> (2 - (rx - 29))) & 1u) != 0u);
+            else if (rx >= 33 && rx < 36) isText = (((tMask[ry] >> (2 - (rx - 33))) & 1u) != 0u);
         }
     } else if ((flags & 32u) != 0u) {
         // "PvP"
-        int totalW = 13 * fontScale;
+        int totalW = 11 * fontScale;
         int tx0 = (w - totalW) / 2;
         int ty0 = (h - charH) / 2;
         int rx = (lx - tx0) / fontScale;
         int ry = (ly - ty0) / fontScale;
         if (ly >= ty0 && ly < ty0 + charH) {
-            uint pMask[5] = uint[5](0xEu, 0x9u, 0xEu, 0x8u, 0x8u);
-            uint vMask[5] = uint[5](0x0u, 0x5u, 0x5u, 0x2u, 0x0u);
-            if (rx >= 0 && rx < 4) {
-                isText = (((pMask[ry] >> (3 - rx)) & 1u) != 0u);
-            } else if (rx >= 5 && rx < 8) {
-                isText = (((vMask[ry] >> (2 - (rx - 5))) & 1u) != 0u);
-            } else if (rx >= 9 && rx < 13) {
-                isText = (((pMask[ry] >> (3 - (rx - 9))) & 1u) != 0u);
-            }
+            uint pMask[5] = uint[5](0x7u, 0x5u, 0x7u, 0x4u, 0x4u); // P
+            uint vMask[5] = uint[5](0x0u, 0x0u, 0x5u, 0x5u, 0x2u); // v
+
+            if (rx >= 0 && rx < 3)      isText = (((pMask[ry] >> (2 - rx)) & 1u) != 0u);
+            else if (rx >= 4 && rx < 7) isText = (((vMask[ry] >> (2 - (rx - 4))) & 1u) != 0u);
+            else if (rx >= 8 && rx < 11) isText = (((pMask[ry] >> (2 - (rx - 8))) & 1u) != 0u);
         }
     }
 
