@@ -381,9 +381,8 @@ def test_zone_shader_multi_zone_quadrants_and_badges():
     assert "vec4(1.00, 0.55, 0.10, 0.98)" in badge_body, "NL badge text must be warm-orange"
     assert "vec4(1.00, 0.15, 0.30, 0.98)" in badge_body, "PvP badge text must be crimson-red"
 
-    # Verify dynamic font scaling and character bitmasks
-    assert "clamp(int(float(h) / 8.5), 1, 5)" in badge_body
-    assert "charH = 5 * fontScale;" in badge_body
+    # Verify high-resolution font and character bitmasks
+    assert "charH = 10" in badge_body
     assert "pMask" in badge_body and "zMask" in badge_body
     assert "nMask" in badge_body and "lMask" in badge_body and "vMask" in badge_body
 

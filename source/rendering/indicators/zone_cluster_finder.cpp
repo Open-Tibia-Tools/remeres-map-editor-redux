@@ -200,31 +200,31 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 
 			// 3. Dynamic badge scaling based on cluster size & clearance
 			const int tile_count = static_cast<int>(cluster_tiles.size());
-			float base_w = 22.0f;
+			float base_w = 33.0f;
 			if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_PZ)) {
-				base_w = 66.0f; // "Protection Zone" (56px text + 10px pad)
+				base_w = 96.0f; // "Protection Zone" (82px text + 14px pad)
 			} else if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT)) {
-				base_w = 44.0f; // "No Logout" (34px text + 10px pad)
+				base_w = 64.0f; // "No Logout" (50px text + 14px pad)
 			} else if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_NOPVP)) {
-				base_w = 38.0f; // "Non-PvP" (28px text + 10px pad)
+				base_w = 57.0f; // "Non-PvP" (43px text + 14px pad)
 			} else if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_PVPZONE)) {
-				base_w = 22.0f; // "PvP" (11px text + 11px pad)
+				base_w = 33.0f; // "PvP" (19px text + 14px pad)
 			}
 
 			float bw = base_w;
-			float bh = 14.0f;
+			float bh = 24.0f;
 			if (tile_count > 4) {
 				bw += 4.0f;
-				bh = 15.0f;
+				bh = 25.0f;
 			}
 			if (tile_count > 25) {
 				bw += 6.0f;
-				bh = 16.0f;
+				bh = 26.0f;
 			}
 
 			// Constrain badge size so it does not overflow narrow corridors, but never clip below base_w
 			const float max_bw = std::max(base_w, static_cast<float>(c_w * 32 - 4));
-			const float max_bh = std::max(14.0f, static_cast<float>(c_h * 32 - 4));
+			const float max_bh = std::max(24.0f, static_cast<float>(c_h * 32 - 4));
 			bw = std::min(bw, max_bw);
 			bh = std::min(bh, max_bh);
 
