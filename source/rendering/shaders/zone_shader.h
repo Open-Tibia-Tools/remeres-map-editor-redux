@@ -123,8 +123,8 @@ bool evaluateClusterBadge(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 ou
             else if (rx >= 25 && rx < 28) isText = (((pMask[ry] >> (2 - (rx - 25))) & 1u) != 0u);
         }
     } else if ((flags & 16u) != 0u) {
-        // "No-Logout"
-        int totalW = 36 * fontScale;
+        // "No Logout"
+        int totalW = 34 * fontScale;
         int tx0 = (w - totalW) / 2;
         int ty0 = (h - charH) / 2;
         int rx = (lx - tx0) / fontScale;
@@ -132,7 +132,6 @@ bool evaluateClusterBadge(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 ou
         if (ly >= ty0 && ly < ty0 + charH) {
             uint nCapMask[5] = uint[5](0x9u, 0xDu, 0xBu, 0x9u, 0x9u); // N
             uint oMask[5]    = uint[5](0x0u, 0x0u, 0x7u, 0x5u, 0x7u); // o
-            uint dashMask[5] = uint[5](0x0u, 0x0u, 0x7u, 0x0u, 0x0u); // -
             uint lMask[5]    = uint[5](0x4u, 0x4u, 0x4u, 0x4u, 0x7u); // L
             uint gMask[5]    = uint[5](0x0u, 0x0u, 0x7u, 0x5u, 0x3u); // g
             uint uMask[5]    = uint[5](0x0u, 0x0u, 0x5u, 0x5u, 0x7u); // u
@@ -140,13 +139,12 @@ bool evaluateClusterBadge(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 ou
 
             if (rx >= 0 && rx < 4)        isText = (((nCapMask[ry] >> (3 - rx)) & 1u) != 0u);
             else if (rx >= 5 && rx < 8)   isText = (((oMask[ry] >> (2 - (rx - 5))) & 1u) != 0u);
-            else if (rx >= 9 && rx < 12)  isText = (((dashMask[ry] >> (2 - (rx - 9))) & 1u) != 0u);
-            else if (rx >= 13 && rx < 16) isText = (((lMask[ry] >> (2 - (rx - 13))) & 1u) != 0u);
-            else if (rx >= 17 && rx < 20) isText = (((oMask[ry] >> (2 - (rx - 17))) & 1u) != 0u);
-            else if (rx >= 21 && rx < 24) isText = (((gMask[ry] >> (2 - (rx - 21))) & 1u) != 0u);
-            else if (rx >= 25 && rx < 28) isText = (((oMask[ry] >> (2 - (rx - 25))) & 1u) != 0u);
-            else if (rx >= 29 && rx < 32) isText = (((uMask[ry] >> (2 - (rx - 29))) & 1u) != 0u);
-            else if (rx >= 33 && rx < 36) isText = (((tMask[ry] >> (2 - (rx - 33))) & 1u) != 0u);
+            else if (rx >= 11 && rx < 14) isText = (((lMask[ry] >> (2 - (rx - 11))) & 1u) != 0u);
+            else if (rx >= 15 && rx < 18) isText = (((oMask[ry] >> (2 - (rx - 15))) & 1u) != 0u);
+            else if (rx >= 19 && rx < 22) isText = (((gMask[ry] >> (2 - (rx - 19))) & 1u) != 0u);
+            else if (rx >= 23 && rx < 26) isText = (((oMask[ry] >> (2 - (rx - 23))) & 1u) != 0u);
+            else if (rx >= 27 && rx < 30) isText = (((uMask[ry] >> (2 - (rx - 27))) & 1u) != 0u);
+            else if (rx >= 31 && rx < 34) isText = (((tMask[ry] >> (2 - (rx - 31))) & 1u) != 0u);
         }
     } else if ((flags & 32u) != 0u) {
         // "PvP"

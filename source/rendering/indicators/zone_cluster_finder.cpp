@@ -204,7 +204,7 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 			if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_PZ)) {
 				base_w = 66.0f; // "Protection Zone" (56px text + 10px pad)
 			} else if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT)) {
-				base_w = 46.0f; // "No-Logout" (36px text + 10px pad)
+				base_w = 44.0f; // "No Logout" (34px text + 10px pad)
 			} else if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_NOPVP)) {
 				base_w = 38.0f; // "Non-PvP" (28px text + 10px pad)
 			} else if (zt.zone_bit == static_cast<uint32_t>(ZONE_FLAG_PVPZONE)) {
