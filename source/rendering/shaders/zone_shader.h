@@ -166,40 +166,6 @@ bool evaluateClusterBadge(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 ou
     return true;
 }
 
-bool evaluatePerimeterNode(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 outColor) {
-    int maxX = int(max(quadSize.x - 1.0, 0.0));
-    int maxY = int(max(quadSize.y - 1.0, 0.0));
-    int lx = clamp(int(floor(quadCoord.x * quadSize.x)), 0, maxX);
-    int ly = clamp(int(floor(quadCoord.y * quadSize.y)), 0, maxY);
-
-    vec4 darkOutline = vec4(0.05, 0.05, 0.07, 0.98);
-    vec4 whiteCore   = vec4(1.00, 1.00, 1.00, 1.00);
-
-    vec4 pzBorder  = vec4(1.00, 0.88, 0.12, 1.00);
-    vec4 npBorder  = vec4(0.12, 0.85, 0.24, 1.00);
-    vec4 nlBorder  = vec4(1.00, 0.52, 0.06, 1.00);
-    vec4 pvpBorder = vec4(0.92, 0.12, 0.24, 1.00);
-
-    vec4 sumBorder = vec4(0.0);
-    float activeCount = 0.0;
-    if ((flags & 4u) != 0u)  { sumBorder += pzBorder;  activeCount += 1.0; }
-    if ((flags & 8u) != 0u)  { sumBorder += npBorder;  activeCount += 1.0; }
-    if ((flags & 16u) != 0u) { sumBorder += nlBorder;  activeCount += 1.0; }
-    if ((flags & 32u) != 0u) { sumBorder += pvpBorder; activeCount += 1.0; }
-    vec4 zoneBorder = (activeCount > 0.0) ? (sumBorder / activeCount) : pzBorder;
-
-    if (lx == 0 || lx == maxX || ly == 0 || ly == maxY) {
-        outColor = darkOutline;
-        return true;
-    }
-    if (lx == 1 || lx == maxX - 1 || ly == 1 || ly == maxY - 1) {
-        outColor = zoneBorder;
-        return true;
-    }
-    outColor = whiteCore;
-    return true;
-}
-
 bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool bWestOuter, bool bEastOuter, int lx, int ly, out vec4 outLayer) {
     bool hasZone = ((flags & 60u) != 0u);
     if (!hasZone) {
@@ -462,14 +428,6 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zon
             return false;
         }
         return evaluateClusterBadge(quadCoord, quadSize, flags, outColor);
-    }
-
-    // Dedicated perimeter connection node quad (Bit 23 = 8388608u)
-    if ((flags & 8388608u) != 0u) {
-        if (showSpecialTiles == 0) {
-            return false;
-        }
-        return evaluatePerimeterNode(quadCoord, quadSize, flags, outColor);
     }
 
     int maxX = int(max(quadSize.x - 1.0, 0.0));

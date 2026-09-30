@@ -81,7 +81,6 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 
 	// 1. Special Zones & Pathing / Blocking Pass
 	if ((options.show_special_tiles || options.show_blocking) && view.zoom <= 10.0f) {
-		perimeter_nodes_.clear();
 		const int min_x = bounds.start_x - 1;
 		const int max_x = bounds.end_x + 1;
 		const int row_width = max_x - min_x + 1;
@@ -119,47 +118,11 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			}
 		};
 
-		auto evaluateVertexRow = [&](int vy, const std::vector<CachedRowTile>& r_north, const std::vector<CachedRowTile>& r_south) {
-			if (!options.show_special_tiles) {
-				return;
-			}
-			for (int vx = bounds.start_x; vx <= bounds.end_x + 1; ++vx) {
-				const int idx = vx - min_x;
-				const CachedRowTile& nw = r_north[idx - 1];
-				const CachedRowTile& ne = r_north[idx];
-				const CachedRowTile& sw = r_south[idx - 1];
-				const CachedRowTile& se = r_south[idx];
-
-				const int pz_count  = (nw.is_pz ? 1 : 0) + (ne.is_pz ? 1 : 0) + (sw.is_pz ? 1 : 0) + (se.is_pz ? 1 : 0);
-				const int np_count  = (nw.is_nopvp ? 1 : 0) + (ne.is_nopvp ? 1 : 0) + (sw.is_nopvp ? 1 : 0) + (se.is_nopvp ? 1 : 0);
-				const int nl_count  = (nw.is_nolog ? 1 : 0) + (ne.is_nolog ? 1 : 0) + (sw.is_nolog ? 1 : 0) + (se.is_nolog ? 1 : 0);
-				const int pvp_count = (nw.is_pvp ? 1 : 0) + (ne.is_pvp ? 1 : 0) + (sw.is_pvp ? 1 : 0) + (se.is_pvp ? 1 : 0);
-
-				uint32_t node_zone_flags = 0;
-				if (pz_count >= 1 && pz_count <= 3)   node_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PZ);
-				if (np_count >= 1 && np_count <= 3)   node_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOPVP);
-				if (nl_count >= 1 && nl_count <= 3)   node_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT);
-				if (pvp_count >= 1 && pvp_count <= 3) node_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PVPZONE);
-
-				if (node_zone_flags != 0) {
-					int vx_screen, vy_screen;
-					view.getScreenPosition(vx, vy, z, vx_screen, vy_screen);
-					perimeter_nodes_.push_back({
-						static_cast<float>(vx_screen) - 3.0f,
-						static_cast<float>(vy_screen) - 3.0f,
-						static_cast<float>(static_cast<uint32_t>(ZONE_FLAG_PERIMETER_NODE) | node_zone_flags)
-					});
-				}
-			}
-		};
-
 		fetchRow(bounds.start_y - 1, row_prev);
 		fetchRow(bounds.start_y, row_curr);
 
 		for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
 			fetchRow(y + 1, row_next);
-
-			evaluateVertexRow(y, row_prev, row_curr);
 
 			for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
 				const int idx = x - min_x;
@@ -216,17 +179,6 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 
 			std::swap(row_prev, row_curr);
 			std::swap(row_curr, row_next);
-		}
-
-		evaluateVertexRow(bounds.end_y + 1, row_prev, row_curr);
-
-		// Draw perimeter connection nodes on top of tile borders
-		if (options.show_special_tiles) {
-			for (const auto& node : perimeter_nodes_) {
-				sprite_batch.draw(node.x, node.y,
-				                  6.0f, 6.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-				                  0.0f, node.flags);
-			}
 		}
 	}
 
