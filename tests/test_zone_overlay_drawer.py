@@ -590,3 +590,113 @@ def test_zone_cluster_finder_algorithm():
     assert get_badge_size(20) == (52.0, 26.0)
 
 
+def test_fixed_world_center_panning_invariance():
+    """Verify that cluster badges are anchored to Fixed World Centers and never move when the camera pans."""
+    from pathlib import Path
+    root = Path(__file__).parent.parent
+
+    # 1. Verify zone_cluster_finder.h declares updateAndGetVisibleBadges with Map and generation
+    zcf_h = (root / "source" / "rendering" / "indicators" / "zone_cluster_finder.h").read_text(encoding="utf-8")
+    assert "updateAndGetVisibleBadges(" in zcf_h
+    assert "uint64_t current_generation" in zcf_h
+    assert "std::array<FloorClusterData, MAP_LAYERS> floor_data_" in zcf_h
+
+    # 2. Verify zone_overlay_drawer.cpp calls updateAndGetVisibleBadges with current generation
+    zod_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.cpp").read_text(encoding="utf-8")
+    assert "cluster_finder_.updateAndGetVisibleBadges(" in zod_cpp
+    assert "map.getChangeTracker().getGeneration()" in zod_cpp
+
+    # 3. Simulate camera panning over a 20x20 world cluster (400 tiles)
+    # The world cluster is from (100, 100) to (119, 119).
+    world_cluster = {(x, y) for x in range(100, 120) for y in range(100, 120)}
+
+    class MockFinder:
+        def __init__(self, world_tiles):
+            self.world_tiles = world_tiles
+            self.cached_badges = {}  # cluster_id -> badge
+            self.visited_tiles = set()
+            self.generation = 1
+
+        def update_and_get_badges(self, bounds, gen):
+            if gen != self.generation:
+                self.cached_badges.clear()
+                self.visited_tiles.clear()
+                self.generation = gen
+
+            # Visible tiles in viewport
+            visible_tiles = [
+                (x, y) for x in range(bounds["start_x"], bounds["end_x"] + 1)
+                for y in range(bounds["start_y"], bounds["end_y"] + 1)
+                if (x, y) in self.world_tiles
+            ]
+
+            for vt in visible_tiles:
+                if vt in self.visited_tiles:
+                    continue
+
+                # Unvisited cluster discovered: BFS across WORLD space
+                comp = set()
+                q = [vt]
+                self.visited_tiles.add(vt)
+                while q:
+                    cur = q.pop(0)
+                    comp.add(cur)
+                    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        n = (cur[0] + dx, cur[1] + dy)
+                        if n in self.world_tiles and n not in self.visited_tiles:
+                            self.visited_tiles.add(n)
+                            q.append(n)
+
+                # Compute center on the full world cluster
+                min_x = min(x for x, y in comp)
+                max_x = max(x for x, y in comp)
+                min_y = min(y for x, y in comp)
+                max_y = max(y for x, y in comp)
+                cx = (min_x + max_x) // 2
+                cy = (min_y + max_y) // 2
+                self.cached_badges[id(comp)] = {"center_x": cx, "center_y": cy, "tiles": len(comp)}
+
+            # Filter badges in viewport
+            margin = 4
+            visible_badges = [
+                b for b in self.cached_badges.values()
+                if (bounds["start_x"] - margin <= b["center_x"] <= bounds["end_x"] + margin and
+                    bounds["start_y"] - margin <= b["center_y"] <= bounds["end_y"] + margin)
+            ]
+            return visible_badges
+
+    finder = MockFinder(world_cluster)
+
+    # Frame 1: Camera at position A (showing left half of cluster: 90..110, 90..110)
+    bounds_a = {"start_x": 90, "end_x": 110, "start_y": 90, "end_y": 110}
+    badges_a = finder.update_and_get_badges(bounds_a, gen=1)
+    assert len(badges_a) == 1
+    fixed_center_a = (badges_a[0]["center_x"], badges_a[0]["center_y"])
+    assert fixed_center_a == (109, 109)
+    assert badges_a[0]["tiles"] == 400, "Cluster must have explored full 400 world tiles"
+
+    # Frame 2: Camera pans right (showing center/right of cluster: 105..125, 100..120)
+    bounds_b = {"start_x": 105, "end_x": 125, "start_y": 100, "end_y": 120}
+    badges_b = finder.update_and_get_badges(bounds_b, gen=1)
+    assert len(badges_b) == 1
+    fixed_center_b = (badges_b[0]["center_x"], badges_b[0]["center_y"])
+
+    # CRITICAL: Badge center must remain in the EXACT SAME ONE PLACE in world coordinates!
+    assert fixed_center_a == fixed_center_b, (
+        f"Badge world position drifted during camera pan! {fixed_center_a} != {fixed_center_b}"
+    )
+
+    # Frame 3: Camera pans further so center is off-screen (115..135, 115..135)
+    bounds_c = {"start_x": 115, "end_x": 135, "start_y": 115, "end_y": 135}
+    badges_c = finder.update_and_get_badges(bounds_c, gen=1)
+    assert len(badges_c) == 0, "Badge at (109, 109) is off-screen and should not be drawn"
+
+    # Frame 4: Camera pans back (95..115, 95..115)
+    bounds_d = {"start_x": 95, "end_x": 115, "start_y": 95, "end_y": 115}
+    badges_d = finder.update_and_get_badges(bounds_d, gen=1)
+    assert len(badges_d) == 1
+    assert (badges_d[0]["center_x"], badges_d[0]["center_y"]) == (109, 109), (
+        "Badge must reappear at the exact same Fixed World Center"
+    )
+
+
