@@ -344,17 +344,14 @@ def test_multi_zone_flag_accumulation_and_brush():
 
     # 4. zone_overlay_drawer.cpp must accumulate all zone bits independently (no else-if)
     zod_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.cpp").read_text(encoding="utf-8")
-    spec_tiles_idx = zod_cpp.find("if (options.show_special_tiles)")
-    assert spec_tiles_idx != -1
-    spec_body = zod_cpp[spec_tiles_idx:spec_tiles_idx + 800]
-    assert "if (has_pz)    tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PZ);" in spec_body
-    assert "if (has_nopvp) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOPVP);" in spec_body
-    assert "if (has_nolog) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT);" in spec_body
-    assert "if (has_pvp)   tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PVPZONE);" in spec_body
-    assert "else if (has_nopvp)" not in spec_body, "zone_overlay_drawer must NOT use else if for special zones"
+    assert "if (ct.is_pz)    tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PZ);" in zod_cpp
+    assert "if (ct.is_nopvp) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOPVP);" in zod_cpp
+    assert "if (ct.is_nolog) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT);" in zod_cpp
+    assert "if (ct.is_pvp)   tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PVPZONE);" in zod_cpp
+    assert "else if (ct.is_nopvp)" not in zod_cpp, "zone_overlay_drawer must NOT use else if for special zones"
 
-    # 5. sameZone in zone_overlay_drawer.cpp must check all 4 flags for equality
-    assert "(t_pz == pz) && (t_nopvp == nopvp) && (t_nolog == nolog) && (t_pvp == pvp)" in zod_cpp
+    # 5. Neighbor check in zone_overlay_drawer.cpp must check all 4 flags
+    assert "n.is_pz != ct.is_pz || n.is_nopvp != ct.is_nopvp ||" in zod_cpp
 
     # 6. preview_drawer.cpp must accumulate all zone bits independently (no else-if)
     prev_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "preview_drawer.cpp").read_text(encoding="utf-8")
@@ -381,9 +378,9 @@ def test_zone_shader_multi_zone_quadrants_and_badges():
     assert "vec4(1.00, 0.55, 0.10, 0.98)" in badge_body, "NL badge text must be warm-orange"
     assert "vec4(1.00, 0.15, 0.30, 0.98)" in badge_body, "PvP badge text must be crimson-red"
 
-    # Verify dynamic 1x / 2x font scaling and character bitmasks
-    assert "bool is2x = (h >= 18);" in badge_body
-    assert "int fontScale = is2x ? 2 : 1;" in badge_body
+    # Verify dynamic font scaling and character bitmasks
+    assert "clamp(int(float(h) / 8.5), 1, 5)" in badge_body
+    assert "charH = 5 * fontScale;" in badge_body
     assert "pMask" in badge_body and "zMask" in badge_body
     assert "nMask" in badge_body and "lMask" in badge_body and "vMask" in badge_body
 
@@ -486,30 +483,41 @@ def test_zone_cluster_finder_algorithm():
 
         return best_pos[0], best_pos[1], len(tiles)
 
-    def get_badge_size(tile_count: int) -> tuple[int, int]:
+    def get_badge_size(tile_count: int, c_w: int = 10, c_h: int = 10) -> tuple[float, float]:
         if tile_count == 1:
-            return 18, 12
-        elif tile_count < 5:
-            return 26, 15
+            bw, bh = 18.0, 12.0
+        elif tile_count <= 4:
+            bw, bh = 26.0, 15.0
+        elif tile_count <= 12:
+            bw, bh = 38.0, 20.0
+        elif tile_count <= 25:
+            bw, bh = 52.0, 26.0
+        elif tile_count <= 50:
+            bw, bh = 66.0, 32.0
+        elif tile_count <= 100:
+            bw, bh = 82.0, 38.0
         else:
-            return 38, 20
+            bw, bh = 98.0, 44.0
+        max_bw = max(18.0, float(c_w * 32 - 4))
+        max_bh = max(12.0, float(c_h * 32 - 4))
+        return min(bw, max_bw), min(bh, max_bh)
 
     # 1. Isolated 1x1 tile
     p1 = compute_pole_of_inaccessibility({(10, 10)})
     assert (p1[0], p1[1]) == (10, 10)
-    assert get_badge_size(p1[2]) == (18, 12)
+    assert get_badge_size(p1[2]) == (18.0, 12.0)
 
     # 2. 2x2 cluster (4 tiles)
     tiles_2x2 = {(10, 10), (11, 10), (10, 11), (11, 11)}
     p2 = compute_pole_of_inaccessibility(tiles_2x2)
     assert (p2[0], p2[1]) in tiles_2x2
-    assert get_badge_size(p2[2]) == (26, 15)
+    assert get_badge_size(p2[2]) == (26.0, 15.0)
 
     # 3. 7x7 solid square (49 tiles) -> center should be at (13, 13)
     tiles_7x7 = {(x, y) for x in range(10, 17) for y in range(10, 17)}
     p3 = compute_pole_of_inaccessibility(tiles_7x7)
     assert (p3[0], p3[1]) == (13, 13)
-    assert get_badge_size(p3[2]) == (38, 20)
+    assert get_badge_size(p3[2]) == (66.0, 32.0)
 
     # 4. Donut shape (outer 7x7 with inner 3x3 hole)
     # Centroid falls in the hole (13, 13). Pole MUST be inside the ring!
@@ -522,12 +530,12 @@ def test_zone_cluster_finder_algorithm():
     assert centroid_donut not in donut_tiles, "Centroid is in the hollow void"
     p_donut = compute_pole_of_inaccessibility(donut_tiles)
     assert (p_donut[0], p_donut[1]) in donut_tiles, "Pole of inaccessibility MUST be in the cluster ring"
-    assert get_badge_size(p_donut[2]) == (38, 20)
+    assert get_badge_size(p_donut[2]) == (66.0, 32.0)
 
     # 5. Overlapping badges side-by-side layout verification
     badges = [
-        {"flag": 4, "w": 38, "h": 20},
-        {"flag": 8, "w": 38, "h": 20}
+        {"flag": 4, "w": 38.0, "h": 20.0},
+        {"flag": 8, "w": 38.0, "h": 20.0}
     ]
     # For 2 badges of width 38 with gap 2: total_w = 38 * 2 + 2 = 78
     gap = 2.0
@@ -542,5 +550,40 @@ def test_zone_cluster_finder_algorithm():
     # First badge centered at -20, second badge at +20
     assert offsets[0] == pytest.approx(-20.0)
     assert offsets[1] == pytest.approx(20.0)
+
+    # 6. Non-touching zones of the same type (e.g. Room A with 30 tiles and Room B with 20 tiles)
+    # Both must be detected as distinct clusters and each receive its own badge!
+    room_a = {(x, y) for x in range(10, 16) for y in range(10, 15)}  # 6x5 = 30 tiles
+    room_b = {(x, y) for x in range(30, 35) for y in range(10, 14)}  # 5x4 = 20 tiles
+    all_tiles = room_a | room_b
+
+    clusters = []
+    visited = set()
+    for t in all_tiles:
+        if t in visited:
+            continue
+        comp = set()
+        q = [t]
+        visited.add(t)
+        while q:
+            cur = q.pop(0)
+            comp.add(cur)
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                n = (cur[0] + dx, cur[1] + dy)
+                if n in all_tiles and n not in visited:
+                    visited.add(n)
+                    q.append(n)
+        clusters.append(comp)
+
+    assert len(clusters) == 2, "Must discover exactly 2 separate clusters for non-touching zones"
+    assert {len(c) for c in clusters} == {30, 20}
+
+    pa = compute_pole_of_inaccessibility(room_a)
+    pb = compute_pole_of_inaccessibility(room_b)
+    assert pa[0] in range(10, 16) and pa[1] in range(10, 15)
+    assert pb[0] in range(30, 35) and pb[1] in range(10, 14)
+    # Room A (30 tiles) has size 66x32, Room B (20 tiles) has size 52x26
+    assert get_badge_size(30) == (66.0, 32.0)
+    assert get_badge_size(20) == (52.0, 26.0)
 
 

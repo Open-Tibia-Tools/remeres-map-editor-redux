@@ -62,21 +62,22 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		return;
 	}
 
-	auto sameZone = [](const Tile* t, bool pz, bool nopvp, bool nolog, bool pvp) -> bool {
-		if (!t) return false;
-		const bool t_pz = t->isPZ();
-		const bool t_nopvp = (t->getMapFlags() & TILESTATE_NOPVP) != 0;
-		const bool t_nolog = (t->getMapFlags() & TILESTATE_NOLOGOUT) != 0;
-		const bool t_pvp = (t->getMapFlags() & TILESTATE_PVPZONE) != 0;
-		return (t_pz == pz) && (t_nopvp == nopvp) && (t_nolog == nolog) && (t_pvp == pvp);
-	};
-
 	const ViewBounds bounds = view.getBoundsForFloor(z);
 	const float floor_alpha = (z == view.floor) ? 1.0f : std::max(0.25f, 1.0f - static_cast<float>(view.floor - z) * 0.20f);
 
-	std::vector<const Tile*> row_prev;
-	std::vector<const Tile*> row_curr;
-	std::vector<const Tile*> row_next;
+	struct CachedRowTile {
+		const Tile* tile = nullptr;
+		bool is_blocking = false;
+		bool is_pz = false;
+		bool is_nopvp = false;
+		bool is_nolog = false;
+		bool is_pvp = false;
+	};
+
+	std::vector<CachedRowTile> row_prev;
+	std::vector<CachedRowTile> row_curr;
+	std::vector<CachedRowTile> row_next;
+	std::vector<VisibleZoneTile> visible_zone_tiles;
 
 	// 1. Special Zones & Pathing / Blocking Pass
 	if ((options.show_special_tiles || options.show_blocking) && view.zoom <= 10.0f) {
@@ -84,17 +85,36 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		const int max_x = bounds.end_x + 1;
 		const int row_width = max_x - min_x + 1;
 
-		auto fetchRow = [&](int ry, std::vector<const Tile*>& row) {
+		auto fetchRow = [&](int ry, std::vector<CachedRowTile>& row) {
 			row.resize(row_width);
 			for (int x = min_x; x <= max_x; ++x) {
-				const Tile* t = nullptr;
-				if (secondary_map) {
-					t = secondary_map->getTile(x, ry, z);
-				}
+				const Tile* t = secondary_map ? secondary_map->getTile(x, ry, z) : nullptr;
 				if (!t) {
 					t = map.getTile(x, ry, z);
 				}
-				row[x - min_x] = t;
+				CachedRowTile& ct = row[x - min_x];
+				ct.tile = t;
+				if (t) {
+					ct.is_blocking = options.show_blocking && IsTilePathBlocking(t);
+					if (options.show_special_tiles) {
+						ct.is_pz = t->isPZ();
+						const uint32_t mf = t->getMapFlags();
+						ct.is_nopvp = (mf & TILESTATE_NOPVP) != 0;
+						ct.is_nolog = (mf & TILESTATE_NOLOGOUT) != 0;
+						ct.is_pvp = (mf & TILESTATE_PVPZONE) != 0;
+					} else {
+						ct.is_pz = false;
+						ct.is_nopvp = false;
+						ct.is_nolog = false;
+						ct.is_pvp = false;
+					}
+				} else {
+					ct.is_blocking = false;
+					ct.is_pz = false;
+					ct.is_nopvp = false;
+					ct.is_nolog = false;
+					ct.is_pvp = false;
+				}
 			}
 		};
 
@@ -106,48 +126,46 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 
 			for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
 				const int idx = x - min_x;
-				const Tile* tile = row_curr[idx];
-				if (!tile) {
+				const CachedRowTile& ct = row_curr[idx];
+				if (!ct.tile) {
 					continue;
 				}
 
 				uint32_t tile_zone_flags = 0;
 
 				// Pathing / Blocking
-				if (options.show_blocking && IsTilePathBlocking(tile)) {
+				if (ct.is_blocking) {
 					tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCKING);
-					if (!IsTilePathBlocking(row_prev[idx]))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_N);
-					if (!IsTilePathBlocking(row_next[idx]))     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_S);
-					if (!IsTilePathBlocking(row_curr[idx - 1])) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_W);
-					if (!IsTilePathBlocking(row_curr[idx + 1])) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_E);
+					if (!row_prev[idx].is_blocking)     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_N);
+					if (!row_next[idx].is_blocking)     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_S);
+					if (!row_curr[idx - 1].is_blocking) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_W);
+					if (!row_curr[idx + 1].is_blocking) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_E);
 				}
 
 				// Special Zones (PZ, No-PvP, No-Logout, PvP Zone)
-				if (options.show_special_tiles) {
-					const bool has_pz = tile->isPZ();
-					const bool has_nopvp = (tile->getMapFlags() & TILESTATE_NOPVP) != 0;
-					const bool has_nolog = (tile->getMapFlags() & TILESTATE_NOLOGOUT) != 0;
-					const bool has_pvp = (tile->getMapFlags() & TILESTATE_PVPZONE) != 0;
+				if (ct.is_pz || ct.is_nopvp || ct.is_nolog || ct.is_pvp) {
+					if (ct.is_pz)    tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PZ);
+					if (ct.is_nopvp) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOPVP);
+					if (ct.is_nolog) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT);
+					if (ct.is_pvp)   tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PVPZONE);
 
-					if (has_pz)    tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PZ);
-					if (has_nopvp) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOPVP);
-					if (has_nolog) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT);
-					if (has_pvp)   tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PVPZONE);
+					auto checkNeighbor = [&](const CachedRowTile& n, uint32_t global_bit, uint32_t internal_bit) {
+						const bool n_has_any = n.is_pz || n.is_nopvp || n.is_nolog || n.is_pvp;
+						if (!n_has_any) {
+							tile_zone_flags |= global_bit;
+						} else if (n.is_pz != ct.is_pz || n.is_nopvp != ct.is_nopvp ||
+						           n.is_nolog != ct.is_nolog || n.is_pvp != ct.is_pvp) {
+							tile_zone_flags |= internal_bit;
+						}
+					};
 
-					if (has_pz || has_nopvp || has_nolog || has_pvp) {
-						auto checkNeighbor = [&](const Tile* neighbor, uint32_t global_bit, uint32_t internal_bit) {
-							if (!neighbor || (!neighbor->isPZ() && (neighbor->getMapFlags() & (TILESTATE_NOPVP | TILESTATE_NOLOGOUT | TILESTATE_PVPZONE)) == 0)) {
-								tile_zone_flags |= global_bit;
-							} else if (!sameZone(neighbor, has_pz, has_nopvp, has_nolog, has_pvp)) {
-								tile_zone_flags |= internal_bit;
-							}
-						};
+					checkNeighbor(row_prev[idx],     static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_N), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_N));
+					checkNeighbor(row_next[idx],     static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_S), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_S));
+					checkNeighbor(row_curr[idx - 1], static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_W), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_W));
+					checkNeighbor(row_curr[idx + 1], static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_E), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_E));
 
-						checkNeighbor(row_prev[idx],     static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_N), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_N));
-						checkNeighbor(row_next[idx],     static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_S), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_S));
-						checkNeighbor(row_curr[idx - 1], static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_W), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_W));
-						checkNeighbor(row_curr[idx + 1], static_cast<uint32_t>(ZONE_FLAG_ZONE_BORDER_E), static_cast<uint32_t>(ZONE_FLAG_ZONE_INTERNAL_E));
-					}
+					uint8_t zmask = (ct.is_pz ? 1 : 0) | (ct.is_nopvp ? 2 : 0) | (ct.is_nolog ? 4 : 0) | (ct.is_pvp ? 8 : 0);
+					visible_zone_tiles.push_back({ static_cast<int16_t>(x), static_cast<int16_t>(y), zmask });
 				}
 
 				if (tile_zone_flags > 0) {
@@ -165,9 +183,8 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	}
 
 	// 2. Fixed World Center Cluster Badges Pass
-	if (options.show_special_tiles && view.zoom <= 10.0f) {
-		const uint64_t cur_gen = map.getChangeTracker().getGeneration();
-		const auto& badges = cluster_finder_.getVisibleBadges(z, bounds, map, secondary_map, cur_gen);
+	if (options.show_special_tiles && !visible_zone_tiles.empty() && view.zoom <= 10.0f) {
+		const auto& badges = cluster_finder_.findClusters(z, bounds, visible_zone_tiles);
 		for (const auto& badge : badges) {
 			int draw_x, draw_y;
 			view.getScreenPosition(badge.center_x, badge.center_y, z, draw_x, draw_y);

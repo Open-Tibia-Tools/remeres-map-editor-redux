@@ -1,23 +1,26 @@
 #ifndef RME_RENDERING_INDICATORS_ZONE_CLUSTER_FINDER_H_
 #define RME_RENDERING_INDICATORS_ZONE_CLUSTER_FINDER_H_
 
-#include "app/main.h"
-#include "map/position.h"
 #include "rendering/core/render_view.h"
 #include "rendering/indicators/zone_flags.h"
 
 #include <vector>
-#include <unordered_map>
-#include <unordered_set>
 #include <cstdint>
-
-class Map;
-class BaseMap;
+#include <span>
 
 namespace rme::rendering {
 
 /**
- * @brief Represents a single cluster badge rendered at the Fixed World Center of a connected zone.
+ * @brief Record of a visible zone tile discovered during the floor rendering pass.
+ */
+struct VisibleZoneTile {
+	int16_t x = 0;
+	int16_t y = 0;
+	uint8_t flags = 0; // Bit 0: PZ, Bit 1: NOPVP, Bit 2: NOLOGOUT, Bit 3: PVPZONE
+};
+
+/**
+ * @brief Represents a single cluster badge rendered at the Pole of Inaccessibility of a connected zone.
  */
 struct ZoneClusterBadge {
 	uint32_t zone_flag = 0; // ZONE_FLAG_PZ, ZONE_FLAG_NOPVP, ZONE_FLAG_NOLOGOUT, ZONE_FLAG_PVPZONE
@@ -32,10 +35,13 @@ struct ZoneClusterBadge {
 };
 
 /**
- * @brief Dedicated Service for discovering connected zone clusters and computing their Fixed World Center.
+ * @brief Dedicated Service for discovering connected zone clusters and computing their badges.
  *
  * Enforces Single Responsibility Principle (SRP) by decoupling topological cluster discovery
  * and Distance Transform geometric calculations from the rendering drawer.
+ *
+ * Operates purely on visible zone tiles in O(N_tiles) time with zero extra map lookups or hash sets,
+ * ensuring maximum performance with 0 FPS impact.
  */
 class ZoneClusterFinder {
 public:
@@ -43,37 +49,28 @@ public:
 	~ZoneClusterFinder() = default;
 
 	/**
-	 * @brief Discovers and returns all Fixed World Center zone badges visible on floor z.
+	 * @brief Discovers and returns all cluster badges visible on floor z.
 	 *
-	 * Uses Breadth-First Search (BFS) to trace complete connected components across the map,
-	 * then evaluates the Pole of Inaccessibility (multi-source BFS distance transform) to
-	 * guarantee the badge is placed in the thickest, most interior part of the zone.
-	 *
-	 * Caches results per floor and generation counter so stationary viewing / panning within
-	 * discovered regions costs zero BFS overhead.
+	 * Operates directly on the tiles collected during the row pass in O(N) time with flat arrays.
+	 * Evaluates 4-connected components and Pole of Inaccessibility (multi-source BFS distance transform)
+	 * for each disconnected cluster independently, guaranteeing every zone shows its badge and scales
+	 * proportionately to the cluster's size.
 	 */
-	const std::vector<ZoneClusterBadge>& getVisibleBadges(
+	const std::vector<ZoneClusterBadge>& findClusters(
 		int z,
 		const ViewBounds& bounds,
-		const Map& map,
-		const BaseMap* secondary_map,
-		uint64_t current_generation
+		std::span<const VisibleZoneTile> visible_tiles
 	);
 
 	void invalidate() noexcept {
-		cached_generation_ = 0;
-		floor_data_.clear();
 		visible_badges_result_.clear();
+		tile_grid_.clear();
+		visited_grid_.clear();
 	}
 
 private:
-	struct FloorClusterData {
-		std::vector<ZoneClusterBadge> badges;
-		std::unordered_set<uint64_t> visited_tiles; // Packed zone_bit and (x, y)
-	};
-
-	uint64_t cached_generation_ = 0;
-	std::unordered_map<int, FloorClusterData> floor_data_;
+	std::vector<uint8_t> tile_grid_;
+	std::vector<uint8_t> visited_grid_;
 	std::vector<ZoneClusterBadge> visible_badges_result_;
 };
 

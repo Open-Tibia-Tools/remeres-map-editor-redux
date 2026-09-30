@@ -55,14 +55,14 @@ bool evaluateClusterBadge(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 ou
     vec4 bg = vec4(0.06, 0.06, 0.09, 0.95);
     vec4 shadow = vec4(0.02, 0.02, 0.03, 0.80);
 
-    bool isEdge = (lx == 0 || lx == w - 1 || ly == 0 || ly == h - 1);
+    int bThick = (h >= 26) ? 2 : 1;
+    bool isEdge = (lx < bThick || lx >= w - bThick || ly < bThick || ly >= h - bThick);
     if (isEdge) {
-        outColor = (ly == h - 1 || lx == w - 1) ? shadow : border;
+        outColor = (ly >= h - bThick || lx >= w - bThick) ? shadow : border;
         return true;
     }
 
-    bool is2x = (h >= 18);
-    int fontScale = is2x ? 2 : 1;
+    int fontScale = clamp(int(float(h) / 8.5), 1, 5);
     int charH = 5 * fontScale;
 
     bool isText = false;
