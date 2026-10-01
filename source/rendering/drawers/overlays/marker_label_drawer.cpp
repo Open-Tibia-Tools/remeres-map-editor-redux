@@ -65,10 +65,10 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 	const float screen_max_x = static_cast<float>(view.screensize_x) + 64.0f;
 	const float screen_max_y = static_cast<float>(view.screensize_y) + 64.0f;
 
-	constexpr float fontSize = 22.0f;
-	constexpr float paddingX = 10.0f;
-	constexpr float paddingY = 4.0f;
-	constexpr float cornerRadius = 5.0f;
+	constexpr float fontSize = 16.5f;
+	constexpr float paddingX = 7.5f;
+	constexpr float paddingY = 3.0f;
+	constexpr float cornerRadius = 4.0f;
 
 	nvgFontSize(vg, fontSize);
 	nvgFontFace(vg, "sans");
@@ -302,25 +302,25 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
 			nvgStrokeColor(vg, nvgRGBA(0, 242, 242, 245));
-			nvgStrokeWidth(vg, 1.5f);
+			nvgStrokeWidth(vg, 1.2f);
 			nvgStroke(vg);
 		} else if (vl.type == MarkerLabelType::Town) {
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
 			nvgStrokeColor(vg, nvgRGBA(255, 215, 0, 245));
-			nvgStrokeWidth(vg, 1.5f);
+			nvgStrokeWidth(vg, 1.2f);
 			nvgStroke(vg);
 		} else if (vl.type == MarkerLabelType::HouseActive) {
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
 			nvgStrokeColor(vg, nvgRGBA(51, 242, 51, 245)); // Neon Green #33F233
-			nvgStrokeWidth(vg, 1.5f);
+			nvgStrokeWidth(vg, 1.2f);
 			nvgStroke(vg);
 		} else { // MarkerLabelType::HouseInactive
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
 			nvgStrokeColor(vg, nvgRGBA(255, 153, 0, 245)); // Warm Amber #FF9900
-			nvgStrokeWidth(vg, 1.5f);
+			nvgStrokeWidth(vg, 1.2f);
 			nvgStroke(vg);
 		}
 	}
