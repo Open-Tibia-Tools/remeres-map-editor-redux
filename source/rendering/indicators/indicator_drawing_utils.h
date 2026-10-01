@@ -26,24 +26,6 @@ inline void DrawNanoVGIndicatorBadge(
 
 	const auto style = GetIndicatorBadgeStyle(type);
 
-	const bool is_invalid = (type == TileIndicatorType::InvalidGround ||
-	                         type == TileIndicatorType::InvalidItem ||
-	                         type == TileIndicatorType::InvalidZone);
-
-	if (is_invalid) {
-		// Clean flat semi-transparent fills for invalid map content with 2px black border
-		nvgBeginPath(vg);
-		nvgRoundedRect(vg, bx, by, bsize, bsize, 2.0f);
-		nvgFillColor(vg, nvgRGBA(13, 13, 18, 255));
-		nvgFill(vg);
-
-		nvgBeginPath(vg);
-		nvgRect(vg, bx + 2.0f, by + 2.0f, bsize - 4.0f, bsize - 4.0f);
-		nvgFillColor(vg, nvgRGBA(style.bg_r, style.bg_g, style.bg_b, style.bg_a));
-		nvgFill(vg);
-		return;
-	}
-
 	// 1. Outer 2px solid black border
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, bx, by, bsize, bsize, 2.0f);

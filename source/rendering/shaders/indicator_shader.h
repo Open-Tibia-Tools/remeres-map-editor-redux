@@ -37,31 +37,6 @@ bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
 
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
 
-    // Clean flat semi-transparent fills for invalid map content with 2px black border
-    if (markerId >= 9000000.0) {
-        if (lx <= 1 || lx >= 30 || ly <= 1 || ly >= 30) {
-            outColor = zBlack * tint;
-            return true;
-        }
-
-        if (markerId < 10000000.0) {
-            // Missing Ground Tile: Flat red overlay
-            if (showInvalidTiles == 0) discard;
-            outColor = vec4(1.0, 0.0, 0.0, 0.67) * tint;
-            return true;
-        }
-        if (markerId < 11000000.0) {
-            // Missing Top Item: Flat orange overlay (RGB 255, 165, 0)
-            if (showInvalidTiles == 0) discard;
-            outColor = vec4(1.0, 0.647, 0.0, 0.67) * tint;
-            return true;
-        }
-        // Invalid Zone Flags: Flat magenta overlay (RGB 255, 0, 255)
-        if (showInvalidZones == 0) discard;
-        outColor = vec4(1.0, 0.0, 1.0, 0.67) * tint;
-        return true;
-    }
-
     vec4 zWash;
     vec4 zLight;
     vec4 zDark;
@@ -124,7 +99,7 @@ bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
         zDark  = vec4(0.37, 0.12, 0.11, 0.95);
         zFg    = vec4(0.75, 0.31, 0.30, 0.98);
         inMask = uint[7](0x09718270u, 0x050A4290u, 0x030A4290u, 0x030A4270u, 0x050A4290u, 0x090A4290u, 0x09719E70u);
-    } else {
+    } else if (markerId < 9000000.0) {
         // Primal Light ("LIGHT") - Pale Ice Azure #BFE9FF
         if (showTechItems == 0) discard;
         zWash  = vec4(0.75, 0.91, 1.00, 0.28);
@@ -132,6 +107,30 @@ bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
         zDark  = vec4(0.31, 0.56, 0.69, 0.95);
         zFg    = vec4(0.75, 0.91, 1.00, 0.98);
         inMask = uint[7](0x0FA5CE10u, 0x02242410u, 0x02242410u, 0x023DA410u, 0x02252410u, 0x02252410u, 0x0225CEF0u);
+    } else if (markerId < 10000000.0) {
+        // Missing Ground Tile ("INVALID") - Warm Red #EB1F3D
+        if (showInvalidTiles == 0) discard;
+        zWash  = vec4(0.92, 0.12, 0.24, 0.28);
+        zLight = vec4(1.00, 0.60, 0.68, 0.85);
+        zDark  = vec4(0.42, 0.04, 0.16, 0.95);
+        zFg    = vec4(0.92, 0.12, 0.24, 0.98);
+        inMask = uint[7](0x00000000u, 0x0345D550u, 0x054555D0u, 0x0545D550u, 0x05455550u, 0x035D4950u, 0x00000000u);
+    } else if (markerId < 11000000.0) {
+        // Missing Top Item ("INVALID") - Warm Orange #FF850F
+        if (showInvalidTiles == 0) discard;
+        zWash  = vec4(1.00, 0.52, 0.06, 0.28);
+        zLight = vec4(1.00, 0.78, 0.50, 0.85);
+        zDark  = vec4(0.54, 0.18, 0.06, 0.95);
+        zFg    = vec4(1.00, 0.52, 0.06, 0.98);
+        inMask = uint[7](0x00000000u, 0x0345D550u, 0x054555D0u, 0x0545D550u, 0x05455550u, 0x035D4950u, 0x00000000u);
+    } else {
+        // Invalid Zone Flags ("INVALID") - Magenta #F226F2
+        if (showInvalidZones == 0) discard;
+        zWash  = vec4(0.95, 0.15, 0.95, 0.28);
+        zLight = vec4(1.00, 0.65, 1.00, 0.85);
+        zDark  = vec4(0.48, 0.00, 0.48, 0.95);
+        zFg    = vec4(0.95, 0.15, 0.95, 0.98);
+        inMask = uint[7](0x00000000u, 0x0345D550u, 0x054555D0u, 0x0545D550u, 0x05455550u, 0x035D4950u, 0x00000000u);
     }
 
     vec4 zBg = vec4(0.06, 0.06, 0.09, 0.95);

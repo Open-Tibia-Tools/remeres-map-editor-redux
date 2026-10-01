@@ -170,9 +170,9 @@ class TechnicalItemRegistry:
             TileIndicatorType.TECH_INVISIBLE_WALKABLE: {"text": "WALK", "short_text": "W", "border": (0, 240, 240)},
             TileIndicatorType.TECH_INVISIBLE_WALL: {"text": "BLOCK", "short_text": "B", "border": (255, 40, 40)},
             TileIndicatorType.TECH_PRIMAL_LIGHT: {"text": "LIGHT", "short_text": "L", "border": (90, 220, 255)},
-            TileIndicatorType.INVALID_GROUND: {"text": "", "short_text": "", "border": (255, 0, 0)},
-            TileIndicatorType.INVALID_ITEM: {"text": "", "short_text": "", "border": (255, 165, 0)},
-            TileIndicatorType.INVALID_ZONE: {"text": "", "short_text": "", "border": (255, 0, 255)},
+            TileIndicatorType.INVALID_GROUND: {"text": "INVALID", "short_text": "INV", "border": (235, 31, 61)},
+            TileIndicatorType.INVALID_ITEM: {"text": "INVALID", "short_text": "INV", "border": (255, 133, 15)},
+            TileIndicatorType.INVALID_ZONE: {"text": "INVALID", "short_text": "INV", "border": (242, 38, 242)},
         }
         return styles.get(ind_type, {"text": "?", "short_text": "?", "border": (200, 200, 200)})
 
@@ -316,12 +316,15 @@ def test_badge_styles():
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALL)["short_text"] == "B"
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_PRIMAL_LIGHT)["text"] == "LIGHT"
     assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_PRIMAL_LIGHT)["short_text"] == "L"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["text"] == ""
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["text"] == ""
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["text"] == ""
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["border"] == (255, 0, 0)
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["border"] == (255, 165, 0)
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["border"] == (255, 0, 255)
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["text"] == "INVALID"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["short_text"] == "INV"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["text"] == "INVALID"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["short_text"] == "INV"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["text"] == "INVALID"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["short_text"] == "INV"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["border"] == (235, 31, 61)
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["border"] == (255, 133, 15)
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["border"] == (242, 38, 242)
 
 def test_search_dialog_catalog_row_badge_classification():
     # In Search for Item dialog (AdvancedFinderResultsView), rows with technical items must yield their badge

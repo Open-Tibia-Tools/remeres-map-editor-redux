@@ -141,11 +141,11 @@ inline constexpr IndicatorBadgeStyle GetIndicatorBadgeStyle(TileIndicatorType ty
 		case TileIndicatorType::TechPrimalLight:
 			return { "LIGHT", "L", 191, 233, 255, 191, 233, 255, 71, 240, 250, 255, 79, 143, 176 };
 		case TileIndicatorType::InvalidGround:
-			return { "", "", 255, 0, 0, 255, 0, 0, 171, 255, 0, 0, 120, 0, 0 };
+			return { "INVALID", "INV", 235, 31, 61, 235, 31, 61, 71, 255, 153, 173, 107, 10, 40 };
 		case TileIndicatorType::InvalidItem:
-			return { "", "", 255, 165, 0, 255, 165, 0, 171, 255, 165, 0, 140, 80, 0 };
+			return { "INVALID", "INV", 255, 133, 15, 255, 133, 15, 71, 255, 199, 128, 138, 46, 16 };
 		case TileIndicatorType::InvalidZone:
-			return { "", "", 255, 0, 255, 255, 0, 255, 171, 255, 0, 255, 140, 0, 140 };
+			return { "INVALID", "INV", 242, 38, 242, 242, 38, 242, 71, 255, 166, 255, 122, 0, 122 };
 		case TileIndicatorType::ZonePZ:
 			return { "PZ", "PZ", 47, 139, 255, 47, 139, 255, 71, 166, 210, 255, 16, 42, 140 };
 		case TileIndicatorType::ZoneNoPvP:
