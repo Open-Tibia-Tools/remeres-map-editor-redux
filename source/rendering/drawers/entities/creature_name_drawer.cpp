@@ -98,23 +98,11 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		const float labelX = screen_x + tile_size_screen * 0.5f;
 		const float labelY = screen_y - 2.0f;
 
-		const char* t_begin = nullptr;
-		const char* t_end = nullptr;
-		std::string_view lookup_key;
+		const char* t_begin = label.name.data();
+		const char* t_end = label.name.data() + label.name.size();
+		std::string_view lookup_key = label.name;
 
-		if (label.creature && !label.creature->isNpc() && label.creature->getSpawnTime() > 0) {
-			s_formatted_strings.push_back(std::format("{} • {}s", label.name, label.creature->getSpawnTime()));
-			const auto& formatted = s_formatted_strings.back();
-			t_begin = formatted.data();
-			t_end = formatted.data() + formatted.size();
-			lookup_key = formatted;
-		} else {
-			t_begin = label.name.data();
-			t_end = label.name.data() + label.name.size();
-			lookup_key = label.name;
-		}
-
-		// Fast cached text bounds lookup (avoids CPU font glyph kerning loops per-instance)
+		// Fast cached text bounds lookup for creature name
 		auto it = s_metrics_cache.find(std::string(lookup_key));
 		float textWidth = 0.0f;
 		float textHeight = 0.0f;
@@ -138,13 +126,44 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			.text_begin = t_begin,
 			.text_end = t_end
 		});
+
+		// Spawn time badge placed in bottom-right corner of creature tile
+		if (label.creature && !label.creature->isNpc() && label.creature->getSpawnTime() > 0) {
+			s_formatted_strings.push_back(std::format("{}s", label.creature->getSpawnTime()));
+			const auto& formatted = s_formatted_strings.back();
+			auto it_t = s_metrics_cache.find(formatted);
+			float tw = 0.0f;
+			float th = 0.0f;
+			if (it_t != s_metrics_cache.end()) {
+				tw = it_t->second.width;
+				th = it_t->second.height;
+			} else {
+				float tb[4];
+				nvgTextBounds(vg, 0, 0, formatted.c_str(), nullptr, tb);
+				tw = tb[2] - tb[0];
+				th = tb[3] - tb[1];
+				s_metrics_cache.emplace(formatted, CachedMetrics{ tw, th });
+			}
+
+			const float timerX = screen_x + tile_size_screen - tw * 0.5f - paddingX - 1.0f;
+			const float timerY = screen_y + tile_size_screen - 1.0f;
+
+			visible_labels.push_back(VisibleLabel {
+				.x = timerX,
+				.y = timerY,
+				.width = tw,
+				.height = th,
+				.text_begin = formatted.data(),
+				.text_end = formatted.data() + formatted.size()
+			});
+		}
 	}
 
 	if (visible_labels.empty()) {
 		return;
 	}
 
-	// Pass 1: Draw all backgrounds with convex rounded rectangles (single path per contour bypasses stencil multipass)
+	// Pass 1: Draw all backgrounds with convex rounded rectangles
 	nvgFillColor(vg, nvgRGBA(0, 0, 0, 160));
 	for (const auto& vl : visible_labels) {
 		nvgBeginPath(vg);

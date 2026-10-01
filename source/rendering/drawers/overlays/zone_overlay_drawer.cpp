@@ -225,6 +225,13 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			sprite_batch.draw(static_cast<float>(draw_x0), static_cast<float>(draw_y0),
 			                  spawn_w, spawn_h, *white_pixel, 1.0f, 1.0f, 1.0f, box_alpha,
 			                  0.0f, static_cast<float>(spawn_flags));
+
+			// Spawn Center Badge (Rendered on ground level, below creatures and items)
+			int center_draw_x, center_draw_y;
+			view.getScreenPosition(spos.x, spos.y, z, center_draw_x, center_draw_y);
+			sprite_batch.draw(static_cast<float>(center_draw_x), static_cast<float>(center_draw_y),
+			                  32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, box_alpha,
+			                  INDICATOR_SPAWN_BASE, 0.0f);
 		}
 	}
 }
@@ -261,36 +268,6 @@ void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
 			const float py = static_cast<float>(draw_y) + 16.0f - (badge.height * 0.5f) + badge.offset_y;
 			sprite_batch.draw(px, py, badge.width, badge.height, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
 			                  0.0f, static_cast<float>(static_cast<uint32_t>(ZONE_FLAG_CLUSTER_BADGE) | badge.zone_flag));
-		}
-	}
-
-	// 2. Spawn Center Badges (Rendered on top of items)
-	if (options.show_spawns) {
-		for (const Position& spos : map.spawns) {
-			if (spos.z != z) {
-				continue;
-			}
-			const Tile* st = map.getTile(spos);
-			if (!st || !st->spawn) {
-				continue;
-			}
-			const int radius = st->spawn->getSize();
-			const int sx0 = spos.x - radius;
-			const int sx1 = spos.x + radius;
-			const int sy0 = spos.y - radius;
-			const int sy1 = spos.y + radius;
-
-			if (sx1 < bounds.start_x || sx0 > bounds.end_x ||
-			    sy1 < bounds.start_y || sy0 > bounds.end_y) {
-				continue;
-			}
-
-			int center_draw_x, center_draw_y;
-			view.getScreenPosition(spos.x, spos.y, z, center_draw_x, center_draw_y);
-			const float box_alpha = (st->spawn->isSelected() && options.dragging) ? (floor_alpha * 0.30f) : floor_alpha;
-			sprite_batch.draw(static_cast<float>(center_draw_x), static_cast<float>(center_draw_y),
-			                  32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, box_alpha,
-			                  INDICATOR_SPAWN_BASE, 0.0f);
 		}
 	}
 }
