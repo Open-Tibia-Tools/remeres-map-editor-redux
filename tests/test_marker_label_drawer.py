@@ -133,7 +133,7 @@ def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, op
         for wp in waypoints:
             if not wp or not wp.name:
                 continue
-            if not is_floor_visible(wp.pos.z, view, options):
+            if wp.pos.z != view.floor:
                 continue
             if not view.is_tile_visible(wp.pos.x, wp.pos.y, wp.pos.z):
                 continue
@@ -159,7 +159,7 @@ def collect_marker_labels(waypoints: list, towns: list, view: MockRenderView, op
             if not town:
                 continue
             pos = town.get_temple_position()
-            if not is_floor_visible(pos.z, view, options):
+            if pos.z != view.floor:
                 continue
             if not view.is_tile_visible(pos.x, pos.y, pos.z):
                 continue
@@ -226,19 +226,17 @@ def test_marker_label_floor_visibility():
     assert len(labels) == 1
     assert labels[0]['text'] == "ground_wp"
 
-    # Multi floor surface mode (show_all_floors = True) with descending bounds (RenderView convention: start_z=7, end_z=0)
+    # Multi floor surface mode (show_all_floors = True): Labels are strictly displayed only per floor!
     opts_multi = MockDrawingOptions(show_waypoints=True, show_all_floors=True)
     labels = collect_marker_labels([wp_ground, wp_roof, wp_underground], [], view, opts_multi)
-    assert len(labels) == 2, "Surface floors (5 and 7) should be visible when show_all_floors is active"
-    texts = {l['text'] for l in labels}
-    assert "ground_wp" in texts and "roof_wp" in texts
-    assert "cave_wp" not in texts, "Underground floor 9 should not be visible when viewing surface"
+    assert len(labels) == 1, "Marker labels must strictly be displayed only on the active floor"
+    assert labels[0]['text'] == "ground_wp"
 
-    # Verify ascending bounds work identically
-    view_ascending = MockRenderView(floor=7, zoom=1.0, start_z=0, end_z=7)
-    labels_asc = collect_marker_labels([wp_ground, wp_roof, wp_underground], [], view_ascending, opts_multi)
-    assert len(labels_asc) == 2
-    assert {l['text'] for l in labels_asc} == {"ground_wp", "roof_wp"}
+    # Verify switching active floor to 5 displays roof_wp only
+    view_roof = MockRenderView(floor=5, zoom=1.0)
+    labels_roof = collect_marker_labels([wp_ground, wp_roof, wp_underground], [], view_roof, opts_multi)
+    assert len(labels_roof) == 1
+    assert labels_roof[0]['text'] == "roof_wp"
 
 
 def test_marker_label_zoom_lod():
@@ -309,8 +307,8 @@ def test_creature_respawn_timer_formatting():
     drawer_path = Path(__file__).parent.parent / "source" / "rendering" / "drawers" / "entities" / "creature_name_drawer.cpp"
     content = drawer_path.read_text(encoding="utf-8")
 
-    # Assert exact required bullet format: "{} • {}s"
-    assert "{} • {}s" in content, "Creature respawn timer must be formatted as '{} • {}s'"
+    # Assert dedicated timer badge format in bottom-right corner: "{}s"
+    assert 'std::format("{}s", label.creature->getSpawnTime())' in content, "Creature respawn timer must be formatted as '{}s'"
 
     # Assert condition filters NPCs and non-positive spawn timers
     assert "!label.creature->isNpc()" in content, "NPCs must not display respawn timers"

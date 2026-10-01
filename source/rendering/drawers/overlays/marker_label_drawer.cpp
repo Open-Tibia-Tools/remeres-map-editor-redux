@@ -38,18 +38,6 @@ struct VisibleMarkerLabel {
 	MarkerLabelType type;
 };
 
-bool isFloorVisible(int z, const RenderView& view, const DrawingOptions& options) {
-	if (z == view.floor) {
-		return true;
-	}
-	const int min_z = std::min(view.start_z, view.end_z);
-	const int max_z = std::max(view.start_z, view.end_z);
-	if (options.show_all_floors && view.floor <= GROUND_LAYER && z >= min_z && z <= max_z) {
-		return true;
-	}
-	return false;
-}
-
 } // namespace
 
 MarkerLabelDrawer::MarkerLabelDrawer() = default;
@@ -77,10 +65,10 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 	const float screen_max_x = static_cast<float>(view.screensize_x) + 64.0f;
 	const float screen_max_y = static_cast<float>(view.screensize_y) + 64.0f;
 
-	constexpr float fontSize = 11.0f;
-	constexpr float paddingX = 5.0f;
-	constexpr float paddingY = 2.0f;
-	constexpr float cornerRadius = 3.0f;
+	constexpr float fontSize = 22.0f;
+	constexpr float paddingX = 10.0f;
+	constexpr float paddingY = 4.0f;
+	constexpr float cornerRadius = 5.0f;
 
 	nvgFontSize(vg, fontSize);
 	nvgFontFace(vg, "sans");
@@ -144,7 +132,7 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 				continue;
 			}
 			const Position& pos = wp_ptr->pos;
-			if (!isFloorVisible(pos.z, view, options)) {
+			if (pos.z != view.floor) {
 				continue;
 			}
 
@@ -181,7 +169,7 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 				continue;
 			}
 			const Position& pos = town_ptr->getTemplePosition();
-			if (!isFloorVisible(pos.z, view, options)) {
+			if (pos.z != view.floor) {
 				continue;
 			}
 
@@ -227,76 +215,72 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 				continue;
 			}
 
-			for (int check_z = view.start_z; check_z >= view.superend_z; --check_z) {
-				if (!isFloorVisible(check_z, view, options)) {
-					continue;
+			const int check_z = view.floor;
+
+			std::vector<Position> floor_tiles;
+			floor_tiles.reserve(all_tiles.size());
+			for (const auto& p : all_tiles) {
+				if (p.z == check_z) {
+					floor_tiles.push_back(p);
 				}
-
-				std::vector<Position> floor_tiles;
-				floor_tiles.reserve(all_tiles.size());
-				for (const auto& p : all_tiles) {
-					if (p.z == check_z) {
-						floor_tiles.push_back(p);
-					}
-				}
-				if (floor_tiles.empty()) {
-					continue;
-				}
-
-				// Centroid of the room tiles
-				double sum_x = 0.0;
-				double sum_y = 0.0;
-				for (const auto& p : floor_tiles) {
-					sum_x += p.x;
-					sum_y += p.y;
-				}
-				const double avg_x = sum_x / static_cast<double>(floor_tiles.size());
-				const double avg_y = sum_y / static_cast<double>(floor_tiles.size());
-
-				// Choose the real room tile closest to centroid to guarantee it sits inside the room
-				Position best_pos = floor_tiles[0];
-				double min_dist_sq = 1e18;
-				for (const auto& p : floor_tiles) {
-					const double dx = static_cast<double>(p.x) - avg_x;
-					const double dy = static_cast<double>(p.y) - avg_y;
-					const double dsq = dx * dx + dy * dy;
-					if (dsq < min_dist_sq) {
-						min_dist_sq = dsq;
-						best_pos = p;
-					}
-				}
-
-				int unscaled_x = 0, unscaled_y = 0;
-				if (!view.IsTileVisible(best_pos.x, best_pos.y, check_z, unscaled_x, unscaled_y)) {
-					continue;
-				}
-
-				const float screen_x = static_cast<float>(unscaled_x) * inv_zoom;
-				const float screen_y = static_cast<float>(unscaled_y) * inv_zoom;
-				if (screen_x < -64.0f || screen_x > screen_max_x || screen_y < -64.0f || screen_y > screen_max_y) {
-					continue;
-				}
-
-				std::string label_text = house_ptr->name;
-				if (label_text.empty()) {
-					label_text = "HOUSE";
-				}
-
-				const CachedMetrics m = getMetrics(label_text);
-				const float labelX = screen_x + tile_size_screen * 0.5f;
-				const float labelY = screen_y + tile_size_screen * 0.5f + (m.height * 0.5f) - paddingY;
-
-				const bool is_active = (options.current_house_id > 0 && house_ptr->getID() == options.current_house_id);
-
-				visible_labels.push_back(VisibleMarkerLabel {
-					.x = labelX,
-					.y = labelY,
-					.width = m.width,
-					.height = m.height,
-					.text = std::move(label_text),
-					.type = is_active ? MarkerLabelType::HouseActive : MarkerLabelType::HouseInactive
-				});
 			}
+			if (floor_tiles.empty()) {
+				continue;
+			}
+
+			// Centroid of the room tiles on the active floor
+			double sum_x = 0.0;
+			double sum_y = 0.0;
+			for (const auto& p : floor_tiles) {
+				sum_x += p.x;
+				sum_y += p.y;
+			}
+			const double avg_x = sum_x / static_cast<double>(floor_tiles.size());
+			const double avg_y = sum_y / static_cast<double>(floor_tiles.size());
+
+			// Choose the real room tile closest to centroid to guarantee it sits inside the room
+			Position best_pos = floor_tiles[0];
+			double min_dist_sq = 1e18;
+			for (const auto& p : floor_tiles) {
+				const double dx = static_cast<double>(p.x) - avg_x;
+				const double dy = static_cast<double>(p.y) - avg_y;
+				const double dsq = dx * dx + dy * dy;
+				if (dsq < min_dist_sq) {
+					min_dist_sq = dsq;
+					best_pos = p;
+				}
+			}
+
+			int unscaled_x = 0, unscaled_y = 0;
+			if (!view.IsTileVisible(best_pos.x, best_pos.y, check_z, unscaled_x, unscaled_y)) {
+				continue;
+			}
+
+			const float screen_x = static_cast<float>(unscaled_x) * inv_zoom;
+			const float screen_y = static_cast<float>(unscaled_y) * inv_zoom;
+			if (screen_x < -64.0f || screen_x > screen_max_x || screen_y < -64.0f || screen_y > screen_max_y) {
+				continue;
+			}
+
+			std::string label_text = house_ptr->name;
+			if (label_text.empty()) {
+				label_text = "HOUSE";
+			}
+
+			const CachedMetrics m = getMetrics(label_text);
+			const float labelX = screen_x + tile_size_screen * 0.5f;
+			const float labelY = resolveCollision(labelX, screen_y + tile_size_screen * 0.5f + (m.height * 0.5f) - paddingY, m.width, m.height);
+
+			const bool is_active = (options.current_house_id > 0 && house_ptr->getID() == options.current_house_id);
+
+			visible_labels.push_back(VisibleMarkerLabel {
+				.x = labelX,
+				.y = labelY,
+				.width = m.width,
+				.height = m.height,
+				.text = std::move(label_text),
+				.type = is_active ? MarkerLabelType::HouseActive : MarkerLabelType::HouseInactive
+			});
 		}
 	}
 
@@ -318,25 +302,25 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
 			nvgStrokeColor(vg, nvgRGBA(0, 242, 242, 245));
-			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeWidth(vg, 1.5f);
 			nvgStroke(vg);
 		} else if (vl.type == MarkerLabelType::Town) {
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
 			nvgStrokeColor(vg, nvgRGBA(255, 215, 0, 245));
-			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeWidth(vg, 1.5f);
 			nvgStroke(vg);
 		} else if (vl.type == MarkerLabelType::HouseActive) {
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
 			nvgStrokeColor(vg, nvgRGBA(51, 242, 51, 245)); // Neon Green #33F233
-			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeWidth(vg, 1.5f);
 			nvgStroke(vg);
 		} else { // MarkerLabelType::HouseInactive
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
 			nvgStrokeColor(vg, nvgRGBA(255, 153, 0, 245)); // Warm Amber #FF9900
-			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeWidth(vg, 1.5f);
 			nvgStroke(vg);
 		}
 	}
