@@ -301,25 +301,25 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 		if (vl.type == MarkerLabelType::Waypoint) {
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(0, 242, 242, 245));
+			nvgStrokeColor(vg, nvgRGBA(0, 229, 255, 245)); // Vivid Cyan #00E5FF
 			nvgStrokeWidth(vg, 1.2f);
 			nvgStroke(vg);
 		} else if (vl.type == MarkerLabelType::Town) {
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(255, 215, 0, 245));
+			nvgStrokeColor(vg, nvgRGBA(255, 217, 0, 245)); // Gold #FFD900
 			nvgStrokeWidth(vg, 1.2f);
 			nvgStroke(vg);
 		} else if (vl.type == MarkerLabelType::HouseActive) {
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(51, 242, 51, 245)); // Neon Green #33F233
+			nvgStrokeColor(vg, nvgRGBA(138, 77, 255, 245)); // Vivid Violet #8A4DFF
 			nvgStrokeWidth(vg, 1.2f);
 			nvgStroke(vg);
 		} else { // MarkerLabelType::HouseInactive
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(255, 153, 0, 245)); // Warm Amber #FF9900
+			nvgStrokeColor(vg, nvgRGBA(143, 127, 196, 245)); // Muted Violet #8F7FC4
 			nvgStrokeWidth(vg, 1.2f);
 			nvgStroke(vg);
 		}
@@ -328,13 +328,13 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 	// Pass 2: Sharp text typography
 	for (const auto& vl : visible_labels) {
 		if (vl.type == MarkerLabelType::Waypoint) {
-			nvgFillColor(vg, nvgRGBA(0, 242, 242, 255));
+			nvgFillColor(vg, nvgRGBA(0, 229, 255, 255));
 		} else if (vl.type == MarkerLabelType::Town) {
-			nvgFillColor(vg, nvgRGBA(255, 215, 0, 255));
+			nvgFillColor(vg, nvgRGBA(255, 217, 0, 255));
 		} else if (vl.type == MarkerLabelType::HouseActive) {
-			nvgFillColor(vg, nvgRGBA(51, 242, 51, 255));
+			nvgFillColor(vg, nvgRGBA(138, 77, 255, 255));
 		} else { // MarkerLabelType::HouseInactive
-			nvgFillColor(vg, nvgRGBA(255, 180, 50, 255));
+			nvgFillColor(vg, nvgRGBA(143, 127, 196, 255));
 		}
 		nvgText(vg, vl.x, vl.y - paddingY, vl.text.c_str(), nullptr);
 	}

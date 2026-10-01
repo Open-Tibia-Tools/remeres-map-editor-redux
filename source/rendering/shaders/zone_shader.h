@@ -37,16 +37,20 @@ bool evaluateClusterBadge(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 ou
     vec4 fg;
     vec4 border;
     if ((flags & 4u) != 0u) {
-        fg = vec4(1.00, 0.90, 0.10, 0.98);
-        border = vec4(1.00, 0.88, 0.12, 0.98);
+        // Protection Zone: #2F8BFF
+        fg = vec4(0.18, 0.55, 1.00, 0.98);
+        border = vec4(0.18, 0.55, 1.00, 0.98);
     } else if ((flags & 8u) != 0u) {
-        fg = vec4(0.20, 1.00, 0.30, 0.98);
-        border = vec4(0.12, 0.85, 0.24, 0.98);
+        // Non-PvP: #1FD97A
+        fg = vec4(0.12, 0.85, 0.48, 0.98);
+        border = vec4(0.12, 0.85, 0.48, 0.98);
     } else if ((flags & 16u) != 0u) {
-        fg = vec4(1.00, 0.55, 0.10, 0.98);
+        // No Logout: #FF850F
+        fg = vec4(1.00, 0.52, 0.06, 0.98);
         border = vec4(1.00, 0.52, 0.06, 0.98);
     } else if ((flags & 32u) != 0u) {
-        fg = vec4(1.00, 0.15, 0.30, 0.98);
+        // PvP: #EB1F3D
+        fg = vec4(0.92, 0.12, 0.24, 0.98);
         border = vec4(0.92, 0.12, 0.24, 0.98);
     } else {
         return false;
@@ -179,20 +183,20 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
     // zWash:    Base translucent wash (Vanilla RME style, ~28% alpha)
     // zDark:    3D shadow bevel color (darker shade of the zone color)
     // zLight:   3D highlight bevel color (lighter tint of the zone color)
-    vec4 pzWash  = vec4(1.00, 0.88, 0.12, 0.28);
-    vec4 pzDark  = vec4(0.55, 0.40, 0.00, 0.95);
-    vec4 pzLight = vec4(1.00, 0.98, 0.70, 0.85);
+    vec4 pzWash  = vec4(0.18, 0.55, 1.00, 0.28);
+    vec4 pzDark  = vec4(0.06, 0.16, 0.55, 0.95);
+    vec4 pzLight = vec4(0.65, 0.82, 1.00, 0.85);
 
-    vec4 npWash  = vec4(0.12, 0.85, 0.24, 0.26);
-    vec4 npDark  = vec4(0.00, 0.38, 0.08, 0.95);
-    vec4 npLight = vec4(0.72, 1.00, 0.78, 0.85);
+    vec4 npWash  = vec4(0.12, 0.85, 0.48, 0.26);
+    vec4 npDark  = vec4(0.00, 0.38, 0.28, 0.95);
+    vec4 npLight = vec4(0.72, 1.00, 0.85, 0.85);
 
     vec4 nlWash  = vec4(1.00, 0.52, 0.06, 0.28);
-    vec4 nlDark  = vec4(0.52, 0.18, 0.00, 0.95);
+    vec4 nlDark  = vec4(0.54, 0.18, 0.06, 0.95);
     vec4 nlLight = vec4(1.00, 0.78, 0.50, 0.85);
 
     vec4 pvpWash  = vec4(0.92, 0.12, 0.24, 0.28);
-    vec4 pvpDark  = vec4(0.44, 0.02, 0.08, 0.95);
+    vec4 pvpDark  = vec4(0.42, 0.04, 0.16, 0.95);
     vec4 pvpLight = vec4(1.00, 0.60, 0.68, 0.85);
 
     bool hasPz  = ((flags & 4u) != 0u);
@@ -358,9 +362,7 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    vec4 zWash  = vec4(0.92, 0.16, 0.16, 0.28);
-    vec4 zLight = vec4(1.00, 0.60, 0.60, 0.85);
-    vec4 zDark  = vec4(0.45, 0.02, 0.02, 0.95);
+    vec4 zWash  = vec4(0.75, 0.31, 0.30, 0.28);
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
 
     // 1. GLOBAL OUTER OUTLINE (2px solid black)
@@ -382,47 +384,7 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
         return true;
     }
 
-    // 2. GLOBAL OUTER 3D BEVEL (Inside the 2px black border)
-    // North & West inner edge: 1px light highlight
-    if (bNorth && tile_ly == 2) {
-        outLayer = zLight;
-        return true;
-    }
-    if (bWest && tile_lx == 2) {
-        outLayer = zLight;
-        return true;
-    }
-    // South & East inner edge: 2px darker shade shadow
-    if (bSouth && (tile_ly == 29 || tile_ly == 28)) {
-        outLayer = zDark;
-        return true;
-    }
-    if (bEast && (tile_lx == 29 || tile_lx == 28)) {
-        outLayer = zDark;
-        return true;
-    }
-
-    // 3. INSIDE 3D KITCHEN TILE BEVEL (For all internal tile edges, zero black!)
-    // Top & Left internal edges: 1px light highlight
-    if (!bNorth && tile_ly == 0) {
-        outLayer = zLight;
-        return true;
-    }
-    if (!bWest && tile_lx == 0) {
-        outLayer = zLight;
-        return true;
-    }
-    // Bottom & Right internal edges: 1px darker shade
-    if (!bSouth && tile_ly == 31) {
-        outLayer = zDark;
-        return true;
-    }
-    if (!bEast && tile_lx == 31) {
-        outLayer = zDark;
-        return true;
-    }
-
-    // 4. INTERIOR TRANSLUCENT WASH
+    // 2. INTERIOR TRANSLUCENT WASH (2px perimeter only, zero bevels)
     outLayer = zWash;
     return true;
 }

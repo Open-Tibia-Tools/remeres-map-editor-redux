@@ -184,21 +184,21 @@ def test_zone_shader_3d_bevel_and_colors():
     # Global 2px black outer outline must be present
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in fn_body, "2px global black outline must be defined"
 
-    # PZ (flags & 4u) must have golden yellow wash and 3D bevel
+    # PZ (flags & 4u) must have cool azure wash and 3D bevel
     assert "flags & 4u" in fn_body
-    assert "1.00, 0.88, 0.12, 0.28" in fn_body, "PZ wash must be golden yellow"
+    assert "0.18, 0.55, 1.00, 0.28" in fn_body, "PZ wash must be cool azure"
 
-    # No-PvP (flags & 8u) must have emerald green wash and 3D bevel
+    # No-PvP (flags & 8u) must have cool mint green wash and 3D bevel
     assert "flags & 8u" in fn_body
-    assert "0.12, 0.85, 0.24, 0.26" in fn_body, "No-PvP wash must be emerald green"
+    assert "0.12, 0.85, 0.48, 0.26" in fn_body, "No-PvP wash must be cool mint green"
 
     # No-Logout (flags & 16u) must have warm orange wash and 3D bevel
     assert "flags & 16u" in fn_body
     assert "1.00, 0.52, 0.06, 0.28" in fn_body, "No-Logout wash must be warm orange"
 
-    # PvP Zone (flags & 32u) must have crimson red wash and 3D bevel
+    # PvP Zone (flags & 32u) must have warm red wash and 3D bevel
     assert "flags & 32u" in fn_body
-    assert "0.92, 0.12, 0.24, 0.28" in fn_body, "PvP Zone wash must be crimson red"
+    assert "0.92, 0.12, 0.24, 0.28" in fn_body, "PvP Zone wash must be warm red"
 
     # Cluster badge evaluation helper must be present
     assert "evaluateClusterBadge" in content
@@ -210,12 +210,12 @@ def test_zone_shader_3d_bevel_and_colors():
     assert "!bSouthOuter && tile_ly == 31" in fn_body
     assert "!bEastOuter && tile_lx == 31" in fn_body
 
-    # Blocking overlay must have 2px black border, 3D bevel, and red wash
+    # Blocking overlay must have 2px black border and muted red wash
     assert "evaluateBlockingOverlay" in content
     b_idx = content.find("evaluateBlockingOverlay")
     b_body = content[b_idx:b_idx + 600]
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in b_body, "Blocking perimeter must be 2px black"
-    assert "0.92, 0.16, 0.16, 0.28" in b_body, "Blocking wash must be crimson red"
+    assert "0.75, 0.31, 0.30, 0.28" in b_body, "Blocking wash must be muted red"
 
     # Spawn overlay must have 2px black perimeter, magenta 3D bevel, and magenta wash
     assert "evaluateSpawnOverlay" in content
@@ -376,10 +376,10 @@ def test_zone_shader_multi_zone_quadrants_and_badges():
     fn_body = content[idx:end_idx]
 
     # Verify all 4 badge text colors are distinct and explicit in evaluateClusterBadge
-    assert "vec4(1.00, 0.90, 0.10, 0.98)" in badge_body, "PZ badge text must be golden-yellow"
-    assert "vec4(0.20, 1.00, 0.30, 0.98)" in badge_body, "NP badge text must be emerald-green"
-    assert "vec4(1.00, 0.55, 0.10, 0.98)" in badge_body, "NL badge text must be warm-orange"
-    assert "vec4(1.00, 0.15, 0.30, 0.98)" in badge_body, "PvP badge text must be crimson-red"
+    assert "vec4(0.18, 0.55, 1.00, 0.98)" in badge_body, "PZ badge text must be cool azure"
+    assert "vec4(0.12, 0.85, 0.48, 0.98)" in badge_body, "NP badge text must be cool mint green"
+    assert "vec4(1.00, 0.52, 0.06, 0.98)" in badge_body, "NL badge text must be warm orange"
+    assert "vec4(0.92, 0.12, 0.24, 0.98)" in badge_body, "PvP badge text must be warm red"
 
     # Verify high-resolution font and character bitmasks
     assert "charH = 10" in badge_body
