@@ -174,24 +174,26 @@ void AdvancedFinderResultsView::drawSpriteBadge(NVGcontext* vg, const wxRect& re
 }
 
 void AdvancedFinderResultsView::drawRowBadge(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row) const {
+	auto tech = rme::rendering::TileIndicatorType::None;
 	if (row.isItem()) {
-		auto tech = rme::rendering::TechnicalItemRegistry::Classify(
+		tech = rme::rendering::TechnicalItemRegistry::Classify(
 			row.server_id,
 			row.client_id
 		);
-		if (tech == rme::rendering::TileIndicatorType::None && row.brush) {
-			tech = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(row.brush);
-		}
-		if (tech != rme::rendering::TileIndicatorType::None) {
-			rme::rendering::DrawNanoVGIndicatorBadge(
-				vg,
-				tech,
-				static_cast<float>(rect.x),
-				static_cast<float>(rect.y),
-				static_cast<float>(rect.width)
-			);
-			return;
-		}
+	}
+	const Brush* b = row.brush ? row.brush : static_cast<Brush*>(row.raw_brush);
+	if (tech == rme::rendering::TileIndicatorType::None && b) {
+		tech = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(b);
+	}
+	if (tech != rme::rendering::TileIndicatorType::None) {
+		rme::rendering::DrawNanoVGIndicatorBadge(
+			vg,
+			tech,
+			static_cast<float>(rect.x),
+			static_cast<float>(rect.y),
+			static_cast<float>(rect.width)
+		);
+		return;
 	}
 	drawSpriteBadge(vg, rect, spriteForRow(row));
 }

@@ -4,6 +4,10 @@
 #include "brushes/spawn/spawn_brush.h"
 #include "brushes/waypoint/waypoint_brush.h"
 #include "brushes/house/house_exit_brush.h"
+#include "brushes/house/house_brush.h"
+#include "brushes/flag/flag_brush.h"
+#include "map/tile.h"
+#include "game/sprites.h"
 
 #include <toml++/toml.h>
 #include <algorithm>
@@ -137,6 +141,25 @@ TileIndicatorType TechnicalItemRegistry::GetBrushIndicatorType(const Brush* brus
 	if (brush->is<HouseExitBrush>()) {
 		return TileIndicatorType::HouseEntry;
 	}
+	if (brush->is<HouseBrush>()) {
+		return TileIndicatorType::House;
+	}
+	if (brush->is<FlagBrush>()) {
+		const auto* fb = brush->as<FlagBrush>();
+		switch (fb->getFlag()) {
+			case TILESTATE_PROTECTIONZONE: return TileIndicatorType::ZonePZ;
+			case TILESTATE_NOPVP:          return TileIndicatorType::ZoneNoPvP;
+			case TILESTATE_NOLOGOUT:       return TileIndicatorType::ZoneNoLogout;
+			case TILESTATE_PVPZONE:        return TileIndicatorType::ZonePvP;
+			default: break;
+		}
+	}
+	const int look_id = brush->getLookID();
+	if (look_id == EDITOR_SPRITE_PZ_TOOL)    return TileIndicatorType::ZonePZ;
+	if (look_id == EDITOR_SPRITE_NOPVP_TOOL) return TileIndicatorType::ZoneNoPvP;
+	if (look_id == EDITOR_SPRITE_NOLOG_TOOL) return TileIndicatorType::ZoneNoLogout;
+	if (look_id == EDITOR_SPRITE_PVPZ_TOOL)  return TileIndicatorType::ZonePvP;
+
 	if (brush->is<RAWBrush>()) {
 		const auto* raw = brush->as<RAWBrush>();
 		const uint32_t s_id = static_cast<uint32_t>(raw->getItemID());
@@ -146,7 +169,6 @@ TileIndicatorType TechnicalItemRegistry::GetBrushIndicatorType(const Brush* brus
 			return tech;
 		}
 	}
-	int look_id = brush->getLookID();
 	if (look_id > 0) {
 		auto tech = Classify(0, static_cast<uint32_t>(look_id));
 		if (tech != TileIndicatorType::None) {

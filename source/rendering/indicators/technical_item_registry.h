@@ -30,7 +30,12 @@ enum class TileIndicatorType : uint8_t {
 	TechPrimalLight = 8,     // "LIGHT" - Sky blue frame + wash
 	InvalidGround = 9,       // Flat red wash (Missing ground tile)
 	InvalidItem = 10,        // Flat orange wash (Missing top item)
-	InvalidZone = 11         // Flat magenta wash (Invalid zone flags)
+	InvalidZone = 11,        // Flat magenta wash (Invalid zone flags)
+	ZonePZ = 12,             // "PZ"    - Protection Zone (Gold/Yellow)
+	ZoneNoPvP = 13,          // "NOPVP" - No-PvP Zone (Green)
+	ZoneNoLogout = 14,       // "NOLOG" - No-Logout Zone (Orange)
+	ZonePvP = 15,            // "PVP"   - PvP Zone (Red)
+	House = 16               // "HOUSE" - House Tile (Amber)
 };
 
 // Base float IDs encoded in vertex attribute `house_id` / `marker_id`
@@ -113,35 +118,46 @@ struct IndicatorBadgeStyle {
 	const char* short_text;
 	uint8_t border_r, border_g, border_b;
 	uint8_t bg_r, bg_g, bg_b, bg_a;
-	uint8_t outline_r, outline_g, outline_b;
+	uint8_t light_r, light_g, light_b; // 3D highlight bevel
+	uint8_t dark_r, dark_g, dark_b;   // 3D shadow bevel
 };
 
 inline constexpr IndicatorBadgeStyle GetIndicatorBadgeStyle(TileIndicatorType type) noexcept {
 	switch (type) {
 		case TileIndicatorType::HouseEntry:
-			return { "ENTRY", "E", 38, 128, 255, 20, 80, 200, 110, 5, 25, 80 };
+			return { "ENTRY", "E", 64, 166, 255, 38, 128, 255, 71, 166, 217, 255, 13, 64, 140 };
 		case TileIndicatorType::Spawn:
-			return { "SPAWN", "S", 255, 51, 255, 210, 35, 210, 110, 60, 5, 60 };
+			return { "SPAWN", "S", 255, 51, 255, 242, 38, 242, 71, 255, 166, 255, 122, 0, 122 };
 		case TileIndicatorType::TownTemple:
-			return { "TOWN", "T", 255, 215, 0, 255, 180, 20, 110, 80, 40, 0 };
+			return { "TOWN", "T", 255, 217, 0, 255, 217, 0, 71, 255, 245, 153, 140, 102, 0 };
 		case TileIndicatorType::Waypoint:
-			return { "WAYPT", "W", 0, 255, 255, 15, 200, 220, 110, 0, 50, 60 };
+			return { "WAYPT", "W", 0, 255, 255, 0, 255, 255, 71, 178, 255, 255, 0, 128, 128 };
 		case TileIndicatorType::TechInvisibleStair:
-			return { "STAIR", "S", 255, 240, 30, 255, 220, 30, 110, 80, 60, 0 };
+			return { "STAIR", "S", 255, 242, 25, 255, 240, 25, 71, 255, 250, 166, 140, 115, 0 };
 		case TileIndicatorType::TechInvisibleWalkable:
-			return { "WALK", "W", 0, 240, 240, 0, 200, 210, 110, 0, 50, 60 };
+			return { "WALK", "W", 0, 242, 242, 0, 242, 242, 71, 166, 255, 255, 0, 115, 115 };
 		case TileIndicatorType::TechInvisibleWall:
-			return { "BLOCK", "B", 255, 40, 40, 230, 40, 40, 110, 80, 5, 5 };
+			return { "BLOCK", "B", 255, 46, 46, 242, 38, 38, 71, 255, 153, 153, 115, 5, 5 };
 		case TileIndicatorType::TechPrimalLight:
-			return { "LIGHT", "L", 90, 220, 255, 70, 180, 240, 110, 10, 40, 90 };
+			return { "LIGHT", "L", 89, 217, 255, 89, 217, 255, 71, 191, 242, 255, 13, 102, 140 };
 		case TileIndicatorType::InvalidGround:
-			return { "", "", 255, 0, 0, 255, 0, 0, 171, 0, 0, 0 };
+			return { "", "", 255, 0, 0, 255, 0, 0, 171, 255, 0, 0, 120, 0, 0 };
 		case TileIndicatorType::InvalidItem:
-			return { "", "", 255, 165, 0, 255, 165, 0, 171, 0, 0, 0 };
+			return { "", "", 255, 165, 0, 255, 165, 0, 171, 255, 165, 0, 140, 80, 0 };
 		case TileIndicatorType::InvalidZone:
-			return { "", "", 255, 0, 255, 255, 0, 255, 171, 0, 0, 0 };
+			return { "", "", 255, 0, 255, 255, 0, 255, 171, 255, 0, 255, 140, 0, 140 };
+		case TileIndicatorType::ZonePZ:
+			return { "PZ", "PZ", 255, 224, 31, 255, 224, 31, 71, 255, 250, 178, 140, 102, 0 };
+		case TileIndicatorType::ZoneNoPvP:
+			return { "NOPVP", "NP", 31, 217, 61, 31, 217, 61, 66, 184, 255, 199, 0, 97, 20 };
+		case TileIndicatorType::ZoneNoLogout:
+			return { "NOLOG", "NL", 255, 133, 15, 255, 133, 15, 71, 255, 199, 128, 133, 46, 0 };
+		case TileIndicatorType::ZonePvP:
+			return { "PVP", "PVP", 235, 31, 61, 235, 31, 61, 71, 255, 153, 173, 112, 5, 20 };
+		case TileIndicatorType::House:
+			return { "HOUSE", "H", 255, 153, 0, 255, 153, 0, 71, 255, 217, 102, 140, 76, 0 };
 		default:
-			return { "?", "?", 200, 200, 200, 100, 100, 100, 100, 0, 0, 0 };
+			return { "?", "?", 200, 200, 200, 100, 100, 100, 100, 240, 240, 240, 50, 50, 50 };
 	}
 }
 
