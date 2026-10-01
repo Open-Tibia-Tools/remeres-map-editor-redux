@@ -272,12 +272,12 @@ def test_blocking_overlay_shader_colors():
 
     assert "evaluateBlockingOverlay" in content, "evaluateBlockingOverlay function must exist in zone_shader.h"
     idx = content.find("evaluateBlockingOverlay")
-    fn_body = content[idx:idx + 500]
+    fn_body = content[idx:idx + 600]
 
-    # Border: vec4(0.00, 0.95, 1.00, 0.95) -> Bright cyan
-    assert "0.00, 0.95, 1.00, 0.95" in fn_body or "0.0, 0.95, 1.0, 0.95" in fn_body, "Blocking border must be bright cyan"
-    # Zero-fill: gray wash eliminated
-    assert "0.40, 0.40, 0.40, 0.35" not in fn_body, "Blocking background wash must be eliminated"
+    # Standardized 2px black border and red palette
+    assert "vec4(0.05, 0.05, 0.07, 0.98)" in fn_body, "Blocking must have 2px black perimeter"
+    assert "0.92, 0.16, 0.16, 0.28" in fn_body, "Blocking wash must be crimson red"
+    assert "0.45, 0.02, 0.02, 0.95" in fn_body, "Blocking dark bevel must be dark red"
 
 
 def test_marker_drawer_does_not_render_spawn_size_labels():

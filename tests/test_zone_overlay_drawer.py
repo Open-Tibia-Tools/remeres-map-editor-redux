@@ -210,31 +210,31 @@ def test_zone_shader_3d_bevel_and_colors():
     assert "!bSouthOuter && tile_ly == 31" in fn_body
     assert "!bEastOuter && tile_lx == 31" in fn_body
 
-    # Blocking overlay must have cyan border
+    # Blocking overlay must have 2px black border, 3D bevel, and red wash
     assert "evaluateBlockingOverlay" in content
     b_idx = content.find("evaluateBlockingOverlay")
     b_body = content[b_idx:b_idx + 600]
-    assert "0.00, 0.95, 1.00, 0.95" in b_body, "Blocking border must be cyan"
+    assert "vec4(0.05, 0.05, 0.07, 0.98)" in b_body, "Blocking perimeter must be 2px black"
+    assert "0.92, 0.16, 0.16, 0.28" in b_body, "Blocking wash must be crimson red"
 
-    # Spawn overlay must have magenta border
+    # Spawn overlay must have 2px black perimeter, magenta 3D bevel, and magenta wash
     assert "evaluateSpawnOverlay" in content
     s_idx = content.find("evaluateSpawnOverlay")
     s_body = content[s_idx:s_idx + 600]
-    assert "1.00, 0.20, 1.00, 0.95" in s_body, "Spawn border must be magenta"
-    assert "0.04, 0.04, 0.06, 0.95" in b_body, "Blocking overlay must evaluate dark drop shadow"
-    assert "0.04, 0.04, 0.06, 0.95" in s_body, "Spawn overlay must evaluate dark drop shadow"
+    assert "vec4(0.05, 0.05, 0.07, 0.98)" in s_body, "Spawn perimeter must be 2px black"
+    assert "0.95, 0.15, 0.95, 0.28" in s_body, "Spawn wash must be magenta"
 
 
-def test_indicator_shader_zero_fill_and_brackets():
-    """Verify that indicator_shader.h defines evaluateTileBracket with shadows and discards non-indicator pixels."""
+def test_indicator_shader_standardized_system():
+    """Verify that indicator_shader.h implements 2px black border, 3D color bevel, kitchen tile wash, and bold centered badge."""
     from pathlib import Path
     shader_path = Path(__file__).parent.parent / "source" / "rendering" / "shaders" / "indicator_shader.h"
     content = shader_path.read_text(encoding="utf-8")
 
-    assert "void evaluateTileBracket" in content, "evaluateTileBracket helper must be defined"
-    assert "isShadow = (isShadowInner || isShadowCap) && !isCore;" in content, "Bracket shadow logic must be implemented"
-    assert "outColor = vec4(0.04, 0.04, 0.06, 0.95);" in content, "Dark drop shadow color must be set"
-    assert "discard;" in content, "Non-indicator pixels must be discarded to guarantee zero white background"
+    assert "lx <= 1 || lx >= 30 || ly <= 1 || ly >= 30" in content, "2px black border must be implemented"
+    assert "vec4(0.05, 0.05, 0.07, 0.98)" in content, "Black border color must be defined"
+    assert "lx >= 2 && lx <= 29 && ly >= 10 && ly <= 20" in content, "Centered bold pill badge must be evaluated"
+    assert "zWash" in content, "Interior translucent wash must be evaluated"
 
 
 def test_is_tile_path_blocking_excludes_invisible_wall():

@@ -306,54 +306,47 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
         return false;
     }
 
-    vec4 sBorder = vec4(1.00, 0.20, 1.00, 0.95);
-    vec4 sShadow = vec4(0.04, 0.04, 0.06, 0.95);
-    vec4 sSunlight = vec4(1.00, 0.20, 1.00, 0.09);
+    vec4 zWash  = vec4(0.95, 0.15, 0.95, 0.28);
+    vec4 zLight = vec4(1.00, 0.65, 1.00, 0.85);
+    vec4 zDark  = vec4(0.48, 0.00, 0.48, 0.95);
+    vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
 
-    float fMaxX = float(maxX);
-    float fMaxY = float(maxY);
-
-    // Rounded outer corners (radius = 5.0 px)
-    if (bNorth && bWest && lx < 6 && ly < 6) {
-        float d = length(vec2(5.0 - float(lx), 5.0 - float(ly)));
-        if (d > 5.8) return false;
-        if (d >= 4.5) { outLayer = sShadow; return true; }
-        if (d >= 3.2) { outLayer = sBorder; return true; }
-        outLayer = sSunlight; return true;
-    }
-    if (bNorth && bEast && lx >= maxX - 5 && ly < 6) {
-        float d = length(vec2(float(lx) - (fMaxX - 5.0), 5.0 - float(ly)));
-        if (d > 5.8) return false;
-        if (d >= 4.5) { outLayer = sShadow; return true; }
-        if (d >= 3.2) { outLayer = sBorder; return true; }
-        outLayer = sSunlight; return true;
-    }
-    if (bSouth && bWest && lx < 6 && ly >= maxY - 5) {
-        float d = length(vec2(5.0 - float(lx), float(ly) - (fMaxY - 5.0)));
-        if (d > 5.8) return false;
-        if (d >= 4.5) { outLayer = sShadow; return true; }
-        if (d >= 3.2) { outLayer = sBorder; return true; }
-        outLayer = sSunlight; return true;
-    }
-    if (bSouth && bEast && lx >= maxX - 5 && ly >= maxY - 5) {
-        float d = length(vec2(float(lx) - (fMaxX - 5.0), float(ly) - (fMaxY - 5.0)));
-        if (d > 5.8) return false;
-        if (d >= 4.5) { outLayer = sShadow; return true; }
-        if (d >= 3.2) { outLayer = sBorder; return true; }
-        outLayer = sSunlight; return true;
+    // 1. GLOBAL OUTER OUTLINE (2px solid black) on perimeter
+    if ((bNorth && (ly == 0 || ly == 1)) ||
+        (bSouth && (ly == maxY || ly == maxY - 1)) ||
+        (bWest  && (lx == 0 || lx == 1)) ||
+        (bEast  && (lx == maxX || lx == maxX - 1))) {
+        outLayer = zBlack;
+        return true;
     }
 
-    // Straight perimeter edges
-    if (bNorth && ly == 0) { outLayer = sShadow; return true; }
-    if (bNorth && ly == 1) { outLayer = sBorder; return true; }
-    if (bSouth && ly == maxY) { outLayer = sShadow; return true; }
-    if (bSouth && ly == maxY - 1) { outLayer = sBorder; return true; }
-    if (bWest  && lx == 0) { outLayer = sShadow; return true; }
-    if (bWest  && lx == 1) { outLayer = sBorder; return true; }
-    if (bEast  && lx == maxX) { outLayer = sShadow; return true; }
-    if (bEast  && lx == maxX - 1) { outLayer = sBorder; return true; }
+    // 2. 3D BEVEL inside the black perimeter
+    // North & West: 1px light highlight
+    if ((bNorth && ly == 2) || (bWest && lx == 2)) {
+        outLayer = zLight;
+        return true;
+    }
+    // South & East: 2px dark shadow
+    if ((bSouth && (ly == maxY - 2 || ly == maxY - 3)) ||
+        (bEast  && (lx == maxX - 2 || lx == maxX - 3))) {
+        outLayer = zDark;
+        return true;
+    }
 
-    outLayer = sSunlight;
+    // 3. INSIDE 3D KITCHEN TILE LINES (dividing adjacent 32x32 tiles within the spawn box)
+    int tile_lx = lx % 32;
+    int tile_ly = ly % 32;
+    if (tile_ly == 0 || tile_lx == 0) {
+        outLayer = zLight;
+        return true;
+    }
+    if (tile_ly == 31 || tile_lx == 31) {
+        outLayer = zDark;
+        return true;
+    }
+
+    // 4. INTERIOR TRANSLUCENT WASH
+    outLayer = zWash;
     return true;
 }
 
@@ -365,51 +358,72 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    vec4 bBorder = vec4(0.00, 0.95, 1.00, 0.95);
-    vec4 bShadow = vec4(0.04, 0.04, 0.06, 0.95);
-    vec4 bSunlight = vec4(0.00, 0.95, 1.00, 0.09);
+    vec4 zWash  = vec4(0.92, 0.16, 0.16, 0.28);
+    vec4 zLight = vec4(1.00, 0.60, 0.60, 0.85);
+    vec4 zDark  = vec4(0.45, 0.02, 0.02, 0.95);
+    vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
 
-    // Rounded outer corners (radius = 3.5 px)
-    if (bNorth && bWest && tile_lx < 4 && tile_ly < 4) {
-        float d = length(vec2(3.5 - float(tile_lx), 3.5 - float(tile_ly)));
-        if (d > 4.3) return false;
-        if (d >= 3.0) { outLayer = bShadow; return true; }
-        if (d >= 1.9) { outLayer = bBorder; return true; }
-        outLayer = bSunlight; return true;
+    // 1. GLOBAL OUTER OUTLINE (2px solid black)
+    // Only applied where neighbor is NOT blocking
+    if (bNorth && (tile_ly == 0 || tile_ly == 1)) {
+        outLayer = zBlack;
+        return true;
     }
-    if (bNorth && bEast && tile_lx >= 28 && tile_ly < 4) {
-        float d = length(vec2(float(tile_lx) - 27.5, 3.5 - float(tile_ly)));
-        if (d > 4.3) return false;
-        if (d >= 3.0) { outLayer = bShadow; return true; }
-        if (d >= 1.9) { outLayer = bBorder; return true; }
-        outLayer = bSunlight; return true;
+    if (bSouth && (tile_ly == 31 || tile_ly == 30)) {
+        outLayer = zBlack;
+        return true;
     }
-    if (bSouth && bWest && tile_lx < 4 && tile_ly >= 28) {
-        float d = length(vec2(3.5 - float(tile_lx), float(tile_ly) - 27.5));
-        if (d > 4.3) return false;
-        if (d >= 3.0) { outLayer = bShadow; return true; }
-        if (d >= 1.9) { outLayer = bBorder; return true; }
-        outLayer = bSunlight; return true;
+    if (bWest && (tile_lx == 0 || tile_lx == 1)) {
+        outLayer = zBlack;
+        return true;
     }
-    if (bSouth && bEast && tile_lx >= 28 && tile_ly >= 28) {
-        float d = length(vec2(float(tile_lx) - 27.5, float(tile_ly) - 27.5));
-        if (d > 4.3) return false;
-        if (d >= 3.0) { outLayer = bShadow; return true; }
-        if (d >= 1.9) { outLayer = bBorder; return true; }
-        outLayer = bSunlight; return true;
+    if (bEast && (tile_lx == 31 || tile_lx == 30)) {
+        outLayer = zBlack;
+        return true;
     }
 
-    // Straight perimeter edges
-    if (bNorth && tile_ly == 0) { outLayer = bShadow; return true; }
-    if (bNorth && tile_ly == 1) { outLayer = bBorder; return true; }
-    if (bSouth && tile_ly == 31) { outLayer = bShadow; return true; }
-    if (bSouth && tile_ly == 30) { outLayer = bBorder; return true; }
-    if (bWest  && tile_lx == 0) { outLayer = bShadow; return true; }
-    if (bWest  && tile_lx == 1) { outLayer = bBorder; return true; }
-    if (bEast  && tile_lx == 31) { outLayer = bShadow; return true; }
-    if (bEast  && tile_lx == 30) { outLayer = bBorder; return true; }
+    // 2. GLOBAL OUTER 3D BEVEL (Inside the 2px black border)
+    // North & West inner edge: 1px light highlight
+    if (bNorth && tile_ly == 2) {
+        outLayer = zLight;
+        return true;
+    }
+    if (bWest && tile_lx == 2) {
+        outLayer = zLight;
+        return true;
+    }
+    // South & East inner edge: 2px darker shade shadow
+    if (bSouth && (tile_ly == 29 || tile_ly == 28)) {
+        outLayer = zDark;
+        return true;
+    }
+    if (bEast && (tile_lx == 29 || tile_lx == 28)) {
+        outLayer = zDark;
+        return true;
+    }
 
-    outLayer = bSunlight;
+    // 3. INSIDE 3D KITCHEN TILE BEVEL (For all internal tile edges, zero black!)
+    // Top & Left internal edges: 1px light highlight
+    if (!bNorth && tile_ly == 0) {
+        outLayer = zLight;
+        return true;
+    }
+    if (!bWest && tile_lx == 0) {
+        outLayer = zLight;
+        return true;
+    }
+    // Bottom & Right internal edges: 1px darker shade
+    if (!bSouth && tile_ly == 31) {
+        outLayer = zDark;
+        return true;
+    }
+    if (!bEast && tile_lx == 31) {
+        outLayer = zDark;
+        return true;
+    }
+
+    // 4. INTERIOR TRANSLUCENT WASH
+    outLayer = zWash;
     return true;
 }
 
