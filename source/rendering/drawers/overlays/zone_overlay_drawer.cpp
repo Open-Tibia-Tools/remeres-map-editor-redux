@@ -53,7 +53,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		return;
 	}
 
-	if (!options.show_special_tiles && !options.show_blocking && !options.show_spawns) {
+	if (!options.show_special_tiles && !options.show_spawns) {
 		return;
 	}
 
@@ -67,7 +67,6 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 
 	struct CachedRowTile {
 		const Tile* tile = nullptr;
-		bool is_blocking = false;
 		bool is_pz = false;
 		bool is_nopvp = false;
 		bool is_nolog = false;
@@ -79,8 +78,8 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	std::vector<CachedRowTile> row_next;
 	std::vector<VisibleZoneTile> visible_zone_tiles;
 
-	// 1. Special Zones & Pathing / Blocking Pass
-	if ((options.show_special_tiles || options.show_blocking) && view.zoom <= 10.0f) {
+	// 1. Special Zones Pass (Ground level)
+	if (options.show_special_tiles && view.zoom <= 10.0f) {
 		const int min_x = bounds.start_x - 1;
 		const int max_x = bounds.end_x + 1;
 		const int row_width = max_x - min_x + 1;
@@ -95,21 +94,12 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 				CachedRowTile& ct = row[x - min_x];
 				ct.tile = t;
 				if (t) {
-					ct.is_blocking = options.show_blocking && IsTilePathBlocking(t);
-					if (options.show_special_tiles) {
-						ct.is_pz = t->isPZ();
-						const uint32_t mf = t->getMapFlags();
-						ct.is_nopvp = (mf & TILESTATE_NOPVP) != 0;
-						ct.is_nolog = (mf & TILESTATE_NOLOGOUT) != 0;
-						ct.is_pvp = (mf & TILESTATE_PVPZONE) != 0;
-					} else {
-						ct.is_pz = false;
-						ct.is_nopvp = false;
-						ct.is_nolog = false;
-						ct.is_pvp = false;
-					}
+					ct.is_pz = t->isPZ();
+					const uint32_t mf = t->getMapFlags();
+					ct.is_nopvp = (mf & TILESTATE_NOPVP) != 0;
+					ct.is_nolog = (mf & TILESTATE_NOLOGOUT) != 0;
+					ct.is_pvp = (mf & TILESTATE_PVPZONE) != 0;
 				} else {
-					ct.is_blocking = false;
 					ct.is_pz = false;
 					ct.is_nopvp = false;
 					ct.is_nolog = false;
@@ -131,19 +121,9 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 					continue;
 				}
 
-				uint32_t tile_zone_flags = 0;
-
-				// Pathing / Blocking
-				if (ct.is_blocking) {
-					tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCKING);
-					if (!row_prev[idx].is_blocking)     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_N);
-					if (!row_next[idx].is_blocking)     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_S);
-					if (!row_curr[idx - 1].is_blocking) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_W);
-					if (!row_curr[idx + 1].is_blocking) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_E);
-				}
-
 				// Special Zones (PZ, No-PvP, No-Logout, PvP Zone)
 				if (ct.is_pz || ct.is_nopvp || ct.is_nolog || ct.is_pvp) {
+					uint32_t tile_zone_flags = 0;
 					if (ct.is_pz)    tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PZ);
 					if (ct.is_nopvp) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOPVP);
 					if (ct.is_nolog) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT);
@@ -166,9 +146,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 
 					uint8_t zmask = (ct.is_pz ? 1 : 0) | (ct.is_nopvp ? 2 : 0) | (ct.is_nolog ? 4 : 0) | (ct.is_pvp ? 8 : 0);
 					visible_zone_tiles.push_back({ x, y, zmask });
-				}
 
-				if (tile_zone_flags > 0) {
 					int draw_x, draw_y;
 					view.getScreenPosition(x, y, z, draw_x, draw_y);
 					sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y),
@@ -236,6 +214,73 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	}
 }
 
+void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
+                                          int z,
+                                          const RenderView& view,
+                                          const Map& map,
+                                          const BaseMap* secondary_map,
+                                          const DrawingOptions& options,
+                                          const AtlasManager& atlas) {
+	if (options.ingame || !options.show_blocking || view.zoom > 10.0f) {
+		return;
+	}
+
+	const AtlasRegion* white_pixel = atlas.getWhitePixel();
+	if (!white_pixel) {
+		return;
+	}
+
+	const ViewBounds bounds = view.getBoundsForFloor(z);
+	const float floor_alpha = (z == view.floor) ? 1.0f : std::max(0.25f, 1.0f - static_cast<float>(view.floor - z) * 0.20f);
+
+	const int min_x = bounds.start_x - 1;
+	const int max_x = bounds.end_x + 1;
+	const int row_width = max_x - min_x + 1;
+
+	std::vector<uint8_t> row_prev(row_width, 0);
+	std::vector<uint8_t> row_curr(row_width, 0);
+	std::vector<uint8_t> row_next(row_width, 0);
+
+	auto fetchRow = [&](int ry, std::vector<uint8_t>& row) {
+		for (int x = min_x; x <= max_x; ++x) {
+			const Tile* t = secondary_map ? secondary_map->getTile(x, ry, z) : nullptr;
+			if (!t) {
+				t = map.getTile(x, ry, z);
+			}
+			row[x - min_x] = (t && IsTilePathBlocking(t)) ? 1 : 0;
+		}
+	};
+
+	fetchRow(bounds.start_y - 1, row_prev);
+	fetchRow(bounds.start_y, row_curr);
+
+	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
+		fetchRow(y + 1, row_next);
+
+		for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
+			const int idx = x - min_x;
+			if (!row_curr[idx]) {
+				continue;
+			}
+
+			uint32_t tile_zone_flags = static_cast<uint32_t>(ZONE_FLAG_BLOCKING);
+			if (!row_prev[idx])     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_N);
+			if (!row_next[idx])     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_S);
+			if (!row_curr[idx - 1]) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_W);
+			if (!row_curr[idx + 1]) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_E);
+
+			int draw_x, draw_y;
+			view.getScreenPosition(x, y, z, draw_x, draw_y);
+			sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y),
+			                  32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
+			                  0.0f, static_cast<float>(tile_zone_flags));
+		}
+
+		std::swap(row_prev, row_curr);
+		std::swap(row_curr, row_next);
+	}
+}
+
 void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
                                         int z,
                                         const RenderView& view,
@@ -287,6 +332,7 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 
 	for (int z = start_z; z >= end_z; --z) {
 		drawFloor(sprite_batch, z, view, map, secondary_map, options, atlas);
+		drawFloorBlocking(sprite_batch, z, view, map, secondary_map, options, atlas);
 		drawFloorBadges(sprite_batch, z, view, map, secondary_map, options, atlas);
 	}
 }

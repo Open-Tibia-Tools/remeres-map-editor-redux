@@ -313,7 +313,7 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 		} else if (vl.type == MarkerLabelType::HouseActive) {
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(138, 77, 255, 245)); // Vivid Violet #8A4DFF
+			nvgStrokeColor(vg, nvgRGBA(180, 235, 31, 245)); // Lime Green #B4EB1F (same as ENTRY)
 			nvgStrokeWidth(vg, 1.2f);
 			nvgStroke(vg);
 		} else { // MarkerLabelType::HouseInactive
@@ -332,7 +332,7 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 		} else if (vl.type == MarkerLabelType::Town) {
 			nvgFillColor(vg, nvgRGBA(255, 217, 0, 255));
 		} else if (vl.type == MarkerLabelType::HouseActive) {
-			nvgFillColor(vg, nvgRGBA(138, 77, 255, 255));
+			nvgFillColor(vg, nvgRGBA(180, 235, 31, 255));
 		} else { // MarkerLabelType::HouseInactive
 			nvgFillColor(vg, nvgRGBA(143, 127, 196, 255));
 		}

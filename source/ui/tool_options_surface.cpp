@@ -523,6 +523,22 @@ wxBitmap ToolOptionsSurface::CreateBrushBitmap(Brush* brush) const {
 		return wxBitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
 	}
 
+	if (brush->getLookID() < 0) {
+		if (wxBitmap* icon_bmp = EditorIconRegistry::GetBitmap(brush->getLookID(), SPRITE_SIZE_32x32)) {
+			if (icon_bmp->IsOk()) {
+				wxBitmap bitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
+				wxMemoryDC dc(bitmap);
+				dc.SetBackground(*wxWHITE_BRUSH);
+				dc.Clear();
+				const int x_offset = (bitmap.GetWidth() - BRUSH_ICON_SIZE) / 2;
+				const int y_offset = (bitmap.GetHeight() - BRUSH_ICON_SIZE) / 2;
+				dc.DrawBitmap(*icon_bmp, x_offset, y_offset, true);
+				dc.SelectObject(wxNullBitmap);
+				return bitmap;
+			}
+		}
+	}
+
 	const auto indType = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(brush);
 	if (indType != rme::rendering::TileIndicatorType::None) {
 		wxBitmap bitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
@@ -542,22 +558,6 @@ wxBitmap ToolOptionsSurface::CreateBrushBitmap(Brush* brush) const {
 		dc.DrawText(txt, (bw - sz.GetWidth()) / 2, (bh - sz.GetHeight()) / 2);
 		dc.SelectObject(wxNullBitmap);
 		return bitmap;
-	}
-
-	if (brush->getLookID() < 0) {
-		if (wxBitmap* icon_bmp = EditorIconRegistry::GetBitmap(brush->getLookID(), SPRITE_SIZE_32x32)) {
-			if (icon_bmp->IsOk()) {
-				wxBitmap bitmap(FromDIP(wxSize(BRUSH_ICON_SIZE, BRUSH_ICON_SIZE)));
-				wxMemoryDC dc(bitmap);
-				dc.SetBackground(*wxWHITE_BRUSH);
-				dc.Clear();
-				const int x_offset = (bitmap.GetWidth() - BRUSH_ICON_SIZE) / 2;
-				const int y_offset = (bitmap.GetHeight() - BRUSH_ICON_SIZE) / 2;
-				dc.DrawBitmap(*icon_bmp, x_offset, y_offset, true);
-				dc.SelectObject(wxNullBitmap);
-				return bitmap;
-			}
-		}
 	}
 
 	Sprite* sprite = brush->getSprite();
