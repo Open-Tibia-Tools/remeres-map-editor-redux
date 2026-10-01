@@ -281,7 +281,7 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 	if (options.show_creatures) {
 		drawer->DrawCreatureNames(vg);
 	}
-	if (!options.ingame && (options.show_waypoints || options.show_towns)) {
+	if (!options.ingame && (options.show_waypoints || options.show_towns || options.show_houses)) {
 		drawer->DrawMarkerLabels(vg);
 	}
 	if (options.show_tooltips) {

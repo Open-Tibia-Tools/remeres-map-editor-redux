@@ -4,6 +4,7 @@
 #include "map/map.h"
 #include "game/waypoints.h"
 #include "game/town.h"
+#include "game/house.h"
 #include <nanovg.h>
 #include <string>
 #include <vector>
@@ -23,7 +24,9 @@ struct CachedMetrics {
 
 enum class MarkerLabelType {
 	Waypoint,
-	Town
+	Town,
+	HouseActive,
+	HouseInactive
 };
 
 struct VisibleMarkerLabel {
@@ -59,7 +62,8 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 
 	const bool show_wp = options.show_waypoints;
 	const bool show_towns = options.show_towns;
-	if (!show_wp && !show_towns) {
+	const bool show_houses = options.show_houses;
+	if (!show_wp && !show_towns && !show_houses) {
 		return;
 	}
 
@@ -212,6 +216,90 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 		}
 	}
 
+	// 3. Collect Houses
+	if (show_houses) {
+		for (const auto& [house_id, house_ptr] : map.houses) {
+			if (!house_ptr) {
+				continue;
+			}
+			const auto& all_tiles = house_ptr->getTiles();
+			if (all_tiles.empty()) {
+				continue;
+			}
+
+			for (int check_z = view.start_z; check_z >= view.superend_z; --check_z) {
+				if (!isFloorVisible(check_z, view, options)) {
+					continue;
+				}
+
+				std::vector<Position> floor_tiles;
+				floor_tiles.reserve(all_tiles.size());
+				for (const auto& p : all_tiles) {
+					if (p.z == check_z) {
+						floor_tiles.push_back(p);
+					}
+				}
+				if (floor_tiles.empty()) {
+					continue;
+				}
+
+				// Centroid of the room tiles
+				double sum_x = 0.0;
+				double sum_y = 0.0;
+				for (const auto& p : floor_tiles) {
+					sum_x += p.x;
+					sum_y += p.y;
+				}
+				const double avg_x = sum_x / static_cast<double>(floor_tiles.size());
+				const double avg_y = sum_y / static_cast<double>(floor_tiles.size());
+
+				// Choose the real room tile closest to centroid to guarantee it sits inside the room
+				Position best_pos = floor_tiles[0];
+				double min_dist_sq = 1e18;
+				for (const auto& p : floor_tiles) {
+					const double dx = static_cast<double>(p.x) - avg_x;
+					const double dy = static_cast<double>(p.y) - avg_y;
+					const double dsq = dx * dx + dy * dy;
+					if (dsq < min_dist_sq) {
+						min_dist_sq = dsq;
+						best_pos = p;
+					}
+				}
+
+				int unscaled_x = 0, unscaled_y = 0;
+				if (!view.IsTileVisible(best_pos.x, best_pos.y, check_z, unscaled_x, unscaled_y)) {
+					continue;
+				}
+
+				const float screen_x = static_cast<float>(unscaled_x) * inv_zoom;
+				const float screen_y = static_cast<float>(unscaled_y) * inv_zoom;
+				if (screen_x < -64.0f || screen_x > screen_max_x || screen_y < -64.0f || screen_y > screen_max_y) {
+					continue;
+				}
+
+				std::string label_text = house_ptr->name;
+				if (label_text.empty()) {
+					label_text = "HOUSE";
+				}
+
+				const CachedMetrics m = getMetrics(label_text);
+				const float labelX = screen_x + tile_size_screen * 0.5f;
+				const float labelY = screen_y + tile_size_screen * 0.5f + (m.height * 0.5f) - paddingY;
+
+				const bool is_active = (options.current_house_id > 0 && house_ptr->getID() == options.current_house_id);
+
+				visible_labels.push_back(VisibleMarkerLabel {
+					.x = labelX,
+					.y = labelY,
+					.width = m.width,
+					.height = m.height,
+					.text = std::move(label_text),
+					.type = is_active ? MarkerLabelType::HouseActive : MarkerLabelType::HouseInactive
+				});
+			}
+		}
+	}
+
 	if (visible_labels.empty()) {
 		return;
 	}
@@ -227,15 +315,27 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 		nvgRoundedRect(vg, rx, ry, rw, rh, cornerRadius);
 
 		if (vl.type == MarkerLabelType::Waypoint) {
-			nvgFillColor(vg, nvgRGBA(10, 24, 32, 220));
+			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(0, 220, 245, 230));
+			nvgStrokeColor(vg, nvgRGBA(0, 242, 242, 245));
 			nvgStrokeWidth(vg, 1.0f);
 			nvgStroke(vg);
-		} else { // MarkerLabelType::Town
-			nvgFillColor(vg, nvgRGBA(32, 24, 10, 220));
+		} else if (vl.type == MarkerLabelType::Town) {
+			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(255, 190, 20, 230));
+			nvgStrokeColor(vg, nvgRGBA(255, 215, 0, 245));
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStroke(vg);
+		} else if (vl.type == MarkerLabelType::HouseActive) {
+			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
+			nvgFill(vg);
+			nvgStrokeColor(vg, nvgRGBA(51, 242, 51, 245)); // Neon Green #33F233
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStroke(vg);
+		} else { // MarkerLabelType::HouseInactive
+			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
+			nvgFill(vg);
+			nvgStrokeColor(vg, nvgRGBA(255, 153, 0, 245)); // Warm Amber #FF9900
 			nvgStrokeWidth(vg, 1.0f);
 			nvgStroke(vg);
 		}
@@ -244,9 +344,13 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 	// Pass 2: Sharp text typography
 	for (const auto& vl : visible_labels) {
 		if (vl.type == MarkerLabelType::Waypoint) {
-			nvgFillColor(vg, nvgRGBA(200, 245, 255, 255));
-		} else { // MarkerLabelType::Town
-			nvgFillColor(vg, nvgRGBA(255, 240, 190, 255));
+			nvgFillColor(vg, nvgRGBA(0, 242, 242, 255));
+		} else if (vl.type == MarkerLabelType::Town) {
+			nvgFillColor(vg, nvgRGBA(255, 215, 0, 255));
+		} else if (vl.type == MarkerLabelType::HouseActive) {
+			nvgFillColor(vg, nvgRGBA(51, 242, 51, 255));
+		} else { // MarkerLabelType::HouseInactive
+			nvgFillColor(vg, nvgRGBA(255, 180, 50, 255));
 		}
 		nvgText(vg, vl.x, vl.y - paddingY, vl.text.c_str(), nullptr);
 	}
