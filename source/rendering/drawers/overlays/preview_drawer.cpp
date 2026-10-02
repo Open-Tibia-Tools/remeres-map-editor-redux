@@ -9,7 +9,6 @@
 #include "editor/editor.h"
 #include "map/map_region.h"
 #include "rendering/indicators/zone_flags.h"
-#include "rendering/drawers/overlays/zone_overlay_drawer.h"
 
 PreviewDrawer::PreviewDrawer() {
 }
@@ -91,9 +90,25 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 					params.green = g;
 					params.blue = b;
 					params.alpha = base_alpha;
-					params.zone_flags = tile_zone_flags;
+					params.zone_flags = 0;
 					params.ctx = ctx;
 					item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
+				}
+
+				if (tile_zone_flags != 0) {
+					const AtlasManager* atlas = ctx ? &ctx->atlas : nullptr;
+					const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;
+					if (white_pixel) {
+						sprite_batch.draw(
+							static_cast<float>(draw_x), static_cast<float>(draw_y),
+							32.0f, 32.0f,
+							*white_pixel,
+							1.0f, 1.0f, 1.0f,
+							static_cast<float>(base_alpha) / 255.0f,
+							0.0f,
+							tile_zone_flags
+						);
+					}
 				}
 
 				if (view.zoom <= 10.0 || !options.hide_items_when_zoomed) {

@@ -49,6 +49,13 @@ inline constexpr uint32_t ZONE_FLAG_HOUSE           = 1u << 22; // Bit 22: House
 [[nodiscard]] constexpr uint32_t MakeHighlightItemsFlags() noexcept {
 	return ZONE_FLAG_HIGHLIGHT_ITEMS | ZONE_FLAG_MULTIPLICATIVE;
 }
+
+} // namespace rme::rendering
+
+class Tile;
+
+namespace rme::rendering {
+[[nodiscard]] bool IsTilePathBlocking(const Tile* t) noexcept;
 } // namespace rme::rendering
 
 #endif // RME_RENDERING_INDICATORS_ZONE_FLAGS_H_
