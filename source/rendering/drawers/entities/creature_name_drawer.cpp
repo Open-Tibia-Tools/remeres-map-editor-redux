@@ -64,14 +64,11 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		float y;
 		float width;
 		float height;
-		const char* text_begin = nullptr;
-		const char* text_end = nullptr;
+		std::string_view text;
+		std::string dynamic_text;
 	};
 	static thread_local std::vector<VisibleLabel> visible_labels;
 	visible_labels.clear();
-
-	static thread_local std::vector<std::string> s_formatted_strings;
-	s_formatted_strings.clear();
 
 	const float screen_max_x = static_cast<float>(view.screensize_x) + 64.0f;
 	const float screen_max_y = static_cast<float>(view.screensize_y) + 64.0f;
@@ -123,14 +120,13 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			.y = labelY,
 			.width = textWidth,
 			.height = textHeight,
-			.text_begin = t_begin,
-			.text_end = t_end
+			.text = lookup_key,
+			.dynamic_text = {}
 		});
 
 		// Spawn time badge placed in bottom-right corner of creature tile
 		if (label.creature && !label.creature->isNpc() && label.creature->getSpawnTime() > 0) {
-			s_formatted_strings.push_back(std::format("{}s", label.creature->getSpawnTime()));
-			const auto& formatted = s_formatted_strings.back();
+			std::string formatted = std::format("{}s", label.creature->getSpawnTime());
 			auto it_t = s_metrics_cache.find(formatted);
 			float tw = 0.0f;
 			float th = 0.0f;
@@ -153,8 +149,8 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 				.y = timerY,
 				.width = tw,
 				.height = th,
-				.text_begin = formatted.data(),
-				.text_end = formatted.data() + formatted.size()
+				.text = {},
+				.dynamic_text = std::move(formatted)
 			});
 		}
 	}
@@ -174,6 +170,7 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	// Pass 2: Draw all text labels with single color state
 	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
 	for (const auto& vl : visible_labels) {
-		nvgText(vg, vl.x, vl.y - paddingY, vl.text_begin, vl.text_end);
+		std::string_view sv = vl.dynamic_text.empty() ? vl.text : std::string_view(vl.dynamic_text);
+		nvgText(vg, vl.x, vl.y - paddingY, sv.data(), sv.data() + sv.size());
 	}
 }
