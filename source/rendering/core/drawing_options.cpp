@@ -60,7 +60,7 @@ void DrawingOptions::SetDefault() {
 	zone_nopvp_color = glm::vec4(0.0f / 255.0f, 220.0f / 255.0f, 92.0f / 255.0f, 117.0f / 255.0f);
 	zone_nologout_color = glm::vec4(255.0f / 255.0f, 122.0f / 255.0f, 0.0f / 255.0f, 122.0f / 255.0f);
 	zone_pvp_color = glm::vec4(245.0f / 255.0f, 26.0f / 255.0f, 51.0f / 255.0f, 122.0f / 255.0f);
-	zone_blocking_color = glm::vec4(0.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 128.0f / 255.0f);
+	zone_blocking_color = glm::vec4(255.0f / 255.0f, 170.0f / 255.0f, 170.0f / 255.0f, 128.0f / 255.0f);
 	zone_spawn_color = glm::vec4(242.0f / 255.0f, 26.0f / 255.0f, 242.0f / 255.0f, 112.0f / 255.0f);
 	house_active_color = glm::vec4(89.0f / 255.0f, 191.0f / 255.0f, 13.0f / 255.0f, 133.0f / 255.0f);
 	house_inactive_color = glm::vec4(92.0f / 255.0f, 56.0f / 255.0f, 166.0f / 255.0f, 133.0f / 255.0f);

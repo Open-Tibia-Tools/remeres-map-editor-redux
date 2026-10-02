@@ -16,7 +16,7 @@
 namespace rme::rendering {
 
 bool IsTilePathBlocking(const Tile* t) noexcept {
-	if (!t || !t->isBlocking() || (!t->ground && t->items.empty())) {
+	if (!t || !t->isBlocking() || !t->ground) {
 		return false;
 	}
 

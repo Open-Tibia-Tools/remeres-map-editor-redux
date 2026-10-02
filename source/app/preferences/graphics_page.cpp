@@ -244,7 +244,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		zone_pvp_color_pick->SetColour(wxColour(245, 26, 51));
 		zone_pvp_opacity_spin->SetValue(48);
 
-		zone_blocking_color_pick->SetColour(wxColour(0, 0, 0));
+		zone_blocking_color_pick->SetColour(wxColour(255, 170, 170));
 		zone_blocking_opacity_spin->SetValue(50);
 
 		zone_spawn_color_pick->SetColour(wxColour(242, 26, 242));

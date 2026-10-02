@@ -179,9 +179,10 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		// 2. Chunk Cache static terrain pass (instanced per-chunk VBOs: ground & borders)
 		chunk_cache->renderFloorTerrain(map_z, map, ctx, view.projectionMatrix, ctx.atlas);
 
-		// 3. Ground-level zone overlay pass: Special Zones, Spawns
+		// 3. Ground-level zone & blocking overlay pass: Special Zones, Spawns, Blocking (underneath items)
 		if (zone_overlay_drawer && !options.ingame) {
 			zone_overlay_drawer->drawFloor(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
 		}
 
@@ -191,13 +192,12 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		// 5. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!
 		chunk_cache->renderDynamicOverlays(map_z, map, ctx, sprite_batch, *tile_renderer);
 
-		// 6. On-Top Blocking & Badges pass: Blocking overlay applied over items, and cluster zone badges
+		// 6. Badges pass: cluster zone badges
 		if (zone_overlay_drawer && !options.ingame) {
-			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 		}
 
-		// 7. Flush dynamic overlays, blocking, and badges for this floor so depth order across floors is preserved
+		// 7. Flush dynamic overlays and badges for this floor so depth order across floors is preserved
 		sprite_batch.flush(ctx.atlas);
 	} else {
 		// Classic full-tile traversal fallback:
@@ -207,9 +207,10 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		});
 		sprite_batch.flush(ctx.atlas);
 
-		// 2. Ground-level zone overlay pass
+		// 2. Ground-level zone & blocking overlay pass
 		if (zone_overlay_drawer && !options.ingame) {
 			zone_overlay_drawer->drawFloor(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
 		}
 
@@ -224,9 +225,8 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 			tile_renderer->RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, true, true);
 		});
 
-		// 4. On-Top Blocking & Badges pass
+		// 4. Badges pass
 		if (zone_overlay_drawer && !options.ingame) {
-			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 		}
 
