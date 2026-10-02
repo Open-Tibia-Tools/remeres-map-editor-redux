@@ -1,5 +1,7 @@
 #include "app/preferences/graphics_page.h"
 #include "rendering/core/hardware_profile.h"
+#include <algorithm>
+#include <cmath>
 #include <format>
 
 #include "app/main.h"
@@ -98,6 +100,170 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		cursor_alt_color_pick
 	);
 	page_sizer->Add(cursor_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+
+	auto* zone_section = new PreferencesSectionPanel(
+		GetScrollWindow(),
+		"Zone & Overlay Appearance",
+		"Customize the colors, fill opacities, and perimeter borders for special zones, pathing, spawns, and houses."
+	);
+
+	zone_borders_enabled_chkbox = PreferencesLayout::AddCheckBoxRow(
+		zone_section,
+		"Draw outer zone borders",
+		"Render high-contrast 2px borders around outer perimeters of special zones, blocking tiles, and spawns.",
+		g_settings.getBoolean(Config::ZONE_BORDERS_ENABLED)
+	);
+
+	zone_border_color_pick = new wxColourPickerCtrl(
+		zone_section,
+		wxID_ANY,
+		wxColour(
+			g_settings.getInteger(Config::ZONE_BORDER_COLOR_R),
+			g_settings.getInteger(Config::ZONE_BORDER_COLOR_G),
+			g_settings.getInteger(Config::ZONE_BORDER_COLOR_B)
+		)
+	);
+	PreferencesLayout::AddControlRow(
+		zone_section,
+		"Zone border color",
+		"Outline color drawn along outer boundaries when zone borders are enabled.",
+		zone_border_color_pick
+	);
+
+	auto create_color_opacity_control = [&](
+		wxWindow* parent_win,
+		wxColourPickerCtrl*& out_picker,
+		wxSpinCtrl*& out_spin,
+		Config::Key red_key,
+		Config::Key green_key,
+		Config::Key blue_key,
+		Config::Key alpha_key
+	) -> wxWindow* {
+		auto* container = new wxPanel(parent_win, wxID_ANY);
+		auto* sizer = new wxBoxSizer(wxHORIZONTAL);
+
+		wxColour initial_color(
+			g_settings.getInteger(red_key),
+			g_settings.getInteger(green_key),
+			g_settings.getInteger(blue_key)
+		);
+		out_picker = new wxColourPickerCtrl(container, wxID_ANY, initial_color);
+
+		int current_alpha = g_settings.getInteger(alpha_key);
+		int current_opacity = std::clamp(static_cast<int>(std::round((current_alpha * 100.0f) / 255.0f)), 0, 100);
+
+		out_spin = new wxSpinCtrl(container, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(65, -1)), wxSP_ARROW_KEYS, 0, 100, current_opacity);
+
+		sizer->Add(out_picker, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+		sizer->Add(new wxStaticText(container, wxID_ANY, "Opacity:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
+		sizer->Add(out_spin, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
+		sizer->Add(new wxStaticText(container, wxID_ANY, "%"), 0, wxALIGN_CENTER_VERTICAL);
+
+		container->SetSizerAndFit(sizer);
+		return container;
+	};
+
+	PreferencesLayout::AddControlRow(
+		zone_section,
+		"Protection Zone",
+		"Color and opacity for Protection Zone (PZ) tiles.",
+		create_color_opacity_control(zone_section, zone_pz_color_pick, zone_pz_opacity_spin,
+			Config::ZONE_PZ_COLOR_R, Config::ZONE_PZ_COLOR_G, Config::ZONE_PZ_COLOR_B, Config::ZONE_PZ_COLOR_A)
+	);
+
+	PreferencesLayout::AddControlRow(
+		zone_section,
+		"Non-PvP Zone",
+		"Color and opacity for Non-PvP zone tiles.",
+		create_color_opacity_control(zone_section, zone_nopvp_color_pick, zone_nopvp_opacity_spin,
+			Config::ZONE_NOPVP_COLOR_R, Config::ZONE_NOPVP_COLOR_G, Config::ZONE_NOPVP_COLOR_B, Config::ZONE_NOPVP_COLOR_A)
+	);
+
+	PreferencesLayout::AddControlRow(
+		zone_section,
+		"No-Logout Zone",
+		"Color and opacity for No-Logout zone tiles.",
+		create_color_opacity_control(zone_section, zone_nologout_color_pick, zone_nologout_opacity_spin,
+			Config::ZONE_NOLOGOUT_COLOR_R, Config::ZONE_NOLOGOUT_COLOR_G, Config::ZONE_NOLOGOUT_COLOR_B, Config::ZONE_NOLOGOUT_COLOR_A)
+	);
+
+	PreferencesLayout::AddControlRow(
+		zone_section,
+		"PvP Zone",
+		"Color and opacity for PvP zone tiles.",
+		create_color_opacity_control(zone_section, zone_pvp_color_pick, zone_pvp_opacity_spin,
+			Config::ZONE_PVP_COLOR_R, Config::ZONE_PVP_COLOR_G, Config::ZONE_PVP_COLOR_B, Config::ZONE_PVP_COLOR_A)
+	);
+
+	PreferencesLayout::AddControlRow(
+		zone_section,
+		"Blocking / Pathing",
+		"Color and opacity for unwalkable and blocking collision tiles.",
+		create_color_opacity_control(zone_section, zone_blocking_color_pick, zone_blocking_opacity_spin,
+			Config::ZONE_BLOCKING_COLOR_R, Config::ZONE_BLOCKING_COLOR_G, Config::ZONE_BLOCKING_COLOR_B, Config::ZONE_BLOCKING_COLOR_A)
+	);
+
+	PreferencesLayout::AddControlRow(
+		zone_section,
+		"Spawn Radius",
+		"Color and opacity for monster and NPC spawn radius tiles.",
+		create_color_opacity_control(zone_section, zone_spawn_color_pick, zone_spawn_opacity_spin,
+			Config::ZONE_SPAWN_COLOR_R, Config::ZONE_SPAWN_COLOR_G, Config::ZONE_SPAWN_COLOR_B, Config::ZONE_SPAWN_COLOR_A)
+	);
+
+	PreferencesLayout::AddControlRow(
+		zone_section,
+		"Selected House",
+		"Color and opacity for the currently selected/edited house tiles.",
+		create_color_opacity_control(zone_section, house_active_color_pick, house_active_opacity_spin,
+			Config::HOUSE_ACTIVE_COLOR_R, Config::HOUSE_ACTIVE_COLOR_G, Config::HOUSE_ACTIVE_COLOR_B, Config::HOUSE_ACTIVE_COLOR_A)
+	);
+
+	PreferencesLayout::AddControlRow(
+		zone_section,
+		"Other Houses",
+		"Color and opacity for other (inactive) house tiles.",
+		create_color_opacity_control(zone_section, house_inactive_color_pick, house_inactive_opacity_spin,
+			Config::HOUSE_INACTIVE_COLOR_R, Config::HOUSE_INACTIVE_COLOR_G, Config::HOUSE_INACTIVE_COLOR_B, Config::HOUSE_INACTIVE_COLOR_A)
+	);
+
+	reset_zone_defaults_btn = new wxButton(zone_section, wxID_ANY, "Reset Overlays to Defaults");
+	reset_zone_defaults_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+		zone_borders_enabled_chkbox->SetValue(true);
+		zone_border_color_pick->SetColour(wxColour(13, 13, 18));
+
+		zone_pz_color_pick->SetColour(wxColour(20, 117, 255));
+		zone_pz_opacity_spin->SetValue(48);
+
+		zone_nopvp_color_pick->SetColour(wxColour(0, 219, 92));
+		zone_nopvp_opacity_spin->SetValue(46);
+
+		zone_nologout_color_pick->SetColour(wxColour(255, 122, 0));
+		zone_nologout_opacity_spin->SetValue(48);
+
+		zone_pvp_color_pick->SetColour(wxColour(245, 26, 51));
+		zone_pvp_opacity_spin->SetValue(48);
+
+		zone_blocking_color_pick->SetColour(wxColour(0, 0, 0));
+		zone_blocking_opacity_spin->SetValue(50);
+
+		zone_spawn_color_pick->SetColour(wxColour(242, 26, 242));
+		zone_spawn_opacity_spin->SetValue(44);
+
+		house_active_color_pick->SetColour(wxColour(89, 191, 13));
+		house_active_opacity_spin->SetValue(52);
+
+		house_inactive_color_pick->SetColour(wxColour(92, 56, 166));
+		house_inactive_opacity_spin->SetValue(52);
+	});
+	PreferencesLayout::AddControlRow(
+		zone_section,
+		"Restore Defaults",
+		"Revert all zone, blocking, spawn, and house overlay colors and opacities to calibrated factory defaults.",
+		reset_zone_defaults_btn
+	);
+
+	page_sizer->Add(zone_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
 
 	auto* screenshot_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -264,6 +430,40 @@ void GraphicsPage::Apply() {
 	g_settings.setInteger(Config::CURSOR_ALT_GREEN, cursor_color.Green());
 	g_settings.setInteger(Config::CURSOR_ALT_BLUE, cursor_color.Blue());
 	g_settings.setInteger(Config::CURSOR_ALT_ALPHA, cursor_color.Alpha());
+
+	g_settings.setInteger(Config::ZONE_BORDERS_ENABLED, zone_borders_enabled_chkbox->GetValue());
+
+	auto border_c = zone_border_color_pick->GetColour();
+	g_settings.setInteger(Config::ZONE_BORDER_COLOR_R, border_c.Red());
+	g_settings.setInteger(Config::ZONE_BORDER_COLOR_G, border_c.Green());
+	g_settings.setInteger(Config::ZONE_BORDER_COLOR_B, border_c.Blue());
+
+	auto save_color_opacity = [](
+		wxColourPickerCtrl* picker,
+		wxSpinCtrl* spin,
+		Config::Key r_key,
+		Config::Key g_key,
+		Config::Key b_key,
+		Config::Key a_key
+	) {
+		auto c = picker->GetColour();
+		int alpha = std::clamp(static_cast<int>(std::round((spin->GetValue() * 255.0f) / 100.0f)), 0, 255);
+		g_settings.setInteger(r_key, c.Red());
+		g_settings.setInteger(g_key, c.Green());
+		g_settings.setInteger(b_key, c.Blue());
+		g_settings.setInteger(a_key, alpha);
+	};
+
+	save_color_opacity(zone_pz_color_pick, zone_pz_opacity_spin, Config::ZONE_PZ_COLOR_R, Config::ZONE_PZ_COLOR_G, Config::ZONE_PZ_COLOR_B, Config::ZONE_PZ_COLOR_A);
+	save_color_opacity(zone_nopvp_color_pick, zone_nopvp_opacity_spin, Config::ZONE_NOPVP_COLOR_R, Config::ZONE_NOPVP_COLOR_G, Config::ZONE_NOPVP_COLOR_B, Config::ZONE_NOPVP_COLOR_A);
+	save_color_opacity(zone_nologout_color_pick, zone_nologout_opacity_spin, Config::ZONE_NOLOGOUT_COLOR_R, Config::ZONE_NOLOGOUT_COLOR_G, Config::ZONE_NOLOGOUT_COLOR_B, Config::ZONE_NOLOGOUT_COLOR_A);
+	save_color_opacity(zone_pvp_color_pick, zone_pvp_opacity_spin, Config::ZONE_PVP_COLOR_R, Config::ZONE_PVP_COLOR_G, Config::ZONE_PVP_COLOR_B, Config::ZONE_PVP_COLOR_A);
+	save_color_opacity(zone_blocking_color_pick, zone_blocking_opacity_spin, Config::ZONE_BLOCKING_COLOR_R, Config::ZONE_BLOCKING_COLOR_G, Config::ZONE_BLOCKING_COLOR_B, Config::ZONE_BLOCKING_COLOR_A);
+	save_color_opacity(zone_spawn_color_pick, zone_spawn_opacity_spin, Config::ZONE_SPAWN_COLOR_R, Config::ZONE_SPAWN_COLOR_G, Config::ZONE_SPAWN_COLOR_B, Config::ZONE_SPAWN_COLOR_A);
+	save_color_opacity(house_active_color_pick, house_active_opacity_spin, Config::HOUSE_ACTIVE_COLOR_R, Config::HOUSE_ACTIVE_COLOR_G, Config::HOUSE_ACTIVE_COLOR_B, Config::HOUSE_ACTIVE_COLOR_A);
+	save_color_opacity(house_inactive_color_pick, house_inactive_opacity_spin, Config::HOUSE_INACTIVE_COLOR_R, Config::HOUSE_INACTIVE_COLOR_G, Config::HOUSE_INACTIVE_COLOR_B, Config::HOUSE_INACTIVE_COLOR_A);
+
+	g_gui.RefreshView();
 
 	g_settings.setInteger(Config::HIDE_ITEMS_WHEN_ZOOMED, hide_items_when_zoomed_chkbox->GetValue());
 	const auto requested_vsync_mode = sanitizeVSyncMode(vsync_choice->GetSelection());
