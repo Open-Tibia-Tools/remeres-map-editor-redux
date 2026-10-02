@@ -40,6 +40,9 @@ inline constexpr uint32_t ZONE_FLAG_MULTIPLICATIVE = 1u << 19; // Bit 19: Multip
 // Highlight items overlay (Bit 20)
 inline constexpr uint32_t ZONE_FLAG_HIGHLIGHT_ITEMS = 1u << 20; // Bit 20: Tile has highlighted items
 
+// Dedicated border pass for crisp alpha-blended kitchen tile borders (Bit 21)
+inline constexpr uint32_t ZONE_FLAG_BORDER_PASS     = 1u << 21; // Bit 21: Dedicated alpha border pass
+
 [[nodiscard]] constexpr uint32_t MakeHighlightItemsFlags() noexcept {
 	return ZONE_FLAG_HIGHLIGHT_ITEMS | ZONE_FLAG_MULTIPLICATIVE;
 }
