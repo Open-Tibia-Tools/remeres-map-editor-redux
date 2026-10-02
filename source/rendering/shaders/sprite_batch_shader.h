@@ -91,8 +91,9 @@ void main() {
                                  FragColor)) {
             discard;
         }
-        bool isBadge = (uint(vZoneFlags + 0.5) & 4194304u) != 0u;
-        bool isMult  = (uint(vZoneFlags + 0.5) & 8388608u) != 0u;
+        uint zf = uint(round(vZoneFlags));
+        bool isBadge = (zf & 4194304u) != 0u;
+        bool isMult  = (zf & 8388608u) != 0u;
         if (isMult && !isBadge) {
             FragColor.rgb = mix(vec3(1.0), FragColor.rgb, FragColor.a * Tint.a * uGlobalTint.a);
             FragColor.a = 1.0;

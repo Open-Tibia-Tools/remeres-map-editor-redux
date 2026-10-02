@@ -88,10 +88,8 @@ def get_floor_range(view: MockMapView, options: MockDrawingOptions):
 
 
 def calculate_floor_alpha(view_floor: int, z: int) -> float:
-    """Calculates floor alpha decay for lower floors."""
-    if z == view_floor:
-        return 1.0
-    return max(0.25, 1.0 - (view_floor - z) * 0.20)
+    """Calculates overlay floor alpha (uniform 1.0 across all floors)."""
+    return 1.0
 
 
 def compute_border_mask(center_val: bool, north: bool, south: bool, west: bool, east: bool) -> int:
@@ -128,17 +126,35 @@ def test_floor_range_transparent_vs_single():
     assert get_floor_range(view, opts_transparent) == (7, 15)
 
 
-def test_floor_alpha_decay():
+def test_floor_alpha_uniform():
     # Active floor = alpha 1.0
     assert calculate_floor_alpha(7, 7) == pytest.approx(1.0)
-    # Floor 6 when viewing 7 -> 1.0 - 1 * 0.20 = 0.80
-    assert calculate_floor_alpha(7, 6) == pytest.approx(0.80)
-    # Floor 5 when viewing 7 -> 1.0 - 2 * 0.20 = 0.60
-    assert calculate_floor_alpha(7, 5) == pytest.approx(0.60)
-    # Floor 4 when viewing 7 -> 1.0 - 3 * 0.20 = 0.40
-    assert calculate_floor_alpha(7, 4) == pytest.approx(0.40)
-    # Floor 0 when viewing 7 -> clamped at min 0.25
-    assert calculate_floor_alpha(7, 0) == pytest.approx(0.25)
+    # Lower floors retain full intensity 1.0
+    assert calculate_floor_alpha(7, 6) == pytest.approx(1.0)
+    assert calculate_floor_alpha(7, 5) == pytest.approx(1.0)
+    assert calculate_floor_alpha(7, 4) == pytest.approx(1.0)
+    assert calculate_floor_alpha(7, 0) == pytest.approx(1.0)
+
+
+def test_multiplicative_float_bitmask_precision():
+    """Verify that ZONE_FLAG_MULTIPLICATIVE (2^23) does not corrupt ZONE_FLAG_BLOCKING (1) or borders in float."""
+    import struct
+    MULTIPLICATIVE_BIT = 1 << 23  # 8388608
+    BLOCKING_BIT = 1              # 1
+    BORDER_N = 64
+    BORDER_W = 256
+
+    flags = MULTIPLICATIVE_BIT | BLOCKING_BIT | BORDER_N | BORDER_W
+    # Packed as float32 in vertex attribute
+    f32 = struct.unpack('f', struct.pack('f', float(flags)))[0]
+
+    # Decoded in GLSL with round(zoneFlags)
+    decoded = int(round(f32))
+    assert (decoded & BLOCKING_BIT) != 0, "Bit 0 (Blocking) must NOT be lost!"
+    assert (decoded & (1 << 1)) == 0, "Bit 1 (Spawn) must NOT be spuriously set!"
+    assert (decoded & MULTIPLICATIVE_BIT) != 0, "Bit 23 (Multiplicative) must remain set!"
+    assert (decoded & BORDER_N) != 0, "Border North must remain set!"
+    assert (decoded & BORDER_W) != 0, "Border West must remain set!"
 
 
 def test_cardinal_border_mask():

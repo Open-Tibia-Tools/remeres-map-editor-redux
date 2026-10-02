@@ -63,7 +63,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	}
 
 	const ViewBounds bounds = view.getBoundsForFloor(z);
-	const float floor_alpha = (z == view.floor) ? 1.0f : std::max(0.25f, 1.0f - static_cast<float>(view.floor - z) * 0.20f);
+	const float floor_alpha = 1.0f;
 
 	struct CachedRowTile {
 		const Tile* tile = nullptr;
@@ -302,7 +302,7 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	}
 
 	const ViewBounds bounds = view.getBoundsForFloor(z);
-	const float floor_alpha = (z == view.floor) ? 1.0f : std::max(0.25f, 1.0f - static_cast<float>(view.floor - z) * 0.20f);
+	const float floor_alpha = 1.0f;
 
 	const int min_x = bounds.start_x - 1;
 	const int max_x = bounds.end_x + 1;
@@ -376,7 +376,7 @@ void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
 	}
 
 	const ViewBounds bounds = view.getBoundsForFloor(z);
-	const float floor_alpha = (z == view.floor) ? 1.0f : std::max(0.25f, 1.0f - static_cast<float>(view.floor - z) * 0.20f);
+	const float floor_alpha = 1.0f;
 
 	// 1. Cluster Zone Badges Pass (Rendered on top of items, tables, walls, and statues)
 	if (options.show_special_tiles && view.zoom <= 10.0f) {

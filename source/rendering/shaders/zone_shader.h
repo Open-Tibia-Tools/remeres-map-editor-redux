@@ -299,7 +299,7 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zon
         return false;
     }
 
-    uint flags = uint(zoneFlags + 0.5);
+    uint flags = uint(round(zoneFlags));
 
     // Dedicated cluster badge indicator quad (Bit 22 = 4194304u)
     if ((flags & 4194304u) != 0u) {
