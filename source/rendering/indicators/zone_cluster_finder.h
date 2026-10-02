@@ -66,12 +66,6 @@ public:
 		return visible_badges_result_;
 	}
 
-	void invalidate() noexcept {
-		visible_badges_result_.clear();
-		tile_grid_.clear();
-		visited_grid_.clear();
-	}
-
 private:
 	std::vector<uint8_t> tile_grid_;
 	std::vector<uint8_t> visited_grid_;

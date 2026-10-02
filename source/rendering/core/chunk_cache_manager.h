@@ -199,17 +199,6 @@ public:
 	);
 
 	/**
-	 * Render all cached static geometry (terrain + items) for visible chunks on floor map_z.
-	 */
-	void renderFloor(
-		int map_z,
-		const Map& map,
-		const RenderFrameContext& ctx,
-		const glm::mat4& projection,
-		AtlasManager& atlas
-	);
-
-	/**
 	 * Render dynamic overlays (animated items, creatures, markers) for visible chunks on floor map_z.
 	 * Only tiles that contain actual dynamic elements are visited.
 	 */

@@ -23,6 +23,7 @@
 #include "rendering/utilities/pattern_calculator.h"
 #include "rendering/core/sprite_preloader.h"
 #include "rendering/shaders/chunk_shader.h"
+#include "rendering/shaders/sprite_batch_shader.h"
 #include "rendering/indicators/technical_item_registry.h"
 #include <spdlog/spdlog.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -787,17 +788,33 @@ void ChunkCacheManager::renderFloorTerrain(
 	shader_.SetInt("uAtlas", 0);
 	shader_.SetInt("uAtlasLUT", SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 	shader_.SetVec4("uGlobalTint", glm::vec4(1.0f));
-	shader_.SetUint("uCurrentHouseId", ctx.current_house_id);
-	shader_.SetInt("uShowHouses", ctx.options.show_houses ? 1 : 0);
-	shader_.SetVec4("uHouseActiveWash", ctx.options.house_active_color);
-	shader_.SetVec4("uHouseInactiveWash", ctx.options.house_inactive_color);
-	shader_.SetInt("uHouseActiveBlendMode", ctx.options.house_active_blend_mode);
-	shader_.SetInt("uHouseInactiveBlendMode", ctx.options.house_inactive_blend_mode);
-	shader_.SetInt("uShowTowns", ctx.options.show_towns ? 1 : 0);
-	shader_.SetInt("uShowWaypoints", (ctx.options.show_waypoints && !ctx.options.ingame) ? 1 : 0);
-	shader_.SetInt("uShowTechItems", (ctx.options.show_tech_items && !ctx.options.ingame) ? 1 : 0);
-	shader_.SetInt("uShowInvalidTiles", (ctx.options.show_invalid_tiles && !ctx.options.ingame) ? 1 : 0);
-	shader_.SetInt("uShowInvalidZones", (ctx.options.show_invalid_zones && !ctx.options.ingame) ? 1 : 0);
+	const auto& options = ctx.options;
+	rme::rendering::shaders::SetSpriteBatchOverlayUniforms(
+		shader_,
+		ctx.current_house_id,
+		options.show_houses,
+		options.show_spawns,
+		options.show_towns,
+		options.show_waypoints && !options.ingame,
+		options.show_tech_items && !options.ingame,
+		options.show_blocking,
+		options.show_special_tiles,
+		options.show_invalid_tiles && !options.ingame,
+		options.show_invalid_zones && !options.ingame,
+		options.highlight_items && !options.ingame,
+		options.show_zone_borders,
+		options.house_active_blend_mode,
+		options.house_inactive_blend_mode,
+		options.zone_border_color,
+		options.zone_pz_color,
+		options.zone_nopvp_color,
+		options.zone_nologout_color,
+		options.zone_pvp_color,
+		options.zone_blocking_color,
+		options.zone_spawn_color,
+		options.house_active_color,
+		options.house_inactive_color
+	);
 
 	atlas.bind(0);
 	atlas.bindLUT(SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
@@ -884,17 +901,33 @@ void ChunkCacheManager::renderFloorItems(
 	shader_.SetInt("uAtlas", 0);
 	shader_.SetInt("uAtlasLUT", SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 	shader_.SetVec4("uGlobalTint", glm::vec4(1.0f));
-	shader_.SetUint("uCurrentHouseId", ctx.current_house_id);
-	shader_.SetInt("uShowHouses", ctx.options.show_houses ? 1 : 0);
-	shader_.SetVec4("uHouseActiveWash", ctx.options.house_active_color);
-	shader_.SetVec4("uHouseInactiveWash", ctx.options.house_inactive_color);
-	shader_.SetInt("uHouseActiveBlendMode", ctx.options.house_active_blend_mode);
-	shader_.SetInt("uHouseInactiveBlendMode", ctx.options.house_inactive_blend_mode);
-	shader_.SetInt("uShowTowns", ctx.options.show_towns ? 1 : 0);
-	shader_.SetInt("uShowWaypoints", (ctx.options.show_waypoints && !ctx.options.ingame) ? 1 : 0);
-	shader_.SetInt("uShowTechItems", (ctx.options.show_tech_items && !ctx.options.ingame) ? 1 : 0);
-	shader_.SetInt("uShowInvalidTiles", (ctx.options.show_invalid_tiles && !ctx.options.ingame) ? 1 : 0);
-	shader_.SetInt("uShowInvalidZones", (ctx.options.show_invalid_zones && !ctx.options.ingame) ? 1 : 0);
+	const auto& options = ctx.options;
+	rme::rendering::shaders::SetSpriteBatchOverlayUniforms(
+		shader_,
+		ctx.current_house_id,
+		options.show_houses,
+		options.show_spawns,
+		options.show_towns,
+		options.show_waypoints && !options.ingame,
+		options.show_tech_items && !options.ingame,
+		options.show_blocking,
+		options.show_special_tiles,
+		options.show_invalid_tiles && !options.ingame,
+		options.show_invalid_zones && !options.ingame,
+		options.highlight_items && !options.ingame,
+		options.show_zone_borders,
+		options.house_active_blend_mode,
+		options.house_inactive_blend_mode,
+		options.zone_border_color,
+		options.zone_pz_color,
+		options.zone_nopvp_color,
+		options.zone_nologout_color,
+		options.zone_pvp_color,
+		options.zone_blocking_color,
+		options.zone_spawn_color,
+		options.house_active_color,
+		options.house_inactive_color
+	);
 
 	atlas.bind(0);
 	atlas.bindLUT(SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
@@ -913,17 +946,6 @@ void ChunkCacheManager::renderFloorItems(
 
 	glBindVertexArray(0);
 	shader_.Unuse();
-}
-
-void ChunkCacheManager::renderFloor(
-	int map_z,
-	const Map& map,
-	const RenderFrameContext& ctx,
-	const glm::mat4& projection,
-	AtlasManager& atlas
-) {
-	renderFloorTerrain(map_z, map, ctx, projection, atlas);
-	renderFloorItems(map_z, ctx, projection, atlas);
 }
 
 void ChunkCacheManager::prune(
