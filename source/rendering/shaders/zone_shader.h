@@ -188,7 +188,7 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    // 1. GLOBAL OUTER OUTLINE (2px black border as is + 1px white with transparency)
+    // 1. GLOBAL OUTER OUTLINE (2px black border as is)
     if (uShowZoneBorders != 0) {
         bool isBlack = (bNorthOuter && (tile_ly == 0 || tile_ly == 1)) ||
                        (bSouthOuter && (tile_ly == 31 || tile_ly == 30)) ||
@@ -196,15 +196,6 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
                        (bEastOuter  && (tile_lx == 31 || tile_lx == 30));
         if (isBlack) {
             outLayer = uZoneBorderColor;
-            return true;
-        }
-
-        bool isWhite = (bNorthOuter && tile_ly == 2) ||
-                       (bSouthOuter && tile_ly == 29) ||
-                       (bWestOuter  && tile_lx == 2) ||
-                       (bEastOuter  && tile_lx == 29);
-        if (isWhite) {
-            outLayer = vec4(1.0, 1.0, 1.0, 0.50);
             return true;
         }
     }
@@ -260,7 +251,7 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
         return false;
     }
 
-    // 1. GLOBAL OUTER OUTLINE (2px black border as is + 1px white with transparency)
+    // 1. GLOBAL OUTER OUTLINE (2px black border as is)
     if (uShowZoneBorders != 0) {
         bool isBlack = (bNorth && (ly == 0 || ly == 1)) ||
                        (bSouth && (ly == maxY || ly == maxY - 1)) ||
@@ -268,15 +259,6 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
                        (bEast  && (lx == maxX || lx == maxX - 1));
         if (isBlack) {
             outLayer = uZoneBorderColor;
-            return true;
-        }
-
-        bool isWhite = (bNorth && ly == 2) ||
-                       (bSouth && ly == maxY - 2) ||
-                       (bWest  && lx == 2) ||
-                       (bEast  && lx == maxX - 2);
-        if (isWhite) {
-            outLayer = vec4(1.0, 1.0, 1.0, 0.50);
             return true;
         }
     }
@@ -294,7 +276,7 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    // 1. GLOBAL OUTER OUTLINE (2px black border as is + 1px white with transparency)
+    // 1. GLOBAL OUTER OUTLINE (2px black border as is)
     if (uShowZoneBorders != 0) {
         bool isBlack = (bNorth && (tile_ly == 0 || tile_ly == 1)) ||
                        (bSouth && (tile_ly == 31 || tile_ly == 30)) ||
@@ -302,15 +284,6 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
                        (bEast  && (tile_lx == 31 || tile_lx == 30));
         if (isBlack) {
             outLayer = uZoneBorderColor;
-            return true;
-        }
-
-        bool isWhite = (bNorth && tile_ly == 2) ||
-                       (bSouth && tile_ly == 29) ||
-                       (bWest  && tile_lx == 2) ||
-                       (bEast  && tile_lx == 29);
-        if (isWhite) {
-            outLayer = vec4(1.0, 1.0, 1.0, 0.50);
             return true;
         }
     }
@@ -341,6 +314,63 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, uint zone
     int maxY = int(max(quadSize.y - 1.0, 0.0));
     int lx = clamp(int(floor(quadCoord.x * quadSize.x)), 0, maxX);
     int ly = clamp(int(floor(quadCoord.y * quadSize.y)), 0, maxY);
+
+    // Dedicated border-only pass quad (Bit 21 = 1u << 21)
+    if ((flags & (1u << 21)) != 0u) {
+        if (uShowZoneBorders == 0) {
+            return false;
+        }
+
+        bool isSpawnBox = ((flags & 2u) != 0u);
+        if (isSpawnBox && showSpawns == 0) return false;
+        if (!isSpawnBox && (flags & 1u) != 0u && showBlocking == 0) return false;
+        if (!isSpawnBox && (flags & 60u) != 0u && showSpecialTiles == 0) return false;
+
+        bool bN, bS, bW, bE;
+        int py, px, my, mx;
+
+        if (isSpawnBox) {
+            bN = (flags & (1u << 14)) != 0u;
+            bS = (flags & (1u << 15)) != 0u;
+            bW = (flags & (1u << 16)) != 0u;
+            bE = (flags & (1u << 17)) != 0u;
+            py = ly;
+            px = lx;
+            my = maxY;
+            mx = maxX;
+        } else {
+            bN = (flags & ((1u << 6) | (1u << 10))) != 0u;
+            bS = (flags & ((1u << 7) | (1u << 11))) != 0u;
+            bW = (flags & ((1u << 8) | (1u << 12))) != 0u;
+            bE = (flags & ((1u << 9) | (1u << 13))) != 0u;
+            py = ly % 32;
+            px = lx % 32;
+            my = 31;
+            mx = 31;
+        }
+
+        // 1. Outer 2px black border (as is)
+        bool isBlack = (bN && (py == 0 || py == 1)) ||
+                       (bS && (py == my || py == my - 1)) ||
+                       (bW && (px == 0 || px == 1)) ||
+                       (bE && (px == mx || px == mx - 1));
+        if (isBlack) {
+            outColor = uZoneBorderColor;
+            return true;
+        }
+
+        // 2. Inner 1px translucent white border
+        bool isWhite = (bN && py == 2) ||
+                       (bS && py == my - 2) ||
+                       (bW && px == 2) ||
+                       (bE && px == mx - 2);
+        if (isWhite) {
+            outColor = vec4(1.0, 1.0, 1.0, 0.70);
+            return true;
+        }
+
+        return false;
+    }
 
     vec4 color = vec4(0.0);
     bool hasOverlay = false;
