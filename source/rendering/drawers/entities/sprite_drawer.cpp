@@ -25,13 +25,15 @@ SpriteDrawer::SpriteDrawer() {
 SpriteDrawer::~SpriteDrawer() {
 }
 
-void SpriteDrawer::glBlitAtlasQuad(SpriteBatch& sprite_batch, int sx, int sy, const AtlasRegion* region, DrawColor color) {
+void SpriteDrawer::glBlitAtlasQuad(SpriteBatch& sprite_batch, int sx, int sy, const AtlasRegion* region, DrawColor color, float house_id, uint32_t zone_flags) {
 	if (region) {
 		sprite_batch.draw(
 			static_cast<float>(sx), static_cast<float>(sy),
 			static_cast<float>(region->pixel_width), static_cast<float>(region->pixel_height),
 			*region,
-			COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]
+			COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a],
+			house_id,
+			zone_flags
 		);
 	}
 }

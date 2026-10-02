@@ -10,6 +10,7 @@
 #include "game/creature.h"
 
 #include <unordered_map>
+#include <format>
 
 CreatureNameDrawer::CreatureNameDrawer() {
 	labels.reserve(256);
@@ -63,11 +64,14 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		float y;
 		float width;
 		float height;
-		const char* text;
-		const char* text_end;
+		const char* text_begin = nullptr;
+		const char* text_end = nullptr;
 	};
 	static thread_local std::vector<VisibleLabel> visible_labels;
 	visible_labels.clear();
+
+	static thread_local std::vector<std::string> s_formatted_strings;
+	s_formatted_strings.clear();
 
 	const float screen_max_x = static_cast<float>(view.screensize_x) + 64.0f;
 	const float screen_max_y = static_cast<float>(view.screensize_y) + 64.0f;
@@ -94,9 +98,12 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		const float labelX = screen_x + tile_size_screen * 0.5f;
 		const float labelY = screen_y - 2.0f;
 
-		// Fast cached text bounds lookup (avoids CPU font glyph kerning loops per-instance)
-		const std::string name_key(label.name);
-		auto it = s_metrics_cache.find(name_key);
+		const char* t_begin = label.name.data();
+		const char* t_end = label.name.data() + label.name.size();
+		std::string_view lookup_key = label.name;
+
+		// Fast cached text bounds lookup for creature name
+		auto it = s_metrics_cache.find(std::string(lookup_key));
 		float textWidth = 0.0f;
 		float textHeight = 0.0f;
 
@@ -105,12 +112,10 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			textHeight = it->second.height;
 		} else {
 			float textBounds[4];
-			const char* text_start = label.name.data();
-			const char* text_end = text_start + label.name.size();
-			nvgTextBounds(vg, 0, 0, text_start, text_end, textBounds);
+			nvgTextBounds(vg, 0, 0, t_begin, t_end, textBounds);
 			textWidth = textBounds[2] - textBounds[0];
 			textHeight = textBounds[3] - textBounds[1];
-			s_metrics_cache.emplace(name_key, CachedMetrics{ textWidth, textHeight });
+			s_metrics_cache.emplace(std::string(lookup_key), CachedMetrics{ textWidth, textHeight });
 		}
 
 		visible_labels.push_back(VisibleLabel {
@@ -118,16 +123,47 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			.y = labelY,
 			.width = textWidth,
 			.height = textHeight,
-			.text = label.name.data(),
-			.text_end = label.name.data() + label.name.size()
+			.text_begin = t_begin,
+			.text_end = t_end
 		});
+
+		// Spawn time badge placed in bottom-right corner of creature tile
+		if (label.creature && !label.creature->isNpc() && label.creature->getSpawnTime() > 0) {
+			s_formatted_strings.push_back(std::format("{}s", label.creature->getSpawnTime()));
+			const auto& formatted = s_formatted_strings.back();
+			auto it_t = s_metrics_cache.find(formatted);
+			float tw = 0.0f;
+			float th = 0.0f;
+			if (it_t != s_metrics_cache.end()) {
+				tw = it_t->second.width;
+				th = it_t->second.height;
+			} else {
+				float tb[4];
+				nvgTextBounds(vg, 0, 0, formatted.c_str(), nullptr, tb);
+				tw = tb[2] - tb[0];
+				th = tb[3] - tb[1];
+				s_metrics_cache.emplace(formatted, CachedMetrics{ tw, th });
+			}
+
+			const float timerX = screen_x + tile_size_screen - tw * 0.5f - paddingX - 1.0f;
+			const float timerY = screen_y + tile_size_screen - 1.0f;
+
+			visible_labels.push_back(VisibleLabel {
+				.x = timerX,
+				.y = timerY,
+				.width = tw,
+				.height = th,
+				.text_begin = formatted.data(),
+				.text_end = formatted.data() + formatted.size()
+			});
+		}
 	}
 
 	if (visible_labels.empty()) {
 		return;
 	}
 
-	// Pass 1: Draw all backgrounds with convex rounded rectangles (single path per contour bypasses stencil multipass)
+	// Pass 1: Draw all backgrounds with convex rounded rectangles
 	nvgFillColor(vg, nvgRGBA(0, 0, 0, 160));
 	for (const auto& vl : visible_labels) {
 		nvgBeginPath(vg);
@@ -138,6 +174,6 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	// Pass 2: Draw all text labels with single color state
 	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
 	for (const auto& vl : visible_labels) {
-		nvgText(vg, vl.x, vl.y - paddingY, vl.text, vl.text_end);
+		nvgText(vg, vl.x, vl.y - paddingY, vl.text_begin, vl.text_end);
 	}
 }

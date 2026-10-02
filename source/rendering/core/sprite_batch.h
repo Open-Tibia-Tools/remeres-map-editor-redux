@@ -62,9 +62,16 @@ public:
 	void draw(float x, float y, float w, float h, const AtlasRegion& region);
 
 	/**
-	 * Queue a sprite with tint.
+	 * Queue a sprite with tint, optional house ID, and optional zone flags.
 	 */
-	void draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a);
+	void draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id = 0.0f, uint32_t zone_flags = 0);
+
+	/**
+	 * Access the underlying shader program for domain-specific uniform configuration.
+	 */
+	[[nodiscard]] ShaderProgram* getShader() const {
+		return shader_.get();
+	}
 
 	/**
 	 * Draw a solid rectangle using the white pixel from the atlas.
@@ -88,6 +95,12 @@ public:
 	 * If pending sprites exist, they will be flushed using the provided atlas manager.
 	 */
 	void setGlobalTint(float r, float g, float b, float a, const AtlasManager& atlas_manager);
+
+	/**
+	 * Set blend function factors for subsequent draws in current batch.
+	 * If pending sprites exist, they will be flushed using the provided atlas manager.
+	 */
+	void setBlendFunc(GLenum sfactor, GLenum dfactor, const AtlasManager& atlas_manager);
 
 	/**
 	 * Ensure capacity in pending vector.
@@ -123,6 +136,8 @@ private:
 	// Scoped state for batch duration
 	std::optional<ScopedGLCapability> blend_capability_;
 	std::optional<ScopedGLBlend> blend_func_;
+	GLenum current_sfactor_ = GL_SRC_ALPHA;
+	GLenum current_dfactor_ = GL_ONE_MINUS_SRC_ALPHA;
 
 	bool in_batch_ = false;
 	bool use_mdi_ = false;

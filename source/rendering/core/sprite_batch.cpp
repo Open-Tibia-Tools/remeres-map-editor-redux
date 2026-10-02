@@ -1,45 +1,10 @@
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/shared_geometry.h"
+#include "rendering/shaders/sprite_batch_shader.h"
 #include <iostream>
 #include <cstring>
 #include <utility>
 #include <spdlog/spdlog.h>
-
-const char* sprite_batch_vert = R"(
-#version 450 core
-layout (location = 0) in vec2 aPos;
-layout (location = 1) in vec2 aTexCoord;
-layout (location = 2) in vec4 aRect;
-layout (location = 3) in vec4 aUV;
-layout (location = 4) in vec4 aTint;
-layout (location = 5) in float aLayer;
-
-out vec3 TexCoord;
-out vec4 Tint;
-
-uniform mat4 uMVP;
-
-void main() {
-    vec2 pos = aRect.xy + aPos * aRect.zw;
-    gl_Position = uMVP * vec4(pos, 0.0, 1.0);
-    TexCoord = vec3(mix(aUV.xy, aUV.zw, aTexCoord), aLayer);
-    Tint = aTint;
-}
-)";
-
-const char* sprite_batch_frag = R"(
-#version 450 core
-in vec3 TexCoord;
-in vec4 Tint;
-out vec4 FragColor;
-
-uniform sampler2DArray uAtlas;
-uniform vec4 uGlobalTint;
-
-void main() {
-    FragColor = texture(uAtlas, TexCoord) * Tint * uGlobalTint;
-}
-)";
 
 SpriteBatch::SpriteBatch() {
 	pending_sprites_.reserve(MAX_SPRITES_PER_BATCH);
@@ -56,7 +21,7 @@ SpriteBatch& SpriteBatch::operator=(SpriteBatch&& other) noexcept = default;
 bool SpriteBatch::initialize() {
 	// Load shader
 	shader_ = std::make_unique<ShaderProgram>();
-	if (!shader_->Load(sprite_batch_vert, sprite_batch_frag)) {
+	if (!shader_->Load(rme::rendering::shaders::SPRITE_BATCH_VERT_SHADER, rme::rendering::shaders::GetSpriteBatchFragShader())) {
 		spdlog::error("SpriteBatch: Failed to load shader");
 		return false;
 	}
@@ -114,6 +79,16 @@ bool SpriteBatch::initialize() {
 	glVertexArrayAttribFormat(vao_->GetID(), 5, 1, GL_FLOAT, GL_FALSE, offsetof(SpriteInstance, atlas_layer));
 	glVertexArrayAttribBinding(vao_->GetID(), 5, 1);
 
+	// Loc 6: house_id (float) - instance
+	glEnableVertexArrayAttrib(vao_->GetID(), 6);
+	glVertexArrayAttribFormat(vao_->GetID(), 6, 1, GL_FLOAT, GL_FALSE, offsetof(SpriteInstance, house_id));
+	glVertexArrayAttribBinding(vao_->GetID(), 6, 1);
+
+	// Loc 7: zone_flags (uint32_t) - instance
+	glEnableVertexArrayAttrib(vao_->GetID(), 7);
+	glVertexArrayAttribIFormat(vao_->GetID(), 7, 1, GL_UNSIGNED_INT, offsetof(SpriteInstance, zone_flags));
+	glVertexArrayAttribBinding(vao_->GetID(), 7, 1);
+
 	// Initialize MDI
 	if (mdi_renderer_.initialize()) {
 		use_mdi_ = true;
@@ -139,6 +114,8 @@ void SpriteBatch::begin(const glm::mat4& projection, const AtlasManager& atlas_m
 	// We use emplace to construct the Scoped objects in-place, which saves the previous state
 	blend_capability_.emplace(GL_BLEND);
 	blend_func_.emplace(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	current_sfactor_ = GL_SRC_ALPHA;
+	current_dfactor_ = GL_ONE_MINUS_SRC_ALPHA;
 
 	shader_->Use();
 	shader_->SetMat4("uMVP", projection_);
@@ -160,6 +137,25 @@ void SpriteBatch::setGlobalTint(float r, float g, float b, float a, const AtlasM
 	shader_->SetVec4("uGlobalTint", global_tint_);
 }
 
+void SpriteBatch::setBlendFunc(GLenum sfactor, GLenum dfactor, const AtlasManager& atlas_manager) {
+	if (!in_batch_) {
+		return;
+	}
+
+	if (current_sfactor_ == sfactor && current_dfactor_ == dfactor) {
+		return;
+	}
+
+	// Flush pending sprites before switching GPU blend mode
+	if (!pending_sprites_.empty()) {
+		flush(atlas_manager);
+	}
+
+	current_sfactor_ = sfactor;
+	current_dfactor_ = dfactor;
+	glBlendFunc(sfactor, dfactor);
+}
+
 void SpriteBatch::ensureCapacity(size_t capacity) {
 	if (pending_sprites_.capacity() < capacity) {
 		pending_sprites_.reserve(capacity);
@@ -167,10 +163,10 @@ void SpriteBatch::ensureCapacity(size_t capacity) {
 }
 
 void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region) {
-	draw(x, y, w, h, region, 1.0f, 1.0f, 1.0f, 1.0f);
+	draw(x, y, w, h, region, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0u);
 }
 
-void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a) {
+void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id, uint32_t zone_flags) {
 	if (!in_batch_) {
 		return;
 	}
@@ -193,6 +189,8 @@ void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& re
 	inst.b = b;
 	inst.a = a;
 	inst.atlas_layer = static_cast<float>(region.atlas_index);
+	inst.house_id = house_id;
+	inst.zone_flags = zone_flags;
 }
 
 void SpriteBatch::drawRect(float x, float y, float w, float h, const glm::vec4& color, const AtlasManager& atlas_manager) {
@@ -357,6 +355,8 @@ void SpriteBatch::end(const AtlasManager& atlas_manager) {
 
 	in_batch_ = false;
 	current_atlas_manager_ = nullptr;
+	current_sfactor_ = GL_SRC_ALPHA;
+	current_dfactor_ = GL_ONE_MINUS_SRC_ALPHA;
 	glBindVertexArray(0);
 
 	// Restore state (reverse order of construction)

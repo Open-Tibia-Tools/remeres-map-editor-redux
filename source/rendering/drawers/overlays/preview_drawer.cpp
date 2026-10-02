@@ -8,6 +8,8 @@
 #include "editor/copybuffer.h"
 #include "editor/editor.h"
 #include "map/map_region.h"
+#include "rendering/indicators/zone_flags.h"
+#include "rendering/drawers/overlays/zone_overlay_drawer.h"
 
 PreviewDrawer::PreviewDrawer() {
 }
@@ -47,12 +49,33 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 				uint8_t g = 255;
 				uint8_t b = 255;
 
-				if (tile->ground) {
-					if (tile->isBlocking() && options.show_blocking) {
-						g = g / 3 * 2;
-						b = b / 3 * 2;
+				uint32_t tile_zone_flags = 0;
+				if (options.show_special_tiles) {
+					if (tile->isPZ()) {
+						tile_zone_flags |= rme::rendering::ZONE_FLAG_PZ;
+						if (options.zone_pz_blend_mode == 1) tile_zone_flags |= rme::rendering::ZONE_FLAG_MULTIPLICATIVE;
 					}
+					if ((tile->getMapFlags() & TILESTATE_NOPVP) != 0) {
+						tile_zone_flags |= rme::rendering::ZONE_FLAG_NOPVP;
+						if (options.zone_nopvp_blend_mode == 1) tile_zone_flags |= rme::rendering::ZONE_FLAG_MULTIPLICATIVE;
+					}
+					if ((tile->getMapFlags() & TILESTATE_NOLOGOUT) != 0) {
+						tile_zone_flags |= rme::rendering::ZONE_FLAG_NOLOGOUT;
+						if (options.zone_nologout_blend_mode == 1) tile_zone_flags |= rme::rendering::ZONE_FLAG_MULTIPLICATIVE;
+					}
+					if ((tile->getMapFlags() & TILESTATE_PVPZONE) != 0) {
+						tile_zone_flags |= rme::rendering::ZONE_FLAG_PVPZONE;
+						if (options.zone_pvp_blend_mode == 1) tile_zone_flags |= rme::rendering::ZONE_FLAG_MULTIPLICATIVE;
+					}
+				}
+				if (options.show_blocking && rme::rendering::IsTilePathBlocking(tile)) {
+					tile_zone_flags |= rme::rendering::ZONE_FLAG_BLOCKING;
+					if (options.zone_blocking_blend_mode == 1) {
+						tile_zone_flags |= rme::rendering::ZONE_FLAG_MULTIPLICATIVE;
+					}
+				}
 
+				if (tile->ground) {
 					if (tile->isHouseTile() && options.show_houses) {
 						if (static_cast<int>(tile->getHouseID()) == current_house_id) {
 							r /= 2;
@@ -60,19 +83,6 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 							r /= 2;
 							g /= 2;
 						}
-					} else if (options.show_special_tiles && tile->isPZ()) {
-						r /= 2;
-						b /= 2;
-					}
-					if (options.show_special_tiles && tile->getMapFlags() & TILESTATE_PVPZONE) {
-						r = r / 3 * 2;
-						b = b / 3 * 2;
-					}
-					if (options.show_special_tiles && tile->getMapFlags() & TILESTATE_NOLOGOUT) {
-						b /= 2;
-					}
-					if (options.show_special_tiles && tile->getMapFlags() & TILESTATE_NOPVP) {
-						g /= 2;
 					}
 
 					BlitItemParams params(tile, tile->ground.get(), options);
@@ -81,6 +91,7 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 					params.green = g;
 					params.blue = b;
 					params.alpha = base_alpha;
+					params.zone_flags = tile_zone_flags;
 					params.ctx = ctx;
 					item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 				}

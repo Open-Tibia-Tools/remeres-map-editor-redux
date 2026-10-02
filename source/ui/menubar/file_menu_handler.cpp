@@ -19,7 +19,12 @@ FileMenuHandler::FileMenuHandler(MainFrame* frame, MainMenuBar* menubar) :
 	frame(frame), menubar(menubar) {
 }
 
-FileMenuHandler::~FileMenuHandler() = default;
+FileMenuHandler::~FileMenuHandler() {
+	if (preferences_dialog_) {
+		preferences_dialog_->Destroy();
+		preferences_dialog_ = nullptr;
+	}
+}
 
 void FileMenuHandler::OnNew(wxCommandEvent& WXUNUSED(event)) {
 	g_gui.NewMap();
@@ -105,9 +110,19 @@ void FileMenuHandler::OnMissingItemsReport(wxCommandEvent& WXUNUSED(event)) {
 }
 
 void FileMenuHandler::OnPreferences(wxCommandEvent& WXUNUSED(event)) {
-	PreferencesWindow dialog(frame);
-	dialog.ShowModal();
-	dialog.Destroy();
+	if (preferences_dialog_) {
+		preferences_dialog_->Raise();
+		preferences_dialog_->SetFocus();
+		return;
+	}
+	preferences_dialog_ = new PreferencesWindow(frame);
+	preferences_dialog_->Bind(wxEVT_DESTROY, [this](wxWindowDestroyEvent& event) {
+		if (event.GetEventObject() == preferences_dialog_) {
+			preferences_dialog_ = nullptr;
+		}
+		event.Skip();
+	});
+	preferences_dialog_->Show();
 }
 
 void FileMenuHandler::OnListExtensions(wxCommandEvent& WXUNUSED(event)) {

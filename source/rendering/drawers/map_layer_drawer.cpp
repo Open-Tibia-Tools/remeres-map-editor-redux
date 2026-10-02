@@ -20,6 +20,7 @@
 #include "app/definitions.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
 #include "rendering/drawers/overlays/grid_drawer.h"
+#include "rendering/drawers/overlays/zone_overlay_drawer.h"
 #include "live/live_client.h"
 #include "map/map.h"
 #include "rendering/core/render_view.h"
@@ -50,16 +51,17 @@ namespace {
 	}};
 }
 
-MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Map& map) :
+MapLayerDrawer::MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, rme::rendering::ZoneOverlayDrawer* zone_overlay_drawer, Map& map) :
 	tile_renderer(tile_renderer),
 	grid_drawer(grid_drawer),
+	zone_overlay_drawer(zone_overlay_drawer),
 	map(map) {
 }
 
 MapLayerDrawer::~MapLayerDrawer() {
 }
 
-void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx, ChunkCacheManager* chunk_cache) {
+void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx, ChunkCacheManager* chunk_cache, const BaseMap* secondary_map) {
 	const RenderView& view = ctx.view;
 	const DrawingOptions& options = ctx.options;
 
@@ -174,19 +176,74 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		// 1. Flush any pending batch geometry before chunk cache pass
 		sprite_batch.flush(ctx.atlas);
 
-		// 2. Chunk Cache static terrain & static items pass (instanced per-chunk VBOs)
-		chunk_cache->renderFloor(map_z, map, ctx, view.projectionMatrix, ctx.atlas);
+		// 2. Chunk Cache static terrain pass (instanced per-chunk VBOs: ground & borders)
+		chunk_cache->renderFloorTerrain(map_z, map, ctx, view.projectionMatrix, ctx.atlas);
 
-		// 3. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!
+		// 3. Ground-level highlight items overlay pass (underneath items, directly on terrain)
+		if (zone_overlay_drawer && options.highlight_items && !options.ingame) {
+			zone_overlay_drawer->drawFloorHighlightItems(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			sprite_batch.flush(ctx.atlas);
+		}
+
+		// 4. Ground-level zone & blocking overlay pass: Special Zones, Spawns, Blocking, Houses (underneath items)
+		if (zone_overlay_drawer && !options.ingame) {
+			zone_overlay_drawer->drawFloor(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			zone_overlay_drawer->drawFloorHouses(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			sprite_batch.flush(ctx.atlas);
+		}
+
+		// 5. Chunk Cache static items pass (instanced per-chunk VBOs: walls, tables, stairs, items)
+		chunk_cache->renderFloorItems(map_z, ctx, view.projectionMatrix, ctx.atlas);
+
+		// 6. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!
 		chunk_cache->renderDynamicOverlays(map_z, map, ctx, sprite_batch, *tile_renderer);
 
-		// 4. Flush dynamic overlays for this floor so depth order across floors is preserved
+		// 7. Badges pass: cluster zone badges
+		if (zone_overlay_drawer && !options.ingame) {
+			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+		}
+
+		// 8. Flush dynamic overlays and badges for this floor so depth order across floors is preserved
 		sprite_batch.flush(ctx.atlas);
 	} else {
 		// Classic full-tile traversal fallback:
-		// Strict tile-by-tile diagonal Painter's Algorithm order
+		// 1. Static terrain pass (ground & borders)
 		visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
-			tile_renderer->DrawTile(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
+			tile_renderer->RenderStaticTerrain(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
 		});
+		sprite_batch.flush(ctx.atlas);
+
+		// 2. Ground-level highlight items overlay pass
+		if (zone_overlay_drawer && options.highlight_items && !options.ingame) {
+			zone_overlay_drawer->drawFloorHighlightItems(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			sprite_batch.flush(ctx.atlas);
+		}
+
+		// 3. Ground-level zone & blocking overlay pass
+		if (zone_overlay_drawer && !options.ingame) {
+			zone_overlay_drawer->drawFloor(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			zone_overlay_drawer->drawFloorHouses(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			sprite_batch.flush(ctx.atlas);
+		}
+
+		// 3. Static items, animated items, dynamic entities pass
+		visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
+			TileElevationState static_elevation { draw_x, draw_y };
+			tile_renderer->RenderStaticItems(sprite_batch, location, ctx, static_elevation);
+
+			TileElevationState animated_elevation { draw_x, draw_y };
+			tile_renderer->RenderAnimatedItems(sprite_batch, location, ctx, animated_elevation);
+
+			tile_renderer->RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, true, true);
+		});
+
+		// 4. Badges pass
+		if (zone_overlay_drawer && !options.ingame) {
+			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+		}
+
+		sprite_batch.flush(ctx.atlas);
 	}
 }

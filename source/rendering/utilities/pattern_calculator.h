@@ -47,7 +47,14 @@ public:
 		patterns.frame = (spr->animator) ? spr->animator->getFrame(elapsed_time) : 0;
 
 		if (it.isSplash() || it.isFluidContainer()) {
-			patterns.subtype = item->getSubtype();
+			const uint16_t fluid = item ? item->getSubtype() : 0;
+			patterns.subtype = fluid;
+			if (spr->pattern_x > 0) {
+				patterns.x = fluid % spr->pattern_x;
+				if (spr->pattern_y > 0) {
+					patterns.y = (fluid / spr->pattern_x) % spr->pattern_y;
+				}
+			}
 		} else if (it.hasFlag(ItemFlag::IsHangable)) {
 			if (tile && tile->hasHookSouth()) {
 				patterns.x = 1;
@@ -57,23 +64,31 @@ public:
 				patterns.x = 0;
 			}
 		} else if (it.hasFlag(ItemFlag::Stackable)) {
-			uint16_t itemSubtype = item->getSubtype();
+			const uint16_t itemSubtype = item ? item->getSubtype() : 0;
+			int exactCount = 0;
 			if (itemSubtype <= 1) {
-				patterns.subtype = 0;
+				exactCount = 0;
 			} else if (itemSubtype <= 2) {
-				patterns.subtype = 1;
+				exactCount = 1;
 			} else if (itemSubtype <= 3) {
-				patterns.subtype = 2;
+				exactCount = 2;
 			} else if (itemSubtype <= 4) {
-				patterns.subtype = 3;
+				exactCount = 3;
 			} else if (itemSubtype < 10) {
-				patterns.subtype = 4;
+				exactCount = 4;
 			} else if (itemSubtype < 25) {
-				patterns.subtype = 5;
+				exactCount = 5;
 			} else if (itemSubtype < 50) {
-				patterns.subtype = 6;
+				exactCount = 6;
 			} else {
-				patterns.subtype = 7;
+				exactCount = 7;
+			}
+			patterns.subtype = exactCount;
+			if (spr->pattern_x > 0) {
+				patterns.x = exactCount % spr->pattern_x;
+				if (spr->pattern_y > 0) {
+					patterns.y = (exactCount / spr->pattern_x) % spr->pattern_y;
+				}
 			}
 		}
 

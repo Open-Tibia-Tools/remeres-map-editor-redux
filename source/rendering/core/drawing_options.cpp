@@ -52,8 +52,29 @@ void DrawingOptions::SetDefault() {
 		.color = rme::lighting::DEFAULT_SERVER_LIGHT_COLOR
 	};
 	minimum_ambient_light = rme::lighting::DEFAULT_MINIMUM_AMBIENT_LIGHT;
-	highlight_pulse = 0.0f;
 	anti_aliasing = false;
+
+	show_zone_borders = true;
+	cursor_blend_mode = 0;
+	cursor_alt_blend_mode = 0;
+	zone_border_blend_mode = 0;
+	zone_pz_blend_mode = 0;
+	zone_nopvp_blend_mode = 0;
+	zone_nologout_blend_mode = 0;
+	zone_pvp_blend_mode = 0;
+	zone_blocking_blend_mode = 1;
+	zone_spawn_blend_mode = 0;
+	house_active_blend_mode = 0;
+	house_inactive_blend_mode = 0;
+	zone_border_color = glm::vec4(13.0f / 255.0f, 13.0f / 255.0f, 18.0f / 255.0f, 250.0f / 255.0f);
+	zone_pz_color = glm::vec4(20.0f / 255.0f, 117.0f / 255.0f, 255.0f / 255.0f, 122.0f / 255.0f);
+	zone_nopvp_color = glm::vec4(0.0f / 255.0f, 220.0f / 255.0f, 92.0f / 255.0f, 117.0f / 255.0f);
+	zone_nologout_color = glm::vec4(255.0f / 255.0f, 122.0f / 255.0f, 0.0f / 255.0f, 122.0f / 255.0f);
+	zone_pvp_color = glm::vec4(245.0f / 255.0f, 26.0f / 255.0f, 51.0f / 255.0f, 122.0f / 255.0f);
+	zone_blocking_color = glm::vec4(0.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 128.0f / 255.0f);
+	zone_spawn_color = glm::vec4(242.0f / 255.0f, 26.0f / 255.0f, 242.0f / 255.0f, 112.0f / 255.0f);
+	house_active_color = glm::vec4(89.0f / 255.0f, 191.0f / 255.0f, 13.0f / 255.0f, 133.0f / 255.0f);
+	house_inactive_color = glm::vec4(92.0f / 255.0f, 56.0f / 255.0f, 166.0f / 255.0f, 133.0f / 255.0f);
 
 	chunk_bake_dirty_ = true;
 	lighting_dirty_ = true;
@@ -115,17 +136,12 @@ void DrawingOptions::MarkSettingDirty(uint32_t key) noexcept {
 	switch (key) {
 		case Config::SHOW_CREATURES:
 		case Config::TRANSPARENT_ITEMS:
-		case Config::SHOW_SPECIAL_TILES:
-		case Config::SHOW_HOUSES:
-		case Config::EXT_HOUSE_SHADER:
-		case Config::SHOW_BLOCKING:
-		case Config::SHOW_SPAWNS:
-		case Config::HIGHLIGHT_ITEMS:
 		case Config::SHOW_ONLY_TILEFLAGS:
 		case Config::SHOW_ONLY_MODIFIED_TILES:
 		case Config::SHOW_ITEMS:
 		case Config::SHOW_AS_MINIMAP:
 		case Config::SHOW_TECHNICAL_ITEMS:
+		case Config::EXT_HOUSE_SHADER:
 			chunk_bake_dirty_ = true;
 			break;
 
@@ -181,20 +197,46 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const float new_minimum_ambient_light = std::clamp(brush_manager.GetAmbientLightLevel(), 0.0f, 1.0f);
 	const bool new_anti_aliasing = settings.getBoolean(Config::ANTI_ALIASING);
 
+	const bool new_show_zone_borders = settings.getBoolean(Config::ZONE_BORDERS_ENABLED);
+	const int new_cursor_blend_mode = settings.getInteger(Config::CURSOR_BLEND_MODE);
+	const int new_cursor_alt_blend_mode = settings.getInteger(Config::CURSOR_ALT_BLEND_MODE);
+	const int new_zone_border_blend_mode = settings.getInteger(Config::ZONE_BORDER_BLEND_MODE);
+	const int new_zone_pz_blend_mode = settings.getInteger(Config::ZONE_PZ_BLEND_MODE);
+	const int new_zone_nopvp_blend_mode = settings.getInteger(Config::ZONE_NOPVP_BLEND_MODE);
+	const int new_zone_nologout_blend_mode = settings.getInteger(Config::ZONE_NOLOGOUT_BLEND_MODE);
+	const int new_zone_pvp_blend_mode = settings.getInteger(Config::ZONE_PVP_BLEND_MODE);
+	const int new_zone_blocking_blend_mode = settings.getInteger(Config::ZONE_BLOCKING_BLEND_MODE);
+	const int new_zone_spawn_blend_mode = settings.getInteger(Config::ZONE_SPAWN_BLEND_MODE);
+	const int new_house_active_blend_mode = settings.getInteger(Config::HOUSE_ACTIVE_BLEND_MODE);
+	const int new_house_inactive_blend_mode = settings.getInteger(Config::HOUSE_INACTIVE_BLEND_MODE);
+	auto readVec4 = [&](uint32_t kr, uint32_t kg, uint32_t kb, uint32_t ka) {
+		return glm::vec4(
+			static_cast<float>(std::clamp(settings.getInteger(kr), 0, 255)) / 255.0f,
+			static_cast<float>(std::clamp(settings.getInteger(kg), 0, 255)) / 255.0f,
+			static_cast<float>(std::clamp(settings.getInteger(kb), 0, 255)) / 255.0f,
+			static_cast<float>(std::clamp(settings.getInteger(ka), 0, 255)) / 255.0f
+		);
+	};
+	const glm::vec4 new_zone_border_color = readVec4(Config::ZONE_BORDER_COLOR_R, Config::ZONE_BORDER_COLOR_G, Config::ZONE_BORDER_COLOR_B, Config::ZONE_BORDER_COLOR_A);
+	const glm::vec4 new_zone_pz_color = readVec4(Config::ZONE_PZ_COLOR_R, Config::ZONE_PZ_COLOR_G, Config::ZONE_PZ_COLOR_B, Config::ZONE_PZ_COLOR_A);
+	const glm::vec4 new_zone_nopvp_color = readVec4(Config::ZONE_NOPVP_COLOR_R, Config::ZONE_NOPVP_COLOR_G, Config::ZONE_NOPVP_COLOR_B, Config::ZONE_NOPVP_COLOR_A);
+	const glm::vec4 new_zone_nologout_color = readVec4(Config::ZONE_NOLOGOUT_COLOR_R, Config::ZONE_NOLOGOUT_COLOR_G, Config::ZONE_NOLOGOUT_COLOR_B, Config::ZONE_NOLOGOUT_COLOR_A);
+	const glm::vec4 new_zone_pvp_color = readVec4(Config::ZONE_PVP_COLOR_R, Config::ZONE_PVP_COLOR_G, Config::ZONE_PVP_COLOR_B, Config::ZONE_PVP_COLOR_A);
+	const glm::vec4 new_zone_blocking_color = readVec4(Config::ZONE_BLOCKING_COLOR_R, Config::ZONE_BLOCKING_COLOR_G, Config::ZONE_BLOCKING_COLOR_B, Config::ZONE_BLOCKING_COLOR_A);
+	const glm::vec4 new_zone_spawn_color = readVec4(Config::ZONE_SPAWN_COLOR_R, Config::ZONE_SPAWN_COLOR_G, Config::ZONE_SPAWN_COLOR_B, Config::ZONE_SPAWN_COLOR_A);
+	const glm::vec4 new_house_active_color = readVec4(Config::HOUSE_ACTIVE_COLOR_R, Config::HOUSE_ACTIVE_COLOR_G, Config::HOUSE_ACTIVE_COLOR_B, Config::HOUSE_ACTIVE_COLOR_A);
+	const glm::vec4 new_house_inactive_color = readVec4(Config::HOUSE_INACTIVE_COLOR_R, Config::HOUSE_INACTIVE_COLOR_G, Config::HOUSE_INACTIVE_COLOR_B, Config::HOUSE_INACTIVE_COLOR_A);
+
 	// Differential Change Detection: Only dirty when values actually change!
 	if (new_transparent_items != transparent_items ||
-		new_show_special_tiles != show_special_tiles ||
-		new_show_houses != show_houses ||
 		new_extended_house_shader != extended_house_shader ||
-		new_show_blocking != show_blocking ||
-		new_show_spawns != show_spawns ||
 		new_show_creatures != show_creatures ||
-		new_highlight_items != highlight_items ||
 		new_show_only_colors != show_only_colors ||
 		new_show_only_modified != show_only_modified ||
 		new_show_items != show_items ||
 		new_show_as_minimap != show_as_minimap ||
-		new_show_tech_items != show_tech_items) {
+		new_show_tech_items != show_tech_items ||
+		new_ingame != ingame) {
 		chunk_bake_dirty_ = true;
 	}
 
@@ -243,6 +285,52 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	minimum_ambient_light = new_minimum_ambient_light;
 	draw_floor_shadow = show_shade;
 	anti_aliasing = new_anti_aliasing;
+
+	if (new_show_zone_borders != show_zone_borders ||
+		new_cursor_blend_mode != cursor_blend_mode ||
+		new_cursor_alt_blend_mode != cursor_alt_blend_mode ||
+		new_zone_border_blend_mode != zone_border_blend_mode ||
+		new_zone_pz_blend_mode != zone_pz_blend_mode ||
+		new_zone_nopvp_blend_mode != zone_nopvp_blend_mode ||
+		new_zone_nologout_blend_mode != zone_nologout_blend_mode ||
+		new_zone_pvp_blend_mode != zone_pvp_blend_mode ||
+		new_zone_blocking_blend_mode != zone_blocking_blend_mode ||
+		new_zone_spawn_blend_mode != zone_spawn_blend_mode ||
+		new_house_active_blend_mode != house_active_blend_mode ||
+		new_house_inactive_blend_mode != house_inactive_blend_mode ||
+		new_zone_border_color != zone_border_color ||
+		new_zone_pz_color != zone_pz_color ||
+		new_zone_nopvp_color != zone_nopvp_color ||
+		new_zone_nologout_color != zone_nologout_color ||
+		new_zone_pvp_color != zone_pvp_color ||
+		new_zone_blocking_color != zone_blocking_color ||
+		new_zone_spawn_color != zone_spawn_color ||
+		new_house_active_color != house_active_color ||
+		new_house_inactive_color != house_inactive_color) {
+		visual_dirty_ = true;
+	}
+
+	show_zone_borders = new_show_zone_borders;
+	cursor_blend_mode = new_cursor_blend_mode;
+	cursor_alt_blend_mode = new_cursor_alt_blend_mode;
+	zone_border_blend_mode = new_zone_border_blend_mode;
+	zone_pz_blend_mode = new_zone_pz_blend_mode;
+	zone_nopvp_blend_mode = new_zone_nopvp_blend_mode;
+	zone_nologout_blend_mode = new_zone_nologout_blend_mode;
+	zone_pvp_blend_mode = new_zone_pvp_blend_mode;
+	zone_blocking_blend_mode = new_zone_blocking_blend_mode;
+	zone_spawn_blend_mode = new_zone_spawn_blend_mode;
+	house_active_blend_mode = new_house_active_blend_mode;
+	house_inactive_blend_mode = new_house_inactive_blend_mode;
+	zone_border_color = new_zone_border_color;
+	zone_pz_color = new_zone_pz_color;
+	zone_nopvp_color = new_zone_nopvp_color;
+	zone_nologout_color = new_zone_nologout_color;
+	zone_pvp_color = new_zone_pvp_color;
+	zone_blocking_color = new_zone_blocking_color;
+	zone_spawn_color = new_zone_spawn_color;
+	house_active_color = new_house_active_color;
+	house_inactive_color = new_house_inactive_color;
 
 	dirty_ = false;
 }
