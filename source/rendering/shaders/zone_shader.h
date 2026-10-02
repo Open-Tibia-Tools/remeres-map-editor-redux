@@ -14,7 +14,7 @@ namespace rme::rendering::shaders {
 inline constexpr std::string_view ZONE_SHADER_GLSL = R"(
 void blendOverlayLayer(inout vec4 baseColor, inout bool hasOverlay, vec4 layerColor) {
     if (hasOverlay) {
-        baseColor.rgb = mix(baseColor.rgb, layerColor.rgb, layerColor.a);
+        baseColor.rgb *= layerColor.rgb;
         baseColor.a = max(baseColor.a, layerColor.a);
     } else {
         baseColor = layerColor;
@@ -179,43 +179,6 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    // Define colors for each zone:
-    // zWash:    Base translucent wash (Vanilla RME style, ~28% alpha)
-    // zDark:    3D shadow bevel color (darker shade of the zone color)
-    // zLight:   3D highlight bevel color (lighter tint of the zone color)
-    vec4 pzWash  = vec4(0.18, 0.55, 1.00, 0.28);
-    vec4 pzDark  = vec4(0.06, 0.16, 0.55, 0.95);
-    vec4 pzLight = vec4(0.65, 0.82, 1.00, 0.85);
-
-    vec4 npWash  = vec4(0.12, 0.85, 0.48, 0.26);
-    vec4 npDark  = vec4(0.00, 0.38, 0.28, 0.95);
-    vec4 npLight = vec4(0.72, 1.00, 0.85, 0.85);
-
-    vec4 nlWash  = vec4(1.00, 0.52, 0.06, 0.28);
-    vec4 nlDark  = vec4(0.54, 0.18, 0.06, 0.95);
-    vec4 nlLight = vec4(1.00, 0.78, 0.50, 0.85);
-
-    vec4 pvpWash  = vec4(0.92, 0.12, 0.24, 0.28);
-    vec4 pvpDark  = vec4(0.42, 0.04, 0.16, 0.95);
-    vec4 pvpLight = vec4(1.00, 0.60, 0.68, 0.85);
-
-    bool hasPz  = ((flags & 4u) != 0u);
-    bool hasNp  = ((flags & 8u) != 0u);
-    bool hasNl  = ((flags & 16u) != 0u);
-    bool hasPvp = ((flags & 32u) != 0u);
-
-    // Compute averaged bevel colors across active zones
-    vec4 sumDark = vec4(0.0);
-    vec4 sumLight = vec4(0.0);
-    float activeCount = 0.0;
-    if (hasPz)  { sumDark += pzDark;  sumLight += pzLight;  activeCount += 1.0; }
-    if (hasNp)  { sumDark += npDark;  sumLight += npLight;  activeCount += 1.0; }
-    if (hasNl)  { sumDark += nlDark;  sumLight += nlLight;  activeCount += 1.0; }
-    if (hasPvp) { sumDark += pvpDark; sumLight += pvpLight; activeCount += 1.0; }
-
-    vec4 zDark = sumDark / activeCount;
-    vec4 zLight = sumLight / activeCount;
-
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98); // 2px solid black global outer outline
 
     // 1. GLOBAL OUTER OUTLINE (2px solid black)
@@ -237,71 +200,25 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
         return true;
     }
 
-    // 3. GLOBAL OUTER 3D BEVEL (Inside the 2px black border)
-    // North & West inner edge: 1px light highlight
-    if (bNorthOuter && tile_ly == 2) {
-        outLayer = zLight;
-        return true;
-    }
-    if (bWestOuter && tile_lx == 2) {
-        outLayer = zLight;
-        return true;
-    }
-    // South & East inner edge: 2px darker shade shadow
-    if (bSouthOuter && (tile_ly == 29 || tile_ly == 28)) {
-        outLayer = zDark;
-        return true;
-    }
-    if (bEastOuter && (tile_lx == 29 || tile_lx == 28)) {
-        outLayer = zDark;
-        return true;
-    }
+    // 2. INTERIOR MULTIPLICATIVE TINTS (Zero inside lines, zero bevels)
+    // PZ: Azure, Non-PvP: Emerald, No-Logout: Warm Orange, PvP Zone: Ruby
+    vec4 pzTint  = vec4(0.50, 0.78, 1.00, 1.0);
+    vec4 npTint  = vec4(0.50, 1.00, 0.68, 1.0);
+    vec4 nlTint  = vec4(1.00, 0.70, 0.30, 1.0);
+    vec4 pvpTint = vec4(1.00, 0.40, 0.48, 1.0);
 
-    // 4. INSIDE 3D KITCHEN TILE BEVEL (For all internal tile edges, zero black!)
-    // Top & Left internal edges: 1px light highlight
-    if (!bNorthOuter && tile_ly == 0) {
-        outLayer = zLight;
-        return true;
-    }
-    if (!bWestOuter && tile_lx == 0) {
-        outLayer = zLight;
-        return true;
-    }
-    // Bottom & Right internal edges: 1px darker shade
-    if (!bSouthOuter && tile_ly == 31) {
-        outLayer = zDark;
-        return true;
-    }
-    if (!bEastOuter && tile_lx == 31) {
-        outLayer = zDark;
-        return true;
-    }
+    bool hasPz  = ((flags & 4u) != 0u);
+    bool hasNp  = ((flags & 8u) != 0u);
+    bool hasNl  = ((flags & 16u) != 0u);
+    bool hasPvp = ((flags & 32u) != 0u);
 
-    // 5. INTERIOR: Voronoi quadrant wash (nearest active zone corner)
-    vec4 zWash = vec4(0.0);
-    int minDist = 999999;
-    if (hasPz) {
-        int d = tile_lx * tile_lx + tile_ly * tile_ly;
-        if (d < minDist) { minDist = d; zWash = pzWash; }
-    }
-    if (hasNp) {
-        int dx = 31 - tile_lx;
-        int d = dx * dx + tile_ly * tile_ly;
-        if (d < minDist) { minDist = d; zWash = npWash; }
-    }
-    if (hasNl) {
-        int dy = 31 - tile_ly;
-        int d = tile_lx * tile_lx + dy * dy;
-        if (d < minDist) { minDist = d; zWash = nlWash; }
-    }
-    if (hasPvp) {
-        int dx = 31 - tile_lx;
-        int dy = 31 - tile_ly;
-        int d = dx * dx + dy * dy;
-        if (d < minDist) { minDist = d; zWash = pvpWash; }
-    }
+    vec4 zTint = vec4(1.0);
+    if (hasPz)  zTint.rgb *= pzTint.rgb;
+    if (hasNp)  zTint.rgb *= npTint.rgb;
+    if (hasNl)  zTint.rgb *= nlTint.rgb;
+    if (hasPvp) zTint.rgb *= pvpTint.rgb;
 
-    outLayer = zWash;
+    outLayer = zTint;
     return true;
 }
 
@@ -310,10 +227,8 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
         return false;
     }
 
-    vec4 zWash  = vec4(0.95, 0.15, 0.95, 0.28);
-    vec4 zLight = vec4(1.00, 0.65, 1.00, 0.85);
-    vec4 zDark  = vec4(0.48, 0.00, 0.48, 0.95);
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
+    vec4 spawnTint = vec4(1.00, 0.45, 1.00, 1.0);
 
     // 1. GLOBAL OUTER OUTLINE (2px solid black) on perimeter
     if ((bNorth && (ly == 0 || ly == 1)) ||
@@ -324,33 +239,8 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
         return true;
     }
 
-    // 2. 3D BEVEL inside the black perimeter
-    // North & West: 1px light highlight
-    if ((bNorth && ly == 2) || (bWest && lx == 2)) {
-        outLayer = zLight;
-        return true;
-    }
-    // South & East: 2px dark shadow
-    if ((bSouth && (ly == maxY - 2 || ly == maxY - 3)) ||
-        (bEast  && (lx == maxX - 2 || lx == maxX - 3))) {
-        outLayer = zDark;
-        return true;
-    }
-
-    // 3. INSIDE 3D KITCHEN TILE LINES (dividing adjacent 32x32 tiles within the spawn box)
-    int tile_lx = lx % 32;
-    int tile_ly = ly % 32;
-    if (tile_ly == 0 || tile_lx == 0) {
-        outLayer = zLight;
-        return true;
-    }
-    if (tile_ly == 31 || tile_lx == 31) {
-        outLayer = zDark;
-        return true;
-    }
-
-    // 4. INTERIOR TRANSLUCENT WASH
-    outLayer = zWash;
+    // 2. Interior Multiplicative Tint (NO inside kitchen tile lines, NO bevels)
+    outLayer = spawnTint;
     return true;
 }
 
@@ -362,8 +252,8 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    vec4 zWash  = vec4(0.75, 0.31, 0.30, 0.28);
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
+    vec4 blockTint = vec4(1.00, 0.50, 0.50, 1.0);
 
     // 1. GLOBAL OUTER OUTLINE (2px solid black)
     // Only applied where neighbor is NOT blocking
@@ -384,8 +274,8 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
         return true;
     }
 
-    // 2. INTERIOR TRANSLUCENT WASH (2px perimeter only, zero bevels)
-    outLayer = zWash;
+    // 2. Interior Multiplicative Tint (zero inside lines or bevels)
+    outLayer = blockTint;
     return true;
 }
 

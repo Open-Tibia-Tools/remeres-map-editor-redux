@@ -24,30 +24,19 @@ void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint 
         return;
     }
 
-    ivec2 p = ivec2(floor(worldPos));
     bool isActive = (uHouseId == currentHouseId);
 
-    int lx = p.x % 32; if (lx < 0) lx += 32;
-    int ly = p.y % 32; if (ly < 0) ly += 32;
-
-    // House Active: #B4EB1F (Lime green, same as ENTRY), House Inactive: #8F7FC4 (muted violet)
-    vec4 zWash  = isActive ? vec4(0.71, 0.92, 0.12, 0.28) : vec4(0.56, 0.50, 0.77, 0.28);
-    vec4 zLight = isActive ? vec4(0.89, 1.00, 0.56, 0.85) : vec4(0.82, 0.79, 0.94, 0.85);
-    vec4 zDark  = isActive ? vec4(0.31, 0.42, 0.00, 0.95) : vec4(0.25, 0.20, 0.44, 0.95);
+    // Multiplicative tints:
+    // House Active: Lime green (matching ENTRY), House Inactive: Muted violet
+    vec3 zTint = isActive ? vec3(0.85, 1.00, 0.45) : vec3(0.80, 0.74, 0.92);
 
     if (houseId < 0.0) {
-        // Base House Shader (ground): 3D kitchen tile lines + translucent wash (NO 'H' stamp, NO stripes)
-        if (ly == 0 || lx == 0) {
-            fragColor.rgb = mix(fragColor.rgb, zLight.rgb, zLight.a);
-        } else if (ly == 31 || lx == 31) {
-            fragColor.rgb = mix(fragColor.rgb, zDark.rgb, zDark.a);
-        } else {
-            fragColor.rgb = mix(fragColor.rgb, zWash.rgb, zWash.a);
-        }
+        // Base House Shader (ground): seamless multiplicative tint (NO inside lines or bevels)
+        fragColor.rgb *= zTint;
     } else {
-        // Extended House Shader (items/walls): clean translucent wash (no striped lines)
-        vec4 itemWash = vec4(zWash.rgb, zWash.a * 0.70);
-        fragColor.rgb = mix(fragColor.rgb, itemWash.rgb, itemWash.a);
+        // Extended House Shader (items/walls): seamless multiplicative tint
+        vec3 itemTint = mix(vec3(1.0), zTint, 0.80);
+        fragColor.rgb *= itemTint;
     }
 }
 )";

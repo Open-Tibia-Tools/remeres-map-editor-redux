@@ -171,7 +171,7 @@ def test_secondary_map_precedence():
 
 
 def test_zone_shader_3d_bevel_and_colors():
-    """Verify that in zone_shader.h, 2px global black outline, 3D bevels, and clean zone washes are implemented."""
+    """Verify that in zone_shader.h, 2px global black outline and clean multiplicative zone tints are implemented without inside lines."""
     from pathlib import Path
     shader_path = Path(__file__).parent.parent / "source" / "rendering" / "shaders" / "zone_shader.h"
     content = shader_path.read_text(encoding="utf-8")
@@ -184,45 +184,45 @@ def test_zone_shader_3d_bevel_and_colors():
     # Global 2px black outer outline must be present
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in fn_body, "2px global black outline must be defined"
 
-    # PZ (flags & 4u) must have cool azure wash and 3D bevel
+    # PZ (flags & 4u) must have cool azure multiplicative tint
     assert "flags & 4u" in fn_body
-    assert "0.18, 0.55, 1.00, 0.28" in fn_body, "PZ wash must be cool azure"
+    assert "0.50, 0.78, 1.00, 1.0" in fn_body, "PZ tint must be cool azure"
 
-    # No-PvP (flags & 8u) must have cool mint green wash and 3D bevel
+    # No-PvP (flags & 8u) must have cool mint green multiplicative tint
     assert "flags & 8u" in fn_body
-    assert "0.12, 0.85, 0.48, 0.26" in fn_body, "No-PvP wash must be cool mint green"
+    assert "0.50, 1.00, 0.68, 1.0" in fn_body, "No-PvP tint must be cool mint green"
 
-    # No-Logout (flags & 16u) must have warm orange wash and 3D bevel
+    # No-Logout (flags & 16u) must have warm orange multiplicative tint
     assert "flags & 16u" in fn_body
-    assert "1.00, 0.52, 0.06, 0.28" in fn_body, "No-Logout wash must be warm orange"
+    assert "1.00, 0.70, 0.30, 1.0" in fn_body, "No-Logout tint must be warm orange"
 
-    # PvP Zone (flags & 32u) must have warm red wash and 3D bevel
+    # PvP Zone (flags & 32u) must have warm red multiplicative tint
     assert "flags & 32u" in fn_body
-    assert "0.92, 0.12, 0.24, 0.28" in fn_body, "PvP Zone wash must be warm red"
+    assert "1.00, 0.40, 0.48, 1.0" in fn_body, "PvP Zone tint must be warm red"
 
     # Cluster badge evaluation helper must be present
     assert "evaluateClusterBadge" in content
     assert "4194304u" in content, "ZONE_FLAG_CLUSTER_BADGE dispatch must be present"
 
-    # Inside 3D kitchen tile bevels must be present
-    assert "!bNorthOuter && tile_ly == 0" in fn_body
-    assert "!bWestOuter && tile_lx == 0" in fn_body
-    assert "!bSouthOuter && tile_ly == 31" in fn_body
-    assert "!bEastOuter && tile_lx == 31" in fn_body
+    # Inside 3D kitchen tile bevels/lines must NOT be present
+    assert "!bNorthOuter && tile_ly == 0" not in fn_body
+    assert "!bWestOuter && tile_lx == 0" not in fn_body
+    assert "!bSouthOuter && tile_ly == 31" not in fn_body
+    assert "!bEastOuter && tile_lx == 31" not in fn_body
 
-    # Blocking overlay must have 2px black border and muted red wash
+    # Blocking overlay must have 2px black border and multiplicative red tint
     assert "evaluateBlockingOverlay" in content
     b_idx = content.find("evaluateBlockingOverlay")
     b_body = content[b_idx:b_idx + 600]
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in b_body, "Blocking perimeter must be 2px black"
-    assert "0.75, 0.31, 0.30, 0.28" in b_body, "Blocking wash must be muted red"
+    assert "1.00, 0.50, 0.50, 1.0" in b_body, "Blocking tint must be multiplicative red"
 
-    # Spawn overlay must have 2px black perimeter, magenta 3D bevel, and magenta wash
+    # Spawn overlay must have 2px black perimeter and multiplicative magenta tint
     assert "evaluateSpawnOverlay" in content
     s_idx = content.find("evaluateSpawnOverlay")
     s_body = content[s_idx:s_idx + 600]
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in s_body, "Spawn perimeter must be 2px black"
-    assert "0.95, 0.15, 0.95, 0.28" in s_body, "Spawn wash must be magenta"
+    assert "1.00, 0.45, 1.00, 1.0" in s_body, "Spawn tint must be multiplicative magenta"
 
 
 def test_indicator_shader_standardized_system():
@@ -365,7 +365,7 @@ def test_multi_zone_flag_accumulation_and_brush():
 
 
 def test_zone_shader_multi_zone_quadrants_and_badges():
-    """Verify that zone_shader.h evaluates 4 distinct corner badges and Voronoi quadrant wash."""
+    """Verify that zone_shader.h evaluates 4 distinct corner badges and multiplicative tint compounding."""
     from pathlib import Path
     shader_path = Path(__file__).parent.parent / "source" / "rendering" / "shaders" / "zone_shader.h"
     content = shader_path.read_text(encoding="utf-8")
@@ -389,55 +389,33 @@ def test_zone_shader_multi_zone_quadrants_and_badges():
     assert "pMask" in badge_body and "zMask" in badge_body
     assert "nMask" in badge_body and "lMask" in badge_body and "vMask" in badge_body
 
-    # Verify bevel averaging across active zones
-    assert "activeCount += 1.0;" in fn_body
-    assert "vec4 zDark = sumDark / activeCount;" in fn_body
-    assert "vec4 zLight = sumLight / activeCount;" in fn_body
+    # Verify multiplicative compounding across active zones without inside borders
+    assert "zTint.rgb *= pzTint.rgb;" in fn_body
+    assert "zTint.rgb *= npTint.rgb;" in fn_body
+    assert "zTint.rgb *= nlTint.rgb;" in fn_body
+    assert "zTint.rgb *= pvpTint.rgb;" in fn_body
 
-    # Verify Voronoi quadrant wash
-    assert "int minDist = 999999;" in fn_body
-    assert "int d = tile_lx * tile_lx + tile_ly * tile_ly;" in fn_body
-    assert "d < minDist" in fn_body
-
-    # Simulate Voronoi resolution in Python and verify correctness
-    def resolve_wash(flags, lx, ly):
-        has_pz = (flags & 4) != 0
-        has_np = (flags & 8) != 0
-        has_nl = (flags & 16) != 0
-        has_pvp = (flags & 32) != 0
-        min_d = 999999
-        chosen = None
-        if has_pz:
-            d = lx * lx + ly * ly
-            if d < min_d: min_d = d; chosen = "PZ"
-        if has_np:
-            dx = 31 - lx
-            d = dx * dx + ly * ly
-            if d < min_d: min_d = d; chosen = "NP"
-        if has_nl:
-            dy = 31 - ly
-            d = lx * lx + dy * dy
-            if d < min_d: min_d = d; chosen = "NL"
-        if has_pvp:
-            dx = 31 - lx
-            dy = 31 - ly
-            d = dx * dx + dy * dy
-            if d < min_d: min_d = d; chosen = "PvP"
-        return chosen
+    # Simulate multiplicative compounding in Python and verify correctness
+    def resolve_tint(flags):
+        pz = (0.50, 0.78, 1.00)
+        np = (0.50, 1.00, 0.68)
+        nl = (1.00, 0.70, 0.30)
+        pvp = (1.00, 0.40, 0.48)
+        tint = [1.0, 1.0, 1.0]
+        if flags & 4:
+            tint = [t * p for t, p in zip(tint, pz)]
+        if flags & 8:
+            tint = [t * p for t, p in zip(tint, np)]
+        if flags & 16:
+            tint = [t * p for t, p in zip(tint, nl)]
+        if flags & 32:
+            tint = [t * p for t, p in zip(tint, pvp)]
+        return tuple(round(c, 4) for c in tint)
 
     all_flags = 4 | 8 | 16 | 32
-    # Check 4 corners match their respective zones when all 4 are active
-    assert resolve_wash(all_flags, 2, 2) == "PZ"
-    assert resolve_wash(all_flags, 29, 2) == "NP"
-    assert resolve_wash(all_flags, 2, 29) == "NL"
-    assert resolve_wash(all_flags, 29, 29) == "PvP"
-
-    # Check 2 zones (PZ + NP) vertical 50/50 split
-    two_flags = 4 | 8
-    assert resolve_wash(two_flags, 5, 10) == "PZ"
-    assert resolve_wash(two_flags, 25, 10) == "NP"
-    assert resolve_wash(two_flags, 5, 25) == "PZ"
-    assert resolve_wash(two_flags, 25, 25) == "NP"
+    assert resolve_tint(all_flags) == (0.25, 0.2184, 0.0979)
+    assert resolve_tint(4 | 8) == (0.25, 0.78, 0.68)
+    assert resolve_tint(4) == (0.50, 0.78, 1.00)
 
 
 def test_zone_cluster_finder_algorithm():

@@ -97,6 +97,12 @@ public:
 	void setGlobalTint(float r, float g, float b, float a, const AtlasManager& atlas_manager);
 
 	/**
+	 * Set blend function factors for subsequent draws in current batch.
+	 * If pending sprites exist, they will be flushed using the provided atlas manager.
+	 */
+	void setBlendFunc(GLenum sfactor, GLenum dfactor, const AtlasManager& atlas_manager);
+
+	/**
 	 * Ensure capacity in pending vector.
 	 */
 	void ensureCapacity(size_t capacity);
@@ -130,6 +136,8 @@ private:
 	// Scoped state for batch duration
 	std::optional<ScopedGLCapability> blend_capability_;
 	std::optional<ScopedGLBlend> blend_func_;
+	GLenum current_sfactor_ = GL_SRC_ALPHA;
+	GLenum current_dfactor_ = GL_ONE_MINUS_SRC_ALPHA;
 
 	bool in_batch_ = false;
 	bool use_mdi_ = false;

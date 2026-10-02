@@ -90,7 +90,13 @@ void main() {
                                  FragColor)) {
             discard;
         }
-        FragColor.a *= Tint.a * uGlobalTint.a;
+        uint flags = uint(vZoneFlags + 0.5);
+        float alpha = Tint.a * uGlobalTint.a;
+        if ((flags & 4194304u) == 0u) {
+            // Multiplicative zone tint quad: fade towards 1.0 (white/neutral)
+            FragColor.rgb = mix(vec3(1.0), FragColor.rgb, alpha);
+        }
+        FragColor.a *= alpha;
         return;
     }
 

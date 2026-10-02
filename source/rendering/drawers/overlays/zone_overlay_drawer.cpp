@@ -62,6 +62,9 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		return;
 	}
 
+	// Switch to multiplicative blending for ground zone tint quads and spawn boxes
+	sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+
 	const ViewBounds bounds = view.getBoundsForFloor(z);
 	const float floor_alpha = (z == view.floor) ? 1.0f : std::max(0.25f, 1.0f - static_cast<float>(view.floor - z) * 0.20f);
 
@@ -203,8 +206,33 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			sprite_batch.draw(static_cast<float>(draw_x0), static_cast<float>(draw_y0),
 			                  spawn_w, spawn_h, *white_pixel, 1.0f, 1.0f, 1.0f, box_alpha,
 			                  0.0f, static_cast<float>(spawn_flags));
+		}
+	}
 
-			// Spawn Center Badge (Rendered on ground level, below creatures and items)
+	// 4. Restore standard alpha blending for spawn center badges and subsequent passes
+	sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+
+	if (options.show_spawns) {
+		for (const Position& spos : map.spawns) {
+			if (spos.z != z) {
+				continue;
+			}
+			const Tile* st = map.getTile(spos);
+			if (!st || !st->spawn) {
+				continue;
+			}
+			const int radius = st->spawn->getSize();
+			const int sx0 = spos.x - radius;
+			const int sx1 = spos.x + radius;
+			const int sy0 = spos.y - radius;
+			const int sy1 = spos.y + radius;
+
+			if (sx1 < bounds.start_x || sx0 > bounds.end_x ||
+			    sy1 < bounds.start_y || sy0 > bounds.end_y) {
+				continue;
+			}
+
+			const float box_alpha = (st->spawn->isSelected() && options.dragging) ? (floor_alpha * 0.30f) : floor_alpha;
 			int center_draw_x, center_draw_y;
 			view.getScreenPosition(spos.x, spos.y, z, center_draw_x, center_draw_y);
 			sprite_batch.draw(static_cast<float>(center_draw_x), static_cast<float>(center_draw_y),
@@ -229,6 +257,9 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	if (!white_pixel) {
 		return;
 	}
+
+	// Switch to multiplicative blending for blocking tint quads
+	sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
 
 	const ViewBounds bounds = view.getBoundsForFloor(z);
 	const float floor_alpha = (z == view.floor) ? 1.0f : std::max(0.25f, 1.0f - static_cast<float>(view.floor - z) * 0.20f);
@@ -279,6 +310,9 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 		std::swap(row_prev, row_curr);
 		std::swap(row_curr, row_next);
 	}
+
+	// Restore standard alpha blending for subsequent passes
+	sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 }
 
 void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,

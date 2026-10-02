@@ -114,6 +114,8 @@ void SpriteBatch::begin(const glm::mat4& projection, const AtlasManager& atlas_m
 	// We use emplace to construct the Scoped objects in-place, which saves the previous state
 	blend_capability_.emplace(GL_BLEND);
 	blend_func_.emplace(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	current_sfactor_ = GL_SRC_ALPHA;
+	current_dfactor_ = GL_ONE_MINUS_SRC_ALPHA;
 
 	shader_->Use();
 	shader_->SetMat4("uMVP", projection_);
@@ -133,6 +135,25 @@ void SpriteBatch::setGlobalTint(float r, float g, float b, float a, const AtlasM
 
 	global_tint_ = glm::vec4(r, g, b, a);
 	shader_->SetVec4("uGlobalTint", global_tint_);
+}
+
+void SpriteBatch::setBlendFunc(GLenum sfactor, GLenum dfactor, const AtlasManager& atlas_manager) {
+	if (!in_batch_) {
+		return;
+	}
+
+	if (current_sfactor_ == sfactor && current_dfactor_ == dfactor) {
+		return;
+	}
+
+	// Flush pending sprites before switching GPU blend mode
+	if (!pending_sprites_.empty()) {
+		flush(atlas_manager);
+	}
+
+	current_sfactor_ = sfactor;
+	current_dfactor_ = dfactor;
+	glBlendFunc(sfactor, dfactor);
 }
 
 void SpriteBatch::ensureCapacity(size_t capacity) {
@@ -334,6 +355,8 @@ void SpriteBatch::end(const AtlasManager& atlas_manager) {
 
 	in_batch_ = false;
 	current_atlas_manager_ = nullptr;
+	current_sfactor_ = GL_SRC_ALPHA;
+	current_dfactor_ = GL_ONE_MINUS_SRC_ALPHA;
 	glBindVertexArray(0);
 
 	// Restore state (reverse order of construction)
