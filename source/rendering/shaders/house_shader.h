@@ -26,16 +26,18 @@ void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint 
 
     bool isActive = (uHouseId == currentHouseId);
 
-    // House Active: Vivid Lime Green #A6F20D, House Inactive: Deep Amethyst #8C66D1
-    vec4 zWash = isActive ? vec4(0.65, 0.95, 0.05, 0.44) : vec4(0.55, 0.40, 0.82, 0.42);
+    // Option 2 (Deep Shadow):
+    // House Active: Deep Emerald Lime #59BF0D, House Inactive: Midnight Amethyst #5C38A6
+    vec4 zWash = isActive ? vec4(0.35, 0.75, 0.05, 0.52) : vec4(0.36, 0.22, 0.65, 0.52);
 
     if (houseId < 0.0) {
-        // Base House Shader (ground): clean translucent wash (NO inside lines or bevels)
+        // Base House Shader (ground): deep clean wash (52% opacity)
         fragColor.rgb = mix(fragColor.rgb, zWash.rgb, zWash.a);
     } else {
-        // Extended House Shader (items/walls): clean translucent wash
-        vec4 itemWash = vec4(zWash.rgb, zWash.a * 0.70);
-        fragColor.rgb = mix(fragColor.rgb, itemWash.rgb, itemWash.a);
+        // Extended House Shader (items/walls): deep shadow tint (45% shadow) + higher opacity (~72%)
+        vec3 darkRgb = zWash.rgb * 0.55;
+        float wallAlpha = min(0.95, zWash.a * 1.40);
+        fragColor.rgb = mix(fragColor.rgb, darkRgb, wallAlpha);
     }
 }
 )";
