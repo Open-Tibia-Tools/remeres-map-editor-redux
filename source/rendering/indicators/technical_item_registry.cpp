@@ -175,9 +175,22 @@ TileIndicatorType TechnicalItemRegistry::GetBrushIndicatorType(const Brush* brus
 			return tech;
 		}
 	}
-	const std::string& bname = brush->getName();
+	std::string bname = brush->getName();
+	std::ranges::transform(bname, bname.begin(), [](unsigned char c) {
+		return static_cast<char>(std::tolower(c));
+	});
+
 	if (bname == "stairs" || bname == "invisible stairs" || bname == "stair") {
 		return TileIndicatorType::TechInvisibleStair;
+	}
+	if (bname == "invisible wall" || bname == "invisible walls" || bname == "block" || bname == "blocking" || bname == "wall (invisible)") {
+		return TileIndicatorType::TechInvisibleWall;
+	}
+	if (bname == "walk" || bname == "invisible walkable" || bname == "invisible floor" || bname == "invisible tile") {
+		return TileIndicatorType::TechInvisibleWalkable;
+	}
+	if (bname == "primal light" || bname == "light" || bname == "light source") {
+		return TileIndicatorType::TechPrimalLight;
 	}
 	return TileIndicatorType::None;
 }

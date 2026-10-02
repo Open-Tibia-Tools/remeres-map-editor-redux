@@ -248,6 +248,9 @@ def test_zone_shader_3d_bevel_and_colors():
     settings_content = settings_path.read_text(encoding="utf-8")
     assert "ZONE_BORDERS_ENABLED, true" in settings_content
     assert "ZONE_BLOCKING_BLEND_MODE, 1" in settings_content
+    assert "ZONE_SPAWN_BLEND_MODE, 1" in settings_content
+    assert "HOUSE_ACTIVE_BLEND_MODE, 1" in settings_content
+    assert "HOUSE_INACTIVE_BLEND_MODE, 1" in settings_content
     assert "ZONE_PZ_BLEND_MODE, 0" in settings_content
     assert "ZONE_BORDER_COLOR_R, 13" in settings_content
     assert "ZONE_PZ_COLOR_R, 20" in settings_content

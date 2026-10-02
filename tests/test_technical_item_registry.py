@@ -162,17 +162,17 @@ class TechnicalItemRegistry:
     @staticmethod
     def get_badge_style(ind_type: TileIndicatorType):
         styles = {
-            TileIndicatorType.HOUSE_ENTRY: {"text": "ENTRY", "short_text": "E", "border": (38, 128, 255)},
-            TileIndicatorType.SPAWN: {"text": "SPAWN", "short_text": "S", "border": (255, 51, 255)},
-            TileIndicatorType.TOWN_TEMPLE: {"text": "TOWN", "short_text": "T", "border": (255, 215, 0)},
-            TileIndicatorType.WAYPOINT: {"text": "WAYPT", "short_text": "W", "border": (0, 255, 255)},
-            TileIndicatorType.TECH_INVISIBLE_STAIR: {"text": "STAIR", "short_text": "S", "border": (255, 240, 30)},
-            TileIndicatorType.TECH_INVISIBLE_WALKABLE: {"text": "WALK", "short_text": "W", "border": (0, 240, 240)},
-            TileIndicatorType.TECH_INVISIBLE_WALL: {"text": "BLOCK", "short_text": "B", "border": (255, 40, 40)},
-            TileIndicatorType.TECH_PRIMAL_LIGHT: {"text": "LIGHT", "short_text": "L", "border": (90, 220, 255)},
-            TileIndicatorType.INVALID_GROUND: {"text": "INVALID", "short_text": "INV", "border": (235, 31, 61)},
-            TileIndicatorType.INVALID_ITEM: {"text": "INVALID", "short_text": "INV", "border": (255, 133, 15)},
-            TileIndicatorType.INVALID_ZONE: {"text": "INVALID", "short_text": "INV", "border": (242, 38, 242)},
+            TileIndicatorType.HOUSE_ENTRY: {"text": "entry", "short_text": "e", "border": (0, 255, 0)},
+            TileIndicatorType.SPAWN: {"text": "spawn", "short_text": "s", "border": (255, 0, 255)},
+            TileIndicatorType.TOWN_TEMPLE: {"text": "town", "short_text": "t", "border": (255, 217, 0)},
+            TileIndicatorType.WAYPOINT: {"text": "waypt", "short_text": "w", "border": (0, 166, 255)},
+            TileIndicatorType.TECH_INVISIBLE_STAIR: {"text": "stair", "short_text": "s", "border": (255, 255, 0)},
+            TileIndicatorType.TECH_INVISIBLE_WALKABLE: {"text": "walk", "short_text": "w", "border": (0, 255, 255)},
+            TileIndicatorType.TECH_INVISIBLE_WALL: {"text": "block", "short_text": "b", "border": (255, 0, 0)},
+            TileIndicatorType.TECH_PRIMAL_LIGHT: {"text": "light", "short_text": "l", "border": (0, 217, 255)},
+            TileIndicatorType.INVALID_GROUND: {"text": "invalid", "short_text": "inv", "border": (255, 0, 0)},
+            TileIndicatorType.INVALID_ITEM: {"text": "invalid", "short_text": "inv", "border": (255, 128, 0)},
+            TileIndicatorType.INVALID_ZONE: {"text": "invalid", "short_text": "inv", "border": (255, 0, 255)},
         }
         return styles.get(ind_type, {"text": "?", "short_text": "?", "border": (200, 200, 200)})
 
@@ -308,41 +308,41 @@ def test_marker_ids():
     assert TechnicalItemRegistry.get_marker_id(TileIndicatorType.NONE) == 0.0
 
 def test_badge_styles():
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_STAIR)["text"] == "STAIR"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_STAIR)["short_text"] == "S"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALKABLE)["text"] == "WALK"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALKABLE)["short_text"] == "W"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALL)["text"] == "BLOCK"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALL)["short_text"] == "B"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_PRIMAL_LIGHT)["text"] == "LIGHT"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_PRIMAL_LIGHT)["short_text"] == "L"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["text"] == "INVALID"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["short_text"] == "INV"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["text"] == "INVALID"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["short_text"] == "INV"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["text"] == "INVALID"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["short_text"] == "INV"
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["border"] == (235, 31, 61)
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["border"] == (255, 133, 15)
-    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["border"] == (242, 38, 242)
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_STAIR)["text"] == "stair"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_STAIR)["short_text"] == "s"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALKABLE)["text"] == "walk"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALKABLE)["short_text"] == "w"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALL)["text"] == "block"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_INVISIBLE_WALL)["short_text"] == "b"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_PRIMAL_LIGHT)["text"] == "light"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.TECH_PRIMAL_LIGHT)["short_text"] == "l"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["text"] == "invalid"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["short_text"] == "inv"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["text"] == "invalid"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["short_text"] == "inv"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["text"] == "invalid"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["short_text"] == "inv"
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_GROUND)["border"] == (255, 0, 0)
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ITEM)["border"] == (255, 128, 0)
+    assert TechnicalItemRegistry.get_badge_style(TileIndicatorType.INVALID_ZONE)["border"] == (255, 0, 255)
 
 def test_search_dialog_catalog_row_badge_classification():
     # In Search for Item dialog (AdvancedFinderResultsView), rows with technical items must yield their badge
     stair_type = TechnicalItemRegistry.classify(459, 469)
     assert stair_type == TileIndicatorType.TECH_INVISIBLE_STAIR
-    assert TechnicalItemRegistry.get_badge_style(stair_type)["text"] == "STAIR"
+    assert TechnicalItemRegistry.get_badge_style(stair_type)["text"] == "stair"
 
     walk_type = TechnicalItemRegistry.classify(460, 470)
     assert walk_type == TileIndicatorType.TECH_INVISIBLE_WALKABLE
-    assert TechnicalItemRegistry.get_badge_style(walk_type)["text"] == "WALK"
+    assert TechnicalItemRegistry.get_badge_style(walk_type)["text"] == "walk"
 
     wall_type = TechnicalItemRegistry.classify(1548, 2187)
     assert wall_type == TileIndicatorType.TECH_INVISIBLE_WALL
-    assert TechnicalItemRegistry.get_badge_style(wall_type)["text"] == "BLOCK"
+    assert TechnicalItemRegistry.get_badge_style(wall_type)["text"] == "block"
 
     light_type = TechnicalItemRegistry.classify(0, 39092)
     assert light_type == TileIndicatorType.TECH_PRIMAL_LIGHT
-    assert TechnicalItemRegistry.get_badge_style(light_type)["text"] == "LIGHT"
+    assert TechnicalItemRegistry.get_badge_style(light_type)["text"] == "light"
 
     # Regular items do not display technical badges
     normal_type = TechnicalItemRegistry.classify(2160, 3031)

@@ -240,15 +240,15 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 
 		zone_spawn_color_pick->SetColour(wxColour(242, 26, 242));
 		zone_spawn_opacity_spin->SetValue(44);
-		zone_spawn_blend_choice->SetSelection(0);
+		zone_spawn_blend_choice->SetSelection(1);
 
 		house_active_color_pick->SetColour(wxColour(89, 191, 13));
 		house_active_opacity_spin->SetValue(52);
-		house_active_blend_choice->SetSelection(0);
+		house_active_blend_choice->SetSelection(1);
 
 		house_inactive_color_pick->SetColour(wxColour(92, 56, 166));
 		house_inactive_opacity_spin->SetValue(52);
-		house_inactive_blend_choice->SetSelection(0);
+		house_inactive_blend_choice->SetSelection(1);
 	});
 	PreferencesLayout::AddControlRow(
 		zone_section,

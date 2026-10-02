@@ -125,39 +125,39 @@ struct IndicatorBadgeStyle {
 inline constexpr IndicatorBadgeStyle GetIndicatorBadgeStyle(TileIndicatorType type) noexcept {
 	switch (type) {
 		case TileIndicatorType::HouseEntry:
-			return { "ENTRY", "E", 180, 235, 31, 180, 235, 31, 71, 227, 255, 143, 79, 107, 0 };
+			return { "entry", "e", 0, 255, 0, 0, 255, 0, 128, 166, 255, 166, 0, 77, 0 };
 		case TileIndicatorType::Spawn:
-			return { "SPAWN", "S", 242, 38, 242, 242, 38, 242, 71, 255, 166, 255, 122, 0, 122 };
+			return { "spawn", "s", 255, 0, 255, 255, 0, 255, 128, 255, 166, 255, 77, 0, 77 };
 		case TileIndicatorType::TownTemple:
-			return { "TOWN", "T", 255, 217, 0, 255, 217, 0, 71, 255, 245, 153, 140, 90, 0 };
+			return { "town", "t", 255, 217, 0, 255, 217, 0, 128, 255, 242, 166, 77, 65, 0 };
 		case TileIndicatorType::Waypoint:
-			return { "WAYPT", "W", 0, 229, 255, 0, 229, 255, 71, 178, 246, 255, 0, 107, 128 };
+			return { "waypt", "w", 0, 166, 255, 0, 166, 255, 128, 166, 224, 255, 0, 50, 77 };
 		case TileIndicatorType::TechInvisibleStair:
-			return { "STAIR", "S", 232, 217, 107, 232, 217, 107, 71, 247, 240, 184, 122, 110, 31 };
+			return { "stair", "s", 255, 255, 0, 255, 255, 0, 128, 255, 255, 166, 77, 77, 0 };
 		case TileIndicatorType::TechInvisibleWalkable:
-			return { "WALK", "W", 92, 184, 196, 92, 184, 196, 71, 194, 230, 236, 31, 90, 102 };
+			return { "walk", "w", 0, 255, 255, 0, 255, 255, 128, 166, 255, 255, 0, 77, 77 };
 		case TileIndicatorType::TechInvisibleWall:
-			return { "BLOCK", "B", 192, 80, 77, 192, 80, 77, 71, 232, 176, 174, 94, 31, 29 };
+			return { "block", "b", 255, 0, 0, 255, 0, 0, 128, 255, 166, 166, 77, 0, 0 };
 		case TileIndicatorType::TechPrimalLight:
-			return { "LIGHT", "L", 191, 233, 255, 191, 233, 255, 71, 240, 250, 255, 79, 143, 176 };
+			return { "light", "l", 0, 217, 255, 0, 217, 255, 128, 166, 242, 255, 0, 65, 77 };
 		case TileIndicatorType::InvalidGround:
-			return { "INVALID", "INV", 235, 31, 61, 235, 31, 61, 71, 255, 153, 173, 107, 10, 40 };
+			return { "invalid", "inv", 255, 0, 0, 255, 0, 0, 128, 255, 166, 166, 77, 0, 0 };
 		case TileIndicatorType::InvalidItem:
-			return { "INVALID", "INV", 255, 133, 15, 255, 133, 15, 71, 255, 199, 128, 138, 46, 16 };
+			return { "invalid", "inv", 255, 128, 0, 255, 128, 0, 128, 255, 217, 166, 77, 38, 0 };
 		case TileIndicatorType::InvalidZone:
-			return { "INVALID", "INV", 242, 38, 242, 242, 38, 242, 71, 255, 166, 255, 122, 0, 122 };
+			return { "invalid", "inv", 255, 0, 255, 255, 0, 255, 128, 255, 166, 255, 77, 0, 77 };
 		case TileIndicatorType::ZonePZ:
-			return { "PZ", "PZ", 47, 139, 255, 47, 139, 255, 71, 166, 210, 255, 16, 42, 140 };
+			return { "pz", "pz", 20, 117, 255, 20, 117, 255, 128, 173, 212, 255, 6, 35, 77 };
 		case TileIndicatorType::ZoneNoPvP:
-			return { "NOPVP", "NP", 31, 217, 122, 31, 217, 122, 66, 184, 255, 217, 0, 97, 72 };
+			return { "nopvp", "np", 0, 219, 92, 0, 219, 92, 128, 166, 255, 206, 0, 66, 28 };
 		case TileIndicatorType::ZoneNoLogout:
-			return { "NOLOG", "NL", 255, 133, 15, 255, 133, 15, 71, 255, 199, 128, 138, 46, 16 };
+			return { "nolog", "nl", 255, 122, 0, 255, 122, 0, 128, 255, 215, 166, 77, 37, 0 };
 		case TileIndicatorType::ZonePvP:
-			return { "PVP", "PVP", 235, 31, 61, 235, 31, 61, 71, 255, 153, 173, 107, 10, 40 };
+			return { "pvp", "pvp", 245, 26, 51, 245, 26, 51, 128, 255, 174, 183, 74, 8, 15 };
 		case TileIndicatorType::House:
-			return { "HOUSE", "H", 143, 127, 196, 143, 127, 196, 71, 210, 201, 240, 63, 52, 112 };
+			return { "house", "h", 89, 191, 13, 89, 191, 13, 128, 199, 240, 169, 27, 57, 4 };
 		default:
-			return { "?", "?", 200, 200, 200, 100, 100, 100, 100, 240, 240, 240, 50, 50, 50 };
+			return { "?", "?", 200, 200, 200, 100, 100, 100, 128, 240, 240, 240, 50, 50, 50 };
 	}
 }
 

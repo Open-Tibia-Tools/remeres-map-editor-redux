@@ -113,9 +113,9 @@ struct DrawingOptions {
 	int zone_nologout_blend_mode = 0;
 	int zone_pvp_blend_mode = 0;
 	int zone_blocking_blend_mode = 1;
-	int zone_spawn_blend_mode = 0;
-	int house_active_blend_mode = 0;
-	int house_inactive_blend_mode = 0;
+	int zone_spawn_blend_mode = 1;
+	int house_active_blend_mode = 1;
+	int house_inactive_blend_mode = 1;
 	glm::vec4 zone_border_color;
 	glm::vec4 zone_pz_color;
 	glm::vec4 zone_nopvp_color;
