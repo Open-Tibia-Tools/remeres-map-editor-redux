@@ -74,19 +74,65 @@ public:
 	                     const DrawingOptions& options,
 	                     const AtlasManager& atlas);
 
-	void draw(SpriteBatch& sprite_batch,
-	          const RenderView& view,
-	          const Map& map,
-	          const BaseMap* secondary_map,
-	          const DrawingOptions& options,
-	          const AtlasManager& atlas);
-
-	void invalidateClusters() noexcept {
-		cluster_finder_.invalidate();
-	}
-
 private:
 	ZoneClusterFinder cluster_finder_;
+
+	struct CachedRowTile {
+		const Tile* tile = nullptr;
+		bool is_pz = false;
+		bool is_nopvp = false;
+		bool is_nolog = false;
+		bool is_pvp = false;
+	};
+
+	struct PendingZoneQuad {
+		float x = 0.0f;
+		float y = 0.0f;
+		uint32_t flags = 0;
+	};
+
+	struct PendingSpawnBorder {
+		float x = 0.0f;
+		float y = 0.0f;
+		float w = 0.0f;
+		float h = 0.0f;
+		float alpha = 0.0f;
+		uint32_t flags = 0;
+	};
+
+	struct PendingBorderQuad {
+		float x = 0.0f;
+		float y = 0.0f;
+		uint32_t flags = 0;
+	};
+
+	struct PendingHighlightQuad {
+		float x = 0.0f;
+		float y = 0.0f;
+		uint32_t flags = 0;
+	};
+
+	// Contiguous reusable buffers across render frames (DOD)
+	std::vector<CachedRowTile> row_prev_;
+	std::vector<CachedRowTile> row_curr_;
+	std::vector<CachedRowTile> row_next_;
+	std::vector<VisibleZoneTile> visible_zone_tiles_;
+	std::vector<PendingZoneQuad> alpha_zone_quads_;
+	std::vector<PendingZoneQuad> mult_zone_quads_;
+	std::vector<PendingZoneQuad> border_zone_quads_;
+	std::vector<PendingSpawnBorder> spawn_borders_;
+
+	std::vector<uint8_t> blocking_row_prev_;
+	std::vector<uint8_t> blocking_row_curr_;
+	std::vector<uint8_t> blocking_row_next_;
+	std::vector<PendingBorderQuad> blocking_border_quads_;
+
+	std::vector<uint32_t> house_row_prev_;
+	std::vector<uint32_t> house_row_curr_;
+	std::vector<uint32_t> house_row_next_;
+	std::vector<PendingBorderQuad> house_border_quads_;
+
+	std::vector<PendingHighlightQuad> highlight_quads_;
 };
 
 } // namespace rme::rendering
