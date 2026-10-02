@@ -188,8 +188,8 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    // 1. GLOBAL OUTER OUTLINE WITH KITCHEN TILE BEVEL (when zone borders are enabled and not multiplicative)
-    if (uShowZoneBorders != 0 && (flags & (1u << 19)) == 0u) {
+    // 1. GLOBAL OUTER OUTLINE WITH KITCHEN TILE BEVEL (when zone borders are enabled)
+    if (uShowZoneBorders != 0) {
         bool isOuter = (bNorthOuter && tile_ly == 0) ||
                        (bSouthOuter && tile_ly == 31) ||
                        (bWestOuter  && tile_lx == 0) ||
@@ -205,7 +205,7 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
                        (bEastOuter  && tile_lx == 30);
         if (isInner) {
             bool isTopLeft = (bNorthOuter && tile_ly == 1) || (bWestOuter && tile_lx == 1);
-            outLayer = isTopLeft ? vec4(1.0, 1.0, 1.0, 0.95) : vec4(0.88, 0.88, 0.92, 0.85);
+            outLayer = isTopLeft ? vec4(0.92, 0.92, 0.95, 0.85) : vec4(0.70, 0.70, 0.75, 0.75);
             return true;
         }
     }
@@ -261,8 +261,8 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
         return false;
     }
 
-    // 1. GLOBAL OUTER OUTLINE WITH KITCHEN TILE BEVEL (when zone borders are enabled and not multiplicative)
-    if (uShowZoneBorders != 0 && (flags & (1u << 19)) == 0u) {
+    // 1. GLOBAL OUTER OUTLINE WITH KITCHEN TILE BEVEL (when zone borders are enabled)
+    if (uShowZoneBorders != 0) {
         bool isOuter = (bNorth && ly == 0) ||
                        (bSouth && ly == maxY) ||
                        (bWest  && lx == 0) ||
@@ -278,7 +278,7 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
                        (bEast  && lx == maxX - 1);
         if (isInner) {
             bool isTopLeft = (bNorth && ly == 1) || (bWest && lx == 1);
-            outLayer = isTopLeft ? vec4(1.0, 1.0, 1.0, 0.95) : vec4(0.88, 0.88, 0.92, 0.85);
+            outLayer = isTopLeft ? vec4(0.92, 0.92, 0.95, 0.85) : vec4(0.70, 0.70, 0.75, 0.75);
             return true;
         }
     }
@@ -296,8 +296,8 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    // 1. GLOBAL OUTER OUTLINE WITH KITCHEN TILE BEVEL (when zone borders are enabled and not multiplicative)
-    if (uShowZoneBorders != 0 && (flags & (1u << 19)) == 0u) {
+    // 1. GLOBAL OUTER OUTLINE WITH KITCHEN TILE BEVEL (when zone borders are enabled)
+    if (uShowZoneBorders != 0) {
         bool isOuter = (bNorth && tile_ly == 0) ||
                        (bSouth && tile_ly == 31) ||
                        (bWest  && tile_lx == 0) ||
@@ -313,7 +313,7 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
                        (bEast  && tile_lx == 30);
         if (isInner) {
             bool isTopLeft = (bNorth && tile_ly == 1) || (bWest && tile_lx == 1);
-            outLayer = isTopLeft ? vec4(1.0, 1.0, 1.0, 0.95) : vec4(0.88, 0.88, 0.92, 0.85);
+            outLayer = isTopLeft ? vec4(0.92, 0.92, 0.95, 0.85) : vec4(0.70, 0.70, 0.75, 0.75);
             return true;
         }
     }
@@ -344,44 +344,6 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, uint zone
     int maxY = int(max(quadSize.y - 1.0, 0.0));
     int lx = clamp(int(floor(quadCoord.x * quadSize.x)), 0, maxX);
     int ly = clamp(int(floor(quadCoord.y * quadSize.y)), 0, maxY);
-
-    // Dedicated border-only pass quad (Bit 21 = 1u << 21)
-    if ((flags & (1u << 21)) != 0u) {
-        if (uShowZoneBorders == 0) {
-            return false;
-        }
-
-        int tile_lx = lx % 32;
-        int tile_ly = ly % 32;
-
-        bool bN = (flags & ((1u << 6) | (1u << 10) | (1u << 14))) != 0u;
-        bool bS = (flags & ((1u << 7) | (1u << 11) | (1u << 15))) != 0u;
-        bool bW = (flags & ((1u << 8) | (1u << 12) | (1u << 16))) != 0u;
-        bool bE = (flags & ((1u << 9) | (1u << 13) | (1u << 17))) != 0u;
-
-        // 1. Outer 1px black border
-        bool isOuter = (bN && (tile_ly == 0 || ly == 0)) ||
-                       (bS && (tile_ly == 31 || ly == maxY)) ||
-                       (bW && (tile_lx == 0 || lx == 0)) ||
-                       (bE && (tile_lx == 31 || lx == maxX));
-        if (isOuter) {
-            outColor = uZoneBorderColor;
-            return true;
-        }
-
-        // 2. Inner 1px bright whitish border (kitchen tile bevel)
-        bool isInner = (bN && (tile_ly == 1 || ly == 1)) ||
-                       (bS && (tile_ly == 30 || ly == maxY - 1)) ||
-                       (bW && (tile_lx == 1 || lx == 1)) ||
-                       (bE && (tile_lx == 30 || lx == maxX - 1));
-        if (isInner) {
-            bool isTopLeft = (bN && (tile_ly == 1 || ly == 1)) || (bW && (tile_lx == 1 || lx == 1));
-            outColor = isTopLeft ? vec4(1.0, 1.0, 1.0, 0.95) : vec4(0.88, 0.88, 0.92, 0.85);
-            return true;
-        }
-
-        return false;
-    }
 
     vec4 color = vec4(0.0);
     bool hasOverlay = false;

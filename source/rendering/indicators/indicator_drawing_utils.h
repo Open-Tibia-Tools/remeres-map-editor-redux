@@ -39,21 +39,21 @@ inline void DrawNanoVGIndicatorBadge(
 	nvgFill(vg);
 
 	// 3. Kitchen Tile Bevel (1px inner light border)
-	// Top & Left: 1px pure white highlight
+	// Top & Left: 1px light highlight
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, bx + 1.5f, by + bsize - 2.0f);
 	nvgLineTo(vg, bx + 1.5f, by + 1.5f);
 	nvgLineTo(vg, bx + bsize - 2.0f, by + 1.5f);
-	nvgStrokeColor(vg, nvgRGBA(255, 255, 255, 235));
+	nvgStrokeColor(vg, nvgRGBA(style.light_r, style.light_g, style.light_b, 220));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 
-	// Bottom & Right: 1px bright light tint bevel
+	// Bottom & Right: 1px subtle dark shadow
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, bx + 2.0f, by + bsize - 1.5f);
 	nvgLineTo(vg, bx + bsize - 1.5f, by + bsize - 1.5f);
 	nvgLineTo(vg, bx + bsize - 1.5f, by + 2.0f);
-	nvgStrokeColor(vg, nvgRGBA(style.light_r, style.light_g, style.light_b, 200));
+	nvgStrokeColor(vg, nvgRGBA(style.dark_r, style.dark_g, style.dark_b, 180));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 
