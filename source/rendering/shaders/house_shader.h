@@ -26,17 +26,16 @@ void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint 
 
     bool isActive = (uHouseId == currentHouseId);
 
-    // Multiplicative tints:
-    // House Active: Lime green (matching ENTRY), House Inactive: Muted violet
-    vec3 zTint = isActive ? vec3(0.85, 1.00, 0.45) : vec3(0.80, 0.74, 0.92);
+    // House Active: #B4EB1F (Lime green, same as ENTRY), House Inactive: #8F7FC4 (muted violet)
+    vec4 zWash = isActive ? vec4(0.71, 0.92, 0.12, 0.30) : vec4(0.56, 0.50, 0.77, 0.28);
 
     if (houseId < 0.0) {
-        // Base House Shader (ground): seamless multiplicative tint (NO inside lines or bevels)
-        fragColor.rgb *= zTint;
+        // Base House Shader (ground): clean translucent wash (NO inside lines or bevels)
+        fragColor.rgb = mix(fragColor.rgb, zWash.rgb, zWash.a);
     } else {
-        // Extended House Shader (items/walls): seamless multiplicative tint
-        vec3 itemTint = mix(vec3(1.0), zTint, 0.80);
-        fragColor.rgb *= itemTint;
+        // Extended House Shader (items/walls): clean translucent wash
+        vec4 itemWash = vec4(zWash.rgb, zWash.a * 0.70);
+        fragColor.rgb = mix(fragColor.rgb, itemWash.rgb, itemWash.a);
     }
 }
 )";

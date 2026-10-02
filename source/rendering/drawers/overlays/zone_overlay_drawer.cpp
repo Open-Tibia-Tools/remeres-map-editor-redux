@@ -62,9 +62,6 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		return;
 	}
 
-	// Switch to multiplicative blending for ground zone tint quads and spawn boxes
-	sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
-
 	const ViewBounds bounds = view.getBoundsForFloor(z);
 	const float floor_alpha = (z == view.floor) ? 1.0f : std::max(0.25f, 1.0f - static_cast<float>(view.floor - z) * 0.20f);
 
@@ -209,8 +206,6 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		}
 	}
 
-	// 4. Restore standard alpha blending for spawn center badges and subsequent passes
-	sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 
 	if (options.show_spawns) {
 		for (const Position& spos : map.spawns) {
@@ -257,9 +252,6 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	if (!white_pixel) {
 		return;
 	}
-
-	// Switch to multiplicative blending for blocking tint quads
-	sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
 
 	const ViewBounds bounds = view.getBoundsForFloor(z);
 	const float floor_alpha = (z == view.floor) ? 1.0f : std::max(0.25f, 1.0f - static_cast<float>(view.floor - z) * 0.20f);
@@ -310,9 +302,6 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 		std::swap(row_prev, row_curr);
 		std::swap(row_curr, row_next);
 	}
-
-	// Restore standard alpha blending for subsequent passes
-	sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 }
 
 void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,

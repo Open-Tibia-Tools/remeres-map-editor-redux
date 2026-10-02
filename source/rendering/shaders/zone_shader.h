@@ -14,7 +14,7 @@ namespace rme::rendering::shaders {
 inline constexpr std::string_view ZONE_SHADER_GLSL = R"(
 void blendOverlayLayer(inout vec4 baseColor, inout bool hasOverlay, vec4 layerColor) {
     if (hasOverlay) {
-        baseColor.rgb *= layerColor.rgb;
+        baseColor.rgb = mix(baseColor.rgb, layerColor.rgb, layerColor.a);
         baseColor.a = max(baseColor.a, layerColor.a);
     } else {
         baseColor = layerColor;
@@ -200,25 +200,47 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
         return true;
     }
 
-    // 2. INTERIOR MULTIPLICATIVE TINTS (Zero inside lines, zero bevels)
-    // PZ: Azure, Non-PvP: Emerald, No-Logout: Warm Orange, PvP Zone: Ruby
-    vec4 pzTint  = vec4(0.50, 0.78, 1.00, 1.0);
-    vec4 npTint  = vec4(0.50, 1.00, 0.68, 1.0);
-    vec4 nlTint  = vec4(1.00, 0.70, 0.30, 1.0);
-    vec4 pvpTint = vec4(1.00, 0.40, 0.48, 1.0);
+    // 2. INTERIOR CLEAN TRANSLUCENT WASH + VORONOI 4-SPLIT (Zero inside lines, zero bevels)
+    // Protection Zone: #2F8BFF (Azure Blue, ~30% alpha)
+    // Non-PvP: #1FD97A (Mint/Emerald Green, ~28% alpha)
+    // No-Logout: #FF850F (Warm Orange, ~30% alpha)
+    // PvP Zone: #EB1F3D (Warm Red, ~30% alpha)
+    vec4 pzWash  = vec4(0.18, 0.55, 1.00, 0.30);
+    vec4 npWash  = vec4(0.12, 0.85, 0.48, 0.28);
+    vec4 nlWash  = vec4(1.00, 0.52, 0.06, 0.30);
+    vec4 pvpWash = vec4(0.92, 0.12, 0.24, 0.30);
 
     bool hasPz  = ((flags & 4u) != 0u);
     bool hasNp  = ((flags & 8u) != 0u);
     bool hasNl  = ((flags & 16u) != 0u);
     bool hasPvp = ((flags & 32u) != 0u);
 
-    vec4 zTint = vec4(1.0);
-    if (hasPz)  zTint.rgb *= pzTint.rgb;
-    if (hasNp)  zTint.rgb *= npTint.rgb;
-    if (hasNl)  zTint.rgb *= nlTint.rgb;
-    if (hasPvp) zTint.rgb *= pvpTint.rgb;
+    // Voronoi quadrant resolution:
+    // Top-Left: PZ, Top-Right: Non-PvP, Bottom-Left: No-Logout, Bottom-Right: PvP
+    vec4 zWash = vec4(0.0);
+    int minDist = 999999;
+    if (hasPz) {
+        int d = tile_lx * tile_lx + tile_ly * tile_ly;
+        if (d < minDist) { minDist = d; zWash = pzWash; }
+    }
+    if (hasNp) {
+        int dx = 31 - tile_lx;
+        int d = dx * dx + tile_ly * tile_ly;
+        if (d < minDist) { minDist = d; zWash = npWash; }
+    }
+    if (hasNl) {
+        int dy = 31 - tile_ly;
+        int d = tile_lx * tile_lx + dy * dy;
+        if (d < minDist) { minDist = d; zWash = nlWash; }
+    }
+    if (hasPvp) {
+        int dx = 31 - tile_lx;
+        int dy = 31 - tile_ly;
+        int d = dx * dx + dy * dy;
+        if (d < minDist) { minDist = d; zWash = pvpWash; }
+    }
 
-    outLayer = zTint;
+    outLayer = zWash;
     return true;
 }
 
@@ -228,7 +250,7 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
     }
 
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
-    vec4 spawnTint = vec4(1.00, 0.45, 1.00, 1.0);
+    vec4 spawnWash = vec4(0.95, 0.15, 0.95, 0.28);
 
     // 1. GLOBAL OUTER OUTLINE (2px solid black) on perimeter
     if ((bNorth && (ly == 0 || ly == 1)) ||
@@ -239,8 +261,8 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
         return true;
     }
 
-    // 2. Interior Multiplicative Tint (NO inside kitchen tile lines, NO bevels)
-    outLayer = spawnTint;
+    // 2. Interior Clean Translucent Wash (NO inside kitchen tile lines, NO bevels)
+    outLayer = spawnWash;
     return true;
 }
 
@@ -253,7 +275,7 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
     int tile_ly = ly % 32;
 
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
-    vec4 blockTint = vec4(1.00, 0.50, 0.50, 1.0);
+    vec4 blockWash = vec4(0.75, 0.31, 0.30, 0.28);
 
     // 1. GLOBAL OUTER OUTLINE (2px solid black)
     // Only applied where neighbor is NOT blocking
@@ -274,8 +296,8 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
         return true;
     }
 
-    // 2. Interior Multiplicative Tint (zero inside lines or bevels)
-    outLayer = blockTint;
+    // 2. Interior Clean Translucent Wash (zero inside lines or bevels)
+    outLayer = blockWash;
     return true;
 }
 

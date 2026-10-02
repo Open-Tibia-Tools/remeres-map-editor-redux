@@ -184,21 +184,21 @@ def test_zone_shader_3d_bevel_and_colors():
     # Global 2px black outer outline must be present
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in fn_body, "2px global black outline must be defined"
 
-    # PZ (flags & 4u) must have cool azure multiplicative tint
+    # PZ (flags & 4u) must have cool azure wash
     assert "flags & 4u" in fn_body
-    assert "0.50, 0.78, 1.00, 1.0" in fn_body, "PZ tint must be cool azure"
+    assert "0.18, 0.55, 1.00, 0.30" in fn_body, "PZ wash must be cool azure"
 
-    # No-PvP (flags & 8u) must have cool mint green multiplicative tint
+    # No-PvP (flags & 8u) must have cool mint green wash
     assert "flags & 8u" in fn_body
-    assert "0.50, 1.00, 0.68, 1.0" in fn_body, "No-PvP tint must be cool mint green"
+    assert "0.12, 0.85, 0.48, 0.28" in fn_body, "No-PvP wash must be cool mint green"
 
-    # No-Logout (flags & 16u) must have warm orange multiplicative tint
+    # No-Logout (flags & 16u) must have warm orange wash
     assert "flags & 16u" in fn_body
-    assert "1.00, 0.70, 0.30, 1.0" in fn_body, "No-Logout tint must be warm orange"
+    assert "1.00, 0.52, 0.06, 0.30" in fn_body, "No-Logout wash must be warm orange"
 
-    # PvP Zone (flags & 32u) must have warm red multiplicative tint
+    # PvP Zone (flags & 32u) must have warm red wash
     assert "flags & 32u" in fn_body
-    assert "1.00, 0.40, 0.48, 1.0" in fn_body, "PvP Zone tint must be warm red"
+    assert "0.92, 0.12, 0.24, 0.30" in fn_body, "PvP Zone wash must be warm red"
 
     # Cluster badge evaluation helper must be present
     assert "evaluateClusterBadge" in content
@@ -210,19 +210,19 @@ def test_zone_shader_3d_bevel_and_colors():
     assert "!bSouthOuter && tile_ly == 31" not in fn_body
     assert "!bEastOuter && tile_lx == 31" not in fn_body
 
-    # Blocking overlay must have 2px black border and multiplicative red tint
+    # Blocking overlay must have 2px black border and clean translucent red wash
     assert "evaluateBlockingOverlay" in content
     b_idx = content.find("evaluateBlockingOverlay")
     b_body = content[b_idx:b_idx + 600]
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in b_body, "Blocking perimeter must be 2px black"
-    assert "1.00, 0.50, 0.50, 1.0" in b_body, "Blocking tint must be multiplicative red"
+    assert "0.75, 0.31, 0.30, 0.28" in b_body, "Blocking wash must be clean translucent red"
 
-    # Spawn overlay must have 2px black perimeter and multiplicative magenta tint
+    # Spawn overlay must have 2px black perimeter and clean translucent magenta wash
     assert "evaluateSpawnOverlay" in content
     s_idx = content.find("evaluateSpawnOverlay")
     s_body = content[s_idx:s_idx + 600]
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in s_body, "Spawn perimeter must be 2px black"
-    assert "1.00, 0.45, 1.00, 1.0" in s_body, "Spawn tint must be multiplicative magenta"
+    assert "0.95, 0.15, 0.95, 0.28" in s_body, "Spawn wash must be clean translucent magenta"
 
 
 def test_indicator_shader_standardized_system():
@@ -389,33 +389,57 @@ def test_zone_shader_multi_zone_quadrants_and_badges():
     assert "pMask" in badge_body and "zMask" in badge_body
     assert "nMask" in badge_body and "lMask" in badge_body and "vMask" in badge_body
 
-    # Verify multiplicative compounding across active zones without inside borders
-    assert "zTint.rgb *= pzTint.rgb;" in fn_body
-    assert "zTint.rgb *= npTint.rgb;" in fn_body
-    assert "zTint.rgb *= nlTint.rgb;" in fn_body
-    assert "zTint.rgb *= pvpTint.rgb;" in fn_body
+    # Verify Voronoi quadrant resolution across active zones without inside borders
+    assert "minDist" in fn_body
+    assert "tile_lx * tile_lx + tile_ly * tile_ly" in fn_body
+    assert "31 - tile_lx" in fn_body
+    assert "31 - tile_ly" in fn_body
 
-    # Simulate multiplicative compounding in Python and verify correctness
-    def resolve_tint(flags):
-        pz = (0.50, 0.78, 1.00)
-        np = (0.50, 1.00, 0.68)
-        nl = (1.00, 0.70, 0.30)
-        pvp = (1.00, 0.40, 0.48)
-        tint = [1.0, 1.0, 1.0]
+    # Simulate Voronoi quadrant resolution in Python and verify correctness
+    def resolve_voronoi_zone(flags, lx, ly):
+        pz = (0.18, 0.55, 1.00, 0.30)
+        np = (0.12, 0.85, 0.48, 0.28)
+        nl = (1.00, 0.52, 0.06, 0.30)
+        pvp = (0.92, 0.12, 0.24, 0.30)
+        min_dist = 999999
+        chosen = (0.0, 0.0, 0.0, 0.0)
         if flags & 4:
-            tint = [t * p for t, p in zip(tint, pz)]
+            d = lx * lx + ly * ly
+            if d < min_dist:
+                min_dist = d
+                chosen = pz
         if flags & 8:
-            tint = [t * p for t, p in zip(tint, np)]
+            dx = 31 - lx
+            d = dx * dx + ly * ly
+            if d < min_dist:
+                min_dist = d
+                chosen = np
         if flags & 16:
-            tint = [t * p for t, p in zip(tint, nl)]
+            dy = 31 - ly
+            d = lx * lx + dy * dy
+            if d < min_dist:
+                min_dist = d
+                chosen = nl
         if flags & 32:
-            tint = [t * p for t, p in zip(tint, pvp)]
-        return tuple(round(c, 4) for c in tint)
+            dx = 31 - lx
+            dy = 31 - ly
+            d = dx * dx + dy * dy
+            if d < min_dist:
+                min_dist = d
+                chosen = pvp
+        return chosen
 
     all_flags = 4 | 8 | 16 | 32
-    assert resolve_tint(all_flags) == (0.25, 0.2184, 0.0979)
-    assert resolve_tint(4 | 8) == (0.25, 0.78, 0.68)
-    assert resolve_tint(4) == (0.50, 0.78, 1.00)
+    # Top-Left corner (lx=2, ly=2) is closest to (0,0) -> PZ
+    assert resolve_voronoi_zone(all_flags, 2, 2) == (0.18, 0.55, 1.00, 0.30)
+    # Top-Right corner (lx=29, ly=2) is closest to (31,0) -> NP
+    assert resolve_voronoi_zone(all_flags, 29, 2) == (0.12, 0.85, 0.48, 0.28)
+    # Bottom-Left corner (lx=2, ly=29) is closest to (0,31) -> NL
+    assert resolve_voronoi_zone(all_flags, 2, 29) == (1.00, 0.52, 0.06, 0.30)
+    # Bottom-Right corner (lx=29, ly=29) is closest to (31,31) -> PvP
+    assert resolve_voronoi_zone(all_flags, 29, 29) == (0.92, 0.12, 0.24, 0.30)
+    # Single zone tile (only PZ) everywhere evaluates to PZ
+    assert resolve_voronoi_zone(4, 29, 29) == (0.18, 0.55, 1.00, 0.30)
 
 
 def test_zone_cluster_finder_algorithm():
