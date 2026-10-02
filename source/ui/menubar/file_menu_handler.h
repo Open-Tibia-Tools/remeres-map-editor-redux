@@ -2,6 +2,7 @@
 #define RME_UI_MENUBAR_FILE_MENU_HANDLER_H
 
 #include <wx/wx.h>
+#include <wx/weakref.h>
 
 class MainFrame;
 class MainMenuBar;
@@ -36,7 +37,7 @@ public:
 protected:
 	MainFrame* frame;
 	MainMenuBar* menubar;
-	PreferencesWindow* preferences_dialog_ = nullptr;
+	wxWeakRef<PreferencesWindow> preferences_dialog_;
 };
 
 #endif
