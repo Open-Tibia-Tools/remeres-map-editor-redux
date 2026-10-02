@@ -111,11 +111,11 @@ void DragShadowDrawer::draw(SpriteBatch& sprite_batch, Editor& editor, const std
 							const float spawn_w = static_cast<float>((sx1 - sx0 + 1) * 32);
 							const float spawn_h = static_cast<float>((sy1 - sy0 + 1) * 32);
 
-							const float spawn_flags = rme::rendering::ZONE_FLAG_SPAWN +
-							                          rme::rendering::ZONE_FLAG_SPAWN_BORDER_N +
-							                          rme::rendering::ZONE_FLAG_SPAWN_BORDER_S +
-							                          rme::rendering::ZONE_FLAG_SPAWN_BORDER_W +
-							                          rme::rendering::ZONE_FLAG_SPAWN_BORDER_E;
+							const uint32_t spawn_flags = rme::rendering::ZONE_FLAG_SPAWN |
+							                             rme::rendering::ZONE_FLAG_SPAWN_BORDER_N |
+							                             rme::rendering::ZONE_FLAG_SPAWN_BORDER_S |
+							                             rme::rendering::ZONE_FLAG_SPAWN_BORDER_W |
+							                             rme::rendering::ZONE_FLAG_SPAWN_BORDER_E;
 
 							sprite_batch.draw(static_cast<float>(draw_x0), static_cast<float>(draw_y0),
 							                  spawn_w, spawn_h, *white_pixel, 1.0f, 1.0f, 1.0f, 0.70f,

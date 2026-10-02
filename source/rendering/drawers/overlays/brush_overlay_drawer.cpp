@@ -39,16 +39,16 @@
 
 namespace {
 
-float getZoneFlagForBrush(const FlagBrush* flag_brush) noexcept {
+uint32_t getZoneFlagForBrush(const FlagBrush* flag_brush) noexcept {
 	if (!flag_brush) {
-		return 0.0f;
+		return 0u;
 	}
 	switch (flag_brush->getFlag()) {
 		case TILESTATE_PROTECTIONZONE: return rme::rendering::ZONE_FLAG_PZ;
 		case TILESTATE_NOPVP:          return rme::rendering::ZONE_FLAG_NOPVP;
 		case TILESTATE_NOLOGOUT:       return rme::rendering::ZONE_FLAG_NOLOGOUT;
 		case TILESTATE_PVPZONE:        return rme::rendering::ZONE_FLAG_PVPZONE;
-		default:                       return 0.0f;
+		default:                       return 0u;
 	}
 }
 
@@ -241,9 +241,9 @@ void BrushOverlayDrawer::draw(
 						}
 					}
 				} else if (brush->is<FlagBrush>()) {
-					const float zf = getZoneFlagForBrush(brush->as<FlagBrush>());
+					const uint32_t zf = getZoneFlagForBrush(brush->as<FlagBrush>());
 					const AtlasRegion* white_pixel = atlas.getWhitePixel();
-					if (white_pixel && zf > 0.0f) {
+					if (white_pixel && zf != 0u) {
 						int start_x = std::min(drag_state.last_click_map_x, view.mouse_map_x);
 						int end_x = std::max(drag_state.last_click_map_x, view.mouse_map_x);
 						int start_y = std::min(drag_state.last_click_map_y, view.mouse_map_y);
@@ -253,17 +253,17 @@ void BrushOverlayDrawer::draw(
 							int cy = y * TILE_SIZE - view.view_scroll_y - view.getFloorAdjustment();
 							for (int x = start_x; x <= end_x; ++x) {
 								int cx = x * TILE_SIZE - view.view_scroll_x - view.getFloorAdjustment();
-								float border_flags = 0.0f;
-								if (y == start_y) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
-								if (y == end_y)   border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_S;
-								if (x == start_x) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
-								if (x == end_x)   border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
+								uint32_t border_flags = 0u;
+								if (y == start_y) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
+								if (y == end_y)   border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_S;
+								if (x == start_x) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
+								if (x == end_x)   border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
 
 								uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
 								if (cursor_blend_mode == 1) {
 									sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
 								}
-								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags + zf_mult);
+								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf | border_flags | zf_mult);
 								if (cursor_blend_mode == 1) {
 									sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 								}
@@ -346,25 +346,25 @@ void BrushOverlayDrawer::draw(
 							if (brush->is<RAWBrush>()) {
 								item_drawer->DrawRawBrush(sprite_batch, sprite_drawer, cx, cy, raw_brush->getItemID(), 160, 160, 160, 160, &ctx);
 							} else if (brush->is<FlagBrush>()) {
-								const float zf = getZoneFlagForBrush(brush->as<FlagBrush>());
+								const uint32_t zf = getZoneFlagForBrush(brush->as<FlagBrush>());
 								const AtlasRegion* white_pixel = atlas.getWhitePixel();
-								if (white_pixel && zf > 0.0f) {
+								if (white_pixel && zf != 0u) {
 									auto inCircle = [&](int nx, int ny) {
 										float cdx = static_cast<float>(center_x - nx);
 										float cdy = static_cast<float>(center_y - ny);
 										return sqrt(cdx * cdx + cdy * cdy) < radii;
 									};
-									float border_flags = 0.0f;
-									if (!inCircle(x, y - 1)) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
-									if (!inCircle(x, y + 1)) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_S;
-									if (!inCircle(x - 1, y)) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
-									if (!inCircle(x + 1, y)) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
+									uint32_t border_flags = 0u;
+									if (!inCircle(x, y - 1)) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
+									if (!inCircle(x, y + 1)) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_S;
+									if (!inCircle(x - 1, y)) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
+									if (!inCircle(x + 1, y)) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
 
 									uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
 									if (cursor_blend_mode == 1) {
 										sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
 									}
-									sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags + zf_mult);
+									sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf | border_flags | zf_mult);
 									if (cursor_blend_mode == 1) {
 										sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 									}
@@ -448,12 +448,12 @@ void BrushOverlayDrawer::draw(
 							if (x == 0 && y == 0) {
 								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, rme::rendering::INDICATOR_SPAWN_BASE);
 							} else {
-								float border_flags = 0.0f;
-								if (y == footprint.min_offset_y) border_flags += rme::rendering::ZONE_FLAG_SPAWN_BORDER_N;
-								if (y == footprint.max_offset_y) border_flags += rme::rendering::ZONE_FLAG_SPAWN_BORDER_S;
-								if (x == footprint.min_offset_x) border_flags += rme::rendering::ZONE_FLAG_SPAWN_BORDER_W;
-								if (x == footprint.max_offset_x) border_flags += rme::rendering::ZONE_FLAG_SPAWN_BORDER_E;
-								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, rme::rendering::ZONE_FLAG_SPAWN + border_flags);
+								uint32_t border_flags = 0u;
+								if (y == footprint.min_offset_y) border_flags |= rme::rendering::ZONE_FLAG_SPAWN_BORDER_N;
+								if (y == footprint.max_offset_y) border_flags |= rme::rendering::ZONE_FLAG_SPAWN_BORDER_S;
+								if (x == footprint.min_offset_x) border_flags |= rme::rendering::ZONE_FLAG_SPAWN_BORDER_W;
+								if (x == footprint.max_offset_x) border_flags |= rme::rendering::ZONE_FLAG_SPAWN_BORDER_E;
+								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, rme::rendering::ZONE_FLAG_SPAWN | border_flags);
 							}
 						}
 					} else if (brush->is<WaypointBrush>()) {
@@ -470,19 +470,19 @@ void BrushOverlayDrawer::draw(
 					} else if (brush->is<FlagBrush>()) {
 						const AtlasRegion* white_pixel = atlas.getWhitePixel();
 						if (white_pixel) {
-							const float zf = getZoneFlagForBrush(brush->as<FlagBrush>());
-							if (zf > 0.0f) {
-								float border_flags = 0.0f;
-								if (y == footprint.min_offset_y) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
-								if (y == footprint.max_offset_y) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_S;
-								if (x == footprint.min_offset_x) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
-								if (x == footprint.max_offset_x) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
+							const uint32_t zf = getZoneFlagForBrush(brush->as<FlagBrush>());
+							if (zf != 0u) {
+								uint32_t border_flags = 0u;
+								if (y == footprint.min_offset_y) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
+								if (y == footprint.max_offset_y) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_S;
+								if (x == footprint.min_offset_x) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
+								if (x == footprint.max_offset_x) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
 
 								uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
 								if (cursor_blend_mode == 1) {
 									sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
 								}
-								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags + zf_mult);
+								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf | border_flags | zf_mult);
 								if (cursor_blend_mode == 1) {
 									sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 								}
