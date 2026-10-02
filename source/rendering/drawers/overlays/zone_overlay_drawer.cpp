@@ -416,6 +416,93 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	}
 }
 
+void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
+                                        int z,
+                                        const RenderView& view,
+                                        const Map& map,
+                                        const BaseMap* secondary_map,
+                                        const DrawingOptions& options,
+                                        const AtlasManager& atlas) {
+	if (options.ingame || !options.show_houses || view.zoom > 10.0f) {
+		return;
+	}
+
+	const AtlasRegion* white_pixel = atlas.getWhitePixel();
+	if (!white_pixel) {
+		return;
+	}
+
+	const ViewBounds bounds = view.getBoundsForFloor(z);
+	const float floor_alpha = 1.0f;
+
+	const int min_x = bounds.start_x - 1;
+	const int max_x = bounds.end_x + 1;
+	const int row_width = max_x - min_x + 1;
+
+	std::vector<uint32_t> row_prev(row_width, 0);
+	std::vector<uint32_t> row_curr(row_width, 0);
+	std::vector<uint32_t> row_next(row_width, 0);
+
+	struct PendingBorderQuad {
+		float x, y;
+		uint32_t flags;
+	};
+	std::vector<PendingBorderQuad> border_quads;
+
+	auto fetchRow = [&](int ry, std::vector<uint32_t>& row) {
+		for (int x = min_x; x <= max_x; ++x) {
+			const Tile* t = secondary_map ? secondary_map->getTile(x, ry, z) : nullptr;
+			if (!t) {
+				t = map.getTile(x, ry, z);
+			}
+			row[x - min_x] = (t && t->isHouseTile()) ? static_cast<uint32_t>(t->getHouseID()) : 0u;
+		}
+	};
+
+	fetchRow(bounds.start_y - 1, row_prev);
+	fetchRow(bounds.start_y, row_curr);
+
+	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
+		fetchRow(y + 1, row_next);
+
+		for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
+			const int idx = x - min_x;
+			const uint32_t house_id = row_curr[idx];
+			if (house_id == 0) {
+				continue;
+			}
+
+			const bool bN = (row_prev[idx] != house_id);
+			const bool bS = (row_next[idx] != house_id);
+			const bool bW = (row_curr[idx - 1] != house_id);
+			const bool bE = (row_curr[idx + 1] != house_id);
+
+			if (options.show_zone_borders && (bN || bS || bW || bE)) {
+				uint32_t border_flags = ZONE_FLAG_BORDER_PASS | ZONE_FLAG_HOUSE;
+				if (bN) border_flags |= ZONE_FLAG_ZONE_BORDER_N;
+				if (bS) border_flags |= ZONE_FLAG_ZONE_BORDER_S;
+				if (bW) border_flags |= ZONE_FLAG_ZONE_BORDER_W;
+				if (bE) border_flags |= ZONE_FLAG_ZONE_BORDER_E;
+
+				int draw_x, draw_y;
+				view.getScreenPosition(x, y, z, draw_x, draw_y);
+				border_quads.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), border_flags });
+			}
+		}
+
+		std::swap(row_prev, row_curr);
+		std::swap(row_curr, row_next);
+	}
+
+	if (!border_quads.empty()) {
+		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+		for (const auto& q : border_quads) {
+			sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
+			                  0.0f, q.flags);
+		}
+	}
+}
+
 void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
                                                 int z,
                                                 const RenderView& view,
@@ -519,6 +606,7 @@ void ZoneOverlayDrawer::draw(SpriteBatch& sprite_batch,
 	for (int z = start_z; z >= end_z; --z) {
 		drawFloor(sprite_batch, z, view, map, secondary_map, options, atlas);
 		drawFloorBlocking(sprite_batch, z, view, map, secondary_map, options, atlas);
+		drawFloorHouses(sprite_batch, z, view, map, secondary_map, options, atlas);
 		drawFloorBadges(sprite_batch, z, view, map, secondary_map, options, atlas);
 	}
 }

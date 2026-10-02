@@ -94,7 +94,7 @@ void main() {
         }
 
         if (!evaluateZoneOverlay(vWorldPos, vQuadCoord, vQuadSize, vZoneFlags,
-                                 uShowBlocking, uShowSpawns, uShowSpecialTiles,
+                                 uShowBlocking, uShowSpawns, uShowSpecialTiles, uShowHouses,
                                  FragColor)) {
             discard;
         }

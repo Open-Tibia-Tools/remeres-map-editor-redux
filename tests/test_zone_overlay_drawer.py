@@ -36,6 +36,7 @@ SPAWN_BORDER_EAST_SHIFT  = 17
 ZONE_FLAG_CLUSTER_BADGE  = 1 << 18
 ZONE_FLAG_MULTIPLICATIVE = 1 << 19
 ZONE_FLAG_BORDER_PASS     = 1 << 21
+ZONE_FLAG_HOUSE           = 1 << 22
 
 
 class MockMapView:
@@ -158,6 +159,16 @@ def test_border_pass_uint32_bitmask():
     assert (border_flags & ZONE_FLAG_MULTIPLICATIVE) == 0, "Bit 19 (Multiplicative) must NOT be set in border pass!"
     assert (border_flags & ZONE_FLAG_BLOCKING) != 0, "Bit 0 (Blocking) must be preserved!"
     assert (border_flags & (1 << ZONE_BORDER_NORTH_SHIFT)) != 0, "Border North flag must be preserved!"
+
+
+def test_house_border_pass_uint32_bitmask():
+    """Verify that ZONE_FLAG_HOUSE and ZONE_FLAG_BORDER_PASS coexist cleanly with cardinal borders."""
+    house_flags = ZONE_FLAG_BORDER_PASS | ZONE_FLAG_HOUSE | (1 << SPECIAL_ZONE_BORDER_NORTH_SHIFT) | (1 << SPECIAL_ZONE_BORDER_EAST_SHIFT)
+    assert (house_flags & ZONE_FLAG_BORDER_PASS) != 0, "Bit 21 (Border Pass) must be set!"
+    assert (house_flags & ZONE_FLAG_HOUSE) != 0, "Bit 22 (House) must be set!"
+    assert (house_flags & (1 << SPECIAL_ZONE_BORDER_NORTH_SHIFT)) != 0, "Border North flag must be set!"
+    assert (house_flags & (1 << SPECIAL_ZONE_BORDER_EAST_SHIFT)) != 0, "Border East flag must be set!"
+    assert (house_flags & (1 << SPECIAL_ZONE_BORDER_SOUTH_SHIFT)) == 0, "Border South flag must NOT be set!"
 
 
 def test_cardinal_border_mask():

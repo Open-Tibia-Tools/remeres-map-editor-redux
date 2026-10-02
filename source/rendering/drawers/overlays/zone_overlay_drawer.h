@@ -50,6 +50,14 @@ public:
 	                       const DrawingOptions& options,
 	                       const AtlasManager& atlas);
 
+	void drawFloorHouses(SpriteBatch& sprite_batch,
+	                     int z,
+	                     const RenderView& view,
+	                     const Map& map,
+	                     const BaseMap* secondary_map,
+	                     const DrawingOptions& options,
+	                     const AtlasManager& atlas);
+
 	void drawFloorHighlightItems(SpriteBatch& sprite_batch,
 	                             int z,
 	                             const RenderView& view,

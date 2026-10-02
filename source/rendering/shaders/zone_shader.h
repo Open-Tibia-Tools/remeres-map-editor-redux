@@ -294,7 +294,7 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
 }
 
 bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, uint zoneFlags,
-                         int showBlocking, int showSpawns, int showSpecialTiles,
+                         int showBlocking, int showSpawns, int showSpecialTiles, int showHouses,
                          out vec4 outColor) {
     if (zoneFlags == 0u) {
         return false;
@@ -325,6 +325,7 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, uint zone
         if (isSpawnBox && showSpawns == 0) return false;
         if (!isSpawnBox && (flags & 1u) != 0u && showBlocking == 0) return false;
         if (!isSpawnBox && (flags & 60u) != 0u && showSpecialTiles == 0) return false;
+        if (!isSpawnBox && (flags & (1u << 22)) != 0u && showHouses == 0) return false;
 
         bool bN, bS, bW, bE;
         int py, px, my, mx;

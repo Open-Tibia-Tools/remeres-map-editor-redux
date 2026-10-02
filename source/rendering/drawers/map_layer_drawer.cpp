@@ -185,10 +185,11 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 			sprite_batch.flush(ctx.atlas);
 		}
 
-		// 4. Ground-level zone & blocking overlay pass: Special Zones, Spawns, Blocking (underneath items)
+		// 4. Ground-level zone & blocking overlay pass: Special Zones, Spawns, Blocking, Houses (underneath items)
 		if (zone_overlay_drawer && !options.ingame) {
 			zone_overlay_drawer->drawFloor(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			zone_overlay_drawer->drawFloorHouses(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
 		}
 
@@ -223,6 +224,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		if (zone_overlay_drawer && !options.ingame) {
 			zone_overlay_drawer->drawFloor(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			zone_overlay_drawer->drawFloorHouses(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
 		}
 
