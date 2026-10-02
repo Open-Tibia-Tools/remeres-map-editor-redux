@@ -522,16 +522,17 @@ name = '1098-BlackTek'
 
 [technical_items.invisible_stairs]
 server_ids = [ 459 ]
-client_ids = [ 582 ]
+client_ids = [ 469 ]
 
 [technical_items.invisible_walkable]
-server_ids = [ 9059 ]
-client_ids = [ 10076 ]
+server_ids = [ 460 ]
+client_ids = [ 470, 17970, 20028, 34168 ]
 
 [technical_items.invisible_walls]
 server_ids = [ 1548 ]
 client_ids = [ 2187 ]
 
 [technical_items.primal_lights]
-server_ids = [ 2608 ]
-client_ids = [ 3482 ]
+server_ids = [ ]
+client_ids = [ 39092, 39093, 39094, 39095, 39096, 39097, 39098, 39099, 39100, 39236, 39367, 39368 ]
+

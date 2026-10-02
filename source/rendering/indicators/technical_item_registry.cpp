@@ -60,13 +60,14 @@ void TechnicalIdFilter::sort_and_dedup() {
 }
 
 void TechnicalItemRegistry::Initialize(const toml::table& config_table) {
-	TechnicalItemLists lists;
+	TechnicalItemLists lists = CreateDefaultTechnicalLists();
 
 	const auto* tech_section = config_table.get_as<toml::table>("technical_items");
 	if (tech_section) {
 		auto read_id_array = [](const toml::table& tbl, std::string_view key, std::vector<uint32_t>& dest) {
 			const auto* arr = tbl.get_as<toml::array>(key);
 			if (arr) {
+				dest.clear();
 				dest.reserve(dest.size() + arr->size());
 				for (const auto& elem : *arr) {
 					if (auto opt = elem.value<int64_t>()) {
