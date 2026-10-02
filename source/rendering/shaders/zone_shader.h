@@ -46,26 +46,26 @@ bool evaluateClusterBadge(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 ou
     vec4 fg;
     vec4 border;
     if ((flags & 4u) != 0u) {
-        // Protection Zone: #2F8BFF
-        fg = vec4(0.18, 0.55, 1.00, 0.98);
-        border = vec4(0.18, 0.55, 1.00, 0.98);
+        // Protection Zone
+        fg = vec4(uPzWash.rgb, 0.98);
+        border = vec4(uPzWash.rgb, 0.98);
     } else if ((flags & 8u) != 0u) {
-        // Non-PvP: #1FD97A
-        fg = vec4(0.12, 0.85, 0.48, 0.98);
-        border = vec4(0.12, 0.85, 0.48, 0.98);
+        // Non-PvP
+        fg = vec4(uNpWash.rgb, 0.98);
+        border = vec4(uNpWash.rgb, 0.98);
     } else if ((flags & 16u) != 0u) {
-        // No Logout: #FF850F
-        fg = vec4(1.00, 0.52, 0.06, 0.98);
-        border = vec4(1.00, 0.52, 0.06, 0.98);
+        // No Logout
+        fg = vec4(uNlWash.rgb, 0.98);
+        border = vec4(uNlWash.rgb, 0.98);
     } else if ((flags & 32u) != 0u) {
-        // PvP: #EB1F3D
-        fg = vec4(0.92, 0.12, 0.24, 0.98);
-        border = vec4(0.92, 0.12, 0.24, 0.98);
+        // PvP
+        fg = vec4(uPvpWash.rgb, 0.98);
+        border = vec4(uPvpWash.rgb, 0.98);
     } else {
         return false;
     }
 
-    vec4 bg = vec4(0.06, 0.06, 0.09, 0.95);
+    vec4 bg = vec4(mix(vec3(0.06, 0.06, 0.09), border.rgb, 0.18), 0.95);
     vec4 shadow = vec4(0.02, 0.02, 0.03, 0.80);
 
     int bThick = (h >= 36) ? 2 : 1;
@@ -179,7 +179,7 @@ bool evaluateClusterBadge(vec2 quadCoord, vec2 quadSize, uint flags, out vec4 ou
     return true;
 }
 
-bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool bWestOuter, bool bEastOuter, int lx, int ly, out vec4 outLayer) {
+bool evaluateSpecialZones(uint flags, int lx, int ly, out vec4 outLayer) {
     bool hasZone = ((flags & 60u) != 0u);
     if (!hasZone) {
         return false;
@@ -188,19 +188,7 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    // 1. GLOBAL OUTER OUTLINE (2px black border as is)
-    if (uShowZoneBorders != 0) {
-        bool isBlack = (bNorthOuter && (tile_ly == 0 || tile_ly == 1)) ||
-                       (bSouthOuter && (tile_ly == 31 || tile_ly == 30)) ||
-                       (bWestOuter  && (tile_lx == 0 || tile_lx == 1)) ||
-                       (bEastOuter  && (tile_lx == 31 || tile_lx == 30));
-        if (isBlack) {
-            outLayer = uZoneBorderColor;
-            return true;
-        }
-    }
-
-    // 2. INTERIOR CLEAN TRANSLUCENT WASH + DIAGONAL TRIANGLE PARTITIONING
+    // INTERIOR CLEAN TRANSLUCENT WASH + DIAGONAL TRIANGLE PARTITIONING
     bool hasPz  = ((flags & 4u) != 0u);
     bool hasNp  = ((flags & 8u) != 0u);
     bool hasNl  = ((flags & 16u) != 0u);
@@ -246,49 +234,20 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
     return true;
 }
 
-bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, int lx, int ly, int maxX, int maxY, out vec4 outLayer) {
+bool evaluateSpawnOverlay(uint flags, out vec4 outLayer) {
     if ((flags & 2u) == 0u) {
         return false;
     }
 
-    // 1. GLOBAL OUTER OUTLINE (2px black border as is)
-    if (uShowZoneBorders != 0) {
-        bool isBlack = (bNorth && (ly == 0 || ly == 1)) ||
-                       (bSouth && (ly == maxY || ly == maxY - 1)) ||
-                       (bWest  && (lx == 0 || lx == 1)) ||
-                       (bEast  && (lx == maxX || lx == maxX - 1));
-        if (isBlack) {
-            outLayer = uZoneBorderColor;
-            return true;
-        }
-    }
-
-    // 2. Interior Clean Translucent Wash
     outLayer = uSpawnWash;
     return true;
 }
 
-bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool bEast, int lx, int ly, out vec4 outLayer) {
+bool evaluateBlockingOverlay(uint flags, out vec4 outLayer) {
     if ((flags & 1u) == 0u) {
         return false;
     }
 
-    int tile_lx = lx % 32;
-    int tile_ly = ly % 32;
-
-    // 1. GLOBAL OUTER OUTLINE (2px black border as is)
-    if (uShowZoneBorders != 0) {
-        bool isBlack = (bNorth && (tile_ly == 0 || tile_ly == 1)) ||
-                       (bSouth && (tile_ly == 31 || tile_ly == 30)) ||
-                       (bWest  && (tile_lx == 0 || tile_lx == 1)) ||
-                       (bEast  && (tile_lx == 31 || tile_lx == 30));
-        if (isBlack) {
-            outLayer = uZoneBorderColor;
-            return true;
-        }
-    }
-
-    // 2. Interior Clean Translucent Wash
     outLayer = uBlockingWash;
     return true;
 }
@@ -378,32 +337,18 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, uint zone
     vec4 layer;
 
     // 1. Special Zones (showSpecialTiles)
-    bool bNorthZone = (flags & (1u << 10)) != 0u;
-    bool bSouthZone = (flags & (1u << 11)) != 0u;
-    bool bWestZone  = (flags & (1u << 12)) != 0u;
-    bool bEastZone  = (flags & (1u << 13)) != 0u;
-
-    if (showSpecialTiles != 0 && evaluateSpecialZones(flags, bNorthZone, bSouthZone, bWestZone, bEastZone, lx, ly, layer)) {
+    // 1. Special Zones (showSpecialTiles)
+    if (showSpecialTiles != 0 && evaluateSpecialZones(flags, lx, ly, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
     // 2. Spawn Radius (showSpawns)
-    bool bNorthSpawn = (ly <= 1) && ((flags & (1u << 14)) != 0u);
-    bool bSouthSpawn = (ly >= maxY - 1) && ((flags & (1u << 15)) != 0u);
-    bool bWestSpawn  = (lx <= 1) && ((flags & (1u << 16)) != 0u);
-    bool bEastSpawn  = (lx >= maxX - 1) && ((flags & (1u << 17)) != 0u);
-
-    if (showSpawns != 0 && evaluateSpawnOverlay(flags, bNorthSpawn, bSouthSpawn, bWestSpawn, bEastSpawn, lx, ly, maxX, maxY, layer)) {
+    if (showSpawns != 0 && evaluateSpawnOverlay(flags, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
     // 3. Pathing / Blocking (showBlocking)
-    bool bNorthBlock = (flags & (1u << 6)) != 0u;
-    bool bSouthBlock = (flags & (1u << 7)) != 0u;
-    bool bWestBlock  = (flags & (1u << 8)) != 0u;
-    bool bEastBlock  = (flags & (1u << 9)) != 0u;
-
-    if (showBlocking != 0 && evaluateBlockingOverlay(flags, bNorthBlock, bSouthBlock, bWestBlock, bEastBlock, lx, ly, layer)) {
+    if (showBlocking != 0 && evaluateBlockingOverlay(flags, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
