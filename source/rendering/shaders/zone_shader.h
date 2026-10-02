@@ -188,24 +188,23 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    // 1. GLOBAL OUTER OUTLINE WITH KITCHEN TILE BEVEL (when zone borders are enabled)
+    // 1. GLOBAL OUTER OUTLINE (2px black border as is + 1px white with transparency)
     if (uShowZoneBorders != 0) {
-        bool isOuter = (bNorthOuter && tile_ly == 0) ||
-                       (bSouthOuter && tile_ly == 31) ||
-                       (bWestOuter  && tile_lx == 0) ||
-                       (bEastOuter  && tile_lx == 31);
-        if (isOuter) {
+        bool isBlack = (bNorthOuter && (tile_ly == 0 || tile_ly == 1)) ||
+                       (bSouthOuter && (tile_ly == 31 || tile_ly == 30)) ||
+                       (bWestOuter  && (tile_lx == 0 || tile_lx == 1)) ||
+                       (bEastOuter  && (tile_lx == 31 || tile_lx == 30));
+        if (isBlack) {
             outLayer = uZoneBorderColor;
             return true;
         }
 
-        bool isInner = (bNorthOuter && tile_ly == 1) ||
-                       (bSouthOuter && tile_ly == 30) ||
-                       (bWestOuter  && tile_lx == 1) ||
-                       (bEastOuter  && tile_lx == 30);
-        if (isInner) {
-            bool isTopLeft = (bNorthOuter && tile_ly == 1) || (bWestOuter && tile_lx == 1);
-            outLayer = isTopLeft ? vec4(0.92, 0.92, 0.95, 0.85) : vec4(0.70, 0.70, 0.75, 0.75);
+        bool isWhite = (bNorthOuter && tile_ly == 2) ||
+                       (bSouthOuter && tile_ly == 29) ||
+                       (bWestOuter  && tile_lx == 2) ||
+                       (bEastOuter  && tile_lx == 29);
+        if (isWhite) {
+            outLayer = vec4(1.0, 1.0, 1.0, 0.50);
             return true;
         }
     }
@@ -261,24 +260,23 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
         return false;
     }
 
-    // 1. GLOBAL OUTER OUTLINE WITH KITCHEN TILE BEVEL (when zone borders are enabled)
+    // 1. GLOBAL OUTER OUTLINE (2px black border as is + 1px white with transparency)
     if (uShowZoneBorders != 0) {
-        bool isOuter = (bNorth && ly == 0) ||
-                       (bSouth && ly == maxY) ||
-                       (bWest  && lx == 0) ||
-                       (bEast  && lx == maxX);
-        if (isOuter) {
+        bool isBlack = (bNorth && (ly == 0 || ly == 1)) ||
+                       (bSouth && (ly == maxY || ly == maxY - 1)) ||
+                       (bWest  && (lx == 0 || lx == 1)) ||
+                       (bEast  && (lx == maxX || lx == maxX - 1));
+        if (isBlack) {
             outLayer = uZoneBorderColor;
             return true;
         }
 
-        bool isInner = (bNorth && ly == 1) ||
-                       (bSouth && ly == maxY - 1) ||
-                       (bWest  && lx == 1) ||
-                       (bEast  && lx == maxX - 1);
-        if (isInner) {
-            bool isTopLeft = (bNorth && ly == 1) || (bWest && lx == 1);
-            outLayer = isTopLeft ? vec4(0.92, 0.92, 0.95, 0.85) : vec4(0.70, 0.70, 0.75, 0.75);
+        bool isWhite = (bNorth && ly == 2) ||
+                       (bSouth && ly == maxY - 2) ||
+                       (bWest  && lx == 2) ||
+                       (bEast  && lx == maxX - 2);
+        if (isWhite) {
+            outLayer = vec4(1.0, 1.0, 1.0, 0.50);
             return true;
         }
     }
@@ -296,24 +294,23 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    // 1. GLOBAL OUTER OUTLINE WITH KITCHEN TILE BEVEL (when zone borders are enabled)
+    // 1. GLOBAL OUTER OUTLINE (2px black border as is + 1px white with transparency)
     if (uShowZoneBorders != 0) {
-        bool isOuter = (bNorth && tile_ly == 0) ||
-                       (bSouth && tile_ly == 31) ||
-                       (bWest  && tile_lx == 0) ||
-                       (bEast  && tile_lx == 31);
-        if (isOuter) {
+        bool isBlack = (bNorth && (tile_ly == 0 || tile_ly == 1)) ||
+                       (bSouth && (tile_ly == 31 || tile_ly == 30)) ||
+                       (bWest  && (tile_lx == 0 || tile_lx == 1)) ||
+                       (bEast  && (tile_lx == 31 || tile_lx == 30));
+        if (isBlack) {
             outLayer = uZoneBorderColor;
             return true;
         }
 
-        bool isInner = (bNorth && tile_ly == 1) ||
-                       (bSouth && tile_ly == 30) ||
-                       (bWest  && tile_lx == 1) ||
-                       (bEast  && tile_lx == 30);
-        if (isInner) {
-            bool isTopLeft = (bNorth && tile_ly == 1) || (bWest && tile_lx == 1);
-            outLayer = isTopLeft ? vec4(0.92, 0.92, 0.95, 0.85) : vec4(0.70, 0.70, 0.75, 0.75);
+        bool isWhite = (bNorth && tile_ly == 2) ||
+                       (bSouth && tile_ly == 29) ||
+                       (bWest  && tile_lx == 2) ||
+                       (bEast  && tile_lx == 29);
+        if (isWhite) {
+            outLayer = vec4(1.0, 1.0, 1.0, 0.50);
             return true;
         }
     }
