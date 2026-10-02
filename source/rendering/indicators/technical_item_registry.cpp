@@ -16,27 +16,27 @@
 
 namespace rme::rendering {
 
-namespace {
-	TechnicalItemLists CreateDefaultTechnicalLists() {
-		TechnicalItemLists lists;
-		lists.invisible_stairs.server_ids = { 459 };
-		lists.invisible_stairs.client_ids = { 469 };
-		lists.invisible_walkable.server_ids = { 460 };
-		lists.invisible_walkable.client_ids = { 470, 17970, 20028, 34168 };
-		lists.invisible_walls.server_ids = { 1548 };
-		lists.invisible_walls.client_ids = { 2187 };
-		lists.primal_lights.client_ids = {
-			39092, 39093, 39094, 39095, 39096, 39097, 39098, 39099, 39100,
-			39236, 39367, 39368
-		};
-		lists.invisible_stairs.sort_and_dedup();
-		lists.invisible_walkable.sort_and_dedup();
-		lists.invisible_walls.sort_and_dedup();
-		lists.primal_lights.sort_and_dedup();
-		return lists;
-	}
+TechnicalItemLists TechnicalItemRegistry::CreateDefaultTechnicalLists() {
+	TechnicalItemLists lists;
+	lists.invisible_stairs.server_ids = { 459 };
+	lists.invisible_stairs.client_ids = { 469 };
+	lists.invisible_walkable.server_ids = { 460 };
+	lists.invisible_walkable.client_ids = { 470, 17970, 20028, 34168 };
+	lists.invisible_walls.server_ids = { 1548 };
+	lists.invisible_walls.client_ids = { 2187 };
+	lists.primal_lights.client_ids = {
+		39092, 39093, 39094, 39095, 39096, 39097, 39098, 39099, 39100,
+		39236, 39367, 39368
+	};
+	lists.invisible_stairs.sort_and_dedup();
+	lists.invisible_walkable.sort_and_dedup();
+	lists.invisible_walls.sort_and_dedup();
+	lists.primal_lights.sort_and_dedup();
+	return lists;
+}
 
-	TechnicalItemLists s_technical_lists = CreateDefaultTechnicalLists();
+namespace {
+	TechnicalItemLists s_technical_lists = TechnicalItemRegistry::CreateDefaultTechnicalLists();
 }
 
 bool TechnicalIdFilter::matches(uint32_t sid, uint32_t cid) const noexcept {
@@ -174,23 +174,6 @@ TileIndicatorType TechnicalItemRegistry::GetBrushIndicatorType(const Brush* brus
 		if (tech != TileIndicatorType::None) {
 			return tech;
 		}
-	}
-	std::string bname = brush->getName();
-	std::ranges::transform(bname, bname.begin(), [](unsigned char c) {
-		return static_cast<char>(std::tolower(c));
-	});
-
-	if (bname == "stairs" || bname == "invisible stairs" || bname == "stair") {
-		return TileIndicatorType::TechInvisibleStair;
-	}
-	if (bname == "invisible wall" || bname == "invisible walls" || bname == "block" || bname == "blocking" || bname == "wall (invisible)") {
-		return TileIndicatorType::TechInvisibleWall;
-	}
-	if (bname == "walk" || bname == "invisible walkable" || bname == "invisible floor" || bname == "invisible tile") {
-		return TileIndicatorType::TechInvisibleWalkable;
-	}
-	if (bname == "primal light" || bname == "light" || bname == "light source") {
-		return TileIndicatorType::TechPrimalLight;
 	}
 	return TileIndicatorType::None;
 }

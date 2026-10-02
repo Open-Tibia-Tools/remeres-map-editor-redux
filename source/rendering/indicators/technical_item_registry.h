@@ -81,6 +81,7 @@ struct TechnicalItemLists {
 class TechnicalItemRegistry {
 public:
 	static void Initialize(const toml::table& config_table);
+	[[nodiscard]] static TechnicalItemLists CreateDefaultTechnicalLists();
 	static void SetLists(TechnicalItemLists lists);
 	[[nodiscard]] static const TechnicalItemLists& GetLists() noexcept;
 

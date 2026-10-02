@@ -212,15 +212,16 @@ static void populateDefaultTechnicalItems(toml::table& table) {
 		return;
 	}
 
-	auto make_category = [](std::initializer_list<int64_t> server_ids, std::initializer_list<int64_t> client_ids) {
+	const auto defaults = rme::rendering::TechnicalItemRegistry::CreateDefaultTechnicalLists();
+	auto make_category = [](const std::vector<uint32_t>& server_ids, const std::vector<uint32_t>& client_ids) {
 		toml::table cat;
 		toml::array s_arr;
-		for (int64_t id : server_ids) {
-			s_arr.push_back(id);
+		for (uint32_t id : server_ids) {
+			s_arr.push_back(static_cast<int64_t>(id));
 		}
 		toml::array c_arr;
-		for (int64_t id : client_ids) {
-			c_arr.push_back(id);
+		for (uint32_t id : client_ids) {
+			c_arr.push_back(static_cast<int64_t>(id));
 		}
 		cat.insert_or_assign("server_ids", std::move(s_arr));
 		cat.insert_or_assign("client_ids", std::move(c_arr));
@@ -228,13 +229,10 @@ static void populateDefaultTechnicalItems(toml::table& table) {
 	};
 
 	toml::table tech_sec;
-	tech_sec.insert_or_assign("invisible_stairs", make_category({ 459 }, { 469 }));
-	tech_sec.insert_or_assign("invisible_walkable", make_category({ 460 }, { 470, 17970, 20028, 34168 }));
-	tech_sec.insert_or_assign("invisible_walls", make_category({ 1548 }, { 2187 }));
-	tech_sec.insert_or_assign("primal_lights", make_category({}, {
-		39092, 39093, 39094, 39095, 39096, 39097, 39098, 39099, 39100,
-		39236, 39367, 39368
-	}));
+	tech_sec.insert_or_assign("invisible_stairs", make_category(defaults.invisible_stairs.server_ids, defaults.invisible_stairs.client_ids));
+	tech_sec.insert_or_assign("invisible_walkable", make_category(defaults.invisible_walkable.server_ids, defaults.invisible_walkable.client_ids));
+	tech_sec.insert_or_assign("invisible_walls", make_category(defaults.invisible_walls.server_ids, defaults.invisible_walls.client_ids));
+	tech_sec.insert_or_assign("primal_lights", make_category(defaults.primal_lights.server_ids, defaults.primal_lights.client_ids));
 	table.insert_or_assign("technical_items", std::move(tech_sec));
 }
 
