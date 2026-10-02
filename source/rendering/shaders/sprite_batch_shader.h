@@ -73,6 +73,7 @@ uniform int uShowBlocking;
 uniform int uShowSpecialTiles;
 uniform int uShowInvalidTiles;
 uniform int uShowInvalidZones;
+uniform int uZoneBlendMode;
 
 )") + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(ZONE_SHADER_GLSL) + R"(
 
@@ -91,7 +92,13 @@ void main() {
                                  FragColor)) {
             discard;
         }
-        FragColor.a *= Tint.a * uGlobalTint.a;
+        bool isBadge = (uint(vZoneFlags + 0.5) & 4194304u) != 0u;
+        if (uZoneBlendMode == 1 && !isBadge) {
+            FragColor.rgb = mix(vec3(1.0), FragColor.rgb, FragColor.a * Tint.a * uGlobalTint.a);
+            FragColor.a = 1.0;
+        } else {
+            FragColor.a *= Tint.a * uGlobalTint.a;
+        }
         return;
     }
 
@@ -124,6 +131,7 @@ inline void SetSpriteBatchOverlayUniforms(
 	bool show_invalid_tiles,
 	bool show_invalid_zones,
 	bool show_zone_borders,
+	bool zone_multiplicative_blending,
 	const glm::vec4& zone_border_color,
 	const glm::vec4& zone_pz_color,
 	const glm::vec4& zone_nopvp_color,
@@ -147,6 +155,7 @@ inline void SetSpriteBatchOverlayUniforms(
 	shader.SetInt("uShowInvalidZones", show_invalid_zones ? 1 : 0);
 
 	shader.SetInt("uShowZoneBorders", show_zone_borders ? 1 : 0);
+	shader.SetInt("uZoneBlendMode", zone_multiplicative_blending ? 1 : 0);
 	shader.SetVec4("uZoneBorderColor", zone_border_color);
 	shader.SetVec4("uPzWash", zone_pz_color);
 	shader.SetVec4("uNpWash", zone_nopvp_color);

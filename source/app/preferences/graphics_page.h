@@ -36,6 +36,7 @@ private:
 
 	// Zone & Overlay Appearance
 	wxCheckBox* zone_borders_enabled_chkbox = nullptr;
+	wxCheckBox* zone_multiplicative_chkbox = nullptr;
 	wxColourPickerCtrl* zone_border_color_pick = nullptr;
 
 	wxColourPickerCtrl* zone_pz_color_pick = nullptr;

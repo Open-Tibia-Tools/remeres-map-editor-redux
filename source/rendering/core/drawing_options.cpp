@@ -55,12 +55,13 @@ void DrawingOptions::SetDefault() {
 	anti_aliasing = false;
 
 	show_zone_borders = true;
+	zone_multiplicative_blending = false;
 	zone_border_color = glm::vec4(13.0f / 255.0f, 13.0f / 255.0f, 18.0f / 255.0f, 250.0f / 255.0f);
 	zone_pz_color = glm::vec4(20.0f / 255.0f, 117.0f / 255.0f, 255.0f / 255.0f, 122.0f / 255.0f);
 	zone_nopvp_color = glm::vec4(0.0f / 255.0f, 220.0f / 255.0f, 92.0f / 255.0f, 117.0f / 255.0f);
 	zone_nologout_color = glm::vec4(255.0f / 255.0f, 122.0f / 255.0f, 0.0f / 255.0f, 122.0f / 255.0f);
 	zone_pvp_color = glm::vec4(245.0f / 255.0f, 26.0f / 255.0f, 51.0f / 255.0f, 122.0f / 255.0f);
-	zone_blocking_color = glm::vec4(255.0f / 255.0f, 170.0f / 255.0f, 170.0f / 255.0f, 128.0f / 255.0f);
+	zone_blocking_color = glm::vec4(0.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 128.0f / 255.0f);
 	zone_spawn_color = glm::vec4(242.0f / 255.0f, 26.0f / 255.0f, 242.0f / 255.0f, 112.0f / 255.0f);
 	house_active_color = glm::vec4(89.0f / 255.0f, 191.0f / 255.0f, 13.0f / 255.0f, 133.0f / 255.0f);
 	house_inactive_color = glm::vec4(92.0f / 255.0f, 56.0f / 255.0f, 166.0f / 255.0f, 133.0f / 255.0f);
@@ -188,6 +189,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const bool new_anti_aliasing = settings.getBoolean(Config::ANTI_ALIASING);
 
 	const bool new_show_zone_borders = settings.getBoolean(Config::ZONE_BORDERS_ENABLED);
+	const bool new_zone_multiplicative_blending = settings.getBoolean(Config::ZONE_MULTIPLICATIVE_BLENDING);
 	auto readVec4 = [&](uint32_t kr, uint32_t kg, uint32_t kb, uint32_t ka) {
 		return glm::vec4(
 			static_cast<float>(std::clamp(settings.getInteger(kr), 0, 255)) / 255.0f,
@@ -267,6 +269,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	anti_aliasing = new_anti_aliasing;
 
 	if (new_show_zone_borders != show_zone_borders ||
+		new_zone_multiplicative_blending != zone_multiplicative_blending ||
 		new_zone_border_color != zone_border_color ||
 		new_zone_pz_color != zone_pz_color ||
 		new_zone_nopvp_color != zone_nopvp_color ||
@@ -280,6 +283,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	}
 
 	show_zone_borders = new_show_zone_borders;
+	zone_multiplicative_blending = new_zone_multiplicative_blending;
 	zone_border_color = new_zone_border_color;
 	zone_pz_color = new_zone_pz_color;
 	zone_nopvp_color = new_zone_nopvp_color;

@@ -8,6 +8,7 @@ Tests:
 """
 
 import pytest
+from pathlib import Path
 
 # Zone flag constants matching zone_flags.h
 ZONE_FLAG_BLOCKING       = 1 << 0  # 1
@@ -238,14 +239,15 @@ def test_zone_shader_3d_bevel_and_colors():
     settings_path = Path(__file__).parent.parent / "source" / "app" / "settings.cpp"
     settings_content = settings_path.read_text(encoding="utf-8")
     assert "ZONE_BORDERS_ENABLED, true" in settings_content
+    assert "ZONE_MULTIPLICATIVE_BLENDING, false" in settings_content
     assert "ZONE_BORDER_COLOR_R, 13" in settings_content
     assert "ZONE_PZ_COLOR_R, 20" in settings_content
     assert "ZONE_NOPVP_COLOR_R, 0" in settings_content
     assert "ZONE_NOLOGOUT_COLOR_R, 255" in settings_content
     assert "ZONE_PVP_COLOR_R, 245" in settings_content
-    assert "ZONE_BLOCKING_COLOR_R, 255" in settings_content
-    assert "ZONE_BLOCKING_COLOR_G, 170" in settings_content
-    assert "ZONE_BLOCKING_COLOR_B, 170" in settings_content
+    assert "ZONE_BLOCKING_COLOR_R, 0" in settings_content
+    assert "ZONE_BLOCKING_COLOR_G, 0" in settings_content
+    assert "ZONE_BLOCKING_COLOR_B, 0" in settings_content
     assert "ZONE_BLOCKING_COLOR_A, 128" in settings_content
     assert "ZONE_SPAWN_COLOR_R, 242" in settings_content
 
@@ -717,6 +719,7 @@ def test_customizable_shader_overlays_architecture():
     # 4. DrawingOptions struct members
     drawing_opts = (root / "source" / "rendering" / "core" / "drawing_options.h").read_text(encoding="utf-8")
     assert "bool show_zone_borders" in drawing_opts
+    assert "bool zone_multiplicative_blending" in drawing_opts
     assert "glm::vec4 zone_border_color;" in drawing_opts
     assert "glm::vec4 zone_pz_color;" in drawing_opts
     assert "glm::vec4 zone_blocking_color;" in drawing_opts
@@ -727,6 +730,7 @@ def test_customizable_shader_overlays_architecture():
     # 5. Settings keys
     settings_h = (root / "source" / "app" / "settings.h").read_text(encoding="utf-8")
     assert "ZONE_BORDERS_ENABLED," in settings_h
+    assert "ZONE_MULTIPLICATIVE_BLENDING," in settings_h
     assert "ZONE_BORDER_COLOR_R," in settings_h
     assert "ZONE_PZ_COLOR_R," in settings_h
     assert "ZONE_BLOCKING_COLOR_R," in settings_h
@@ -735,10 +739,40 @@ def test_customizable_shader_overlays_architecture():
     # 6. Preferences GraphicsPage controls
     graphics_page_h = (root / "source" / "app" / "preferences" / "graphics_page.h").read_text(encoding="utf-8")
     assert "wxCheckBox* zone_borders_enabled_chkbox" in graphics_page_h
+    assert "wxCheckBox* zone_multiplicative_chkbox" in graphics_page_h
     assert "wxColourPickerCtrl* zone_border_color_pick" in graphics_page_h
     assert "wxColourPickerCtrl* zone_pz_color_pick" in graphics_page_h
     assert "wxSpinCtrl* zone_pz_opacity_spin" in graphics_page_h
     assert "wxButton* reset_zone_defaults_btn" in graphics_page_h
+
+
+def test_zone_multiplicative_blending_system():
+    """Verify that multiplicative color blending is implemented end-to-end:
+    - Shader uniform uZoneBlendMode and fragment modulation
+    - SetSpriteBatchOverlayUniforms forwarding
+    - ZoneOverlayDrawer blend mode switching and restoring
+    - GraphicsPage wiring and default resetting
+    """
+    root = Path(__file__).parent.parent
+
+    # 1. Shader uniform and fragment logic
+    shader_h = (root / "source" / "rendering" / "shaders" / "sprite_batch_shader.h").read_text(encoding="utf-8")
+    assert "uniform int uZoneBlendMode;" in shader_h
+    assert "shader.SetInt(\"uZoneBlendMode\", zone_multiplicative_blending ? 1 : 0);" in shader_h
+    assert "if (uZoneBlendMode == 1 && !isBadge)" in shader_h
+    assert "FragColor.rgb = mix(vec3(1.0), FragColor.rgb, FragColor.a * Tint.a * uGlobalTint.a);" in shader_h
+
+    # 2. Zone overlay drawer blend mode switches
+    zod_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.cpp").read_text(encoding="utf-8")
+    assert "sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);" in zod_cpp
+    assert "sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);" in zod_cpp
+
+    # 3. GraphicsPage wiring
+    gp_cpp = (root / "source" / "app" / "preferences" / "graphics_page.cpp").read_text(encoding="utf-8")
+    assert "zone_multiplicative_chkbox = PreferencesLayout::AddCheckBoxRow" in gp_cpp
+    assert "g_settings.setInteger(Config::ZONE_MULTIPLICATIVE_BLENDING, zone_multiplicative_chkbox->GetValue());" in gp_cpp
+    assert "zone_multiplicative_chkbox->SetValue(false);" in gp_cpp
+
 
 
 

@@ -105,6 +105,7 @@ struct DrawingOptions {
 
 	// Zone & Overlay customizable colors, opacity, and borders
 	bool show_zone_borders = true;
+	bool zone_multiplicative_blending = false;
 	glm::vec4 zone_border_color;
 	glm::vec4 zone_pz_color;
 	glm::vec4 zone_nopvp_color;

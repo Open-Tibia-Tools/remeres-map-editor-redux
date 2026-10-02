@@ -114,6 +114,13 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		g_settings.getBoolean(Config::ZONE_BORDERS_ENABLED)
 	);
 
+	zone_multiplicative_chkbox = PreferencesLayout::AddCheckBoxRow(
+		zone_section,
+		"Use multiplicative color blending",
+		"Tint tile textures multiplicatively (classic RME style) instead of drawing a semi-transparent color wash.",
+		g_settings.getBoolean(Config::ZONE_MULTIPLICATIVE_BLENDING)
+	);
+
 	zone_border_color_pick = new wxColourPickerCtrl(
 		zone_section,
 		wxID_ANY,
@@ -230,6 +237,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 	reset_zone_defaults_btn = new wxButton(zone_section, wxID_ANY, "Reset Overlays to Defaults");
 	reset_zone_defaults_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
 		zone_borders_enabled_chkbox->SetValue(true);
+		zone_multiplicative_chkbox->SetValue(false);
 		zone_border_color_pick->SetColour(wxColour(13, 13, 18));
 
 		zone_pz_color_pick->SetColour(wxColour(20, 117, 255));
@@ -244,7 +252,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		zone_pvp_color_pick->SetColour(wxColour(245, 26, 51));
 		zone_pvp_opacity_spin->SetValue(48);
 
-		zone_blocking_color_pick->SetColour(wxColour(255, 170, 170));
+		zone_blocking_color_pick->SetColour(wxColour(0, 0, 0));
 		zone_blocking_opacity_spin->SetValue(50);
 
 		zone_spawn_color_pick->SetColour(wxColour(242, 26, 242));
@@ -432,6 +440,7 @@ void GraphicsPage::Apply() {
 	g_settings.setInteger(Config::CURSOR_ALT_ALPHA, cursor_color.Alpha());
 
 	g_settings.setInteger(Config::ZONE_BORDERS_ENABLED, zone_borders_enabled_chkbox->GetValue());
+	g_settings.setInteger(Config::ZONE_MULTIPLICATIVE_BLENDING, zone_multiplicative_chkbox->GetValue());
 
 	auto border_c = zone_border_color_pick->GetColour();
 	g_settings.setInteger(Config::ZONE_BORDER_COLOR_R, border_c.Red());

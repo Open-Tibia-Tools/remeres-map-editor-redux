@@ -238,6 +238,7 @@ namespace Config {
 
 		// Zone & Overlay custom colors, opacity, and border appearance
 		ZONE_BORDERS_ENABLED,
+		ZONE_MULTIPLICATIVE_BLENDING,
 		ZONE_BORDER_COLOR_R,
 		ZONE_BORDER_COLOR_G,
 		ZONE_BORDER_COLOR_B,

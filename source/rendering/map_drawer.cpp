@@ -180,6 +180,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		options.show_invalid_tiles && !options.ingame,
 		options.show_invalid_zones && !options.ingame,
 		options.show_zone_borders,
+		options.zone_multiplicative_blending,
 		options.zone_border_color,
 		options.zone_pz_color,
 		options.zone_nopvp_color,

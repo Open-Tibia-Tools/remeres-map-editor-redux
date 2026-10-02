@@ -78,6 +78,11 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	std::vector<CachedRowTile> row_next;
 	std::vector<VisibleZoneTile> visible_zone_tiles;
 
+	const bool use_mult_zones = options.zone_multiplicative_blending && (options.show_special_tiles || options.show_spawns);
+	if (use_mult_zones) {
+		sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+	}
+
 	// 1. Special Zones Pass (Ground level)
 	if (options.show_special_tiles && view.zoom <= 10.0f) {
 		const int min_x = bounds.start_x - 1;
@@ -206,6 +211,9 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		}
 	}
 
+	if (use_mult_zones) {
+		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+	}
 
 	if (options.show_spawns) {
 		for (const Position& spos : map.spawns) {
@@ -251,6 +259,10 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	const AtlasRegion* white_pixel = atlas.getWhitePixel();
 	if (!white_pixel) {
 		return;
+	}
+
+	if (options.zone_multiplicative_blending) {
+		sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
 	}
 
 	const ViewBounds bounds = view.getBoundsForFloor(z);
@@ -301,6 +313,10 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 
 		std::swap(row_prev, row_curr);
 		std::swap(row_curr, row_next);
+	}
+
+	if (options.zone_multiplicative_blending) {
+		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 	}
 }
 
