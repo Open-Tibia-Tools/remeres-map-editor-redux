@@ -26,8 +26,8 @@ void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint 
 
     bool isActive = (uHouseId == currentHouseId);
 
-    // House Active: #B4EB1F (Lime green, same as ENTRY), House Inactive: #8F7FC4 (muted violet)
-    vec4 zWash = isActive ? vec4(0.71, 0.92, 0.12, 0.30) : vec4(0.56, 0.50, 0.77, 0.28);
+    // House Active: Vivid Lime Green #A6F20D, House Inactive: Deep Amethyst #8C66D1
+    vec4 zWash = isActive ? vec4(0.65, 0.95, 0.05, 0.44) : vec4(0.55, 0.40, 0.82, 0.42);
 
     if (houseId < 0.0) {
         // Base House Shader (ground): clean translucent wash (NO inside lines or bevels)

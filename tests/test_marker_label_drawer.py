@@ -274,7 +274,7 @@ def test_blocking_overlay_shader_colors():
 
     # Standardized 2px black border and red palette
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in fn_body, "Blocking must have 2px black perimeter"
-    assert "0.75, 0.31, 0.30, 0.28" in fn_body, "Blocking wash must be clean translucent red"
+    assert "0.85, 0.15, 0.15, 0.44" in fn_body, "Blocking wash must be deep translucent red"
 
 
 def test_marker_drawer_does_not_render_spawn_size_labels():

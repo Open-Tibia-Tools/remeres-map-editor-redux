@@ -200,47 +200,58 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
         return true;
     }
 
-    // 2. INTERIOR CLEAN TRANSLUCENT WASH + VORONOI 4-SPLIT (Zero inside lines, zero bevels)
-    // Protection Zone: #2F8BFF (Azure Blue, ~30% alpha)
-    // Non-PvP: #1FD97A (Mint/Emerald Green, ~28% alpha)
-    // No-Logout: #FF850F (Warm Orange, ~30% alpha)
-    // PvP Zone: #EB1F3D (Warm Red, ~30% alpha)
-    vec4 pzWash  = vec4(0.18, 0.55, 1.00, 0.30);
-    vec4 npWash  = vec4(0.12, 0.85, 0.48, 0.28);
-    vec4 nlWash  = vec4(1.00, 0.52, 0.06, 0.30);
-    vec4 pvpWash = vec4(0.92, 0.12, 0.24, 0.30);
+    // 2. INTERIOR CLEAN TRANSLUCENT WASH + DIAGONAL TRIANGLE PARTITIONING
+    // Protection Zone: Royal Azure Blue (~48% opacity)
+    // Non-PvP: Vivid Emerald Green (~46% opacity)
+    // No-Logout: Rich Amber-Orange (~48% opacity)
+    // PvP Zone: Deep Crimson Red (~48% opacity)
+    vec4 pzWash  = vec4(0.08, 0.46, 1.00, 0.48);
+    vec4 npWash  = vec4(0.00, 0.86, 0.36, 0.46);
+    vec4 nlWash  = vec4(1.00, 0.48, 0.00, 0.48);
+    vec4 pvpWash = vec4(0.96, 0.10, 0.20, 0.48);
 
     bool hasPz  = ((flags & 4u) != 0u);
     bool hasNp  = ((flags & 8u) != 0u);
     bool hasNl  = ((flags & 16u) != 0u);
     bool hasPvp = ((flags & 32u) != 0u);
 
-    // Voronoi quadrant resolution:
-    // Top-Left: PZ, Top-Right: Non-PvP, Bottom-Left: No-Logout, Bottom-Right: PvP
-    vec4 zWash = vec4(0.0);
-    int minDist = 999999;
-    if (hasPz) {
-        int d = tile_lx * tile_lx + tile_ly * tile_ly;
-        if (d < minDist) { minDist = d; zWash = pzWash; }
-    }
-    if (hasNp) {
-        int dx = 31 - tile_lx;
-        int d = dx * dx + tile_ly * tile_ly;
-        if (d < minDist) { minDist = d; zWash = npWash; }
-    }
-    if (hasNl) {
-        int dy = 31 - tile_ly;
-        int d = tile_lx * tile_lx + dy * dy;
-        if (d < minDist) { minDist = d; zWash = nlWash; }
-    }
-    if (hasPvp) {
-        int dx = 31 - tile_lx;
-        int dy = 31 - tile_ly;
-        int d = dx * dx + dy * dy;
-        if (d < minDist) { minDist = d; zWash = pvpWash; }
+    vec4 activeWashes[4];
+    int count = 0;
+    if (hasPz)  activeWashes[count++] = pzWash;
+    if (hasNp)  activeWashes[count++] = npWash;
+    if (hasNl)  activeWashes[count++] = nlWash;
+    if (hasPvp) activeWashes[count++] = pvpWash;
+
+    if (count == 1) {
+        outLayer = activeWashes[0];
+    } else if (count == 2) {
+        // Consistent diagonal halves (triangles):
+        // Top-Left triangle vs Bottom-Right triangle
+        outLayer = (tile_lx + tile_ly < 31) ? activeWashes[0] : activeWashes[1];
+    } else if (count == 3) {
+        // 3 triangles: Top-Left half is Zone 0; Bottom-Right half split diagonally into Zone 1 & 2
+        if (tile_lx + tile_ly < 31) {
+            outLayer = activeWashes[0];
+        } else if (tile_lx >= tile_ly) {
+            outLayer = activeWashes[1];
+        } else {
+            outLayer = activeWashes[2];
+        }
+    } else {
+        // 4 zones: symmetrical 4-triangle X meeting at center
+        bool diag1 = (tile_ly <= tile_lx);
+        bool diag2 = (tile_lx + tile_ly <= 31);
+        if (diag1 && diag2) {
+            outLayer = activeWashes[0]; // North triangle
+        } else if (diag1 && !diag2) {
+            outLayer = activeWashes[1]; // East triangle
+        } else if (!diag1 && !diag2) {
+            outLayer = activeWashes[2]; // South triangle
+        } else {
+            outLayer = activeWashes[3]; // West triangle
+        }
     }
 
-    outLayer = zWash;
     return true;
 }
 
@@ -250,7 +261,7 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
     }
 
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
-    vec4 spawnWash = vec4(0.95, 0.15, 0.95, 0.28);
+    vec4 spawnWash = vec4(0.95, 0.10, 0.95, 0.44);
 
     // 1. GLOBAL OUTER OUTLINE (2px solid black) on perimeter
     if ((bNorth && (ly == 0 || ly == 1)) ||
@@ -275,7 +286,7 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
     int tile_ly = ly % 32;
 
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
-    vec4 blockWash = vec4(0.75, 0.31, 0.30, 0.28);
+    vec4 blockWash = vec4(0.85, 0.15, 0.15, 0.44);
 
     // 1. GLOBAL OUTER OUTLINE (2px solid black)
     // Only applied where neighbor is NOT blocking

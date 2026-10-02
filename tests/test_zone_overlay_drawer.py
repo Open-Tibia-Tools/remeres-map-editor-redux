@@ -184,21 +184,21 @@ def test_zone_shader_3d_bevel_and_colors():
     # Global 2px black outer outline must be present
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in fn_body, "2px global black outline must be defined"
 
-    # PZ (flags & 4u) must have cool azure wash
+    # PZ (flags & 4u) must have deep azure wash
     assert "flags & 4u" in fn_body
-    assert "0.18, 0.55, 1.00, 0.30" in fn_body, "PZ wash must be cool azure"
+    assert "0.08, 0.46, 1.00, 0.48" in fn_body, "PZ wash must be deep azure"
 
-    # No-PvP (flags & 8u) must have cool mint green wash
+    # No-PvP (flags & 8u) must have deep emerald green wash
     assert "flags & 8u" in fn_body
-    assert "0.12, 0.85, 0.48, 0.28" in fn_body, "No-PvP wash must be cool mint green"
+    assert "0.00, 0.86, 0.36, 0.46" in fn_body, "No-PvP wash must be deep emerald green"
 
-    # No-Logout (flags & 16u) must have warm orange wash
+    # No-Logout (flags & 16u) must have rich amber orange wash
     assert "flags & 16u" in fn_body
-    assert "1.00, 0.52, 0.06, 0.30" in fn_body, "No-Logout wash must be warm orange"
+    assert "1.00, 0.48, 0.00, 0.48" in fn_body, "No-Logout wash must be rich amber orange"
 
-    # PvP Zone (flags & 32u) must have warm red wash
+    # PvP Zone (flags & 32u) must have deep crimson red wash
     assert "flags & 32u" in fn_body
-    assert "0.92, 0.12, 0.24, 0.30" in fn_body, "PvP Zone wash must be warm red"
+    assert "0.96, 0.10, 0.20, 0.48" in fn_body, "PvP Zone wash must be deep crimson red"
 
     # Cluster badge evaluation helper must be present
     assert "evaluateClusterBadge" in content
@@ -210,19 +210,19 @@ def test_zone_shader_3d_bevel_and_colors():
     assert "!bSouthOuter && tile_ly == 31" not in fn_body
     assert "!bEastOuter && tile_lx == 31" not in fn_body
 
-    # Blocking overlay must have 2px black border and clean translucent red wash
+    # Blocking overlay must have 2px black border and deep translucent red wash
     assert "evaluateBlockingOverlay" in content
     b_idx = content.find("evaluateBlockingOverlay")
     b_body = content[b_idx:b_idx + 600]
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in b_body, "Blocking perimeter must be 2px black"
-    assert "0.75, 0.31, 0.30, 0.28" in b_body, "Blocking wash must be clean translucent red"
+    assert "0.85, 0.15, 0.15, 0.44" in b_body, "Blocking wash must be deep translucent red"
 
-    # Spawn overlay must have 2px black perimeter and clean translucent magenta wash
+    # Spawn overlay must have 2px black perimeter and deep translucent magenta wash
     assert "evaluateSpawnOverlay" in content
     s_idx = content.find("evaluateSpawnOverlay")
     s_body = content[s_idx:s_idx + 600]
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in s_body, "Spawn perimeter must be 2px black"
-    assert "0.95, 0.15, 0.95, 0.28" in s_body, "Spawn wash must be clean translucent magenta"
+    assert "0.95, 0.10, 0.95, 0.44" in s_body, "Spawn wash must be deep translucent magenta"
 
 
 def test_indicator_shader_standardized_system():
@@ -389,57 +389,58 @@ def test_zone_shader_multi_zone_quadrants_and_badges():
     assert "pMask" in badge_body and "zMask" in badge_body
     assert "nMask" in badge_body and "lMask" in badge_body and "vMask" in badge_body
 
-    # Verify Voronoi quadrant resolution across active zones without inside borders
-    assert "minDist" in fn_body
-    assert "tile_lx * tile_lx + tile_ly * tile_ly" in fn_body
-    assert "31 - tile_lx" in fn_body
-    assert "31 - tile_ly" in fn_body
+    # Verify diagonal halves and triangle partitioning for overlapping zones
+    assert "tile_lx + tile_ly < 31" in fn_body
+    assert "activeWashes[0]" in fn_body
+    assert "activeWashes[1]" in fn_body
 
-    # Simulate Voronoi quadrant resolution in Python and verify correctness
-    def resolve_voronoi_zone(flags, lx, ly):
-        pz = (0.18, 0.55, 1.00, 0.30)
-        np = (0.12, 0.85, 0.48, 0.28)
-        nl = (1.00, 0.52, 0.06, 0.30)
-        pvp = (0.92, 0.12, 0.24, 0.30)
-        min_dist = 999999
-        chosen = (0.0, 0.0, 0.0, 0.0)
-        if flags & 4:
-            d = lx * lx + ly * ly
-            if d < min_dist:
-                min_dist = d
-                chosen = pz
-        if flags & 8:
-            dx = 31 - lx
-            d = dx * dx + ly * ly
-            if d < min_dist:
-                min_dist = d
-                chosen = np
-        if flags & 16:
-            dy = 31 - ly
-            d = lx * lx + dy * dy
-            if d < min_dist:
-                min_dist = d
-                chosen = nl
-        if flags & 32:
-            dx = 31 - lx
-            dy = 31 - ly
-            d = dx * dx + dy * dy
-            if d < min_dist:
-                min_dist = d
-                chosen = pvp
-        return chosen
+    # Simulate diagonal triangle partitioning in Python and verify correctness
+    def resolve_triangle_zone(flags, lx, ly):
+        pz = (0.08, 0.46, 1.00, 0.48)
+        np = (0.00, 0.86, 0.36, 0.46)
+        nl = (1.00, 0.48, 0.00, 0.48)
+        pvp = (0.96, 0.10, 0.20, 0.48)
+        active = []
+        if flags & 4:  active.append(pz)
+        if flags & 8:  active.append(np)
+        if flags & 16: active.append(nl)
+        if flags & 32: active.append(pvp)
+        if not active:
+            return (0.0, 0.0, 0.0, 0.0)
+        n = len(active)
+        if n == 1:
+            return active[0]
+        if n == 2:
+            return active[0] if (lx + ly < 31) else active[1]
+        if n == 3:
+            if lx + ly < 31:
+                return active[0]
+            return active[1] if (lx >= ly) else active[2]
+        # n == 4
+        diag1 = (ly <= lx)
+        diag2 = (lx + ly <= 31)
+        if diag1 and diag2:
+            return active[0]
+        if diag1 and not diag2:
+            return active[1]
+        if not diag1 and not diag2:
+            return active[2]
+        return active[3]
 
-    all_flags = 4 | 8 | 16 | 32
-    # Top-Left corner (lx=2, ly=2) is closest to (0,0) -> PZ
-    assert resolve_voronoi_zone(all_flags, 2, 2) == (0.18, 0.55, 1.00, 0.30)
-    # Top-Right corner (lx=29, ly=2) is closest to (31,0) -> NP
-    assert resolve_voronoi_zone(all_flags, 29, 2) == (0.12, 0.85, 0.48, 0.28)
-    # Bottom-Left corner (lx=2, ly=29) is closest to (0,31) -> NL
-    assert resolve_voronoi_zone(all_flags, 2, 29) == (1.00, 0.52, 0.06, 0.30)
-    # Bottom-Right corner (lx=29, ly=29) is closest to (31,31) -> PvP
-    assert resolve_voronoi_zone(all_flags, 29, 29) == (0.92, 0.12, 0.24, 0.30)
+    # 2 zones (PZ + No Logout): Top-Left triangle is PZ, Bottom-Right triangle is NL
+    assert resolve_triangle_zone(4 | 16, 2, 2) == (0.08, 0.46, 1.00, 0.48)
+    assert resolve_triangle_zone(4 | 16, 29, 29) == (1.00, 0.48, 0.00, 0.48)
+
+    # 2 zones (PZ + Non-PvP): Top-Left triangle is PZ, Bottom-Right triangle is NP
+    assert resolve_triangle_zone(4 | 8, 2, 2) == (0.08, 0.46, 1.00, 0.48)
+    assert resolve_triangle_zone(4 | 8, 29, 29) == (0.00, 0.86, 0.36, 0.46)
+
+    # 2 zones (PZ + PvP): Top-Left triangle is PZ, Bottom-Right triangle is PvP
+    assert resolve_triangle_zone(4 | 32, 2, 2) == (0.08, 0.46, 1.00, 0.48)
+    assert resolve_triangle_zone(4 | 32, 29, 29) == (0.96, 0.10, 0.20, 0.48)
+
     # Single zone tile (only PZ) everywhere evaluates to PZ
-    assert resolve_voronoi_zone(4, 29, 29) == (0.18, 0.55, 1.00, 0.30)
+    assert resolve_triangle_zone(4, 29, 29) == (0.08, 0.46, 1.00, 0.48)
 
 
 def test_zone_cluster_finder_algorithm():
