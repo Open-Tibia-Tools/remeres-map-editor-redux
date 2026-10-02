@@ -98,7 +98,11 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 				if (tile_zone_flags != 0) {
 					const AtlasManager* atlas = ctx ? &ctx->atlas : nullptr;
 					const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;
-					if (white_pixel) {
+					if (white_pixel && atlas) {
+						const bool is_mult = (tile_zone_flags & rme::rendering::ZONE_FLAG_MULTIPLICATIVE) != 0;
+						if (is_mult) {
+							sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, *atlas);
+						}
 						sprite_batch.draw(
 							static_cast<float>(draw_x), static_cast<float>(draw_y),
 							32.0f, 32.0f,
@@ -108,6 +112,9 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 							0.0f,
 							tile_zone_flags
 						);
+						if (is_mult) {
+							sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, *atlas);
+						}
 					}
 				}
 
