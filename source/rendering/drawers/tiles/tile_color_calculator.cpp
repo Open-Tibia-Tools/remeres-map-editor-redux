@@ -6,16 +6,6 @@
 #include <array>
 
 void TileColorCalculator::Calculate(const Tile* tile, const DrawingOptions& options, uint8_t& r, uint8_t& g, uint8_t& b) {
-	if (options.highlight_items && !tile->items.empty() && !tile->items.back()->isBorder()) {
-		int item_count = static_cast<int>(tile->items.size());
-		// Fixed point factors (x/256)
-		// 0.75 -> 192, 0.6 -> 154, 0.48 -> 123, 0.40 -> 102, 0.33 -> 84
-		static constexpr std::array<int, 5> factor = { 192, 154, 123, 102, 84 };
-		int idx = std::clamp(item_count, 1, 5) - 1;
-		g = (g * factor[idx]) >> 8;
-		r = (r * factor[idx]) >> 8;
-	}
-
 	if (options.show_only_colors) {
 		if (tile->isPZ()) {
 			b >>= 1;

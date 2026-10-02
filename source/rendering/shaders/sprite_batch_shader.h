@@ -5,6 +5,7 @@
 #include "rendering/shaders/indicator_shader.h"
 #include "rendering/shaders/house_shader.h"
 #include "rendering/shaders/zone_shader.h"
+#include "rendering/shaders/highlight_items_shader.h"
 #include <glm/vec4.hpp>
 #include <string>
 
@@ -74,7 +75,7 @@ uniform int uShowSpecialTiles;
 uniform int uShowInvalidTiles;
 uniform int uShowInvalidZones;
 
-)") + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(ZONE_SHADER_GLSL) + R"(
+)") + std::string(HIGHLIGHT_ITEMS_SHADER_GLSL) + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(ZONE_SHADER_GLSL) + R"(
 
 void main() {
     if (evaluateTileIndicator(vQuadCoord, vHouseId, uCurrentHouseId,
@@ -86,6 +87,12 @@ void main() {
     }
 
     if (vZoneFlags != 0u) {
+        vec4 highlightColor;
+        if (evaluateHighlightItems(vZoneFlags, highlightColor)) {
+            FragColor = highlightColor;
+            return;
+        }
+
         if (!evaluateZoneOverlay(vWorldPos, vQuadCoord, vQuadSize, vZoneFlags,
                                  uShowBlocking, uShowSpawns, uShowSpecialTiles,
                                  FragColor)) {
@@ -130,6 +137,7 @@ inline void SetSpriteBatchOverlayUniforms(
 	bool show_special_tiles,
 	bool show_invalid_tiles,
 	bool show_invalid_zones,
+	bool show_highlight_items,
 	bool show_zone_borders,
 	int house_active_blend_mode,
 	int house_inactive_blend_mode,
@@ -154,6 +162,7 @@ inline void SetSpriteBatchOverlayUniforms(
 	shader.SetInt("uShowSpecialTiles", show_special_tiles ? 1 : 0);
 	shader.SetInt("uShowInvalidTiles", show_invalid_tiles ? 1 : 0);
 	shader.SetInt("uShowInvalidZones", show_invalid_zones ? 1 : 0);
+	shader.SetInt("uShowHighlightItems", show_highlight_items ? 1 : 0);
 
 	shader.SetInt("uShowZoneBorders", show_zone_borders ? 1 : 0);
 	shader.SetInt("uHouseActiveBlendMode", house_active_blend_mode);

@@ -356,6 +356,58 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	}
 }
 
+void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
+                                                int z,
+                                                const RenderView& view,
+                                                const Map& map,
+                                                const BaseMap* secondary_map,
+                                                const DrawingOptions& options,
+                                                const AtlasManager& atlas) {
+	if (options.ingame || !options.highlight_items || view.zoom > 10.0f) {
+		return;
+	}
+
+	const AtlasRegion* white_pixel = atlas.getWhitePixel();
+	if (!white_pixel) {
+		return;
+	}
+
+	const ViewBounds bounds = view.getBoundsForFloor(z);
+
+	struct PendingQuad {
+		float x, y;
+		uint32_t flags;
+	};
+	std::vector<PendingQuad> quads;
+
+	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
+		for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
+			const Tile* t = secondary_map ? secondary_map->getTile(x, y, z) : nullptr;
+			if (!t) {
+				t = map.getTile(x, y, z);
+			}
+			if (!t || t->items.empty() || t->items.back()->isBorder()) {
+				continue;
+			}
+
+			int draw_x, draw_y;
+			view.getScreenPosition(x, y, z, draw_x, draw_y);
+
+			int item_count = static_cast<int>(t->items.size());
+			uint32_t flags = MakeHighlightItemsFlags(item_count);
+			quads.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), flags });
+		}
+	}
+
+	if (!quads.empty()) {
+		sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+		for (const auto& q : quads) {
+			sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, q.flags);
+		}
+		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+	}
+}
+
 void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
                                         int z,
                                         const RenderView& view,

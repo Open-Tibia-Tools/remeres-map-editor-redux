@@ -883,6 +883,53 @@ def test_multiplicative_mathematical_identity_for_black():
         assert any(abs(a_ch - m_ch) > 0.05 for a_ch, m_ch in zip(alpha_res, mult_res))
 
 
+def test_highlight_items_shader_overlay_system():
+    """Verify that highlight_items is migrated to GPU shader overlay system:
+    1. highlight_items_shader.h defines uShowHighlightItems and exact 1:1 legacy fixed-point factors.
+    2. zone_flags.h defines ZONE_FLAG_HIGHLIGHT_ITEMS and MakeHighlightItemsFlags.
+    3. zone_overlay_drawer.h and .cpp implement drawFloorHighlightItems.
+    4. MapLayerDrawer renders drawFloorHighlightItems directly over terrain before items.
+    5. TileColorCalculator::Calculate no longer contains CPU highlight_items tinting.
+    """
+    root = Path(__file__).parent.parent
+
+    # 1. Shader GLSL verification
+    shader_path = root / "source" / "rendering" / "shaders" / "highlight_items_shader.h"
+    assert shader_path.exists(), "highlight_items_shader.h must exist"
+    shader_code = shader_path.read_text(encoding="utf-8")
+    assert "uniform int uShowHighlightItems;" in shader_code
+    assert "evaluateHighlightItems" in shader_code
+    assert "0.75" in shader_code
+    assert "0.6015625" in shader_code
+    assert "0.48046875" in shader_code
+    assert "0.3984375" in shader_code
+    assert "0.328125" in shader_code
+
+    # 2. Zone flags verification
+    zf_path = root / "source" / "rendering" / "indicators" / "zone_flags.h"
+    zf_code = zf_path.read_text(encoding="utf-8")
+    assert "ZONE_FLAG_HIGHLIGHT_ITEMS" in zf_code
+    assert "MakeHighlightItemsFlags" in zf_code
+
+    # 3. ZoneOverlayDrawer verification
+    zod_h = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.h").read_text(encoding="utf-8")
+    assert "drawFloorHighlightItems" in zod_h
+
+    zod_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.cpp").read_text(encoding="utf-8")
+    assert "void ZoneOverlayDrawer::drawFloorHighlightItems" in zod_cpp
+    assert "MakeHighlightItemsFlags" in zod_cpp
+    assert "sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);" in zod_cpp
+
+    # 4. MapLayerDrawer pass ordering
+    mld_cpp = (root / "source" / "rendering" / "drawers" / "map_layer_drawer.cpp").read_text(encoding="utf-8")
+    assert "drawFloorHighlightItems" in mld_cpp
+
+    # 5. TileColorCalculator decoupled from highlight_items
+    tcc_cpp = (root / "source" / "rendering" / "drawers" / "tiles" / "tile_color_calculator.cpp").read_text(encoding="utf-8")
+    assert "highlight_items" not in tcc_cpp, "TileColorCalculator must be decoupled from highlight_items"
+
+
+
 
 
 

@@ -484,7 +484,6 @@ def test_chunk_bake_dirty_differential_criteria():
             if (self.transparent_items != prev['transparent_items'] or
                 self.extended_house_shader != prev['extended_house_shader'] or
                 self.show_creatures != prev['show_creatures'] or
-                self.highlight_items != prev['highlight_items'] or
                 self.show_only_colors != prev['show_only_colors'] or
                 self.show_only_modified != prev['show_only_modified'] or
                 self.show_items != prev['show_items'] or
@@ -494,13 +493,13 @@ def test_chunk_bake_dirty_differential_criteria():
                 self.chunk_bake_dirty = True
 
     # 1. Overlay toggles MUST NOT dirty chunk bake cache
-    for toggle in ['show_special_tiles', 'show_blocking', 'show_spawns', 'show_houses', 'show_waypoints', 'show_towns']:
+    for toggle in ['show_special_tiles', 'show_blocking', 'show_spawns', 'show_houses', 'show_waypoints', 'show_towns', 'highlight_items']:
         opts = MockDrawingOptions()
         opts.update(**{toggle: True})
         assert not opts.chunk_bake_dirty, f"Toggling '{toggle}' must NOT trigger chunk_bake_dirty!"
 
     # 2. Geometry/mesh/mode toggles MUST dirty chunk bake cache
-    for toggle in ['show_items', 'ingame', 'show_creatures', 'show_tech_items', 'transparent_items', 'highlight_items', 'show_only_colors']:
+    for toggle in ['show_items', 'ingame', 'show_creatures', 'show_tech_items', 'transparent_items', 'show_only_colors']:
         opts = MockDrawingOptions()
         opts.update(**{toggle: not getattr(opts, toggle)})
         assert opts.chunk_bake_dirty, f"Toggling '{toggle}' MUST trigger chunk_bake_dirty!"

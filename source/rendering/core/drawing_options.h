@@ -127,7 +127,7 @@ struct DrawingOptions {
 	glm::vec4 house_inactive_color;
 
 	[[nodiscard]] bool hasTileColorModifiers() const noexcept {
-		return highlight_items || show_only_colors;
+		return show_only_colors;
 	}
 
 private:

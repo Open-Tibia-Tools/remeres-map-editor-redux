@@ -179,6 +179,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		options.show_special_tiles,
 		options.show_invalid_tiles && !options.ingame,
 		options.show_invalid_zones && !options.ingame,
+		options.highlight_items && !options.ingame,
 		options.show_zone_borders,
 		options.house_active_blend_mode,
 		options.house_inactive_blend_mode,

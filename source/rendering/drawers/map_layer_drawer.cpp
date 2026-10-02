@@ -179,25 +179,31 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		// 2. Chunk Cache static terrain pass (instanced per-chunk VBOs: ground & borders)
 		chunk_cache->renderFloorTerrain(map_z, map, ctx, view.projectionMatrix, ctx.atlas);
 
-		// 3. Ground-level zone & blocking overlay pass: Special Zones, Spawns, Blocking (underneath items)
+		// 3. Ground-level highlight items overlay pass (underneath items, directly on terrain)
+		if (zone_overlay_drawer && options.highlight_items && !options.ingame) {
+			zone_overlay_drawer->drawFloorHighlightItems(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			sprite_batch.flush(ctx.atlas);
+		}
+
+		// 4. Ground-level zone & blocking overlay pass: Special Zones, Spawns, Blocking (underneath items)
 		if (zone_overlay_drawer && !options.ingame) {
 			zone_overlay_drawer->drawFloor(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
 		}
 
-		// 4. Chunk Cache static items pass (instanced per-chunk VBOs: walls, tables, stairs, items)
+		// 5. Chunk Cache static items pass (instanced per-chunk VBOs: walls, tables, stairs, items)
 		chunk_cache->renderFloorItems(map_z, ctx, view.projectionMatrix, ctx.atlas);
 
-		// 5. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!
+		// 6. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!
 		chunk_cache->renderDynamicOverlays(map_z, map, ctx, sprite_batch, *tile_renderer);
 
-		// 6. Badges pass: cluster zone badges
+		// 7. Badges pass: cluster zone badges
 		if (zone_overlay_drawer && !options.ingame) {
 			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 		}
 
-		// 7. Flush dynamic overlays and badges for this floor so depth order across floors is preserved
+		// 8. Flush dynamic overlays and badges for this floor so depth order across floors is preserved
 		sprite_batch.flush(ctx.atlas);
 	} else {
 		// Classic full-tile traversal fallback:
@@ -207,7 +213,13 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		});
 		sprite_batch.flush(ctx.atlas);
 
-		// 2. Ground-level zone & blocking overlay pass
+		// 2. Ground-level highlight items overlay pass
+		if (zone_overlay_drawer && options.highlight_items && !options.ingame) {
+			zone_overlay_drawer->drawFloorHighlightItems(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			sprite_batch.flush(ctx.atlas);
+		}
+
+		// 3. Ground-level zone & blocking overlay pass
 		if (zone_overlay_drawer && !options.ingame) {
 			zone_overlay_drawer->drawFloor(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);

@@ -136,7 +136,6 @@ void DrawingOptions::MarkSettingDirty(uint32_t key) noexcept {
 	switch (key) {
 		case Config::SHOW_CREATURES:
 		case Config::TRANSPARENT_ITEMS:
-		case Config::HIGHLIGHT_ITEMS:
 		case Config::SHOW_ONLY_TILEFLAGS:
 		case Config::SHOW_ONLY_MODIFIED_TILES:
 		case Config::SHOW_ITEMS:
@@ -232,7 +231,6 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	if (new_transparent_items != transparent_items ||
 		new_extended_house_shader != extended_house_shader ||
 		new_show_creatures != show_creatures ||
-		new_highlight_items != highlight_items ||
 		new_show_only_colors != show_only_colors ||
 		new_show_only_modified != show_only_modified ||
 		new_show_items != show_items ||
