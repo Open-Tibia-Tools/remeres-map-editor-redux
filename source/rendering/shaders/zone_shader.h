@@ -337,7 +337,6 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, uint zone
     vec4 layer;
 
     // 1. Special Zones (showSpecialTiles)
-    // 1. Special Zones (showSpecialTiles)
     if (showSpecialTiles != 0 && evaluateSpecialZones(flags, lx, ly, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }

@@ -66,12 +66,13 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	const float floor_alpha = 1.0f;
 
 	visible_zone_tiles_.clear();
+	alpha_zone_quads_.clear();
+	mult_zone_quads_.clear();
+	border_zone_quads_.clear();
+	spawn_borders_.clear();
 
 	// 1. Special Zones Pass (Ground level)
 	if (options.show_special_tiles && view.zoom <= 10.0f) {
-		alpha_zone_quads_.clear();
-		mult_zone_quads_.clear();
-		border_zone_quads_.clear();
 
 		const int min_x = bounds.start_x - 1;
 		const int max_x = bounds.end_x + 1;
