@@ -286,7 +286,7 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
     int tile_ly = ly % 32;
 
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
-    vec4 blockWash = vec4(0.20, 0.20, 0.23, 0.52);
+    vec4 blockWash = vec4(0.0, 0.0, 0.0, 0.50);
 
     // 1. GLOBAL OUTER OUTLINE (2px solid black)
     // Only applied where neighbor is NOT blocking

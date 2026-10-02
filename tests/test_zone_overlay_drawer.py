@@ -210,12 +210,12 @@ def test_zone_shader_3d_bevel_and_colors():
     assert "!bSouthOuter && tile_ly == 31" not in fn_body
     assert "!bEastOuter && tile_lx == 31" not in fn_body
 
-    # Blocking overlay must have 2px black border and dark gray wash
+    # Blocking overlay must have 2px black border and 50% black shade
     assert "evaluateBlockingOverlay" in content
     b_idx = content.find("evaluateBlockingOverlay")
     b_body = content[b_idx:b_idx + 600]
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in b_body, "Blocking perimeter must be 2px black"
-    assert "0.20, 0.20, 0.23, 0.52" in b_body, "Blocking wash must be dark gray"
+    assert "0.0, 0.0, 0.0, 0.50" in b_body, "Blocking wash must be 50% black shade"
 
     # Spawn overlay must have 2px black perimeter and deep translucent magenta wash
     assert "evaluateSpawnOverlay" in content
