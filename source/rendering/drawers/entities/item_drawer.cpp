@@ -99,10 +99,9 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	const AtlasManager* atlas = params.ctx ? &params.ctx->atlas : nullptr;
 
-	// Display invisible and invalid items via technical item shader indicators
-	if (options.show_tech_items && !options.ingame) {
-		// Red invalid client id
-		if (!it) {
+	// Red invalid client id / missing item
+	if (!it) {
+		if (options.show_invalid_tiles && !options.ingame) {
 			const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;
 			if (white_pixel) {
 				const float rf = static_cast<float>(red) / 255.0f;
@@ -118,9 +117,12 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 					rme::rendering::TechnicalItemRegistry::GetMarkerId(invalid_type)
 				);
 			}
-			return;
 		}
+		return;
+	}
 
+	// Display invisible items via technical item shader indicators
+	if (options.show_tech_items && !options.ingame) {
 		const uint16_t client_id = it.clientId();
 		const uint16_t server_id = item ? item->getID() : 0;
 		const auto tech_type = rme::rendering::TechnicalItemRegistry::Classify(server_id, client_id);
