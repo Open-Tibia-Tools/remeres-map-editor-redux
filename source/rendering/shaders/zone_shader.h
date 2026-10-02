@@ -12,6 +12,15 @@ namespace rme::rendering::shaders {
  *        and Pathing / Blocking (translucent gray wash + bright cyan outer connected borders).
  */
 inline constexpr std::string_view ZONE_SHADER_GLSL = R"(
+uniform int uShowZoneBorders;
+uniform vec4 uZoneBorderColor;
+uniform vec4 uPzWash;
+uniform vec4 uNpWash;
+uniform vec4 uNlWash;
+uniform vec4 uPvpWash;
+uniform vec4 uBlockingWash;
+uniform vec4 uSpawnWash;
+
 void blendOverlayLayer(inout vec4 baseColor, inout bool hasOverlay, vec4 layerColor) {
     if (hasOverlay) {
         baseColor.rgb = mix(baseColor.rgb, layerColor.rgb, layerColor.a);
@@ -179,37 +188,19 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98); // 2px solid black global outer outline
-
-    // 1. GLOBAL OUTER OUTLINE (2px solid black)
-    // Only applied where neighbor is NOT a special zone!
-    if (bNorthOuter && (tile_ly == 0 || tile_ly == 1)) {
-        outLayer = zBlack;
-        return true;
-    }
-    if (bSouthOuter && (tile_ly == 31 || tile_ly == 30)) {
-        outLayer = zBlack;
-        return true;
-    }
-    if (bWestOuter && (tile_lx == 0 || tile_lx == 1)) {
-        outLayer = zBlack;
-        return true;
-    }
-    if (bEastOuter && (tile_lx == 31 || tile_lx == 30)) {
-        outLayer = zBlack;
-        return true;
+    // 1. GLOBAL OUTER OUTLINE
+    // Only applied where neighbor is NOT a special zone and zone borders are enabled!
+    if (uShowZoneBorders != 0) {
+        if ((bNorthOuter && (tile_ly == 0 || tile_ly == 1)) ||
+            (bSouthOuter && (tile_ly == 31 || tile_ly == 30)) ||
+            (bWestOuter && (tile_lx == 0 || tile_lx == 1)) ||
+            (bEastOuter && (tile_lx == 31 || tile_lx == 30))) {
+            outLayer = uZoneBorderColor;
+            return true;
+        }
     }
 
     // 2. INTERIOR CLEAN TRANSLUCENT WASH + DIAGONAL TRIANGLE PARTITIONING
-    // Protection Zone: Royal Azure Blue (~48% opacity)
-    // Non-PvP: Vivid Emerald Green (~46% opacity)
-    // No-Logout: Rich Amber-Orange (~48% opacity)
-    // PvP Zone: Deep Crimson Red (~48% opacity)
-    vec4 pzWash  = vec4(0.08, 0.46, 1.00, 0.48);
-    vec4 npWash  = vec4(0.00, 0.86, 0.36, 0.46);
-    vec4 nlWash  = vec4(1.00, 0.48, 0.00, 0.48);
-    vec4 pvpWash = vec4(0.96, 0.10, 0.20, 0.48);
-
     bool hasPz  = ((flags & 4u) != 0u);
     bool hasNp  = ((flags & 8u) != 0u);
     bool hasNl  = ((flags & 16u) != 0u);
@@ -217,10 +208,10 @@ bool evaluateSpecialZones(uint flags, bool bNorthOuter, bool bSouthOuter, bool b
 
     vec4 activeWashes[4];
     int count = 0;
-    if (hasPz)  activeWashes[count++] = pzWash;
-    if (hasNp)  activeWashes[count++] = npWash;
-    if (hasNl)  activeWashes[count++] = nlWash;
-    if (hasPvp) activeWashes[count++] = pvpWash;
+    if (hasPz)  activeWashes[count++] = uPzWash;
+    if (hasNp)  activeWashes[count++] = uNpWash;
+    if (hasNl)  activeWashes[count++] = uNlWash;
+    if (hasPvp) activeWashes[count++] = uPvpWash;
 
     if (count == 1) {
         outLayer = activeWashes[0];
@@ -260,20 +251,19 @@ bool evaluateSpawnOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, bool
         return false;
     }
 
-    vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
-    vec4 spawnWash = vec4(0.95, 0.10, 0.95, 0.44);
-
-    // 1. GLOBAL OUTER OUTLINE (2px solid black) on perimeter
-    if ((bNorth && (ly == 0 || ly == 1)) ||
-        (bSouth && (ly == maxY || ly == maxY - 1)) ||
-        (bWest  && (lx == 0 || lx == 1)) ||
-        (bEast  && (lx == maxX || lx == maxX - 1))) {
-        outLayer = zBlack;
-        return true;
+    // 1. GLOBAL OUTER OUTLINE on perimeter (when zone borders are enabled)
+    if (uShowZoneBorders != 0) {
+        if ((bNorth && (ly == 0 || ly == 1)) ||
+            (bSouth && (ly == maxY || ly == maxY - 1)) ||
+            (bWest  && (lx == 0 || lx == 1)) ||
+            (bEast  && (lx == maxX || lx == maxX - 1))) {
+            outLayer = uZoneBorderColor;
+            return true;
+        }
     }
 
-    // 2. Interior Clean Translucent Wash (NO inside kitchen tile lines, NO bevels)
-    outLayer = spawnWash;
+    // 2. Interior Clean Translucent Wash
+    outLayer = uSpawnWash;
     return true;
 }
 
@@ -285,30 +275,20 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
     int tile_lx = lx % 32;
     int tile_ly = ly % 32;
 
-    vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
-    vec4 blockWash = vec4(0.0, 0.0, 0.0, 0.50);
-
-    // 1. GLOBAL OUTER OUTLINE (2px solid black)
-    // Only applied where neighbor is NOT blocking
-    if (bNorth && (tile_ly == 0 || tile_ly == 1)) {
-        outLayer = zBlack;
-        return true;
-    }
-    if (bSouth && (tile_ly == 31 || tile_ly == 30)) {
-        outLayer = zBlack;
-        return true;
-    }
-    if (bWest && (tile_lx == 0 || tile_lx == 1)) {
-        outLayer = zBlack;
-        return true;
-    }
-    if (bEast && (tile_lx == 31 || tile_lx == 30)) {
-        outLayer = zBlack;
-        return true;
+    // 1. GLOBAL OUTER OUTLINE
+    // Only applied where neighbor is NOT blocking and zone borders are enabled!
+    if (uShowZoneBorders != 0) {
+        if ((bNorth && (tile_ly == 0 || tile_ly == 1)) ||
+            (bSouth && (tile_ly == 31 || tile_ly == 30)) ||
+            (bWest && (tile_lx == 0 || tile_lx == 1)) ||
+            (bEast && (tile_lx == 31 || tile_lx == 30))) {
+            outLayer = uZoneBorderColor;
+            return true;
+        }
     }
 
-    // 2. Interior Clean Translucent Wash (zero inside lines or bevels)
-    outLayer = blockWash;
+    // 2. Interior Clean Translucent Wash
+    outLayer = uBlockingWash;
     return true;
 }
 

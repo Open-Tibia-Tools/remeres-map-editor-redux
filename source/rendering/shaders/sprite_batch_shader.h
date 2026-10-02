@@ -5,6 +5,7 @@
 #include "rendering/shaders/indicator_shader.h"
 #include "rendering/shaders/house_shader.h"
 #include "rendering/shaders/zone_shader.h"
+#include <glm/vec4.hpp>
 #include <string>
 
 namespace rme::rendering::shaders {
@@ -120,8 +121,18 @@ inline void SetSpriteBatchOverlayUniforms(
 	bool show_tech_items,
 	bool show_blocking,
 	bool show_special_tiles,
-	bool show_invalid_tiles = true,
-	bool show_invalid_zones = true)
+	bool show_invalid_tiles,
+	bool show_invalid_zones,
+	bool show_zone_borders,
+	const glm::vec4& zone_border_color,
+	const glm::vec4& zone_pz_color,
+	const glm::vec4& zone_nopvp_color,
+	const glm::vec4& zone_nologout_color,
+	const glm::vec4& zone_pvp_color,
+	const glm::vec4& zone_blocking_color,
+	const glm::vec4& zone_spawn_color,
+	const glm::vec4& house_active_color,
+	const glm::vec4& house_inactive_color)
 {
 	shader.Use();
 	shader.SetUint("uCurrentHouseId", current_house_id);
@@ -134,6 +145,17 @@ inline void SetSpriteBatchOverlayUniforms(
 	shader.SetInt("uShowSpecialTiles", show_special_tiles ? 1 : 0);
 	shader.SetInt("uShowInvalidTiles", show_invalid_tiles ? 1 : 0);
 	shader.SetInt("uShowInvalidZones", show_invalid_zones ? 1 : 0);
+
+	shader.SetInt("uShowZoneBorders", show_zone_borders ? 1 : 0);
+	shader.SetVec4("uZoneBorderColor", zone_border_color);
+	shader.SetVec4("uPzWash", zone_pz_color);
+	shader.SetVec4("uNpWash", zone_nopvp_color);
+	shader.SetVec4("uNlWash", zone_nologout_color);
+	shader.SetVec4("uPvpWash", zone_pvp_color);
+	shader.SetVec4("uBlockingWash", zone_blocking_color);
+	shader.SetVec4("uSpawnWash", zone_spawn_color);
+	shader.SetVec4("uHouseActiveWash", house_active_color);
+	shader.SetVec4("uHouseInactiveWash", house_inactive_color);
 }
 
 } // namespace rme::rendering::shaders

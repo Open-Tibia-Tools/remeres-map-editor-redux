@@ -178,7 +178,17 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		options.show_blocking,
 		options.show_special_tiles,
 		options.show_invalid_tiles && !options.ingame,
-		options.show_invalid_zones && !options.ingame
+		options.show_invalid_zones && !options.ingame,
+		options.show_zone_borders,
+		options.zone_border_color,
+		options.zone_pz_color,
+		options.zone_nopvp_color,
+		options.zone_nologout_color,
+		options.zone_pvp_color,
+		options.zone_blocking_color,
+		options.zone_spawn_color,
+		options.house_active_color,
+		options.house_inactive_color
 	);
 	primitive_renderer.setProjectionMatrix(view.projectionMatrix);
 
