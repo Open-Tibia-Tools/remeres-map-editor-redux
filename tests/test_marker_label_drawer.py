@@ -269,12 +269,18 @@ def test_blocking_overlay_shader_colors():
     content = shader_path.read_text(encoding="utf-8")
 
     assert "evaluateBlockingOverlay" in content, "evaluateBlockingOverlay function must exist in zone_shader.h"
+    assert "uniform vec4 uBlockingWash;" in content
     idx = content.find("evaluateBlockingOverlay")
-    fn_body = content[idx:idx + 600]
+    end_idx = content.find("bool evaluateZoneOverlay", idx)
+    fn_body = content[idx:end_idx]
 
-    # Standardized 2px black border and 50% black shade
-    assert "vec4(0.05, 0.05, 0.07, 0.98)" in fn_body, "Blocking must have 2px black perimeter"
-    assert "0.0, 0.0, 0.0, 0.50" in fn_body, "Blocking wash must be 50% black shade"
+    # Standardized dynamic border and blocking wash uniform
+    assert "uShowZoneBorders != 0" in fn_body, "Blocking perimeter must be guarded by uShowZoneBorders"
+    assert "outLayer = uBlockingWash;" in fn_body, "Blocking wash must use uBlockingWash uniform"
+
+    settings_path = Path(__file__).parent.parent / "source" / "app" / "settings.cpp"
+    settings_content = settings_path.read_text(encoding="utf-8")
+    assert "ZONE_BLOCKING_COLOR_A, 128" in settings_content
 
 
 def test_marker_drawer_does_not_render_spawn_size_labels():

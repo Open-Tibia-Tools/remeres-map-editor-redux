@@ -171,34 +171,42 @@ def test_secondary_map_precedence():
 
 
 def test_zone_shader_3d_bevel_and_colors():
-    """Verify that in zone_shader.h, 2px global black outline and clean multiplicative zone tints are implemented without inside lines."""
+    """Verify that in zone_shader.h, dynamic uniforms for borders and washes are declared and used without inside lines, with calibrated defaults in settings.cpp."""
     from pathlib import Path
     shader_path = Path(__file__).parent.parent / "source" / "rendering" / "shaders" / "zone_shader.h"
     content = shader_path.read_text(encoding="utf-8")
+
+    # Uniform declarations must be present
+    assert "uniform int uShowZoneBorders;" in content
+    assert "uniform vec4 uZoneBorderColor;" in content
+    assert "uniform vec4 uPzWash;" in content
+    assert "uniform vec4 uNpWash;" in content
+    assert "uniform vec4 uNlWash;" in content
+    assert "uniform vec4 uPvpWash;" in content
+    assert "uniform vec4 uBlockingWash;" in content
+    assert "uniform vec4 uSpawnWash;" in content
 
     assert "evaluateSpecialZones" in content
     idx = content.find("evaluateSpecialZones")
     end_idx = content.find("bool evaluateSpawnOverlay")
     fn_body = content[idx:end_idx]
 
-    # Global 2px black outer outline must be present
-    assert "vec4(0.05, 0.05, 0.07, 0.98)" in fn_body, "2px global black outline must be defined"
+    # Global outer outline guarded by uShowZoneBorders and uses uZoneBorderColor
+    assert "uShowZoneBorders != 0" in fn_body
+    assert "outLayer = uZoneBorderColor;" in fn_body
 
-    # PZ (flags & 4u) must have deep azure wash
+    # Washes must use dynamic uniforms
     assert "flags & 4u" in fn_body
-    assert "0.08, 0.46, 1.00, 0.48" in fn_body, "PZ wash must be deep azure"
+    assert "activeWashes[count++] = uPzWash;" in fn_body
 
-    # No-PvP (flags & 8u) must have deep emerald green wash
     assert "flags & 8u" in fn_body
-    assert "0.00, 0.86, 0.36, 0.46" in fn_body, "No-PvP wash must be deep emerald green"
+    assert "activeWashes[count++] = uNpWash;" in fn_body
 
-    # No-Logout (flags & 16u) must have rich amber orange wash
     assert "flags & 16u" in fn_body
-    assert "1.00, 0.48, 0.00, 0.48" in fn_body, "No-Logout wash must be rich amber orange"
+    assert "activeWashes[count++] = uNlWash;" in fn_body
 
-    # PvP Zone (flags & 32u) must have deep crimson red wash
     assert "flags & 32u" in fn_body
-    assert "0.96, 0.10, 0.20, 0.48" in fn_body, "PvP Zone wash must be deep crimson red"
+    assert "activeWashes[count++] = uPvpWash;" in fn_body
 
     # Cluster badge evaluation helper must be present
     assert "evaluateClusterBadge" in content
@@ -210,19 +218,33 @@ def test_zone_shader_3d_bevel_and_colors():
     assert "!bSouthOuter && tile_ly == 31" not in fn_body
     assert "!bEastOuter && tile_lx == 31" not in fn_body
 
-    # Blocking overlay must have 2px black border and 50% black shade
+    # Blocking overlay must use uShowZoneBorders and uBlockingWash
     assert "evaluateBlockingOverlay" in content
     b_idx = content.find("evaluateBlockingOverlay")
-    b_body = content[b_idx:b_idx + 600]
-    assert "vec4(0.05, 0.05, 0.07, 0.98)" in b_body, "Blocking perimeter must be 2px black"
-    assert "0.0, 0.0, 0.0, 0.50" in b_body, "Blocking wash must be 50% black shade"
+    b_end = content.find("bool evaluateZoneOverlay", b_idx)
+    b_body = content[b_idx:b_end]
+    assert "uShowZoneBorders != 0" in b_body
+    assert "outLayer = uBlockingWash;" in b_body
 
-    # Spawn overlay must have 2px black perimeter and deep translucent magenta wash
+    # Spawn overlay must use uShowZoneBorders and uSpawnWash
     assert "evaluateSpawnOverlay" in content
     s_idx = content.find("evaluateSpawnOverlay")
-    s_body = content[s_idx:s_idx + 600]
-    assert "vec4(0.05, 0.05, 0.07, 0.98)" in s_body, "Spawn perimeter must be 2px black"
-    assert "0.95, 0.10, 0.95, 0.44" in s_body, "Spawn wash must be deep translucent magenta"
+    s_end = content.find("bool evaluateBlockingOverlay", s_idx)
+    s_body = content[s_idx:s_end]
+    assert "uShowZoneBorders != 0" in s_body
+    assert "outLayer = uSpawnWash;" in s_body
+
+    # Verify default calibrated settings exist in settings.cpp
+    settings_path = Path(__file__).parent.parent / "source" / "app" / "settings.cpp"
+    settings_content = settings_path.read_text(encoding="utf-8")
+    assert "ZONE_BORDERS_ENABLED, true" in settings_content
+    assert "ZONE_BORDER_COLOR_R, 13" in settings_content
+    assert "ZONE_PZ_COLOR_R, 20" in settings_content
+    assert "ZONE_NOPVP_COLOR_R, 0" in settings_content
+    assert "ZONE_NOLOGOUT_COLOR_R, 255" in settings_content
+    assert "ZONE_PVP_COLOR_R, 245" in settings_content
+    assert "ZONE_BLOCKING_COLOR_A, 128" in settings_content
+    assert "ZONE_SPAWN_COLOR_R, 242" in settings_content
 
 
 def test_indicator_shader_standardized_system():
@@ -660,6 +682,58 @@ def test_large_tibia_world_coordinates_zone_badges():
 
     assert len(found_clusters) == 1, "Must discover exactly 1 cluster for the 10x10 PZ zone"
     assert len(found_clusters[0]) == 100, "Cluster must have all 100 tiles"
+
+
+def test_customizable_shader_overlays_architecture():
+    """Verify end-to-end architecture: settings keys, drawing options, shader uniforms, and preferences page."""
+    from pathlib import Path
+    root = Path(__file__).parent.parent
+
+    # 1. House shader uniforms
+    house_shader = (root / "source" / "rendering" / "shaders" / "house_shader.h").read_text(encoding="utf-8")
+    assert "uniform vec4 uHouseActiveWash;" in house_shader
+    assert "uniform vec4 uHouseInactiveWash;" in house_shader
+    assert "vec4 zWash = isActive ? uHouseActiveWash : uHouseInactiveWash;" in house_shader
+
+    # 2. SpriteBatch shader plumbing
+    sb_shader = (root / "source" / "rendering" / "shaders" / "sprite_batch_shader.h").read_text(encoding="utf-8")
+    assert "shader.SetInt(\"uShowZoneBorders\", show_zone_borders ? 1 : 0);" in sb_shader
+    assert "shader.SetVec4(\"uZoneBorderColor\", zone_border_color);" in sb_shader
+    assert "shader.SetVec4(\"uPzWash\", zone_pz_color);" in sb_shader
+    assert "shader.SetVec4(\"uHouseActiveWash\", house_active_color);" in sb_shader
+    assert "shader.SetVec4(\"uHouseInactiveWash\", house_inactive_color);" in sb_shader
+
+    # 3. Chunk Cache Manager plumbing for houses
+    ccm = (root / "source" / "rendering" / "core" / "chunk_cache_manager.cpp").read_text(encoding="utf-8")
+    assert "shader_.SetVec4(\"uHouseActiveWash\", ctx.options.house_active_color);" in ccm
+    assert "shader_.SetVec4(\"uHouseInactiveWash\", ctx.options.house_inactive_color);" in ccm
+
+    # 4. DrawingOptions struct members
+    drawing_opts = (root / "source" / "rendering" / "core" / "drawing_options.h").read_text(encoding="utf-8")
+    assert "bool show_zone_borders" in drawing_opts
+    assert "glm::vec4 zone_border_color;" in drawing_opts
+    assert "glm::vec4 zone_pz_color;" in drawing_opts
+    assert "glm::vec4 zone_blocking_color;" in drawing_opts
+    assert "glm::vec4 zone_spawn_color;" in drawing_opts
+    assert "glm::vec4 house_active_color;" in drawing_opts
+    assert "glm::vec4 house_inactive_color;" in drawing_opts
+
+    # 5. Settings keys
+    settings_h = (root / "source" / "app" / "settings.h").read_text(encoding="utf-8")
+    assert "ZONE_BORDERS_ENABLED," in settings_h
+    assert "ZONE_BORDER_COLOR_R," in settings_h
+    assert "ZONE_PZ_COLOR_R," in settings_h
+    assert "ZONE_BLOCKING_COLOR_R," in settings_h
+    assert "HOUSE_ACTIVE_COLOR_R," in settings_h
+
+    # 6. Preferences GraphicsPage controls
+    graphics_page_h = (root / "source" / "app" / "preferences" / "graphics_page.h").read_text(encoding="utf-8")
+    assert "wxCheckBox* zone_borders_enabled_chkbox" in graphics_page_h
+    assert "wxColourPickerCtrl* zone_border_color_pick" in graphics_page_h
+    assert "wxColourPickerCtrl* zone_pz_color_pick" in graphics_page_h
+    assert "wxSpinCtrl* zone_pz_opacity_spin" in graphics_page_h
+    assert "wxButton* reset_zone_defaults_btn" in graphics_page_h
+
 
 
 
