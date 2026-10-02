@@ -55,7 +55,14 @@ void DrawingOptions::SetDefault() {
 	anti_aliasing = false;
 
 	show_zone_borders = true;
-	zone_multiplicative_blending = false;
+	zone_pz_blend_mode = 0;
+	zone_nopvp_blend_mode = 0;
+	zone_nologout_blend_mode = 0;
+	zone_pvp_blend_mode = 0;
+	zone_blocking_blend_mode = 1;
+	zone_spawn_blend_mode = 0;
+	house_active_blend_mode = 0;
+	house_inactive_blend_mode = 0;
 	zone_border_color = glm::vec4(13.0f / 255.0f, 13.0f / 255.0f, 18.0f / 255.0f, 250.0f / 255.0f);
 	zone_pz_color = glm::vec4(20.0f / 255.0f, 117.0f / 255.0f, 255.0f / 255.0f, 122.0f / 255.0f);
 	zone_nopvp_color = glm::vec4(0.0f / 255.0f, 220.0f / 255.0f, 92.0f / 255.0f, 117.0f / 255.0f);
@@ -189,7 +196,14 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const bool new_anti_aliasing = settings.getBoolean(Config::ANTI_ALIASING);
 
 	const bool new_show_zone_borders = settings.getBoolean(Config::ZONE_BORDERS_ENABLED);
-	const bool new_zone_multiplicative_blending = settings.getBoolean(Config::ZONE_MULTIPLICATIVE_BLENDING);
+	const int new_zone_pz_blend_mode = settings.getInteger(Config::ZONE_PZ_BLEND_MODE);
+	const int new_zone_nopvp_blend_mode = settings.getInteger(Config::ZONE_NOPVP_BLEND_MODE);
+	const int new_zone_nologout_blend_mode = settings.getInteger(Config::ZONE_NOLOGOUT_BLEND_MODE);
+	const int new_zone_pvp_blend_mode = settings.getInteger(Config::ZONE_PVP_BLEND_MODE);
+	const int new_zone_blocking_blend_mode = settings.getInteger(Config::ZONE_BLOCKING_BLEND_MODE);
+	const int new_zone_spawn_blend_mode = settings.getInteger(Config::ZONE_SPAWN_BLEND_MODE);
+	const int new_house_active_blend_mode = settings.getInteger(Config::HOUSE_ACTIVE_BLEND_MODE);
+	const int new_house_inactive_blend_mode = settings.getInteger(Config::HOUSE_INACTIVE_BLEND_MODE);
 	auto readVec4 = [&](uint32_t kr, uint32_t kg, uint32_t kb, uint32_t ka) {
 		return glm::vec4(
 			static_cast<float>(std::clamp(settings.getInteger(kr), 0, 255)) / 255.0f,
@@ -269,7 +283,14 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	anti_aliasing = new_anti_aliasing;
 
 	if (new_show_zone_borders != show_zone_borders ||
-		new_zone_multiplicative_blending != zone_multiplicative_blending ||
+		new_zone_pz_blend_mode != zone_pz_blend_mode ||
+		new_zone_nopvp_blend_mode != zone_nopvp_blend_mode ||
+		new_zone_nologout_blend_mode != zone_nologout_blend_mode ||
+		new_zone_pvp_blend_mode != zone_pvp_blend_mode ||
+		new_zone_blocking_blend_mode != zone_blocking_blend_mode ||
+		new_zone_spawn_blend_mode != zone_spawn_blend_mode ||
+		new_house_active_blend_mode != house_active_blend_mode ||
+		new_house_inactive_blend_mode != house_inactive_blend_mode ||
 		new_zone_border_color != zone_border_color ||
 		new_zone_pz_color != zone_pz_color ||
 		new_zone_nopvp_color != zone_nopvp_color ||
@@ -283,7 +304,14 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	}
 
 	show_zone_borders = new_show_zone_borders;
-	zone_multiplicative_blending = new_zone_multiplicative_blending;
+	zone_pz_blend_mode = new_zone_pz_blend_mode;
+	zone_nopvp_blend_mode = new_zone_nopvp_blend_mode;
+	zone_nologout_blend_mode = new_zone_nologout_blend_mode;
+	zone_pvp_blend_mode = new_zone_pvp_blend_mode;
+	zone_blocking_blend_mode = new_zone_blocking_blend_mode;
+	zone_spawn_blend_mode = new_zone_spawn_blend_mode;
+	house_active_blend_mode = new_house_active_blend_mode;
+	house_inactive_blend_mode = new_house_inactive_blend_mode;
 	zone_border_color = new_zone_border_color;
 	zone_pz_color = new_zone_pz_color;
 	zone_nopvp_color = new_zone_nopvp_color;

@@ -16,6 +16,8 @@ namespace rme::rendering::shaders {
 inline constexpr std::string_view HOUSE_SHADER_GLSL = R"(
 uniform vec4 uHouseActiveWash;
 uniform vec4 uHouseInactiveWash;
+uniform int uHouseActiveBlendMode;
+uniform int uHouseInactiveBlendMode;
 
 void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint currentHouseId, int showHouses) {
     if (showHouses == 0 || houseId >= 1000000.0) {
@@ -31,15 +33,28 @@ void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint 
 
     // Dynamic house active / inactive washes:
     vec4 zWash = isActive ? uHouseActiveWash : uHouseInactiveWash;
+    int blendMode = isActive ? uHouseActiveBlendMode : uHouseInactiveBlendMode;
 
-    if (houseId < 0.0) {
-        // Base House Shader (ground): clean wash
-        fragColor.rgb = mix(fragColor.rgb, zWash.rgb, zWash.a);
+    if (blendMode == 1) {
+        if (houseId < 0.0) {
+            // Base House Shader (ground): multiplicative tint
+            fragColor.rgb *= mix(vec3(1.0), zWash.rgb, zWash.a);
+        } else {
+            // Extended House Shader (items/walls): deep shadow multiplicative tint
+            vec3 darkRgb = zWash.rgb * 0.55;
+            float wallAlpha = min(0.95, zWash.a * 1.40);
+            fragColor.rgb *= mix(vec3(1.0), darkRgb, wallAlpha);
+        }
     } else {
-        // Extended House Shader (items/walls): deep shadow tint (45% shadow) + higher opacity
-        vec3 darkRgb = zWash.rgb * 0.55;
-        float wallAlpha = min(0.95, zWash.a * 1.40);
-        fragColor.rgb = mix(fragColor.rgb, darkRgb, wallAlpha);
+        if (houseId < 0.0) {
+            // Base House Shader (ground): clean wash
+            fragColor.rgb = mix(fragColor.rgb, zWash.rgb, zWash.a);
+        } else {
+            // Extended House Shader (items/walls): deep shadow tint (45% shadow) + higher opacity
+            vec3 darkRgb = zWash.rgb * 0.55;
+            float wallAlpha = min(0.95, zWash.a * 1.40);
+            fragColor.rgb = mix(fragColor.rgb, darkRgb, wallAlpha);
+        }
     }
 }
 )";

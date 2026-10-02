@@ -114,13 +114,6 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		g_settings.getBoolean(Config::ZONE_BORDERS_ENABLED)
 	);
 
-	zone_multiplicative_chkbox = PreferencesLayout::AddCheckBoxRow(
-		zone_section,
-		"Use multiplicative color blending",
-		"Tint tile textures multiplicatively (classic RME style) instead of drawing a semi-transparent color wash.",
-		g_settings.getBoolean(Config::ZONE_MULTIPLICATIVE_BLENDING)
-	);
-
 	zone_border_color_pick = new wxColourPickerCtrl(
 		zone_section,
 		wxID_ANY,
@@ -141,10 +134,12 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		wxWindow* parent_win,
 		wxColourPickerCtrl*& out_picker,
 		wxSpinCtrl*& out_spin,
+		wxChoice*& out_choice,
 		Config::Key red_key,
 		Config::Key green_key,
 		Config::Key blue_key,
-		Config::Key alpha_key
+		Config::Key alpha_key,
+		Config::Key mode_key
 	) -> wxWindow* {
 		auto* container = new wxPanel(parent_win, wxID_ANY);
 		auto* sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -161,10 +156,18 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 
 		out_spin = new wxSpinCtrl(container, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(65, -1)), wxSP_ARROW_KEYS, 0, 100, current_opacity);
 
+		wxArrayString blend_modes;
+		blend_modes.Add("Alpha Blend");
+		blend_modes.Add("Multiplicative");
+		out_choice = new wxChoice(container, wxID_ANY, wxDefaultPosition, wxDefaultSize, blend_modes);
+		out_choice->SetSelection(std::clamp(g_settings.getInteger(mode_key), 0, 1));
+
 		sizer->Add(out_picker, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
 		sizer->Add(new wxStaticText(container, wxID_ANY, "Opacity:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
 		sizer->Add(out_spin, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
-		sizer->Add(new wxStaticText(container, wxID_ANY, "%"), 0, wxALIGN_CENTER_VERTICAL);
+		sizer->Add(new wxStaticText(container, wxID_ANY, "%"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
+		sizer->Add(new wxStaticText(container, wxID_ANY, "Mode:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
+		sizer->Add(out_choice, 0, wxALIGN_CENTER_VERTICAL);
 
 		container->SetSizerAndFit(sizer);
 		return container;
@@ -173,96 +176,103 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 	PreferencesLayout::AddControlRow(
 		zone_section,
 		"Protection Zone",
-		"Color and opacity for Protection Zone (PZ) tiles.",
-		create_color_opacity_control(zone_section, zone_pz_color_pick, zone_pz_opacity_spin,
-			Config::ZONE_PZ_COLOR_R, Config::ZONE_PZ_COLOR_G, Config::ZONE_PZ_COLOR_B, Config::ZONE_PZ_COLOR_A)
+		"Color, opacity, and blend mode for Protection Zone (PZ) tiles.",
+		create_color_opacity_control(zone_section, zone_pz_color_pick, zone_pz_opacity_spin, zone_pz_blend_choice,
+			Config::ZONE_PZ_COLOR_R, Config::ZONE_PZ_COLOR_G, Config::ZONE_PZ_COLOR_B, Config::ZONE_PZ_COLOR_A, Config::ZONE_PZ_BLEND_MODE)
 	);
 
 	PreferencesLayout::AddControlRow(
 		zone_section,
 		"Non-PvP Zone",
-		"Color and opacity for Non-PvP zone tiles.",
-		create_color_opacity_control(zone_section, zone_nopvp_color_pick, zone_nopvp_opacity_spin,
-			Config::ZONE_NOPVP_COLOR_R, Config::ZONE_NOPVP_COLOR_G, Config::ZONE_NOPVP_COLOR_B, Config::ZONE_NOPVP_COLOR_A)
+		"Color, opacity, and blend mode for Non-PvP zone tiles.",
+		create_color_opacity_control(zone_section, zone_nopvp_color_pick, zone_nopvp_opacity_spin, zone_nopvp_blend_choice,
+			Config::ZONE_NOPVP_COLOR_R, Config::ZONE_NOPVP_COLOR_G, Config::ZONE_NOPVP_COLOR_B, Config::ZONE_NOPVP_COLOR_A, Config::ZONE_NOPVP_BLEND_MODE)
 	);
 
 	PreferencesLayout::AddControlRow(
 		zone_section,
 		"No-Logout Zone",
-		"Color and opacity for No-Logout zone tiles.",
-		create_color_opacity_control(zone_section, zone_nologout_color_pick, zone_nologout_opacity_spin,
-			Config::ZONE_NOLOGOUT_COLOR_R, Config::ZONE_NOLOGOUT_COLOR_G, Config::ZONE_NOLOGOUT_COLOR_B, Config::ZONE_NOLOGOUT_COLOR_A)
+		"Color, opacity, and blend mode for No-Logout zone tiles.",
+		create_color_opacity_control(zone_section, zone_nologout_color_pick, zone_nologout_opacity_spin, zone_nologout_blend_choice,
+			Config::ZONE_NOLOGOUT_COLOR_R, Config::ZONE_NOLOGOUT_COLOR_G, Config::ZONE_NOLOGOUT_COLOR_B, Config::ZONE_NOLOGOUT_COLOR_A, Config::ZONE_NOLOGOUT_BLEND_MODE)
 	);
 
 	PreferencesLayout::AddControlRow(
 		zone_section,
 		"PvP Zone",
-		"Color and opacity for PvP zone tiles.",
-		create_color_opacity_control(zone_section, zone_pvp_color_pick, zone_pvp_opacity_spin,
-			Config::ZONE_PVP_COLOR_R, Config::ZONE_PVP_COLOR_G, Config::ZONE_PVP_COLOR_B, Config::ZONE_PVP_COLOR_A)
+		"Color, opacity, and blend mode for PvP zone tiles.",
+		create_color_opacity_control(zone_section, zone_pvp_color_pick, zone_pvp_opacity_spin, zone_pvp_blend_choice,
+			Config::ZONE_PVP_COLOR_R, Config::ZONE_PVP_COLOR_G, Config::ZONE_PVP_COLOR_B, Config::ZONE_PVP_COLOR_A, Config::ZONE_PVP_BLEND_MODE)
 	);
 
 	PreferencesLayout::AddControlRow(
 		zone_section,
 		"Blocking / Pathing",
-		"Color and opacity for unwalkable and blocking collision tiles.",
-		create_color_opacity_control(zone_section, zone_blocking_color_pick, zone_blocking_opacity_spin,
-			Config::ZONE_BLOCKING_COLOR_R, Config::ZONE_BLOCKING_COLOR_G, Config::ZONE_BLOCKING_COLOR_B, Config::ZONE_BLOCKING_COLOR_A)
+		"Color, opacity, and blend mode for unwalkable and blocking collision tiles.",
+		create_color_opacity_control(zone_section, zone_blocking_color_pick, zone_blocking_opacity_spin, zone_blocking_blend_choice,
+			Config::ZONE_BLOCKING_COLOR_R, Config::ZONE_BLOCKING_COLOR_G, Config::ZONE_BLOCKING_COLOR_B, Config::ZONE_BLOCKING_COLOR_A, Config::ZONE_BLOCKING_BLEND_MODE)
 	);
 
 	PreferencesLayout::AddControlRow(
 		zone_section,
 		"Spawn Radius",
-		"Color and opacity for monster and NPC spawn radius tiles.",
-		create_color_opacity_control(zone_section, zone_spawn_color_pick, zone_spawn_opacity_spin,
-			Config::ZONE_SPAWN_COLOR_R, Config::ZONE_SPAWN_COLOR_G, Config::ZONE_SPAWN_COLOR_B, Config::ZONE_SPAWN_COLOR_A)
+		"Color, opacity, and blend mode for monster and NPC spawn radius tiles.",
+		create_color_opacity_control(zone_section, zone_spawn_color_pick, zone_spawn_opacity_spin, zone_spawn_blend_choice,
+			Config::ZONE_SPAWN_COLOR_R, Config::ZONE_SPAWN_COLOR_G, Config::ZONE_SPAWN_COLOR_B, Config::ZONE_SPAWN_COLOR_A, Config::ZONE_SPAWN_BLEND_MODE)
 	);
 
 	PreferencesLayout::AddControlRow(
 		zone_section,
 		"Selected House",
-		"Color and opacity for the currently selected/edited house tiles.",
-		create_color_opacity_control(zone_section, house_active_color_pick, house_active_opacity_spin,
-			Config::HOUSE_ACTIVE_COLOR_R, Config::HOUSE_ACTIVE_COLOR_G, Config::HOUSE_ACTIVE_COLOR_B, Config::HOUSE_ACTIVE_COLOR_A)
+		"Color, opacity, and blend mode for the currently selected/edited house tiles.",
+		create_color_opacity_control(zone_section, house_active_color_pick, house_active_opacity_spin, house_active_blend_choice,
+			Config::HOUSE_ACTIVE_COLOR_R, Config::HOUSE_ACTIVE_COLOR_G, Config::HOUSE_ACTIVE_COLOR_B, Config::HOUSE_ACTIVE_COLOR_A, Config::HOUSE_ACTIVE_BLEND_MODE)
 	);
 
 	PreferencesLayout::AddControlRow(
 		zone_section,
 		"Other Houses",
-		"Color and opacity for other (inactive) house tiles.",
-		create_color_opacity_control(zone_section, house_inactive_color_pick, house_inactive_opacity_spin,
-			Config::HOUSE_INACTIVE_COLOR_R, Config::HOUSE_INACTIVE_COLOR_G, Config::HOUSE_INACTIVE_COLOR_B, Config::HOUSE_INACTIVE_COLOR_A)
+		"Color, opacity, and blend mode for other (inactive) house tiles.",
+		create_color_opacity_control(zone_section, house_inactive_color_pick, house_inactive_opacity_spin, house_inactive_blend_choice,
+			Config::HOUSE_INACTIVE_COLOR_R, Config::HOUSE_INACTIVE_COLOR_G, Config::HOUSE_INACTIVE_COLOR_B, Config::HOUSE_INACTIVE_COLOR_A, Config::HOUSE_INACTIVE_BLEND_MODE)
 	);
 
 	reset_zone_defaults_btn = new wxButton(zone_section, wxID_ANY, "Reset Overlays to Defaults");
 	reset_zone_defaults_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
 		zone_borders_enabled_chkbox->SetValue(true);
-		zone_multiplicative_chkbox->SetValue(false);
 		zone_border_color_pick->SetColour(wxColour(13, 13, 18));
 
 		zone_pz_color_pick->SetColour(wxColour(20, 117, 255));
 		zone_pz_opacity_spin->SetValue(48);
+		zone_pz_blend_choice->SetSelection(0);
 
 		zone_nopvp_color_pick->SetColour(wxColour(0, 219, 92));
 		zone_nopvp_opacity_spin->SetValue(46);
+		zone_nopvp_blend_choice->SetSelection(0);
 
 		zone_nologout_color_pick->SetColour(wxColour(255, 122, 0));
 		zone_nologout_opacity_spin->SetValue(48);
+		zone_nologout_blend_choice->SetSelection(0);
 
 		zone_pvp_color_pick->SetColour(wxColour(245, 26, 51));
 		zone_pvp_opacity_spin->SetValue(48);
+		zone_pvp_blend_choice->SetSelection(0);
 
 		zone_blocking_color_pick->SetColour(wxColour(0, 0, 0));
 		zone_blocking_opacity_spin->SetValue(50);
+		zone_blocking_blend_choice->SetSelection(1);
 
 		zone_spawn_color_pick->SetColour(wxColour(242, 26, 242));
 		zone_spawn_opacity_spin->SetValue(44);
+		zone_spawn_blend_choice->SetSelection(0);
 
 		house_active_color_pick->SetColour(wxColour(89, 191, 13));
 		house_active_opacity_spin->SetValue(52);
+		house_active_blend_choice->SetSelection(0);
 
 		house_inactive_color_pick->SetColour(wxColour(92, 56, 166));
 		house_inactive_opacity_spin->SetValue(52);
+		house_inactive_blend_choice->SetSelection(0);
 	});
 	PreferencesLayout::AddControlRow(
 		zone_section,
@@ -440,20 +450,21 @@ void GraphicsPage::Apply() {
 	g_settings.setInteger(Config::CURSOR_ALT_ALPHA, cursor_color.Alpha());
 
 	g_settings.setInteger(Config::ZONE_BORDERS_ENABLED, zone_borders_enabled_chkbox->GetValue());
-	g_settings.setInteger(Config::ZONE_MULTIPLICATIVE_BLENDING, zone_multiplicative_chkbox->GetValue());
 
 	auto border_c = zone_border_color_pick->GetColour();
 	g_settings.setInteger(Config::ZONE_BORDER_COLOR_R, border_c.Red());
 	g_settings.setInteger(Config::ZONE_BORDER_COLOR_G, border_c.Green());
 	g_settings.setInteger(Config::ZONE_BORDER_COLOR_B, border_c.Blue());
 
-	auto save_color_opacity = [](
+	auto save_color_opacity_mode = [](
 		wxColourPickerCtrl* picker,
 		wxSpinCtrl* spin,
+		wxChoice* choice,
 		Config::Key r_key,
 		Config::Key g_key,
 		Config::Key b_key,
-		Config::Key a_key
+		Config::Key a_key,
+		Config::Key mode_key
 	) {
 		auto c = picker->GetColour();
 		int alpha = std::clamp(static_cast<int>(std::round((spin->GetValue() * 255.0f) / 100.0f)), 0, 255);
@@ -461,16 +472,17 @@ void GraphicsPage::Apply() {
 		g_settings.setInteger(g_key, c.Green());
 		g_settings.setInteger(b_key, c.Blue());
 		g_settings.setInteger(a_key, alpha);
+		g_settings.setInteger(mode_key, choice->GetSelection());
 	};
 
-	save_color_opacity(zone_pz_color_pick, zone_pz_opacity_spin, Config::ZONE_PZ_COLOR_R, Config::ZONE_PZ_COLOR_G, Config::ZONE_PZ_COLOR_B, Config::ZONE_PZ_COLOR_A);
-	save_color_opacity(zone_nopvp_color_pick, zone_nopvp_opacity_spin, Config::ZONE_NOPVP_COLOR_R, Config::ZONE_NOPVP_COLOR_G, Config::ZONE_NOPVP_COLOR_B, Config::ZONE_NOPVP_COLOR_A);
-	save_color_opacity(zone_nologout_color_pick, zone_nologout_opacity_spin, Config::ZONE_NOLOGOUT_COLOR_R, Config::ZONE_NOLOGOUT_COLOR_G, Config::ZONE_NOLOGOUT_COLOR_B, Config::ZONE_NOLOGOUT_COLOR_A);
-	save_color_opacity(zone_pvp_color_pick, zone_pvp_opacity_spin, Config::ZONE_PVP_COLOR_R, Config::ZONE_PVP_COLOR_G, Config::ZONE_PVP_COLOR_B, Config::ZONE_PVP_COLOR_A);
-	save_color_opacity(zone_blocking_color_pick, zone_blocking_opacity_spin, Config::ZONE_BLOCKING_COLOR_R, Config::ZONE_BLOCKING_COLOR_G, Config::ZONE_BLOCKING_COLOR_B, Config::ZONE_BLOCKING_COLOR_A);
-	save_color_opacity(zone_spawn_color_pick, zone_spawn_opacity_spin, Config::ZONE_SPAWN_COLOR_R, Config::ZONE_SPAWN_COLOR_G, Config::ZONE_SPAWN_COLOR_B, Config::ZONE_SPAWN_COLOR_A);
-	save_color_opacity(house_active_color_pick, house_active_opacity_spin, Config::HOUSE_ACTIVE_COLOR_R, Config::HOUSE_ACTIVE_COLOR_G, Config::HOUSE_ACTIVE_COLOR_B, Config::HOUSE_ACTIVE_COLOR_A);
-	save_color_opacity(house_inactive_color_pick, house_inactive_opacity_spin, Config::HOUSE_INACTIVE_COLOR_R, Config::HOUSE_INACTIVE_COLOR_G, Config::HOUSE_INACTIVE_COLOR_B, Config::HOUSE_INACTIVE_COLOR_A);
+	save_color_opacity_mode(zone_pz_color_pick, zone_pz_opacity_spin, zone_pz_blend_choice, Config::ZONE_PZ_COLOR_R, Config::ZONE_PZ_COLOR_G, Config::ZONE_PZ_COLOR_B, Config::ZONE_PZ_COLOR_A, Config::ZONE_PZ_BLEND_MODE);
+	save_color_opacity_mode(zone_nopvp_color_pick, zone_nopvp_opacity_spin, zone_nopvp_blend_choice, Config::ZONE_NOPVP_COLOR_R, Config::ZONE_NOPVP_COLOR_G, Config::ZONE_NOPVP_COLOR_B, Config::ZONE_NOPVP_COLOR_A, Config::ZONE_NOPVP_BLEND_MODE);
+	save_color_opacity_mode(zone_nologout_color_pick, zone_nologout_opacity_spin, zone_nologout_blend_choice, Config::ZONE_NOLOGOUT_COLOR_R, Config::ZONE_NOLOGOUT_COLOR_G, Config::ZONE_NOLOGOUT_COLOR_B, Config::ZONE_NOLOGOUT_COLOR_A, Config::ZONE_NOLOGOUT_BLEND_MODE);
+	save_color_opacity_mode(zone_pvp_color_pick, zone_pvp_opacity_spin, zone_pvp_blend_choice, Config::ZONE_PVP_COLOR_R, Config::ZONE_PVP_COLOR_G, Config::ZONE_PVP_COLOR_B, Config::ZONE_PVP_COLOR_A, Config::ZONE_PVP_BLEND_MODE);
+	save_color_opacity_mode(zone_blocking_color_pick, zone_blocking_opacity_spin, zone_blocking_blend_choice, Config::ZONE_BLOCKING_COLOR_R, Config::ZONE_BLOCKING_COLOR_G, Config::ZONE_BLOCKING_COLOR_B, Config::ZONE_BLOCKING_COLOR_A, Config::ZONE_BLOCKING_BLEND_MODE);
+	save_color_opacity_mode(zone_spawn_color_pick, zone_spawn_opacity_spin, zone_spawn_blend_choice, Config::ZONE_SPAWN_COLOR_R, Config::ZONE_SPAWN_COLOR_G, Config::ZONE_SPAWN_COLOR_B, Config::ZONE_SPAWN_COLOR_A, Config::ZONE_SPAWN_BLEND_MODE);
+	save_color_opacity_mode(house_active_color_pick, house_active_opacity_spin, house_active_blend_choice, Config::HOUSE_ACTIVE_COLOR_R, Config::HOUSE_ACTIVE_COLOR_G, Config::HOUSE_ACTIVE_COLOR_B, Config::HOUSE_ACTIVE_COLOR_A, Config::HOUSE_ACTIVE_BLEND_MODE);
+	save_color_opacity_mode(house_inactive_color_pick, house_inactive_opacity_spin, house_inactive_blend_choice, Config::HOUSE_INACTIVE_COLOR_R, Config::HOUSE_INACTIVE_COLOR_G, Config::HOUSE_INACTIVE_COLOR_B, Config::HOUSE_INACTIVE_COLOR_A, Config::HOUSE_INACTIVE_BLEND_MODE);
 
 	g_gui.RefreshView();
 

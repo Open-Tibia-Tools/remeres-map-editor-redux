@@ -78,13 +78,15 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	std::vector<CachedRowTile> row_next;
 	std::vector<VisibleZoneTile> visible_zone_tiles;
 
-	const bool use_mult_zones = options.zone_multiplicative_blending && (options.show_special_tiles || options.show_spawns);
-	if (use_mult_zones) {
-		sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
-	}
-
 	// 1. Special Zones Pass (Ground level)
 	if (options.show_special_tiles && view.zoom <= 10.0f) {
+		struct PendingZoneQuad {
+			float x, y;
+			uint32_t flags;
+		};
+		std::vector<PendingZoneQuad> alpha_zone_quads;
+		std::vector<PendingZoneQuad> mult_zone_quads;
+
 		const int min_x = bounds.start_x - 1;
 		const int max_x = bounds.end_x + 1;
 		const int row_width = max_x - min_x + 1;
@@ -152,16 +154,43 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 					uint8_t zmask = (ct.is_pz ? 1 : 0) | (ct.is_nopvp ? 2 : 0) | (ct.is_nolog ? 4 : 0) | (ct.is_pvp ? 8 : 0);
 					visible_zone_tiles.push_back({ x, y, zmask });
 
+					bool is_mult = false;
+					if (ct.is_pz && options.zone_pz_blend_mode == 1) is_mult = true;
+					if (ct.is_nopvp && options.zone_nopvp_blend_mode == 1) is_mult = true;
+					if (ct.is_nolog && options.zone_nologout_blend_mode == 1) is_mult = true;
+					if (ct.is_pvp && options.zone_pvp_blend_mode == 1) is_mult = true;
+
 					int draw_x, draw_y;
 					view.getScreenPosition(x, y, z, draw_x, draw_y);
-					sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y),
-					                  32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-					                  0.0f, static_cast<float>(tile_zone_flags));
+
+					if (is_mult) {
+						tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_MULTIPLICATIVE);
+						mult_zone_quads.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags });
+					} else {
+						alpha_zone_quads.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags });
+					}
 				}
 			}
 
 			std::swap(row_prev, row_curr);
 			std::swap(row_curr, row_next);
+		}
+
+		if (!alpha_zone_quads.empty()) {
+			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+			for (const auto& q : alpha_zone_quads) {
+				sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
+				                  0.0f, static_cast<float>(q.flags));
+			}
+		}
+
+		if (!mult_zone_quads.empty()) {
+			sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+			for (const auto& q : mult_zone_quads) {
+				sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
+				                  0.0f, static_cast<float>(q.flags));
+			}
+			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 		}
 	}
 
@@ -198,21 +227,28 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			const float spawn_w = static_cast<float>((sx1 - sx0 + 1) * 32);
 			const float spawn_h = static_cast<float>((sy1 - sy0 + 1) * 32);
 
-			const uint32_t spawn_flags = static_cast<uint32_t>(ZONE_FLAG_SPAWN) |
-			                             static_cast<uint32_t>(ZONE_FLAG_SPAWN_BORDER_N) |
-			                             static_cast<uint32_t>(ZONE_FLAG_SPAWN_BORDER_S) |
-			                             static_cast<uint32_t>(ZONE_FLAG_SPAWN_BORDER_W) |
-			                             static_cast<uint32_t>(ZONE_FLAG_SPAWN_BORDER_E);
+			uint32_t spawn_flags = static_cast<uint32_t>(ZONE_FLAG_SPAWN) |
+			                       static_cast<uint32_t>(ZONE_FLAG_SPAWN_BORDER_N) |
+			                       static_cast<uint32_t>(ZONE_FLAG_SPAWN_BORDER_S) |
+			                       static_cast<uint32_t>(ZONE_FLAG_SPAWN_BORDER_W) |
+			                       static_cast<uint32_t>(ZONE_FLAG_SPAWN_BORDER_E);
+
+			if (options.zone_spawn_blend_mode == 1) {
+				spawn_flags |= static_cast<uint32_t>(ZONE_FLAG_MULTIPLICATIVE);
+				sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+			} else {
+				sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+			}
 
 			const float box_alpha = (st->spawn->isSelected() && options.dragging) ? (floor_alpha * 0.30f) : floor_alpha;
 			sprite_batch.draw(static_cast<float>(draw_x0), static_cast<float>(draw_y0),
 			                  spawn_w, spawn_h, *white_pixel, 1.0f, 1.0f, 1.0f, box_alpha,
 			                  0.0f, static_cast<float>(spawn_flags));
-		}
-	}
 
-	if (use_mult_zones) {
-		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+			if (options.zone_spawn_blend_mode == 1) {
+				sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+			}
+		}
 	}
 
 	if (options.show_spawns) {
@@ -261,7 +297,7 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 		return;
 	}
 
-	if (options.zone_multiplicative_blending) {
+	if (options.zone_blocking_blend_mode == 1) {
 		sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
 	}
 
@@ -299,6 +335,9 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 			}
 
 			uint32_t tile_zone_flags = static_cast<uint32_t>(ZONE_FLAG_BLOCKING);
+			if (options.zone_blocking_blend_mode == 1) {
+				tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_MULTIPLICATIVE);
+			}
 			if (!row_prev[idx])     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_N);
 			if (!row_next[idx])     tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_S);
 			if (!row_curr[idx - 1]) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_BLOCK_BORDER_W);
@@ -315,7 +354,7 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 		std::swap(row_curr, row_next);
 	}
 
-	if (options.zone_multiplicative_blending) {
+	if (options.zone_blocking_blend_mode == 1) {
 		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 	}
 }

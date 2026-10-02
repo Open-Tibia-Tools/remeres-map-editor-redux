@@ -103,9 +103,16 @@ struct DrawingOptions {
 
 	bool anti_aliasing;
 
-	// Zone & Overlay customizable colors, opacity, and borders
+	// Zone & Overlay customizable colors, opacity, borders, and blend modes
 	bool show_zone_borders = true;
-	bool zone_multiplicative_blending = false;
+	int zone_pz_blend_mode = 0;
+	int zone_nopvp_blend_mode = 0;
+	int zone_nologout_blend_mode = 0;
+	int zone_pvp_blend_mode = 0;
+	int zone_blocking_blend_mode = 1;
+	int zone_spawn_blend_mode = 0;
+	int house_active_blend_mode = 0;
+	int house_inactive_blend_mode = 0;
 	glm::vec4 zone_border_color;
 	glm::vec4 zone_pz_color;
 	glm::vec4 zone_nopvp_color;

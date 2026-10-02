@@ -36,32 +36,39 @@ private:
 
 	// Zone & Overlay Appearance
 	wxCheckBox* zone_borders_enabled_chkbox = nullptr;
-	wxCheckBox* zone_multiplicative_chkbox = nullptr;
 	wxColourPickerCtrl* zone_border_color_pick = nullptr;
 
 	wxColourPickerCtrl* zone_pz_color_pick = nullptr;
 	wxSpinCtrl* zone_pz_opacity_spin = nullptr;
+	wxChoice* zone_pz_blend_choice = nullptr;
 
 	wxColourPickerCtrl* zone_nopvp_color_pick = nullptr;
 	wxSpinCtrl* zone_nopvp_opacity_spin = nullptr;
+	wxChoice* zone_nopvp_blend_choice = nullptr;
 
 	wxColourPickerCtrl* zone_nologout_color_pick = nullptr;
 	wxSpinCtrl* zone_nologout_opacity_spin = nullptr;
+	wxChoice* zone_nologout_blend_choice = nullptr;
 
 	wxColourPickerCtrl* zone_pvp_color_pick = nullptr;
 	wxSpinCtrl* zone_pvp_opacity_spin = nullptr;
+	wxChoice* zone_pvp_blend_choice = nullptr;
 
 	wxColourPickerCtrl* zone_blocking_color_pick = nullptr;
 	wxSpinCtrl* zone_blocking_opacity_spin = nullptr;
+	wxChoice* zone_blocking_blend_choice = nullptr;
 
 	wxColourPickerCtrl* zone_spawn_color_pick = nullptr;
 	wxSpinCtrl* zone_spawn_opacity_spin = nullptr;
+	wxChoice* zone_spawn_blend_choice = nullptr;
 
 	wxColourPickerCtrl* house_active_color_pick = nullptr;
 	wxSpinCtrl* house_active_opacity_spin = nullptr;
+	wxChoice* house_active_blend_choice = nullptr;
 
 	wxColourPickerCtrl* house_inactive_color_pick = nullptr;
 	wxSpinCtrl* house_inactive_opacity_spin = nullptr;
+	wxChoice* house_inactive_blend_choice = nullptr;
 
 	wxButton* reset_zone_defaults_btn = nullptr;
 };

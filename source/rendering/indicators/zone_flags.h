@@ -38,6 +38,9 @@ inline constexpr float ZONE_FLAG_ZONE_INTERNAL_E = 2097152.0f;// Bit 21: East in
 
 // Dedicated cluster badge indicator quad (Bit 22)
 inline constexpr float ZONE_FLAG_CLUSTER_BADGE  = 4194304.0f;// Bit 22: Fixed World Center cluster badge quad
+
+// Multiplicative blend mode flag for overlay quads (Bit 23)
+inline constexpr float ZONE_FLAG_MULTIPLICATIVE = 8388608.0f;// Bit 23: Multiplicative blending quad
 } // namespace rme::rendering
 
 #endif // RME_RENDERING_INDICATORS_ZONE_FLAGS_H_

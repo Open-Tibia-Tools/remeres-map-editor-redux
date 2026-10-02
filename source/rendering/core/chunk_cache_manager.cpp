@@ -791,6 +791,8 @@ void ChunkCacheManager::renderFloorTerrain(
 	shader_.SetInt("uShowHouses", ctx.options.show_houses ? 1 : 0);
 	shader_.SetVec4("uHouseActiveWash", ctx.options.house_active_color);
 	shader_.SetVec4("uHouseInactiveWash", ctx.options.house_inactive_color);
+	shader_.SetInt("uHouseActiveBlendMode", ctx.options.house_active_blend_mode);
+	shader_.SetInt("uHouseInactiveBlendMode", ctx.options.house_inactive_blend_mode);
 	shader_.SetInt("uShowTowns", ctx.options.show_towns ? 1 : 0);
 	shader_.SetInt("uShowWaypoints", (ctx.options.show_waypoints && !ctx.options.ingame) ? 1 : 0);
 	shader_.SetInt("uShowTechItems", (ctx.options.show_tech_items && !ctx.options.ingame) ? 1 : 0);
@@ -886,6 +888,8 @@ void ChunkCacheManager::renderFloorItems(
 	shader_.SetInt("uShowHouses", ctx.options.show_houses ? 1 : 0);
 	shader_.SetVec4("uHouseActiveWash", ctx.options.house_active_color);
 	shader_.SetVec4("uHouseInactiveWash", ctx.options.house_inactive_color);
+	shader_.SetInt("uHouseActiveBlendMode", ctx.options.house_active_blend_mode);
+	shader_.SetInt("uHouseInactiveBlendMode", ctx.options.house_inactive_blend_mode);
 	shader_.SetInt("uShowTowns", ctx.options.show_towns ? 1 : 0);
 	shader_.SetInt("uShowWaypoints", (ctx.options.show_waypoints && !ctx.options.ingame) ? 1 : 0);
 	shader_.SetInt("uShowTechItems", (ctx.options.show_tech_items && !ctx.options.ingame) ? 1 : 0);

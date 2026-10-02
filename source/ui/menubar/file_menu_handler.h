@@ -5,6 +5,7 @@
 
 class MainFrame;
 class MainMenuBar;
+class PreferencesWindow;
 
 class FileMenuHandler : public wxEvtHandler {
 public:
@@ -35,6 +36,7 @@ public:
 protected:
 	MainFrame* frame;
 	MainMenuBar* menubar;
+	PreferencesWindow* preferences_dialog_ = nullptr;
 };
 
 #endif
