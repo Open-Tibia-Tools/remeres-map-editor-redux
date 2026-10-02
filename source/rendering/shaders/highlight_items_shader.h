@@ -8,9 +8,9 @@ namespace rme::rendering::shaders {
 /**
  * @brief GLSL module providing shader-driven item highlighting overlays.
  *
- * Tints ground underneath tiles with items based on item count,
- * replicating the legacy multiplicative color shift (reducing red and green)
- * fully on the GPU without triggering chunk cache invalidations.
+ * Evaluates item highlighting for tiles containing items, replicating
+ * the legacy multiplicative color shift (reducing red and green)
+ * fully on the GPU via ZoneOverlayDrawer without triggering chunk cache invalidations.
  */
 inline constexpr std::string_view HIGHLIGHT_ITEMS_SHADER_GLSL = R"(
 uniform int uShowHighlightItems;

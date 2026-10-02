@@ -9,8 +9,9 @@ namespace rme::rendering::shaders {
  * @brief GLSL module providing house zoning and overlay evaluation routines.
  *
  * Implements:
- * applyHouseOverlay: Evaluates house zoning atmosphere wash, centered 'H' ground emblem,
- * and 45-degree dark diagonal hatching for walls and extended items.
+ * applyHouseOverlay: Evaluates house zoning atmosphere wash (active vs. inactive house tinting)
+ * for ground tiles and deep shadow tinting for walls and extended items.
+ * Connected borders are handled via ZoneOverlayDrawer border passes.
  * (Note: House Entry tile indicators are evaluated centrally via indicator_shader.h)
  */
 inline constexpr std::string_view HOUSE_SHADER_GLSL = R"(
