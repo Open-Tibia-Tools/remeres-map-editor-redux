@@ -9,17 +9,17 @@ namespace rme::rendering::shaders {
  * @brief GLSL module providing full 32x32 square tile indicators with pixel typography.
  *
  * Supports:
- * - ENTRY  (House entry point: Blue)
- * - SPAWN  (Spawn center: Purple/Magenta)
- * - TOWN   (Town temple: Gold/Amber)
- * - WAYPT  (Waypoint: Cyan)
- * - STAIR  (Technical invisible stairs: Yellow)
- * - WALK   (Technical invisible walkable: Cyan)
- * - BLOCK  (Technical invisible wall: Red)
- * - LIGHT  (Technical primal light source: Sky Blue)
- * - INVALID (Missing ground: Red)
- * - INVALID (Missing top item: Orange/Yellow)
- * - INVALID (Invalid zone flags: Magenta)
+ * - entry   (House entry point: Bright Pure Green)
+ * - spawn   (Spawn center: Bright Pure Magenta)
+ * - town    (Town temple: Bright Gold/Amber)
+ * - waypt   (Waypoint: Vivid Bright Blue)
+ * - stair   (Technical invisible stairs: Bright Pure Yellow)
+ * - walk    (Technical invisible walkable: Bright Pure Cyan)
+ * - block   (Technical invisible wall: Bright Pure Red)
+ * - light   (Technical primal light source: Bright Sky Blue)
+ * - invalid (Missing ground: Bright Pure Red)
+ * - invalid (Missing top item: Bright Pure Orange)
+ * - invalid (Invalid zone flags: Bright Pure Magenta)
  */
 inline constexpr std::string_view INDICATOR_SHADER_GLSL = R"(
 bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
@@ -38,115 +38,120 @@ bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
     vec4 zBlack = vec4(0.05, 0.05, 0.07, 0.98);
 
     vec4 zWash;
-    vec4 zFg;
     uint inMask[7];
 
     if (markerId < 2000000.0) {
-        // House Entry ("ENTRY") - Bright Pure Green #00FF00
+        // House Entry ("entry") - Bright Pure Green #00FF00
         if (showHouses == 0) discard;
-        zWash  = vec4(0.00, 1.00, 0.00, 0.75);
-        zFg    = vec4(0.00, 1.00, 0.00, 1.00);
-        inMask = uint[7](0x00000000u, 0x0519CA70u, 0x05288E10u, 0x02188A30u, 0x02288A10u, 0x02288A70u, 0x00000000u);
+        zWash  = vec4(0.00, 1.00, 0.00, 0.50);
+        inMask = uint[7](0x00008000u, 0x0001C000u, 0x014C8C80u, 0x01549540u, 0x014495C0u, 0x01849440u, 0x01051580u);
     } else if (markerId < 3000000.0) {
-        // Spawn Center ("SPAWN") - Bright Pure Magenta #FF00FF
+        // Spawn Center ("spawn") - Bright Pure Magenta #FF00FF
         if (showSpawns == 0) discard;
-        zWash  = vec4(1.00, 0.00, 1.00, 0.75);
-        zFg    = vec4(1.00, 0.00, 1.00, 1.00);
-        inMask = uint[7](0x0944C770u, 0x0B452908u, 0x0D452908u, 0x0955E730u, 0x09552140u, 0x096D2140u, 0x09452138u);
+        zWash  = vec4(1.00, 0.00, 1.00, 0.50);
+        inMask = uint[7](0x00000000u, 0x00000000u, 0x01A266C0u, 0x02A28A20u, 0x02AACA40u, 0x02AAA680u, 0x0294C260u);
     } else if (markerId < 4000000.0) {
-        // Town Temple ("TOWN") - Bright Gold/Amber #FFCC00
+        // Town Temple ("town") - Bright Gold/Amber #FFCC00
         if (showTowns == 0) discard;
-        zWash  = vec4(1.00, 0.85, 0.00, 0.75);
-        zFg    = vec4(1.00, 0.85, 0.00, 1.00);
-        inMask = uint[7](0x025133E0u, 0x02D14880u, 0x03514880u, 0x02554880u, 0x02554880u, 0x025B4880u, 0x02513080u);
+        zWash  = vec4(1.00, 0.85, 0.00, 0.50);
+        inMask = uint[7](0x00000100u, 0x00000380u, 0x00689100u, 0x00A8A900u, 0x00AAA900u, 0x00AAA900u, 0x00A51200u);
     } else if (markerId < 5000000.0) {
-        // Waypoint ("WAYPT") - Bright Vivid Blue #00A6FF
+        // Waypoint ("waypt") - Bright Vivid Blue #00A6FF
         if (showWaypoints == 0) discard;
-        zWash  = vec4(0.00, 0.65, 1.00, 0.75);
-        zFg    = vec4(0.00, 0.65, 1.00, 1.00);
-        inMask = uint[7](0x1F3A4C88u, 0x044A5288u, 0x044A5288u, 0x04399EA8u, 0x040912A8u, 0x040912D8u, 0x04091288u);
+        zWash  = vec4(0.00, 0.65, 1.00, 0.50);
+        inMask = uint[7](0x01000000u, 0x03800000u, 0x011A9A20u, 0x012AA220u, 0x012AB2A0u, 0x011B2AA0u, 0x020A3140u);
     } else if (markerId < 6000000.0) {
-        // Invisible Stairs ("STAIR") - Bright Pure Yellow #FFFF00
+        // Invisible Stairs ("stair") - Bright Pure Yellow #FFFF00
         if (showTechItems == 0) discard;
-        zWash  = vec4(1.00, 1.00, 0.00, 0.75);
-        zFg    = vec4(1.00, 1.00, 0.00, 1.00);
-        inMask = uint[7](0x07733EE0u, 0x09248810u, 0x09248810u, 0x07278860u, 0x05248880u, 0x09248880u, 0x09748870u);
+        zWash  = vec4(1.00, 1.00, 0.00, 0.50);
+        inMask = uint[7](0x00081000u, 0x00003800u, 0x00699300u, 0x00AA1080u, 0x002B1100u, 0x002A9200u, 0x002B2180u);
     } else if (markerId < 7000000.0) {
-        // Invisible Walkable ("WALK") - Bright Pure Cyan #00FFFF
+        // Invisible Walkable ("walk") - Bright Pure Cyan #00FFFF
         if (showTechItems == 0) discard;
-        zWash  = vec4(0.00, 1.00, 1.00, 0.75);
-        zFg    = vec4(0.00, 1.00, 1.00, 1.00);
-        inMask = uint[7](0x02426440u, 0x01429440u, 0x00C29440u, 0x00C2F540u, 0x01429540u, 0x024296C0u, 0x025E9440u);
+        zWash  = vec4(0.00, 1.00, 1.00, 0.50);
+        inMask = uint[7](0x00140000u, 0x00140000u, 0x0054D100u, 0x00351100u, 0x00359500u, 0x00555500u, 0x00558A00u);
     } else if (markerId < 8000000.0) {
-        // Invisible Wall ("BLOCK") - Bright Pure Red #FF0000
+        // Invisible Wall ("block") - Bright Pure Red #FF0000
         if (showTechItems == 0) discard;
-        zWash  = vec4(1.00, 0.00, 0.00, 0.75);
-        zFg    = vec4(1.00, 0.00, 0.00, 1.00);
-        inMask = uint[7](0x09718270u, 0x050A4290u, 0x030A4290u, 0x030A4270u, 0x050A4290u, 0x090A4290u, 0x09719E70u);
+        zWash  = vec4(1.00, 0.00, 0.00, 0.50);
+        inMask = uint[7](0x00200880u, 0x00200880u, 0x00AC4980u, 0x0062AA80u, 0x0062AA80u, 0x00A2AA80u, 0x00AC4980u);
     } else if (markerId < 9000000.0) {
-        // Primal Light ("LIGHT") - Bright Sky Blue #00D5FF
+        // Primal Light ("light") - Bright Sky Blue #00D5FF
         if (showTechItems == 0) discard;
-        zWash  = vec4(0.00, 0.85, 1.00, 0.75);
-        zFg    = vec4(0.00, 0.85, 1.00, 1.00);
-        inMask = uint[7](0x0FA5CE10u, 0x02242410u, 0x02242410u, 0x023DA410u, 0x02252410u, 0x02252410u, 0x0225CEF0u);
+        zWash  = vec4(0.00, 0.85, 1.00, 0.50);
+        inMask = uint[7](0x00210500u, 0x00710100u, 0x00236500u, 0x00255500u, 0x00255500u, 0x00256500u, 0x00454500u);
     } else if (markerId < 10000000.0) {
-        // Missing Ground Tile ("INVALID") - Bright Pure Red #FF0000
+        // Missing Ground Tile ("invalid") - Bright Pure Red #FF0000
         if (showInvalidTiles == 0) discard;
-        zWash  = vec4(1.00, 0.00, 0.00, 0.75);
-        zFg    = vec4(1.00, 0.00, 0.00, 1.00);
-        inMask = uint[7](0x00000000u, 0x0345D550u, 0x054555D0u, 0x0545D550u, 0x05455550u, 0x035D4950u, 0x00000000u);
+        zWash  = vec4(1.00, 0.00, 0.00, 0.50);
+        inMask = uint[7](0x02280020u, 0x02080000u, 0x0329A9A0u, 0x02AA2AA0u, 0x02AB2AA0u, 0x02AAAAA0u, 0x032B12A0u);
     } else if (markerId < 11000000.0) {
-        // Missing Top Item ("INVALID") - Bright Pure Orange #FF8000
+        // Missing Top Item ("invalid") - Bright Pure Orange #FF8000
         if (showInvalidTiles == 0) discard;
-        zWash  = vec4(1.00, 0.50, 0.00, 0.75);
-        zFg    = vec4(1.00, 0.50, 0.00, 1.00);
-        inMask = uint[7](0x00000000u, 0x0345D550u, 0x054555D0u, 0x054555D0u, 0x05455550u, 0x035D4950u, 0x00000000u);
+        zWash  = vec4(1.00, 0.50, 0.00, 0.50);
+        inMask = uint[7](0x02280020u, 0x02080000u, 0x0329A9A0u, 0x02AA2AA0u, 0x02AB2AA0u, 0x02AAAAA0u, 0x032B12A0u);
     } else {
-        // Invalid Zone Flags ("INVALID") - Bright Pure Magenta #FF00FF
+        // Invalid Zone Flags ("invalid") - Bright Pure Magenta #FF00FF
         if (showInvalidZones == 0) discard;
-        zWash  = vec4(1.00, 0.00, 1.00, 0.75);
-        zFg    = vec4(1.00, 0.00, 1.00, 1.00);
-        inMask = uint[7](0x00000000u, 0x0345D550u, 0x054555D0u, 0x0545D550u, 0x05455550u, 0x035D4950u, 0x00000000u);
+        zWash  = vec4(1.00, 0.00, 1.00, 0.50);
+        inMask = uint[7](0x02280020u, 0x02080000u, 0x0329A9A0u, 0x02AA2AA0u, 0x02AB2AA0u, 0x02AAAAA0u, 0x032B12A0u);
     }
 
-    vec4 zBg = vec4(0.06, 0.06, 0.09, 0.95);
-
-    // 1. 2px solid black outer outline
-    if (lx <= 1 || lx >= 30 || ly <= 1 || ly >= 30) {
+    // 1. Outer 1px black border
+    if (lx == 0 || lx == 31 || ly == 0 || ly == 31) {
         outColor = zBlack;
         outColor.rgb *= tint.rgb;
         outColor.a *= tint.a;
         return true;
     }
 
-    // 2. Centered Bold Badge (ly in 10..20, lx in 2..29)
-    if (lx >= 2 && lx <= 29 && ly >= 10 && ly <= 20) {
-        bool isBadgeBorder = (lx == 2 || lx == 29 || ly == 10 || ly == 20);
-        if (isBadgeBorder) {
-            // Discard/wash outer 4 corner pixels of badge for rounded pill effect
-            if ((lx == 2 && ly == 10) || (lx == 29 && ly == 10) ||
-                (lx == 2 && ly == 20) || (lx == 29 && ly == 20)) {
-                outColor = zWash;
-            } else {
-                outColor = zBlack;
-            }
-            outColor.rgb *= tint.rgb;
-            outColor.a *= tint.a;
-            return true;
-        }
-
-        int row = ly - 12;
-        bool isText = false;
-        if (row >= 0 && row < 7) {
-            isText = ((inMask[row] >> lx) & 1u) != 0u;
-        }
-        outColor = isText ? zFg : zBg;
+    // 2. 1px light border (kitchen tile bevel)
+    if (lx == 1 || lx == 30 || ly == 1 || ly == 30) {
+        float highlightStrength = (ly == 1 || lx == 1) ? 0.65 : 0.30;
+        float alpha = (ly == 1 || lx == 1) ? 0.85 : 0.75;
+        outColor = vec4(mix(zWash.rgb, vec3(1.0), highlightStrength), alpha);
         outColor.rgb *= tint.rgb;
         outColor.a *= tint.a;
         return true;
     }
 
-    // 3. Interior Wash
+    // 3. Text (white font) with 1px black outline (ly in 11..19)
+    if (ly >= 11 && ly <= 19 && lx >= 2 && lx <= 29) {
+        int row = ly - 12;
+        bool isText = false;
+        if (row >= 0 && row < 7) {
+            isText = ((inMask[row] >> lx) & 1u) != 0u;
+        }
+
+        if (isText) {
+            outColor = vec4(1.0, 1.0, 1.0, 1.0);
+            outColor.rgb *= tint.rgb;
+            outColor.a *= tint.a;
+            return true;
+        }
+
+        // 8-way dilation around white font for black outline
+        bool isOutline = false;
+        for (int dy = -1; dy <= 1; ++dy) {
+            int r = row + dy;
+            if (r >= 0 && r < 7) {
+                uint m = inMask[r];
+                if (((m >> (lx - 1)) & 7u) != 0u) {
+                    isOutline = true;
+                    break;
+                }
+            }
+        }
+
+        if (isOutline) {
+            outColor = zBlack;
+            outColor.rgb *= tint.rgb;
+            outColor.a *= tint.a;
+            return true;
+        }
+    }
+
+    // 4. Interior 50% Transparent Background Wash
     outColor = zWash;
     outColor.rgb *= tint.rgb;
     outColor.a *= tint.a;

@@ -262,14 +262,16 @@ def test_zone_shader_3d_bevel_and_colors():
 
 
 def test_indicator_shader_standardized_system():
-    """Verify that indicator_shader.h implements 2px black border, 3D color bevel, kitchen tile wash, and bold centered badge."""
+    """Verify that indicator_shader.h implements 1px black border, 1px light border (kitchen tile bevel), 50% wash, and white text font with black outline."""
     from pathlib import Path
     shader_path = Path(__file__).parent.parent / "source" / "rendering" / "shaders" / "indicator_shader.h"
     content = shader_path.read_text(encoding="utf-8")
 
-    assert "lx <= 1 || lx >= 30 || ly <= 1 || ly >= 30" in content, "2px black border must be implemented"
+    assert "lx == 0 || lx == 31 || ly == 0 || ly == 31" in content, "1px outer black border must be implemented"
+    assert "lx == 1 || lx == 30 || ly == 1 || ly == 30" in content, "1px inner light border (kitchen tile bevel) must be implemented"
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in content, "Black border color must be defined"
-    assert "lx >= 2 && lx <= 29 && ly >= 10 && ly <= 20" in content, "Centered bold pill badge must be evaluated"
+    assert "outColor = vec4(1.0, 1.0, 1.0, 1.0);" in content, "White text font must be evaluated"
+    assert "isOutline" in content, "Black text outline must be evaluated"
     assert "zWash" in content, "Interior translucent wash must be evaluated"
 
 
@@ -925,24 +927,42 @@ def test_highlight_items_shader_overlay_system():
     assert "highlight_items" not in tcc_cpp, "TileColorCalculator must be decoupled from highlight_items"
 
 
-def test_single_tile_indicator_bright_colors_and_75_percent_opacity():
+def test_single_tile_indicator_kitchen_tile_styling():
     """Verify that single-tile indicators (spawn, town, entry, walk, block, stair, waypoint, etc.)
-    use bright simple colors and 75% alpha background wash."""
+    use kitchen tile styling:
+    1. White text font + black text outline.
+    2. 50% transparent tiles (alpha = 0.50).
+    3. Outer 1px black border + inner 1px light border (kitchen tile bevel).
+    4. Lowercase typography ('block', 'entry', 'stair', 'walk', 'spawn', 'waypt', 'town', 'light', 'invalid').
+    """
     root = Path(__file__).parent.parent
     indicator_path = root / "source" / "rendering" / "shaders" / "indicator_shader.h"
     assert indicator_path.exists(), "indicator_shader.h must exist"
     code = indicator_path.read_text(encoding="utf-8")
 
-    # Assert 75% opacity wash across indicators
-    assert "zWash  = vec4(0.00, 1.00, 0.00, 0.75);" in code  # ENTRY (Bright pure green)
-    assert "zWash  = vec4(1.00, 0.00, 1.00, 0.75);" in code  # SPAWN (Bright pure magenta)
-    assert "zWash  = vec4(1.00, 0.85, 0.00, 0.75);" in code  # TOWN (Bright gold/amber)
-    assert "zWash  = vec4(0.00, 0.65, 1.00, 0.75);" in code  # WAYPT (Bright vivid blue)
-    assert "zWash  = vec4(1.00, 1.00, 0.00, 0.75);" in code  # STAIR (Bright pure yellow)
-    assert "zWash  = vec4(0.00, 1.00, 1.00, 0.75);" in code  # WALK (Bright pure cyan)
-    assert "zWash  = vec4(1.00, 0.00, 0.00, 0.75);" in code  # BLOCK (Bright pure red)
-    assert "zWash  = vec4(0.00, 0.85, 1.00, 0.75);" in code  # LIGHT (Bright sky blue)
-    assert "zWash  = vec4(1.00, 0.50, 0.00, 0.75);" in code  # INVALID top item (Bright pure orange)
+    # 1. White text font and black outline
+    assert "outColor = vec4(1.0, 1.0, 1.0, 1.0);" in code  # White text font
+    assert "isOutline" in code  # Black text outline via 8-way dilation
+
+    # 2. 50% opacity background wash across indicators
+    assert "zWash  = vec4(0.00, 1.00, 0.00, 0.50);" in code  # entry (Bright pure green)
+    assert "zWash  = vec4(1.00, 0.00, 1.00, 0.50);" in code  # spawn (Bright pure magenta)
+    assert "zWash  = vec4(1.00, 0.85, 0.00, 0.50);" in code  # town (Bright gold/amber)
+    assert "zWash  = vec4(0.00, 0.65, 1.00, 0.50);" in code  # waypt (Bright vivid blue)
+    assert "zWash  = vec4(1.00, 1.00, 0.00, 0.50);" in code  # stair (Bright pure yellow)
+    assert "zWash  = vec4(0.00, 1.00, 1.00, 0.50);" in code  # walk (Bright pure cyan)
+    assert "zWash  = vec4(1.00, 0.00, 0.00, 0.50);" in code  # block (Bright pure red)
+    assert "zWash  = vec4(0.00, 0.85, 1.00, 0.50);" in code  # light (Bright sky blue)
+    assert "zWash  = vec4(1.00, 0.50, 0.00, 0.50);" in code  # invalid top item (Bright pure orange)
+
+    # 3. Kitchen tile borders (outer 1px black + inner 1px light border)
+    assert "lx == 0 || lx == 31 || ly == 0 || ly == 31" in code  # Outer black border
+    assert "lx == 1 || lx == 30 || ly == 1 || ly == 30" in code  # Inner 1px light border
+
+    # 4. Lowercase indicator labels
+    for word in ['"entry"', '"spawn"', '"town"', '"waypt"', '"stair"', '"walk"', '"block"', '"light"', '"invalid"']:
+        assert word in code, f"Lowercase label {word} must be present in indicator_shader.h"
+
 
 
 
