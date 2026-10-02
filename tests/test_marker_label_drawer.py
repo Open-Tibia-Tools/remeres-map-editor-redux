@@ -280,6 +280,9 @@ def test_blocking_overlay_shader_colors():
 
     settings_path = Path(__file__).parent.parent / "source" / "app" / "settings.cpp"
     settings_content = settings_path.read_text(encoding="utf-8")
+    assert "ZONE_BLOCKING_COLOR_R, 255" in settings_content
+    assert "ZONE_BLOCKING_COLOR_G, 170" in settings_content
+    assert "ZONE_BLOCKING_COLOR_B, 170" in settings_content
     assert "ZONE_BLOCKING_COLOR_A, 128" in settings_content
 
 

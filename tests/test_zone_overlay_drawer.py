@@ -243,6 +243,9 @@ def test_zone_shader_3d_bevel_and_colors():
     assert "ZONE_NOPVP_COLOR_R, 0" in settings_content
     assert "ZONE_NOLOGOUT_COLOR_R, 255" in settings_content
     assert "ZONE_PVP_COLOR_R, 245" in settings_content
+    assert "ZONE_BLOCKING_COLOR_R, 255" in settings_content
+    assert "ZONE_BLOCKING_COLOR_G, 170" in settings_content
+    assert "ZONE_BLOCKING_COLOR_B, 170" in settings_content
     assert "ZONE_BLOCKING_COLOR_A, 128" in settings_content
     assert "ZONE_SPAWN_COLOR_R, 242" in settings_content
 
@@ -260,7 +263,7 @@ def test_indicator_shader_standardized_system():
 
 
 def test_is_tile_path_blocking_excludes_invisible_wall():
-    """Verify that invisible walls (1548) are excluded from pathing blocking overlay."""
+    """Verify that invisible walls (1548) are excluded from pathing blocking overlay and ground is required."""
     class MockItem:
         def __init__(self, server_id: int, client_id: int, is_blocking: bool):
             self.server_id = server_id
@@ -271,9 +274,9 @@ def test_is_tile_path_blocking_excludes_invisible_wall():
         return item.server_id == 1548 or item.client_id == 2187
 
     def is_tile_path_blocking(ground: MockItem | None, items: list[MockItem]) -> bool:
-        if not ground and not items:
+        if not ground:
             return False
-        if ground and ground.blocking and not is_invisible_wall(ground):
+        if ground.blocking and not is_invisible_wall(ground):
             return True
         for item in items:
             if item.blocking and not is_invisible_wall(item):
@@ -296,9 +299,12 @@ def test_is_tile_path_blocking_excludes_invisible_wall():
     water = MockItem(server_id=4608, client_id=4608, is_blocking=True)
     assert is_tile_path_blocking(water, []), "Water ground tile MUST be path-blocking"
 
+    # Tile without ground (void / open air) must NOT be path-blocking (ground-only)
+    assert not is_tile_path_blocking(None, [stone_wall]), "Tile without ground must NOT be path-blocking"
+
 
 def test_ground_level_render_order_and_subpass_partitioning():
-    """Verify that zone overlays are rendered at ground level between terrain and items."""
+    """Verify that zone and blocking overlays are rendered at ground level between terrain and items."""
     from pathlib import Path
     root = Path(__file__).parent.parent
 
@@ -315,22 +321,22 @@ def test_ground_level_render_order_and_subpass_partitioning():
     assert "void drawFloorBlocking(" in zod_h
     assert "void drawFloorBadges(" in zod_h
 
-    # 3. Verify map_layer_drawer.cpp invokes drawFloor between renderFloorTerrain and renderFloorItems, and drawFloorBlocking + drawFloorBadges after renderFloorItems
+    # 3. Verify map_layer_drawer.cpp invokes drawFloor and drawFloorBlocking at ground level between renderFloorTerrain and renderFloorItems
     mld_cpp = (root / "source" / "rendering" / "drawers" / "map_layer_drawer.cpp").read_text(encoding="utf-8")
     terrain_pos = mld_cpp.find("renderFloorTerrain")
     zone_pos = mld_cpp.find("zone_overlay_drawer->drawFloor")
-    items_pos = mld_cpp.find("renderFloorItems")
     blocking_pos = mld_cpp.find("zone_overlay_drawer->drawFloorBlocking")
+    items_pos = mld_cpp.find("renderFloorItems")
     badges_pos = mld_cpp.find("zone_overlay_drawer->drawFloorBadges")
 
     assert terrain_pos != -1, "renderFloorTerrain must be called"
     assert zone_pos != -1, "zone_overlay_drawer->drawFloor must be called"
-    assert items_pos != -1, "renderFloorItems must be called"
     assert blocking_pos != -1, "zone_overlay_drawer->drawFloorBlocking must be called"
+    assert items_pos != -1, "renderFloorItems must be called"
     assert badges_pos != -1, "zone_overlay_drawer->drawFloorBadges must be called"
 
-    assert terrain_pos < zone_pos < items_pos < blocking_pos <= badges_pos, (
-        "Strict Order: renderFloorTerrain -> drawFloor -> renderFloorItems -> drawFloorBlocking -> drawFloorBadges"
+    assert terrain_pos < zone_pos <= blocking_pos < items_pos < badges_pos, (
+        "Strict Order: renderFloorTerrain -> drawFloor -> drawFloorBlocking -> renderFloorItems -> drawFloorBadges"
     )
 
     # 4. Verify post-map overlay pass in map_drawer.cpp does NOT draw zone overlays on top of items
