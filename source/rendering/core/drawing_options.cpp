@@ -55,6 +55,9 @@ void DrawingOptions::SetDefault() {
 	anti_aliasing = false;
 
 	show_zone_borders = true;
+	cursor_blend_mode = 0;
+	cursor_alt_blend_mode = 0;
+	zone_border_blend_mode = 0;
 	zone_pz_blend_mode = 0;
 	zone_nopvp_blend_mode = 0;
 	zone_nologout_blend_mode = 0;
@@ -196,6 +199,9 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const bool new_anti_aliasing = settings.getBoolean(Config::ANTI_ALIASING);
 
 	const bool new_show_zone_borders = settings.getBoolean(Config::ZONE_BORDERS_ENABLED);
+	const int new_cursor_blend_mode = settings.getInteger(Config::CURSOR_BLEND_MODE);
+	const int new_cursor_alt_blend_mode = settings.getInteger(Config::CURSOR_ALT_BLEND_MODE);
+	const int new_zone_border_blend_mode = settings.getInteger(Config::ZONE_BORDER_BLEND_MODE);
 	const int new_zone_pz_blend_mode = settings.getInteger(Config::ZONE_PZ_BLEND_MODE);
 	const int new_zone_nopvp_blend_mode = settings.getInteger(Config::ZONE_NOPVP_BLEND_MODE);
 	const int new_zone_nologout_blend_mode = settings.getInteger(Config::ZONE_NOLOGOUT_BLEND_MODE);
@@ -283,6 +289,9 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	anti_aliasing = new_anti_aliasing;
 
 	if (new_show_zone_borders != show_zone_borders ||
+		new_cursor_blend_mode != cursor_blend_mode ||
+		new_cursor_alt_blend_mode != cursor_alt_blend_mode ||
+		new_zone_border_blend_mode != zone_border_blend_mode ||
 		new_zone_pz_blend_mode != zone_pz_blend_mode ||
 		new_zone_nopvp_blend_mode != zone_nopvp_blend_mode ||
 		new_zone_nologout_blend_mode != zone_nologout_blend_mode ||
@@ -304,6 +313,9 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	}
 
 	show_zone_borders = new_show_zone_borders;
+	cursor_blend_mode = new_cursor_blend_mode;
+	cursor_alt_blend_mode = new_cursor_alt_blend_mode;
+	zone_border_blend_mode = new_zone_border_blend_mode;
 	zone_pz_blend_mode = new_zone_pz_blend_mode;
 	zone_nopvp_blend_mode = new_zone_nopvp_blend_mode;
 	zone_nologout_blend_mode = new_zone_nologout_blend_mode;

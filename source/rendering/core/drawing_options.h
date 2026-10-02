@@ -105,6 +105,9 @@ struct DrawingOptions {
 
 	// Zone & Overlay customizable colors, opacity, borders, and blend modes
 	bool show_zone_borders = true;
+	int cursor_blend_mode = 0;
+	int cursor_alt_blend_mode = 0;
+	int zone_border_blend_mode = 0;
 	int zone_pz_blend_mode = 0;
 	int zone_nopvp_blend_mode = 0;
 	int zone_nologout_blend_mode = 0;

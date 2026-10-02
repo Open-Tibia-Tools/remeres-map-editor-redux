@@ -720,6 +720,9 @@ def test_customizable_shader_overlays_architecture():
     # 4. DrawingOptions struct members
     drawing_opts = (root / "source" / "rendering" / "core" / "drawing_options.h").read_text(encoding="utf-8")
     assert "bool show_zone_borders" in drawing_opts
+    assert "int cursor_blend_mode" in drawing_opts
+    assert "int cursor_alt_blend_mode" in drawing_opts
+    assert "int zone_border_blend_mode" in drawing_opts
     assert "int zone_pz_blend_mode" in drawing_opts
     assert "int zone_blocking_blend_mode" in drawing_opts
     assert "glm::vec4 zone_border_color;" in drawing_opts
@@ -732,6 +735,9 @@ def test_customizable_shader_overlays_architecture():
     # 5. Settings keys
     settings_h = (root / "source" / "app" / "settings.h").read_text(encoding="utf-8")
     assert "ZONE_BORDERS_ENABLED," in settings_h
+    assert "ZONE_BORDER_BLEND_MODE," in settings_h
+    assert "CURSOR_BLEND_MODE," in settings_h
+    assert "CURSOR_ALT_BLEND_MODE," in settings_h
     assert "ZONE_PZ_BLEND_MODE," in settings_h
     assert "ZONE_BLOCKING_BLEND_MODE," in settings_h
     assert "HOUSE_ACTIVE_BLEND_MODE," in settings_h
@@ -743,6 +749,12 @@ def test_customizable_shader_overlays_architecture():
     # 6. Preferences GraphicsPage controls
     graphics_page_h = (root / "source" / "app" / "preferences" / "graphics_page.h").read_text(encoding="utf-8")
     assert "wxCheckBox* zone_borders_enabled_chkbox" in graphics_page_h
+    assert "wxChoice* cursor_blend_choice" in graphics_page_h
+    assert "wxSpinCtrl* cursor_opacity_spin" in graphics_page_h
+    assert "wxChoice* cursor_alt_blend_choice" in graphics_page_h
+    assert "wxSpinCtrl* cursor_alt_opacity_spin" in graphics_page_h
+    assert "wxChoice* zone_border_blend_choice" in graphics_page_h
+    assert "wxSpinCtrl* zone_border_opacity_spin" in graphics_page_h
     assert "wxChoice* zone_pz_blend_choice" in graphics_page_h
     assert "wxChoice* zone_blocking_blend_choice" in graphics_page_h
     assert "wxColourPickerCtrl* zone_border_color_pick" in graphics_page_h
@@ -757,6 +769,7 @@ def test_zone_multiplicative_blending_system():
     - Shader isMult evaluation and fragment modulation
     - House shader per-house blend mode uniform evaluation
     - ZoneOverlayDrawer per-overlay blend mode separation and switching
+    - BrushOverlayDrawer cursor rects and flag brush multiplicative blending
     - GraphicsPage wiring with blend choices and calibrated defaults
     """
     root = Path(__file__).parent.parent
@@ -785,10 +798,20 @@ def test_zone_multiplicative_blending_system():
     assert "options.zone_blocking_blend_mode == 1" in zod_cpp
     assert "ZONE_FLAG_MULTIPLICATIVE" in zod_cpp
 
-    # 5. GraphicsPage wiring
+    # 5. BrushOverlayDrawer cursor multiplicative blending
+    bod_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "brush_overlay_drawer.cpp").read_text(encoding="utf-8")
+    assert "drawBrushRect" in bod_cpp
+    assert "Config::CURSOR_BLEND_MODE" in bod_cpp
+    assert "Config::CURSOR_ALT_BLEND_MODE" in bod_cpp
+    assert "GL_DST_COLOR, GL_ZERO" in bod_cpp
+
+    # 6. GraphicsPage wiring
     gp_cpp = (root / "source" / "app" / "preferences" / "graphics_page.cpp").read_text(encoding="utf-8")
     assert "blend_modes.Add(\"Alpha Blend\");" in gp_cpp
     assert "blend_modes.Add(\"Multiplicative\");" in gp_cpp
+    assert "Config::CURSOR_BLEND_MODE" in gp_cpp
+    assert "Config::CURSOR_ALT_BLEND_MODE" in gp_cpp
+    assert "Config::ZONE_BORDER_BLEND_MODE" in gp_cpp
     assert "Config::ZONE_BLOCKING_BLEND_MODE" in gp_cpp
     assert "zone_blocking_blend_choice->SetSelection(1);" in gp_cpp
 
@@ -811,6 +834,46 @@ def test_preferences_window_modeless_support():
     assert "if (IsModal())" in pw_cpp
     assert "EndModal(wxID_OK);" in pw_cpp
     assert "Destroy();" in pw_cpp
+
+
+def test_multiplicative_mathematical_identity_for_black():
+    """Prove that for pure black RGB(0,0,0) at opacity alpha, Alpha Blend and Multiplicative Blend
+    produce 100% mathematically identical pixels for any destination background color:
+      Alpha Blend:        0 * a + D * (1 - a) = (1 - a) * D
+      Multiplicative:     D * mix(1.0, 0, a) = D * (1 - a)
+    However, for any colored tint (e.g. Red (255, 0, 0) or RGB(255, 170, 170)),
+    the two blend modes produce markedly distinct visual results.
+    """
+    def alpha_blend(src_rgb, alpha, dst_rgb):
+        return tuple(s * alpha + d * (1.0 - alpha) for s, d in zip(src_rgb, dst_rgb))
+
+    def mult_blend(src_rgb, alpha, dst_rgb):
+        mod_rgb = tuple(1.0 * (1.0 - alpha) + s * alpha for s in src_rgb)
+        return tuple(m * d for m, d in zip(mod_rgb, dst_rgb))
+
+    black = (0.0, 0.0, 0.0)
+    test_destinations = [
+        (0.2, 0.6, 0.3),  # Green grass
+        (0.8, 0.7, 0.4),  # Sand
+        (0.1, 0.3, 0.8),  # Water
+        (0.5, 0.5, 0.5),  # Gray stone
+    ]
+
+    for alpha in [0.2, 0.5, 0.8]:
+        for dst in test_destinations:
+            alpha_res = alpha_blend(black, alpha, dst)
+            mult_res = mult_blend(black, alpha, dst)
+            # Must be bit-exact identical for pure black
+            for a_ch, m_ch in zip(alpha_res, mult_res):
+                assert abs(a_ch - m_ch) < 1e-9
+
+    # For non-black colors (e.g. Red), verify they differ significantly
+    red = (1.0, 0.0, 0.0)
+    for dst in test_destinations:
+        alpha_res = alpha_blend(red, 0.5, dst)
+        mult_res = mult_blend(red, 0.5, dst)
+        assert any(abs(a_ch - m_ch) > 0.05 for a_ch, m_ch in zip(alpha_res, mult_res))
+
 
 
 

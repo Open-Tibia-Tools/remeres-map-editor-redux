@@ -62,74 +62,6 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 	);
 	page_sizer->Add(palette_section, 0, wxEXPAND | wxALL, FromDIP(10));
 
-	auto* cursor_section = new PreferencesSectionPanel(
-		GetScrollWindow(),
-		"Cursor",
-		"Customize the map cursor colors used for drawing, houses, flags, and similar overlays."
-	);
-	cursor_color_pick = new wxColourPickerCtrl(
-		cursor_section,
-		wxID_ANY,
-		wxColor(
-			g_settings.getInteger(Config::CURSOR_RED),
-			g_settings.getInteger(Config::CURSOR_GREEN),
-			g_settings.getInteger(Config::CURSOR_BLUE),
-			g_settings.getInteger(Config::CURSOR_ALPHA)
-		)
-	);
-	PreferencesLayout::AddControlRow(
-		cursor_section,
-		"Primary cursor color",
-		"Main drawing cursor color shown during regular placement and painting operations.",
-		cursor_color_pick
-	);
-	cursor_alt_color_pick = new wxColourPickerCtrl(
-		cursor_section,
-		wxID_ANY,
-		wxColor(
-			g_settings.getInteger(Config::CURSOR_ALT_RED),
-			g_settings.getInteger(Config::CURSOR_ALT_GREEN),
-			g_settings.getInteger(Config::CURSOR_ALT_BLUE),
-			g_settings.getInteger(Config::CURSOR_ALT_ALPHA)
-		)
-	);
-	PreferencesLayout::AddControlRow(
-		cursor_section,
-		"Secondary cursor color",
-		"Alternate cursor used for special overlays such as house and flag tools.",
-		cursor_alt_color_pick
-	);
-	page_sizer->Add(cursor_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
-
-	auto* zone_section = new PreferencesSectionPanel(
-		GetScrollWindow(),
-		"Zone & Overlay Appearance",
-		"Customize the colors, fill opacities, and perimeter borders for special zones, pathing, spawns, and houses."
-	);
-
-	zone_borders_enabled_chkbox = PreferencesLayout::AddCheckBoxRow(
-		zone_section,
-		"Draw outer zone borders",
-		"Render high-contrast 2px borders around outer perimeters of special zones, blocking tiles, and spawns.",
-		g_settings.getBoolean(Config::ZONE_BORDERS_ENABLED)
-	);
-
-	zone_border_color_pick = new wxColourPickerCtrl(
-		zone_section,
-		wxID_ANY,
-		wxColour(
-			g_settings.getInteger(Config::ZONE_BORDER_COLOR_R),
-			g_settings.getInteger(Config::ZONE_BORDER_COLOR_G),
-			g_settings.getInteger(Config::ZONE_BORDER_COLOR_B)
-		)
-	);
-	PreferencesLayout::AddControlRow(
-		zone_section,
-		"Zone border color",
-		"Outline color drawn along outer boundaries when zone borders are enabled.",
-		zone_border_color_pick
-	);
-
 	auto create_color_opacity_control = [&](
 		wxWindow* parent_win,
 		wxColourPickerCtrl*& out_picker,
@@ -172,6 +104,48 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		container->SetSizerAndFit(sizer);
 		return container;
 	};
+
+	auto* cursor_section = new PreferencesSectionPanel(
+		GetScrollWindow(),
+		"Cursor",
+		"Customize the map cursor colors used for drawing, houses, flags, and similar overlays."
+	);
+	PreferencesLayout::AddControlRow(
+		cursor_section,
+		"Primary cursor color",
+		"Color, opacity, and blend mode for the main drawing cursor.",
+		create_color_opacity_control(cursor_section, cursor_color_pick, cursor_opacity_spin, cursor_blend_choice,
+			Config::CURSOR_RED, Config::CURSOR_GREEN, Config::CURSOR_BLUE, Config::CURSOR_ALPHA, Config::CURSOR_BLEND_MODE)
+	);
+	PreferencesLayout::AddControlRow(
+		cursor_section,
+		"Secondary cursor color",
+		"Color, opacity, and blend mode for alternate cursors (house, flag tools).",
+		create_color_opacity_control(cursor_section, cursor_alt_color_pick, cursor_alt_opacity_spin, cursor_alt_blend_choice,
+			Config::CURSOR_ALT_RED, Config::CURSOR_ALT_GREEN, Config::CURSOR_ALT_BLUE, Config::CURSOR_ALT_ALPHA, Config::CURSOR_ALT_BLEND_MODE)
+	);
+	page_sizer->Add(cursor_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+
+	auto* zone_section = new PreferencesSectionPanel(
+		GetScrollWindow(),
+		"Zone & Overlay Appearance",
+		"Customize the colors, fill opacities, and perimeter borders for special zones, pathing, spawns, and houses."
+	);
+
+	zone_borders_enabled_chkbox = PreferencesLayout::AddCheckBoxRow(
+		zone_section,
+		"Draw outer zone borders",
+		"Render high-contrast 2px borders around outer perimeters of special zones, blocking tiles, and spawns.",
+		g_settings.getBoolean(Config::ZONE_BORDERS_ENABLED)
+	);
+
+	PreferencesLayout::AddControlRow(
+		zone_section,
+		"Zone border color",
+		"Outline color, opacity, and blend mode drawn along outer boundaries when zone borders are enabled.",
+		create_color_opacity_control(zone_section, zone_border_color_pick, zone_border_opacity_spin, zone_border_blend_choice,
+			Config::ZONE_BORDER_COLOR_R, Config::ZONE_BORDER_COLOR_G, Config::ZONE_BORDER_COLOR_B, Config::ZONE_BORDER_COLOR_A, Config::ZONE_BORDER_BLEND_MODE)
+	);
 
 	PreferencesLayout::AddControlRow(
 		zone_section,
@@ -241,6 +215,8 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 	reset_zone_defaults_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
 		zone_borders_enabled_chkbox->SetValue(true);
 		zone_border_color_pick->SetColour(wxColour(13, 13, 18));
+		zone_border_opacity_spin->SetValue(98);
+		zone_border_blend_choice->SetSelection(0);
 
 		zone_pz_color_pick->SetColour(wxColour(20, 117, 255));
 		zone_pz_opacity_spin->SetValue(48);
@@ -437,24 +413,7 @@ void GraphicsPage::Apply() {
 		g_settings.setString(Config::SCREENSHOT_FORMAT, "bmp");
 	}
 
-	auto cursor_color = cursor_color_pick->GetColour();
-	g_settings.setInteger(Config::CURSOR_RED, cursor_color.Red());
-	g_settings.setInteger(Config::CURSOR_GREEN, cursor_color.Green());
-	g_settings.setInteger(Config::CURSOR_BLUE, cursor_color.Blue());
-	g_settings.setInteger(Config::CURSOR_ALPHA, cursor_color.Alpha());
-
-	cursor_color = cursor_alt_color_pick->GetColour();
-	g_settings.setInteger(Config::CURSOR_ALT_RED, cursor_color.Red());
-	g_settings.setInteger(Config::CURSOR_ALT_GREEN, cursor_color.Green());
-	g_settings.setInteger(Config::CURSOR_ALT_BLUE, cursor_color.Blue());
-	g_settings.setInteger(Config::CURSOR_ALT_ALPHA, cursor_color.Alpha());
-
 	g_settings.setInteger(Config::ZONE_BORDERS_ENABLED, zone_borders_enabled_chkbox->GetValue());
-
-	auto border_c = zone_border_color_pick->GetColour();
-	g_settings.setInteger(Config::ZONE_BORDER_COLOR_R, border_c.Red());
-	g_settings.setInteger(Config::ZONE_BORDER_COLOR_G, border_c.Green());
-	g_settings.setInteger(Config::ZONE_BORDER_COLOR_B, border_c.Blue());
 
 	auto save_color_opacity_mode = [](
 		wxColourPickerCtrl* picker,
@@ -474,6 +433,10 @@ void GraphicsPage::Apply() {
 		g_settings.setInteger(a_key, alpha);
 		g_settings.setInteger(mode_key, choice->GetSelection());
 	};
+
+	save_color_opacity_mode(cursor_color_pick, cursor_opacity_spin, cursor_blend_choice, Config::CURSOR_RED, Config::CURSOR_GREEN, Config::CURSOR_BLUE, Config::CURSOR_ALPHA, Config::CURSOR_BLEND_MODE);
+	save_color_opacity_mode(cursor_alt_color_pick, cursor_alt_opacity_spin, cursor_alt_blend_choice, Config::CURSOR_ALT_RED, Config::CURSOR_ALT_GREEN, Config::CURSOR_ALT_BLUE, Config::CURSOR_ALT_ALPHA, Config::CURSOR_ALT_BLEND_MODE);
+	save_color_opacity_mode(zone_border_color_pick, zone_border_opacity_spin, zone_border_blend_choice, Config::ZONE_BORDER_COLOR_R, Config::ZONE_BORDER_COLOR_G, Config::ZONE_BORDER_COLOR_B, Config::ZONE_BORDER_COLOR_A, Config::ZONE_BORDER_BLEND_MODE);
 
 	save_color_opacity_mode(zone_pz_color_pick, zone_pz_opacity_spin, zone_pz_blend_choice, Config::ZONE_PZ_COLOR_R, Config::ZONE_PZ_COLOR_G, Config::ZONE_PZ_COLOR_B, Config::ZONE_PZ_COLOR_A, Config::ZONE_PZ_BLEND_MODE);
 	save_color_opacity_mode(zone_nopvp_color_pick, zone_nopvp_opacity_spin, zone_nopvp_blend_choice, Config::ZONE_NOPVP_COLOR_R, Config::ZONE_NOPVP_COLOR_G, Config::ZONE_NOPVP_COLOR_B, Config::ZONE_NOPVP_COLOR_A, Config::ZONE_NOPVP_BLEND_MODE);

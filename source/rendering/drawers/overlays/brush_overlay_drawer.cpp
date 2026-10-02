@@ -149,6 +149,24 @@ void BrushOverlayDrawer::draw(
 
 	glm::vec4 brushColor = get_brush_color(brushColorType, cfg);
 
+	int cursor_blend_mode = 0;
+	if (brushColorType == COLOR_BRUSH) {
+		cursor_blend_mode = cfg.getInteger(Config::CURSOR_BLEND_MODE);
+	} else if (brushColorType == COLOR_HOUSE_BRUSH || brushColorType == COLOR_FLAG_BRUSH) {
+		cursor_blend_mode = cfg.getInteger(Config::CURSOR_ALT_BLEND_MODE);
+	}
+
+	auto drawBrushRect = [&](float rx, float ry, float rw, float rh, const glm::vec4& col) {
+		if (cursor_blend_mode == 1) {
+			glm::vec4 mult_col(glm::mix(glm::vec3(1.0f), glm::vec3(col.r, col.g, col.b), col.a), 1.0f);
+			sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+			sprite_batch.drawRect(rx, ry, rw, rh, mult_col, atlas);
+			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+		} else {
+			sprite_batch.drawRect(rx, ry, rw, rh, col, atlas);
+		}
+	};
+
 	if (drag_state.is_dragging_draw) {
 		ASSERT(brush->canDrag());
 
@@ -167,23 +185,23 @@ void BrushOverlayDrawer::draw(
 			int delta_y = last_click_end_sy - last_click_start_sy;
 
 			// Top
-			sprite_batch.drawRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy), static_cast<float>(last_click_end_sx - last_click_start_sx), static_cast<float>(TILE_SIZE), brushColor, atlas);
+			drawBrushRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy), static_cast<float>(last_click_end_sx - last_click_start_sx), static_cast<float>(TILE_SIZE), brushColor);
 
 			// Bottom
 			if (delta_y > TILE_SIZE) {
-				sprite_batch.drawRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_end_sy - TILE_SIZE), static_cast<float>(last_click_end_sx - last_click_start_sx), static_cast<float>(TILE_SIZE), brushColor, atlas);
+				drawBrushRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_end_sy - TILE_SIZE), static_cast<float>(last_click_end_sx - last_click_start_sx), static_cast<float>(TILE_SIZE), brushColor);
 			}
 
 			// Right
 			if (delta_x > TILE_SIZE && delta_y > TILE_SIZE) {
 				float h = (last_click_end_sy - TILE_SIZE) - (last_click_start_sy + TILE_SIZE);
-				sprite_batch.drawRect(static_cast<float>(last_click_end_sx - TILE_SIZE), static_cast<float>(last_click_start_sy + TILE_SIZE), static_cast<float>(TILE_SIZE), h, brushColor, atlas);
+				drawBrushRect(static_cast<float>(last_click_end_sx - TILE_SIZE), static_cast<float>(last_click_start_sy + TILE_SIZE), static_cast<float>(TILE_SIZE), h, brushColor);
 			}
 
 			// Left
 			if (delta_y > TILE_SIZE) {
 				float h = (last_click_end_sy - TILE_SIZE) - (last_click_start_sy + TILE_SIZE);
-				sprite_batch.drawRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy + TILE_SIZE), static_cast<float>(TILE_SIZE), h, brushColor, atlas);
+				drawBrushRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy + TILE_SIZE), static_cast<float>(TILE_SIZE), h, brushColor);
 			}
 		} else {
 			if (bm.GetBrushShape() == BRUSHSHAPE_SQUARE || brush->is<SpawnBrush>()) {
@@ -241,7 +259,14 @@ void BrushOverlayDrawer::draw(
 								if (x == start_x) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
 								if (x == end_x)   border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
 
-								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags);
+								uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
+								if (cursor_blend_mode == 1) {
+									sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+								}
+								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags + zf_mult);
+								if (cursor_blend_mode == 1) {
+									sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+								}
 							}
 						}
 					}
@@ -264,15 +289,15 @@ void BrushOverlayDrawer::draw(
 						float thickness = 1.0f; // Thin border
 
 						// Top
-						sprite_batch.drawRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy), w, thickness, brushColor, atlas);
+						drawBrushRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy), w, thickness, brushColor);
 						// Bottom
-						sprite_batch.drawRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy + h - thickness), w, thickness, brushColor, atlas);
+						drawBrushRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy + h - thickness), w, thickness, brushColor);
 						// Left
-						sprite_batch.drawRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy + thickness), thickness, h - 2 * thickness, brushColor, atlas);
+						drawBrushRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy + thickness), thickness, h - 2 * thickness, brushColor);
 						// Right
-						sprite_batch.drawRect(static_cast<float>(last_click_start_sx + w - thickness), static_cast<float>(last_click_start_sy + thickness), thickness, h - 2 * thickness, brushColor, atlas);
+						drawBrushRect(static_cast<float>(last_click_start_sx + w - thickness), static_cast<float>(last_click_start_sy + thickness), thickness, h - 2 * thickness, brushColor);
 					} else {
-						sprite_batch.drawRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy), w, h, brushColor, atlas);
+						drawBrushRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy), w, h, brushColor);
 					}
 				}
 			} else if (bm.GetBrushShape() == BRUSHSHAPE_CIRCLE) {
@@ -335,10 +360,17 @@ void BrushOverlayDrawer::draw(
 									if (!inCircle(x - 1, y)) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
 									if (!inCircle(x + 1, y)) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
 
-									sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags);
+									uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
+									if (cursor_blend_mode == 1) {
+										sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+									}
+									sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags + zf_mult);
+									if (cursor_blend_mode == 1) {
+										sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+									}
 								}
 							} else {
-								sprite_batch.drawRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), brushColor, atlas);
+								drawBrushRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), brushColor);
 							}
 						}
 					}
@@ -362,23 +394,23 @@ void BrushOverlayDrawer::draw(
 			int delta_y = end_sy - start_sy;
 
 			// Top
-			sprite_batch.drawRect(static_cast<float>(start_sx), static_cast<float>(start_sy), static_cast<float>(end_sx - start_sx), static_cast<float>(TILE_SIZE), brushColor, atlas);
+			drawBrushRect(static_cast<float>(start_sx), static_cast<float>(start_sy), static_cast<float>(end_sx - start_sx), static_cast<float>(TILE_SIZE), brushColor);
 
 			// Bottom
 			if (delta_y > TILE_SIZE) {
-				sprite_batch.drawRect(static_cast<float>(start_sx), static_cast<float>(end_sy - TILE_SIZE), static_cast<float>(end_sx - start_sx), static_cast<float>(TILE_SIZE), brushColor, atlas);
+				drawBrushRect(static_cast<float>(start_sx), static_cast<float>(end_sy - TILE_SIZE), static_cast<float>(end_sx - start_sx), static_cast<float>(TILE_SIZE), brushColor);
 			}
 
 			// Right
 			if (delta_x > TILE_SIZE && delta_y > TILE_SIZE) {
 				float h = static_cast<float>(end_sy - start_sy - 2 * TILE_SIZE);
-				sprite_batch.drawRect(static_cast<float>(end_sx - TILE_SIZE), static_cast<float>(start_sy + TILE_SIZE), static_cast<float>(TILE_SIZE), h, brushColor, atlas);
+				drawBrushRect(static_cast<float>(end_sx - TILE_SIZE), static_cast<float>(start_sy + TILE_SIZE), static_cast<float>(TILE_SIZE), h, brushColor);
 			}
 
 			// Left
 			if (delta_y > TILE_SIZE) {
 				float h = static_cast<float>(end_sy - start_sy - 2 * TILE_SIZE);
-				sprite_batch.drawRect(static_cast<float>(start_sx), static_cast<float>(start_sy + TILE_SIZE), static_cast<float>(TILE_SIZE), h, brushColor, atlas);
+				drawBrushRect(static_cast<float>(start_sx), static_cast<float>(start_sy + TILE_SIZE), static_cast<float>(TILE_SIZE), h, brushColor);
 			}
 		} else if (brush->is<DoorBrush>()) {
 			int cx = (view.mouse_map_x) * TILE_SIZE - view.view_scroll_x - view.getFloorAdjustment();
@@ -446,7 +478,14 @@ void BrushOverlayDrawer::draw(
 								if (x == footprint.min_offset_x) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
 								if (x == footprint.max_offset_x) border_flags += rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
 
-								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags);
+								uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
+								if (cursor_blend_mode == 1) {
+									sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+								}
+								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf + border_flags + zf_mult);
+								if (cursor_blend_mode == 1) {
+									sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+								}
 							}
 						}
 					} else {
@@ -454,7 +493,7 @@ void BrushOverlayDrawer::draw(
 						if (brush->is<OptionalBorderBrush>()) {
 							c = get_check_color(brush, editor, Position(view.mouse_map_x + x, view.mouse_map_y + y, view.floor), cfg);
 						}
-						sprite_batch.drawRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), c, atlas);
+						drawBrushRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), c);
 					}
 				}
 			}

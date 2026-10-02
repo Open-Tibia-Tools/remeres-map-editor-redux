@@ -25,7 +25,12 @@ private:
 	wxChoice* screenshot_format_choice = nullptr;
 
 	wxColourPickerCtrl* cursor_color_pick = nullptr;
+	wxSpinCtrl* cursor_opacity_spin = nullptr;
+	wxChoice* cursor_blend_choice = nullptr;
+
 	wxColourPickerCtrl* cursor_alt_color_pick = nullptr;
+	wxSpinCtrl* cursor_alt_opacity_spin = nullptr;
+	wxChoice* cursor_alt_blend_choice = nullptr;
 
 	wxDirPickerCtrl* screenshot_directory_picker = nullptr;
 
@@ -37,6 +42,8 @@ private:
 	// Zone & Overlay Appearance
 	wxCheckBox* zone_borders_enabled_chkbox = nullptr;
 	wxColourPickerCtrl* zone_border_color_pick = nullptr;
+	wxSpinCtrl* zone_border_opacity_spin = nullptr;
+	wxChoice* zone_border_blend_choice = nullptr;
 
 	wxColourPickerCtrl* zone_pz_color_pick = nullptr;
 	wxSpinCtrl* zone_pz_opacity_spin = nullptr;
