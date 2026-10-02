@@ -272,9 +272,9 @@ def test_blocking_overlay_shader_colors():
     idx = content.find("evaluateBlockingOverlay")
     fn_body = content[idx:idx + 600]
 
-    # Standardized 2px black border and red palette
+    # Standardized 2px black border and dark gray palette
     assert "vec4(0.05, 0.05, 0.07, 0.98)" in fn_body, "Blocking must have 2px black perimeter"
-    assert "0.85, 0.15, 0.15, 0.44" in fn_body, "Blocking wash must be deep translucent red"
+    assert "0.20, 0.20, 0.23, 0.52" in fn_body, "Blocking wash must be dark gray"
 
 
 def test_marker_drawer_does_not_render_spawn_size_labels():
