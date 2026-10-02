@@ -42,70 +42,70 @@ bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
     uint inMask[7];
 
     if (markerId < 2000000.0) {
-        // House Entry ("ENTRY") - Lime Green #B4EB1F (complement of violet)
+        // House Entry ("ENTRY") - Bright Pure Green #00FF00
         if (showHouses == 0) discard;
-        zWash  = vec4(0.71, 0.92, 0.12, 0.98);
-        zFg    = vec4(0.71, 0.92, 0.12, 0.98);
+        zWash  = vec4(0.00, 1.00, 0.00, 0.75);
+        zFg    = vec4(0.00, 1.00, 0.00, 1.00);
         inMask = uint[7](0x00000000u, 0x0519CA70u, 0x05288E10u, 0x02188A30u, 0x02288A10u, 0x02288A70u, 0x00000000u);
     } else if (markerId < 3000000.0) {
-        // Spawn Center ("SPAWN") - Magenta #F226F2
+        // Spawn Center ("SPAWN") - Bright Pure Magenta #FF00FF
         if (showSpawns == 0) discard;
-        zWash  = vec4(0.95, 0.15, 0.95, 0.98);
-        zFg    = vec4(0.95, 0.15, 0.95, 0.98);
+        zWash  = vec4(1.00, 0.00, 1.00, 0.75);
+        zFg    = vec4(1.00, 0.00, 1.00, 1.00);
         inMask = uint[7](0x0944C770u, 0x0B452908u, 0x0D452908u, 0x0955E730u, 0x09552140u, 0x096D2140u, 0x09452138u);
     } else if (markerId < 4000000.0) {
-        // Town Temple ("TOWN") - Gold #FFD900
+        // Town Temple ("TOWN") - Bright Gold/Amber #FFCC00
         if (showTowns == 0) discard;
-        zWash  = vec4(1.00, 0.85, 0.00, 0.98);
-        zFg    = vec4(1.00, 0.85, 0.00, 0.98);
+        zWash  = vec4(1.00, 0.85, 0.00, 0.75);
+        zFg    = vec4(1.00, 0.85, 0.00, 1.00);
         inMask = uint[7](0x025133E0u, 0x02D14880u, 0x03514880u, 0x02554880u, 0x02554880u, 0x025B4880u, 0x02513080u);
     } else if (markerId < 5000000.0) {
-        // Waypoint ("WAYPT") - Vivid Cyan #00E5FF
+        // Waypoint ("WAYPT") - Bright Vivid Blue #00A6FF
         if (showWaypoints == 0) discard;
-        zWash  = vec4(0.00, 0.90, 1.00, 0.98);
-        zFg    = vec4(0.00, 0.90, 1.00, 0.98);
+        zWash  = vec4(0.00, 0.65, 1.00, 0.75);
+        zFg    = vec4(0.00, 0.65, 1.00, 1.00);
         inMask = uint[7](0x1F3A4C88u, 0x044A5288u, 0x044A5288u, 0x04399EA8u, 0x040912A8u, 0x040912D8u, 0x04091288u);
     } else if (markerId < 6000000.0) {
-        // Invisible Stairs ("STAIR") - Muted Yellow #E8D96B
+        // Invisible Stairs ("STAIR") - Bright Pure Yellow #FFFF00
         if (showTechItems == 0) discard;
-        zWash  = vec4(0.91, 0.85, 0.42, 0.98);
-        zFg    = vec4(0.91, 0.85, 0.42, 0.98);
+        zWash  = vec4(1.00, 1.00, 0.00, 0.75);
+        zFg    = vec4(1.00, 1.00, 0.00, 1.00);
         inMask = uint[7](0x07733EE0u, 0x09248810u, 0x09248810u, 0x07278860u, 0x05248880u, 0x09248880u, 0x09748870u);
     } else if (markerId < 7000000.0) {
-        // Invisible Walkable ("WALK") - Muted Cyan-Teal #5CB8C4
+        // Invisible Walkable ("WALK") - Bright Pure Cyan #00FFFF
         if (showTechItems == 0) discard;
-        zWash  = vec4(0.36, 0.72, 0.77, 0.98);
-        zFg    = vec4(0.36, 0.72, 0.77, 0.98);
+        zWash  = vec4(0.00, 1.00, 1.00, 0.75);
+        zFg    = vec4(0.00, 1.00, 1.00, 1.00);
         inMask = uint[7](0x02426440u, 0x01429440u, 0x00C29440u, 0x00C2F540u, 0x01429540u, 0x024296C0u, 0x025E9440u);
     } else if (markerId < 8000000.0) {
-        // Invisible Wall ("BLOCK") - Muted Red #C0504D
+        // Invisible Wall ("BLOCK") - Bright Pure Red #FF0000
         if (showTechItems == 0) discard;
-        zWash  = vec4(0.75, 0.31, 0.30, 0.98);
-        zFg    = vec4(0.75, 0.31, 0.30, 0.98);
+        zWash  = vec4(1.00, 0.00, 0.00, 0.75);
+        zFg    = vec4(1.00, 0.00, 0.00, 1.00);
         inMask = uint[7](0x09718270u, 0x050A4290u, 0x030A4290u, 0x030A4270u, 0x050A4290u, 0x090A4290u, 0x09719E70u);
     } else if (markerId < 9000000.0) {
-        // Primal Light ("LIGHT") - Pale Ice Azure #BFE9FF
+        // Primal Light ("LIGHT") - Bright Sky Blue #00D5FF
         if (showTechItems == 0) discard;
-        zWash  = vec4(0.75, 0.91, 1.00, 0.98);
-        zFg    = vec4(0.75, 0.91, 1.00, 0.98);
+        zWash  = vec4(0.00, 0.85, 1.00, 0.75);
+        zFg    = vec4(0.00, 0.85, 1.00, 1.00);
         inMask = uint[7](0x0FA5CE10u, 0x02242410u, 0x02242410u, 0x023DA410u, 0x02252410u, 0x02252410u, 0x0225CEF0u);
     } else if (markerId < 10000000.0) {
-        // Missing Ground Tile ("INVALID") - Warm Red #EB1F3D
+        // Missing Ground Tile ("INVALID") - Bright Pure Red #FF0000
         if (showInvalidTiles == 0) discard;
-        zWash  = vec4(0.92, 0.12, 0.24, 0.98);
-        zFg    = vec4(0.92, 0.12, 0.24, 0.98);
+        zWash  = vec4(1.00, 0.00, 0.00, 0.75);
+        zFg    = vec4(1.00, 0.00, 0.00, 1.00);
         inMask = uint[7](0x00000000u, 0x0345D550u, 0x054555D0u, 0x0545D550u, 0x05455550u, 0x035D4950u, 0x00000000u);
     } else if (markerId < 11000000.0) {
-        // Missing Top Item ("INVALID") - Warm Orange #FF850F
+        // Missing Top Item ("INVALID") - Bright Pure Orange #FF8000
         if (showInvalidTiles == 0) discard;
-        zWash  = vec4(1.00, 0.52, 0.06, 0.98);
-        zFg    = vec4(1.00, 0.52, 0.06, 0.98);
+        zWash  = vec4(1.00, 0.50, 0.00, 0.75);
+        zFg    = vec4(1.00, 0.50, 0.00, 1.00);
         inMask = uint[7](0x00000000u, 0x0345D550u, 0x054555D0u, 0x054555D0u, 0x05455550u, 0x035D4950u, 0x00000000u);
     } else {
-        // Invalid Zone Flags ("INVALID") - Magenta #F226F2
+        // Invalid Zone Flags ("INVALID") - Bright Pure Magenta #FF00FF
         if (showInvalidZones == 0) discard;
-        zWash  = vec4(0.95, 0.15, 0.95, 0.98);
-        zFg    = vec4(0.95, 0.15, 0.95, 0.98);
+        zWash  = vec4(1.00, 0.00, 1.00, 0.75);
+        zFg    = vec4(1.00, 0.00, 1.00, 1.00);
         inMask = uint[7](0x00000000u, 0x0345D550u, 0x054555D0u, 0x0545D550u, 0x05455550u, 0x035D4950u, 0x00000000u);
     }
 

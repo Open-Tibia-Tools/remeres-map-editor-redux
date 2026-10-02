@@ -899,11 +899,7 @@ def test_highlight_items_shader_overlay_system():
     shader_code = shader_path.read_text(encoding="utf-8")
     assert "uniform int uShowHighlightItems;" in shader_code
     assert "evaluateHighlightItems" in shader_code
-    assert "0.75" in shader_code
-    assert "0.6015625" in shader_code
-    assert "0.48046875" in shader_code
-    assert "0.3984375" in shader_code
-    assert "0.328125" in shader_code
+    assert "vec4(0.75, 0.75, 1.0, 1.0)" in shader_code
 
     # 2. Zone flags verification
     zf_path = root / "source" / "rendering" / "indicators" / "zone_flags.h"
@@ -917,7 +913,7 @@ def test_highlight_items_shader_overlay_system():
 
     zod_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.cpp").read_text(encoding="utf-8")
     assert "void ZoneOverlayDrawer::drawFloorHighlightItems" in zod_cpp
-    assert "MakeHighlightItemsFlags" in zod_cpp
+    assert "MakeHighlightItemsFlags()" in zod_cpp
     assert "sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);" in zod_cpp
 
     # 4. MapLayerDrawer pass ordering
@@ -927,6 +923,27 @@ def test_highlight_items_shader_overlay_system():
     # 5. TileColorCalculator decoupled from highlight_items
     tcc_cpp = (root / "source" / "rendering" / "drawers" / "tiles" / "tile_color_calculator.cpp").read_text(encoding="utf-8")
     assert "highlight_items" not in tcc_cpp, "TileColorCalculator must be decoupled from highlight_items"
+
+
+def test_single_tile_indicator_bright_colors_and_75_percent_opacity():
+    """Verify that single-tile indicators (spawn, town, entry, walk, block, stair, waypoint, etc.)
+    use bright simple colors and 75% alpha background wash."""
+    root = Path(__file__).parent.parent
+    indicator_path = root / "source" / "rendering" / "shaders" / "indicator_shader.h"
+    assert indicator_path.exists(), "indicator_shader.h must exist"
+    code = indicator_path.read_text(encoding="utf-8")
+
+    # Assert 75% opacity wash across indicators
+    assert "zWash  = vec4(0.00, 1.00, 0.00, 0.75);" in code  # ENTRY (Bright pure green)
+    assert "zWash  = vec4(1.00, 0.00, 1.00, 0.75);" in code  # SPAWN (Bright pure magenta)
+    assert "zWash  = vec4(1.00, 0.85, 0.00, 0.75);" in code  # TOWN (Bright gold/amber)
+    assert "zWash  = vec4(0.00, 0.65, 1.00, 0.75);" in code  # WAYPT (Bright vivid blue)
+    assert "zWash  = vec4(1.00, 1.00, 0.00, 0.75);" in code  # STAIR (Bright pure yellow)
+    assert "zWash  = vec4(0.00, 1.00, 1.00, 0.75);" in code  # WALK (Bright pure cyan)
+    assert "zWash  = vec4(1.00, 0.00, 0.00, 0.75);" in code  # BLOCK (Bright pure red)
+    assert "zWash  = vec4(0.00, 0.85, 1.00, 0.75);" in code  # LIGHT (Bright sky blue)
+    assert "zWash  = vec4(1.00, 0.50, 0.00, 0.75);" in code  # INVALID top item (Bright pure orange)
+
 
 
 

@@ -37,14 +37,11 @@ inline constexpr uint32_t ZONE_FLAG_CLUSTER_BADGE  = 1u << 18; // Bit 18: Fixed 
 // Multiplicative blend mode flag for overlay quads (Bit 19)
 inline constexpr uint32_t ZONE_FLAG_MULTIPLICATIVE = 1u << 19; // Bit 19: Multiplicative blending quad
 
-// Highlight items overlay (Bits 20-23)
-inline constexpr uint32_t ZONE_FLAG_HIGHLIGHT_ITEMS      = 1u << 20; // Bit 20: Tile has highlighted items
-inline constexpr uint32_t ZONE_FLAG_HIGHLIGHT_TIER_SHIFT = 21;       // Bits 21-23: Tier index (0-4)
-inline constexpr uint32_t ZONE_FLAG_HIGHLIGHT_TIER_MASK  = 0x7u << ZONE_FLAG_HIGHLIGHT_TIER_SHIFT;
+// Highlight items overlay (Bit 20)
+inline constexpr uint32_t ZONE_FLAG_HIGHLIGHT_ITEMS = 1u << 20; // Bit 20: Tile has highlighted items
 
-[[nodiscard]] constexpr uint32_t MakeHighlightItemsFlags(int item_count) noexcept {
-	int idx = item_count < 1 ? 0 : (item_count > 5 ? 4 : item_count - 1);
-	return ZONE_FLAG_HIGHLIGHT_ITEMS | (static_cast<uint32_t>(idx) << ZONE_FLAG_HIGHLIGHT_TIER_SHIFT) | ZONE_FLAG_MULTIPLICATIVE;
+[[nodiscard]] constexpr uint32_t MakeHighlightItemsFlags() noexcept {
+	return ZONE_FLAG_HIGHLIGHT_ITEMS | ZONE_FLAG_MULTIPLICATIVE;
 }
 } // namespace rme::rendering
 

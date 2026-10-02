@@ -393,8 +393,7 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 			int draw_x, draw_y;
 			view.getScreenPosition(x, y, z, draw_x, draw_y);
 
-			int item_count = static_cast<int>(t->items.size());
-			uint32_t flags = MakeHighlightItemsFlags(item_count);
+			uint32_t flags = MakeHighlightItemsFlags();
 			quads.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), flags });
 		}
 	}
