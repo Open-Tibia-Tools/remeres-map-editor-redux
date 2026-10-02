@@ -16,10 +16,10 @@ struct ZoneTypeConfig {
 };
 
 inline constexpr std::array<ZoneTypeConfig, 4> ZONE_TYPES = {{
-	{ 0x01, static_cast<uint32_t>(ZONE_FLAG_PZ) },
-	{ 0x02, static_cast<uint32_t>(ZONE_FLAG_NOPVP) },
-	{ 0x04, static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT) },
-	{ 0x08, static_cast<uint32_t>(ZONE_FLAG_PVPZONE) }
+	{ 0x01, ZONE_FLAG_PZ },
+	{ 0x02, ZONE_FLAG_NOPVP },
+	{ 0x04, ZONE_FLAG_NOLOGOUT },
+	{ 0x08, ZONE_FLAG_PVPZONE }
 }};
 
 inline constexpr std::array<std::pair<int, int>, 4> DIRS = {{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}};

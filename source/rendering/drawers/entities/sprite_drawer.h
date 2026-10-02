@@ -21,7 +21,7 @@ public:
 	SpriteDrawer();
 	~SpriteDrawer();
 
-	void glBlitAtlasQuad(SpriteBatch& sprite_batch, int sx, int sy, const AtlasRegion* region, DrawColor color = {}, float house_id = 0.0f, float zone_flags = 0.0f);
+	void glBlitAtlasQuad(SpriteBatch& sprite_batch, int sx, int sy, const AtlasRegion* region, DrawColor color = {}, float house_id = 0.0f, uint32_t zone_flags = 0);
 	void glBlitSquare(SpriteBatch& sprite_batch, int sx, int sy, DrawColor color, int size = 0, const AtlasManager* atlas = nullptr);
 	void glDrawBox(SpriteBatch& sprite_batch, int sx, int sy, int width, int height, DrawColor color, const AtlasManager* atlas = nullptr);
 

@@ -33,6 +33,9 @@ SPAWN_BORDER_SOUTH_SHIFT = 15
 SPAWN_BORDER_WEST_SHIFT  = 16
 SPAWN_BORDER_EAST_SHIFT  = 17
 
+ZONE_FLAG_CLUSTER_BADGE  = 1 << 18
+ZONE_FLAG_MULTIPLICATIVE = 1 << 19
+
 
 class MockMapView:
     def __init__(self, floor: int, start_z: int, superend_z: int):
@@ -136,25 +139,14 @@ def test_floor_alpha_uniform():
     assert calculate_floor_alpha(7, 0) == pytest.approx(1.0)
 
 
-def test_multiplicative_float_bitmask_precision():
-    """Verify that ZONE_FLAG_MULTIPLICATIVE (2^23) does not corrupt ZONE_FLAG_BLOCKING (1) or borders in float."""
-    import struct
-    MULTIPLICATIVE_BIT = 1 << 23  # 8388608
-    BLOCKING_BIT = 1              # 1
-    BORDER_N = 64
-    BORDER_W = 256
-
-    flags = MULTIPLICATIVE_BIT | BLOCKING_BIT | BORDER_N | BORDER_W
-    # Packed as float32 in vertex attribute
-    f32 = struct.unpack('f', struct.pack('f', float(flags)))[0]
-
-    # Decoded in GLSL with round(zoneFlags)
-    decoded = int(round(f32))
-    assert (decoded & BLOCKING_BIT) != 0, "Bit 0 (Blocking) must NOT be lost!"
-    assert (decoded & (1 << 1)) == 0, "Bit 1 (Spawn) must NOT be spuriously set!"
-    assert (decoded & MULTIPLICATIVE_BIT) != 0, "Bit 23 (Multiplicative) must remain set!"
-    assert (decoded & BORDER_N) != 0, "Border North must remain set!"
-    assert (decoded & BORDER_W) != 0, "Border West must remain set!"
+def test_multiplicative_uint32_bitmask():
+    """Verify that ZONE_FLAG_MULTIPLICATIVE cleanly coexists with ZONE_FLAG_BLOCKING and borders as uint32."""
+    flags = ZONE_FLAG_MULTIPLICATIVE | ZONE_FLAG_BLOCKING | (1 << ZONE_BORDER_NORTH_SHIFT) | (1 << ZONE_BORDER_WEST_SHIFT)
+    assert (flags & ZONE_FLAG_BLOCKING) != 0, "Bit 0 (Blocking) must be set!"
+    assert (flags & ZONE_FLAG_SPAWN) == 0, "Bit 1 (Spawn) must NOT be set!"
+    assert (flags & ZONE_FLAG_MULTIPLICATIVE) != 0, "Bit 19 (Multiplicative) must be set!"
+    assert (flags & (1 << ZONE_BORDER_NORTH_SHIFT)) != 0, "Border North must be set!"
+    assert (flags & (1 << ZONE_BORDER_WEST_SHIFT)) != 0, "Border West must be set!"
 
 
 def test_cardinal_border_mask():
@@ -227,7 +219,7 @@ def test_zone_shader_3d_bevel_and_colors():
 
     # Cluster badge evaluation helper must be present
     assert "evaluateClusterBadge" in content
-    assert "4194304u" in content, "ZONE_FLAG_CLUSTER_BADGE dispatch must be present"
+    assert "(1u << 18)" in content, "ZONE_FLAG_CLUSTER_BADGE dispatch must be present"
 
     # Inside 3D kitchen tile bevels/lines must NOT be present
     assert "!bNorthOuter && tile_ly == 0" not in fn_body
@@ -397,14 +389,14 @@ def test_multi_zone_flag_accumulation_and_brush():
 
     # 4. zone_overlay_drawer.cpp must accumulate all zone bits independently (no else-if)
     zod_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "zone_overlay_drawer.cpp").read_text(encoding="utf-8")
-    assert "if (ct.is_pz)    tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PZ);" in zod_cpp
-    assert "if (ct.is_nopvp) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOPVP);" in zod_cpp
-    assert "if (ct.is_nolog) tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_NOLOGOUT);" in zod_cpp
-    assert "if (ct.is_pvp)   tile_zone_flags |= static_cast<uint32_t>(ZONE_FLAG_PVPZONE);" in zod_cpp
+    assert "if (ct.is_pz)    tile_zone_flags |= ZONE_FLAG_PZ;" in zod_cpp
+    assert "if (ct.is_nopvp) tile_zone_flags |= ZONE_FLAG_NOPVP;" in zod_cpp
+    assert "if (ct.is_nolog) tile_zone_flags |= ZONE_FLAG_NOLOGOUT;" in zod_cpp
+    assert "if (ct.is_pvp)   tile_zone_flags |= ZONE_FLAG_PVPZONE;" in zod_cpp
     assert "else if (ct.is_nopvp)" not in zod_cpp, "zone_overlay_drawer must NOT use else if for special zones"
 
-    # 5. Neighbor check in zone_overlay_drawer.cpp must check all 4 flags
-    assert "n.is_pz != ct.is_pz || n.is_nopvp != ct.is_nopvp ||" in zod_cpp
+    # 5. Neighbor check in zone_overlay_drawer.cpp checks all 4 flags for outer borders
+    assert "const bool n_has_any = n.is_pz || n.is_nopvp || n.is_nolog || n.is_pvp;" in zod_cpp
 
     # 6. preview_drawer.cpp must accumulate all zone bits independently (no else-if)
     prev_cpp = (root / "source" / "rendering" / "drawers" / "overlays" / "preview_drawer.cpp").read_text(encoding="utf-8")
@@ -790,14 +782,14 @@ def test_zone_multiplicative_blending_system():
     """
     root = Path(__file__).parent.parent
 
-    # 1. Dedicated Bit 23 flag in zone_flags.h
+    # 1. Dedicated Bit 19 flag in zone_flags.h
     flags_h = (root / "source" / "rendering" / "indicators" / "zone_flags.h").read_text(encoding="utf-8")
     assert "ZONE_FLAG_MULTIPLICATIVE" in flags_h
-    assert "8388608.0f" in flags_h
+    assert "1u << 19" in flags_h
 
     # 2. Shader bitmask test and fragment logic
     shader_h = (root / "source" / "rendering" / "shaders" / "sprite_batch_shader.h").read_text(encoding="utf-8")
-    assert "8388608u" in shader_h
+    assert "1u << 19" in shader_h
     assert "if (isMult && !isBadge)" in shader_h
     assert "FragColor.rgb = mix(vec3(1.0), FragColor.rgb, FragColor.a * Tint.a * uGlobalTint.a);" in shader_h
 

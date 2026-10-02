@@ -84,9 +84,9 @@ bool SpriteBatch::initialize() {
 	glVertexArrayAttribFormat(vao_->GetID(), 6, 1, GL_FLOAT, GL_FALSE, offsetof(SpriteInstance, house_id));
 	glVertexArrayAttribBinding(vao_->GetID(), 6, 1);
 
-	// Loc 7: zone_flags (float) - instance
+	// Loc 7: zone_flags (uint32_t) - instance
 	glEnableVertexArrayAttrib(vao_->GetID(), 7);
-	glVertexArrayAttribFormat(vao_->GetID(), 7, 1, GL_FLOAT, GL_FALSE, offsetof(SpriteInstance, zone_flags));
+	glVertexArrayAttribIFormat(vao_->GetID(), 7, 1, GL_UNSIGNED_INT, offsetof(SpriteInstance, zone_flags));
 	glVertexArrayAttribBinding(vao_->GetID(), 7, 1);
 
 	// Initialize MDI
@@ -163,10 +163,10 @@ void SpriteBatch::ensureCapacity(size_t capacity) {
 }
 
 void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region) {
-	draw(x, y, w, h, region, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f);
+	draw(x, y, w, h, region, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0u);
 }
 
-void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id, float zone_flags) {
+void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id, uint32_t zone_flags) {
 	if (!in_batch_) {
 		return;
 	}

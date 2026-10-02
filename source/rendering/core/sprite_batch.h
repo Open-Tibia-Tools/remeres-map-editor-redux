@@ -64,7 +64,7 @@ public:
 	/**
 	 * Queue a sprite with tint, optional house ID, and optional zone flags.
 	 */
-	void draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id = 0.0f, float zone_flags = 0.0f);
+	void draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id = 0.0f, uint32_t zone_flags = 0);
 
 	/**
 	 * Access the underlying shader program for domain-specific uniform configuration.

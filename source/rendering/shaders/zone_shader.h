@@ -292,17 +292,17 @@ bool evaluateBlockingOverlay(uint flags, bool bNorth, bool bSouth, bool bWest, b
     return true;
 }
 
-bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zoneFlags,
+bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, uint zoneFlags,
                          int showBlocking, int showSpawns, int showSpecialTiles,
                          out vec4 outColor) {
-    if (zoneFlags < 0.5) {
+    if (zoneFlags == 0u) {
         return false;
     }
 
-    uint flags = uint(round(zoneFlags));
+    uint flags = zoneFlags;
 
-    // Dedicated cluster badge indicator quad (Bit 22 = 4194304u)
-    if ((flags & 4194304u) != 0u) {
+    // Dedicated cluster badge indicator quad (Bit 18 = 1u << 18)
+    if ((flags & (1u << 18)) != 0u) {
         if (showSpecialTiles == 0) {
             return false;
         }
@@ -318,31 +318,31 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, float zon
     bool hasOverlay = false;
     vec4 layer;
 
-    // 1. Special Zones (showSpecialTiles) with continuous SDF rounded silhouette & sunlight color grading
-    bool bNorthZone = (flags & 1024u) != 0u;
-    bool bSouthZone = (flags & 2048u) != 0u;
-    bool bWestZone  = (flags & 4096u) != 0u;
-    bool bEastZone  = (flags & 8192u) != 0u;
+    // 1. Special Zones (showSpecialTiles)
+    bool bNorthZone = (flags & (1u << 10)) != 0u;
+    bool bSouthZone = (flags & (1u << 11)) != 0u;
+    bool bWestZone  = (flags & (1u << 12)) != 0u;
+    bool bEastZone  = (flags & (1u << 13)) != 0u;
 
     if (showSpecialTiles != 0 && evaluateSpecialZones(flags, bNorthZone, bSouthZone, bWestZone, bEastZone, lx, ly, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
-    // 2. Spawn Radius (showSpawns) with continuous SDF rounded silhouette & magenta sunlight lift
-    bool bNorthSpawn = (ly <= 1) && (flags & 16384u) != 0u;
-    bool bSouthSpawn = (ly >= maxY - 1) && (flags & 32768u) != 0u;
-    bool bWestSpawn  = (lx <= 1) && (flags & 65536u) != 0u;
-    bool bEastSpawn  = (lx >= maxX - 1) && (flags & 131072u) != 0u;
+    // 2. Spawn Radius (showSpawns)
+    bool bNorthSpawn = (ly <= 1) && ((flags & (1u << 14)) != 0u);
+    bool bSouthSpawn = (ly >= maxY - 1) && ((flags & (1u << 15)) != 0u);
+    bool bWestSpawn  = (lx <= 1) && ((flags & (1u << 16)) != 0u);
+    bool bEastSpawn  = (lx >= maxX - 1) && ((flags & (1u << 17)) != 0u);
 
     if (showSpawns != 0 && evaluateSpawnOverlay(flags, bNorthSpawn, bSouthSpawn, bWestSpawn, bEastSpawn, lx, ly, maxX, maxY, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 
-    // 3. Pathing / Blocking (showBlocking) with continuous SDF rounded silhouette & cyan lift
-    bool bNorthBlock = (flags & 64u) != 0u;
-    bool bSouthBlock = (flags & 128u) != 0u;
-    bool bWestBlock  = (flags & 256u) != 0u;
-    bool bEastBlock  = (flags & 512u) != 0u;
+    // 3. Pathing / Blocking (showBlocking)
+    bool bNorthBlock = (flags & (1u << 6)) != 0u;
+    bool bSouthBlock = (flags & (1u << 7)) != 0u;
+    bool bWestBlock  = (flags & (1u << 8)) != 0u;
+    bool bEastBlock  = (flags & (1u << 9)) != 0u;
 
     if (showBlocking != 0 && evaluateBlockingOverlay(flags, bNorthBlock, bSouthBlock, bWestBlock, bEastBlock, lx, ly, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);

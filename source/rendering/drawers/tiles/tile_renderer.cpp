@@ -99,7 +99,7 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 				params.green = g;
 				params.blue = b;
 				params.house_id = ground_house_id;
-				params.zone_flags = 0.0f;
+				params.zone_flags = 0;
 				params.patterns = &patterns;
 				params.view = &view;
 				params.ctx = &ctx;
@@ -114,7 +114,7 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 				params.green = g;
 				params.blue = b;
 				params.house_id = ground_house_id;
-				params.zone_flags = 0.0f;
+				params.zone_flags = 0;
 				params.view = &view;
 				params.ctx = &ctx;
 				item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
@@ -135,7 +135,7 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 			border_params.green = g;
 			border_params.blue = b;
 			border_params.house_id = ground_house_id;
-			border_params.zone_flags = 0.0f;
+			border_params.zone_flags = 0;
 			for (const auto& item : tile->items) {
 				if (!item || !item->isBorder() || item->isInvalidOTBMItem()) {
 					continue;
@@ -238,7 +238,7 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 			item_params.red = default_ir;
 			item_params.green = default_ig;
 			item_params.blue = default_ib;
-			item_params.zone_flags = 0.0f;
+			item_params.zone_flags = 0;
 
 			item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, elevation.current_draw_x, elevation.current_draw_y, item_params);
 		} else if (it && options.show_tech_items && !options.ingame) {
@@ -249,7 +249,7 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 			item_params.red = default_ir;
 			item_params.green = default_ig;
 			item_params.blue = default_ib;
-			item_params.zone_flags = 0.0f;
+			item_params.zone_flags = 0;
 
 			item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, elevation.current_draw_x, elevation.current_draw_y, item_params);
 		}
@@ -321,7 +321,7 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 		item_params.green = default_ig;
 		item_params.blue = default_ib;
 
-		item_params.zone_flags = 0.0f;
+		item_params.zone_flags = 0;
 
 		item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, elevation.current_draw_x, elevation.current_draw_y, item_params);
 	}

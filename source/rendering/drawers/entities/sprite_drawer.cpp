@@ -25,7 +25,7 @@ SpriteDrawer::SpriteDrawer() {
 SpriteDrawer::~SpriteDrawer() {
 }
 
-void SpriteDrawer::glBlitAtlasQuad(SpriteBatch& sprite_batch, int sx, int sy, const AtlasRegion* region, DrawColor color, float house_id, float zone_flags) {
+void SpriteDrawer::glBlitAtlasQuad(SpriteBatch& sprite_batch, int sx, int sy, const AtlasRegion* region, DrawColor color, float house_id, uint32_t zone_flags) {
 	if (region) {
 		sprite_batch.draw(
 			static_cast<float>(sx), static_cast<float>(sy),

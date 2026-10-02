@@ -21,7 +21,7 @@ layout (location = 3) in vec4 aUV;        // u_min, v_min, u_max, v_max
 layout (location = 4) in vec4 aTint;      // r, g, b, a
 layout (location = 5) in float aLayer;    // texture array layer
 layout (location = 6) in float aHouseId;
-layout (location = 7) in float aZoneFlags;
+layout (location = 7) in uint aZoneFlags;
 
 out vec2 vWorldPos;
 out vec2 vQuadCoord;
@@ -29,7 +29,7 @@ out vec2 vQuadSize;
 out vec3 TexCoord;
 out vec4 Tint;
 flat out float vHouseId;
-flat out float vZoneFlags;
+flat out uint vZoneFlags;
 
 uniform mat4 uMVP;
 
@@ -58,7 +58,7 @@ in vec2 vQuadSize;
 in vec3 TexCoord;
 in vec4 Tint;
 flat in float vHouseId;
-flat in float vZoneFlags;
+flat in uint vZoneFlags;
 out vec4 FragColor;
 
 uniform sampler2DArray uAtlas;
@@ -85,15 +85,14 @@ void main() {
         return;
     }
 
-    if (vZoneFlags > 0.5) {
+    if (vZoneFlags != 0u) {
         if (!evaluateZoneOverlay(vWorldPos, vQuadCoord, vQuadSize, vZoneFlags,
                                  uShowBlocking, uShowSpawns, uShowSpecialTiles,
                                  FragColor)) {
             discard;
         }
-        uint zf = uint(round(vZoneFlags));
-        bool isBadge = (zf & 4194304u) != 0u;
-        bool isMult  = (zf & 8388608u) != 0u;
+        bool isBadge = (vZoneFlags & (1u << 18)) != 0u;
+        bool isMult  = (vZoneFlags & (1u << 19)) != 0u;
         if (isMult && !isBadge) {
             FragColor.rgb = mix(vec3(1.0), FragColor.rgb, FragColor.a * Tint.a * uGlobalTint.a);
             FragColor.a = 1.0;
