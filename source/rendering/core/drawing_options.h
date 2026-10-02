@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <glm/vec4.hpp>
 #include "map/position.h"
 #include "rendering/core/floor_visibility_mode.h"
 #include "rendering/core/sprite_light.h"
@@ -101,6 +102,18 @@ struct DrawingOptions {
 	float minimum_ambient_light;
 
 	bool anti_aliasing;
+
+	// Zone & Overlay customizable colors, opacity, and borders
+	bool show_zone_borders = true;
+	glm::vec4 zone_border_color;
+	glm::vec4 zone_pz_color;
+	glm::vec4 zone_nopvp_color;
+	glm::vec4 zone_nologout_color;
+	glm::vec4 zone_pvp_color;
+	glm::vec4 zone_blocking_color;
+	glm::vec4 zone_spawn_color;
+	glm::vec4 house_active_color;
+	glm::vec4 house_inactive_color;
 
 	[[nodiscard]] bool hasTileColorModifiers() const noexcept {
 		return highlight_items || show_only_colors;
