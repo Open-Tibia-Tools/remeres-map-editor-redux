@@ -12,6 +12,7 @@
 #include <format>
 #include <cmath>
 #include <algorithm>
+#include <limits>
 
 namespace rme::rendering {
 
@@ -206,6 +207,9 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 
 	// 3. Collect Houses
 	if (show_houses) {
+		const ViewBounds floor_bounds = view.getBoundsForFloor(view.floor);
+		const int check_z = view.floor;
+
 		for (const auto& [house_id, house_ptr] : map.houses) {
 			if (!house_ptr) {
 				continue;
@@ -215,39 +219,52 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 				continue;
 			}
 
-			const int check_z = view.floor;
+			int count = 0;
+			int min_x = std::numeric_limits<int>::max();
+			int max_x = std::numeric_limits<int>::min();
+			int min_y = std::numeric_limits<int>::max();
+			int max_y = std::numeric_limits<int>::min();
+			double sum_x = 0.0;
+			double sum_y = 0.0;
 
-			std::vector<Position> floor_tiles;
-			floor_tiles.reserve(all_tiles.size());
 			for (const auto& p : all_tiles) {
 				if (p.z == check_z) {
-					floor_tiles.push_back(p);
+					++count;
+					min_x = std::min(min_x, p.x);
+					max_x = std::max(max_x, p.x);
+					min_y = std::min(min_y, p.y);
+					max_y = std::max(max_y, p.y);
+					sum_x += p.x;
+					sum_y += p.y;
 				}
 			}
-			if (floor_tiles.empty()) {
+
+			if (count == 0) {
+				continue;
+			}
+
+			// AABB culling against view bounds on active floor
+			if (max_x < floor_bounds.start_x || min_x > floor_bounds.end_x ||
+			    max_y < floor_bounds.start_y || min_y > floor_bounds.end_y) {
 				continue;
 			}
 
 			// Centroid of the room tiles on the active floor
-			double sum_x = 0.0;
-			double sum_y = 0.0;
-			for (const auto& p : floor_tiles) {
-				sum_x += p.x;
-				sum_y += p.y;
-			}
-			const double avg_x = sum_x / static_cast<double>(floor_tiles.size());
-			const double avg_y = sum_y / static_cast<double>(floor_tiles.size());
+			const double avg_x = sum_x / static_cast<double>(count);
+			const double avg_y = sum_y / static_cast<double>(count);
 
 			// Choose the real room tile closest to centroid to guarantee it sits inside the room
-			Position best_pos = floor_tiles[0];
-			double min_dist_sq = 1e18;
-			for (const auto& p : floor_tiles) {
-				const double dx = static_cast<double>(p.x) - avg_x;
-				const double dy = static_cast<double>(p.y) - avg_y;
-				const double dsq = dx * dx + dy * dy;
-				if (dsq < min_dist_sq) {
-					min_dist_sq = dsq;
-					best_pos = p;
+			Position best_pos;
+			double min_dist_sq = std::numeric_limits<double>::infinity();
+			for (const auto& p : all_tiles) {
+				if (p.z == check_z) {
+					const double dx = static_cast<double>(p.x) - avg_x;
+					const double dy = static_cast<double>(p.y) - avg_y;
+					const double dsq = dx * dx + dy * dy;
+					if (dsq < min_dist_sq) {
+						min_dist_sq = dsq;
+						best_pos = p;
+					}
 				}
 			}
 
