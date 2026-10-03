@@ -195,7 +195,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 				}
 			}
 #endif
-			sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx, screeny, region, DrawColor(red, green, blue, alpha), params.house_id, params.zone_flags);
+			sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx, screeny, region, DrawColor(red, green, blue, alpha), params.house_id, params.zone_flags, params.depth);
 		}
 	} else {
 		const auto composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
@@ -206,7 +206,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 				for (int cf = 0; cf != spr->layers; cf++) {
 					const AtlasRegion* region = spr->getAtlasRegion(cx, cy, cf, subtype, pattern_x, pattern_y, pattern_z, frame);
 					if (region) {
-						sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx - x_offset, screeny - y_offset, region, DrawColor(red, green, blue, alpha), params.house_id, params.zone_flags);
+						sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx - x_offset, screeny - y_offset, region, DrawColor(red, green, blue, alpha), params.house_id, params.zone_flags, params.depth);
 					}
 				}
 				y_offset += composite_metrics.row_heights[cy];
@@ -238,7 +238,8 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, outfit, static_cast<Direction>(podium->getDirection()), CreatureDrawOptions {
 			.color = DrawColor(red, green, blue, alpha),
 			.view = view,
-			.ctx = params.ctx
+			.ctx = params.ctx,
+			.depth = params.depth
 		});
 	}
 
@@ -254,8 +255,8 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 			// SpriteDrawer::glBlitSquare internally uses BatchRenderer::DrawQuad which sets blank texture if needed.
 			// So we don't need manual enable/disable here anymore.
 
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 2, draw_y + startOffset - 2, DrawColor(0, 0, 0, 255), sqSize + 2, atlas);
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 1, draw_y + startOffset - 1, lightColor, sqSize, atlas);
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 2, draw_y + startOffset - 2, DrawColor(0, 0, 0, 255), sqSize + 2, atlas, params.depth);
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 1, draw_y + startOffset - 1, lightColor, sqSize, atlas, params.depth);
 		}
 	}
 }

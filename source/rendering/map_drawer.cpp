@@ -19,6 +19,7 @@
 #include <chrono>
 #include <cmath>
 #include <spdlog/spdlog.h>
+#include <glad/glad.h>
 
 #include "rendering/map_drawer.h"
 #include "rendering/core/hardware_profile.h"
@@ -247,6 +248,8 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx, const InteractionRenderSt
 	BaseMap* secondary_map = (!options.ingame) ? interaction.secondary_map : nullptr;
 
 	for (int map_z = view.start_z; map_z >= view.superend_z; map_z--) {
+		glClear(GL_DEPTH_BUFFER_BIT);
+
 		RenderView floor_view = view;
 		const ViewBounds floor_bounds = view.getBoundsForFloor(map_z);
 		floor_view.start_x = floor_bounds.start_x;

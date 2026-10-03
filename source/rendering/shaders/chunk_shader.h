@@ -18,6 +18,7 @@ layout (location = 3) in float aSpriteId;
 layout (location = 4) in float aFlags;
 layout (location = 5) in vec4 aTint;
 layout (location = 6) in float aHouseId;
+layout (location = 7) in float aDepth;
 
 out vec2 vWorldPos;
 out vec2 vQuadCoord;
@@ -33,6 +34,7 @@ uniform samplerBuffer uAtlasLUT;
 void main() {
 	vec2 worldPos = aRect.xy + aPos * aRect.zw;
 	gl_Position = uMVP * vec4(worldPos, 0.0, 1.0);
+	gl_Position.z = aDepth * 2.0 - 1.0;
 
 	vFlags = aFlags;
 	vHouseId = aHouseId;

@@ -5,6 +5,7 @@
 #include "rendering/core/atlas_manager.h"
 #include "rendering/indicators/zone_flags.h"
 #include "rendering/indicators/technical_item_registry.h"
+#include "rendering/core/render_depth.h"
 #include "map/map.h"
 #include "map/basemap.h"
 #include "map/tile.h"
@@ -155,17 +156,18 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 
 					int draw_x, draw_y;
 					view.getScreenPosition(x, y, z, draw_x, draw_y);
+					const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
 
 					if (is_mult) {
 						tile_zone_flags |= ZONE_FLAG_MULTIPLICATIVE;
-						mult_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags });
+						mult_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags, depth });
 					} else {
-						alpha_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags });
+						alpha_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags, depth });
 					}
 
 					if (options.show_zone_borders && (tile_zone_flags & (ZONE_FLAG_ZONE_BORDER_N | ZONE_FLAG_ZONE_BORDER_S | ZONE_FLAG_ZONE_BORDER_W | ZONE_FLAG_ZONE_BORDER_E))) {
 						uint32_t border_flags = (tile_zone_flags & ~ZONE_FLAG_MULTIPLICATIVE) | ZONE_FLAG_BORDER_PASS;
-						border_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), border_flags });
+						border_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), border_flags, depth });
 					}
 				}
 			}
@@ -178,7 +180,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 			for (const auto& q : alpha_zone_quads_) {
 				sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-				                  0.0f, q.flags);
+				                  0.0f, q.flags, q.depth);
 			}
 		}
 
@@ -186,7 +188,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
 			for (const auto& q : mult_zone_quads_) {
 				sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-				                  0.0f, q.flags);
+				                  0.0f, q.flags, q.depth);
 			}
 			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 		}
@@ -195,7 +197,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 			for (const auto& q : border_zone_quads_) {
 				sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-				                  0.0f, q.flags);
+				                  0.0f, q.flags, q.depth);
 			}
 		}
 	}
@@ -265,13 +267,15 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 
 			const float box_alpha = (st->spawn->isSelected() && options.dragging) ? (floor_alpha * 0.30f) : floor_alpha;
 
+			const float spawn_depth = calculateTileDepth(spos.x, spos.y, RenderSublayer::GroundOverlay);
+
 			if (options.zone_spawn_blend_mode == 1) {
 				spawn_flags |= ZONE_FLAG_MULTIPLICATIVE;
 				mult_spawn_quads_.push_back({ static_cast<float>(draw_x0), static_cast<float>(draw_y0),
-				                              spawn_w, spawn_h, box_alpha, spawn_flags });
+				                              spawn_w, spawn_h, box_alpha, spawn_flags, spawn_depth });
 			} else {
 				alpha_spawn_quads_.push_back({ static_cast<float>(draw_x0), static_cast<float>(draw_y0),
-				                              spawn_w, spawn_h, box_alpha, spawn_flags });
+				                              spawn_w, spawn_h, box_alpha, spawn_flags, spawn_depth });
 			}
 
 			// LOD Detail level: borders and flame badges are omitted when zoomed beyond 15% zoom
@@ -279,13 +283,14 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 				if (options.show_zone_borders) {
 					uint32_t border_flags = (spawn_flags & ~ZONE_FLAG_MULTIPLICATIVE) | ZONE_FLAG_BORDER_PASS;
 					spawn_borders_.push_back({ static_cast<float>(draw_x0), static_cast<float>(draw_y0),
-					                           spawn_w, spawn_h, box_alpha, border_flags });
+					                           spawn_w, spawn_h, box_alpha, border_flags, spawn_depth });
 				}
 
 				int center_draw_x, center_draw_y;
 				view.getScreenPosition(spos.x, spos.y, z, center_draw_x, center_draw_y);
+				const float badge_depth = calculateTileDepth(spos.x, spos.y, RenderSublayer::Overlay);
 				spawn_badges_.push_back({ static_cast<float>(center_draw_x), static_cast<float>(center_draw_y),
-				                          32.0f, 32.0f, box_alpha, 0 });
+				                          32.0f, 32.0f, box_alpha, 0, badge_depth });
 			}
 		}
 
@@ -294,7 +299,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 			for (const auto& sq : alpha_spawn_quads_) {
 				sprite_batch.draw(sq.x, sq.y, sq.w, sq.h, *white_pixel, 1.0f, 1.0f, 1.0f, sq.alpha,
-				                  0.0f, sq.flags);
+				                  0.0f, sq.flags, sq.depth);
 			}
 		}
 
@@ -302,7 +307,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
 			for (const auto& sq : mult_spawn_quads_) {
 				sprite_batch.draw(sq.x, sq.y, sq.w, sq.h, *white_pixel, 1.0f, 1.0f, 1.0f, sq.alpha,
-				                  0.0f, sq.flags);
+				                  0.0f, sq.flags, sq.depth);
 			}
 			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 		}
@@ -311,7 +316,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 			for (const auto& sb : spawn_borders_) {
 				sprite_batch.draw(sb.x, sb.y, sb.w, sb.h, *white_pixel, 1.0f, 1.0f, 1.0f, sb.alpha,
-				                  0.0f, sb.flags);
+				                  0.0f, sb.flags, sb.depth);
 			}
 		}
 
@@ -319,7 +324,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 			for (const auto& b : spawn_badges_) {
 				sprite_batch.draw(b.x, b.y, b.w, b.h, *white_pixel, 1.0f, 1.0f, 1.0f, b.alpha,
-				                  INDICATOR_SPAWN_BASE, 0.0f);
+				                  INDICATOR_SPAWN_BASE, 0.0f, b.depth);
 			}
 		}
 	}
@@ -395,13 +400,14 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 			view.getScreenPosition(x, y, z, draw_x, draw_y);
 			const float fx = static_cast<float>(draw_x);
 			const float fy = static_cast<float>(draw_y);
+			const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
 
 			sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-			                  0.0f, tile_zone_flags);
+			                  0.0f, tile_zone_flags, depth);
 
 			if (options.show_zone_borders && (bN || bS || bW || bE)) {
 				uint32_t border_flags = (tile_zone_flags & ~ZONE_FLAG_MULTIPLICATIVE) | ZONE_FLAG_BORDER_PASS;
-				blocking_border_quads_.push_back({ fx, fy, border_flags });
+				blocking_border_quads_.push_back({ fx, fy, border_flags, depth });
 			}
 		}
 
@@ -417,7 +423,7 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 		for (const auto& q : blocking_border_quads_) {
 			sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-			                  0.0f, q.flags);
+			                  0.0f, q.flags, q.depth);
 		}
 	}
 }
@@ -485,7 +491,8 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
 
 				int draw_x, draw_y;
 				view.getScreenPosition(x, y, z, draw_x, draw_y);
-				house_border_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), border_flags });
+				const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
+				house_border_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), border_flags, depth });
 			}
 		}
 
@@ -497,7 +504,7 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
 		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 		for (const auto& q : house_border_quads_) {
 			sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-			                  0.0f, q.flags);
+			                  0.0f, q.flags, q.depth);
 		}
 	}
 }
@@ -535,15 +542,16 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 			int draw_x, draw_y;
 			view.getScreenPosition(x, y, z, draw_x, draw_y);
 
+			const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
 			uint32_t flags = MakeHighlightItemsFlags();
-			highlight_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), flags });
+			highlight_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), flags, depth });
 		}
 	}
 
 	if (!highlight_quads_.empty()) {
 		sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
 		for (const auto& q : highlight_quads_) {
-			sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, q.flags);
+			sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, q.flags, q.depth);
 		}
 		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 	}
@@ -579,8 +587,9 @@ void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
 			view.getScreenPosition(badge.center_x, badge.center_y, z, draw_x, draw_y);
 			const float px = static_cast<float>(draw_x) + 16.0f - (badge.width * 0.5f) + badge.offset_x;
 			const float py = static_cast<float>(draw_y) + 16.0f - (badge.height * 0.5f) + badge.offset_y;
+			const float badge_depth = calculateTileDepth(badge.center_x, badge.center_y, RenderSublayer::Overlay);
 			sprite_batch.draw(px, py, badge.width, badge.height, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-			                  0.0f, ZONE_FLAG_CLUSTER_BADGE | badge.zone_flag);
+			                  0.0f, ZONE_FLAG_CLUSTER_BADGE | badge.zone_flag, badge_depth);
 		}
 	}
 }

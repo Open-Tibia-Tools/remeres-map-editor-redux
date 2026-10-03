@@ -27,6 +27,7 @@
 #include "rendering/indicators/zone_flags.h"
 #include "rendering/utilities/pattern_calculator.h"
 #include "rendering/core/sprite_preloader.h"
+#include "rendering/core/render_depth.h"
 
 #include <algorithm>
 
@@ -68,12 +69,15 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 		TileColorCalculator::Calculate(tile, options, r, g, b);
 	}
 
+	const float ground_depth = rme::rendering::calculateTileDepth(position.x, position.y, rme::rendering::RenderSublayer::Ground);
+	const float border_depth = rme::rendering::calculateTileDepth(position.x, position.y, rme::rendering::RenderSublayer::Border);
+
 	if (only_colors) {
 		if (as_minimap) {
 			TileColorCalculator::GetMinimapColor(tile, r, g, b);
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(r, g, b, 255), 0, &ctx.atlas);
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(r, g, b, 255), 0, &ctx.atlas, ground_depth);
 		} else if (r != 255 || g != 255 || b != 255) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(r, g, b, 128), 0, &ctx.atlas);
+			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(r, g, b, 128), 0, &ctx.atlas, ground_depth);
 		}
 	} else {
 		if (tile->ground && ground_it && !hidden_invalid_ground) {
@@ -100,6 +104,7 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 				params.blue = b;
 				params.house_id = ground_house_id;
 				params.zone_flags = 0;
+				params.depth = ground_depth;
 				params.patterns = &patterns;
 				params.view = &view;
 				params.ctx = &ctx;
@@ -115,6 +120,7 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 				params.blue = b;
 				params.house_id = ground_house_id;
 				params.zone_flags = 0;
+				params.depth = ground_depth;
 				params.view = &view;
 				params.ctx = &ctx;
 				item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
@@ -136,6 +142,7 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 			border_params.blue = b;
 			border_params.house_id = ground_house_id;
 			border_params.zone_flags = 0;
+			border_params.depth = border_depth;
 			for (const auto& item : tile->items) {
 				if (!item || !item->isBorder() || item->isInvalidOTBMItem()) {
 					continue;
@@ -206,6 +213,7 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 	item_params.view = &view;
 	item_params.house_id = item_house_id;
 
+	int elevation_step = 0;
 	for (const auto& item : tile->items) {
 		if (item->isBorder()) {
 			continue;
@@ -214,6 +222,18 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 		if (item->isInvalidOTBMItem() && (!options.show_invalid_tiles || !it)) {
 			continue;
 		}
+
+		rme::rendering::RenderSublayer sublayer = rme::rendering::RenderSublayer::CommonItem;
+		if (item->isAlwaysOnBottom()) {
+			sublayer = rme::rendering::RenderSublayer::BottomItem;
+		} else if (it && it.hasFlag(ItemFlag::TopEffect)) {
+			sublayer = rme::rendering::RenderSublayer::TopItem;
+		}
+		const float item_depth = rme::rendering::calculateTileDepth(position.x, position.y, sublayer, elevation_step);
+		if (sublayer == rme::rendering::RenderSublayer::CommonItem) {
+			elevation_step++;
+		}
+		item_params.depth = item_depth;
 
 		GameSprite* sprite = it ? ctx.gfx.getGameSprite(it.clientId()) : nullptr;
 		if (sprite && sprite->isAnimated()) {
@@ -289,6 +309,7 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 	item_params.view = &view;
 	item_params.house_id = item_house_id;
 
+	int anim_elevation_step = 0;
 	for (const auto& item : tile->items) {
 		if (item->isBorder()) {
 			continue;
@@ -297,6 +318,18 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 		if (item->isInvalidOTBMItem() && (!options.show_invalid_tiles || !it)) {
 			continue;
 		}
+
+		rme::rendering::RenderSublayer sublayer = rme::rendering::RenderSublayer::CommonItem;
+		if (item->isAlwaysOnBottom()) {
+			sublayer = rme::rendering::RenderSublayer::BottomItem;
+		} else if (it && it.hasFlag(ItemFlag::TopEffect)) {
+			sublayer = rme::rendering::RenderSublayer::TopItem;
+		}
+		const float item_depth = rme::rendering::calculateTileDepth(position.x, position.y, sublayer, anim_elevation_step);
+		if (sublayer == rme::rendering::RenderSublayer::CommonItem) {
+			anim_elevation_step++;
+		}
+		item_params.depth = item_depth;
 
 		GameSprite* sprite = it ? ctx.gfx.getGameSprite(it.clientId()) : nullptr;
 		if (!sprite || !sprite->isAnimated()) {
@@ -344,6 +377,9 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 	const bool only_colors = as_minimap || options.show_only_colors;
 
 	if (!only_colors) {
+		const float creature_depth = rme::rendering::calculateTileDepth(position.x, position.y, rme::rendering::RenderSublayer::DynamicEntity);
+		const float overlay_depth = rme::rendering::calculateTileDepth(position.x, position.y, rme::rendering::RenderSublayer::Overlay);
+
 		// monster/npc on tile
 		if (tile->creature && options.show_creatures) {
 			if (render_creature_sprites) {
@@ -351,7 +387,8 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 					.map_pos = position,
 					.transient_selection_bounds = options.transient_selection_bounds,
 					.view = &view,
-					.ctx = &ctx
+					.ctx = &ctx,
+					.depth = creature_depth
 				});
 			}
 			if (creature_name_drawer) {
@@ -367,7 +404,9 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 				32.0f, 32.0f,
 				*white_pixel,
 				1.0f, 1.0f, 1.0f, 1.0f,
-				rme::rendering::INDICATOR_INVALID_ZONE_BASE
+				rme::rendering::INDICATOR_INVALID_ZONE_BASE,
+				0u,
+				overlay_depth
 			);
 		}
 
@@ -405,7 +444,9 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 					32.0f, 32.0f,
 					*white_pixel,
 					tint, tint, tint, 1.0f,
-					marker_id
+					marker_id,
+					0u,
+					overlay_depth
 				);
 			}
 		}
@@ -418,7 +459,7 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 
 		// markers (waypoint, house exit, town temple, spawn)
 		if (editor && render_markers) {
-			marker_drawer->draw(sprite_batch, draw_x, draw_y, tile, waypoint, options, ctx);
+			marker_drawer->draw(sprite_batch, draw_x, draw_y, tile, waypoint, options, ctx, overlay_depth);
 		}
 	}
 }

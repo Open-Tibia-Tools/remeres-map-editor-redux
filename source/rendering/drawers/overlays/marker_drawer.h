@@ -15,7 +15,7 @@ public:
 	MarkerDrawer();
 	~MarkerDrawer();
 
-	void draw(SpriteBatch& sprite_batch, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, const DrawingOptions& options, const RenderFrameContext& ctx);
+	void draw(SpriteBatch& sprite_batch, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, const DrawingOptions& options, const RenderFrameContext& ctx, float depth = 0.0f);
 };
 
 #endif

@@ -38,6 +38,7 @@ struct BlitItemParams {
 	int alpha = 255;
 	float house_id = 0.0f;
 	uint32_t zone_flags = 0;
+	float depth = 0.0f;
 	const RenderView* view = nullptr;
 	const RenderFrameContext* ctx = nullptr;
 

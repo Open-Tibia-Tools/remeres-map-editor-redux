@@ -23,6 +23,7 @@ layout (location = 4) in vec4 aTint;      // r, g, b, a
 layout (location = 5) in float aLayer;    // texture array layer
 layout (location = 6) in float aHouseId;
 layout (location = 7) in uint aZoneFlags;
+layout (location = 8) in float aDepth;
 
 out vec2 vWorldPos;
 out vec2 vQuadCoord;
@@ -37,6 +38,7 @@ uniform mat4 uMVP;
 void main() {
     vec2 pos = aRect.xy + aPos * aRect.zw;
     gl_Position = uMVP * vec4(pos, 0.0, 1.0);
+    gl_Position.z = aDepth * 2.0 - 1.0;
     vWorldPos = pos;
     vQuadCoord = aPos;
     vQuadSize = aRect.zw;

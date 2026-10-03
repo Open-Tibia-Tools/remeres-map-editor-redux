@@ -52,19 +52,20 @@ public:
 	void begin(const glm::mat4& projection, const AtlasManager& atlas_manager);
 
 	/**
-	 * Queue a sprite for rendering.
+	 * Queue a sprite for rendering with optional depth.
 	 * @param x Screen X
 	 * @param y Screen Y
 	 * @param w Width
 	 * @param h Height
 	 * @param region Atlas region for UVs
+	 * @param depth Monotonic depth for 2.5D isometric depth testing
 	 */
-	void draw(float x, float y, float w, float h, const AtlasRegion& region);
+	void draw(float x, float y, float w, float h, const AtlasRegion& region, float depth = 0.0f);
 
 	/**
-	 * Queue a sprite with tint, optional house ID, and optional zone flags.
+	 * Queue a sprite with tint, optional house ID, optional zone flags, and optional depth.
 	 */
-	void draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id = 0.0f, uint32_t zone_flags = 0);
+	void draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id = 0.0f, uint32_t zone_flags = 0, float depth = 0.0f);
 
 	/**
 	 * Access the underlying shader program for domain-specific uniform configuration.
@@ -77,12 +78,12 @@ public:
 	 * Draw a solid rectangle using the white pixel from the atlas.
 	 * Requires AtlasManager::getWhitePixel() to be valid.
 	 */
-	void drawRect(float x, float y, float w, float h, const glm::vec4& color, const AtlasManager& atlas_manager);
+	void drawRect(float x, float y, float w, float h, const glm::vec4& color, const AtlasManager& atlas_manager, float depth = 0.0f);
 
 	/**
 	 * Draw a hollow rectangle (outline) using 4 thin rects.
 	 */
-	void drawRectLines(float x, float y, float w, float h, const glm::vec4& color, const AtlasManager& atlas_manager);
+	void drawRectLines(float x, float y, float w, float h, const glm::vec4& color, const AtlasManager& atlas_manager, float depth = 0.0f);
 
 	/**
 	 * End batch. Flushes all sprites to GPU.

@@ -8,7 +8,7 @@
 MarkerDrawer::MarkerDrawer() = default;
 MarkerDrawer::~MarkerDrawer() = default;
 
-void MarkerDrawer::draw(SpriteBatch& sprite_batch, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, const DrawingOptions& options, const RenderFrameContext& ctx) {
+void MarkerDrawer::draw(SpriteBatch& sprite_batch, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, const DrawingOptions& options, const RenderFrameContext& ctx, float depth) {
 	const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
 	if (!white_pixel || !tile) {
 		return;
@@ -22,18 +22,18 @@ void MarkerDrawer::draw(SpriteBatch& sprite_batch, int draw_x, int draw_y, const
 		const HouseExitList* exits = tile->getHouseExits();
 		const uint32_t exit_house_id = (exits && !exits->empty()) ? exits->front() : 1;
 		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
-			rme::rendering::INDICATOR_HOUSE_ENTRY_BASE + static_cast<float>(exit_house_id));
+			rme::rendering::INDICATOR_HOUSE_ENTRY_BASE + static_cast<float>(exit_house_id), 0u, depth);
 	}
 
 	// Town temple ("TOWN")
 	if (options.show_towns && tile->isTownExit()) {
 		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
-			rme::rendering::INDICATOR_TOWN_BASE);
+			rme::rendering::INDICATOR_TOWN_BASE, 0u, depth);
 	}
 
 	// Waypoint ("WAYPT")
 	if (!options.ingame && options.show_waypoints && waypoint) {
 		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
-			rme::rendering::INDICATOR_WAYPOINT_BASE);
+			rme::rendering::INDICATOR_WAYPOINT_BASE, 0u, depth);
 	}
 }

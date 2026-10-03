@@ -89,6 +89,11 @@ bool SpriteBatch::initialize() {
 	glVertexArrayAttribIFormat(vao_->GetID(), 7, 1, GL_UNSIGNED_INT, offsetof(SpriteInstance, zone_flags));
 	glVertexArrayAttribBinding(vao_->GetID(), 7, 1);
 
+	// Loc 8: depth (float) - instance
+	glEnableVertexArrayAttrib(vao_->GetID(), 8);
+	glVertexArrayAttribFormat(vao_->GetID(), 8, 1, GL_FLOAT, GL_FALSE, offsetof(SpriteInstance, depth));
+	glVertexArrayAttribBinding(vao_->GetID(), 8, 1);
+
 	// Initialize MDI
 	if (mdi_renderer_.initialize()) {
 		use_mdi_ = true;
@@ -162,11 +167,11 @@ void SpriteBatch::ensureCapacity(size_t capacity) {
 	}
 }
 
-void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region) {
-	draw(x, y, w, h, region, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0u);
+void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region, float depth) {
+	draw(x, y, w, h, region, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0u, depth);
 }
 
-void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id, uint32_t zone_flags) {
+void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& region, float r, float g, float b, float a, float house_id, uint32_t zone_flags, float depth) {
 	if (!in_batch_) {
 		return;
 	}
@@ -191,16 +196,17 @@ void SpriteBatch::draw(float x, float y, float w, float h, const AtlasRegion& re
 	inst.atlas_layer = static_cast<float>(region.atlas_index);
 	inst.house_id = house_id;
 	inst.zone_flags = zone_flags;
+	inst.depth = depth;
 }
 
-void SpriteBatch::drawRect(float x, float y, float w, float h, const glm::vec4& color, const AtlasManager& atlas_manager) {
+void SpriteBatch::drawRect(float x, float y, float w, float h, const glm::vec4& color, const AtlasManager& atlas_manager, float depth) {
 	const AtlasRegion* region = atlas_manager.getWhitePixel();
 	if (region) {
-		draw(x, y, w, h, *region, color.r, color.g, color.b, color.a);
+		draw(x, y, w, h, *region, color.r, color.g, color.b, color.a, 0.0f, 0u, depth);
 	}
 }
 
-void SpriteBatch::drawRectLines(float x, float y, float w, float h, const glm::vec4& color, const AtlasManager& atlas_manager) {
+void SpriteBatch::drawRectLines(float x, float y, float w, float h, const glm::vec4& color, const AtlasManager& atlas_manager, float depth) {
 	const AtlasRegion* region = atlas_manager.getWhitePixel();
 	if (!region || !in_batch_) {
 		return;
@@ -211,13 +217,13 @@ void SpriteBatch::drawRectLines(float x, float y, float w, float h, const glm::v
 	}
 
 	// Top
-	draw(x, y, w, 1.0f, *region, color.r, color.g, color.b, color.a);
+	draw(x, y, w, 1.0f, *region, color.r, color.g, color.b, color.a, 0.0f, 0u, depth);
 	// Bottom
-	draw(x, y + h - 1.0f, w, 1.0f, *region, color.r, color.g, color.b, color.a);
+	draw(x, y + h - 1.0f, w, 1.0f, *region, color.r, color.g, color.b, color.a, 0.0f, 0u, depth);
 	// Left
-	draw(x, y + 1.0f, 1.0f, h - 2.0f, *region, color.r, color.g, color.b, color.a);
+	draw(x, y + 1.0f, 1.0f, h - 2.0f, *region, color.r, color.g, color.b, color.a, 0.0f, 0u, depth);
 	// Right
-	draw(x + w - 1.0f, y + 1.0f, 1.0f, h - 2.0f, *region, color.r, color.g, color.b, color.a);
+	draw(x + w - 1.0f, y + 1.0f, 1.0f, h - 2.0f, *region, color.r, color.g, color.b, color.a, 0.0f, 0u, depth);
 }
 
 void SpriteBatch::flush(const AtlasManager& atlas_manager) {

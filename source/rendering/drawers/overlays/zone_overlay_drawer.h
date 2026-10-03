@@ -107,6 +107,7 @@ private:
 		float x = 0.0f;
 		float y = 0.0f;
 		uint32_t flags = 0;
+		float depth = 0.0f;
 	};
 
 	struct PendingSpawnQuad {
@@ -116,18 +117,21 @@ private:
 		float h = 0.0f;
 		float alpha = 0.0f;
 		uint32_t flags = 0;
+		float depth = 0.0f;
 	};
 
 	struct PendingBorderQuad {
 		float x = 0.0f;
 		float y = 0.0f;
 		uint32_t flags = 0;
+		float depth = 0.0f;
 	};
 
 	struct PendingHighlightQuad {
 		float x = 0.0f;
 		float y = 0.0f;
 		uint32_t flags = 0;
+		float depth = 0.0f;
 	};
 
 	// Contiguous reusable buffers across render frames (DOD)

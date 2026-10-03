@@ -31,6 +31,7 @@ struct CreatureDrawOptions {
 	const RenderView* view = nullptr;
 	bool preview_local_player = false;
 	const RenderFrameContext* ctx = nullptr;
+	float depth = 0.0f;
 };
 
 class CreatureDrawer {

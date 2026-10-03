@@ -16,7 +16,7 @@ struct SpriteInstance {
 	float atlas_layer; // Byte 48-51: Texture layer (Location 5)
 	float house_id = 0.0f; // Byte 52-55: House ID for overlay shader (Location 6)
 	uint32_t zone_flags = 0; // Byte 56-59: Zone and pathing flags for overlay shader (Location 7)
-	float _pad3 = 0.0f; // Byte 60-63: Padding
+	float depth = 0.0f; // Byte 60-63: Normalized depth [0.0, 1.0] (Location 8)
 };
 static_assert(sizeof(SpriteInstance) == 64, "SpriteInstance must be 64 bytes");
 
