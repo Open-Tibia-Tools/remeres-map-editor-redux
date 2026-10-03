@@ -13,20 +13,15 @@ namespace rme::rendering::shaders {
  * walls, doodads, and items when "Show pathing" and "Extended pathing shader" are active.
  */
 inline constexpr std::string_view PATHING_SHADER_GLSL = R"(
-uniform int uShowBlocking;
-uniform int uExtendedPathingShader;
-uniform vec4 uBlockingWash;
-uniform int uBlockingBlendMode;
-
-void applyPathingOverlay(inout vec4 fragColor, bool isBlocking) {
-    if (uShowBlocking == 0 || uExtendedPathingShader == 0 || !isBlocking) {
+void applyPathingOverlay(inout vec4 fragColor, bool isBlocking, int showBlocking, int extPathingShader, vec4 blockingWash, int blendMode) {
+    if (showBlocking == 0 || extPathingShader == 0 || !isBlocking) {
         return;
     }
 
-    vec3 darkRgb = uBlockingWash.rgb * 0.55;
-    float wallAlpha = min(0.95, uBlockingWash.a * 1.40);
+    vec3 darkRgb = blockingWash.rgb * 0.55;
+    float wallAlpha = min(0.95, blockingWash.a * 1.40);
 
-    if (uBlockingBlendMode == 1) {
+    if (blendMode == 1) {
         // Multiplicative tint
         fragColor.rgb *= mix(vec3(1.0), darkRgb, wallAlpha);
     } else {

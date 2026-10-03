@@ -63,19 +63,20 @@ def test_extended_pathing_shader_invariants():
     pathing_shader_h = (root / "source" / "rendering" / "shaders" / "pathing_shader.h").read_text(encoding="utf-8")
     assert "PATHING_SHADER_GLSL" in pathing_shader_h
     assert "applyPathingOverlay" in pathing_shader_h
-    assert "uExtendedPathingShader" in pathing_shader_h
-    assert "uBlockingWash" in pathing_shader_h
+    assert "blockingWash" in pathing_shader_h
 
     # 8. chunk_shader.h & sprite_batch_shader.h
     chunk_shader_h = (root / "source" / "rendering" / "shaders" / "chunk_shader.h").read_text(encoding="utf-8")
     assert 'pathing_shader.h' in chunk_shader_h
     assert "PATHING_SHADER_GLSL" in chunk_shader_h
-    assert "applyPathingOverlay(FragColor, isBlocking);" in chunk_shader_h
+    assert "uExtendedPathingShader" in chunk_shader_h
+    assert "uBlockingWash" in chunk_shader_h
+    assert "applyPathingOverlay(FragColor, isBlocking, uShowBlocking, uExtendedPathingShader, uBlockingWash, uBlockingBlendMode);" in chunk_shader_h
 
     sprite_batch_shader_h = (root / "source" / "rendering" / "shaders" / "sprite_batch_shader.h").read_text(encoding="utf-8")
     assert 'pathing_shader.h' in sprite_batch_shader_h
     assert "PATHING_SHADER_GLSL" in sprite_batch_shader_h
-    assert "applyPathingOverlay(FragColor, isBlocking);" in sprite_batch_shader_h
+    assert "applyPathingOverlay(FragColor, isBlocking, uShowBlocking, uExtendedPathingShader, uBlockingWash, uBlockingBlendMode);" in sprite_batch_shader_h
     assert "uExtendedPathingShader" in sprite_batch_shader_h
 
     # 9. chunk_cache_manager.cpp

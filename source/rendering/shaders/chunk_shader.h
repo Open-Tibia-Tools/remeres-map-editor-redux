@@ -78,6 +78,10 @@ uniform int uShowWaypoints;
 uniform int uShowTechItems;
 uniform int uShowInvalidTiles;
 uniform int uShowInvalidZones;
+uniform int uShowBlocking;
+uniform int uExtendedPathingShader;
+uniform vec4 uBlockingWash;
+uniform int uBlockingBlendMode;
 
 )") + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + R"(
 
@@ -107,7 +111,7 @@ void main() {
 
 	applyHouseOverlay(FragColor, vWorldPos, vHouseId, uCurrentHouseId, uShowHouses);
 	bool isBlocking = ((flagBits & 2) != 0);
-	applyPathingOverlay(FragColor, isBlocking);
+	applyPathingOverlay(FragColor, isBlocking, uShowBlocking, uExtendedPathingShader, uBlockingWash, uBlockingBlendMode);
 }
 )";
 }
