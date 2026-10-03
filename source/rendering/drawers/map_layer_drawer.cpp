@@ -173,18 +173,19 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 
 	const bool use_chunk_cache = (chunk_cache != nullptr && chunk_cache->isValid() && !live_client && !options.show_as_minimap && !options.show_only_colors);
 
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-
 	if (use_chunk_cache) {
 		// 1. Flush any pending batch geometry before chunk cache pass
 		sprite_batch.flush(ctx.atlas);
 
 		// 2. Chunk Cache static terrain pass (instanced per-chunk VBOs: ground & borders)
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
 		glDepthMask(GL_TRUE);
 		chunk_cache->renderFloorTerrain(map_z, map, ctx, view.projectionMatrix, ctx.atlas);
 
 		// 3. Ground-level highlight items overlay pass (underneath items, directly on terrain)
+		// Overlays are 2D editor surfaces: depth test is disabled so multi-tile overlays are never clipped by terrain depth
+		glDisable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 		if (zone_overlay_drawer && options.highlight_items && !options.ingame) {
 			zone_overlay_drawer->drawFloorHighlightItems(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
@@ -200,23 +201,28 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		}
 
 		// 5. Chunk Cache static items pass (instanced per-chunk VBOs: walls, tables, stairs, items)
+		// Depth test re-enabled: items test against terrain depth buffer (resolving Mountain 919 vs north railings)
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
 		glDepthMask(GL_TRUE);
 		chunk_cache->renderFloorItems(map_z, ctx, view.projectionMatrix, ctx.atlas);
 
 		// 6. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!
 		chunk_cache->renderDynamicOverlays(map_z, map, ctx, sprite_batch, *tile_renderer);
+		sprite_batch.flush(ctx.atlas);
 
-		// 7. Badges pass: cluster zone badges
+		// 7. Badges pass: cluster zone badges (floating on top of all items and terrain)
+		glDisable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 		if (zone_overlay_drawer && !options.ingame) {
 			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			sprite_batch.flush(ctx.atlas);
 		}
-
-		// 8. Flush dynamic overlays and badges for this floor so depth order across floors is preserved
-		sprite_batch.flush(ctx.atlas);
 	} else {
 		// Classic full-tile traversal fallback:
 		// 1. Static terrain pass (ground & borders)
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
 		glDepthMask(GL_TRUE);
 		visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
 			tile_renderer->RenderStaticTerrain(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
@@ -224,6 +230,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		sprite_batch.flush(ctx.atlas);
 
 		// 2. Ground-level highlight items overlay pass
+		glDisable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 		if (zone_overlay_drawer && options.highlight_items && !options.ingame) {
 			zone_overlay_drawer->drawFloorHighlightItems(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
@@ -239,6 +246,8 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		}
 
 		// 4. Static items, animated items, dynamic entities pass
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
 		glDepthMask(GL_TRUE);
 		visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
 			TileElevationState static_elevation { draw_x, draw_y };
@@ -252,12 +261,12 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		sprite_batch.flush(ctx.atlas);
 
 		// 5. Badges pass
+		glDisable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 		if (zone_overlay_drawer && !options.ingame) {
 			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			sprite_batch.flush(ctx.atlas);
 		}
-
-		sprite_batch.flush(ctx.atlas);
 	}
 
 	glDisable(GL_DEPTH_TEST);
