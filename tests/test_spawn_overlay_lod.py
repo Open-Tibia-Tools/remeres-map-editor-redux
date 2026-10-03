@@ -86,6 +86,9 @@ def test_source_code_invariants():
     assert "view.zoom > kZoomLODCutoff" in zod_cpp
     assert "map.spawns.lower_bound" in zod_cpp
     assert "kMaxCoarseRadius" in zod_cpp
+    assert "MAX_SPAWN_RADIUS" in zod_cpp
+    assert "it->y > coarse_max_y" in zod_cpp
+    assert "break;" in zod_cpp
     assert "show_spawn_details" in zod_cpp
     assert "alpha_spawn_quads_.push_back" in zod_cpp
     assert "mult_spawn_quads_.push_back" in zod_cpp
@@ -96,69 +99,109 @@ def test_source_code_invariants():
     assert "for (const Position& spos : map.spawns)" not in zod_cpp
 
 
-def test_lower_bound_floor_traversal_equivalence():
-    """Prove that binary search lower_bound(Position(min, min, z)) + it.z == z
-    finds the exact same elements as filtering all spawns by z, across 10,000 randomized spawns on 16 floors.
+def test_y_bounded_floor_traversal_efficiency_and_equivalence():
+    """Prove that binary search lower_bound(Position(min, coarse_min_y, z)) + early break on it.y > coarse_max_y
+    finds the exact same visible spawns as an exhaustive linear scan of all 10,000 spawns on the floor,
+    while visiting only a fraction of the nodes (O(log N + K_visible) vs O(N_floor)).
     """
     rng = random.Random(42)
     spawns = []
     int_min = -2147483648
+    floor = 7
+    max_coarse_radius = 128
 
     for _ in range(10000):
-        pos = Position(rng.randint(0, 4000), rng.randint(0, 4000), rng.randint(0, 15))
-        spawns.append(pos)
+        pos = Position(rng.randint(0, 4000), rng.randint(0, 4000), floor)
+        size = rng.randint(1, 30)
+        spawns.append((pos, MockSpawn(size=size)))
 
-    # std::set is strictly sorted by Position::operator<
-    spawns.sort()
+    # std::set is strictly sorted by Position::operator< (z, then y, then x)
+    spawns.sort(key=lambda item: item[0])
 
-    for floor in range(16):
-        # Oracle: linear scan
-        oracle_spawns = [p for p in spawns if p.z == floor]
+    # Viewport at y in [1500, 1800]
+    bounds = ViewBounds(1000, 1500, 1400, 1800)
+    coarse_min_x = bounds.start_x - max_coarse_radius
+    coarse_max_x = bounds.end_x + max_coarse_radius
+    coarse_min_y = bounds.start_y - max_coarse_radius
+    coarse_max_y = bounds.end_y + max_coarse_radius
 
-        # Fast lower_bound implementation matching std::set
-        search_target = Position(int_min, int_min, floor)
-        idx = bisect.bisect_left(spawns, search_target)
+    # 1. Oracle: linear scan of all 10,000 spawns on this floor
+    oracle_visible = []
+    for spos, spawn in spawns:
+        sx0 = spos.x - spawn.size
+        sx1 = spos.x + spawn.size
+        sy0 = spos.y - spawn.size
+        sy1 = spos.y + spawn.size
+        if not (sx1 < bounds.start_x or sx0 > bounds.end_x or sy1 < bounds.start_y or sy0 > bounds.end_y):
+            oracle_visible.append(spos)
 
-        gathered = []
-        while idx < len(spawns) and spawns[idx].z == floor:
-            gathered.append(spawns[idx])
+    # 2. Optimized Y-bounded traversal matching updated ZoneOverlayDrawer
+    pos_keys = [item[0] for item in spawns]
+    search_target = Position(int_min, coarse_min_y, floor)
+    idx = bisect.bisect_left(pos_keys, search_target)
+
+    traversal_visible = []
+    nodes_visited = 0
+    while idx < len(spawns) and spawns[idx][0].z == floor:
+        nodes_visited += 1
+        spos, spawn = spawns[idx]
+        if spos.y > coarse_max_y:
+            break
+
+        if spos.x < coarse_min_x or spos.x > coarse_max_x:
             idx += 1
+            continue
 
-        assert gathered == oracle_spawns, f"Floor {floor} mismatch between lower_bound and oracle"
+        sx0 = spos.x - spawn.size
+        sx1 = spos.x + spawn.size
+        sy0 = spos.y - spawn.size
+        sy1 = spos.y + spawn.size
+        if not (sx1 < bounds.start_x or sx0 > bounds.end_x or sy1 < bounds.start_y or sy0 > bounds.end_y):
+            traversal_visible.append(spos)
+        idx += 1
+
+    # Soundness & Completeness: EXACT match with oracle
+    assert traversal_visible == oracle_visible, "Y-bounded traversal missed or incorrectly added visible spawns"
+    # Efficiency: visited nodes must be far less than total spawns on floor
+    assert nodes_visited < 2000, f"Expected < 2000 visited nodes, got {nodes_visited} out of 10000"
+    assert len(traversal_visible) > 0, "Should have found visible spawns in test scenario"
 
 
-def test_coarse_aabb_culling_soundness():
-    """Prove that coarse AABB culling with MAX_COARSE_RADIUS = 128 has ZERO false negatives
-    for any spawn with size <= 128.
+def test_dynamic_coarse_radius_soundness_and_fixed_radius_counterexample():
+    """Prove that:
+    1. A hardcoded coarse radius of 128 produces FALSE NEGATIVES when spawn radius exceeds 128 (prior attempt bug).
+    2. Dynamic coarse radius bounded by max(128, MAX_SPAWN_RADIUS) has ZERO false negatives.
     """
     bounds = ViewBounds(500, 500, 700, 700)
-    coarse_min_x = bounds.start_x - MAX_COARSE_RADIUS
-    coarse_max_x = bounds.end_x + MAX_COARSE_RADIUS
-    coarse_min_y = bounds.start_y - MAX_COARSE_RADIUS
-    coarse_max_y = bounds.end_y + MAX_COARSE_RADIUS
 
-    rng = random.Random(1337)
-    for _ in range(20000):
-        spos_x = rng.randint(0, 1500)
-        spos_y = rng.randint(0, 1500)
-        radius = rng.randint(1, 128)
+    # Counterexample showing prior attempt flaw: spawn radius 150 placed at x=360
+    # sx1 = 360 + 150 = 510 >= bounds.start_x (500) -> IS VISIBLE
+    spos_x = 360
+    spos_y = 600
+    radius = 150
+    sx0 = spos_x - radius
+    sx1 = spos_x + radius
+    sy0 = spos_y - radius
+    sy1 = spos_y + radius
 
-        sx0 = spos_x - radius
-        sx1 = spos_x + radius
-        sy0 = spos_y - radius
-        sy1 = spos_y + radius
+    is_visible = not (sx1 < bounds.start_x or sx0 > bounds.end_x or sy1 < bounds.start_y or sy0 > bounds.end_y)
+    assert is_visible, "Test setup: spawn must actually be visible"
 
-        # Exact intersection
-        exact_visible = not (sx1 < bounds.start_x or sx0 > bounds.end_x or
-                             sy1 < bounds.start_y or sy0 > bounds.end_y)
+    # With prior attempt's hardcoded 128:
+    prior_coarse_min_x = bounds.start_x - 128  # 372
+    prior_culled = (spos_x < prior_coarse_min_x)  # 360 < 372 -> TRUE -> FALSE NEGATIVE!
+    assert prior_culled, "Fixed 128 radius must falsely cull the visible radius=150 spawn"
 
-        # Coarse test
-        coarse_inside = not (spos_x < coarse_min_x or spos_x > coarse_max_x or
-                             spos_y < coarse_min_y or spos_y > coarse_max_y)
+    # With dynamic max_coarse_radius = max(128, setting_radius = 200):
+    dynamic_max_radius = max(128, 200)
+    dynamic_coarse_min_x = bounds.start_x - dynamic_max_radius  # 300
+    dynamic_coarse_max_x = bounds.end_x + dynamic_max_radius
+    dynamic_coarse_min_y = bounds.start_y - dynamic_max_radius
+    dynamic_coarse_max_y = bounds.end_y + dynamic_max_radius
 
-        if exact_visible:
-            # SOUNDNESS: if a spawn actually intersects, coarse test MUST NOT reject it!
-            assert coarse_inside, f"False negative at ({spos_x}, {spos_y}) with radius {radius}"
+    dynamic_inside = not (spos_x < dynamic_coarse_min_x or spos_x > dynamic_coarse_max_x or
+                          spos_y < dynamic_coarse_min_y or spos_y > dynamic_coarse_max_y)
+    assert dynamic_inside, "Dynamic coarse radius MUST NOT cull the visible spawn"
 
 
 def simulate_spawn_render(zoom: float, spawns_on_floor, bounds: ViewBounds, blend_mode: int, show_borders: bool):

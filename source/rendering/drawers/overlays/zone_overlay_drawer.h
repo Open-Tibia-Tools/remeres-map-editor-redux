@@ -27,6 +27,11 @@ inline constexpr float kZoomLODCutoff = 10.0f;
 inline constexpr float kSpawnLODDetailThreshold = 1.0f / 0.15f; // ~6.6667f
 
 /**
+ * @brief Default fallback coarse radius for spawn AABB culling.
+ */
+inline constexpr int kMaxCoarseRadius = 128;
+
+/**
  * @brief Evaluates whether a tile is considered path-blocking for map navigation overlays.
  *
  * Excludes technical invisible wall items (e.g. Server ID 1548 / TechInvisibleWall),

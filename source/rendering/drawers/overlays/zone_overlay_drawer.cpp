@@ -10,6 +10,7 @@
 #include "map/tile.h"
 #include "game/item.h"
 #include "game/spawn.h"
+#include "app/settings.h"
 #include <algorithm>
 #include <vector>
 #include <limits>
@@ -50,6 +51,15 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
                                   const BaseMap* secondary_map,
                                   const DrawingOptions& options,
                                   const AtlasManager& atlas) {
+	visible_zone_tiles_.clear();
+	alpha_zone_quads_.clear();
+	mult_zone_quads_.clear();
+	border_zone_quads_.clear();
+	alpha_spawn_quads_.clear();
+	mult_spawn_quads_.clear();
+	spawn_borders_.clear();
+	spawn_badges_.clear();
+
 	if (options.ingame) {
 		return;
 	}
@@ -69,15 +79,6 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 
 	const ViewBounds bounds = view.getBoundsForFloor(z);
 	const float floor_alpha = 1.0f;
-
-	visible_zone_tiles_.clear();
-	alpha_zone_quads_.clear();
-	mult_zone_quads_.clear();
-	border_zone_quads_.clear();
-	alpha_spawn_quads_.clear();
-	mult_spawn_quads_.clear();
-	spawn_borders_.clear();
-	spawn_badges_.clear();
 
 	// 1. Special Zones Pass (Ground level)
 	if (options.show_special_tiles && view.zoom <= kZoomLODCutoff) {
@@ -207,21 +208,29 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	// 3. Spawns Pass (Ground level)
 	if (options.show_spawns && view.zoom <= kZoomLODCutoff) {
 		const bool show_spawn_details = (view.zoom <= kSpawnLODDetailThreshold);
-		constexpr int kMaxCoarseRadius = 128;
-		const int coarse_min_x = bounds.start_x - kMaxCoarseRadius;
-		const int coarse_max_x = bounds.end_x + kMaxCoarseRadius;
-		const int coarse_min_y = bounds.start_y - kMaxCoarseRadius;
-		const int coarse_max_y = bounds.end_y + kMaxCoarseRadius;
+		const int max_coarse_radius = std::max(kMaxCoarseRadius, g_settings.getInteger(Config::MAX_SPAWN_RADIUS));
+		const int coarse_min_x = bounds.start_x - max_coarse_radius;
+		const int coarse_max_x = bounds.end_x + max_coarse_radius;
+		const int coarse_min_y = bounds.start_y - max_coarse_radius;
+		const int coarse_max_y = bounds.end_y + max_coarse_radius;
 
-		const Position floor_start_pos(std::numeric_limits<int>::min(), std::numeric_limits<int>::min(), z);
+		// Spawns are stored in std::set<Position> sorted by (z, y, x).
+		// By querying lower_bound for (INT_MIN, coarse_min_y, z), we jump directly to the
+		// first candidate spawn on floor z within the visible Y range in O(log N) time.
+		const Position floor_start_pos(std::numeric_limits<int>::min(), coarse_min_y, z);
 		auto it = map.spawns.lower_bound(floor_start_pos);
 
 		for (; it != map.spawns.end() && it->z == z; ++it) {
+			// Because y is strictly non-decreasing across floor z in the sorted set,
+			// once it->y exceeds coarse_max_y, no subsequent spawn on this floor can intersect the viewport.
+			if (it->y > coarse_max_y) {
+				break;
+			}
+
 			const Position& spos = *it;
 
-			// Coarse AABB culling: reject without MapNode lookup if spawn center is far outside bounds
-			if (spos.x < coarse_min_x || spos.x > coarse_max_x ||
-			    spos.y < coarse_min_y || spos.y > coarse_max_y) {
+			// Coarse X AABB culling: reject without MapNode lookup if spawn center is far outside X bounds
+			if (spos.x < coarse_min_x || spos.x > coarse_max_x) {
 				continue;
 			}
 
