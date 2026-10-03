@@ -271,7 +271,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		return;
 	}
 
-	auto pushRegionInstance = [&](const AtlasRegion* reg, int draw_x, int draw_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f) {
+	auto pushRegionInstance = [&](const AtlasRegion* reg, int draw_x, int draw_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE) {
 		if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
 			TileInstance inst;
 			inst.x = static_cast<float>(draw_x);
@@ -279,7 +279,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			inst.w = (house_id >= 1000000.0f) ? 32.0f : static_cast<float>(reg->pixel_width);
 			inst.h = (house_id >= 1000000.0f) ? 32.0f : static_cast<float>(reg->pixel_height);
 			inst.sprite_id = static_cast<float>(reg->debug_sprite_id);
-			inst.flags = 0.0f;
+			inst.flags = flags;
 			inst.r = rf;
 			inst.g = gf;
 			inst.b = bf;
@@ -297,7 +297,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		inst.w = static_cast<float>(rw);
 		inst.h = static_cast<float>(rh);
 		inst.sprite_id = 0.0f;
-		inst.flags = 1.0f; // SOLID_COLOR: direct color quad, bypasses texture atlas and LUT
+		inst.flags = TILE_INSTANCE_FLAG_SOLID_COLOR; // SOLID_COLOR: direct color quad, bypasses texture atlas and LUT
 		inst.r = rf;
 		inst.g = gf;
 		inst.b = bf;
@@ -307,7 +307,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		bake_buffer_.push_back(inst);
 	};
 
-	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f) {
+	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE) {
 		const bool is_simple = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
 		if (is_simple) {
 			const AtlasRegion* reg = nullptr;
@@ -317,7 +317,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			if (!reg) {
 				reg = spr->getAtlasRegion(0, 0, 0, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
 			}
-			pushRegionInstance(reg, draw_base_x, draw_base_y, rf, gf, bf, af, house_id, depth);
+			pushRegionInstance(reg, draw_base_x, draw_base_y, rf, gf, bf, af, house_id, depth, flags);
 		} else {
 			const auto composite_metrics = spr->getPlainLayoutMetrics(pat.subtype, pat.x, pat.y, pat.z, pat.frame);
 			int x_offset = 0;
@@ -326,7 +326,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
 					for (int cf = 0; cf < spr->layers; ++cf) {
 						const AtlasRegion* reg = spr->getAtlasRegion(cx, cy, cf, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
-						pushRegionInstance(reg, draw_base_x - x_offset, draw_base_y - y_offset, rf, gf, bf, af, house_id, depth);
+						pushRegionInstance(reg, draw_base_x - x_offset, draw_base_y - y_offset, rf, gf, bf, af, house_id, depth, flags);
 					}
 					y_offset += composite_metrics.row_heights[cy];
 				}
@@ -719,6 +719,12 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				}
 
 				const float item_house_id = (ctx.options.extended_house_shader) ? tile_house_id : 0.0f;
+				const bool is_blocking_item = item->isBlocking() &&
+					(item_server_id != 1548 && item_client_id != 2187) &&
+					(rme::rendering::TechnicalItemRegistry::Classify(item_server_id, item_client_id) != rme::rendering::TileIndicatorType::TechInvisibleWall);
+				const float item_flags = (ctx.options.extended_pathing_shader && is_blocking_item)
+					? TILE_INSTANCE_FLAG_BLOCKING
+					: TILE_INSTANCE_FLAG_TEXTURE;
 
 				pushSpriteInstances(ispr, i_pat, item_x, item_y,
 					static_cast<float>(r) * (1.0f / 255.0f),
@@ -726,7 +732,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					static_cast<float>(b) * (1.0f / 255.0f),
 					static_cast<float>(a) * (1.0f / 255.0f),
 					item_house_id,
-					item_depth);
+					item_depth,
+					item_flags);
 
 				if (ispr->hasElevation()) {
 					elev += ispr->draw_height;
@@ -836,7 +843,9 @@ void ChunkCacheManager::renderFloorTerrain(
 		options.zone_blocking_color,
 		options.zone_spawn_color,
 		options.house_active_color,
-		options.house_inactive_color
+		options.house_inactive_color,
+		options.extended_pathing_shader,
+		options.zone_blocking_blend_mode
 	);
 
 	atlas.bind(0);
@@ -949,7 +958,9 @@ void ChunkCacheManager::renderFloorItems(
 		options.zone_blocking_color,
 		options.zone_spawn_color,
 		options.house_active_color,
-		options.house_inactive_color
+		options.house_inactive_color,
+		options.extended_pathing_shader,
+		options.zone_blocking_blend_mode
 	);
 
 	atlas.bind(0);

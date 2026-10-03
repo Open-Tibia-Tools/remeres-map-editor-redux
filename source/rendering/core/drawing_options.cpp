@@ -45,6 +45,8 @@ void DrawingOptions::SetDefault() {
 	show_preview = false;
 	show_hooks = false;
 	hide_items_when_zoomed = true;
+	extended_house_shader = true;
+	extended_pathing_shader = true;
 	current_house_id = 0;
 	draw_floor_shadow = show_shade;
 	server_light = SpriteLight {
@@ -116,6 +118,8 @@ void DrawingOptions::SetIngame() {
 	show_preview = false;
 	show_hooks = false;
 	hide_items_when_zoomed = false;
+	extended_house_shader = false;
+	extended_pathing_shader = false;
 	current_house_id = 0;
 	draw_floor_shadow = show_shade;
 	server_light = SpriteLight {
@@ -143,6 +147,7 @@ void DrawingOptions::MarkSettingDirty(uint32_t key) noexcept {
 		case Config::SHOW_TECHNICAL_ITEMS:
 		case Config::SHOW_EXTRA:
 		case Config::EXT_HOUSE_SHADER:
+		case Config::EXT_PATHING_SHADER:
 			chunk_bake_dirty_ = true;
 			break;
 
@@ -191,6 +196,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const bool new_show_towns = settings.getBoolean(Config::SHOW_TOWNS);
 	const bool new_always_show_zones = settings.getBoolean(Config::ALWAYS_SHOW_ZONES);
 	const bool new_extended_house_shader = settings.getBoolean(Config::EXT_HOUSE_SHADER);
+	const bool new_extended_pathing_shader = settings.getBoolean(Config::EXT_PATHING_SHADER);
 	const SpriteLight new_server_light = SpriteLight {
 		.intensity = static_cast<uint8_t>(std::clamp(brush_manager.GetLightIntensity(), 0, 255)),
 		.color = static_cast<uint8_t>(std::clamp(brush_manager.GetServerLightColor(), 0, 255))
@@ -231,6 +237,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	// Differential Change Detection: Only dirty when values actually change!
 	if (new_transparent_items != transparent_items ||
 		new_extended_house_shader != extended_house_shader ||
+		new_extended_pathing_shader != extended_pathing_shader ||
 		new_show_creatures != show_creatures ||
 		new_show_only_colors != show_only_colors ||
 		new_show_only_modified != show_only_modified ||
@@ -282,6 +289,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	show_towns = new_show_towns;
 	always_show_zones = new_always_show_zones;
 	extended_house_shader = new_extended_house_shader;
+	extended_pathing_shader = new_extended_pathing_shader;
 	server_light = new_server_light;
 	minimum_ambient_light = new_minimum_ambient_light;
 	draw_floor_shadow = show_shade;

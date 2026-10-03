@@ -94,6 +94,7 @@ struct DrawingOptions {
 	bool show_towns;
 	bool always_show_zones;
 	bool extended_house_shader;
+	bool extended_pathing_shader;
 
 	bool draw_floor_shadow;
 

@@ -215,6 +215,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_atlas.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_garbage_collector.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/house_shader.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/pathing_shader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/indicator_shader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/zone_shader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/highlight_items_shader.h

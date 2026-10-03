@@ -7,6 +7,10 @@
 
 #include <cstdint>
 
+inline constexpr float TILE_INSTANCE_FLAG_TEXTURE     = 0.0f;
+inline constexpr float TILE_INSTANCE_FLAG_SOLID_COLOR = 1.0f;
+inline constexpr float TILE_INSTANCE_FLAG_BLOCKING    = 2.0f;
+
 /**
  * TileInstance represents a single sprite instance in a chunk buffer.
  * Decoupled from atlas texture coordinates via sprite_id indirection (SpriteAtlasLUT).

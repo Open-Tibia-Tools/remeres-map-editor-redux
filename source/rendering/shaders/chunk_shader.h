@@ -3,6 +3,7 @@
 
 #include "rendering/shaders/indicator_shader.h"
 #include "rendering/shaders/house_shader.h"
+#include "rendering/shaders/pathing_shader.h"
 #include <string>
 
 namespace rme::rendering::shaders {
@@ -42,7 +43,8 @@ void main() {
 	vQuadCoord = aPos;
 	vColor = aTint * uGlobalTint;
 
-	if (aFlags > 0.5) {
+	int flagBits = int(aFlags + 0.5);
+	if ((flagBits & 1) != 0) {
 		vTexCoord = vec3(0.0);
 	} else {
 		int baseTexel = int(aSpriteId + 0.5) * 2;
@@ -77,7 +79,7 @@ uniform int uShowTechItems;
 uniform int uShowInvalidTiles;
 uniform int uShowInvalidZones;
 
-)") + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + R"(
+)") + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + R"(
 
 void main() {
 	if (evaluateTileIndicator(vQuadCoord, vHouseId, uCurrentHouseId,
@@ -88,7 +90,8 @@ void main() {
 		return;
 	}
 
-	if (vFlags > 0.5) {
+	int flagBits = int(vFlags + 0.5);
+	if ((flagBits & 1) != 0) {
 		FragColor = vColor;
 		if (FragColor.a < 0.01) {
 			discard;
@@ -103,6 +106,8 @@ void main() {
 	}
 
 	applyHouseOverlay(FragColor, vWorldPos, vHouseId, uCurrentHouseId, uShowHouses);
+	bool isBlocking = ((flagBits & 2) != 0);
+	applyPathingOverlay(FragColor, isBlocking);
 }
 )";
 }

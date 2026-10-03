@@ -258,7 +258,12 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 			item_params.red = default_ir;
 			item_params.green = default_ig;
 			item_params.blue = default_ib;
-			item_params.zone_flags = 0;
+			const bool is_blocking_item = item->isBlocking() &&
+				(item->getID() != 1548 && it.clientId() != 2187) &&
+				(rme::rendering::TechnicalItemRegistry::Classify(item->getID(), it.clientId()) != rme::rendering::TileIndicatorType::TechInvisibleWall);
+			item_params.zone_flags = (options.show_blocking && options.extended_pathing_shader && is_blocking_item)
+				? rme::rendering::ZONE_FLAG_ITEM_BLOCKING
+				: 0;
 
 			item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, elevation.current_draw_x, elevation.current_draw_y, item_params);
 		} else if (it && options.show_tech_items && !options.ingame) {
@@ -352,9 +357,12 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 		item_params.patterns = &patterns;
 		item_params.red = default_ir;
 		item_params.green = default_ig;
-		item_params.blue = default_ib;
-
-		item_params.zone_flags = 0;
+		const bool is_blocking_item = item->isBlocking() &&
+			(item->getID() != 1548 && it.clientId() != 2187) &&
+			(rme::rendering::TechnicalItemRegistry::Classify(item->getID(), it.clientId()) != rme::rendering::TileIndicatorType::TechInvisibleWall);
+		item_params.zone_flags = (options.show_blocking && options.extended_pathing_shader && is_blocking_item)
+			? rme::rendering::ZONE_FLAG_ITEM_BLOCKING
+			: 0;
 
 		item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, elevation.current_draw_x, elevation.current_draw_y, item_params);
 	}

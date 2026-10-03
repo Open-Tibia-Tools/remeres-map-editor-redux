@@ -4,6 +4,7 @@
 #include "rendering/core/shader_program.h"
 #include "rendering/shaders/indicator_shader.h"
 #include "rendering/shaders/house_shader.h"
+#include "rendering/shaders/pathing_shader.h"
 #include "rendering/shaders/zone_shader.h"
 #include "rendering/shaders/highlight_items_shader.h"
 #include <glm/vec4.hpp>
@@ -77,7 +78,7 @@ uniform int uShowSpecialTiles;
 uniform int uShowInvalidTiles;
 uniform int uShowInvalidZones;
 
-)") + std::string(HIGHLIGHT_ITEMS_SHADER_GLSL) + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(ZONE_SHADER_GLSL) + R"(
+)") + std::string(HIGHLIGHT_ITEMS_SHADER_GLSL) + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + std::string(ZONE_SHADER_GLSL) + R"(
 
 void main() {
     if (evaluateTileIndicator(vQuadCoord, vHouseId, uCurrentHouseId,
@@ -88,7 +89,8 @@ void main() {
         return;
     }
 
-    if (vZoneFlags != 0u) {
+    uint overlayFlags = (vZoneFlags & ~((1u << 23) | (1u << 19)));
+    if (overlayFlags != 0u) {
         vec4 highlightColor;
         if (evaluateHighlightItems(vZoneFlags, highlightColor)) {
             FragColor = highlightColor;
@@ -118,6 +120,8 @@ void main() {
     }
 
     applyHouseOverlay(FragColor, vWorldPos, vHouseId, uCurrentHouseId, uShowHouses);
+    bool isBlocking = ((vZoneFlags & (1u << 23)) != 0u);
+    applyPathingOverlay(FragColor, isBlocking);
 }
 )";
 }
@@ -151,7 +155,9 @@ inline void SetSpriteBatchOverlayUniforms(
 	const glm::vec4& zone_blocking_color,
 	const glm::vec4& zone_spawn_color,
 	const glm::vec4& house_active_color,
-	const glm::vec4& house_inactive_color)
+	const glm::vec4& house_inactive_color,
+	bool extended_pathing_shader = true,
+	int zone_blocking_blend_mode = 1)
 {
 	shader.Use();
 	shader.SetUint("uCurrentHouseId", current_house_id);
@@ -178,6 +184,8 @@ inline void SetSpriteBatchOverlayUniforms(
 	shader.SetVec4("uSpawnWash", zone_spawn_color);
 	shader.SetVec4("uHouseActiveWash", house_active_color);
 	shader.SetVec4("uHouseInactiveWash", house_inactive_color);
+	shader.SetInt("uExtendedPathingShader", extended_pathing_shader ? 1 : 0);
+	shader.SetInt("uBlockingBlendMode", zone_blocking_blend_mode);
 }
 
 } // namespace rme::rendering::shaders

@@ -384,6 +384,7 @@ void Settings::IO(IOMode mode) {
 	Bool(SHOW_TOWNS, false);
 	Bool(ALWAYS_SHOW_ZONES, true);
 	Bool(EXT_HOUSE_SHADER, true);
+	Bool(EXT_PATHING_SHADER, true);
 	Bool(DRAW_LOCKED_DOOR, false);
 	Bool(SHOW_AS_MINIMAP, false);
 

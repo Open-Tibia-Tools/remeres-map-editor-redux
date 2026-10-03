@@ -46,6 +46,9 @@ inline constexpr uint32_t ZONE_FLAG_BORDER_PASS     = 1u << 21; // Bit 21: Dedic
 // House overlay / perimeter border (Bit 22)
 inline constexpr uint32_t ZONE_FLAG_HOUSE           = 1u << 22; // Bit 22: House overlay / border
 
+// Extended pathing shader: item blocking tint (Bit 23)
+inline constexpr uint32_t ZONE_FLAG_ITEM_BLOCKING   = 1u << 23; // Bit 23: Extended pathing shader item blocking tint
+
 [[nodiscard]] constexpr uint32_t MakeHighlightItemsFlags() noexcept {
 	return ZONE_FLAG_HIGHLIGHT_ITEMS | ZONE_FLAG_MULTIPLICATIVE;
 }

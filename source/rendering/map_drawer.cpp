@@ -192,7 +192,9 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		options.zone_blocking_color,
 		options.zone_spawn_color,
 		options.house_active_color,
-		options.house_inactive_color
+		options.house_inactive_color,
+		options.extended_pathing_shader,
+		options.zone_blocking_blend_mode
 	);
 	primitive_renderer.setProjectionMatrix(view.projectionMatrix);
 
