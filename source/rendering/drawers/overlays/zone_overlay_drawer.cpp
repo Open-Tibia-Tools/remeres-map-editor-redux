@@ -12,6 +12,7 @@
 #include "game/spawn.h"
 #include <algorithm>
 #include <vector>
+#include <limits>
 
 namespace rme::rendering {
 
@@ -57,6 +58,10 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		return;
 	}
 
+	if (view.zoom > kZoomLODCutoff) {
+		return;
+	}
+
 	const AtlasRegion* white_pixel = atlas.getWhitePixel();
 	if (!white_pixel) {
 		return;
@@ -69,10 +74,13 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	alpha_zone_quads_.clear();
 	mult_zone_quads_.clear();
 	border_zone_quads_.clear();
+	alpha_spawn_quads_.clear();
+	mult_spawn_quads_.clear();
 	spawn_borders_.clear();
+	spawn_badges_.clear();
 
 	// 1. Special Zones Pass (Ground level)
-	if (options.show_special_tiles && view.zoom <= 10.0f) {
+	if (options.show_special_tiles && view.zoom <= kZoomLODCutoff) {
 
 		const int min_x = bounds.start_x - 1;
 		const int max_x = bounds.end_x + 1;
@@ -192,29 +200,43 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	}
 
 	// 2. Pre-calculate Cluster Badges
-	if (options.show_special_tiles && !visible_zone_tiles_.empty() && view.zoom <= 10.0f) {
+	if (options.show_special_tiles && !visible_zone_tiles_.empty() && view.zoom <= kZoomLODCutoff) {
 		cluster_finder_.findClusters(z, bounds, visible_zone_tiles_);
 	}
 
-	// 3. Spawns Perimeter Box Pass (Ground level)
-	if (options.show_spawns) {
-		spawn_borders_.clear();
+	// 3. Spawns Pass (Ground level)
+	if (options.show_spawns && view.zoom <= kZoomLODCutoff) {
+		const bool show_spawn_details = (view.zoom <= kSpawnLODDetailThreshold);
+		constexpr int kMaxCoarseRadius = 128;
+		const int coarse_min_x = bounds.start_x - kMaxCoarseRadius;
+		const int coarse_max_x = bounds.end_x + kMaxCoarseRadius;
+		const int coarse_min_y = bounds.start_y - kMaxCoarseRadius;
+		const int coarse_max_y = bounds.end_y + kMaxCoarseRadius;
 
-		for (const Position& spos : map.spawns) {
-			if (spos.z != z) {
+		const Position floor_start_pos(std::numeric_limits<int>::min(), std::numeric_limits<int>::min(), z);
+		auto it = map.spawns.lower_bound(floor_start_pos);
+
+		for (; it != map.spawns.end() && it->z == z; ++it) {
+			const Position& spos = *it;
+
+			// Coarse AABB culling: reject without MapNode lookup if spawn center is far outside bounds
+			if (spos.x < coarse_min_x || spos.x > coarse_max_x ||
+			    spos.y < coarse_min_y || spos.y > coarse_max_y) {
 				continue;
 			}
+
 			const Tile* st = map.getTile(spos);
 			if (!st || !st->spawn) {
 				continue;
 			}
+
 			const int radius = st->spawn->getSize();
 			const int sx0 = spos.x - radius;
 			const int sx1 = spos.x + radius;
 			const int sy0 = spos.y - radius;
 			const int sy1 = spos.y + radius;
 
-			// Viewport intersection test
+			// Exact Viewport intersection test
 			if (sx1 < bounds.start_x || sx0 > bounds.end_x ||
 			    sy1 < bounds.start_y || sy0 > bounds.end_y) {
 				continue;
@@ -232,27 +254,48 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			                       ZONE_FLAG_SPAWN_BORDER_W |
 			                       ZONE_FLAG_SPAWN_BORDER_E;
 
+			const float box_alpha = (st->spawn->isSelected() && options.dragging) ? (floor_alpha * 0.30f) : floor_alpha;
+
 			if (options.zone_spawn_blend_mode == 1) {
 				spawn_flags |= ZONE_FLAG_MULTIPLICATIVE;
-				sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+				mult_spawn_quads_.push_back({ static_cast<float>(draw_x0), static_cast<float>(draw_y0),
+				                              spawn_w, spawn_h, box_alpha, spawn_flags });
 			} else {
-				sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+				alpha_spawn_quads_.push_back({ static_cast<float>(draw_x0), static_cast<float>(draw_y0),
+				                              spawn_w, spawn_h, box_alpha, spawn_flags });
 			}
 
-			const float box_alpha = (st->spawn->isSelected() && options.dragging) ? (floor_alpha * 0.30f) : floor_alpha;
-			sprite_batch.draw(static_cast<float>(draw_x0), static_cast<float>(draw_y0),
-			                  spawn_w, spawn_h, *white_pixel, 1.0f, 1.0f, 1.0f, box_alpha,
-			                  0.0f, spawn_flags);
+			// LOD Detail level: borders and flame badges are omitted when zoomed beyond 15% zoom
+			if (show_spawn_details) {
+				if (options.show_zone_borders) {
+					uint32_t border_flags = (spawn_flags & ~ZONE_FLAG_MULTIPLICATIVE) | ZONE_FLAG_BORDER_PASS;
+					spawn_borders_.push_back({ static_cast<float>(draw_x0), static_cast<float>(draw_y0),
+					                           spawn_w, spawn_h, box_alpha, border_flags });
+				}
 
-			if (options.zone_spawn_blend_mode == 1) {
-				sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+				int center_draw_x, center_draw_y;
+				view.getScreenPosition(spos.x, spos.y, z, center_draw_x, center_draw_y);
+				spawn_badges_.push_back({ static_cast<float>(center_draw_x), static_cast<float>(center_draw_y),
+				                          32.0f, 32.0f, box_alpha, 0 });
 			}
+		}
 
-			if (options.show_zone_borders) {
-				uint32_t border_flags = (spawn_flags & ~ZONE_FLAG_MULTIPLICATIVE) | ZONE_FLAG_BORDER_PASS;
-				spawn_borders_.push_back({ static_cast<float>(draw_x0), static_cast<float>(draw_y0),
-				                           spawn_w, spawn_h, box_alpha, border_flags });
+		// Batched draw calls: zero per-spawn state changes or flushes
+		if (!alpha_spawn_quads_.empty()) {
+			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+			for (const auto& sq : alpha_spawn_quads_) {
+				sprite_batch.draw(sq.x, sq.y, sq.w, sq.h, *white_pixel, 1.0f, 1.0f, 1.0f, sq.alpha,
+				                  0.0f, sq.flags);
 			}
+		}
+
+		if (!mult_spawn_quads_.empty()) {
+			sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+			for (const auto& sq : mult_spawn_quads_) {
+				sprite_batch.draw(sq.x, sq.y, sq.w, sq.h, *white_pixel, 1.0f, 1.0f, 1.0f, sq.alpha,
+				                  0.0f, sq.flags);
+			}
+			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 		}
 
 		if (!spawn_borders_.empty()) {
@@ -262,34 +305,13 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 				                  0.0f, sb.flags);
 			}
 		}
-	}
 
-	if (options.show_spawns) {
-		for (const Position& spos : map.spawns) {
-			if (spos.z != z) {
-				continue;
+		if (!spawn_badges_.empty()) {
+			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+			for (const auto& b : spawn_badges_) {
+				sprite_batch.draw(b.x, b.y, b.w, b.h, *white_pixel, 1.0f, 1.0f, 1.0f, b.alpha,
+				                  INDICATOR_SPAWN_BASE, 0.0f);
 			}
-			const Tile* st = map.getTile(spos);
-			if (!st || !st->spawn) {
-				continue;
-			}
-			const int radius = st->spawn->getSize();
-			const int sx0 = spos.x - radius;
-			const int sx1 = spos.x + radius;
-			const int sy0 = spos.y - radius;
-			const int sy1 = spos.y + radius;
-
-			if (sx1 < bounds.start_x || sx0 > bounds.end_x ||
-			    sy1 < bounds.start_y || sy0 > bounds.end_y) {
-				continue;
-			}
-
-			const float box_alpha = (st->spawn->isSelected() && options.dragging) ? (floor_alpha * 0.30f) : floor_alpha;
-			int center_draw_x, center_draw_y;
-			view.getScreenPosition(spos.x, spos.y, z, center_draw_x, center_draw_y);
-			sprite_batch.draw(static_cast<float>(center_draw_x), static_cast<float>(center_draw_y),
-			                  32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, box_alpha,
-			                  INDICATOR_SPAWN_BASE, 0.0f);
 		}
 	}
 }
@@ -301,7 +323,7 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
                                           const BaseMap* secondary_map,
                                           const DrawingOptions& options,
                                           const AtlasManager& atlas) {
-	if (options.ingame || !options.show_blocking || view.zoom > 10.0f) {
+	if (options.ingame || !options.show_blocking || view.zoom > kZoomLODCutoff) {
 		return;
 	}
 
@@ -398,7 +420,7 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
                                         const BaseMap* secondary_map,
                                         const DrawingOptions& options,
                                         const AtlasManager& atlas) {
-	if (options.ingame || !options.show_houses || view.zoom > 10.0f) {
+	if (options.ingame || !options.show_houses || view.zoom > kZoomLODCutoff) {
 		return;
 	}
 
@@ -478,7 +500,7 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
                                                 const BaseMap* secondary_map,
                                                 const DrawingOptions& options,
                                                 const AtlasManager& atlas) {
-	if (options.ingame || !options.highlight_items || view.zoom > 10.0f) {
+	if (options.ingame || !options.highlight_items || view.zoom > kZoomLODCutoff) {
 		return;
 	}
 
@@ -538,7 +560,7 @@ void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
 	const float floor_alpha = 1.0f;
 
 	// 1. Cluster Zone Badges Pass (Rendered on top of items, tables, walls, and statues)
-	if (options.show_special_tiles && view.zoom <= 10.0f) {
+	if (options.show_special_tiles && view.zoom <= kZoomLODCutoff) {
 		const auto& badges = cluster_finder_.getLastBadges();
 		for (const auto& badge : badges) {
 			if (badge.z != z) {

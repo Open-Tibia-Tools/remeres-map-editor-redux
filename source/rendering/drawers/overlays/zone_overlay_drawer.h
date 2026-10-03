@@ -14,6 +14,19 @@ class Tile;
 namespace rme::rendering {
 
 /**
+ * @brief Editor-wide LOD policy cutoff: beyond 10x zoom-out (zoom <= 10%, view.zoom > 10.0f),
+ *        all zone overlays, text labels, and dynamic entities are culled.
+ */
+inline constexpr float kZoomLODCutoff = 10.0f;
+
+/**
+ * @brief Spawn detail LOD threshold: beyond ~15% zoom (view.zoom > 6.67f),
+ *        individual 1px/2px borders and center flame badges become subpixel and illegible.
+ *        In this range, spawns are rendered with simplified, high-throughput area fill quads.
+ */
+inline constexpr float kSpawnLODDetailThreshold = 1.0f / 0.15f; // ~6.6667f
+
+/**
  * @brief Evaluates whether a tile is considered path-blocking for map navigation overlays.
  *
  * Excludes technical invisible wall items (e.g. Server ID 1548 / TechInvisibleWall),
@@ -91,7 +104,7 @@ private:
 		uint32_t flags = 0;
 	};
 
-	struct PendingSpawnBorder {
+	struct PendingSpawnQuad {
 		float x = 0.0f;
 		float y = 0.0f;
 		float w = 0.0f;
@@ -120,7 +133,11 @@ private:
 	std::vector<PendingZoneQuad> alpha_zone_quads_;
 	std::vector<PendingZoneQuad> mult_zone_quads_;
 	std::vector<PendingZoneQuad> border_zone_quads_;
-	std::vector<PendingSpawnBorder> spawn_borders_;
+
+	std::vector<PendingSpawnQuad> alpha_spawn_quads_;
+	std::vector<PendingSpawnQuad> mult_spawn_quads_;
+	std::vector<PendingSpawnQuad> spawn_borders_;
+	std::vector<PendingSpawnQuad> spawn_badges_;
 
 	std::vector<uint8_t> blocking_row_prev_;
 	std::vector<uint8_t> blocking_row_curr_;
