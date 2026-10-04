@@ -25,20 +25,23 @@ SpriteDrawer::SpriteDrawer() {
 SpriteDrawer::~SpriteDrawer() {
 }
 
-void SpriteDrawer::glBlitAtlasQuad(SpriteBatch& sprite_batch, int sx, int sy, const AtlasRegion* region, DrawColor color) {
+void SpriteDrawer::glBlitAtlasQuad(SpriteBatch& sprite_batch, int sx, int sy, const AtlasRegion* region, DrawColor color, float house_id, uint32_t zone_flags, float depth) {
 	if (region) {
 		sprite_batch.draw(
 			static_cast<float>(sx), static_cast<float>(sy),
 			static_cast<float>(region->pixel_width), static_cast<float>(region->pixel_height),
 			*region,
-			COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]
+			COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a],
+			house_id,
+			zone_flags,
+			depth
 		);
 	}
 }
 
 #include "rendering/core/render_frame_context.h"
 
-void SpriteDrawer::glBlitSquare(SpriteBatch& sprite_batch, int sx, int sy, DrawColor color, int size, const AtlasManager* atlas) {
+void SpriteDrawer::glBlitSquare(SpriteBatch& sprite_batch, int sx, int sy, DrawColor color, int size, const AtlasManager* atlas, float depth) {
 	if (!atlas) {
 		return;
 	}
@@ -46,18 +49,18 @@ void SpriteDrawer::glBlitSquare(SpriteBatch& sprite_batch, int sx, int sy, DrawC
 		size = TILE_SIZE;
 	}
 
-	sprite_batch.drawRect(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(size), static_cast<float>(size), glm::vec4(COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]), *atlas);
+	sprite_batch.drawRect(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(size), static_cast<float>(size), glm::vec4(COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]), *atlas, depth);
 }
 
-void SpriteDrawer::glDrawBox(SpriteBatch& sprite_batch, int sx, int sy, int width, int height, DrawColor color, const AtlasManager* atlas) {
+void SpriteDrawer::glDrawBox(SpriteBatch& sprite_batch, int sx, int sy, int width, int height, DrawColor color, const AtlasManager* atlas, float depth) {
 	if (!atlas) {
 		return;
 	}
 
-	sprite_batch.drawRectLines(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(width), static_cast<float>(height), glm::vec4(COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]), *atlas);
+	sprite_batch.drawRectLines(static_cast<float>(sx), static_cast<float>(sy), static_cast<float>(width), static_cast<float>(height), glm::vec4(COLOR_LUT[color.r], COLOR_LUT[color.g], COLOR_LUT[color.b], COLOR_LUT[color.a]), *atlas, depth);
 }
 
-void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, ServerItemId server_item_id, DrawColor color, const RenderFrameContext* ctx) {
+void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, ServerItemId server_item_id, DrawColor color, const RenderFrameContext* ctx, float depth) {
 	if (!ctx) {
 		return;
 	}
@@ -67,10 +70,10 @@ void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screen
 		return;
 	}
 	// Call the pointer overload
-	BlitSprite(sprite_batch, screenx, screeny, spr, color, ctx);
+	BlitSprite(sprite_batch, screenx, screeny, spr, color, ctx, depth);
 }
 
-void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, GameSprite* spr, DrawColor color, const RenderFrameContext* ctx) {
+void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screeny, GameSprite* spr, DrawColor color, const RenderFrameContext* ctx, float depth) {
 	if (spr == nullptr) {
 		return;
 	}
@@ -85,7 +88,7 @@ void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screen
 	if (spr->width == 1 && spr->height == 1 && spr->layers == 1) {
 		const AtlasRegion* region = spr->getAtlasRegion(0, 0, 0, -1, 0, 0, 0, tme);
 		if (region) {
-			glBlitAtlasQuad(sprite_batch, screenx, screeny, region, color);
+			glBlitAtlasQuad(sprite_batch, screenx, screeny, region, color, 0.0f, 0u, depth);
 		}
 		return;
 	}
@@ -98,7 +101,7 @@ void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screen
 			for (int cf = 0; cf != spr->layers; ++cf) {
 				const AtlasRegion* region = spr->getAtlasRegion(cx, cy, cf, -1, 0, 0, 0, tme);
 				if (region) {
-					glBlitAtlasQuad(sprite_batch, screenx - x_offset, screeny - y_offset, region, color);
+					glBlitAtlasQuad(sprite_batch, screenx - x_offset, screeny - y_offset, region, color, 0.0f, 0u, depth);
 				}
 				// No fallback - if region is null, sprite failed to load
 			}

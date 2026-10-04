@@ -18,6 +18,8 @@
 #include "game/item.h"
 #include "game/creature.h"
 #include "game/spawn.h"
+#include "rendering/indicators/technical_item_registry.h"
+#include "rendering/indicators/zone_flags.h"
 
 DragShadowDrawer::DragShadowDrawer() {
 }
@@ -96,7 +98,33 @@ void DragShadowDrawer::draw(SpriteBatch& sprite_batch, Editor& editor, const std
 						});
 					}
 					if (tile->spawn && tile->spawn->isSelected()) {
-						sprite_drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_SPAWN, DrawColor(160, 160, 160, 160), ctx);
+						const AtlasRegion* white_pixel = ctx ? ctx->atlas.getWhitePixel() : nullptr;
+						if (white_pixel) {
+							const int radius = tile->spawn->getSize();
+							const int sx0 = pos.x - radius;
+							const int sx1 = pos.x + radius;
+							const int sy0 = pos.y - radius;
+							const int sy1 = pos.y + radius;
+
+							int draw_x0 = 0, draw_y0 = 0;
+							view.getScreenPosition(sx0, sy0, pos.z, draw_x0, draw_y0);
+							const float spawn_w = static_cast<float>((sx1 - sx0 + 1) * 32);
+							const float spawn_h = static_cast<float>((sy1 - sy0 + 1) * 32);
+
+							const uint32_t spawn_flags = rme::rendering::ZONE_FLAG_SPAWN |
+							                             rme::rendering::ZONE_FLAG_SPAWN_BORDER_N |
+							                             rme::rendering::ZONE_FLAG_SPAWN_BORDER_S |
+							                             rme::rendering::ZONE_FLAG_SPAWN_BORDER_W |
+							                             rme::rendering::ZONE_FLAG_SPAWN_BORDER_E;
+
+							sprite_batch.draw(static_cast<float>(draw_x0), static_cast<float>(draw_y0),
+							                  spawn_w, spawn_h, *white_pixel, 1.0f, 1.0f, 1.0f, 0.70f,
+							                  0.0f, spawn_flags);
+
+							sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y),
+							                  32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f,
+							                  rme::rendering::INDICATOR_SPAWN_BASE);
+						}
 					}
 				}
 			}

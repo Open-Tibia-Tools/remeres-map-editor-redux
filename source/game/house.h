@@ -56,6 +56,9 @@ public:
 	Position getExit() const {
 		return exit;
 	}
+	const PositionList& getTiles() const noexcept {
+		return tiles;
+	}
 	uint8_t getEmptyDoorID() const;
 	Position getDoorPositionByID(uint8_t id) const;
 

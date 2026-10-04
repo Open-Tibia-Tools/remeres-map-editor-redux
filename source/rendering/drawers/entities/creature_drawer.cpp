@@ -224,7 +224,10 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 							base_x,
 							base_y,
 							region,
-							options.color
+							options.color,
+							0.0f,
+							0u,
+							options.depth
 						);
 					}
 					continue;
@@ -243,7 +246,10 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 								base_x - sprite_x_offset,
 								base_y - sprite_y_offset,
 								region,
-								options.color
+								options.color,
+								0.0f,
+								0u,
+								options.depth
 							);
 						}
 						sprite_y_offset += sprite_metrics.row_heights[cy];

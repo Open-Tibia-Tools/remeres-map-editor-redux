@@ -12,6 +12,7 @@
 #include "game/sprites.h"
 #include "ui/gui.h"
 #include "ui/theme.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 
 ContainerGridCanvas::ContainerGridCanvas(wxWindow* parent, bool large) :
 	NanoVGCanvas(parent, wxID_ANY, 0),
@@ -310,47 +311,59 @@ void ContainerGridCanvas::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 		}
 
 		if (item) {
-			Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());
-			if (sprite) {
-				int tex = GetOrCreateSpriteTexture(vg, sprite);
-				if (tex > 0) {
-					NVGpaint imgPaint = nvgImagePattern(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size, 0, tex, 1.0f);
-					nvgBeginPath(vg);
-					nvgRect(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size);
-					nvgFillPaint(vg, imgPaint);
-					nvgFill(vg);
-
-					// Overlays for selected
-					if (is_selected && g_settings.getInteger(Config::USE_GUI_SELECTION_SHADOW)) {
-						int overlayTex = GetOrCreateEditorIconTexture(vg, EDITOR_SPRITE_SELECTION_MARKER, (img_size <= 16) ? SPRITE_SIZE_16x16 : SPRITE_SIZE_32x32);
-						if (overlayTex > 0) {
-							NVGpaint ovPaint = nvgImagePattern(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size, 0, overlayTex, 1.0f);
-							nvgBeginPath(vg);
-							nvgRect(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size);
-							nvgFillPaint(vg, ovPaint);
-							nvgFill(vg);
-						}
-					}
-
-					// Draw Count if > 1
-					if (item->getCount() > 1 && item->isStackable()) {
-						std::string countStr = std::to_string(item->getCount());
-						nvgFontSize(vg, 10.0f);
-						nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
-
-						float text_x = slot_x + btn_size_x - offset_x + 1.0f;
-						float text_y = slot_y + btn_size_y - offset_y + 1.0f;
-
-						// Shadow
-						nvgFillColor(vg, nvgRGBA(0, 0, 0, 255));
-						nvgText(vg, text_x + 1.0f, text_y + 1.0f, countStr.c_str(), nullptr);
-
-						// Text
-						wxColour countCol = Theme::Get(Theme::Role::TooltipCountText);
-						nvgFillColor(vg, nvgRGBA(countCol.Red(), countCol.Green(), countCol.Blue(), 255));
-						nvgText(vg, text_x, text_y, countStr.c_str(), nullptr);
+			const auto tech = rme::rendering::TechnicalItemRegistry::Classify(item->getID(), item->getClientID());
+			if (tech != rme::rendering::TileIndicatorType::None) {
+				rme::rendering::DrawNanoVGIndicatorBadge(
+					vg,
+					tech,
+					slot_x + offset_x,
+					slot_y + offset_y,
+					static_cast<float>(img_size),
+					!m_large
+				);
+			} else {
+				Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());
+				if (sprite) {
+					int tex = GetOrCreateSpriteTexture(vg, sprite);
+					if (tex > 0) {
+						NVGpaint imgPaint = nvgImagePattern(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size, 0, tex, 1.0f);
+						nvgBeginPath(vg);
+						nvgRect(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size);
+						nvgFillPaint(vg, imgPaint);
+						nvgFill(vg);
 					}
 				}
+			}
+
+			// Overlays for selected
+			if (is_selected && g_settings.getInteger(Config::USE_GUI_SELECTION_SHADOW)) {
+				int overlayTex = GetOrCreateEditorIconTexture(vg, EDITOR_SPRITE_SELECTION_MARKER, (img_size <= 16) ? SPRITE_SIZE_16x16 : SPRITE_SIZE_32x32);
+				if (overlayTex > 0) {
+					NVGpaint ovPaint = nvgImagePattern(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size, 0, overlayTex, 1.0f);
+					nvgBeginPath(vg);
+					nvgRect(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size);
+					nvgFillPaint(vg, ovPaint);
+					nvgFill(vg);
+				}
+			}
+
+			// Draw Count if > 1
+			if (item->getCount() > 1 && item->isStackable()) {
+				std::string countStr = std::to_string(item->getCount());
+				nvgFontSize(vg, 10.0f);
+				nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
+
+				float text_x = slot_x + btn_size_x - offset_x + 1.0f;
+				float text_y = slot_y + btn_size_y - offset_y + 1.0f;
+
+				// Shadow
+				nvgFillColor(vg, nvgRGBA(0, 0, 0, 255));
+				nvgText(vg, text_x + 1.0f, text_y + 1.0f, countStr.c_str(), nullptr);
+
+				// Text
+				wxColour countCol = Theme::Get(Theme::Role::TooltipCountText);
+				nvgFillColor(vg, nvgRGBA(countCol.Red(), countCol.Green(), countCol.Blue(), 255));
+				nvgText(vg, text_x, text_y, countStr.c_str(), nullptr);
 			}
 		}
 	}

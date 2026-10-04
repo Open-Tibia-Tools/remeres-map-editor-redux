@@ -16,7 +16,7 @@ namespace {
 		}
 
 		size_t index = 0;
-		if (subtype >= 0 && sprite.height <= 1 && sprite.width <= 1) {
+		if (subtype >= 0 && sprite.height <= 1 && sprite.width <= 1 && sprite.layers <= 1 && sprite.frames <= 1 && sprite.pattern_x <= 1 && sprite.pattern_y <= 1 && sprite.pattern_z <= 1) {
 			index = static_cast<size_t>(subtype);
 		} else {
 			index = sprite.getIndex(x, y, layer, pattern_x, pattern_y, pattern_z, frame);

@@ -57,6 +57,6 @@ void FlagBrush::undraw(BaseMap* /*map*/, Tile* tile) {
 
 void FlagBrush::draw(BaseMap* /*map*/, Tile* tile, void* /*parameter*/) {
 	if (tile->hasGround()) {
-		tile->setMapFlags(static_cast<uint16_t>(flag));
+		tile->addMapFlags(static_cast<uint16_t>(flag));
 	}
 }

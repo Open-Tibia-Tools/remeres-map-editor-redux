@@ -8,7 +8,6 @@
 #include "map/position.h"
 #include <glm/glm.hpp>
 
-class BrushCursorDrawer;
 struct RenderFrameContext;
 class Settings;
 class BrushManager;
@@ -21,7 +20,6 @@ class ItemDrawer;
 class SpriteDrawer;
 class CreatureDrawer;
 class SpriteBatch;
-class PrimitiveRenderer;
 class AtlasManager;
 
 struct BrushOverlayDragState {
@@ -37,8 +35,6 @@ public:
 
 	void draw(
 		SpriteBatch& sprite_batch,
-		PrimitiveRenderer& primitive_renderer,
-		BrushCursorDrawer* brush_cursor_drawer,
 		const BrushOverlayDragState& drag_state,
 		ItemDrawer* item_drawer,
 		SpriteDrawer* sprite_drawer,
@@ -63,8 +59,6 @@ private:
 		COLOR_INVALID,
 		COLOR_BLANK,
 	};
-
-	void get_color(Brush* brush, Editor& editor, const Position& position, uint8_t& r, uint8_t& g, uint8_t& b);
 
 	glm::vec4 get_brush_color(BrushColor color, const Settings& settings);
 	glm::vec4 get_check_color(Brush* brush, Editor& editor, const Position& pos, const Settings& settings);

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <glm/vec4.hpp>
 #include "map/position.h"
 #include "rendering/core/floor_visibility_mode.h"
 #include "rendering/core/sprite_light.h"
@@ -93,18 +94,41 @@ struct DrawingOptions {
 	bool show_towns;
 	bool always_show_zones;
 	bool extended_house_shader;
+	bool extended_pathing_shader;
 
 	bool draw_floor_shadow;
 
 	uint32_t current_house_id;
 	SpriteLight server_light;
 	float minimum_ambient_light;
-	float highlight_pulse;
 
 	bool anti_aliasing;
 
+	// Zone & Overlay customizable colors, opacity, borders, and blend modes
+	bool show_zone_borders = false;
+	int cursor_blend_mode = 0;
+	int cursor_alt_blend_mode = 0;
+	int zone_border_blend_mode = 0;
+	int zone_pz_blend_mode = 0;
+	int zone_nopvp_blend_mode = 0;
+	int zone_nologout_blend_mode = 0;
+	int zone_pvp_blend_mode = 0;
+	int zone_blocking_blend_mode = 0;
+	int zone_spawn_blend_mode = 1;
+	int house_active_blend_mode = 1;
+	int house_inactive_blend_mode = 1;
+	glm::vec4 zone_border_color;
+	glm::vec4 zone_pz_color;
+	glm::vec4 zone_nopvp_color;
+	glm::vec4 zone_nologout_color;
+	glm::vec4 zone_pvp_color;
+	glm::vec4 zone_blocking_color;
+	glm::vec4 zone_spawn_color;
+	glm::vec4 house_active_color;
+	glm::vec4 house_inactive_color;
+
 	[[nodiscard]] bool hasTileColorModifiers() const noexcept {
-		return show_blocking || highlight_items || show_spawns || show_houses || show_special_tiles || show_only_colors;
+		return show_only_colors;
 	}
 
 private:

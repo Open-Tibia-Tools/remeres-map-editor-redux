@@ -1,42 +1,37 @@
 #include "rendering/drawers/overlays/marker_drawer.h"
-#include "rendering/drawers/entities/sprite_drawer.h"
 #include "rendering/core/sprite_batch.h"
+#include "rendering/indicators/technical_item_registry.h"
 #include "map/tile.h"
-#include "game/spawn.h"
-#include "game/sprites.h"
+#include "rendering/core/atlas_manager.h"
+#include "rendering/core/render_frame_context.h"
 
-MarkerDrawer::MarkerDrawer() {
-}
+MarkerDrawer::MarkerDrawer() = default;
+MarkerDrawer::~MarkerDrawer() = default;
 
-MarkerDrawer::~MarkerDrawer() {
-}
-
-void MarkerDrawer::draw(SpriteBatch& sprite_batch, SpriteDrawer* drawer, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, uint32_t current_house_id, Map& map, const DrawingOptions& options, const RenderFrameContext& ctx) {
-	// waypoint (blue flame)
-	if (!options.ingame && waypoint && options.show_waypoints) {
-		drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_WAYPOINT, DrawColor(64, 64, 255), &ctx);
+void MarkerDrawer::draw(SpriteBatch& sprite_batch, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, const DrawingOptions& options, const RenderFrameContext& ctx, float depth) {
+	const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
+	if (!white_pixel || !tile) {
+		return;
 	}
 
-	// house exit (blue splash)
-	if (tile->isHouseExit() && options.show_houses) {
-		if (tile->hasHouseExit(current_house_id)) {
-			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_HOUSE_EXIT, DrawColor(64, 255, 255), &ctx);
-		} else {
-			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_HOUSE_EXIT, DrawColor(64, 64, 255), &ctx);
-		}
+	const float fx = static_cast<float>(draw_x);
+	const float fy = static_cast<float>(draw_y);
+
+	// House entry ("ENTRY")
+	if (options.show_houses && tile->isHouseExit()) {
+		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
+			rme::rendering::INDICATOR_HOUSE_ENTRY_BASE, 0u, depth);
 	}
 
-	// town temple (gray flag)
-	if (options.show_towns && tile->isTownExit(map)) {
-		drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_TOWN_TEMPLE, DrawColor(255, 255, 64, 170), &ctx);
+	// Town temple ("TOWN")
+	if (options.show_towns && tile->isTownExit()) {
+		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
+			rme::rendering::INDICATOR_TOWN_BASE, 0u, depth);
 	}
 
-	// spawn (purple flame)
-	if (tile->spawn && options.show_spawns) {
-		if (tile->spawn->isSelected()) {
-			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_SPAWN, DrawColor(128, 128, 128), &ctx);
-		} else {
-			drawer->BlitSprite(sprite_batch, draw_x, draw_y, SPRITE_SPAWN, DrawColor(255, 255, 255), &ctx);
-		}
+	// Waypoint ("WAYPT")
+	if (!options.ingame && options.show_waypoints && waypoint) {
+		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
+			rme::rendering::INDICATOR_WAYPOINT_BASE, 0u, depth);
 	}
 }

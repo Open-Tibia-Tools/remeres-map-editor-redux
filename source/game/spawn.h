@@ -94,6 +94,22 @@ public:
 	SpawnPositionList::iterator find(Position& pos) {
 		return spawns.find(pos);
 	}
+	SpawnPositionList::const_iterator find(const Position& pos) const {
+		return spawns.find(pos);
+	}
+	SpawnPositionList::iterator lower_bound(const Position& pos) {
+		return spawns.lower_bound(pos);
+	}
+	SpawnPositionList::const_iterator lower_bound(const Position& pos) const {
+		return spawns.lower_bound(pos);
+	}
+
+	[[nodiscard]] bool empty() const noexcept {
+		return spawns.empty();
+	}
+	[[nodiscard]] size_t size() const noexcept {
+		return spawns.size();
+	}
 
 private:
 	SpawnPositionList spawns;
