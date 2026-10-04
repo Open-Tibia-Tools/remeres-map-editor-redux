@@ -15,7 +15,7 @@ class Spawn;
 
 class EditorPersistence {
 public:
-	static void saveMap(Editor& editor, FileName filename, bool showdialog);
+	static bool saveMap(Editor& editor, FileName filename, bool showdialog);
 	static void loadMap(Editor& editor, const FileName& filename, const MapLoadOptions& load_options = {});
 	static bool importMap(Editor& editor, FileName filename, int import_x_offset, int import_y_offset, ImportType house_import_type, ImportType spawn_import_type);
 	static bool importMiniMap(Editor& editor, FileName filename, int import, int import_x_offset, int import_y_offset, int import_z_offset);

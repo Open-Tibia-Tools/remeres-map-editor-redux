@@ -308,8 +308,8 @@ public:
 	Map& GetCurrentMap();
 	int GetOpenMapCount();
 	bool ShouldSave();
-	void SaveCurrentMap(FileName filename, bool showdialog);
-	void SaveCurrentMap(bool showdialog = true);
+	bool SaveCurrentMap(FileName filename, bool showdialog);
+	bool SaveCurrentMap(bool showdialog = true);
 	bool NewMap();
 	void OpenMap();
 	void SaveMap();

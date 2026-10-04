@@ -36,7 +36,7 @@ public:
 	Map& GetCurrentMap();
 	int GetOpenMapCount();
 	bool ShouldSave();
-	void SaveCurrentMap(FileName filename, bool showdialog);
+	bool SaveCurrentMap(FileName filename, bool showdialog);
 	bool NewMap();
 	void OpenMap();
 	void SaveMap();

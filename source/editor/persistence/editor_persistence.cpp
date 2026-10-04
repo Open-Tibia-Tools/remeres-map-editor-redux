@@ -38,17 +38,24 @@ void EditorPersistence::loadMap(Editor& editor, const FileName& fn, const MapLoa
 	editor.map.open(nstr(fn.GetFullPath()));
 }
 
-void EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdialog) {
+bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdialog) {
 	std::string savefile = filename.GetFullPath().mb_str(wxConvUTF8).data();
 	bool save_as = false;
 
 	if (savefile.empty()) {
 		savefile = editor.map.getFilename();
-
+	} else {
 		FileName c1(wxstr(savefile));
 		FileName c2(wxstr(editor.map.getFilename()));
 		save_as = c1 != c2;
 	}
+
+	const std::string prev_filename = editor.map.getFilename();
+	const std::string prev_name = editor.map.getName();
+	const bool prev_unnamed = editor.map.unnamed;
+	const std::string prev_spawn = editor.map.getSpawnFilename();
+	const std::string prev_house = editor.map.getHouseFilename();
+	const std::string prev_waypoint = editor.map.getWaypointFilename();
 
 	// If not named yet, propagate the file name to the auxilliary files
 	if (editor.map.unnamed) {
@@ -162,7 +169,13 @@ void EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 
 		// If failure, don't run the rest of the function
 		if (!success) {
-			return;
+			editor.map.filename = prev_filename;
+			editor.map.name = prev_name;
+			editor.map.unnamed = prev_unnamed;
+			editor.map.setSpawnFilename(prev_spawn);
+			editor.map.setHouseFilename(prev_house);
+			editor.map.setWaypointFilename(prev_waypoint);
+			return false;
 		}
 	}
 
@@ -203,6 +216,7 @@ void EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	}
 
 	editor.map.clearChanges();
+	return true;
 }
 
 void EditorPersistence::importTowns(Editor& editor, Map& imported_map, const Position& offset, ImportType house_import_type, std::unordered_map<uint32_t, uint32_t>& town_id_map) {
