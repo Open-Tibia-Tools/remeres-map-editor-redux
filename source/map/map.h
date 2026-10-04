@@ -168,6 +168,7 @@ protected:
 
 	std::string spawnfile; // The maps spawnfile
 	std::string housefile; // The housefile
+	std::string npcfile; // Crystal Server keeps NPC spawns in their own file
 	std::string waypointfile; // The waypoints file (stores extended waypoint information such as id, preferred icon and matching town)
 
 public:

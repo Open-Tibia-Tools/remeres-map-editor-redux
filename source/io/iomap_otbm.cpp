@@ -220,6 +220,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	};
 
 	loadAux(MapXMLIO::loadSpawns, "spawn", map.spawnfile);
+	loadAux(MapXMLIO::loadNpcSpawns, "npc", map.npcfile);
 	loadAux(MapXMLIO::loadHouses, "house", map.housefile);
 
 	// Waypoints handling
@@ -715,6 +716,9 @@ bool IOMapOTBM::saveMap(Map& map, NodeFileWriteHandle& f) {
 			};
 
 			addExtFile(OTBM_ATTR_EXT_SPAWN_FILE, map.spawnfile);
+			if (mapVersion.otbm == MAP_OTBM_5) {
+				addExtFile(OTBM_ATTR_EXT_SPAWN_NPC_FILE, map.npcfile);
+			}
 			addExtFile(OTBM_ATTR_EXT_HOUSE_FILE, map.housefile);
 
 			writeTileData(map, f);

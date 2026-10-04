@@ -64,6 +64,7 @@ void Map::initializeEmpty() {
 	name = sname + ".otbm";
 	spawnfile = sname + "-spawn.xml";
 	housefile = sname + "-house.xml";
+	npcfile = sname + "-npc.xml";
 	waypointfile = sname + "-waypoint.xml";
 	description = "No map description available.";
 	unnamed = true;
