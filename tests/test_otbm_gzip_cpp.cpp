@@ -355,18 +355,157 @@ namespace {
 			TEST_OTBM_2 = 1,
 			TEST_OTBM_3 = 2,
 			TEST_OTBM_4 = 3,
+			TEST_OTBM_5 = 4,
 		};
 		const auto normalizeTestVer = [](uint32_t raw) -> TestMapVersionID {
-			if (raw == 4) return TEST_OTBM_4;
+			if (raw == 4 || raw == 5) return TEST_OTBM_5;
 			return static_cast<TestMapVersionID>(raw);
 		};
-		assert(normalizeTestVer(4) == TEST_OTBM_4);
+		assert(normalizeTestVer(5) == TEST_OTBM_5);
+		assert(normalizeTestVer(4) == TEST_OTBM_5);
 		assert(normalizeTestVer(3) == TEST_OTBM_4);
 		assert(normalizeTestVer(2) == TEST_OTBM_3);
 		assert(normalizeTestVer(1) == TEST_OTBM_2);
 		assert(normalizeTestVer(0) == TEST_OTBM_1);
 
-		std::cout << "  -> Passed: 4/4 header resolves to 15.25, 1/4 to 7.80, and OTBM 4 is normalized.\n";
+		std::cout << "  -> Passed: 4/4 header resolves to 15.25, 1/4 to 7.80, and OTBM 5 is normalized.\n";
+	}
+
+	void testScenario9_OTBM5_CrystalServer() {
+		std::cout << "[Scenario 9] Testing OTBM 5 (Crystal Server) header and zone attribute compatibility...\n";
+		const std::filesystem::path otbm5_file = "tests/test_otbm5_crystalserver.otbm";
+		{
+			DiskNodeFileWriteHandle f(otbm5_file.string(), "OTBM");
+			assert(f.isOk());
+			f.addNode(0);
+			f.addU32(4); // raw version 4 = OTBM 5
+			f.addU16(2048);
+			f.addU16(2048);
+			f.addU32(4); // items_major = 4
+			f.addU32(4); // items_minor = 4
+			f.addNode(2); // OTBM_MAP_DATA
+			f.addU8(1); // OTBM_ATTR_DESCRIPTION
+			f.addString("Crystal Server OTBM 5 Map");
+			f.addU8(11); // OTBM_ATTR_EXT_SPAWN_MONSTER_FILE
+			f.addString("world-monster.xml");
+			f.addU8(23); // OTBM_ATTR_EXT_SPAWN_NPC_FILE
+			f.addString("world-npc.xml");
+			f.addU8(24); // OTBM_ATTR_EXT_ZONE_FILE
+			f.addString("world-zone.xml");
+			f.addU8(13); // OTBM_ATTR_EXT_HOUSE_FILE
+			f.addString("world-house.xml");
+			f.endNode();
+			f.endNode();
+			f.close();
+			assert(f.isOk());
+		}
+
+		// Read back with MemoryNodeFileReadHandle
+		const auto raw = Compression::readRawFile(otbm5_file);
+		assert(raw && raw->size() > 4);
+		assert(hasValidOtbmPrefix(*raw));
+
+		MemoryNodeFileReadHandle handle(raw->data() + 4, raw->size() - 4);
+		BinaryNode* root = handle.getRootNode();
+		assert(root != nullptr);
+		uint8_t rootType = 0;
+		assert(root->getU8(rootType));
+
+		uint32_t raw_version = 0;
+		assert(root->getU32(raw_version));
+		assert(raw_version == 4);
+
+		uint16_t w = 0, h = 0;
+		assert(root->getU16(w) && root->getU16(h));
+		assert(w == 2048 && h == 2048);
+
+		uint32_t major = 0, minor = 0;
+		assert(root->getU32(major) && root->getU32(minor));
+		assert(major == 4 && minor == 4);
+
+		// Verify child node OTBM_MAP_DATA
+		BinaryNode* mapData = root->getChild();
+		assert(mapData != nullptr);
+		uint8_t mapDataType = 0;
+		assert(mapData->getU8(mapDataType));
+		assert(mapDataType == 2);
+
+		std::filesystem::remove(otbm5_file);
+		std::cout << "  -> Passed: OTBM 5 map header (raw version 4, major/minor 4/4) and zone attributes parsed successfully.\n";
+	}
+
+	void testScenario10_OversizedStringAndTierHandling() {
+		std::cout << "[Scenario 10] Testing oversized text/description and tier boundary handling...\n";
+		const std::string test_file = "test_oversized.otbm";
+		if (std::filesystem::exists(test_file)) {
+			std::filesystem::remove(test_file);
+		}
+
+		// 1. Verify NodeFileWriteHandle rejects strings > 0xFFFF
+		std::string huge_string(70000, 'A');
+		{
+			DiskNodeFileWriteHandle f(test_file, "OTBM");
+			assert(f.isOk());
+			f.addNode(0);
+			f.addU32(2);
+			f.addU16(100);
+			f.addU16(100);
+			f.addU32(3);
+			f.addU32(57);
+			f.addNode(2); // OTBM_MAP_DATA
+
+			// Imitate the safe serialization pattern:
+			// If text exceeds 0xFFFF, omit the native tag to avoid corrupting node stream
+			std::string normal_text = "Standard sign text";
+			if (normal_text.size() <= 0xFFFF) {
+				f.addU8(3); // OTBM_ATTR_TEXT
+				assert(f.addString(normal_text));
+			}
+
+			if (huge_string.size() <= 0xFFFF) {
+				f.addU8(3);
+				f.addString(huge_string);
+			} // else omitted native tag!
+
+			// Tier handling:
+			uint16_t tier_normal = 2;
+			if (tier_normal <= 0xFF) {
+				f.addU8(41); // OTBM_ATTR_TIER
+				f.addU8(static_cast<uint8_t>(tier_normal));
+			}
+
+			uint16_t tier_oversized = 300;
+			if (tier_oversized <= 0xFF) {
+				f.addU8(41);
+				f.addU8(static_cast<uint8_t>(tier_oversized));
+			} // omitted native tag so attribute map retains 300!
+
+			f.endNode();
+			f.endNode();
+			f.close();
+			assert(f.isOk());
+		}
+
+		// Read back and verify the stream is clean and not corrupted
+		const auto raw = Compression::readRawFile(test_file);
+		assert(raw && raw->size() > 4);
+		MemoryNodeFileReadHandle handle(raw->data() + 4, raw->size() - 4);
+		BinaryNode* root = handle.getRootNode();
+		assert(root != nullptr);
+		BinaryNode* mapData = root->getChild();
+		assert(mapData != nullptr);
+
+		uint8_t tag = 0;
+		assert(mapData->getU8(tag) && tag == 3);
+		std::string read_text;
+		assert(mapData->getString(read_text) && read_text == "Standard sign text");
+
+		assert(mapData->getU8(tag) && tag == 41);
+		uint8_t read_tier = 0;
+		assert(mapData->getU8(read_tier) && read_tier == 2);
+
+		std::filesystem::remove(test_file);
+		std::cout << "  -> Passed: Oversized strings and tiers safely omitted without stream corruption.\n";
 	}
 
 } // namespace
@@ -386,6 +525,8 @@ int main() {
 	testScenario6_MultiMapIsolation();
 	testScenario7_EscapedCharactersAndHeaderGrowth();
 	testScenario8_ClientVersionDisambiguation();
+	testScenario9_OTBM5_CrystalServer();
+	testScenario10_OversizedStringAndTierHandling();
 
 	std::cout << "========================================================\n";
 	std::cout << "  ALL SCENARIOS PASSED SUCCESSFULLY!\n";

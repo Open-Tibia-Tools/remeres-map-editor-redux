@@ -494,7 +494,7 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 		}
 	}
 
-	if (maphandle.version.otbm >= MAP_OTBM_4) {
+	if (maphandle.version.otbm == MAP_OTBM_4) {
 		if (item.getID() > 0xFFFF && !item.hasIntegerAttribute("serverId")) {
 			const_cast<Item&>(item).setAttribute("serverId", static_cast<int32_t>(item.getID()));
 		}
@@ -502,45 +502,54 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 			f.addU8(OTBM_ATTR_ATTRIBUTE_MAP);
 			item.serializeAttributeMap(maphandle, f);
 		}
-	} else {
-		if (g_item_definitions.MinorVersion >= CLIENT_VERSION_820 && item.isCharged()) {
-			f.addU8(OTBM_ATTR_CHARGES);
-			f.addU16(item.getSubtype());
-		}
+	}
 
-		uint16_t actionId = item.getActionID();
-		if (actionId > 0) {
-			f.addU8(OTBM_ATTR_ACTION_ID);
-			f.addU16(actionId);
-		}
+	if (g_item_definitions.MinorVersion >= CLIENT_VERSION_820 && item.isCharged()) {
+		f.addU8(OTBM_ATTR_CHARGES);
+		f.addU16(item.getSubtype());
+	}
 
-		uint16_t uniqueId = item.getUniqueID();
-		if (uniqueId > 0) {
-			f.addU8(OTBM_ATTR_UNIQUE_ID);
-			f.addU16(uniqueId);
-		}
+	uint16_t actionId = item.getActionID();
+	if (actionId > 0) {
+		f.addU8(OTBM_ATTR_ACTION_ID);
+		f.addU16(actionId);
+	}
 
-		std::string text(item.getText());
-		if (!text.empty()) {
+	uint16_t uniqueId = item.getUniqueID();
+	if (uniqueId > 0) {
+		f.addU8(OTBM_ATTR_UNIQUE_ID);
+		f.addU16(uniqueId);
+	}
+
+	std::string text(item.getText());
+	if (!text.empty()) {
+		if (text.size() <= 0xFFFF) {
 			f.addU8(OTBM_ATTR_TEXT);
 			f.addString(text);
+		} else {
+			spdlog::warn("ItemSerializationOTBM: Item '{}' text length ({}) exceeds 65535 bytes, omitting native OTBM_ATTR_TEXT tag", item.getName(), text.size());
 		}
+	}
 
-		std::string description(item.getDescription());
-		if (!description.empty()) {
+	std::string description(item.getDescription());
+	if (!description.empty()) {
+		if (description.size() <= 0xFFFF) {
 			f.addU8(OTBM_ATTR_DESC);
 			f.addString(description);
+		} else {
+			spdlog::warn("ItemSerializationOTBM: Item '{}' description length ({}) exceeds 65535 bytes, omitting native OTBM_ATTR_DESC tag", item.getName(), description.size());
 		}
+	}
 
+	// CrystalServer (OTBM 5) only supports classic attributes in BasicItem::readAttr
+	if (maphandle.version.otbm != MAP_OTBM_5) {
 		uint16_t tier = item.getTier();
 		if (tier > 0) {
 			if (tier <= 0xFF) {
 				f.addU8(OTBM_ATTR_TIER);
 				f.addU8(static_cast<uint8_t>(tier));
 			} else {
-				spdlog::warn("ItemSerializationOTBM: Item '{}' has tier {} which is too large for uint8_t, truncating to 255", item.getName(), tier);
-				f.addU8(OTBM_ATTR_TIER);
-				f.addU8(0xFF);
+				spdlog::warn("ItemSerializationOTBM: Item '{}' has tier {} exceeding 255; omitting native OTBM_ATTR_TIER tag to preserve full value in attribute map", item.getName(), tier);
 			}
 		}
 	}
@@ -562,33 +571,35 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 			f.addU16(depot->getDepotID());
 		}
 	} else if (auto podium = item.asPodium()) {
-		uint8_t flags = 0;
-		if (podium->getShowOutfit()) {
-			flags |= PODIUM_SHOW_OUTFIT;
-		}
-		if (podium->getShowMount()) {
-			flags |= PODIUM_SHOW_MOUNT;
-		}
-		if (podium->getShowPlatform()) {
-			flags |= PODIUM_SHOW_PLATFORM;
-		}
+		if (maphandle.version.otbm != MAP_OTBM_5) {
+			uint8_t flags = 0;
+			if (podium->getShowOutfit()) {
+				flags |= PODIUM_SHOW_OUTFIT;
+			}
+			if (podium->getShowMount()) {
+				flags |= PODIUM_SHOW_MOUNT;
+			}
+			if (podium->getShowPlatform()) {
+				flags |= PODIUM_SHOW_PLATFORM;
+			}
 
-		const Outfit& outfit = podium->getOutfit();
-		f.addU8(OTBM_ATTR_PODIUMOUTFIT);
-		f.addU8(flags);
-		f.addU8(podium->getDirection());
+			const Outfit& outfit = podium->getOutfit();
+			f.addU8(OTBM_ATTR_PODIUMOUTFIT);
+			f.addU8(flags);
+			f.addU8(podium->getDirection());
 
-		f.addU16(outfit.lookType);
-		f.addU8(outfit.lookHead);
-		f.addU8(outfit.lookBody);
-		f.addU8(outfit.lookLegs);
-		f.addU8(outfit.lookFeet);
-		f.addU8(outfit.lookAddon);
+			f.addU16(outfit.lookType);
+			f.addU8(outfit.lookHead);
+			f.addU8(outfit.lookBody);
+			f.addU8(outfit.lookLegs);
+			f.addU8(outfit.lookFeet);
+			f.addU8(outfit.lookAddon);
 
-		f.addU16(outfit.lookMount);
-		f.addU8(outfit.lookMountHead);
-		f.addU8(outfit.lookMountBody);
-		f.addU8(outfit.lookMountLegs);
-		f.addU8(outfit.lookMountFeet);
+			f.addU16(outfit.lookMount);
+			f.addU8(outfit.lookMountHead);
+			f.addU8(outfit.lookMountBody);
+			f.addU8(outfit.lookMountLegs);
+			f.addU8(outfit.lookMountFeet);
+		}
 	}
 }

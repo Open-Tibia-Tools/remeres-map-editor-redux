@@ -17,8 +17,7 @@
 #include "editor/editor.h"
 #include "editor/action.h"
 #include "editor/action_queue.h"
-#include "ui/properties/properties_window.h"
-#include "ui/properties/old_properties_window.h"
+#include "ui/properties/item_properties_window.h"
 #include "app/settings.h"
 
 ContainerPropertyPanel::ContainerPropertyPanel(wxWindow* parent) :
@@ -177,14 +176,10 @@ void ContainerPropertyPanel::OnEditItem(wxCommandEvent& WXUNUSED(event)) {
 	Item* new_sub_item = new_container->getItem(sub_item_index);
 	wxPoint newDialogAt = GetPosition() + FROM_DIP(this, wxPoint(20, 20));
 
-	wxDialog* d;
-	if (current_map->getVersion().otbm >= MAP_OTBM_4) {
-		d = newd PropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
-	} else {
-		d = newd OldPropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
-	}
+	wxDialog* d = newd ItemPropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
 
-	if (d->ShowModal() == wxID_OK) {
+	const int result = d->ShowModal();
+	if (result == 1 || result == wxID_OK) {
 		std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
 		action->addChange(std::make_unique<Change>(std::move(new_tile)));
 		editor->addAction(std::move(action));

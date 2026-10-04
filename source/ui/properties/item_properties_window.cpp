@@ -16,7 +16,7 @@
 #include "ui/gui.h"
 #include "ui/dialog_util.h"
 #include "app/application.h"
-#include "ui/properties/old_properties_window.h"
+#include "ui/properties/item_properties_window.h"
 #include "ui/properties/property_validator.h"
 #include "ui/properties/property_applier.h"
 #include "ui/properties/teleport_service.h"
@@ -30,9 +30,9 @@ namespace {
 }
 
 // ============================================================================
-// Old Properties Window
+// Item Properties Window
 
-OldPropertiesWindow::OldPropertiesWindow(wxWindow* win_parent, const Map* map, const Tile* tile_parent, Item* item, wxPoint pos) :
+ItemPropertiesWindow::ItemPropertiesWindow(wxWindow* win_parent, const Map* map, const Tile* tile_parent, Item* item, wxPoint pos) :
 	ObjectPropertiesWindowBase(win_parent, "Item Properties", map, tile_parent, item, pos),
 	count_field(nullptr),
 	action_id_field(nullptr),
@@ -41,9 +41,9 @@ OldPropertiesWindow::OldPropertiesWindow(wxWindow* win_parent, const Map* map, c
 	tier_field(nullptr) {
 	ASSERT(edit_item);
 
-	Bind(wxEVT_SET_FOCUS, &OldPropertiesWindow::OnFocusChange, this);
-	Bind(wxEVT_BUTTON, &OldPropertiesWindow::OnClickOK, this, wxID_OK);
-	Bind(wxEVT_BUTTON, &OldPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
+	Bind(wxEVT_SET_FOCUS, &ItemPropertiesWindow::OnFocusChange, this);
+	Bind(wxEVT_BUTTON, &ItemPropertiesWindow::OnClickOK, this, wxID_OK);
+	Bind(wxEVT_BUTTON, &ItemPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
 
 	wxSizer* topsizer = newd wxBoxSizer(wxVERTICAL);
 
@@ -88,12 +88,12 @@ OldPropertiesWindow::OldPropertiesWindow(wxWindow* win_parent, const Map* map, c
 	SetIcon(icon);
 }
 
-void OldPropertiesWindow::createHeaderFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
+void ItemPropertiesWindow::createHeaderFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
 	subsizer->Add(newd wxStaticText(parent, wxID_ANY, "ID " + i2ws(edit_item->getID())));
 	subsizer->Add(newd wxStaticText(parent, wxID_ANY, "\"" + wxstr(edit_item->getName()) + "\""));
 }
 
-void OldPropertiesWindow::createGenericFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
+void ItemPropertiesWindow::createGenericFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
 	subsizer->Add(newd wxStaticText(parent, wxID_ANY, (edit_item->isCharged() ? "Charges" : "Count")));
 	int max_count = 100;
 	if (edit_item->isClientCharged()) {
@@ -117,7 +117,7 @@ void OldPropertiesWindow::createGenericFields(wxFlexGridSizer* subsizer, wxWindo
 	subsizer->Add(unique_id_field, wxSizerFlags(1).Expand());
 }
 
-void OldPropertiesWindow::createClassificationFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
+void ItemPropertiesWindow::createClassificationFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
 	// item classification (12.81+)
 	if (supportsClassificationTiers() && (edit_item->getClassification() > 0 || edit_item->isWeapon() || edit_item->isWearableEquipment())) {
 		subsizer->Add(newd wxStaticText(parent, wxID_ANY, "Classification"));
@@ -130,7 +130,7 @@ void OldPropertiesWindow::createClassificationFields(wxFlexGridSizer* subsizer, 
 	}
 }
 
-void OldPropertiesWindow::createDoorFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
+void ItemPropertiesWindow::createDoorFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
 	if (Door* door = dynamic_cast<Door*>(edit_item)) {
 		subsizer->Add(newd wxStaticText(parent, wxID_ANY, "Door ID"));
 		door_id_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(door->getDoorID()), wxDefaultPosition, FROM_DIP(this, wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFF, door->getDoorID());
@@ -141,30 +141,30 @@ void OldPropertiesWindow::createDoorFields(wxFlexGridSizer* subsizer, wxWindow* 
 	}
 }
 
-void OldPropertiesWindow::createTeleportFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
+void ItemPropertiesWindow::createTeleportFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
 	if (Teleport* teleport = dynamic_cast<Teleport*>(edit_item)) {
 		subsizer->Add(newd wxStaticText(parent, wxID_ANY, "Destination"));
 
 		wxSizer* possizer = newd wxBoxSizer(wxHORIZONTAL);
 		x_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(teleport->getX()), wxDefaultPosition, FROM_DIP(this, wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, edit_map->getWidth(), teleport->getX());
-		x_field->Bind(wxEVT_CHAR, &OldPropertiesWindow::OnChar, this);
+		x_field->Bind(wxEVT_CHAR, &ItemPropertiesWindow::OnChar, this);
 		possizer->Add(x_field, wxSizerFlags(3).Expand());
 		y_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(teleport->getY()), wxDefaultPosition, FROM_DIP(this, wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, edit_map->getHeight(), teleport->getY());
-		y_field->Bind(wxEVT_CHAR, &OldPropertiesWindow::OnChar, this);
+		y_field->Bind(wxEVT_CHAR, &ItemPropertiesWindow::OnChar, this);
 		possizer->Add(y_field, wxSizerFlags(3).Expand());
 		z_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(teleport->getZ()), wxDefaultPosition, FROM_DIP(this, wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, MAP_MAX_LAYER, teleport->getZ());
-		z_field->Bind(wxEVT_CHAR, &OldPropertiesWindow::OnChar, this);
+		z_field->Bind(wxEVT_CHAR, &ItemPropertiesWindow::OnChar, this);
 		possizer->Add(z_field, wxSizerFlags(2).Expand());
 
 		subsizer->Add(possizer, wxSizerFlags(1).Expand());
 	}
 }
 
-OldPropertiesWindow::~OldPropertiesWindow() {
+ItemPropertiesWindow::~ItemPropertiesWindow() {
 	//
 }
 
-void OldPropertiesWindow::OnFocusChange(wxFocusEvent& event) {
+void ItemPropertiesWindow::OnFocusChange(wxFocusEvent& event) {
 	wxWindow* win = event.GetWindow();
 	if (wxSpinCtrl* spin = dynamic_cast<wxSpinCtrl*>(win)) {
 		spin->SetSelection(-1, -1);
@@ -173,7 +173,7 @@ void OldPropertiesWindow::OnFocusChange(wxFocusEvent& event) {
 	}
 }
 
-void OldPropertiesWindow::OnChar(wxKeyEvent& evt) {
+void ItemPropertiesWindow::OnChar(wxKeyEvent& evt) {
 	if (evt.GetKeyCode() == WXK_CONTROL_V) {
 		int x, y, z;
 		const Editor* const editor = g_gui.GetCurrentEditor();
@@ -188,7 +188,7 @@ void OldPropertiesWindow::OnChar(wxKeyEvent& evt) {
 	evt.Skip();
 }
 
-void OldPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
+void ItemPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	if (edit_item) {
 		// Normal item
 		Door* door = dynamic_cast<Door*>(edit_item);
@@ -232,6 +232,6 @@ void OldPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	EndModal(1);
 }
 
-void OldPropertiesWindow::OnClickCancel(wxCommandEvent& WXUNUSED(event)) {
+void ItemPropertiesWindow::OnClickCancel(wxCommandEvent& WXUNUSED(event)) {
 	EndModal(0);
 }

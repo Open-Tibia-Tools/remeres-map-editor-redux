@@ -323,7 +323,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 		return false;
 	}
 	version.otbm = normalizeOtbmVersion(raw_version);
-	if (version.otbm > MAP_OTBM_4) {
+	if (version.otbm > MAP_OTBM_5) {
 		spdlog::warn("Unsupported or damaged map version: {}", static_cast<int>(version.otbm));
 	}
 

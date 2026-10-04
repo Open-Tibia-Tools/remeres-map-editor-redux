@@ -47,7 +47,7 @@ class LiveClient;
 class SearchResultWindow;
 class MinimapWindow;
 class PaletteWindow;
-class OldPropertiesWindow;
+class ItemPropertiesWindow;
 class EditTownsDialog;
 class ItemButton;
 class HousePalette;

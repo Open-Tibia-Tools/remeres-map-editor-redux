@@ -115,11 +115,12 @@ enum MapVersionID {
 	MAP_OTBM_2 = 1,
 	MAP_OTBM_3 = 2,
 	MAP_OTBM_4 = 3,
+	MAP_OTBM_5 = 4,
 };
 
 inline MapVersionID normalizeOtbmVersion(uint32_t raw_version) noexcept {
-	if (raw_version == 4) {
-		return MAP_OTBM_4;
+	if (raw_version == 4 || raw_version == 5) {
+		return MAP_OTBM_5;
 	}
 	return static_cast<MapVersionID>(raw_version);
 }
