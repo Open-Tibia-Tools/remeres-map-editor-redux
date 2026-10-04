@@ -44,8 +44,9 @@ enum OTBM_ItemAttribute : uint8_t {
 	OTBM_ATTR_SLEEPSTART = 21,
 	OTBM_ATTR_CHARGES = 22,
 
-	// Canary RME (parse without loading only)
+	// Canary / CrystalServer RME (parse without loading only)
 	OTBM_ATTR_EXT_SPAWN_NPC_FILE = 23,
+	OTBM_ATTR_EXT_ZONE_FILE = 24,
 
 	OTBM_ATTR_PODIUMOUTFIT = 40,
 	OTBM_ATTR_TIER = 41,

@@ -35,6 +35,7 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	version_choice->Append("OTServ 0.6.0");
 	version_choice->Append("OTServ 0.6.1");
 	version_choice->Append("OTServ 0.7.0 (revscriptsys)");
+	version_choice->Append("OTServ 0.7.1 (CrystalServer)");
 
 	switch (map.getVersion().otbm) {
 		case MAP_OTBM_1:
@@ -47,8 +48,10 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 			version_choice->SetSelection(2);
 			break;
 		case MAP_OTBM_4:
-		case static_cast<MapVersionID>(4):
 			version_choice->SetSelection(3);
+			break;
+		case MAP_OTBM_5:
+			version_choice->SetSelection(4);
 			break;
 		default:
 			version_choice->SetSelection(0);
@@ -172,11 +175,18 @@ void MapPropertiesWindow::UpdateProtocolList() {
 			map_version = MAP_OTBM_3;
 		} else if (ver.Contains("0.7.0")) {
 			map_version = MAP_OTBM_4;
+		} else if (ver.Contains("0.7.1")) {
+			map_version = MAP_OTBM_5;
 		}
 
 		if (map_version >= MAP_OTBM_4) {
 			protocols = ClientVersion::getAllForOTBMVersion(MAP_OTBM_3);
 			for (auto* c : ClientVersion::getAllForOTBMVersion(MAP_OTBM_4)) {
+				if (std::find(protocols.begin(), protocols.end(), c) == protocols.end()) {
+					protocols.push_back(c);
+				}
+			}
+			for (auto* c : ClientVersion::getAllForOTBMVersion(MAP_OTBM_5)) {
 				if (std::find(protocols.begin(), protocols.end(), c) == protocols.end()) {
 					protocols.push_back(c);
 				}
@@ -221,6 +231,8 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		new_ver.otbm = MAP_OTBM_3;
 	} else if (ver.Contains("0.7.0")) {
 		new_ver.otbm = MAP_OTBM_4;
+	} else if (ver.Contains("0.7.1")) {
+		new_ver.otbm = MAP_OTBM_5;
 	}
 
 	if (!MapVersionChanger::changeMapVersion(this, editor, new_ver)) {

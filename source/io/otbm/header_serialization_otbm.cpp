@@ -10,7 +10,7 @@
 
 namespace {
 int toDisplayOTBMVersion(uint32_t raw_version) {
-	return raw_version <= static_cast<uint32_t>(MAP_OTBM_4) ? static_cast<int>(raw_version) + 1 : static_cast<int>(raw_version);
+	return raw_version <= static_cast<uint32_t>(MAP_OTBM_5) ? static_cast<int>(raw_version) + 1 : static_cast<int>(raw_version);
 }
 }
 
@@ -151,6 +151,15 @@ bool HeaderSerializationOTBM::readMapAttributes(Map& map, FastOTBMStream& stream
 				std::string stringToSkip;
 				if (!stream.getString(stringToSkip)) {
 					spdlog::warn("Invalid map NPC spawnfile tag");
+					return true;
+				}
+				break;
+			}
+			case OTBM_ATTR_EXT_ZONE_FILE: {
+				// compatibility: skip CrystalServer zone file tag
+				std::string stringToSkip;
+				if (!stream.getString(stringToSkip)) {
+					spdlog::warn("Invalid map zonefile tag");
 					return true;
 				}
 				break;

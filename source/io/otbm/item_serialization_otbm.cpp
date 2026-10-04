@@ -494,7 +494,7 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 		}
 	}
 
-	if (maphandle.version.otbm >= MAP_OTBM_4) {
+	if (maphandle.version.otbm == MAP_OTBM_4) {
 		if (item.getID() > 0xFFFF && !item.hasIntegerAttribute("serverId")) {
 			const_cast<Item&>(item).setAttribute("serverId", static_cast<int32_t>(item.getID()));
 		}
@@ -533,15 +533,18 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 		f.addString(description);
 	}
 
-	uint16_t tier = item.getTier();
-	if (tier > 0) {
-		if (tier <= 0xFF) {
-			f.addU8(OTBM_ATTR_TIER);
-			f.addU8(static_cast<uint8_t>(tier));
-		} else {
-			spdlog::warn("ItemSerializationOTBM: Item '{}' has tier {} which is too large for uint8_t, truncating to 255", item.getName(), tier);
-			f.addU8(OTBM_ATTR_TIER);
-			f.addU8(0xFF);
+	// CrystalServer (OTBM 5) only supports classic attributes in BasicItem::readAttr
+	if (maphandle.version.otbm != MAP_OTBM_5) {
+		uint16_t tier = item.getTier();
+		if (tier > 0) {
+			if (tier <= 0xFF) {
+				f.addU8(OTBM_ATTR_TIER);
+				f.addU8(static_cast<uint8_t>(tier));
+			} else {
+				spdlog::warn("ItemSerializationOTBM: Item '{}' has tier {} which is too large for uint8_t, truncating to 255", item.getName(), tier);
+				f.addU8(OTBM_ATTR_TIER);
+				f.addU8(0xFF);
+			}
 		}
 	}
 
@@ -562,33 +565,35 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 			f.addU16(depot->getDepotID());
 		}
 	} else if (auto podium = item.asPodium()) {
-		uint8_t flags = 0;
-		if (podium->getShowOutfit()) {
-			flags |= PODIUM_SHOW_OUTFIT;
-		}
-		if (podium->getShowMount()) {
-			flags |= PODIUM_SHOW_MOUNT;
-		}
-		if (podium->getShowPlatform()) {
-			flags |= PODIUM_SHOW_PLATFORM;
-		}
+		if (maphandle.version.otbm != MAP_OTBM_5) {
+			uint8_t flags = 0;
+			if (podium->getShowOutfit()) {
+				flags |= PODIUM_SHOW_OUTFIT;
+			}
+			if (podium->getShowMount()) {
+				flags |= PODIUM_SHOW_MOUNT;
+			}
+			if (podium->getShowPlatform()) {
+				flags |= PODIUM_SHOW_PLATFORM;
+			}
 
-		const Outfit& outfit = podium->getOutfit();
-		f.addU8(OTBM_ATTR_PODIUMOUTFIT);
-		f.addU8(flags);
-		f.addU8(podium->getDirection());
+			const Outfit& outfit = podium->getOutfit();
+			f.addU8(OTBM_ATTR_PODIUMOUTFIT);
+			f.addU8(flags);
+			f.addU8(podium->getDirection());
 
-		f.addU16(outfit.lookType);
-		f.addU8(outfit.lookHead);
-		f.addU8(outfit.lookBody);
-		f.addU8(outfit.lookLegs);
-		f.addU8(outfit.lookFeet);
-		f.addU8(outfit.lookAddon);
+			f.addU16(outfit.lookType);
+			f.addU8(outfit.lookHead);
+			f.addU8(outfit.lookBody);
+			f.addU8(outfit.lookLegs);
+			f.addU8(outfit.lookFeet);
+			f.addU8(outfit.lookAddon);
 
-		f.addU16(outfit.lookMount);
-		f.addU8(outfit.lookMountHead);
-		f.addU8(outfit.lookMountBody);
-		f.addU8(outfit.lookMountLegs);
-		f.addU8(outfit.lookMountFeet);
+			f.addU16(outfit.lookMount);
+			f.addU8(outfit.lookMountHead);
+			f.addU8(outfit.lookMountBody);
+			f.addU8(outfit.lookMountLegs);
+			f.addU8(outfit.lookMountFeet);
+		}
 	}
 }

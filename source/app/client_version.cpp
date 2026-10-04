@@ -166,7 +166,7 @@ void ClientVersion::loadVersionsFromTOML(const std::string& configName) {
 				auto& otbmVers = *client["otbmVersions"].as_array();
 				for (auto&& v : otbmVers) {
 					int ver = v.value_or(-1);
-					if (ver >= 1 && ver <= 4) {
+					if (ver >= 1 && ver <= 5) {
 						int enumVer = ver - 1;
 						cv_ptr->map_versions_supported.push_back(static_cast<MapVersionID>(enumVer));
 						if (cv_ptr->preferred_map_version == MAP_OTBM_UNKNOWN) {
