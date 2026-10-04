@@ -117,6 +117,13 @@ enum MapVersionID {
 	MAP_OTBM_4 = 3,
 };
 
+inline MapVersionID normalizeOtbmVersion(uint32_t raw_version) noexcept {
+	if (raw_version == 4) {
+		return MAP_OTBM_4;
+	}
+	return static_cast<MapVersionID>(raw_version);
+}
+
 // The composed version of a otbm file (otbm version, client version)
 struct MapVersion {
 	MapVersion() :
@@ -125,6 +132,7 @@ struct MapVersion {
 		otbm(m), client(c) { }
 	MapVersionID otbm;
 	OtbVersionID client;
+	uint32_t items_major = 0; // OTB format version stored in the header; disambiguates clients sharing an OTB id
 };
 
 enum OtbFormatVersion : uint32_t {

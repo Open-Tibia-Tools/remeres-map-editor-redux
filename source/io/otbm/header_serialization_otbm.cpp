@@ -29,10 +29,14 @@ bool HeaderSerializationOTBM::getVersionInfo(NodeFileReadHandle& f, MapVersion& 
 	if (!root->getU32(u32)) { // Version
 		return false;
 	}
-	out_ver.otbm = static_cast<MapVersionID>(u32);
+	out_ver.otbm = normalizeOtbmVersion(u32);
 
 	uint16_t u16;
-	if (!root->getU16(u16) || !root->getU16(u16) || !root->getU32(u32)) {
+	if (!root->getU16(u16) || !root->getU16(u16)) {
+		return false;
+	}
+
+	if (!root->getU32(out_ver.items_major)) { // OTB major version
 		return false;
 	}
 
