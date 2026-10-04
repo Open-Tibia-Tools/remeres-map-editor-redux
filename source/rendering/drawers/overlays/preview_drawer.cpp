@@ -17,6 +17,7 @@ PreviewDrawer::~PreviewDrawer() {
 }
 
 void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* secondary_map, const RenderView& view, int map_z, const DrawingOptions& options, Editor& editor, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, uint32_t current_house_id, Brush* current_brush, const RenderFrameContext* ctx) {
+	mult_zone_quads_.clear();
 	if (secondary_map != nullptr && !options.ingame) {
 		Brush* brush = current_brush;
 
@@ -39,6 +40,8 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 			const int source_end_y = normalPos.y + view.end_y - to.y;
 			const int offset = map_z <= GROUND_LAYER ? (GROUND_LAYER - map_z) * TILE_SIZE : TILE_SIZE * (view.floor - map_z);
 			const uint8_t base_alpha = is_pasting ? 128 : 255;
+			const AtlasManager* atlas = ctx ? &ctx->atlas : nullptr;
+			const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;
 
 			auto drawPreviewTile = [&](Tile* tile, int map_x, int map_y) {
 				int draw_x = ((map_x * TILE_SIZE) - view.view_scroll_x) - offset;
@@ -96,13 +99,10 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 				}
 
 				if (tile_zone_flags != 0) {
-					const AtlasManager* atlas = ctx ? &ctx->atlas : nullptr;
-					const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;
-					if (white_pixel && atlas) {
-						const bool is_mult = (tile_zone_flags & rme::rendering::ZONE_FLAG_MULTIPLICATIVE) != 0;
-						if (is_mult) {
-							sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, *atlas);
-						}
+					const bool is_mult = (tile_zone_flags & rme::rendering::ZONE_FLAG_MULTIPLICATIVE) != 0;
+					if (is_mult) {
+						mult_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags });
+					} else if (white_pixel) {
 						sprite_batch.draw(
 							static_cast<float>(draw_x), static_cast<float>(draw_y),
 							32.0f, 32.0f,
@@ -112,9 +112,6 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 							0.0f,
 							tile_zone_flags
 						);
-						if (is_mult) {
-							sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, *atlas);
-						}
 					}
 				}
 
@@ -162,6 +159,22 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 					}
 				}
 			});
+
+			if (!mult_zone_quads_.empty() && white_pixel && atlas) {
+				sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, *atlas);
+				for (const auto& q : mult_zone_quads_) {
+					sprite_batch.draw(
+						q.x, q.y,
+						32.0f, 32.0f,
+						*white_pixel,
+						1.0f, 1.0f, 1.0f,
+						static_cast<float>(base_alpha) / 255.0f,
+						0.0f,
+						q.flags
+					);
+				}
+				sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, *atlas);
+			}
 		}
 
 		// Draw highlight on the specific tile under mouse

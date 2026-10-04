@@ -159,9 +159,7 @@ void BrushOverlayDrawer::draw(
 	auto drawBrushRect = [&](float rx, float ry, float rw, float rh, const glm::vec4& col) {
 		if (cursor_blend_mode == 1) {
 			glm::vec4 mult_col(glm::mix(glm::vec3(1.0f), glm::vec3(col.r, col.g, col.b), col.a), 1.0f);
-			sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
 			sprite_batch.drawRect(rx, ry, rw, rh, mult_col, atlas);
-			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 		} else {
 			sprite_batch.drawRect(rx, ry, rw, rh, col, atlas);
 		}
@@ -184,6 +182,10 @@ void BrushOverlayDrawer::draw(
 			int delta_x = last_click_end_sx - last_click_start_sx;
 			int delta_y = last_click_end_sy - last_click_start_sy;
 
+			if (cursor_blend_mode == 1) {
+				sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+			}
+
 			// Top
 			drawBrushRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy), static_cast<float>(last_click_end_sx - last_click_start_sx), static_cast<float>(TILE_SIZE), brushColor);
 
@@ -202,6 +204,10 @@ void BrushOverlayDrawer::draw(
 			if (delta_y > TILE_SIZE) {
 				float h = (last_click_end_sy - TILE_SIZE) - (last_click_start_sy + TILE_SIZE);
 				drawBrushRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy + TILE_SIZE), static_cast<float>(TILE_SIZE), h, brushColor);
+			}
+
+			if (cursor_blend_mode == 1) {
+				sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 			}
 		} else {
 			if (bm.GetBrushShape() == BRUSHSHAPE_SQUARE || brush->is<SpawnBrush>()) {
@@ -249,6 +255,11 @@ void BrushOverlayDrawer::draw(
 						int start_y = std::min(drag_state.last_click_map_y, view.mouse_map_y);
 						int end_y = std::max(drag_state.last_click_map_y, view.mouse_map_y);
 
+						if (cursor_blend_mode == 1) {
+							sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+						}
+						const uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
+
 						for (int y = start_y; y <= end_y; ++y) {
 							int cy = y * TILE_SIZE - view.view_scroll_y - view.getFloorAdjustment();
 							for (int x = start_x; x <= end_x; ++x) {
@@ -259,15 +270,12 @@ void BrushOverlayDrawer::draw(
 								if (x == start_x) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
 								if (x == end_x)   border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
 
-								uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
-								if (cursor_blend_mode == 1) {
-									sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
-								}
 								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf | border_flags | zf_mult);
-								if (cursor_blend_mode == 1) {
-									sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
-								}
 							}
+						}
+
+						if (cursor_blend_mode == 1) {
+							sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 						}
 					}
 				} else {
@@ -284,6 +292,11 @@ void BrushOverlayDrawer::draw(
 					float w = last_click_end_sx - last_click_start_sx;
 					float h = last_click_end_sy - last_click_start_sy;
 					bool autoborder_active = cfg.getInteger(Config::USE_AUTOMAGIC) && brush->needBorders();
+
+					if (cursor_blend_mode == 1) {
+						sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+					}
+
 					if (autoborder_active) {
 						// Draw outline only
 						float thickness = 1.0f; // Thin border
@@ -298,6 +311,10 @@ void BrushOverlayDrawer::draw(
 						drawBrushRect(static_cast<float>(last_click_start_sx + w - thickness), static_cast<float>(last_click_start_sy + thickness), thickness, h - 2 * thickness, brushColor);
 					} else {
 						drawBrushRect(static_cast<float>(last_click_start_sx), static_cast<float>(last_click_start_sy), w, h, brushColor);
+					}
+
+					if (cursor_blend_mode == 1) {
+						sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 					}
 				}
 			} else if (bm.GetBrushShape() == BRUSHSHAPE_CIRCLE) {
@@ -334,6 +351,11 @@ void BrushOverlayDrawer::draw(
 					raw_brush = brush->as<RAWBrush>();
 				}
 
+				if (cursor_blend_mode == 1) {
+					sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+				}
+				const uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
+
 				for (int y = start_y - 1; y <= end_y + 1; y++) {
 					int cy = y * TILE_SIZE - view.view_scroll_y - view.getFloorAdjustment();
 					float dy = center_y - y;
@@ -360,20 +382,17 @@ void BrushOverlayDrawer::draw(
 									if (!inCircle(x - 1, y)) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
 									if (!inCircle(x + 1, y)) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
 
-									uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
-									if (cursor_blend_mode == 1) {
-										sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
-									}
 									sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf | border_flags | zf_mult);
-									if (cursor_blend_mode == 1) {
-										sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
-									}
 								}
 							} else {
 								drawBrushRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), brushColor);
 							}
 						}
 					}
+				}
+
+				if (cursor_blend_mode == 1) {
+					sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 				}
 			}
 		}
@@ -432,6 +451,11 @@ void BrushOverlayDrawer::draw(
 				raw_brush = brush->as<RAWBrush>();
 			}
 
+			if (cursor_blend_mode == 1) {
+				sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
+			}
+			const uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
+
 			for (int y = footprint.min_offset_y - 1; y <= footprint.max_offset_y + 1; y++) {
 				int cy = (view.mouse_map_y + y) * TILE_SIZE - view.view_scroll_y - view.getFloorAdjustment();
 				for (int x = footprint.min_offset_x - 1; x <= footprint.max_offset_x + 1; x++) {
@@ -464,8 +488,7 @@ void BrushOverlayDrawer::draw(
 					} else if (brush->is<HouseExitBrush>()) {
 						const AtlasRegion* white_pixel = atlas.getWhitePixel();
 						if (white_pixel) {
-							uint32_t hid = options.current_house_id > 0 ? options.current_house_id : 1;
-							sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, rme::rendering::INDICATOR_HOUSE_ENTRY_BASE + static_cast<float>(hid));
+							sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, rme::rendering::INDICATOR_HOUSE_ENTRY_BASE);
 						}
 					} else if (brush->is<FlagBrush>()) {
 						const AtlasRegion* white_pixel = atlas.getWhitePixel();
@@ -478,14 +501,7 @@ void BrushOverlayDrawer::draw(
 								if (x == footprint.min_offset_x) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
 								if (x == footprint.max_offset_x) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
 
-								uint32_t zf_mult = (cursor_blend_mode == 1) ? static_cast<uint32_t>(rme::rendering::ZONE_FLAG_MULTIPLICATIVE) : 0u;
-								if (cursor_blend_mode == 1) {
-									sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);
-								}
 								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf | border_flags | zf_mult);
-								if (cursor_blend_mode == 1) {
-									sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
-								}
 							}
 						}
 					} else {
@@ -496,6 +512,10 @@ void BrushOverlayDrawer::draw(
 						drawBrushRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), c);
 					}
 				}
+			}
+
+			if (cursor_blend_mode == 1) {
+				sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 			}
 		}
 	}
