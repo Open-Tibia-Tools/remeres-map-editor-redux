@@ -91,6 +91,10 @@ public:
 		return Classify(server_id, client_id) != TileIndicatorType::None;
 	}
 
+	[[nodiscard]] static bool IsInvisibleWall(uint32_t server_id, uint32_t client_id) noexcept {
+		return Classify(server_id, client_id) == TileIndicatorType::TechInvisibleWall;
+	}
+
 	[[nodiscard]] static constexpr float GetMarkerId(TileIndicatorType type) noexcept {
 		switch (type) {
 			case TileIndicatorType::HouseEntry:            return INDICATOR_HOUSE_ENTRY_BASE;

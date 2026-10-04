@@ -259,8 +259,7 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 			item_params.green = default_ig;
 			item_params.blue = default_ib;
 			const bool is_blocking_item = item->isBlocking() &&
-				(item->getID() != 1548 && it.clientId() != 2187) &&
-				(rme::rendering::TechnicalItemRegistry::Classify(item->getID(), it.clientId()) != rme::rendering::TileIndicatorType::TechInvisibleWall);
+				!rme::rendering::TechnicalItemRegistry::IsInvisibleWall(item->getID(), it.clientId());
 			item_params.zone_flags = (options.show_blocking && options.extended_pathing_shader && is_blocking_item)
 				? rme::rendering::ZONE_FLAG_ITEM_BLOCKING
 				: 0;
@@ -358,8 +357,7 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 		item_params.red = default_ir;
 		item_params.green = default_ig;
 		const bool is_blocking_item = item->isBlocking() &&
-			(item->getID() != 1548 && it.clientId() != 2187) &&
-			(rme::rendering::TechnicalItemRegistry::Classify(item->getID(), it.clientId()) != rme::rendering::TileIndicatorType::TechInvisibleWall);
+			!rme::rendering::TechnicalItemRegistry::IsInvisibleWall(item->getID(), it.clientId());
 		item_params.zone_flags = (options.show_blocking && options.extended_pathing_shader && is_blocking_item)
 			? rme::rendering::ZONE_FLAG_ITEM_BLOCKING
 			: 0;
