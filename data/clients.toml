@@ -1137,7 +1137,7 @@ version = 1320
 [[clients]]
 configType = 'protobuf_only'
 datSignature = '0'
-dataDirectory = '1330'
+dataDirectory = '1525-CrystalServer'
 description = 'Crystal Server / Canary protobuf assets'
 extended = true
 frameDurations = true

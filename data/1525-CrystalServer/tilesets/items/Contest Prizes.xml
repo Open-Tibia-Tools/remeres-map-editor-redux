@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Contest Prizes">
+    <item id="8737" />
+    <item id="16262" />
+    <item id="21445" />
+    <item fromid="30183" toid="30184" />
+</tileset>

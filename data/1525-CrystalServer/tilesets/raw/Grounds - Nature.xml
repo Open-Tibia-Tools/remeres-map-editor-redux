@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Grounds - Nature">
+    <item id="372" />
+    <item id="727" />
+    <item fromid="4654" toid="4655" />
+    <item id="5730" />
+    <item id="6838" />
+    <item fromid="7738" toid="7740" />
+    <item fromid="7747" toid="7748" />
+    <item id="7756" />
+    <item id="8770" />
+    <item id="8969" />
+    <item id="9174" />
+    <item fromid="9257" toid="9258" />
+    <item id="10197" />
+    <item id="10480" />
+    <item id="12274" />
+    <item id="12236" />
+    <item id="12516" />
+    <item fromid="12564" toid="12569" />
+    <item fromid="12700" toid="12710" />
+    <item id="12712" />
+    <item fromid="14133" toid="14140" />
+    <item id="15717" />
+    <item id="17950" />
+    <item id="17968" />
+    <item id="19099" />
+    <item id="19145" />
+    <item id="19147" />
+    <item fromid="19550" toid="19577" />
+    <item id="20125" />
+    <item fromid="20136" toid="20137" />
+    <item fromid="19401" toid="19404" />
+    <item id="20324" />
+    <item fromid="21302" toid="21307" />
+    <item fromid="21311" toid="21322" />
+    <item id="21414" />
+    <item fromid="21477" toid="21482" />
+    <item fromid="21484" toid="21499" />
+    <item fromid="21575" toid="21585" />
+</tileset>

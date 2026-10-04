@@ -120,3 +120,5 @@ compile_commands.json
 __pycache__/
 *.py[cod]
 *$py.class
+/tools/crystal_data
+/tools/cd2

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Depots">
+    <item fromid="3497" toid="3500" />
+    <item id="3502" />
+    <item fromid="22797" toid="22813" />
+    <item id="31915" />
+</tileset>

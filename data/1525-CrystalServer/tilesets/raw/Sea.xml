@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Sea">
+    <item fromid="1851" toid="1860" />
+    <item id="3111" />
+    <item id="3125" />
+    <item fromid="5404" toid="5459" />
+    <item id="5553" />
+    <item fromid="5630" toid="5653" />
+    <item fromid="5678" toid="5682" />
+    <item fromid="5704" toid="5705" />
+    <item fromid="5743" toid="5744" />
+    <item id="5738" />
+    <item fromid="5763" toid="5764" />
+    <item id="5811" />
+    <item id="9291" />
+    <item fromid="11516" toid="11538" />
+    <item fromid="11542" toid="11543" />
+    <item id="14240" />
+    <item id="21159" />
+    <item id="28912" />
+</tileset>

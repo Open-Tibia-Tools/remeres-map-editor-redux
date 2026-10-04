@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature - Grass">
+    <item fromid="2511" toid="2514" />
+    <item fromid="6215" toid="6218" />
+    <item fromid="9820" toid="9823" />
+    <item fromid="13368" toid="13375" />
+    <item fromid="17897" toid="17898" />
+    <item fromid="17983" toid="17984" />
+    <item id="21935" />
+    <item id="9044" />
+    <item fromid="12372" toid="12378" />
+</tileset>

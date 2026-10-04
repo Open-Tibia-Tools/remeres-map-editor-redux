@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature - Brushes">
+    <item fromid="3681" toid="3683" />
+    <item id="3684" />
+    <item fromid="3698" toid="3700" />
+    <item fromid="6430" toid="6431" />
+</tileset>

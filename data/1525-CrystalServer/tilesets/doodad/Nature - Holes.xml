@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature - Holes">
+    <brush name="hole 1" />
+    <brush name="hole 2" />
+    <brush name="hole 3" />
+    <brush name="sand hole" />
+</tileset>
