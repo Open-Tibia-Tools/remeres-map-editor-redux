@@ -1,6 +1,6 @@
-// Comprehensive test suite for GZIP OTBM support and format conversions.
-// Build & run with MSVC:
-//   cl /std:c++latest /EHsc /utf-8 /I source /I build-ninja/vcpkg_installed/x64-windows/include tests/test_otbm_gzip_cpp.cpp build-ninja/vcpkg_installed/x64-windows/lib/zlib.lib
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <cassert>
 #include <filesystem>
 #include <iostream>
@@ -8,6 +8,7 @@
 #include <vector>
 #include <chrono>
 #include <cstring>
+#include <fstream>
 
 #define RME_MAIN_H_
 #define ASSERT assert
@@ -130,49 +131,105 @@ namespace {
 	void testScenario4_ConversionNormalToGzip() {
 		std::cout << "[Scenario 4] Testing format conversion: Normal OTBM -> GZIP...\n";
 		const std::filesystem::path none_path = "tests/none_world.otbm";
-		const auto none_bytes = Compression::readRawFile(none_path);
-		assert(none_bytes.has_value());
-
 		const auto temp_dir = std::filesystem::temp_directory_path() / "rme_gzip_test";
 		std::filesystem::create_directories(temp_dir);
+		const auto original_none = temp_dir / "original_none.otbm";
 		const auto converted_gz = temp_dir / "converted_from_none.otbm";
 
-		// Write sample map using GzipNodeFileWriteHandle
-		const std::string desc = "Sample Map for Normal -> Gzip";
-		writeSampleMap<GzipNodeFileWriteHandle>(desc, converted_gz, std::string(4, '\0'));
+		std::vector<uint8_t> uncompressed_bytes;
+		if (std::filesystem::exists(none_path)) {
+			const auto loaded = Compression::readRawFile(none_path);
+			assert(loaded.has_value());
+			uncompressed_bytes = std::move(*loaded);
+		} else {
+			writeSampleMap<DiskNodeFileWriteHandle>("Normal to Gzip Map", original_none.string(), std::string(4, '\0'));
+			const auto loaded = Compression::readRawFile(original_none);
+			assert(loaded.has_value());
+			uncompressed_bytes = std::move(*loaded);
+		}
+
+		// Convert uncompressed map to GZIP format by streaming its payload
+		{
+#ifdef _WIN32
+			gzFile gz = gzopen_w(converted_gz.c_str(), "wb");
+#else
+			gzFile gz = gzopen(converted_gz.c_str(), "wb");
+#endif
+			assert(gz != nullptr);
+			const int written = gzwrite(gz, uncompressed_bytes.data(), static_cast<unsigned>(uncompressed_bytes.size()));
+			assert(written == static_cast<int>(uncompressed_bytes.size()));
+			const int close_res = gzclose(gz);
+			assert(close_res == Z_OK);
+		}
 
 		assert(Compression::isGzipFile(converted_gz));
 		const auto inflated = Compression::decompressGzipFile(converted_gz);
 		assert(inflated.has_value());
+		assert(inflated->size() == uncompressed_bytes.size());
+		assert(*inflated == uncompressed_bytes);
 		assert(hasValidOtbmPrefix(*inflated));
 
+		// Verify OTBM parsing on converted gzip map matches original
+		MemoryNodeFileReadHandle handle(inflated->data() + 4, inflated->size() - 4);
+		BinaryNode* root = handle.getRootNode();
+		assert(root != nullptr);
+		uint8_t type = 0;
+		uint32_t version = 0;
+		uint16_t width = 0, height = 0;
+		assert(root->getByte(type) && root->getU32(version) && root->getU16(width) && root->getU16(height));
+		assert(width > 0 && height > 0);
+
 		std::filesystem::remove_all(temp_dir);
-		std::cout << "  -> Passed: Normal map converted and verified as valid GZIP.\n";
+		std::cout << "  -> Passed: Existing normal map converted to GZIP and verified with byte-for-byte fidelity.\n";
 	}
 
 	void testScenario5_ConversionGzipToNormal() {
 		std::cout << "[Scenario 5] Testing format conversion: GZIP -> Normal OTBM...\n";
+		const std::filesystem::path gzip_path = "tests/gzip_world.otbm";
 		const auto temp_dir = std::filesystem::temp_directory_path() / "rme_gzip_test";
 		std::filesystem::create_directories(temp_dir);
-		const auto gz_file = temp_dir / "original.otbm";
-		const auto uncompressed_file = temp_dir / "uncompressed.otbm";
+		const auto original_gz = temp_dir / "original_gz.otbm";
+		const auto uncompressed_file = temp_dir / "converted_to_uncompressed.otbm";
 
-		const std::string desc = "Sample Map for Gzip -> Normal";
-		writeSampleMap<GzipNodeFileWriteHandle>(desc, gz_file, std::string(4, '\0'));
-		writeSampleMap<DiskNodeFileWriteHandle>(desc, uncompressed_file.string(), std::string(4, '\0'));
+		std::vector<uint8_t> decompressed_bytes;
+		if (std::filesystem::exists(gzip_path)) {
+			const auto loaded = Compression::decompressGzipFile(gzip_path);
+			assert(loaded.has_value());
+			decompressed_bytes = std::move(*loaded);
+		} else {
+			writeSampleMap<GzipNodeFileWriteHandle>("Gzip to Normal Map", original_gz, std::string(4, '\0'));
+			const auto loaded = Compression::decompressGzipFile(original_gz);
+			assert(loaded.has_value());
+			decompressed_bytes = std::move(*loaded);
+		}
 
-		assert(Compression::isGzipFile(gz_file));
+		// Convert by writing uncompressed bytes to standard disk file
+		{
+			std::ofstream out(uncompressed_file, std::ios::binary);
+			assert(out.is_open());
+			out.write(reinterpret_cast<const char*>(decompressed_bytes.data()), static_cast<std::streamsize>(decompressed_bytes.size()));
+			assert(out.good());
+		}
+
 		assert(!Compression::isGzipFile(uncompressed_file));
+		const auto raw_read = Compression::readRawFile(uncompressed_file);
+		assert(raw_read.has_value());
+		assert(raw_read->size() == decompressed_bytes.size());
+		assert(*raw_read == decompressed_bytes);
+		assert(hasValidOtbmPrefix(*raw_read));
 
-		const auto gz_decomp = Compression::decompressGzipFile(gz_file);
-		const auto raw_bytes = Compression::readRawFile(uncompressed_file);
-
-		assert(gz_decomp && raw_bytes);
-		assert(*gz_decomp == *raw_bytes);
-		assert(gz_decomp->size() == raw_bytes->size());
+		// Verify OTBM parsing on converted uncompressed map matches original
+		MemoryNodeFileReadHandle handle(raw_read->data() + 4, raw_read->size() - 4);
+		BinaryNode* root = handle.getRootNode();
+		assert(root != nullptr);
+		uint8_t type = 0;
+		uint32_t version = 0;
+		uint16_t width = 0, height = 0;
+		assert(root->getByte(type) && root->getU32(version) && root->getU16(width) && root->getU16(height));
+		assert(width > 0 && height > 0);
 
 		std::filesystem::remove_all(temp_dir);
-		std::cout << "  -> Passed: GZIP map converted to uncompressed OTBM with byte-for-byte fidelity.\n";
+		std::cout << "  -> Passed: Existing GZIP map converted to uncompressed OTBM with byte-for-byte fidelity.\n";
 	}
 
 	void testScenario6_MultiMapIsolation() {
@@ -236,6 +293,8 @@ namespace {
 } // namespace
 
 int main() {
+	std::cout.setf(std::ios::unitbuf);
+	std::cerr.setf(std::ios::unitbuf);
 	std::cout << "========================================================\n";
 	std::cout << "  RME Redux: Comprehensive GZIP OTBM Test Suite\n";
 	std::cout << "========================================================\n";
