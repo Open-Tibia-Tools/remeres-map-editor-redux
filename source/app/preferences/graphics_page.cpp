@@ -234,7 +234,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		zone_pvp_opacity_spin->SetValue(48);
 		zone_pvp_blend_choice->SetSelection(0);
 
-		zone_blocking_color_pick->SetColour(wxColour(128, 0, 0));
+		zone_blocking_color_pick->SetColour(wxColour(0, 0, 0));
 		zone_blocking_opacity_spin->SetValue(35);
 		zone_blocking_blend_choice->SetSelection(0);
 
