@@ -29,6 +29,9 @@ wxString formatMapClientVersion(const OTBMStartupPeekResult* info) {
 
 	ClientVersion* matched_client = ClientVersion::getByItemsVersion(info->items_major_version, info->items_minor_version);
 	if (!matched_client) {
+		matched_client = ClientVersion::getBestMatch(info->items_minor_version);
+	}
+	if (!matched_client) {
 		return "-";
 	}
 
