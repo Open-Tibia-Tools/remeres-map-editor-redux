@@ -41,6 +41,37 @@ Typical examples:
   walls.xml
 ```
 
+### Partitioned / Forked Structures (e.g. Crystal RME)
+
+Certain RME forks and custom clients organize files into dedicated subdirectories with nested manifests:
+
+```text
+crystal_data/
+  creatures/
+    monsters.xml
+    npcs.xml
+  items/
+    items.otb
+    items.xml
+  materials/
+    materials.xml
+    borders.xml
+    brushs.xml
+    tilesets.xml
+    borders/
+      borders.xml
+    brushs/
+      grounds.xml, walls.xml, ...
+    tilesets/
+      nature.xml, exterior.xml, ...
+```
+
+The converter automatically detects partitioned layouts:
+1. **Recursive Includes**: `<include file="..."/>` tags are followed recursively (e.g. `materials.xml` -> `brushs.xml` -> `brushs/grounds.xml`), resolving paths relative to the including file, the `materials/` folder, or the version root, with cycle prevention.
+2. **Multi-Source Creature Registries**: Automatically detects both standard `creatures.xml` and partitioned `monsters.xml` / `npcs.xml`, normalizing `<monster>` and `<npc>` tags into standard `<creature>` elements with appropriate `type="monster"` or `type="npc"` and normalized attribute keys.
+3. **Partitioned Item & OTB Registries**: Checks root and subfolders (`items/`, `materials/`) for `items.xml`, `items2.xml`, and `items.otb`.
+4. **Smart Folder Resolution**: If pointed directly to the root (`crystal_data/`) or to `crystal_data/materials/`, the converter automatically resolves the true version root.
+
 ### Legacy Entry Point
 
 `materials.xml` is the legacy material manifest. It contains ordered includes and, in many versions, editor-only metaitems:
