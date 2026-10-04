@@ -69,7 +69,7 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	compression_choice = newd wxChoice(this, wxID_ANY);
 	compression_choice->SetToolTip("Select the map storage compression format");
 	compression_choice->Append("None (Standard / The Forgotten Server)");
-	compression_choice->Append("GZIP (Canary / Crystal Server)");
+	compression_choice->Append("GZIP (Crystal Server)");
 	compression_choice->SetSelection(map.getCompression() == OtbmCompression::Gzip ? 1 : 0);
 	grid_sizer->Add(compression_choice, wxSizerFlags(1).Expand());
 

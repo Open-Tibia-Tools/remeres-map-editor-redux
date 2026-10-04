@@ -142,6 +142,8 @@ bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResul
 		out_info.modified_time = modified_time;
 	}
 
+	out_info.is_compressed = Compression::isGzipFile(toPath(identifier));
+
 	const auto parsed = parseHeaderPrefix(identifier, [&](NodeFileReadHandle& f) { return HeaderSerializationOTBM::peekStartupInfo(f, out_info); });
 	if (!parsed) {
 		out_info.has_error = true;
