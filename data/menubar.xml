@@ -34,6 +34,7 @@
 		<item name="Open..." hotkey="Ctrl+O" action="OPEN" help="Open another map."/>
 		<item name="Save" hotkey="Ctrl+S" action="SAVE" help="Save the current map."/>
 		<item name="Save As..." hotkey="Ctrl+Alt+S" action="SAVE_AS" help="Save the current map as a new file."/>
+		<item name="Save as GZIP..." action="SAVE_AS_GZIP" help="Save the current map as a GZIP-compressed OTBM file."/>
 		<item name="Generate Map" action="GENERATE_MAP" help="Generate a new map."/>
 		<item name="Close" hotkey="Ctrl+Q" action="CLOSE" help="Closes the currently open map."/>
 		<separator/>

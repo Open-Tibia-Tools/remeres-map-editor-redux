@@ -600,6 +600,9 @@ void GUI::SaveMap() {
 void GUI::SaveMapAs() {
 	g_editors.SaveMapAs();
 }
+void GUI::SaveMapAsGzip() {
+	g_editors.SaveMapAsGzip();
+}
 bool GUI::LoadMap(const FileName& fileName, const MapLoadOptions& load_options) {
 	return g_editors.LoadMap(fileName, load_options);
 }

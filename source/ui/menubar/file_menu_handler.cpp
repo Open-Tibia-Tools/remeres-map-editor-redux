@@ -37,6 +37,10 @@ void FileMenuHandler::OnSaveAs(wxCommandEvent& WXUNUSED(event)) {
 	g_gui.SaveMapAs();
 }
 
+void FileMenuHandler::OnSaveAsGzip(wxCommandEvent& WXUNUSED(event)) {
+	g_gui.SaveMapAsGzip();
+}
+
 void FileMenuHandler::OnClose(wxCommandEvent& WXUNUSED(event)) {
 	frame->DoQuerySave(true); // It closes the editor too
 }

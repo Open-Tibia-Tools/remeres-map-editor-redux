@@ -32,6 +32,7 @@ namespace MenuBar {
 		OPEN,
 		SAVE,
 		SAVE_AS,
+		SAVE_AS_GZIP,
 		GENERATE_MAP,
 		CLOSE,
 		IMPORT_MAP,
@@ -199,6 +200,7 @@ public:
 	void OnOpen(wxCommandEvent& event);
 	void OnSave(wxCommandEvent& event);
 	void OnSaveAs(wxCommandEvent& event);
+	void OnSaveAsGzip(wxCommandEvent& event);
 	void OnClose(wxCommandEvent& event);
 	void OnQuit(wxCommandEvent& event);
 	void OnGenerateMap(wxCommandEvent& event);

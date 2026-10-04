@@ -41,6 +41,7 @@ public:
 	void OpenMap();
 	void SaveMap();
 	void SaveMapAs();
+	void SaveMapAsGzip();
 	bool LoadMap(const FileName& fileName, const MapLoadOptions& load_options = {});
 
 	// Edit operations

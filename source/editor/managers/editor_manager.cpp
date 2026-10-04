@@ -282,6 +282,24 @@ void EditorManager::SaveMapAs() {
 	}
 }
 
+void EditorManager::SaveMapAsGzip() {
+	if (!IsEditorOpen()) {
+		return;
+	}
+
+	wxString wildcard = "GZIP Compressed Map (*.otbm)|*.otbm|OpenTibia Binary Map (*.otbm)|*.otbm";
+	wxFileDialog dialog(g_gui.root, "Save as GZIP...", "", "", wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	dialog.SetFilterIndex(0);
+
+	if (dialog.ShowModal() == wxID_OK) {
+		GetCurrentMap().setCompression(OtbmCompression::Gzip);
+		SaveCurrentMap(dialog.GetPath(), true);
+		g_status.UpdateTitle();
+		g_gui.root->AddRecentFile(dialog.GetPath());
+		g_gui.root->UpdateMenubar();
+	}
+}
+
 bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load_options) {
 	spdlog::info("EditorManager::LoadMap - Loading map: {}", nstr(fileName.GetFullPath()));
 	g_status.SetStatusText("Loading map...");
