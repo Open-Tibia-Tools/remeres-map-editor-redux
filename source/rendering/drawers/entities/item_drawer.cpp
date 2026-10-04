@@ -114,7 +114,9 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 					32.0f, 32.0f,
 					*white_pixel,
 					rf, gf, bf, af,
-					rme::rendering::TechnicalItemRegistry::GetMarkerId(invalid_type)
+					rme::rendering::TechnicalItemRegistry::GetMarkerId(invalid_type),
+					0u,
+					params.depth
 				);
 			}
 		}
@@ -129,7 +131,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		if (tech_type != rme::rendering::TileIndicatorType::None) {
 			const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;
 			if (white_pixel) {
-				sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, static_cast<float>(alpha) / 255.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type));
+				sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, static_cast<float>(alpha) / 255.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type), 0u, params.depth);
 			}
 			return;
 		}
