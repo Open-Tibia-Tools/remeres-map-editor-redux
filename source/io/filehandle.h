@@ -32,7 +32,6 @@
 #include <iterator>
 #include <cstring>
 #include <string_view>
-#include <filesystem>
 
 class wxFileName;
 using FileName = wxFileName;
@@ -481,30 +480,6 @@ public:
 
 protected:
 	bool renewCache() override;
-};
-
-struct gzFile_s;
-
-// Streams the node file through zlib's gzip writer (Crystal Server compressed map format).
-// close() must be called explicitly and isOk() checked afterwards: gzip errors surface on flush.
-class GzipNodeFileWriteHandle : public NodeFileWriteHandle {
-public:
-	GzipNodeFileWriteHandle(const std::filesystem::path& path, const std::string& identifier);
-	~GzipNodeFileWriteHandle() override;
-
-	void close() override;
-	bool isOpen() override {
-		return gz != nullptr;
-	}
-	bool isOk() override {
-		return error_code == FILE_NO_ERROR;
-	}
-
-protected:
-	bool renewCache() override;
-
-private:
-	gzFile_s* gz = nullptr;
 };
 
 class MemoryNodeFileWriteHandle : public NodeFileWriteHandle {
