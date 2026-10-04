@@ -4,7 +4,6 @@
 #include <array>
 #include <algorithm>
 #include <cmath>
-#include <unordered_map>
 
 namespace rme::rendering {
 
@@ -58,9 +57,6 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 		}
 	}
 
-	std::deque<std::pair<int, int>> bfs_queue;
-	std::vector<std::pair<int, int>> cluster_tiles;
-
 	for (const auto& zt : ZONE_TYPES) {
 		for (const auto& vt : visible_tiles) {
 			if ((vt.flags & zt.bit_mask) == 0) {
@@ -79,16 +75,16 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 			}
 
 			// 1. Explore connected component for this zone
-			cluster_tiles.clear();
-			bfs_queue.clear();
+			cluster_tiles_.clear();
+			bfs_queue_.clear();
 
 			visited_grid_[start_idx] |= zt.bit_mask;
-			bfs_queue.emplace_back(vt.x, vt.y);
+			bfs_queue_.emplace_back(vt.x, vt.y);
 
-			while (!bfs_queue.empty()) {
-				auto [cx, cy] = bfs_queue.front();
-				bfs_queue.pop_front();
-				cluster_tiles.emplace_back(cx, cy);
+			while (!bfs_queue_.empty()) {
+				auto [cx, cy] = bfs_queue_.front();
+				bfs_queue_.pop_front();
+				cluster_tiles_.emplace_back(cx, cy);
 
 				for (auto [dx, dy] : DIRS) {
 					int nx = cx + dx;
@@ -102,22 +98,22 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 					int nidx = nly * grid_w + nlx;
 					if ((tile_grid_[nidx] & zt.bit_mask) != 0 && (visited_grid_[nidx] & zt.bit_mask) == 0) {
 						visited_grid_[nidx] |= zt.bit_mask;
-						bfs_queue.emplace_back(nx, ny);
+						bfs_queue_.emplace_back(nx, ny);
 					}
 				}
 			}
 
-			if (cluster_tiles.empty()) {
+			if (cluster_tiles_.empty()) {
 				continue;
 			}
 
 			// 2. Evaluate Pole of Inaccessibility (multi-source BFS distance transform)
-			int min_x = cluster_tiles[0].first;
-			int max_x = cluster_tiles[0].first;
-			int min_y = cluster_tiles[0].second;
-			int max_y = cluster_tiles[0].second;
+			int min_x = cluster_tiles_[0].first;
+			int max_x = cluster_tiles_[0].first;
+			int min_y = cluster_tiles_[0].second;
+			int max_y = cluster_tiles_[0].second;
 
-			for (const auto& [tx, ty] : cluster_tiles) {
+			for (const auto& [tx, ty] : cluster_tiles_) {
 				min_x = std::min(min_x, tx);
 				max_x = std::max(max_x, tx);
 				min_y = std::min(min_y, ty);
@@ -127,42 +123,47 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 			int c_w = max_x - min_x + 1;
 			int c_h = max_y - min_y + 1;
 
-			int best_cx = cluster_tiles[0].first;
-			int best_cy = cluster_tiles[0].second;
+			int best_cx = cluster_tiles_[0].first;
+			int best_cy = cluster_tiles_[0].second;
 
 			if (c_w > 0 && c_h > 0 && static_cast<size_t>(c_w) * c_h <= 65536) {
-				std::vector<int> dist(c_w * c_h, 0);
-				std::vector<uint8_t> in_cluster(c_w * c_h, 0);
+				const size_t cluster_cells = static_cast<size_t>(c_w) * c_h;
+				if (cluster_dist_.size() < cluster_cells) {
+					cluster_dist_.resize(cluster_cells);
+					cluster_in_cluster_.resize(cluster_cells);
+				}
+				std::fill_n(cluster_dist_.data(), cluster_cells, 0);
+				std::fill_n(cluster_in_cluster_.data(), cluster_cells, static_cast<uint8_t>(0));
+				dt_queue_.clear();
 
-				for (const auto& [tx, ty] : cluster_tiles) {
-					in_cluster[(ty - min_y) * c_w + (tx - min_x)] = 1;
+				for (const auto& [tx, ty] : cluster_tiles_) {
+					cluster_in_cluster_[(ty - min_y) * c_w + (tx - min_x)] = 1;
 				}
 
-				std::deque<std::pair<int, int>> dt_queue;
 				// Enqueue boundary tiles
-				for (const auto& [tx, ty] : cluster_tiles) {
+				for (const auto& [tx, ty] : cluster_tiles_) {
 					int clx = tx - min_x;
 					int cly = ty - min_y;
 					bool is_boundary = false;
 					for (auto [dx, dy] : DIRS) {
 						int nclx = clx + dx;
 						int ncly = cly + dy;
-						if (nclx < 0 || nclx >= c_w || ncly < 0 || ncly >= c_h || !in_cluster[ncly * c_w + nclx]) {
+						if (nclx < 0 || nclx >= c_w || ncly < 0 || ncly >= c_h || !cluster_in_cluster_[ncly * c_w + nclx]) {
 							is_boundary = true;
 							break;
 						}
 					}
 					if (is_boundary) {
-						dist[cly * c_w + clx] = 1;
-						dt_queue.emplace_back(tx, ty);
+						cluster_dist_[cly * c_w + clx] = 1;
+						dt_queue_.emplace_back(tx, ty);
 					}
 				}
 
 				int max_dist = 1;
-				while (!dt_queue.empty()) {
-					auto [cx, cy] = dt_queue.front();
-					dt_queue.pop_front();
-					int cur_d = dist[(cy - min_y) * c_w + (cx - min_x)];
+				while (!dt_queue_.empty()) {
+					auto [cx, cy] = dt_queue_.front();
+					dt_queue_.pop_front();
+					int cur_d = cluster_dist_[(cy - min_y) * c_w + (cx - min_x)];
 					if (cur_d > max_dist) {
 						max_dist = cur_d;
 					}
@@ -173,9 +174,9 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 						int nclx = nx - min_x;
 						int ncly = ny - min_y;
 						if (nclx >= 0 && nclx < c_w && ncly >= 0 && ncly < c_h &&
-							in_cluster[ncly * c_w + nclx] && dist[ncly * c_w + nclx] == 0) {
-							dist[ncly * c_w + nclx] = cur_d + 1;
-							dt_queue.emplace_back(nx, ny);
+							cluster_in_cluster_[ncly * c_w + nclx] && cluster_dist_[ncly * c_w + nclx] == 0) {
+							cluster_dist_[ncly * c_w + nclx] = cur_d + 1;
+							dt_queue_.emplace_back(nx, ny);
 						}
 					}
 				}
@@ -185,8 +186,8 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 				float mid_y = (min_y + max_y) * 0.5f;
 				float min_dist_to_mid = 1e9f;
 
-				for (const auto& [tx, ty] : cluster_tiles) {
-					int d = dist[(ty - min_y) * c_w + (tx - min_x)];
+				for (const auto& [tx, ty] : cluster_tiles_) {
+					int d = cluster_dist_[(ty - min_y) * c_w + (tx - min_x)];
 					if (d == max_dist) {
 						float dist_mid = (tx - mid_x) * (tx - mid_x) + (ty - mid_y) * (ty - mid_y);
 						if (dist_mid < min_dist_to_mid) {
@@ -200,7 +201,7 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 
 			// 3. Dynamic badge scaling based on cluster size & clearance
 			// Uniform badge size across all zone types, adjusted to the largest label ("Protection Zone")
-			const int tile_count = static_cast<int>(cluster_tiles.size());
+			const int tile_count = static_cast<int>(cluster_tiles_.size());
 			const float base_w = 112.0f;
 
 			float bw = base_w;
@@ -236,46 +237,63 @@ const std::vector<ZoneClusterBadge>& ZoneClusterFinder::findClusters(
 
 	// 4. Resolve multi-badge relative offsets for shared center tiles
 	if (visible_badges_result_.size() > 1) {
-		std::unordered_map<uint64_t, std::vector<size_t>> badges_by_pos;
+		badge_keys_.clear();
+		badge_keys_.reserve(visible_badges_result_.size());
 		for (size_t i = 0; i < visible_badges_result_.size(); ++i) {
 			const uint64_t ux = static_cast<uint32_t>(visible_badges_result_[i].center_x);
 			const uint64_t uy = static_cast<uint32_t>(visible_badges_result_[i].center_y);
 			uint64_t pos_key = (ux << 32) | uy;
-			badges_by_pos[pos_key].push_back(i);
+			badge_keys_.emplace_back(pos_key, i);
 		}
 
-		for (const auto& [_, indices] : badges_by_pos) {
-			if (indices.size() == 1) {
-				visible_badges_result_[indices[0]].offset_x = 0.0f;
-				visible_badges_result_[indices[0]].offset_y = 0.0f;
-			} else if (indices.size() == 2) {
-				float w0 = visible_badges_result_[indices[0]].width;
-				float w1 = visible_badges_result_[indices[1]].width;
+		std::sort(badge_keys_.begin(), badge_keys_.end(), [](const auto& a, const auto& b) {
+			return a.first < b.first;
+		});
+
+		size_t run_start = 0;
+		while (run_start < badge_keys_.size()) {
+			size_t run_end = run_start + 1;
+			while (run_end < badge_keys_.size() && badge_keys_[run_end].first == badge_keys_[run_start].first) {
+				++run_end;
+			}
+			const size_t group_size = run_end - run_start;
+
+			if (group_size == 1) {
+				visible_badges_result_[badge_keys_[run_start].second].offset_x = 0.0f;
+				visible_badges_result_[badge_keys_[run_start].second].offset_y = 0.0f;
+			} else if (group_size == 2) {
+				size_t idx0 = badge_keys_[run_start].second;
+				size_t idx1 = badge_keys_[run_start + 1].second;
+				float w0 = visible_badges_result_[idx0].width;
+				float w1 = visible_badges_result_[idx1].width;
 				float gap = 2.0f;
 				float total_w = w0 + gap + w1;
-				visible_badges_result_[indices[0]].offset_x = -total_w * 0.5f + w0 * 0.5f;
-				visible_badges_result_[indices[0]].offset_y = 0.0f;
-				visible_badges_result_[indices[1]].offset_x = total_w * 0.5f - w1 * 0.5f;
-				visible_badges_result_[indices[1]].offset_y = 0.0f;
+				visible_badges_result_[idx0].offset_x = -total_w * 0.5f + w0 * 0.5f;
+				visible_badges_result_[idx0].offset_y = 0.0f;
+				visible_badges_result_[idx1].offset_x = total_w * 0.5f - w1 * 0.5f;
+				visible_badges_result_[idx1].offset_y = 0.0f;
 			} else {
-				float w0 = visible_badges_result_[indices[0]].width;
-				float h0 = visible_badges_result_[indices[0]].height;
+				size_t idx0 = badge_keys_[run_start].second;
+				float w0 = visible_badges_result_[idx0].width;
+				float h0 = visible_badges_result_[idx0].height;
 				float shift_x = w0 * 0.5f + 1.0f;
 				float shift_y = h0 * 0.5f + 1.0f;
 
-				visible_badges_result_[indices[0]].offset_x = -shift_x;
-				visible_badges_result_[indices[0]].offset_y = -shift_y;
-				visible_badges_result_[indices[1]].offset_x = shift_x;
-				visible_badges_result_[indices[1]].offset_y = -shift_y;
-				if (indices.size() >= 3) {
-					visible_badges_result_[indices[2]].offset_x = -shift_x;
-					visible_badges_result_[indices[2]].offset_y = shift_y;
+				visible_badges_result_[idx0].offset_x = -shift_x;
+				visible_badges_result_[idx0].offset_y = -shift_y;
+				visible_badges_result_[badge_keys_[run_start + 1].second].offset_x = shift_x;
+				visible_badges_result_[badge_keys_[run_start + 1].second].offset_y = -shift_y;
+				if (group_size >= 3) {
+					visible_badges_result_[badge_keys_[run_start + 2].second].offset_x = -shift_x;
+					visible_badges_result_[badge_keys_[run_start + 2].second].offset_y = shift_y;
 				}
-				if (indices.size() >= 4) {
-					visible_badges_result_[indices[3]].offset_x = shift_x;
-					visible_badges_result_[indices[3]].offset_y = shift_y;
+				if (group_size >= 4) {
+					visible_badges_result_[badge_keys_[run_start + 3].second].offset_x = shift_x;
+					visible_badges_result_[badge_keys_[run_start + 3].second].offset_y = shift_y;
 				}
 			}
+
+			run_start = run_end;
 		}
 	}
 

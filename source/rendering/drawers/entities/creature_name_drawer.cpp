@@ -57,7 +57,19 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		float width = 0.0f;
 		float height = 0.0f;
 	};
-	static thread_local std::unordered_map<std::string, CachedMetrics> s_metrics_cache;
+	struct StringHash {
+		using is_transparent = void;
+		size_t operator()(std::string_view sv) const noexcept {
+			return std::hash<std::string_view>{}(sv);
+		}
+		size_t operator()(const std::string& s) const noexcept {
+			return std::hash<std::string_view>{}(s);
+		}
+		size_t operator()(const char* s) const noexcept {
+			return std::hash<std::string_view>{}(s);
+		}
+	};
+	static thread_local std::unordered_map<std::string, CachedMetrics, StringHash, std::equal_to<>> s_metrics_cache;
 
 	struct VisibleLabel {
 		float x;
@@ -99,8 +111,8 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		const char* t_end = label.name.data() + label.name.size();
 		std::string_view lookup_key = label.name;
 
-		// Fast cached text bounds lookup for creature name
-		auto it = s_metrics_cache.find(std::string(lookup_key));
+		// Fast cached text bounds lookup for creature name (zero allocations on hit)
+		auto it = s_metrics_cache.find(lookup_key);
 		float textWidth = 0.0f;
 		float textHeight = 0.0f;
 

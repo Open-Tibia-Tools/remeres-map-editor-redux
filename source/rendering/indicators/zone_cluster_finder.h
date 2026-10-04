@@ -5,6 +5,8 @@
 #include "rendering/indicators/zone_flags.h"
 
 #include <vector>
+#include <deque>
+#include <utility>
 #include <cstdint>
 #include <span>
 
@@ -70,6 +72,14 @@ private:
 	std::vector<uint8_t> tile_grid_;
 	std::vector<uint8_t> visited_grid_;
 	std::vector<ZoneClusterBadge> visible_badges_result_;
+
+	// Reusable scratch buffers for DOD cache locality and zero heap allocations per frame
+	std::vector<std::pair<int, int>> cluster_tiles_;
+	std::deque<std::pair<int, int>> bfs_queue_;
+	std::vector<int> cluster_dist_;
+	std::vector<uint8_t> cluster_in_cluster_;
+	std::deque<std::pair<int, int>> dt_queue_;
+	std::vector<std::pair<uint64_t, size_t>> badge_keys_;
 };
 
 } // namespace rme::rendering
