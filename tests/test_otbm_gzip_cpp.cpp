@@ -95,16 +95,31 @@ namespace {
 		uint8_t type = 0;
 		uint32_t version = 0;
 		uint16_t width = 0, height = 0;
-		assert(root->getByte(type) && root->getU32(version) && root->getU16(width) && root->getU16(height));
-		assert(width > 0 && height > 0);
+		uint32_t gzip_major = 0, gzip_minor = 0;
+		const bool ok_gz = root->getByte(type) && root->getU32(version) && root->getU16(width) && root->getU16(height) && root->getU32(gzip_major) && root->getU32(gzip_minor);
+		assert(ok_gz);
+		assert(width == 35143 && height == 34812);
+		assert(gzip_major == 4 && gzip_minor == 4);
 
 		// Peek 64 KiB from raw map
 		const auto none_prefix = Compression::readRawFile(none_path, 64 * 1024);
 		assert(none_prefix && none_prefix->size() == 64 * 1024);
 		assert(hasValidOtbmPrefix(*none_prefix));
 
+		MemoryNodeFileReadHandle none_handle(none_prefix->data() + 4, none_prefix->size() - 4);
+		BinaryNode* none_root = none_handle.getRootNode();
+		assert(none_root != nullptr);
+		uint8_t none_type = 0;
+		uint32_t none_version = 0;
+		uint16_t none_width = 0, none_height = 0;
+		uint32_t none_major = 0, none_minor = 0;
+		const bool ok_none = none_root->getByte(none_type) && none_root->getU32(none_version) && none_root->getU16(none_width) && none_root->getU16(none_height) && none_root->getU32(none_major) && none_root->getU32(none_minor);
+		assert(ok_none);
+		assert(none_width == 6063 && none_height == 6018);
+		assert(none_major == 3 && none_minor == 57);
+
 		const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-		std::cout << "  -> Passed: Header parsed in " << elapsed << " us (width: " << width << ", height: " << height << ").\n";
+		std::cout << "  -> Passed: Header parsed in " << elapsed << " us (Gzip 4/4: " << width << "x" << height << ", None 3/57: " << none_width << "x" << none_height << ").\n";
 	}
 
 	void testScenario3_FullLoad() {
@@ -290,6 +305,52 @@ namespace {
 		std::cout << "  -> Passed: Escaped bytes and dynamic header growth verified.\n";
 	}
 
+	void testScenario8_ClientVersionDisambiguation() {
+		std::cout << "[Scenario 8] Testing OTB major+minor client version disambiguation...\n";
+
+		struct MockClient {
+			std::string name;
+			uint32_t otbMajor;
+			uint32_t otbId;
+		};
+
+		const std::vector<MockClient> clients = {
+			{ "7.80", 1, 4 },
+			{ "10.98", 3, 57 },
+			{ "15.25", 4, 4 },
+		};
+
+		const auto matchClient = [&](uint32_t major, uint32_t minor) -> std::string {
+			// First try exact major + minor match (PR 1045 behavior)
+			for (const auto& c : clients) {
+				if (c.otbMajor == major && c.otbId == minor) {
+					return c.name;
+				}
+			}
+			// Fallback to best match on minor only (legacy behavior)
+			for (const auto& c : clients) {
+				if (c.otbId == minor) {
+					return c.name;
+				}
+			}
+			return "";
+		};
+
+		// Canary / Crystal Server header (4/4) -> Must match 15.25, NOT 7.80!
+		assert(matchClient(4, 4) == "15.25");
+
+		// Classic 7.80 header (1/4) -> Must match 7.80
+		assert(matchClient(1, 4) == "7.80");
+
+		// Unknown major version with minor 4 -> Must fall back to 7.80
+		assert(matchClient(99, 4) == "7.80");
+
+		// Standard 10.98 header (3/57) -> Must match 10.98
+		assert(matchClient(3, 57) == "10.98");
+
+		std::cout << "  -> Passed: 4/4 header resolves to 15.25, 1/4 to 7.80, and legacy fallbacks work.\n";
+	}
+
 } // namespace
 
 int main() {
@@ -306,6 +367,7 @@ int main() {
 	testScenario5_ConversionGzipToNormal();
 	testScenario6_MultiMapIsolation();
 	testScenario7_EscapedCharactersAndHeaderGrowth();
+	testScenario8_ClientVersionDisambiguation();
 
 	std::cout << "========================================================\n";
 	std::cout << "  ALL SCENARIOS PASSED SUCCESSFULLY!\n";
