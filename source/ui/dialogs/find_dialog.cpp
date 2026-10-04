@@ -356,13 +356,6 @@ void FindDialogListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t n)
 		ASSERT(n < brushlist.size());
 		const Brush* brush = brushlist[n];
 		auto tech = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(brush);
-		if (tech == rme::rendering::TileIndicatorType::None && brush && brush->is<RAWBrush>()) {
-			const auto* raw = brush->as<RAWBrush>();
-			const ServerItemId sid = raw->getItemID();
-			const auto def = g_item_definitions.get(sid);
-			const ClientItemId cid = def ? def.clientId() : 0;
-			tech = rme::rendering::TechnicalItemRegistry::Classify(sid, cid);
-		}
 		if (tech != rme::rendering::TileIndicatorType::None) {
 			const int icon_size = rect.height;
 			rme::rendering::DrawNanoVGIndicatorBadge(

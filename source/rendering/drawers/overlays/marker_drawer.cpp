@@ -19,10 +19,8 @@ void MarkerDrawer::draw(SpriteBatch& sprite_batch, int draw_x, int draw_y, const
 
 	// House entry ("ENTRY")
 	if (options.show_houses && tile->isHouseExit()) {
-		const HouseExitList* exits = tile->getHouseExits();
-		const uint32_t exit_house_id = (exits && !exits->empty()) ? exits->front() : 1;
 		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
-			rme::rendering::INDICATOR_HOUSE_ENTRY_BASE + static_cast<float>(exit_house_id), 0u, depth);
+			rme::rendering::INDICATOR_HOUSE_ENTRY_BASE, 0u, depth);
 	}
 
 	// Town temple ("TOWN")

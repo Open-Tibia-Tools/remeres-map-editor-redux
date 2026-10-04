@@ -22,7 +22,7 @@ namespace rme::rendering::shaders {
  * - invalid (Invalid zone flags: Bright Pure Magenta)
  */
 inline constexpr std::string_view INDICATOR_SHADER_GLSL = R"(
-bool evaluateTileIndicator(vec2 quadCoord, float markerId, uint currentHouseId,
+bool evaluateTileIndicator(vec2 quadCoord, float markerId,
                            int showHouses, int showSpawns, int showTowns,
                            int showWaypoints, int showTechItems,
                            int showInvalidTiles, int showInvalidZones,

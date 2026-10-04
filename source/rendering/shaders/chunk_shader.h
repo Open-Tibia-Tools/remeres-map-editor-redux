@@ -1,6 +1,8 @@
 #ifndef RME_RENDERING_SHADERS_CHUNK_SHADER_H_
 #define RME_RENDERING_SHADERS_CHUNK_SHADER_H_
 
+#include "rendering/core/shader_program.h"
+#include "rendering/core/drawing_options.h"
 #include "rendering/shaders/indicator_shader.h"
 #include "rendering/shaders/house_shader.h"
 #include "rendering/shaders/pathing_shader.h"
@@ -86,7 +88,7 @@ uniform int uBlockingBlendMode;
 )") + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + R"(
 
 void main() {
-	if (evaluateTileIndicator(vQuadCoord, vHouseId, uCurrentHouseId,
+	if (evaluateTileIndicator(vQuadCoord, vHouseId,
 	                          uShowHouses, 0, uShowTowns,
 	                          uShowWaypoints, uShowTechItems,
 	                          uShowInvalidTiles, uShowInvalidZones,
@@ -114,6 +116,32 @@ void main() {
 	applyPathingOverlay(FragColor, isBlocking, uShowBlocking, uExtendedPathingShader, uBlockingWash, uBlockingBlendMode);
 }
 )";
+}
+
+/**
+ * @brief Sets domain-specific uniform values for the Chunk cache shader.
+ */
+inline void SetChunkShaderUniforms(
+	ShaderProgram& shader,
+	uint32_t current_house_id,
+	const DrawingOptions& options
+) {
+	shader.Use();
+	shader.SetUint("uCurrentHouseId", current_house_id);
+	shader.SetInt("uShowHouses", options.show_houses ? 1 : 0);
+	shader.SetVec4("uHouseActiveWash", options.house_active_color);
+	shader.SetVec4("uHouseInactiveWash", options.house_inactive_color);
+	shader.SetInt("uHouseActiveBlendMode", options.house_active_blend_mode);
+	shader.SetInt("uHouseInactiveBlendMode", options.house_inactive_blend_mode);
+	shader.SetInt("uShowTowns", options.show_towns ? 1 : 0);
+	shader.SetInt("uShowWaypoints", (options.show_waypoints && !options.ingame) ? 1 : 0);
+	shader.SetInt("uShowTechItems", (options.show_tech_items && !options.ingame) ? 1 : 0);
+	shader.SetInt("uShowInvalidTiles", (options.show_invalid_tiles && !options.ingame) ? 1 : 0);
+	shader.SetInt("uShowInvalidZones", (options.show_invalid_zones && !options.ingame) ? 1 : 0);
+	shader.SetInt("uShowBlocking", options.show_blocking ? 1 : 0);
+	shader.SetInt("uExtendedPathingShader", options.extended_pathing_shader ? 1 : 0);
+	shader.SetVec4("uBlockingWash", options.zone_blocking_color);
+	shader.SetInt("uBlockingBlendMode", options.zone_blocking_blend_mode);
 }
 
 } // namespace rme::rendering::shaders
