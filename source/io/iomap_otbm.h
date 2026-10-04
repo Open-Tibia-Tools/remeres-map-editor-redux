@@ -86,6 +86,7 @@ struct OTBMStartupPeekResult {
 	wxDateTime modified_time;
 	bool has_error = false;
 	wxString error_message;
+	bool is_compressed = false;
 };
 
 #pragma pack()

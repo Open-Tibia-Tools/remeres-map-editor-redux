@@ -17,6 +17,7 @@ public:
 	void OnOpen(wxCommandEvent& event);
 	void OnSave(wxCommandEvent& event);
 	void OnSaveAs(wxCommandEvent& event);
+	void OnSaveAsGzip(wxCommandEvent& event);
 	void OnClose(wxCommandEvent& event);
 	void OnQuit(wxCommandEvent& event);
 	void OnGenerateMap(wxCommandEvent& event);

@@ -64,6 +64,15 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 
 	grid_sizer->Add(protocol_choice, wxSizerFlags(1).Expand());
 
+	// Compression
+	grid_sizer->Add(newd wxStaticText(this, wxID_ANY, "Map Compression"));
+	compression_choice = newd wxChoice(this, wxID_ANY);
+	compression_choice->SetToolTip("Select the map storage compression format");
+	compression_choice->Append("None (Standard / The Forgotten Server)");
+	compression_choice->Append("GZIP (Crystal Server)");
+	compression_choice->SetSelection(map.getCompression() == OtbmCompression::Gzip ? 1 : 0);
+	grid_sizer->Add(compression_choice, wxSizerFlags(1).Expand());
+
 	// Dimensions
 	grid_sizer->Add(newd wxStaticText(this, wxID_ANY, "Map Dimensions"));
 	{
@@ -198,6 +207,12 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	map.setHouseFilename(nstr(house_filename_ctrl->GetValue()));
 	map.setSpawnFilename(nstr(spawn_filename_ctrl->GetValue()));
 	map.setWaypointFilename(nstr(waypoint_filename_ctrl->GetValue()));
+
+	const auto new_compression = (compression_choice->GetSelection() == 1) ? OtbmCompression::Gzip : OtbmCompression::None;
+	if (new_compression != map.getCompression()) {
+		map.setCompression(new_compression);
+		map.doChange();
+	}
 
 	// Only resize if we have to
 	int new_map_width = width_spin->GetValue();

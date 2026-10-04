@@ -176,7 +176,7 @@ bool EditorManager::ShouldSave() {
 	return false;
 }
 
-void EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
+bool EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
 	MapTab* mapTab = GetCurrentMapTab();
 	if (mapTab) {
 		Editor* editor = mapTab->GetEditor();
@@ -186,24 +186,29 @@ void EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
 				g_gui.root->Update();
 			}
 
-			EditorPersistence::saveMap(*editor, fileName, showdialog);
+			const bool success = EditorPersistence::saveMap(*editor, fileName, showdialog);
 
-			if (!editor->map.hasChanged()) {
+			if (success && !editor->map.hasChanged()) {
 				g_status.SetStatusText("Map saved successfully.");
 			}
 
-			const std::string& path = editor->map.getFilename();
-			const Position& position = mapTab->GetScreenCenterPosition();
-			std::ostringstream stream;
-			stream << position;
-			g_settings.setString(Config::RECENT_EDITED_MAP_PATH, path);
-			g_settings.setString(Config::RECENT_EDITED_MAP_POSITION, stream.str());
+			if (success) {
+				const std::string& path = editor->map.getFilename();
+				const Position& position = mapTab->GetScreenCenterPosition();
+				std::ostringstream stream;
+				stream << position;
+				g_settings.setString(Config::RECENT_EDITED_MAP_PATH, path);
+				g_settings.setString(Config::RECENT_EDITED_MAP_POSITION, stream.str());
+			}
+
+			g_status.UpdateTitle();
+			g_gui.root->UpdateMenubar();
+			g_gui.root->Refresh();
+			return success;
 		}
 	}
 
-	g_status.UpdateTitle();
-	g_gui.root->UpdateMenubar();
-	g_gui.root->Refresh();
+	return false;
 }
 
 bool EditorManager::NewMap() {
@@ -265,11 +270,46 @@ void EditorManager::SaveMapAs() {
 		return;
 	}
 
-	wxString wildcard = MAP_SAVE_FILE_WILDCARD;
+	wxString wildcard = "OpenTibia Binary Map (*.otbm)|*.otbm|GZIP Compressed Map (*.otbm)|*.otbm";
 	wxFileDialog dialog(g_gui.root, "Save As...", "", "", wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	dialog.SetFilterIndex(GetCurrentMap().getCompression() == OtbmCompression::Gzip ? 1 : 0);
 
 	if (dialog.ShowModal() == wxID_OK) {
-		SaveCurrentMap(dialog.GetPath(), true);
+		const OtbmCompression prev_compression = GetCurrentMap().getCompression();
+		if (dialog.GetFilterIndex() == 1) {
+			GetCurrentMap().setCompression(OtbmCompression::Gzip);
+		} else if (dialog.GetFilterIndex() == 0) {
+			GetCurrentMap().setCompression(OtbmCompression::None);
+		}
+
+		if (!SaveCurrentMap(dialog.GetPath(), true)) {
+			GetCurrentMap().setCompression(prev_compression);
+			return;
+		}
+
+		g_status.UpdateTitle();
+		g_gui.root->AddRecentFile(dialog.GetPath());
+		g_gui.root->UpdateMenubar();
+	}
+}
+
+void EditorManager::SaveMapAsGzip() {
+	if (!IsEditorOpen()) {
+		return;
+	}
+
+	wxString wildcard = "GZIP Compressed Map (*.otbm)|*.otbm";
+	wxFileDialog dialog(g_gui.root, "Save as GZIP...", "", "", wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+
+	if (dialog.ShowModal() == wxID_OK) {
+		const OtbmCompression prev_compression = GetCurrentMap().getCompression();
+		GetCurrentMap().setCompression(OtbmCompression::Gzip);
+
+		if (!SaveCurrentMap(dialog.GetPath(), true)) {
+			GetCurrentMap().setCompression(prev_compression);
+			return;
+		}
+
 		g_status.UpdateTitle();
 		g_gui.root->AddRecentFile(dialog.GetPath());
 		g_gui.root->UpdateMenubar();

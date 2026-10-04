@@ -131,6 +131,8 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/tile_serialization_otbm.h
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/town_serialization_otbm.h
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/fast_otbm_reader.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/compression/gzip_stream.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/compression/gzip_node_file_write_handle.h
     ${CMAKE_CURRENT_LIST_DIR}/io/templates.h
     ${CMAKE_CURRENT_LIST_DIR}/live/live_action.h
     ${CMAKE_CURRENT_LIST_DIR}/live/live_client.h
@@ -142,6 +144,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/live/live_tab.h
     ${CMAKE_CURRENT_LIST_DIR}/map/basemap.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/map_storage_format.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_allocator.h
     ${CMAKE_CURRENT_LIST_DIR}/map/operations/map_processor.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_region.h
@@ -543,6 +546,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/tile_serialization_otbm.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/town_serialization_otbm.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/fast_otbm_reader.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/compression/gzip_stream.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/compression/gzip_node_file_write_handle.cpp
     ${CMAKE_CURRENT_LIST_DIR}/live/live_action.cpp
     ${CMAKE_CURRENT_LIST_DIR}/live/live_client.cpp
     ${CMAKE_CURRENT_LIST_DIR}/live/live_manager.cpp

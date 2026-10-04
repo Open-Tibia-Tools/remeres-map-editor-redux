@@ -214,6 +214,10 @@ void MainMenuBar::OnSaveAs(wxCommandEvent& event) {
 	fileMenuHandler->OnSaveAs(event);
 }
 
+void MainMenuBar::OnSaveAsGzip(wxCommandEvent& event) {
+	fileMenuHandler->OnSaveAsGzip(event);
+}
+
 void MainMenuBar::OnPreferences(wxCommandEvent& event) {
 	fileMenuHandler->OnPreferences(event);
 }

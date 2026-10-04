@@ -600,6 +600,9 @@ void GUI::SaveMap() {
 void GUI::SaveMapAs() {
 	g_editors.SaveMapAs();
 }
+void GUI::SaveMapAsGzip() {
+	g_editors.SaveMapAsGzip();
+}
 bool GUI::LoadMap(const FileName& fileName, const MapLoadOptions& load_options) {
 	return g_editors.LoadMap(fileName, load_options);
 }
@@ -613,11 +616,11 @@ int GUI::GetOpenMapCount() {
 bool GUI::ShouldSave() {
 	return g_editors.ShouldSave();
 }
-void GUI::SaveCurrentMap(FileName filename, bool showdialog) {
-	g_editors.SaveCurrentMap(filename, showdialog);
+bool GUI::SaveCurrentMap(FileName filename, bool showdialog) {
+	return g_editors.SaveCurrentMap(filename, showdialog);
 }
-void GUI::SaveCurrentMap(bool showdialog) {
-	g_editors.SaveCurrentMap(FileName(""), showdialog);
+bool GUI::SaveCurrentMap(bool showdialog) {
+	return g_editors.SaveCurrentMap(FileName(""), showdialog);
 }
 
 PaletteWindow* GUI::NewPalette() {
