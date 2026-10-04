@@ -9,6 +9,30 @@
 #include "ui/map_tab.h"
 #include "util/image_manager.h"
 
+namespace {
+	MapVersionID indexToMapVersion(int selection) noexcept {
+		switch (selection) {
+			case 0: return MAP_OTBM_1;
+			case 1: return MAP_OTBM_2;
+			case 2: return MAP_OTBM_3;
+			case 3: return MAP_OTBM_4;
+			case 4: return MAP_OTBM_5;
+			default: return MAP_OTBM_UNKNOWN;
+		}
+	}
+
+	int mapVersionToIndex(MapVersionID ver) noexcept {
+		switch (ver) {
+			case MAP_OTBM_1: return 0;
+			case MAP_OTBM_2: return 1;
+			case MAP_OTBM_3: return 2;
+			case MAP_OTBM_4: return 3;
+			case MAP_OTBM_5: return 4;
+			default: return 0;
+		}
+	}
+}
+
 MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor& editor) :
 	wxDialog(parent, wxID_ANY, "Map Properties", wxDefaultPosition, FROM_DIP(parent, wxSize(300, 200)), wxRESIZE_BORDER | wxCAPTION),
 	view(view),
@@ -31,31 +55,13 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	grid_sizer->Add(newd wxStaticText(this, wxID_ANY, "Map Version"));
 	version_choice = newd wxChoice(this, MAP_PROPERTIES_VERSION);
 	version_choice->SetToolTip("Select the OTBM version (Determines feature support)");
-	version_choice->Append("OTServ 0.5.0");
-	version_choice->Append("OTServ 0.6.0");
-	version_choice->Append("OTServ 0.6.1");
-	version_choice->Append("OTServ 0.7.0 (revscriptsys)");
-	version_choice->Append("OTServ 0.7.1 (CrystalServer)");
+	version_choice->Append("OTBM 1");
+	version_choice->Append("OTBM 2");
+	version_choice->Append("OTBM 3 (Standard TFS)");
+	version_choice->Append("OTBM 4 (Canary)");
+	version_choice->Append("OTBM 5 (CrystalServer)");
 
-	switch (map.getVersion().otbm) {
-		case MAP_OTBM_1:
-			version_choice->SetSelection(0);
-			break;
-		case MAP_OTBM_2:
-			version_choice->SetSelection(1);
-			break;
-		case MAP_OTBM_3:
-			version_choice->SetSelection(2);
-			break;
-		case MAP_OTBM_4:
-			version_choice->SetSelection(3);
-			break;
-		case MAP_OTBM_5:
-			version_choice->SetSelection(4);
-			break;
-		default:
-			version_choice->SetSelection(0);
-	}
+	version_choice->SetSelection(mapVersionToIndex(map.getVersion().otbm));
 
 	grid_sizer->Add(version_choice, wxSizerFlags(1).Expand());
 
@@ -157,7 +163,6 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 }
 
 void MapPropertiesWindow::UpdateProtocolList() {
-	wxString ver = version_choice->GetStringSelection();
 	wxString client = protocol_choice->GetStringSelection();
 
 	protocol_choice->Clear();
@@ -166,17 +171,9 @@ void MapPropertiesWindow::UpdateProtocolList() {
 	if (g_settings.getInteger(Config::USE_OTBM_4_FOR_ALL_MAPS)) {
 		protocols = ClientVersion::getAllVisible();
 	} else {
-		MapVersionID map_version = MAP_OTBM_1;
-		if (ver.Contains("0.5.0")) {
+		MapVersionID map_version = indexToMapVersion(version_choice->GetSelection());
+		if (map_version == MAP_OTBM_UNKNOWN) {
 			map_version = MAP_OTBM_1;
-		} else if (ver.Contains("0.6.0")) {
-			map_version = MAP_OTBM_2;
-		} else if (ver.Contains("0.6.1")) {
-			map_version = MAP_OTBM_3;
-		} else if (ver.Contains("0.7.0")) {
-			map_version = MAP_OTBM_4;
-		} else if (ver.Contains("0.7.1")) {
-			map_version = MAP_OTBM_5;
 		}
 
 		if (map_version >= MAP_OTBM_4) {
@@ -213,8 +210,6 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	MapVersion old_ver = map.getVersion();
 	MapVersion new_ver;
 
-	wxString ver = version_choice->GetStringSelection();
-
 	ClientVersion* selected_client = ClientVersion::get(nstr(protocol_choice->GetStringSelection()));
 	if (selected_client) {
 		new_ver.client = selected_client->getProtocolID();
@@ -223,16 +218,9 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		new_ver.client = old_ver.client;
 		new_ver.items_major = old_ver.items_major;
 	}
-	if (ver.Contains("0.5.0")) {
+	new_ver.otbm = indexToMapVersion(version_choice->GetSelection());
+	if (new_ver.otbm == MAP_OTBM_UNKNOWN) {
 		new_ver.otbm = MAP_OTBM_1;
-	} else if (ver.Contains("0.6.0")) {
-		new_ver.otbm = MAP_OTBM_2;
-	} else if (ver.Contains("0.6.1")) {
-		new_ver.otbm = MAP_OTBM_3;
-	} else if (ver.Contains("0.7.0")) {
-		new_ver.otbm = MAP_OTBM_4;
-	} else if (ver.Contains("0.7.1")) {
-		new_ver.otbm = MAP_OTBM_5;
 	}
 
 	if (!MapVersionChanger::changeMapVersion(this, editor, new_ver)) {
