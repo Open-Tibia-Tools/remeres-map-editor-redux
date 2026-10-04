@@ -23,21 +23,14 @@ bool IsTilePathBlocking(const Tile* t) noexcept {
 		return false;
 	}
 
-	auto isInvisibleWall = [](uint32_t sid, uint32_t cid) noexcept -> bool {
-		if (sid == 1548 || cid == 2187) {
-			return true;
-		}
-		return TechnicalItemRegistry::Classify(sid, cid) == TileIndicatorType::TechInvisibleWall;
-	};
-
 	if (t->ground && t->ground->isBlocking()) {
-		if (!isInvisibleWall(t->ground->getID(), t->ground->getClientID())) {
+		if (!TechnicalItemRegistry::IsInvisibleWall(t->ground->getID(), t->ground->getClientID())) {
 			return true;
 		}
 	}
 	for (const auto& item : t->items) {
 		if (item && item->isBlocking()) {
-			if (!isInvisibleWall(item->getID(), item->getClientID())) {
+			if (!TechnicalItemRegistry::IsInvisibleWall(item->getID(), item->getClientID())) {
 				return true;
 			}
 		}
@@ -203,7 +196,7 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 	}
 
 	// 2. Pre-calculate Cluster Badges
-	if (options.show_special_tiles && !visible_zone_tiles_.empty() && view.zoom <= kZoomLODCutoff) {
+	if (options.show_special_tiles && view.zoom <= kZoomLODCutoff) {
 		cluster_finder_.findClusters(z, bounds, visible_zone_tiles_);
 	}
 
@@ -317,14 +310,6 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 			for (const auto& sb : spawn_borders_) {
 				sprite_batch.draw(sb.x, sb.y, sb.w, sb.h, *white_pixel, 1.0f, 1.0f, 1.0f, sb.alpha,
 				                  0.0f, sb.flags, sb.depth);
-			}
-		}
-
-		if (!spawn_badges_.empty()) {
-			sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
-			for (const auto& b : spawn_badges_) {
-				sprite_batch.draw(b.x, b.y, b.w, b.h, *white_pixel, 1.0f, 1.0f, 1.0f, b.alpha,
-				                  INDICATOR_SPAWN_BASE, 0.0f, b.depth);
 			}
 		}
 	}
@@ -590,6 +575,15 @@ void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
 			const float badge_depth = calculateTileDepth(badge.center_x, badge.center_y, RenderSublayer::Overlay);
 			sprite_batch.draw(px, py, badge.width, badge.height, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
 			                  0.0f, ZONE_FLAG_CLUSTER_BADGE | badge.zone_flag, badge_depth);
+		}
+	}
+
+	// 2. Spawn Center Badges Pass (Rendered on top of items, tables, walls, and statues)
+	if (options.show_spawns && !spawn_badges_.empty()) {
+		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+		for (const auto& b : spawn_badges_) {
+			sprite_batch.draw(b.x, b.y, b.w, b.h, *white_pixel, 1.0f, 1.0f, 1.0f, b.alpha,
+			                  INDICATOR_SPAWN_BASE, 0u, b.depth);
 		}
 	}
 }
