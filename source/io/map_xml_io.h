@@ -30,6 +30,10 @@ public:
 	static bool saveHouses(const Map& map, const wxFileName& dir);
 	static bool saveHouses(const Map& map, pugi::xml_document& doc);
 
+	// Zones (Crystal Server)
+	static bool loadZones(Map& map, const wxFileName& dir);
+	static bool saveZones(const Map& map, const wxFileName& dir);
+
 	// Waypoints
 	static bool loadWaypoints(Map& map, const wxFileName& dir, bool replace = true);
 	static bool loadWaypoints(Map& map, pugi::xml_document& doc, bool replace = true);

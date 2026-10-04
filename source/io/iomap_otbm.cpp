@@ -222,6 +222,7 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	loadAux(MapXMLIO::loadSpawns, "spawn", map.spawnfile);
 	loadAux(MapXMLIO::loadNpcSpawns, "npc", map.npcfile);
 	loadAux(MapXMLIO::loadHouses, "house", map.housefile);
+	loadAux(MapXMLIO::loadZones, "zones", map.zonefile);
 
 	// Waypoints handling
 	if (map.getVersion().otbm == MAP_OTBM_5) {
@@ -658,6 +659,10 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 	}
 
 	if (map.getVersion().otbm == MAP_OTBM_5) {
+		if (!map.zones.empty() && !MapXMLIO::saveZones(map, identifier)) {
+			spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save zones");
+			return false;
+		}
 		return true; // Waypoints already live in the OTBM WAYPOINTS node
 	}
 
@@ -720,6 +725,9 @@ bool IOMapOTBM::saveMap(Map& map, NodeFileWriteHandle& f) {
 				addExtFile(OTBM_ATTR_EXT_SPAWN_NPC_FILE, map.npcfile);
 			}
 			addExtFile(OTBM_ATTR_EXT_HOUSE_FILE, map.housefile);
+			if (mapVersion.otbm == MAP_OTBM_5 && !map.zones.empty()) {
+				addExtFile(OTBM_ATTR_EXT_ZONE_FILE, map.zonefile);
+			}
 
 			writeTileData(map, f);
 			writeTowns(map, f);

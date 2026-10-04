@@ -463,6 +463,47 @@ bool MapXMLIO::saveHouses(const Map& map, pugi::xml_document& doc) {
 	return true;
 }
 
+bool MapXMLIO::loadZones(Map& map, const wxFileName& dir) {
+	auto paths = normalizeMapFilePaths(dir, map.zonefile);
+	pugi::xml_document doc;
+	if (!doc.load_file(paths.second.c_str())) {
+		return false;
+	}
+
+	pugi::xml_node node = doc.child("zones");
+	if (!node) {
+		return false;
+	}
+
+	map.zones.clear();
+	for (auto zoneNode : node.children("zone")) {
+		std::string name = zoneNode.attribute("name").as_string();
+		uint16_t id = static_cast<uint16_t>(zoneNode.attribute("zoneid").as_uint());
+		if (name.empty() || id == 0) {
+			spdlog::warn("MapXMLIO: Malformed zone data, discarding...");
+			continue;
+		}
+		map.zones.push_back({ std::move(name), id });
+	}
+	return true;
+}
+
+bool MapXMLIO::saveZones(const Map& map, const wxFileName& dir) {
+	auto paths = normalizeMapFilePaths(dir, map.zonefile);
+
+	pugi::xml_document doc;
+	pugi::xml_node decl = doc.prepend_child(pugi::node_declaration);
+	decl.append_attribute("version") = "1.0";
+
+	pugi::xml_node zoneNodes = doc.append_child("zones");
+	for (const auto& zone : map.zones) {
+		pugi::xml_node zoneNode = zoneNodes.append_child("zone");
+		zoneNode.append_attribute("name") = zone.name.c_str();
+		zoneNode.append_attribute("zoneid") = zone.id;
+	}
+	return doc.save_file(paths.second.c_str(), "\t", pugi::format_default, pugi::encoding_utf8);
+}
+
 bool MapXMLIO::loadWaypoints(Map& map, const wxFileName& dir, bool replace) {
 	auto paths = normalizeMapFilePaths(dir, map.waypointfile);
 	if (!FileName(wxstr(paths.first)).FileExists()) {

@@ -65,6 +65,7 @@ void Map::initializeEmpty() {
 	spawnfile = sname + "-spawn.xml";
 	housefile = sname + "-house.xml";
 	npcfile = sname + "-npc.xml";
+	zonefile = sname + "-zones.xml";
 	waypointfile = sname + "-waypoint.xml";
 	description = "No map description available.";
 	unnamed = true;
