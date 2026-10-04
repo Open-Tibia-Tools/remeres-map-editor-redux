@@ -178,7 +178,8 @@ void ContainerPropertyPanel::OnEditItem(wxCommandEvent& WXUNUSED(event)) {
 
 	wxDialog* d = newd ItemPropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
 
-	if (d->ShowModal() == wxID_OK) {
+	const int result = d->ShowModal();
+	if (result == 1 || result == wxID_OK) {
 		std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
 		action->addChange(std::make_unique<Change>(std::move(new_tile)));
 		editor->addAction(std::move(action));

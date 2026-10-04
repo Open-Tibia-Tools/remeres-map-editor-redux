@@ -523,14 +523,22 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 
 	std::string text(item.getText());
 	if (!text.empty()) {
-		f.addU8(OTBM_ATTR_TEXT);
-		f.addString(text);
+		if (text.size() <= 0xFFFF) {
+			f.addU8(OTBM_ATTR_TEXT);
+			f.addString(text);
+		} else {
+			spdlog::warn("ItemSerializationOTBM: Item '{}' text length ({}) exceeds 65535 bytes, omitting native OTBM_ATTR_TEXT tag", item.getName(), text.size());
+		}
 	}
 
 	std::string description(item.getDescription());
 	if (!description.empty()) {
-		f.addU8(OTBM_ATTR_DESC);
-		f.addString(description);
+		if (description.size() <= 0xFFFF) {
+			f.addU8(OTBM_ATTR_DESC);
+			f.addString(description);
+		} else {
+			spdlog::warn("ItemSerializationOTBM: Item '{}' description length ({}) exceeds 65535 bytes, omitting native OTBM_ATTR_DESC tag", item.getName(), description.size());
+		}
 	}
 
 	// CrystalServer (OTBM 5) only supports classic attributes in BasicItem::readAttr
@@ -541,9 +549,7 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 				f.addU8(OTBM_ATTR_TIER);
 				f.addU8(static_cast<uint8_t>(tier));
 			} else {
-				spdlog::warn("ItemSerializationOTBM: Item '{}' has tier {} which is too large for uint8_t, truncating to 255", item.getName(), tier);
-				f.addU8(OTBM_ATTR_TIER);
-				f.addU8(0xFF);
+				spdlog::warn("ItemSerializationOTBM: Item '{}' has tier {} exceeding 255; omitting native OTBM_ATTR_TIER tag to preserve full value in attribute map", item.getName(), tier);
 			}
 		}
 	}
