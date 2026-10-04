@@ -73,6 +73,9 @@ namespace Compression {
 		return isize;
 	}
 
+	constexpr size_t kMaxDecompressedBudget = 2ULL * 1024 * 1024 * 1024; // 2 GiB safety budget
+	constexpr size_t kMaxInitialReserve = 512 * 1024 * 1024; // 512 MiB initial reservation cap
+
 	std::optional<std::vector<uint8_t>> decompressGzipFile(const std::filesystem::path& path, size_t limit) {
 		GzPtr gz(openGz(path));
 		if (!gz) {
@@ -80,26 +83,27 @@ namespace Compression {
 		}
 		gzbuffer(gz.get(), static_cast<unsigned>(kChunkSize));
 
+		const size_t budget = std::min<size_t>(limit, kMaxDecompressedBudget);
 		std::vector<uint8_t> out;
 
-		// Pre-reserve memory using ISIZE footer or reasonable estimate to avoid reallocations (DOD)
+		// Pre-reserve memory using ISIZE footer as an untrusted hint (capped) or reasonable estimate (DOD)
 		if (limit == std::numeric_limits<size_t>::max()) {
 			const auto expected_size = readGzipUncompressedSize(path);
 			if (expected_size && *expected_size > 0) {
-				out.reserve(*expected_size);
+				out.reserve(std::min<size_t>(*expected_size, kMaxInitialReserve));
 			} else {
 				std::error_code ec;
 				const auto fsize = std::filesystem::file_size(path, ec);
 				if (!ec && fsize > 0) {
-					out.reserve(static_cast<size_t>(std::min<uintmax_t>(fsize * 4, std::numeric_limits<size_t>::max())));
+					out.reserve(std::min<size_t>(static_cast<size_t>(std::min<uintmax_t>(fsize * 4, kMaxInitialReserve)), kMaxInitialReserve));
 				}
 			}
 		} else {
-			out.reserve(std::min<size_t>(limit, 256 * 1024));
+			out.reserve(std::min<size_t>(budget, 256 * 1024));
 		}
 
-		while (out.size() < limit) {
-			const auto wanted = static_cast<unsigned>(std::min<size_t>(kChunkSize, limit - out.size()));
+		while (out.size() < budget) {
+			const auto wanted = static_cast<unsigned>(std::min<size_t>(kChunkSize, budget - out.size()));
 			const size_t current_size = out.size();
 			out.resize(current_size + wanted);
 
@@ -112,6 +116,11 @@ namespace Compression {
 			if (read == 0) {
 				break;
 			}
+		}
+
+		// If full decompression exceeded the maximum safety budget before EOF, reject excessive/corrupted file
+		if (limit == std::numeric_limits<size_t>::max() && out.size() >= budget && !gzeof(gz.get())) {
+			return std::nullopt;
 		}
 
 		// A truncated prefix read never reaches the gzip trailer, so its CRC can't be checked.
