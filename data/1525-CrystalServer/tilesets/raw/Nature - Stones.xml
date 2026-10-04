@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature - Stones">
+    <item fromid="390" toid="392" />
+    <item id="1006" />
+    <item id="1090" />
+    <item fromid="1133" toid="1151" />
+    <item fromid="1772" toid="1780" />
+    <item fromid="1782" toid="1921" />
+    <item fromid="4434" toid="4444" />
+    <item fromid="4556" toid="4558" />
+    <item fromid="4569" toid="4583" />
+    <item fromid="4603" toid="4608" />
+    <item fromid="5618" toid="5623" />
+    <item fromid="5707" toid="5709" />
+    <item id="5747" />
+    <item fromid="5750" toid="5754" />
+    <item fromid="5866" toid="5868" />
+    <item fromid="7912" toid="7915" />
+    <item fromid="8503" toid="8506" />
+    <item fromid="15393" toid="15398" />
+    <item fromid="16387" toid="16395" />
+    <item fromid="16402" toid="16411" />
+    <item fromid="18450" toid="18452" />
+    <item fromid="16416" toid="16417" />
+    <item fromid="18621" toid="18622" />
+    <item fromid="18624" toid="18625" />
+    <item id="18629" />
+    <item fromid="19784" toid="19789" />
+    <item fromid="19808" toid="19810" />
+    <item fromid="22271" toid="22277" />
+    <item fromid="25106" toid="25123" />
+    <item fromid="25160" toid="25165" />
+    <item fromid="25236" toid="25237" />
+    <item fromid="27273" toid="27276" />
+    <item fromid="25446" toid="25465" />
+    <item fromid="29334" toid="29337" />
+    <item fromid="30428" toid="30447" />
+</tileset>

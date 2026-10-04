@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Splash">
+    <item id="2886" />
+    <item id="2887" />
+    <item id="2888" />
+    <item id="2889" />
+    <item id="2890" />
+    <item id="2891" />
+    <item id="2696" />
+    <item id="2697" />
+    <item id="2698" />
+    <item fromid="2895" toid="2900" />
+</tileset>

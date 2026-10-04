@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature - Flowers">
+    <brush name="flowers (evil)" />
+    <brush name="flowers (ice)" />
+    <brush name="flowers (moon)" />
+    <brush name="flowers (red hanging)" />
+    <brush name="flowers (yellow)" />
+    <brush name="flowers (yellow hanging)" />
+    <brush name="flowers (white)" />
+    <brush name="flowers (white hanging)" />
+    <brush name="sunflowers" />
+</tileset>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Bottom">
+    <item fromid="5630" toid="5653" />
+    <item fromid="5676" toid="5677" />
+    <item fromid="5683" toid="5686" />
+    <item id="6085" />
+    <item fromid="6822" toid="6837" />
+    <item fromid="7102" toid="7105" />
+</tileset>

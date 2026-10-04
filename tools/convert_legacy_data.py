@@ -323,18 +323,66 @@ def is_valid_folder_name(name: str) -> bool:
     return True
 
 
+def resolve_version_root(path: Path) -> Path:
+    """If user pointed to a materials/ subdirectory, resolve to the true version root if items/ or creatures/ exist in parent."""
+    if path.name.lower() == "materials" and path.parent.is_dir():
+        if (path.parent / "items").is_dir() or (path.parent / "creatures").is_dir():
+            return path.parent
+    return path
+
+
+def is_version_dir(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+    if find_case_insensitive_file(path, "materials.xml") is not None:
+        return True
+    materials_sub = path / "materials"
+    if materials_sub.is_dir() and find_case_insensitive_file(materials_sub, "materials.xml") is not None:
+        return True
+    return False
+
+
+def resolve_include_path(base_file: Path, inc_file: str, materials_dir: Path, version_dir: Path) -> Path | None:
+    # 1. Try relative to the file containing the include
+    p1 = find_case_insensitive_file(base_file.parent, inc_file)
+    if p1 and p1.exists():
+        return p1
+    exact1 = (base_file.parent / inc_file).resolve()
+    if exact1.exists():
+        return exact1
+
+    # 2. Try relative to materials_dir
+    p2 = find_case_insensitive_file(materials_dir, inc_file)
+    if p2 and p2.exists():
+        return p2
+    exact2 = (materials_dir / inc_file).resolve()
+    if exact2.exists():
+        return exact2
+
+    # 3. Try relative to version_dir
+    p3 = find_case_insensitive_file(version_dir, inc_file)
+    if p3 and p3.exists():
+        return p3
+    exact3 = (version_dir / inc_file).resolve()
+    if exact3.exists():
+        return exact3
+
+    return None
+
+
 class LegacyVersionReader:
     def __init__(self, base_dir: Path) -> None:
-        self.base_dir = base_dir
+        self.base_dir = resolve_version_root(base_dir)
 
     def discover_versions(self) -> list[Path]:
-        if find_case_insensitive_file(self.base_dir, "materials.xml"):
-            return [self.base_dir]
-        if not self.base_dir.is_dir():
+        resolved = resolve_version_root(self.base_dir)
+        if is_version_dir(resolved):
+            return [resolved]
+        if not resolved.is_dir():
             return []
         versions: list[Path] = []
-        for path in self.base_dir.iterdir():
-            if path.is_dir() and find_case_insensitive_file(path, "materials.xml"):
+        for path in resolved.iterdir():
+            if path.is_dir() and is_version_dir(path):
                 versions.append(path)
         return sorted(
             versions,
@@ -346,105 +394,254 @@ class LegacyVersionReader:
         version_dir: Path,
         log_cb: Callable[[str, str], None] | None = None,
     ) -> LegacyVersionData:
+        version_dir = resolve_version_root(version_dir)
         issues: list[FileIssue] = []
         if log_cb:
             log_cb("INFO", f"[{version_dir.name}] Reading legacy data from {version_dir}")
+
         materials_path = find_case_insensitive_file(version_dir, "materials.xml")
         if not materials_path or not materials_path.exists():
+            materials_sub = version_dir / "materials"
+            if materials_sub.is_dir():
+                materials_path = find_case_insensitive_file(materials_sub, "materials.xml")
+        if not materials_path or not materials_path.exists():
             raise RuntimeError(f"{version_dir}: missing materials.xml")
-        materials_root, messages = parse_root(materials_path)
-        if messages:
-            issues.append(FileIssue(path=materials_path.name, messages=messages))
-            if log_cb:
-                for msg in messages:
-                    log_cb("WARN", f"[{version_dir.name}] {materials_path.name}: {msg}")
-        if materials_root.tag != "materials":
-            raise RuntimeError(f"{materials_path}: expected <materials> root, got <{materials_root.tag}>")
+
+        materials_dir = materials_path.parent
 
         include_files: list[str] = []
         metaitems: list[int] = []
-        for child in materials_root:
-            if child.tag == "include" and "file" in child.attrib:
-                include_files.append(child.attrib["file"])
-            elif child.tag == "metaitem" and "id" in child.attrib:
-                metaitems.append(int(child.attrib["id"]))
-
         borders: list[TopLevelNode] = []
         brushes: list[TopLevelNode] = []
         tilesets: list[TopLevelNode] = []
         sequence = 0
+        visited_includes: set[Path] = set()
 
-        for include_file in include_files:
-            include_path = find_case_insensitive_file(version_dir, include_file) or (version_dir / include_file)
-            if not include_path.exists():
+        def process_include(file_path: Path) -> None:
+            nonlocal sequence
+            canon = file_path.resolve()
+            if canon in visited_includes or not canon.exists():
+                return
+            visited_includes.add(canon)
+            try:
+                rel_path = str(file_path.relative_to(version_dir)).replace("\\", "/")
+            except ValueError:
+                rel_path = file_path.name
+            include_files.append(rel_path)
+
+            try:
+                root_tag, elements, include_messages = parse_top_level_elements(file_path)
+            except Exception as exc:
+                issues.append(FileIssue(path=rel_path, messages=[str(exc)]))
                 if log_cb:
-                    log_cb("WARN", f"[{version_dir.name}] Included file not found: {include_file}")
-                continue
-            root_tag, elements, include_messages = parse_top_level_elements(include_path)
+                    log_cb("ERROR", f"[{version_dir.name}] {rel_path}: {exc}")
+                return
+
             if include_messages:
-                issues.append(FileIssue(path=include_file, messages=include_messages))
+                issues.append(FileIssue(path=rel_path, messages=include_messages))
                 if log_cb:
                     for msg in include_messages:
-                        log_cb("WARN", f"[{version_dir.name}] {include_file}: {msg}")
-            for element in elements:
-                node = TopLevelNode(
-                    source_file=include_file,
-                    root_tag=root_tag,
-                    tag=element.tag,
-                    sequence=sequence,
-                    element=element,
-                )
-                sequence += 1
-                if element.tag == "border":
-                    borders.append(node)
-                elif element.tag == "brush":
-                    brushes.append(node)
-                elif element.tag == "tileset":
-                    tilesets.append(node)
+                        log_cb("WARN", f"[{version_dir.name}] {rel_path}: {msg}")
 
+            for element in elements:
+                if element.tag == "border":
+                    borders.append(
+                        TopLevelNode(
+                            source_file=rel_path,
+                            root_tag=root_tag,
+                            tag=element.tag,
+                            sequence=sequence,
+                            element=element,
+                        )
+                    )
+                    sequence += 1
+                elif element.tag == "brush":
+                    brushes.append(
+                        TopLevelNode(
+                            source_file=rel_path,
+                            root_tag=root_tag,
+                            tag=element.tag,
+                            sequence=sequence,
+                            element=element,
+                        )
+                    )
+                    sequence += 1
+                elif element.tag == "tileset":
+                    tilesets.append(
+                        TopLevelNode(
+                            source_file=rel_path,
+                            root_tag=root_tag,
+                            tag=element.tag,
+                            sequence=sequence,
+                            element=element,
+                        )
+                    )
+                    sequence += 1
+                elif element.tag == "metaitem" and "id" in element.attrib:
+                    try:
+                        metaitems.append(int(element.attrib["id"]))
+                    except ValueError:
+                        pass
+                elif element.tag == "include" and "file" in element.attrib:
+                    target = resolve_include_path(file_path, element.attrib["file"], materials_dir, version_dir)
+                    if target and target.exists():
+                        process_include(target)
+                    else:
+                        missing_str = element.attrib["file"]
+                        issues.append(FileIssue(path=rel_path, messages=[f"Included file not found: {missing_str}"]))
+                        if log_cb:
+                            log_cb("WARN", f"[{version_dir.name}] {rel_path}: Included file not found: {missing_str}")
+
+        process_include(materials_path)
+
+        # Ingest Items
         items: list[TopLevelNode] = []
+        item_paths: list[Path] = []
         for item_file in ITEM_REGISTRY_FILES:
-            item_path = find_case_insensitive_file(version_dir, item_file)
-            if not item_path or not item_path.exists():
-                continue
+            p = find_case_insensitive_file(version_dir, item_file)
+            if p and p.exists() and p not in item_paths:
+                item_paths.append(p)
+
+        items_dir = version_dir / "items"
+        if items_dir.is_dir():
+            for item_file in ITEM_REGISTRY_FILES:
+                p = find_case_insensitive_file(items_dir, item_file)
+                if p and p.exists() and p not in item_paths:
+                    item_paths.append(p)
+
+        for item_path in item_paths:
+            try:
+                rel_item = str(item_path.relative_to(version_dir)).replace("\\", "/")
+            except ValueError:
+                rel_item = item_path.name
             root_tag, elements, item_messages = parse_top_level_elements(item_path)
             if item_messages:
-                issues.append(FileIssue(path=item_file, messages=item_messages))
+                issues.append(FileIssue(path=rel_item, messages=item_messages))
                 if log_cb:
                     for msg in item_messages:
-                        log_cb("WARN", f"[{version_dir.name}] {item_file}: {msg}")
+                        log_cb("WARN", f"[{version_dir.name}] {rel_item}: {msg}")
             for element in elements:
-                items.append(
-                    TopLevelNode(
-                        source_file=item_file,
-                        root_tag=root_tag,
-                        tag=element.tag,
-                        sequence=len(items),
-                        element=element,
+                if element.tag == "item":
+                    items.append(
+                        TopLevelNode(
+                            source_file=rel_item,
+                            root_tag=root_tag,
+                            tag=element.tag,
+                            sequence=len(items),
+                            element=element,
+                        )
                     )
-                )
 
+        # Ingest Creatures
         creatures: list[TopLevelNode] = []
         creatures_path = find_case_insensitive_file(version_dir, "creatures.xml")
+        if not creatures_path and (version_dir / "creatures").is_dir():
+            creatures_path = find_case_insensitive_file(version_dir / "creatures", "creatures.xml")
+
         if creatures_path and creatures_path.exists():
+            try:
+                rel_c = str(creatures_path.relative_to(version_dir)).replace("\\", "/")
+            except ValueError:
+                rel_c = creatures_path.name
             root_tag, elements, creature_messages = parse_top_level_elements(creatures_path)
             if creature_messages:
-                issues.append(FileIssue(path="creatures.xml", messages=creature_messages))
+                issues.append(FileIssue(path=rel_c, messages=creature_messages))
                 if log_cb:
                     for msg in creature_messages:
-                        log_cb("WARN", f"[{version_dir.name}] creatures.xml: {msg}")
+                        log_cb("WARN", f"[{version_dir.name}] {rel_c}: {msg}")
             for element in elements:
-                creatures.append(
-                    TopLevelNode(
-                        source_file="creatures.xml",
-                        root_tag=root_tag,
-                        tag=element.tag,
-                        sequence=len(creatures),
-                        element=element,
+                if element.tag == "creature":
+                    creatures.append(
+                        TopLevelNode(
+                            source_file=rel_c,
+                            root_tag=root_tag,
+                            tag=element.tag,
+                            sequence=len(creatures),
+                            element=element,
+                        )
                     )
-                )
 
+        # If no standard creatures.xml was found, check for partitioned monsters.xml and npcs.xml
+        if not creatures:
+            creatures_dir = version_dir / "creatures" if (version_dir / "creatures").is_dir() else version_dir
+            monsters_path = find_case_insensitive_file(creatures_dir, "monsters.xml") or find_case_insensitive_file(version_dir, "monsters.xml")
+            npcs_path = find_case_insensitive_file(creatures_dir, "npcs.xml") or find_case_insensitive_file(version_dir, "npcs.xml")
+
+            if monsters_path and monsters_path.exists():
+                try:
+                    rel_m = str(monsters_path.relative_to(version_dir)).replace("\\", "/")
+                except ValueError:
+                    rel_m = monsters_path.name
+                root_tag, elements, m_messages = parse_top_level_elements(monsters_path)
+                if m_messages:
+                    issues.append(FileIssue(path=rel_m, messages=m_messages))
+                    if log_cb:
+                        for msg in m_messages:
+                            log_cb("WARN", f"[{version_dir.name}] {rel_m}: {msg}")
+                for element in elements:
+                    if element.tag in ("monster", "creature"):
+                        c_elem = ET.Element("creature")
+                        for k, v in element.attrib.items():
+                            k_lower = k.lower()
+                            if k_lower in ("lookaddon", "lookaddons"):
+                                c_elem.attrib["lookaddons"] = v
+                            else:
+                                c_elem.attrib[k_lower] = v
+                        if "type" not in c_elem.attrib:
+                            c_elem.attrib["type"] = "monster"
+                        creatures.append(
+                            TopLevelNode(
+                                source_file=rel_m,
+                                root_tag=root_tag,
+                                tag="creature",
+                                sequence=len(creatures),
+                                element=c_elem,
+                            )
+                        )
+
+            if npcs_path and npcs_path.exists():
+                try:
+                    rel_n = str(npcs_path.relative_to(version_dir)).replace("\\", "/")
+                except ValueError:
+                    rel_n = npcs_path.name
+                root_tag, elements, n_messages = parse_top_level_elements(npcs_path)
+                if n_messages:
+                    issues.append(FileIssue(path=rel_n, messages=n_messages))
+                    if log_cb:
+                        for msg in n_messages:
+                            log_cb("WARN", f"[{version_dir.name}] {rel_n}: {msg}")
+                for element in elements:
+                    if element.tag in ("npc", "creature"):
+                        c_elem = ET.Element("creature")
+                        for k, v in element.attrib.items():
+                            k_lower = k.lower()
+                            if k_lower in ("lookaddon", "lookaddons"):
+                                c_elem.attrib["lookaddons"] = v
+                            else:
+                                c_elem.attrib[k_lower] = v
+                        if "type" not in c_elem.attrib:
+                            c_elem.attrib["type"] = "npc"
+                        creatures.append(
+                            TopLevelNode(
+                                source_file=rel_n,
+                                root_tag=root_tag,
+                                tag="creature",
+                                sequence=len(creatures),
+                                element=c_elem,
+                            )
+                        )
+
+        # Ingest items.otb
         items_otb = find_case_insensitive_file(version_dir, "items.otb")
+        if not items_otb or not items_otb.exists():
+            for sub in ("items", "materials"):
+                subdir = version_dir / sub
+                if subdir.is_dir():
+                    candidate = find_case_insensitive_file(subdir, "items.otb")
+                    if candidate and candidate.exists():
+                        items_otb = candidate
+                        break
+
         if log_cb:
             log_cb(
                 "INFO",
@@ -503,12 +700,23 @@ class Normalizer:
                         assigned_creature_names.add(child.attrib["name"])
 
         creature_registry = [clone_element(node.element) for node in legacy.creatures if node.tag == "creature"]
-        creature_names_in_order = [element.attrib["name"] for element in creature_registry if "name" in element.attrib]
-        creature_type_by_name = {element.attrib["name"]: element.attrib.get("type", "") for element in creature_registry if "name" in element.attrib}
-        unassigned_creatures = [name for name in creature_names_in_order if name not in assigned_creature_names]
-        unassigned_npcs = [name for name in unassigned_creatures if creature_type_by_name.get(name, "").lower() == "npc"]
-        unassigned_npc_set = set(unassigned_npcs)
-        unassigned_other_creatures = [name for name in unassigned_creatures if name not in unassigned_npc_set]
+        unassigned_npcs: list[str] = []
+        unassigned_other_creatures: list[str] = []
+        seen_npcs: set[str] = set()
+        seen_others: set[str] = set()
+
+        for element in creature_registry:
+            name = element.attrib.get("name")
+            if not name or name in assigned_creature_names:
+                continue
+            if element.attrib.get("type", "").lower() == "npc":
+                if name not in seen_npcs:
+                    seen_npcs.add(name)
+                    unassigned_npcs.append(name)
+            else:
+                if name not in seen_others:
+                    seen_others.add(name)
+                    unassigned_other_creatures.append(name)
 
         if unassigned_npcs:
             if log_cb:
@@ -858,16 +1066,18 @@ def summarize_issues(issues: list[FileIssue]) -> list[str]:
 
 
 def inspect_source_path(path: Path) -> dict[str, object]:
-    if not path.exists() or not path.is_dir():
+    resolved_path = resolve_version_root(path)
+    if not resolved_path.exists() or not resolved_path.is_dir():
         return {
             "is_valid": False,
             "is_single_version": False,
             "versions": [],
             "version_dirs": {},
+            "resolved_path": str(resolved_path),
             "error": f"Path does not exist or is not a directory: {path}",
         }
 
-    reader = LegacyVersionReader(path)
+    reader = LegacyVersionReader(resolved_path)
     versions = reader.discover_versions()
     if not versions:
         return {
@@ -875,10 +1085,11 @@ def inspect_source_path(path: Path) -> dict[str, object]:
             "is_single_version": False,
             "versions": [],
             "version_dirs": {},
+            "resolved_path": str(resolved_path),
             "error": "No legacy client folders found (no materials.xml detected in path or subdirectories).",
         }
 
-    is_single = find_case_insensitive_file(path, "materials.xml") is not None
+    is_single = is_version_dir(resolved_path)
     v_dict = {v.name: v for v in versions}
     return {
         "is_valid": True,
@@ -886,25 +1097,31 @@ def inspect_source_path(path: Path) -> dict[str, object]:
         "versions": [v.name for v in versions],
         "version_dirs": v_dict,
         "version_paths": v_dict,
+        "resolved_path": str(resolved_path),
         "error": None,
     }
 
 
 def inspect_legacy_details(version_dir: Path, log_cb: Callable[[str, str], None] | None = None) -> dict[str, object]:
+    version_dir = resolve_version_root(version_dir)
     reader = LegacyVersionReader(version_dir.parent if version_dir.parent.is_dir() else version_dir)
     legacy = reader.read(version_dir, log_cb=log_cb)
 
     files = []
-    for p in sorted(version_dir.iterdir()):
+    for p in sorted(version_dir.rglob("*")):
         if p.is_file():
+            rel_name = str(p.relative_to(version_dir)).replace("\\", "/")
             files.append({
-                "name": p.name,
+                "name": rel_name,
                 "size": p.stat().st_size,
             })
+
+    is_partitioned = any("/" in f["name"] for f in files)
 
     return {
         "version": legacy.version,
         "version_dir": str(version_dir),
+        "structure_layout": "Partitioned (Crystal / Forked Layout)" if is_partitioned else "Flat (Standard Legacy Layout)",
         "files": files,
         "include_files": legacy.include_files,
         "metaitems": legacy.metaitems,
@@ -919,6 +1136,7 @@ def inspect_legacy_details(version_dir: Path, log_cb: Callable[[str, str], None]
 
 
 def preview_normalized(version_dir: Path, log_cb: Callable[[str, str], None] | None = None) -> dict[str, object]:
+    version_dir = resolve_version_root(version_dir)
     reader = LegacyVersionReader(version_dir.parent if version_dir.parent.is_dir() else version_dir)
     legacy = reader.read(version_dir, log_cb=log_cb)
     normalizer = Normalizer()

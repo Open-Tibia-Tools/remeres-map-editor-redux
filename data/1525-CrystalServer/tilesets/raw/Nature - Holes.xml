@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature - Holes">
+    <item id="967" />
+    <item fromid="7515" toid="7518" />
+    <item fromid="7520" toid="7524" />
+    <item id="7737" />
+    <item id="7749" />
+    <item id="7762" />
+</tileset>

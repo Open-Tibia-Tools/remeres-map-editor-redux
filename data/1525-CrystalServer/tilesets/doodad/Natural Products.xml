@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Natural Products">
+    <brush name="carrot sprouts" />
+    <brush name="sand trickle (east)" />
+    <brush name="sand trickle (south)" />
+</tileset>

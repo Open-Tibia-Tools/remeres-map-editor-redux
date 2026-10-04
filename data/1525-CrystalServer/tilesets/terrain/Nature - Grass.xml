@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature - Grass">
+    <brush name="grass tufts" />
+    <brush name="dry grass tufts" />
+    <brush name="grassy tufts" />
+    <brush name="venorean grass tufts" />
+    <brush name="tall jungle grass" />
+    <brush name="tall swamp grass" />
+    <brush name="grass (green small)" />
+    <brush name="grass (green small with snow)" />
+    <brush name="grass drift (horizontal)" />
+    <brush name="grass drift (vertical)" />
+    <brush name="mini pepper root grass" />
+    <brush name="pepper root grass" />
+    <brush name="high grass" />
+    <brush name="necrotic grass" />
+</tileset>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Levers">
+    <brush name="colored levers" />
+    <item fromid="2772" toid="2773" />
+    <item fromid="8911" toid="8914" />
+    <item fromid="30408" toid="30415" />
+</tileset>

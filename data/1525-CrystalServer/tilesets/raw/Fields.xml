@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Fields">
+    <item fromid="1716" toid="1721" />
+    <item fromid="14144" toid="14146" />
+    <item fromid="19237" toid="19242" />
+</tileset>

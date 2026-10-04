@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature - Stones (Crystals)">
+    <brush name="crystals cave (blue)" />
+    <brush name="crystals cave (green)" />
+    <brush name="crystals cave (light blue)" />
+    <brush name="crystals cave (red)" />
+    <brush name="crystals cave (prism)" />
+    <brush name="crystals cave (white)" />
+    <brush name="crystals large (white)" />
+    <brush name="crystals small (white)" />
+    <brush name="crystals (white)" />
+    <brush name="crystals large (blue)" />
+    <brush name="crystals (purple)" />
+    <brush name="huge red crystals" />
+    <brush name="large fallen crystal" />
+    <brush name="green crystal stalagmite" />
+    <brush name="green crystal wall" />
+    <brush name="green crystal rods" />
+    <brush name="blue crystal wall" />
+    <brush name="blue crystal rods" />
+    <brush name="red crystal wall" />
+    <brush name="red crystal rods" />
+    <brush name="red crystal geode" />
+    <brush name="harverstable crystal" />
+    <brush name="crystal resonator" />
+</tileset>
