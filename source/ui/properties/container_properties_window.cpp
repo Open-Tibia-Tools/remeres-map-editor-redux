@@ -12,9 +12,7 @@
 #include "util/image_manager.h"
 #include "app/application.h"
 #include "ui/find_item_window.h"
-#include "ui/gui_ids.h"
-#include "ui/properties/properties_window.h"
-#include "ui/properties/old_properties_window.h"
+#include "ui/properties/item_properties_window.h"
 #include "ui/tile_properties/container_grid_canvas.h"
 
 ContainerPropertiesWindow::ContainerPropertiesWindow(wxWindow* win_parent, const Map* map, const Tile* tile_parent, Item* item, wxPoint pos) :
@@ -210,12 +208,7 @@ void ContainerPropertiesWindow::OnEditItem(wxCommandEvent& WXUNUSED(event)) {
 	Item* sub_item = container->getItem(sub_item_index);
 	wxPoint newDialogAt = GetPosition() + FROM_DIP(this, wxPoint(20, 20));
 
-	wxDialog* d;
-	if (edit_map->getVersion().otbm >= MAP_OTBM_4) {
-		d = newd PropertiesWindow(this, edit_map, nullptr, sub_item, newDialogAt);
-	} else {
-		d = newd OldPropertiesWindow(this, edit_map, nullptr, sub_item, newDialogAt);
-	}
+	wxDialog* d = newd ItemPropertiesWindow(this, edit_map, nullptr, sub_item, newDialogAt);
 
 	d->ShowModal();
 	d->Destroy();

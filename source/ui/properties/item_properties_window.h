@@ -15,8 +15,8 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#ifndef RME_OLD_PROPERTIES_WINDOW_H_
-#define RME_OLD_PROPERTIES_WINDOW_H_
+#ifndef RME_ITEM_PROPERTIES_WINDOW_H_
+#define RME_ITEM_PROPERTIES_WINDOW_H_
 
 #include "app/main.h"
 
@@ -26,10 +26,10 @@
 class ContainerItemButton;
 class ContainerItemPopupMenu;
 
-class OldPropertiesWindow : public ObjectPropertiesWindowBase {
+class ItemPropertiesWindow : public ObjectPropertiesWindowBase {
 public:
-	OldPropertiesWindow(wxWindow* parent, const Map* map, const Tile* tile, Item* item, wxPoint = wxDefaultPosition);
-	~OldPropertiesWindow() override;
+	ItemPropertiesWindow(wxWindow* parent, const Map* map, const Tile* tile, Item* item, wxPoint = wxDefaultPosition);
+	~ItemPropertiesWindow() override;
 
 	void OnFocusChange(wxFocusEvent&);
 	void OnChar(wxKeyEvent& evt);
