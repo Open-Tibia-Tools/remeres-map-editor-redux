@@ -947,7 +947,7 @@ void ClientVersionPage::OnPropertyChanged(wxPropertyGridEvent& event) {
 		wxStringTokenizer tokenizer(value.As<wxString>(), ", ");
 		while (tokenizer.HasMoreTokens()) {
 			long version = 0;
-			if (tokenizer.GetNextToken().ToLong(&version) && version >= 1 && version <= 4) {
+			if (tokenizer.GetNextToken().ToLong(&version) && version >= 1 && version <= 5) {
 				client->getMapVersionsSupported().push_back(static_cast<MapVersionID>(version - 1));
 			}
 		}
