@@ -2,9 +2,11 @@
 #define RME_UI_MENUBAR_FILE_MENU_HANDLER_H
 
 #include <wx/wx.h>
+#include <wx/weakref.h>
 
 class MainFrame;
 class MainMenuBar;
+class PreferencesWindow;
 
 class FileMenuHandler : public wxEvtHandler {
 public:
@@ -35,6 +37,7 @@ public:
 protected:
 	MainFrame* frame;
 	MainMenuBar* menubar;
+	wxWeakRef<PreferencesWindow> preferences_dialog_;
 };
 
 #endif

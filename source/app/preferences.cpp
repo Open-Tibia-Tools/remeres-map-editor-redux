@@ -112,12 +112,20 @@ void PreferencesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 	Apply();
-	EndModal(wxID_OK);
+	if (IsModal()) {
+		EndModal(wxID_OK);
+	} else {
+		Destroy();
+	}
 }
 
 void PreferencesWindow::OnClickCancel(wxCommandEvent& WXUNUSED(event)) {
 	client_version_page->DiscardPendingChanges();
-	EndModal(wxID_CANCEL);
+	if (IsModal()) {
+		EndModal(wxID_CANCEL);
+	} else {
+		Destroy();
+	}
 }
 
 void PreferencesWindow::OnClickApply(wxCommandEvent& WXUNUSED(event)) {
@@ -138,11 +146,10 @@ void PreferencesWindow::Apply() {
 }
 
 void PreferencesWindow::OnClose(wxCloseEvent& event) {
-	if (!IsModal()) {
-		event.Skip();
-		return;
-	}
-
 	client_version_page->DiscardPendingChanges();
-	EndModal(wxID_CANCEL);
+	if (IsModal()) {
+		EndModal(wxID_CANCEL);
+	} else {
+		Destroy();
+	}
 }

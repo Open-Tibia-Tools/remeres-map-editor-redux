@@ -28,7 +28,6 @@
 #include "rendering/core/render_interaction_state.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/sprite_batch.h"
-#include "rendering/drawers/cursors/brush_cursor_drawer.h"
 #include "rendering/drawers/cursors/drag_shadow_drawer.h"
 #include "rendering/drawers/cursors/live_cursor_drawer.h"
 #include "rendering/drawers/entities/creature_drawer.h"
@@ -42,8 +41,10 @@
 #include "rendering/drawers/overlays/hook_indicator_drawer.h"
 #include "rendering/drawers/overlays/lua_overlay_drawer.h"
 #include "rendering/drawers/overlays/marker_drawer.h"
+#include "rendering/drawers/overlays/marker_label_drawer.h"
 #include "rendering/drawers/overlays/preview_drawer.h"
 #include "rendering/drawers/overlays/selection_drawer.h"
+#include "rendering/drawers/overlays/zone_overlay_drawer.h"
 #include "rendering/drawers/tiles/floor_drawer.h"
 #include "rendering/drawers/tiles/shade_drawer.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
@@ -65,8 +66,8 @@ class MapDrawer {
 	GridDrawer grid_drawer;
 	LiveCursorDrawer live_cursor_drawer;
 	SelectionDrawer selection_drawer;
-	BrushCursorDrawer brush_cursor_drawer;
 	BrushOverlayDrawer brush_overlay_drawer;
+	rme::rendering::ZoneOverlayDrawer zone_overlay_drawer;
 	DragShadowDrawer drag_shadow_drawer;
 	FloorDrawer floor_drawer;
 	SpriteDrawer sprite_drawer;
@@ -76,6 +77,7 @@ class MapDrawer {
 	DoorIndicatorDrawer door_indicator_drawer;
 	ItemDrawer item_drawer;
 	MarkerDrawer marker_drawer;
+	rme::rendering::MarkerLabelDrawer marker_label_drawer;
 	PreviewDrawer preview_drawer;
 	ShadeDrawer shade_drawer;
 	TileRenderer tile_renderer;
@@ -103,6 +105,7 @@ public:
 	void DrawUIOverlays(NVGcontext* vg);
 	void ClearFrameOverlays();
 	void DrawCreatureNames(NVGcontext* vg);
+	void DrawMarkerLabels(NVGcontext* vg);
 	bool hasOverlays();
 
 	void DrawLight();
@@ -196,7 +199,7 @@ private:
 		}
 	};
 
-	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client);
+	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, const BaseMap* secondary_map = nullptr);
 	void CollectOverlays();
 	bool renderers_initialized = false;
 	OverlayCacheState overlay_cache;

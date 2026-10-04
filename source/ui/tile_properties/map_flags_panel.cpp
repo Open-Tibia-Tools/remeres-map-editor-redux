@@ -79,19 +79,19 @@ void MapFlagsPanel::OnToggleFlag(wxCommandEvent& event) {
 	new_tile->setPZ(chk_pz->GetValue());
 
 	if (chk_nopvp->GetValue()) {
-		new_tile->setMapFlags(TILESTATE_NOPVP);
+		new_tile->addMapFlags(TILESTATE_NOPVP);
 	} else {
 		new_tile->unsetMapFlags(TILESTATE_NOPVP);
 	}
 
 	if (chk_nologout->GetValue()) {
-		new_tile->setMapFlags(TILESTATE_NOLOGOUT);
+		new_tile->addMapFlags(TILESTATE_NOLOGOUT);
 	} else {
 		new_tile->unsetMapFlags(TILESTATE_NOLOGOUT);
 	}
 
 	if (chk_pvpzone->GetValue()) {
-		new_tile->setMapFlags(TILESTATE_PVPZONE);
+		new_tile->addMapFlags(TILESTATE_PVPZONE);
 	} else {
 		new_tile->unsetMapFlags(TILESTATE_PVPZONE);
 	}

@@ -23,6 +23,7 @@
 #include "rendering/core/graphics.h"
 #include "ui/gui.h"
 #include "util/image_manager.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include "item_definitions/core/item_definition_store.h"
 #include <glad/glad.h>
 #include <format>
@@ -141,14 +142,21 @@ void ReplaceItemsListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t 
 
 	const ReplacingItem& item = m_items.at(index);
 	const auto type1 = g_item_definitions.get(item.replaceId);
-	Sprite* sprite1 = type1 ? g_gui.gfx.getSprite(type1.clientId()) : nullptr;
+	const uint16_t cid1 = type1 ? type1.clientId() : 0;
+	Sprite* sprite1 = cid1 ? g_gui.gfx.getSprite(cid1) : nullptr;
+	const auto tech1 = rme::rendering::TechnicalItemRegistry::Classify(item.replaceId, cid1);
+
 	const auto type2 = g_item_definitions.get(item.withId);
-	Sprite* sprite2 = type2 ? g_gui.gfx.getSprite(type2.clientId()) : nullptr;
+	const uint16_t cid2 = type2 ? type2.clientId() : 0;
+	Sprite* sprite2 = cid2 ? g_gui.gfx.getSprite(cid2) : nullptr;
+	const auto tech2 = rme::rendering::TechnicalItemRegistry::Classify(item.withId, cid2);
 
-	if (sprite1 && sprite2) {
-		int x = rect.GetX();
-		int y = rect.GetY();
+	int x = rect.GetX();
+	int y = rect.GetY();
 
+	if (tech1 != rme::rendering::TileIndicatorType::None) {
+		rme::rendering::DrawNanoVGIndicatorBadge(vg, tech1, static_cast<float>(x + 4), static_cast<float>(y + 4), 32.0f);
+	} else if (sprite1) {
 		int tex1 = GetOrCreateSpriteTexture(vg, sprite1);
 		if (tex1 > 0) {
 			NVGpaint imgPaint = nvgImagePattern(vg, x + 4, y + 4, 32, 32, 0, tex1, 1.0f);
@@ -157,15 +165,19 @@ void ReplaceItemsListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t 
 			nvgFillPaint(vg, imgPaint);
 			nvgFill(vg);
 		}
+	}
 
-		if (m_arrow_image > 0) {
-			NVGpaint arrowPaint = nvgImagePattern(vg, x + 38, y + 10, 16, 16, 0, m_arrow_image, 1.0f);
-			nvgBeginPath(vg);
-			nvgRect(vg, x + 38, y + 10, 16, 16);
-			nvgFillPaint(vg, arrowPaint);
-			nvgFill(vg);
-		}
+	if (m_arrow_image > 0) {
+		NVGpaint arrowPaint = nvgImagePattern(vg, x + 38, y + 10, 16, 16, 0, m_arrow_image, 1.0f);
+		nvgBeginPath(vg);
+		nvgRect(vg, x + 38, y + 10, 16, 16);
+		nvgFillPaint(vg, arrowPaint);
+		nvgFill(vg);
+	}
 
+	if (tech2 != rme::rendering::TileIndicatorType::None) {
+		rme::rendering::DrawNanoVGIndicatorBadge(vg, tech2, static_cast<float>(x + 56), static_cast<float>(y + 4), 32.0f);
+	} else if (sprite2) {
 		int tex2 = GetOrCreateSpriteTexture(vg, sprite2);
 		if (tex2 > 0) {
 			NVGpaint imgPaint = nvgImagePattern(vg, x + 56, y + 4, 32, 32, 0, tex2, 1.0f);
@@ -174,33 +186,31 @@ void ReplaceItemsListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t 
 			nvgFillPaint(vg, imgPaint);
 			nvgFill(vg);
 		}
+	}
 
-		if (IsSelected(index)) {
-			wxColour textColour = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
-			nvgFillColor(vg, nvgRGBA(textColour.Red(), textColour.Green(), textColour.Blue(), 255));
-		} else {
-			wxColour textColour = wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT);
-			nvgFillColor(vg, nvgRGBA(textColour.Red(), textColour.Green(), textColour.Blue(), 255));
+	if (IsSelected(index)) {
+		wxColour textColour = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
+		nvgFillColor(vg, nvgRGBA(textColour.Red(), textColour.Green(), textColour.Blue(), 255));
+	} else {
+		wxColour textColour = wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT);
+		nvgFillColor(vg, nvgRGBA(textColour.Red(), textColour.Green(), textColour.Blue(), 255));
+	}
+
+	nvgFontSize(vg, 12.0f);
+	nvgFontFace(vg, "sans");
+	nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+	nvgText(vg, x + 104, y + 20, std::format("Replace: {} With: {}", item.replaceId, item.withId).c_str(), nullptr);
+
+	if (item.complete) {
+		int rightX = rect.GetRight() - 100;
+		if (m_flag_image > 0) {
+			NVGpaint flagPaint = nvgImagePattern(vg, rightX + 70, y + 10, 16, 16, 0, m_flag_image, 1.0f);
+			nvgBeginPath(vg);
+			nvgRect(vg, rightX + 70, y + 10, 16, 16);
+			nvgFillPaint(vg, flagPaint);
+			nvgFill(vg);
 		}
-
-		nvgFontSize(vg, 12.0f);
-		nvgFontFace(vg, "sans");
-		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE); // Text alignment inside rect? No, absolute coords.
-		// nvgText expects x, y for baseline or according to align.
-		// NVG_ALIGN_MIDDLE means y is vertical center.
-		nvgText(vg, x + 104, y + 20, std::format("Replace: {} With: {}", item.replaceId, item.withId).c_str(), nullptr);
-
-		if (item.complete) {
-			int rightX = rect.GetRight() - 100;
-			if (m_flag_image > 0) {
-				NVGpaint flagPaint = nvgImagePattern(vg, rightX + 70, y + 10, 16, 16, 0, m_flag_image, 1.0f);
-				nvgBeginPath(vg);
-				nvgRect(vg, rightX + 70, y + 10, 16, 16);
-				nvgFillPaint(vg, flagPaint);
-				nvgFill(vg);
-			}
-			nvgText(vg, rightX, y + 20, std::format("Total: {}", item.total).c_str(), nullptr);
-		}
+		nvgText(vg, rightX, y + 20, std::format("Total: {}", item.total).c_str(), nullptr);
 	}
 }
 

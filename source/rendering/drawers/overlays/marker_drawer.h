@@ -4,11 +4,9 @@
 #include "rendering/core/drawing_options.h"
 #include <cstdint>
 
-class SpriteDrawer;
 class Tile;
 class Waypoint;
 
-class Map;
 class SpriteBatch;
 struct RenderFrameContext;
 
@@ -17,7 +15,7 @@ public:
 	MarkerDrawer();
 	~MarkerDrawer();
 
-	void draw(SpriteBatch& sprite_batch, SpriteDrawer* drawer, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, uint32_t current_house_id, Map& map, const DrawingOptions& options, const RenderFrameContext& ctx);
+	void draw(SpriteBatch& sprite_batch, int draw_x, int draw_y, const Tile* tile, const Waypoint* waypoint, const DrawingOptions& options, const RenderFrameContext& ctx, float depth = 0.0f);
 };
 
 #endif

@@ -20,6 +20,7 @@
 #include "app/client_version.h"
 #include "app/main.h"
 #include "ui/managers/vsync_policy.h"
+#include "rendering/indicators/technical_item_registry.h"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
@@ -206,6 +207,35 @@ static std::string toLower(std::string s) {
 	return s;
 }
 
+static void populateDefaultTechnicalItems(toml::table& table) {
+	if (table.contains("technical_items")) {
+		return;
+	}
+
+	const auto defaults = rme::rendering::TechnicalItemRegistry::CreateDefaultTechnicalLists();
+	auto make_category = [](const std::vector<uint32_t>& server_ids, const std::vector<uint32_t>& client_ids) {
+		toml::table cat;
+		toml::array s_arr;
+		for (uint32_t id : server_ids) {
+			s_arr.push_back(static_cast<int64_t>(id));
+		}
+		toml::array c_arr;
+		for (uint32_t id : client_ids) {
+			c_arr.push_back(static_cast<int64_t>(id));
+		}
+		cat.insert_or_assign("server_ids", std::move(s_arr));
+		cat.insert_or_assign("client_ids", std::move(c_arr));
+		return cat;
+	};
+
+	toml::table tech_sec;
+	tech_sec.insert_or_assign("invisible_stairs", make_category(defaults.invisible_stairs.server_ids, defaults.invisible_stairs.client_ids));
+	tech_sec.insert_or_assign("invisible_walkable", make_category(defaults.invisible_walkable.server_ids, defaults.invisible_walkable.client_ids));
+	tech_sec.insert_or_assign("invisible_walls", make_category(defaults.invisible_walls.server_ids, defaults.invisible_walls.client_ids));
+	tech_sec.insert_or_assign("primal_lights", make_category(defaults.primal_lights.server_ids, defaults.primal_lights.client_ids));
+	table.insert_or_assign("technical_items", std::move(tech_sec));
+}
+
 void Settings::IO(IOMode mode) {
 	if (mode == LOAD) {
 		try {
@@ -215,6 +245,10 @@ void Settings::IO(IOMode mode) {
 		} catch (const std::exception& err) {
 			spdlog::error("Failed to load config.toml: {}", err.what());
 		}
+		populateDefaultTechnicalItems(g_settings_table);
+		rme::rendering::TechnicalItemRegistry::Initialize(g_settings_table);
+	} else if (mode == DEFAULT || mode == SAVE) {
+		populateDefaultTechnicalItems(g_settings_table);
 	}
 
 	toml::table* root = &g_settings_table;
@@ -350,6 +384,7 @@ void Settings::IO(IOMode mode) {
 	Bool(SHOW_TOWNS, false);
 	Bool(ALWAYS_SHOW_ZONES, true);
 	Bool(EXT_HOUSE_SHADER, true);
+	Bool(EXT_PATHING_SHADER, true);
 	Bool(DRAW_LOCKED_DOOR, false);
 	Bool(SHOW_AS_MINIMAP, false);
 
@@ -444,10 +479,68 @@ void Settings::IO(IOMode mode) {
 	Int(CURSOR_GREEN, 166);
 	Int(CURSOR_BLUE, 0);
 	Int(CURSOR_ALPHA, 128);
+	Int(CURSOR_BLEND_MODE, 0);
 	Int(CURSOR_ALT_RED, 0);
 	Int(CURSOR_ALT_GREEN, 166);
 	Int(CURSOR_ALT_BLUE, 0);
 	Int(CURSOR_ALT_ALPHA, 128);
+	Int(CURSOR_ALT_BLEND_MODE, 0);
+
+	section("Zones");
+	Bool(ZONE_BORDERS_ENABLED, false);
+	Int(ZONE_BORDER_COLOR_R, 13);
+	Int(ZONE_BORDER_COLOR_G, 13);
+	Int(ZONE_BORDER_COLOR_B, 18);
+	Int(ZONE_BORDER_COLOR_A, 250);
+	Int(ZONE_BORDER_BLEND_MODE, 0);
+
+	Int(ZONE_PZ_COLOR_R, 20);
+	Int(ZONE_PZ_COLOR_G, 117);
+	Int(ZONE_PZ_COLOR_B, 255);
+	Int(ZONE_PZ_COLOR_A, 122);
+	Int(ZONE_PZ_BLEND_MODE, 0);
+
+	Int(ZONE_NOPVP_COLOR_R, 0);
+	Int(ZONE_NOPVP_COLOR_G, 219);
+	Int(ZONE_NOPVP_COLOR_B, 92);
+	Int(ZONE_NOPVP_COLOR_A, 117);
+	Int(ZONE_NOPVP_BLEND_MODE, 0);
+
+	Int(ZONE_NOLOGOUT_COLOR_R, 255);
+	Int(ZONE_NOLOGOUT_COLOR_G, 122);
+	Int(ZONE_NOLOGOUT_COLOR_B, 0);
+	Int(ZONE_NOLOGOUT_COLOR_A, 122);
+	Int(ZONE_NOLOGOUT_BLEND_MODE, 0);
+
+	Int(ZONE_PVP_COLOR_R, 245);
+	Int(ZONE_PVP_COLOR_G, 26);
+	Int(ZONE_PVP_COLOR_B, 51);
+	Int(ZONE_PVP_COLOR_A, 122);
+	Int(ZONE_PVP_BLEND_MODE, 0);
+
+	Int(ZONE_BLOCKING_COLOR_R, 0);
+	Int(ZONE_BLOCKING_COLOR_G, 0);
+	Int(ZONE_BLOCKING_COLOR_B, 0);
+	Int(ZONE_BLOCKING_COLOR_A, 89);
+	Int(ZONE_BLOCKING_BLEND_MODE, 0);
+
+	Int(ZONE_SPAWN_COLOR_R, 255);
+	Int(ZONE_SPAWN_COLOR_G, 0);
+	Int(ZONE_SPAWN_COLOR_B, 128);
+	Int(ZONE_SPAWN_COLOR_A, 89);
+	Int(ZONE_SPAWN_BLEND_MODE, 1);
+
+	Int(HOUSE_ACTIVE_COLOR_R, 89);
+	Int(HOUSE_ACTIVE_COLOR_G, 191);
+	Int(HOUSE_ACTIVE_COLOR_B, 13);
+	Int(HOUSE_ACTIVE_COLOR_A, 133);
+	Int(HOUSE_ACTIVE_BLEND_MODE, 1);
+
+	Int(HOUSE_INACTIVE_COLOR_R, 92);
+	Int(HOUSE_INACTIVE_COLOR_G, 56);
+	Int(HOUSE_INACTIVE_COLOR_B, 166);
+	Int(HOUSE_INACTIVE_COLOR_A, 133);
+	Int(HOUSE_INACTIVE_BLEND_MODE, 1);
 
 	section("UI");
 	Bool(USE_LARGE_CONTAINER_ICONS, true);

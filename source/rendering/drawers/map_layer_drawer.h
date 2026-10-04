@@ -19,6 +19,7 @@
 #define RME_MAP_LAYER_DRAWER_H
 
 class Map;
+class BaseMap;
 class LiveClient;
 class TileRenderer;
 class GridDrawer;
@@ -26,16 +27,21 @@ struct RenderFrameContext;
 class SpriteBatch;
 class ChunkCacheManager;
 
+namespace rme::rendering {
+class ZoneOverlayDrawer;
+}
+
 class MapLayerDrawer {
 public:
-	MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, Map& map);
+	MapLayerDrawer(TileRenderer* tile_renderer, GridDrawer* grid_drawer, rme::rendering::ZoneOverlayDrawer* zone_overlay_drawer, Map& map);
 	~MapLayerDrawer();
 
-	void Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx, ChunkCacheManager* chunk_cache = nullptr);
+	void Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live_client, const RenderFrameContext& ctx, ChunkCacheManager* chunk_cache = nullptr, const BaseMap* secondary_map = nullptr);
 
 private:
 	TileRenderer* tile_renderer;
 	GridDrawer* grid_drawer;
+	rme::rendering::ZoneOverlayDrawer* zone_overlay_drawer;
 	Map& map;
 };
 

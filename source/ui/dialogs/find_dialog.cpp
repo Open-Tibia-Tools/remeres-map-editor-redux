@@ -5,6 +5,7 @@
 #include "ui/gui.h"
 #include "ui/theme.h"
 #include "brushes/raw/raw_brush.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include "util/image_manager.h"
 #include <glad/glad.h>
 #include <nanovg.h>
@@ -353,16 +354,29 @@ void FindDialogListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t n)
 		nvgText(vg, rect.x + 40, rect.y + rect.height / 2.0f, "Please enter your search string.", nullptr);
 	} else {
 		ASSERT(n < brushlist.size());
-		Sprite* spr = g_gui.gfx.getSprite(brushlist[n]->getLookID());
-		if (spr) {
-			int tex = GetOrCreateSpriteTexture(vg, spr);
-			if (tex > 0) {
-				int icon_size = rect.height;
-				NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
-				nvgBeginPath(vg);
-				nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
-				nvgFillPaint(vg, imgPaint);
-				nvgFill(vg);
+		const Brush* brush = brushlist[n];
+		auto tech = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(brush);
+		if (tech != rme::rendering::TileIndicatorType::None) {
+			const int icon_size = rect.height;
+			rme::rendering::DrawNanoVGIndicatorBadge(
+				vg,
+				tech,
+				static_cast<float>(rect.x),
+				static_cast<float>(rect.y),
+				static_cast<float>(icon_size)
+			);
+		} else {
+			Sprite* spr = g_gui.gfx.getSprite(brush->getLookID());
+			if (spr) {
+				int tex = GetOrCreateSpriteTexture(vg, spr);
+				if (tex > 0) {
+					int icon_size = rect.height;
+					NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
+					nvgBeginPath(vg);
+					nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
+					nvgFillPaint(vg, imgPaint);
+					nvgFill(vg);
+				}
 			}
 		}
 

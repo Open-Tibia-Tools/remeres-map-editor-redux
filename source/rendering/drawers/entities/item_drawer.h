@@ -8,6 +8,7 @@
 #include "app/definitions.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "map/position.h"
+#include <cstdint>
 
 // Forward declarations
 class SpriteDrawer;
@@ -35,6 +36,9 @@ struct BlitItemParams {
 	int green = 255;
 	int blue = 255;
 	int alpha = 255;
+	float house_id = 0.0f;
+	uint32_t zone_flags = 0;
+	float depth = 0.0f;
 	const RenderView* view = nullptr;
 	const RenderFrameContext* ctx = nullptr;
 

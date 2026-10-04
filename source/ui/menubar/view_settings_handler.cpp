@@ -72,6 +72,7 @@ void ViewSettingsHandler::LoadValues() {
 	menuBar->CheckItem(SHOW_TOWNS, g_settings.getBoolean(Config::SHOW_TOWNS));
 	menuBar->CheckItem(ALWAYS_SHOW_ZONES, g_settings.getBoolean(Config::ALWAYS_SHOW_ZONES));
 	menuBar->CheckItem(EXT_HOUSE_SHADER, g_settings.getBoolean(Config::EXT_HOUSE_SHADER));
+	menuBar->CheckItem(EXT_PATHING_SHADER, g_settings.getBoolean(Config::EXT_PATHING_SHADER));
 
 }
 
@@ -120,6 +121,7 @@ void ViewSettingsHandler::OnChangeViewSettings(wxCommandEvent& event) {
 	g_settings.setInteger(Config::SHOW_TOWNS, menuBar->IsItemChecked(SHOW_TOWNS));
 	g_settings.setInteger(Config::ALWAYS_SHOW_ZONES, menuBar->IsItemChecked(ALWAYS_SHOW_ZONES));
 	g_settings.setInteger(Config::EXT_HOUSE_SHADER, menuBar->IsItemChecked(EXT_HOUSE_SHADER));
+	g_settings.setInteger(Config::EXT_PATHING_SHADER, menuBar->IsItemChecked(EXT_PATHING_SHADER));
 
 	bool new_grid = g_settings.getBoolean(Config::SHOW_GRID);
 	if (old_grid != new_grid) {

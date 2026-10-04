@@ -10,6 +10,7 @@
 #include "game/creature.h"
 
 #include <unordered_map>
+#include <format>
 
 CreatureNameDrawer::CreatureNameDrawer() {
 	labels.reserve(256);
@@ -56,15 +57,27 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		float width = 0.0f;
 		float height = 0.0f;
 	};
-	static thread_local std::unordered_map<std::string, CachedMetrics> s_metrics_cache;
+	struct StringHash {
+		using is_transparent = void;
+		size_t operator()(std::string_view sv) const noexcept {
+			return std::hash<std::string_view>{}(sv);
+		}
+		size_t operator()(const std::string& s) const noexcept {
+			return std::hash<std::string_view>{}(s);
+		}
+		size_t operator()(const char* s) const noexcept {
+			return std::hash<std::string_view>{}(s);
+		}
+	};
+	static thread_local std::unordered_map<std::string, CachedMetrics, StringHash, std::equal_to<>> s_metrics_cache;
 
 	struct VisibleLabel {
 		float x;
 		float y;
 		float width;
 		float height;
-		const char* text;
-		const char* text_end;
+		std::string_view text;
+		std::string dynamic_text;
 	};
 	static thread_local std::vector<VisibleLabel> visible_labels;
 	visible_labels.clear();
@@ -94,9 +107,12 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		const float labelX = screen_x + tile_size_screen * 0.5f;
 		const float labelY = screen_y - 2.0f;
 
-		// Fast cached text bounds lookup (avoids CPU font glyph kerning loops per-instance)
-		const std::string name_key(label.name);
-		auto it = s_metrics_cache.find(name_key);
+		const char* t_begin = label.name.data();
+		const char* t_end = label.name.data() + label.name.size();
+		std::string_view lookup_key = label.name;
+
+		// Fast cached text bounds lookup for creature name (zero allocations on hit)
+		auto it = s_metrics_cache.find(lookup_key);
 		float textWidth = 0.0f;
 		float textHeight = 0.0f;
 
@@ -105,12 +121,10 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			textHeight = it->second.height;
 		} else {
 			float textBounds[4];
-			const char* text_start = label.name.data();
-			const char* text_end = text_start + label.name.size();
-			nvgTextBounds(vg, 0, 0, text_start, text_end, textBounds);
+			nvgTextBounds(vg, 0, 0, t_begin, t_end, textBounds);
 			textWidth = textBounds[2] - textBounds[0];
 			textHeight = textBounds[3] - textBounds[1];
-			s_metrics_cache.emplace(name_key, CachedMetrics{ textWidth, textHeight });
+			s_metrics_cache.emplace(std::string(lookup_key), CachedMetrics{ textWidth, textHeight });
 		}
 
 		visible_labels.push_back(VisibleLabel {
@@ -118,16 +132,46 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			.y = labelY,
 			.width = textWidth,
 			.height = textHeight,
-			.text = label.name.data(),
-			.text_end = label.name.data() + label.name.size()
+			.text = lookup_key,
+			.dynamic_text = {}
 		});
+
+		// Spawn time badge placed in bottom-right corner of creature tile
+		if (label.creature && !label.creature->isNpc() && label.creature->getSpawnTime() > 0) {
+			std::string formatted = std::format("{}s", label.creature->getSpawnTime());
+			auto it_t = s_metrics_cache.find(formatted);
+			float tw = 0.0f;
+			float th = 0.0f;
+			if (it_t != s_metrics_cache.end()) {
+				tw = it_t->second.width;
+				th = it_t->second.height;
+			} else {
+				float tb[4];
+				nvgTextBounds(vg, 0, 0, formatted.c_str(), nullptr, tb);
+				tw = tb[2] - tb[0];
+				th = tb[3] - tb[1];
+				s_metrics_cache.emplace(formatted, CachedMetrics{ tw, th });
+			}
+
+			const float timerX = screen_x + tile_size_screen - tw * 0.5f - paddingX - 1.0f;
+			const float timerY = screen_y + tile_size_screen - 1.0f;
+
+			visible_labels.push_back(VisibleLabel {
+				.x = timerX,
+				.y = timerY,
+				.width = tw,
+				.height = th,
+				.text = {},
+				.dynamic_text = std::move(formatted)
+			});
+		}
 	}
 
 	if (visible_labels.empty()) {
 		return;
 	}
 
-	// Pass 1: Draw all backgrounds with convex rounded rectangles (single path per contour bypasses stencil multipass)
+	// Pass 1: Draw all backgrounds with convex rounded rectangles
 	nvgFillColor(vg, nvgRGBA(0, 0, 0, 160));
 	for (const auto& vl : visible_labels) {
 		nvgBeginPath(vg);
@@ -138,6 +182,7 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	// Pass 2: Draw all text labels with single color state
 	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
 	for (const auto& vl : visible_labels) {
-		nvgText(vg, vl.x, vl.y - paddingY, vl.text, vl.text_end);
+		std::string_view sv = vl.dynamic_text.empty() ? vl.text : std::string_view(vl.dynamic_text);
+		nvgText(vg, vl.x, vl.y - paddingY, sv.data(), sv.data() + sv.size());
 	}
 }

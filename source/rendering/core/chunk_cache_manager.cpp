@@ -22,72 +22,13 @@
 #include "game/outfit.h"
 #include "rendering/utilities/pattern_calculator.h"
 #include "rendering/core/sprite_preloader.h"
+#include "rendering/shaders/chunk_shader.h"
+#include "rendering/indicators/technical_item_registry.h"
+#include "rendering/core/render_depth.h"
 #include <spdlog/spdlog.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 #include <cmath>
-
-namespace {
-	constexpr const char* CHUNK_VERT_SHADER = R"(#version 430 core
-layout(location = 0) in vec2 aPos;
-layout(location = 1) in vec2 aTexCoord;
-layout(location = 2) in vec4 aRect;
-layout(location = 3) in float aSpriteId;
-layout(location = 4) in float aFlags;
-layout(location = 5) in vec4 aTint;
-
-uniform samplerBuffer uAtlasLUT;
-
-uniform mat4 uMVP;
-uniform vec4 uGlobalTint;
-
-flat out float vFlags;
-out vec3 vTexCoord;
-out vec4 vColor;
-
-void main() {
-	vec2 worldPos = aRect.xy + aPos * aRect.zw;
-	gl_Position = uMVP * vec4(worldPos, 0.0, 1.0);
-
-	vFlags = aFlags;
-	vColor = aTint * uGlobalTint;
-
-	if (aFlags > 0.5) {
-		vTexCoord = vec3(0.0);
-	} else {
-		int baseTexel = int(aSpriteId + 0.5) * 2;
-		vec4 uvRect = texelFetch(uAtlasLUT, baseTexel);
-		vec4 meta = texelFetch(uAtlasLUT, baseTexel + 1);
-		vec2 uv = mix(uvRect.xy, uvRect.zw, aTexCoord);
-		vTexCoord = vec3(uv, meta.x);
-	}
-}
-)";
-
-	constexpr const char* CHUNK_FRAG_SHADER = R"(#version 430 core
-flat in float vFlags;
-in vec3 vTexCoord;
-in vec4 vColor;
-out vec4 FragColor;
-
-uniform sampler2DArray uAtlas;
-
-void main() {
-	if (vFlags > 0.5) {
-		FragColor = vColor;
-		if (FragColor.a < 0.01) {
-			discard;
-		}
-		return;
-	}
-	vec4 texColor = texture(uAtlas, vTexCoord);
-	FragColor = texColor * vColor;
-	if (FragColor.a < 0.01) {
-		discard;
-	}
-}
-)";
-}
 
 ChunkCacheManager::ChunkCacheManager() {
 	bake_buffer_.reserve(2048);
@@ -105,7 +46,7 @@ bool ChunkCacheManager::initialize() {
 		return false;
 	}
 
-	if (!shader_.Load(CHUNK_VERT_SHADER, CHUNK_FRAG_SHADER)) {
+	if (!shader_.Load(rme::rendering::shaders::CHUNK_VERT_SHADER, rme::rendering::shaders::GetChunkFragShader())) {
 		spdlog::error("ChunkCacheManager: Failed to compile chunk shader");
 		return false;
 	}
@@ -154,6 +95,16 @@ bool ChunkCacheManager::initialize() {
 	glEnableVertexArrayAttrib(vao_, 5);
 	glVertexArrayAttribFormat(vao_, 5, 4, GL_FLOAT, GL_FALSE, offsetof(TileInstance, r));
 	glVertexArrayAttribBinding(vao_, 5, 1);
+
+	// Loc 6: aHouseId (float)
+	glEnableVertexArrayAttrib(vao_, 6);
+	glVertexArrayAttribFormat(vao_, 6, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, house_id));
+	glVertexArrayAttribBinding(vao_, 6, 1);
+
+	// Loc 7: aDepth (float)
+	glEnableVertexArrayAttrib(vao_, 7);
+	glVertexArrayAttribFormat(vao_, 7, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, depth));
+	glVertexArrayAttribBinding(vao_, 7, 1);
 
 	applyBudget(HardwareProfileManager::get().getActiveBudget());
 
@@ -244,6 +195,8 @@ CachedChunk& ChunkCacheManager::getOrCreateChunk(const ChunkCoord& coord) {
 void ChunkCacheManager::uploadChunk(CachedChunk& chunk, const std::vector<TileInstance>& instances) {
 	if (instances.empty()) {
 		chunk.instance_count = 0;
+		chunk.terrain_instance_count = 0;
+		chunk.item_instance_count = 0;
 		chunk.is_empty = true;
 		return;
 	}
@@ -267,9 +220,10 @@ void ChunkCacheManager::uploadChunk(CachedChunk& chunk, const std::vector<TileIn
 
 void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const RenderFrameContext& ctx) {
 	bake_buffer_.clear();
-	chunk.dynamic_tiles.clear();
+	chunk.clearDynamicTiles();
 	chunk.has_animated_terrain = false;
 	chunk.sample_animated_sprite = nullptr;
+	chunk.min_anim_duration = 350;
 
 	const int32_t base_x = chunk.coord.cx * CHUNK_SIZE;
 	const int32_t base_y = chunk.coord.cy * CHUNK_SIZE;
@@ -316,39 +270,43 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		return;
 	}
 
-	auto pushRegionInstance = [&](const AtlasRegion* reg, int draw_x, int draw_y, float rf, float gf, float bf, float af) {
+	auto pushRegionInstance = [&](const AtlasRegion* reg, int draw_x, int draw_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE) {
 		if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
 			TileInstance inst;
 			inst.x = static_cast<float>(draw_x);
 			inst.y = static_cast<float>(draw_y);
-			inst.w = static_cast<float>(reg->pixel_width);
-			inst.h = static_cast<float>(reg->pixel_height);
+			inst.w = (house_id >= 1000000.0f) ? 32.0f : static_cast<float>(reg->pixel_width);
+			inst.h = (house_id >= 1000000.0f) ? 32.0f : static_cast<float>(reg->pixel_height);
 			inst.sprite_id = static_cast<float>(reg->debug_sprite_id);
-			inst.flags = 0.0f;
+			inst.flags = flags;
 			inst.r = rf;
 			inst.g = gf;
 			inst.b = bf;
 			inst.a = af;
+			inst.house_id = house_id;
+			inst.depth = depth;
 			bake_buffer_.push_back(inst);
 		}
 	};
 
-	auto pushColorRect = [&](int rx, int ry, int rw, int rh, float rf, float gf, float bf, float af) {
+	auto pushColorRect = [&](int rx, int ry, int rw, int rh, float rf, float gf, float bf, float af, float depth = 0.0f) {
 		TileInstance inst;
 		inst.x = static_cast<float>(rx);
 		inst.y = static_cast<float>(ry);
 		inst.w = static_cast<float>(rw);
 		inst.h = static_cast<float>(rh);
 		inst.sprite_id = 0.0f;
-		inst.flags = 1.0f; // SOLID_COLOR: direct color quad, bypasses texture atlas and LUT
+		inst.flags = TILE_INSTANCE_FLAG_SOLID_COLOR; // SOLID_COLOR: direct color quad, bypasses texture atlas and LUT
 		inst.r = rf;
 		inst.g = gf;
 		inst.b = bf;
 		inst.a = af;
+		inst.house_id = 0.0f;
+		inst.depth = depth;
 		bake_buffer_.push_back(inst);
 	};
 
-	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af) {
+	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE) {
 		const bool is_simple = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
 		if (is_simple) {
 			const AtlasRegion* reg = nullptr;
@@ -358,7 +316,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			if (!reg) {
 				reg = spr->getAtlasRegion(0, 0, 0, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
 			}
-			pushRegionInstance(reg, draw_base_x, draw_base_y, rf, gf, bf, af);
+			pushRegionInstance(reg, draw_base_x, draw_base_y, rf, gf, bf, af, house_id, depth, flags);
 		} else {
 			const auto composite_metrics = spr->getPlainLayoutMetrics(pat.subtype, pat.x, pat.y, pat.z, pat.frame);
 			int x_offset = 0;
@@ -367,7 +325,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
 					for (int cf = 0; cf < spr->layers; ++cf) {
 						const AtlasRegion* reg = spr->getAtlasRegion(cx, cy, cf, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
-						pushRegionInstance(reg, draw_base_x - x_offset, draw_base_y - y_offset, rf, gf, bf, af);
+						pushRegionInstance(reg, draw_base_x - x_offset, draw_base_y - y_offset, rf, gf, bf, af, house_id, depth, flags);
 					}
 					y_offset += composite_metrics.row_heights[cy];
 				}
@@ -376,7 +334,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		}
 	};
 
-	auto pushCreatureInstances = [&](const Creature* creature, int screenx, int screeny) {
+	auto pushCreatureInstances = [&](const Creature* creature, int screenx, int screeny, float depth = 0.0f) {
 		if (!creature) {
 			return;
 		}
@@ -400,7 +358,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					const int item_x = screenx - draw_offset_x;
 					const int item_y = screeny - draw_offset_y;
 					const SpritePatterns pat { .x = 0, .y = 0, .z = 0, .frame = 0, .subtype = -1 };
-					pushSpriteInstances(ispr, pat, item_x, item_y, rf, gf, bf, af);
+					pushSpriteInstances(ispr, pat, item_x, item_y, rf, gf, bf, af, 0.0f, depth);
 				}
 			}
 			return;
@@ -438,7 +396,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 
 				if (is_simple_mount) {
 					const AtlasRegion* region = mountSpr->getAtlasRegion(0, 0, static_cast<int>(dir), 0, 0, mountOutfit, 0);
-					pushRegionInstance(region, mount_base_x, mount_base_y, rf, gf, bf, af);
+					pushRegionInstance(region, mount_base_x, mount_base_y, rf, gf, bf, af, 0.0f, depth);
 				} else {
 					const auto mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, 0);
 					int mount_x_offset = 0;
@@ -446,7 +404,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 						int mount_y_offset = 0;
 						for (int cy = 0; cy < mount_metrics.num_rows; ++cy) {
 							const AtlasRegion* region = mountSpr->getAtlasRegion(cx, cy, static_cast<int>(dir), 0, 0, mountOutfit, 0);
-							pushRegionInstance(region, mount_base_x - mount_x_offset, mount_base_y - mount_y_offset, rf, gf, bf, af);
+							pushRegionInstance(region, mount_base_x - mount_x_offset, mount_base_y - mount_y_offset, rf, gf, bf, af, 0.0f, depth);
 							mount_y_offset += mount_metrics.row_heights[cy];
 						}
 						mount_x_offset += mount_metrics.column_widths[cx];
@@ -470,7 +428,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 
 			if (spr->width == 1 && spr->height == 1) {
 				const AtlasRegion* region = spr->getAtlasRegion(0, 0, static_cast<int>(dir), pattern_y, pattern_z, *drawOutfit, 0);
-				pushRegionInstance(region, base_x, base_y, rf, gf, bf, af);
+				pushRegionInstance(region, base_x, base_y, rf, gf, bf, af, 0.0f, depth);
 				continue;
 			}
 
@@ -480,7 +438,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				int sprite_y_offset = 0;
 				for (int cy = 0; cy < sprite_metrics.num_rows; ++cy) {
 					const AtlasRegion* region = spr->getAtlasRegion(cx, cy, static_cast<int>(dir), pattern_y, pattern_z, *drawOutfit, 0);
-					pushRegionInstance(region, base_x - sprite_x_offset, base_y - sprite_y_offset, rf, gf, bf, af);
+					pushRegionInstance(region, base_x - sprite_x_offset, base_y - sprite_y_offset, rf, gf, bf, af, 0.0f, depth);
 					sprite_y_offset += sprite_metrics.row_heights[cy];
 				}
 				sprite_x_offset += sprite_metrics.column_widths[cx];
@@ -489,15 +447,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 	};
 
 	// =========================================================================
-	// Single Diagonal Loop (Painter's Algorithm: North-West to South-East)
-	// Traverses tiles in strict diagonal order. On each tile:
-	//   1. Ground (with ctx.elapsed_time for animated grounds like water)
-	//   2. Ground borders (isBorder(), with ctx.elapsed_time for shallow water)
-	//   3. Static items & structures with elevation stacking
-	// Multi-tile grounds (e.g. 2x2 mountain ID 919) at (x+1, y+1) correctly
-	// occlude items placed on tiles behind them (x, y).
-	// Multi-tile items (e.g. 2x2 rock) at (x+1, y+1) correctly overlay
-	// ground borders on tiles before them (x, y).
+	// Pass 1: Static & animated terrain ground and borders (water, grass, coastlines)
+	// Traverses tiles in strict diagonal order (Painter's Algorithm: NW to SE).
 	// =========================================================================
 	for (int d = 0; d < 2 * CHUNK_SIZE - 1; ++d) {
 		for (int tx = 0; tx <= d && tx < CHUNK_SIZE; ++tx) {
@@ -527,16 +478,16 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			const bool as_minimap = ctx.options.show_as_minimap;
 			const bool only_colors = as_minimap || ctx.options.show_only_colors;
 
-			bool is_dynamic = false;
-			if ((tile->creature && ctx.options.show_creatures && !only_colors) || tile->spawn || loc->getSpawnCount() > 0 || loc->getWaypointCount() > 0 ||
-				loc->getTownCount() > 0 || loc->getHouseExits() != nullptr || tile->invalidZones ||
+			if ((tile->creature && ctx.options.show_creatures && !only_colors) || tile->invalidZones ||
 				(tile->ground && tile->ground->isInvalidOTBMItem())) {
-				is_dynamic = true;
+				chunk.markDynamicTile(tx, ty);
 			}
 
+			const float tile_house_id = tile->isHouseTile() ? static_cast<float>(tile->getHouseID()) : 0.0f;
+
 			uint8_t gr = 255, gg = 255, gb = 255;
-			if (!ctx.options.show_as_minimap && (ctx.options.hasTileColorModifiers() || loc->getSpawnCount() > 0)) {
-				TileColorCalculator::Calculate(tile, ctx.options, ctx.current_house_id, loc->getSpawnCount(), gr, gg, gb);
+			if (!ctx.options.show_as_minimap && ctx.options.hasTileColorModifiers()) {
+				TileColorCalculator::Calculate(tile, ctx.options, gr, gg, gb);
 			}
 
 			// 1. Static & animated terrain ground (water, grass, dirt, lava, etc.)
@@ -545,13 +496,16 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				const uint16_t ground_client_id = git ? git.clientId() : 0;
 				const uint16_t ground_server_id = tile->ground->getID();
 
-				if (ctx.options.show_tech_items && !ctx.options.ingame && (ground_server_id == 459 || ground_client_id == 469)) {
-					pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 1.0f, 0.0f, 170.0f / 255.0f);
-				} else if (ctx.options.show_tech_items && !ctx.options.ingame && (ground_server_id == 460 || ground_client_id == 470 || ground_client_id == 17970 || ground_client_id == 20028 || ground_client_id == 34168)) {
-					pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 0.0f, 0.0f, 170.0f / 255.0f);
-				} else if (ctx.options.show_tech_items && !ctx.options.ingame && (ground_server_id == 1548 || ground_client_id == 2187)) {
-					pushColorRect(x * 32, y * 32, 32, 32, 0.0f, 1.0f, 1.0f, 80.0f / 255.0f);
-				} else if (git) {
+				const float ground_depth = rme::rendering::calculateTileDepth(x, y, rme::rendering::RenderSublayer::Ground);
+				const auto tech_type = (ctx.options.show_tech_items && !ctx.options.ingame)
+					? rme::rendering::TechnicalItemRegistry::Classify(ground_server_id, ground_client_id)
+					: rme::rendering::TileIndicatorType::None;
+				if (tech_type != rme::rendering::TileIndicatorType::None) {
+					const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
+					if (white_pixel) {
+						pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type), ground_depth);
+					}
+				} else if (git && !git.isMetaItem()) {
 					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
 					if (gspr) {
 						if (gspr->isAnimated()) {
@@ -581,7 +535,9 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 							static_cast<float>(r) * (1.0f / 255.0f),
 							static_cast<float>(g) * (1.0f / 255.0f),
 							static_cast<float>(b) * (1.0f / 255.0f),
-							1.0f);
+							1.0f,
+							-tile_house_id,
+							ground_depth);
 					}
 				}
 			}
@@ -598,19 +554,16 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				const uint16_t item_client_id = it.clientId();
 				const uint16_t item_server_id = item->getID();
 
-				if (ctx.options.show_tech_items && !ctx.options.ingame) {
-					if (item_server_id == 459 || item_client_id == 469) {
-						pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 1.0f, 0.0f, 170.0f / 255.0f);
-						continue;
+				const float border_depth = rme::rendering::calculateTileDepth(x, y, rme::rendering::RenderSublayer::Border);
+				const auto tech_type = (ctx.options.show_tech_items && !ctx.options.ingame)
+					? rme::rendering::TechnicalItemRegistry::Classify(item_server_id, item_client_id)
+					: rme::rendering::TileIndicatorType::None;
+				if (tech_type != rme::rendering::TileIndicatorType::None) {
+					const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
+					if (white_pixel) {
+						pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type), border_depth);
 					}
-					if (item_server_id == 460 || item_client_id == 470 || item_client_id == 17970 || item_client_id == 20028 || item_client_id == 34168) {
-						pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 0.0f, 0.0f, 170.0f / 255.0f);
-						continue;
-					}
-					if (item_server_id == 1548 || item_client_id == 2187) {
-						pushColorRect(x * 32, y * 32, 32, 32, 0.0f, 1.0f, 1.0f, 80.0f / 255.0f);
-						continue;
-					}
+					continue;
 				}
 
 				GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
@@ -645,8 +598,48 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					static_cast<float>(r) * (1.0f / 255.0f),
 					static_cast<float>(g) * (1.0f / 255.0f),
 					static_cast<float>(b) * (1.0f / 255.0f),
-					1.0f);
+					1.0f,
+					-tile_house_id,
+					border_depth);
 			}
+		}
+	}
+	chunk.terrain_instance_count = static_cast<uint32_t>(bake_buffer_.size());
+
+	// =========================================================================
+	// Pass 2: Static items & structures, point indicators, creatures
+	// Traverses tiles in strict diagonal order (Painter's Algorithm: NW to SE).
+	// Rendered after terrain and ground-level zone overlays.
+	// =========================================================================
+	for (int d = 0; d < 2 * CHUNK_SIZE - 1; ++d) {
+		for (int tx = 0; tx <= d && tx < CHUNK_SIZE; ++tx) {
+			const int ty = d - tx;
+			if (ty >= CHUNK_SIZE) {
+				continue;
+			}
+
+			const Floor* fl = floors[tx >> 2][ty >> 2];
+			if (!fl) {
+				continue;
+			}
+
+			const int loc_idx = (tx & 3) * 4 + (ty & 3);
+			const TileLocation* loc = &fl->locs[loc_idx];
+			const Tile* tile = loc->get();
+			if (!tile) {
+				continue;
+			}
+			if (ctx.options.show_only_modified && !tile->isModified()) {
+				continue;
+			}
+
+			const int x = base_x + tx;
+			const int y = base_y + ty;
+
+			const bool as_minimap = ctx.options.show_as_minimap;
+			const bool only_colors = as_minimap || ctx.options.show_only_colors;
+
+			const float tile_house_id = tile->isHouseTile() ? static_cast<float>(tile->getHouseID()) : 0.0f;
 
 			// 3. Static items & structures with elevation stacking
 			int elev = 0;
@@ -655,29 +648,33 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					continue;
 				}
 				if (item->isInvalidOTBMItem()) {
-					is_dynamic = true;
+					chunk.markDynamicTile(tx, ty);
 					continue;
 				}
 				const ItemDefinitionView it = item->getDefinition();
 				const uint16_t item_client_id = it ? it.clientId() : 0;
 				const uint16_t item_server_id = item->getID();
 
-				if (ctx.options.show_tech_items && !ctx.options.ingame) {
-					if (item_server_id == 459 || item_client_id == 469) {
-						pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 1.0f, 0.0f, 170.0f / 255.0f);
-						continue;
+				rme::rendering::RenderSublayer sublayer = rme::rendering::RenderSublayer::CommonItem;
+				if (item->isAlwaysOnBottom()) {
+					sublayer = rme::rendering::RenderSublayer::BottomItem;
+				} else if (it && it.hasFlag(ItemFlag::TopEffect)) {
+					sublayer = rme::rendering::RenderSublayer::TopItem;
+				}
+				const float item_depth = rme::rendering::calculateTileDepth(x, y, sublayer, elev > 0 ? 1 : 0);
+
+				const auto tech_type = (ctx.options.show_tech_items && !ctx.options.ingame)
+					? rme::rendering::TechnicalItemRegistry::Classify(item_server_id, item_client_id)
+					: rme::rendering::TileIndicatorType::None;
+				if (tech_type != rme::rendering::TileIndicatorType::None) {
+					const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
+					if (white_pixel) {
+						pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type), item_depth);
 					}
-					if (item_server_id == 460 || item_client_id == 470 || item_client_id == 17970 || item_client_id == 20028 || item_client_id == 34168) {
-						pushColorRect(x * 32, y * 32, 32, 32, 1.0f, 0.0f, 0.0f, 170.0f / 255.0f);
-						continue;
-					}
-					if (item_server_id == 1548 || item_client_id == 2187) {
-						pushColorRect(x * 32, y * 32, 32, 32, 0.0f, 1.0f, 1.0f, 80.0f / 255.0f);
-						continue;
-					}
+					continue;
 				}
 
-				if (!it) {
+				if (!it || it.isMetaItem() || (!ctx.options.show_items && it.hasFlag(ItemFlag::Pickupable))) {
 					continue;
 				}
 				GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
@@ -685,18 +682,26 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					continue;
 				}
 				if (ispr->isAnimated()) {
-					is_dynamic = true;
-					if (ispr->hasElevation()) {
-						elev += ispr->draw_height;
+					chunk.has_animated_terrain = true;
+					if (!chunk.sample_animated_sprite) {
+						chunk.sample_animated_sprite = ispr;
 					}
-					continue;
+					if (ispr->animator) {
+						const FrameDuration* fd = ispr->animator->getFrameDuration(0);
+						if (fd) {
+							const int dur = fd->getDuration();
+							if (dur > 0 && dur < chunk.min_anim_duration) {
+								chunk.min_anim_duration = dur;
+							}
+						}
+					}
 				}
 
 				const auto [draw_offset_x, draw_offset_y] = ispr->getDrawOffset();
 				const int item_x = x * 32 - elev - draw_offset_x;
 				const int item_y = y * 32 - elev - draw_offset_y;
 
-				const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z), 0);
+				const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z), ctx.elapsed_time);
 				if (!ispr->isSimpleAndLoaded()) {
 					rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
 				}
@@ -706,35 +711,60 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					r >>= 1;
 					g >>= 1;
 					b >>= 1;
-				} else if (ctx.options.extended_house_shader && ctx.options.show_houses && tile->isHouseTile()) {
-					TileColorCalculator::GetHouseColor(tile->getHouseID(), r, g, b);
 				}
 
 				if (ctx.options.transparent_items && (!it.isGroundTile() || ispr->width > 1 || ispr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || ispr->width > 1 || ispr->height > 1)) {
 					a >>= 1;
 				}
 
+				const float item_house_id = (ctx.options.extended_house_shader) ? tile_house_id : 0.0f;
+				const bool is_blocking_item = item->isBlocking() &&
+					!rme::rendering::TechnicalItemRegistry::IsInvisibleWall(item_server_id, item_client_id);
+				const float item_flags = (ctx.options.extended_pathing_shader && is_blocking_item)
+					? TILE_INSTANCE_FLAG_BLOCKING
+					: TILE_INSTANCE_FLAG_TEXTURE;
+
 				pushSpriteInstances(ispr, i_pat, item_x, item_y,
 					static_cast<float>(r) * (1.0f / 255.0f),
 					static_cast<float>(g) * (1.0f / 255.0f),
 					static_cast<float>(b) * (1.0f / 255.0f),
-					static_cast<float>(a) * (1.0f / 255.0f));
+					static_cast<float>(a) * (1.0f / 255.0f),
+					item_house_id,
+					item_depth,
+					item_flags);
 
 				if (ispr->hasElevation()) {
 					elev += ispr->draw_height;
 				}
 			}
 
-			// 4. Creature on tile (Painter's Algorithm: NW-to-SE order ensures occlusion by adjacent South/East walls and structures)
-			if (tile->creature && ctx.options.show_creatures && !only_colors) {
-				pushCreatureInstances(tile->creature.get(), x * 32, y * 32);
+			// 3.5. Tile point indicators (rendered on top of items and ground)
+			const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
+			if (white_pixel) {
+				const float indicator_depth = rme::rendering::calculateTileDepth(x, y, rme::rendering::RenderSublayer::Overlay);
+				if (tile->isHouseExit()) {
+					const HouseExitList* exits = tile->getHouseExits();
+					const uint32_t exit_house_id = (exits && !exits->empty()) ? exits->front() : 1;
+					pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::INDICATOR_HOUSE_ENTRY_BASE + static_cast<float>(exit_house_id), indicator_depth);
+				}
+				if (loc->getTownCount() > 0) {
+					pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::INDICATOR_TOWN_BASE, indicator_depth);
+				}
+				if (loc->getWaypointCount() > 0) {
+					pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::INDICATOR_WAYPOINT_BASE, indicator_depth);
+				}
 			}
 
-			if (is_dynamic) {
-				chunk.dynamic_tiles.push_back(DynamicTileInfo{ static_cast<uint8_t>(tx), static_cast<uint8_t>(ty) });
+			// 4. Creature on tile (Painter's Algorithm: NW-to-SE order ensures occlusion by adjacent South/East walls and structures)
+			if (tile->creature && ctx.options.show_creatures && !only_colors) {
+				const float creature_depth = rme::rendering::calculateTileDepth(x, y, rme::rendering::RenderSublayer::DynamicEntity);
+				pushCreatureInstances(tile->creature.get(), x * 32, y * 32, creature_depth);
 			}
 		}
 	}
+
+	chunk.item_instance_count = static_cast<uint32_t>(bake_buffer_.size()) - chunk.terrain_instance_count;
+	chunk.instance_count = static_cast<uint32_t>(bake_buffer_.size());
 
 	chunk.last_baked_anim_time = ctx.elapsed_time;
 	if (chunk.sample_animated_sprite && chunk.sample_animated_sprite->animator) {
@@ -754,7 +784,7 @@ void ChunkCacheManager::advanceFrame(int current_floor) {
 	}
 }
 
-void ChunkCacheManager::renderFloor(
+void ChunkCacheManager::renderFloorTerrain(
 	int map_z,
 	const Map& map,
 	const RenderFrameContext& ctx,
@@ -766,10 +796,10 @@ void ChunkCacheManager::renderFloor(
 	}
 
 	const ViewBounds bounds = ctx.view.getBoundsForFloor(map_z);
-	const int min_cx = bounds.start_x >> 4;
-	const int max_cx = (bounds.end_x + 15) >> 4;
-	const int min_cy = bounds.start_y >> 4;
-	const int max_cy = (bounds.end_y + 15) >> 4;
+	const int min_cx = (bounds.start_x - 16) >> 4;
+	const int max_cx = (bounds.end_x + 31) >> 4;
+	const int min_cy = (bounds.start_y - 16) >> 4;
+	const int max_cy = (bounds.end_y + 31) >> 4;
 
 	const int offset = (map_z <= GROUND_LAYER)
 		? (GROUND_LAYER - map_z) * TILE_SIZE
@@ -786,6 +816,7 @@ void ChunkCacheManager::renderFloor(
 	shader_.SetInt("uAtlas", 0);
 	shader_.SetInt("uAtlasLUT", SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 	shader_.SetVec4("uGlobalTint", glm::vec4(1.0f));
+	rme::rendering::shaders::SetChunkShaderUniforms(shader_, ctx.current_house_id, ctx.options);
 
 	atlas.bind(0);
 	atlas.bindLUT(SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
@@ -813,7 +844,8 @@ void ChunkCacheManager::renderFloor(
 					frame_changed = true;
 				}
 			}
-			if (!frame_changed && std::abs(ctx.elapsed_time - chunk.last_baked_anim_time) >= 350) {
+			const int check_interval = (chunk.min_anim_duration > 0) ? chunk.min_anim_duration : 200;
+			if (!frame_changed && std::abs(ctx.elapsed_time - chunk.last_baked_anim_time) >= check_interval) {
 				frame_changed = true;
 			}
 			if (frame_changed) {
@@ -827,11 +859,11 @@ void ChunkCacheManager::renderFloor(
 		}
 		chunk.last_accessed_frame = current_frame_;
 
-		if (!chunk.is_empty && chunk.instance_count > 0 && chunk.vbo != 0) {
+		if (!chunk.is_empty && chunk.terrain_instance_count > 0 && chunk.vbo != 0) {
 			glVertexArrayVertexBuffer(vao_, 1, chunk.vbo, 0, sizeof(TileInstance));
-			glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk.instance_count));
+			glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk.terrain_instance_count));
 			++rendered_chunk_count;
-			rendered_instance_count += chunk.instance_count;
+			rendered_instance_count += chunk.terrain_instance_count;
 		}
 
 		active_visible_chunks_.push_back(&chunk);
@@ -840,6 +872,52 @@ void ChunkCacheManager::renderFloor(
 	if (baked_count > 0) {
 		spdlog::debug("[ChunkCache] Floor {}: Baked {} new/dirty chunk(s) | Visible: {} chunks ({} instances) | Total cached: {}/{}",
 			map_z, baked_count, rendered_chunk_count, rendered_instance_count, cached_chunks_.size(), max_cached_chunks_);
+	}
+
+	glBindVertexArray(0);
+	shader_.Unuse();
+}
+
+void ChunkCacheManager::renderFloorItems(
+	int map_z,
+	const RenderFrameContext& ctx,
+	const glm::mat4& projection,
+	AtlasManager& atlas
+) {
+	if (!isValid() || active_visible_chunks_.empty() || active_floor_ != map_z) {
+		return;
+	}
+
+	const int offset = (map_z <= GROUND_LAYER)
+		? (GROUND_LAYER - map_z) * TILE_SIZE
+		: TILE_SIZE * (ctx.view.floor - map_z);
+	const glm::vec3 translation(
+		static_cast<float>(-ctx.view.view_scroll_x - offset),
+		static_cast<float>(-ctx.view.view_scroll_y - offset),
+		0.0f
+	);
+	const glm::mat4 floor_mvp = projection * glm::translate(glm::mat4(1.0f), translation);
+
+	shader_.Use();
+	shader_.SetMat4("uMVP", floor_mvp);
+	shader_.SetInt("uAtlas", 0);
+	shader_.SetInt("uAtlasLUT", SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
+	shader_.SetVec4("uGlobalTint", glm::vec4(1.0f));
+	rme::rendering::shaders::SetChunkShaderUniforms(shader_, ctx.current_house_id, ctx.options);
+
+	atlas.bind(0);
+	atlas.bindLUT(SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
+
+	glBindVertexArray(vao_);
+
+	for (const CachedChunk* chunk_ptr : active_visible_chunks_) {
+		if (!chunk_ptr || chunk_ptr->is_empty || chunk_ptr->item_instance_count == 0 || chunk_ptr->vbo == 0) {
+			continue;
+		}
+
+		const GLintptr byte_offset = static_cast<GLintptr>(chunk_ptr->terrain_instance_count * sizeof(TileInstance));
+		glVertexArrayVertexBuffer(vao_, 1, chunk_ptr->vbo, byte_offset, sizeof(TileInstance));
+		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk_ptr->item_instance_count));
 	}
 
 	glBindVertexArray(0);
@@ -966,7 +1044,7 @@ void ChunkCacheManager::renderDynamicOverlays(
 	// Direct iteration of active visible chunks gathered in renderFloor!
 	// Zero O(W x H) bounding box iteration, zero hash map lookups.
 	for (const CachedChunk* chunk_ptr : active_visible_chunks_) {
-		if (!chunk_ptr || chunk_ptr->dynamic_tiles.empty()) {
+		if (!chunk_ptr || !chunk_ptr->hasDynamicTiles()) {
 			continue;
 		}
 
@@ -974,24 +1052,30 @@ void ChunkCacheManager::renderDynamicOverlays(
 		const int chunk_base_x = chunk.coord.cx * CHUNK_SIZE;
 		const int chunk_base_y = chunk.coord.cy * CHUNK_SIZE;
 
-		for (const auto& dt : chunk.dynamic_tiles) {
-			const int x = chunk_base_x + dt.rel_x;
-			const int y = chunk_base_y + dt.rel_y;
+		for (size_t w = 0; w < 4; ++w) {
+			uint64_t word = chunk.dynamic_tile_mask[w];
+			while (word != 0) {
+				const int bit = std::countr_zero(word);
+				const int tile_idx = static_cast<int>(w * 64 + bit);
+				const int tx = tile_idx & 15;
+				const int ty = tile_idx >> 4;
 
-			const int draw_x = x * TILE_SIZE + base_draw_x;
-			const int draw_y = y * TILE_SIZE + base_draw_y;
+				const int x = chunk_base_x + tx;
+				const int y = chunk_base_y + ty;
 
-			if (!ctx.view.IsPixelVisible(draw_x, draw_y)) {
-				continue;
+				const int draw_x = x * TILE_SIZE + base_draw_x;
+				const int draw_y = y * TILE_SIZE + base_draw_y;
+
+				if (ctx.view.IsPixelVisible(draw_x, draw_y)) {
+					const TileLocation* loc = map.getTileL(x, y, map_z);
+					if (loc) {
+						const Tile* tile_above = (map_z == GROUND_LAYER + 1) ? map.getTile(x, y, GROUND_LAYER) : nullptr;
+						tile_renderer.RenderDynamicPasses(sprite_batch, loc, ctx, draw_x, draw_y, tile_above);
+					}
+				}
+
+				word &= word - 1; // Clear lowest set bit
 			}
-
-			const TileLocation* loc = map.getTileL(x, y, map_z);
-			if (!loc) {
-				continue;
-			}
-
-			const Tile* tile_above = (map_z == GROUND_LAYER + 1) ? map.getTile(x, y, GROUND_LAYER) : nullptr;
-			tile_renderer.RenderDynamicPasses(sprite_batch, loc, ctx, draw_x, draw_y, tile_above);
 		}
 	}
 }
