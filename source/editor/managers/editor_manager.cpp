@@ -265,10 +265,16 @@ void EditorManager::SaveMapAs() {
 		return;
 	}
 
-	wxString wildcard = MAP_SAVE_FILE_WILDCARD;
+	wxString wildcard = "OpenTibia Binary Map (*.otbm)|*.otbm|GZIP Compressed Map (*.otbm)|*.otbm";
 	wxFileDialog dialog(g_gui.root, "Save As...", "", "", wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	dialog.SetFilterIndex(GetCurrentMap().getCompression() == OtbmCompression::Gzip ? 1 : 0);
 
 	if (dialog.ShowModal() == wxID_OK) {
+		if (dialog.GetFilterIndex() == 1) {
+			GetCurrentMap().setCompression(OtbmCompression::Gzip);
+		} else if (dialog.GetFilterIndex() == 0) {
+			GetCurrentMap().setCompression(OtbmCompression::None);
+		}
 		SaveCurrentMap(dialog.GetPath(), true);
 		g_status.UpdateTitle();
 		g_gui.root->AddRecentFile(dialog.GetPath());
