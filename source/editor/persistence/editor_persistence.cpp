@@ -30,8 +30,11 @@ void EditorPersistence::loadMap(Editor& editor, const FileName& fn, const MapLoa
 		throw std::runtime_error("Could not open file \"" + nstr(fn.GetFullPath()) + "\".\nThis is not a valid OTBM file or it does not exist.");
 	}
 
-	if (g_version.GetCurrentVersion().getProtocolID() != ver.client && !load_options.force_client_mismatch) {
-		throw std::runtime_error(std::format("Client version mismatch. Expected protocol {} but got protocol {}", ver.client, g_version.GetCurrentVersion().getProtocolID()));
+	const auto loaded_major = static_cast<uint32_t>(g_version.GetCurrentVersion().getOTBVersion().format_version);
+	const bool mismatch = (g_version.GetCurrentVersion().getProtocolID() != ver.client) ||
+		(ver.items_major != 0 && loaded_major != 0 && loaded_major != ver.items_major);
+	if (mismatch && !load_options.force_client_mismatch) {
+		throw std::runtime_error(std::format("Client version mismatch. Expected protocol {} (OTB major {}) but got protocol {} (OTB major {})", ver.client, ver.items_major, g_version.GetCurrentVersion().getProtocolID(), loaded_major));
 	}
 
 	ScopedLoadingBar loadingBar("Loading OTBM map...");

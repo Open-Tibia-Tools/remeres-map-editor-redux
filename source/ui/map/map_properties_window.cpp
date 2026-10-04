@@ -47,6 +47,7 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 			version_choice->SetSelection(2);
 			break;
 		case MAP_OTBM_4:
+		case static_cast<MapVersionID>(4):
 			version_choice->SetSelection(3);
 			break;
 		default:
@@ -134,7 +135,13 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	Centre(wxBOTH);
 	UpdateProtocolList();
 
-	ClientVersion* current_version = ClientVersion::getBestMatch(map.getVersion().client);
+	const ClientVersion* current_version = ClientVersion::getByItemsVersion(map.getVersion().items_major, map.getVersion().client);
+	if (!current_version) {
+		current_version = ClientVersion::getBestMatch(map.getVersion().client);
+	}
+	if (!current_version) {
+		current_version = &g_version.GetCurrentVersion();
+	}
 	if (current_version) {
 		protocol_choice->SetStringSelection(wxstr(current_version->getName()));
 	}
@@ -188,7 +195,14 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 
 	wxString ver = version_choice->GetStringSelection();
 
-	new_ver.client = ClientVersion::get(nstr(protocol_choice->GetStringSelection()))->getProtocolID();
+	ClientVersion* selected_client = ClientVersion::get(nstr(protocol_choice->GetStringSelection()));
+	if (selected_client) {
+		new_ver.client = selected_client->getProtocolID();
+		new_ver.items_major = selected_client->getOTBVersion().format_version;
+	} else {
+		new_ver.client = old_ver.client;
+		new_ver.items_major = old_ver.items_major;
+	}
 	if (ver.Contains("0.5.0")) {
 		new_ver.otbm = MAP_OTBM_1;
 	} else if (ver.Contains("0.6.0")) {

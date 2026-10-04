@@ -322,7 +322,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 	if (!stream.getU32(raw_version)) {
 		return false;
 	}
-	version.otbm = static_cast<MapVersionID>(raw_version);
+	version.otbm = normalizeOtbmVersion(raw_version);
 	if (version.otbm > MAP_OTBM_4) {
 		spdlog::warn("Unsupported or damaged map version: {}", static_cast<int>(version.otbm));
 	}
@@ -340,6 +340,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 		spdlog::warn("Newer items.otb major version ({}); continuing with unresolved item preservation", majorVersion);
 	}
 	version.client = static_cast<OtbVersionID>(minorVersion);
+	version.items_major = majorVersion;
 
 	stream.skipRemainingProps();
 

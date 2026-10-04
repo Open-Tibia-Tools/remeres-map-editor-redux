@@ -39,7 +39,8 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 	Map& map = editor.map;
 	MapVersion old_ver = map.getVersion();
 
-	if (new_ver.client != old_ver.client) {
+	const bool client_changed = (new_ver.client != old_ver.client || new_ver.items_major != old_ver.items_major);
+	if (client_changed) {
 		if (g_gui.GetOpenMapCount() > 1) {
 			DialogUtil::PopupDialog(parent, "Error", "You can not change editor version with multiple maps open", wxOK);
 			return false;
@@ -48,11 +49,11 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 		std::vector<std::string> warnings;
 
 		// Switch version
-		// Switch version
 		editor.selection.clear();
 		editor.actionQueue->clear();
 
-		if (new_ver.client < old_ver.client) {
+		const bool is_downgrade = (new_ver.client < old_ver.client) || (new_ver.client == old_ver.client && new_ver.items_major < old_ver.items_major);
+		if (is_downgrade) {
 			int ret = DialogUtil::PopupDialog(parent, "Notice", "Converting to a previous version may have serious side-effects, are you sure you want to do this?", wxYES | wxNO);
 			if (ret != wxID_YES) {
 				return false;
@@ -67,7 +68,10 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 			map.convert(new_ver, true);
 
 			// Load the new version
-			ClientVersion* target = ClientVersion::getBestMatch(new_ver.client);
+			ClientVersion* target = ClientVersion::getByItemsVersion(new_ver.items_major, new_ver.client);
+			if (!target) {
+				target = ClientVersion::getBestMatch(new_ver.client);
+			}
 			if (!target || !g_version.LoadVersion(target->getID(), error, warnings)) {
 				DialogUtil::ListDialog(parent, "Warnings", warnings);
 				if (error.empty() && !target) {
@@ -96,7 +100,10 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 			map.cleanInvalidTiles(true);
 		} else {
 			UnnamedRenderingLock();
-			ClientVersion* target = ClientVersion::getBestMatch(new_ver.client);
+			ClientVersion* target = ClientVersion::getByItemsVersion(new_ver.items_major, new_ver.client);
+			if (!target) {
+				target = ClientVersion::getBestMatch(new_ver.client);
+			}
 			if (!target || !g_version.LoadVersion(target->getID(), error, warnings)) {
 				DialogUtil::ListDialog(parent, "Warnings", warnings);
 				if (error.empty() && !target) {

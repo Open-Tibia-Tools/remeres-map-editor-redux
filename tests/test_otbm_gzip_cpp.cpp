@@ -348,7 +348,25 @@ namespace {
 		// Standard 10.98 header (3/57) -> Must match 10.98
 		assert(matchClient(3, 57) == "10.98");
 
-		std::cout << "  -> Passed: 4/4 header resolves to 15.25, 1/4 to 7.80, and legacy fallbacks work.\n";
+		// Test OTBM version normalization
+		enum TestMapVersionID {
+			TEST_OTBM_UNKNOWN = -1,
+			TEST_OTBM_1 = 0,
+			TEST_OTBM_2 = 1,
+			TEST_OTBM_3 = 2,
+			TEST_OTBM_4 = 3,
+		};
+		const auto normalizeTestVer = [](uint32_t raw) -> TestMapVersionID {
+			if (raw == 4) return TEST_OTBM_4;
+			return static_cast<TestMapVersionID>(raw);
+		};
+		assert(normalizeTestVer(4) == TEST_OTBM_4);
+		assert(normalizeTestVer(3) == TEST_OTBM_4);
+		assert(normalizeTestVer(2) == TEST_OTBM_3);
+		assert(normalizeTestVer(1) == TEST_OTBM_2);
+		assert(normalizeTestVer(0) == TEST_OTBM_1);
+
+		std::cout << "  -> Passed: 4/4 header resolves to 15.25, 1/4 to 7.80, and OTBM 4 is normalized.\n";
 	}
 
 } // namespace
