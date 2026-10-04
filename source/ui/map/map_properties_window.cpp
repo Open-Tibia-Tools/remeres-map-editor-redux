@@ -159,9 +159,9 @@ void MapPropertiesWindow::UpdateProtocolList() {
 
 	protocol_choice->Clear();
 
-	ClientVersionList versions;
+	ClientVersionList protocols;
 	if (g_settings.getInteger(Config::USE_OTBM_4_FOR_ALL_MAPS)) {
-		versions = ClientVersion::getAllVisible();
+		protocols = ClientVersion::getAllVisible();
 	} else {
 		MapVersionID map_version = MAP_OTBM_1;
 		if (ver.Contains("0.5.0")) {
@@ -174,10 +174,20 @@ void MapPropertiesWindow::UpdateProtocolList() {
 			map_version = MAP_OTBM_4;
 		}
 
-		ClientVersionList protocols = ClientVersion::getAllForOTBMVersion(map_version);
-		for (ClientVersionList::const_iterator p = protocols.begin(); p != protocols.end(); ++p) {
-			protocol_choice->Append(wxstr((*p)->getName()));
+		if (map_version >= MAP_OTBM_4) {
+			protocols = ClientVersion::getAllForOTBMVersion(MAP_OTBM_3);
+			for (auto* c : ClientVersion::getAllForOTBMVersion(MAP_OTBM_4)) {
+				if (std::find(protocols.begin(), protocols.end(), c) == protocols.end()) {
+					protocols.push_back(c);
+				}
+			}
+		} else {
+			protocols = ClientVersion::getAllForOTBMVersion(map_version);
 		}
+	}
+
+	for (ClientVersionList::const_iterator p = protocols.begin(); p != protocols.end(); ++p) {
+		protocol_choice->Append(wxstr((*p)->getName()));
 	}
 	protocol_choice->SetSelection(0);
 	protocol_choice->SetStringSelection(client);
