@@ -159,7 +159,7 @@ inline void SetSpriteBatchOverlayUniforms(
 	const glm::vec4& house_active_color,
 	const glm::vec4& house_inactive_color,
 	bool extended_pathing_shader = true,
-	int zone_blocking_blend_mode = 1)
+	int zone_blocking_blend_mode = 0)
 {
 	shader.Use();
 	shader.SetUint("uCurrentHouseId", current_house_id);

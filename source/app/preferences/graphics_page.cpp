@@ -213,7 +213,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 
 	reset_zone_defaults_btn = new wxButton(zone_section, wxID_ANY, "Reset Overlays to Defaults");
 	reset_zone_defaults_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
-		zone_borders_enabled_chkbox->SetValue(true);
+		zone_borders_enabled_chkbox->SetValue(false);
 		zone_border_color_pick->SetColour(wxColour(13, 13, 18));
 		zone_border_opacity_spin->SetValue(98);
 		zone_border_blend_choice->SetSelection(0);
@@ -234,12 +234,12 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		zone_pvp_opacity_spin->SetValue(48);
 		zone_pvp_blend_choice->SetSelection(0);
 
-		zone_blocking_color_pick->SetColour(wxColour(0, 0, 0));
-		zone_blocking_opacity_spin->SetValue(50);
-		zone_blocking_blend_choice->SetSelection(1);
+		zone_blocking_color_pick->SetColour(wxColour(128, 0, 0));
+		zone_blocking_opacity_spin->SetValue(35);
+		zone_blocking_blend_choice->SetSelection(0);
 
-		zone_spawn_color_pick->SetColour(wxColour(242, 26, 242));
-		zone_spawn_opacity_spin->SetValue(44);
+		zone_spawn_color_pick->SetColour(wxColour(255, 0, 128));
+		zone_spawn_opacity_spin->SetValue(35);
 		zone_spawn_blend_choice->SetSelection(1);
 
 		house_active_color_pick->SetColour(wxColour(89, 191, 13));

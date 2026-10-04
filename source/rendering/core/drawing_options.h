@@ -105,7 +105,7 @@ struct DrawingOptions {
 	bool anti_aliasing;
 
 	// Zone & Overlay customizable colors, opacity, borders, and blend modes
-	bool show_zone_borders = true;
+	bool show_zone_borders = false;
 	int cursor_blend_mode = 0;
 	int cursor_alt_blend_mode = 0;
 	int zone_border_blend_mode = 0;
@@ -113,7 +113,7 @@ struct DrawingOptions {
 	int zone_nopvp_blend_mode = 0;
 	int zone_nologout_blend_mode = 0;
 	int zone_pvp_blend_mode = 0;
-	int zone_blocking_blend_mode = 1;
+	int zone_blocking_blend_mode = 0;
 	int zone_spawn_blend_mode = 1;
 	int house_active_blend_mode = 1;
 	int house_inactive_blend_mode = 1;

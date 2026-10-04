@@ -56,7 +56,7 @@ void DrawingOptions::SetDefault() {
 	minimum_ambient_light = rme::lighting::DEFAULT_MINIMUM_AMBIENT_LIGHT;
 	anti_aliasing = false;
 
-	show_zone_borders = true;
+	show_zone_borders = false;
 	cursor_blend_mode = 0;
 	cursor_alt_blend_mode = 0;
 	zone_border_blend_mode = 0;
@@ -64,17 +64,17 @@ void DrawingOptions::SetDefault() {
 	zone_nopvp_blend_mode = 0;
 	zone_nologout_blend_mode = 0;
 	zone_pvp_blend_mode = 0;
-	zone_blocking_blend_mode = 1;
-	zone_spawn_blend_mode = 0;
-	house_active_blend_mode = 0;
-	house_inactive_blend_mode = 0;
+	zone_blocking_blend_mode = 0;
+	zone_spawn_blend_mode = 1;
+	house_active_blend_mode = 1;
+	house_inactive_blend_mode = 1;
 	zone_border_color = glm::vec4(13.0f / 255.0f, 13.0f / 255.0f, 18.0f / 255.0f, 250.0f / 255.0f);
 	zone_pz_color = glm::vec4(20.0f / 255.0f, 117.0f / 255.0f, 255.0f / 255.0f, 122.0f / 255.0f);
-	zone_nopvp_color = glm::vec4(0.0f / 255.0f, 220.0f / 255.0f, 92.0f / 255.0f, 117.0f / 255.0f);
+	zone_nopvp_color = glm::vec4(0.0f / 255.0f, 219.0f / 255.0f, 92.0f / 255.0f, 117.0f / 255.0f);
 	zone_nologout_color = glm::vec4(255.0f / 255.0f, 122.0f / 255.0f, 0.0f / 255.0f, 122.0f / 255.0f);
 	zone_pvp_color = glm::vec4(245.0f / 255.0f, 26.0f / 255.0f, 51.0f / 255.0f, 122.0f / 255.0f);
-	zone_blocking_color = glm::vec4(0.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 128.0f / 255.0f);
-	zone_spawn_color = glm::vec4(242.0f / 255.0f, 26.0f / 255.0f, 242.0f / 255.0f, 112.0f / 255.0f);
+	zone_blocking_color = glm::vec4(128.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 89.0f / 255.0f);
+	zone_spawn_color = glm::vec4(255.0f / 255.0f, 0.0f / 255.0f, 128.0f / 255.0f, 89.0f / 255.0f);
 	house_active_color = glm::vec4(89.0f / 255.0f, 191.0f / 255.0f, 13.0f / 255.0f, 133.0f / 255.0f);
 	house_inactive_color = glm::vec4(92.0f / 255.0f, 56.0f / 255.0f, 166.0f / 255.0f, 133.0f / 255.0f);
 
