@@ -111,6 +111,7 @@ std::vector<StartupInfoField> BuildStartupMapFields(const OTBMStartupPeekResult*
 			{ "House File", "-", std::string(ICON_FILE), wxNullColour, false },
 			{ "Spawn File", "-", std::string(ICON_FILE), wxNullColour, false },
 			{ "Description", error_description, std::string(ICON_FILE_LINES), error_colour, false },
+			{ "Compression", "-", std::string(ICON_FILE_ZIPPER), wxNullColour, false },
 		};
 	}
 
@@ -124,6 +125,7 @@ std::vector<StartupInfoField> BuildStartupMapFields(const OTBMStartupPeekResult*
 		{ "House File", fallbackValue(info->house_xml_file), std::string(ICON_FILE), wxNullColour, false },
 		{ "Spawn File", fallbackValue(info->spawn_xml_file), std::string(ICON_FILE), wxNullColour, false },
 		{ "Description", formatMapDescription(info), std::string(ICON_FILE_LINES), wxNullColour, false },
+		{ "Compression", info->is_compressed ? "GZIP" : "None", std::string(ICON_FILE_ZIPPER), wxNullColour, false },
 	};
 }
 

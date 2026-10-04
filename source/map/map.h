@@ -19,6 +19,7 @@
 #define RME_MAP_H_
 
 #include <cstdint>
+#include "map/map_storage_format.h"
 #include "map/basemap.h"
 #include "map/tile.h"
 #include "game/town.h"
@@ -177,6 +178,17 @@ public:
 protected:
 	bool has_changed; // If the map has changed
 	bool unnamed; // If the map has yet to receive a name
+	OtbmCompression compression = OtbmCompression::None;
+
+public:
+	[[nodiscard]] OtbmCompression getCompression() const noexcept {
+		return compression;
+	}
+	void setCompression(OtbmCompression format) noexcept {
+		compression = format;
+	}
+
+protected:
 
 	friend class IOMapOTBM;
 	friend class Editor;

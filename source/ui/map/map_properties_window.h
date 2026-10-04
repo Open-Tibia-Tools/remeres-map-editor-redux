@@ -27,6 +27,7 @@ protected:
 	wxSpinCtrl* width_spin;
 	wxChoice* version_choice;
 	wxChoice* protocol_choice;
+	wxChoice* compression_choice;
 	wxTextCtrl* description_ctrl;
 	wxTextCtrl* house_filename_ctrl;
 	wxTextCtrl* spawn_filename_ctrl;
