@@ -502,46 +502,46 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 			f.addU8(OTBM_ATTR_ATTRIBUTE_MAP);
 			item.serializeAttributeMap(maphandle, f);
 		}
-	} else {
-		if (g_item_definitions.MinorVersion >= CLIENT_VERSION_820 && item.isCharged()) {
-			f.addU8(OTBM_ATTR_CHARGES);
-			f.addU16(item.getSubtype());
-		}
+	}
 
-		uint16_t actionId = item.getActionID();
-		if (actionId > 0) {
-			f.addU8(OTBM_ATTR_ACTION_ID);
-			f.addU16(actionId);
-		}
+	if (g_item_definitions.MinorVersion >= CLIENT_VERSION_820 && item.isCharged()) {
+		f.addU8(OTBM_ATTR_CHARGES);
+		f.addU16(item.getSubtype());
+	}
 
-		uint16_t uniqueId = item.getUniqueID();
-		if (uniqueId > 0) {
-			f.addU8(OTBM_ATTR_UNIQUE_ID);
-			f.addU16(uniqueId);
-		}
+	uint16_t actionId = item.getActionID();
+	if (actionId > 0) {
+		f.addU8(OTBM_ATTR_ACTION_ID);
+		f.addU16(actionId);
+	}
 
-		std::string text(item.getText());
-		if (!text.empty()) {
-			f.addU8(OTBM_ATTR_TEXT);
-			f.addString(text);
-		}
+	uint16_t uniqueId = item.getUniqueID();
+	if (uniqueId > 0) {
+		f.addU8(OTBM_ATTR_UNIQUE_ID);
+		f.addU16(uniqueId);
+	}
 
-		std::string description(item.getDescription());
-		if (!description.empty()) {
-			f.addU8(OTBM_ATTR_DESC);
-			f.addString(description);
-		}
+	std::string text(item.getText());
+	if (!text.empty()) {
+		f.addU8(OTBM_ATTR_TEXT);
+		f.addString(text);
+	}
 
-		uint16_t tier = item.getTier();
-		if (tier > 0) {
-			if (tier <= 0xFF) {
-				f.addU8(OTBM_ATTR_TIER);
-				f.addU8(static_cast<uint8_t>(tier));
-			} else {
-				spdlog::warn("ItemSerializationOTBM: Item '{}' has tier {} which is too large for uint8_t, truncating to 255", item.getName(), tier);
-				f.addU8(OTBM_ATTR_TIER);
-				f.addU8(0xFF);
-			}
+	std::string description(item.getDescription());
+	if (!description.empty()) {
+		f.addU8(OTBM_ATTR_DESC);
+		f.addString(description);
+	}
+
+	uint16_t tier = item.getTier();
+	if (tier > 0) {
+		if (tier <= 0xFF) {
+			f.addU8(OTBM_ATTR_TIER);
+			f.addU8(static_cast<uint8_t>(tier));
+		} else {
+			spdlog::warn("ItemSerializationOTBM: Item '{}' has tier {} which is too large for uint8_t, truncating to 255", item.getName(), tier);
+			f.addU8(OTBM_ATTR_TIER);
+			f.addU8(0xFF);
 		}
 	}
 
