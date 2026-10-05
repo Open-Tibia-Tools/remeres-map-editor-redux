@@ -126,6 +126,15 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	);
 	waypoint_filename_ctrl->SetToolTip("External waypoint XML file (leave empty for internal)");
 
+	grid_sizer->Add(
+		newd wxStaticText(this, wxID_ANY, "External Zonefile")
+	);
+
+	grid_sizer->Add(
+		zone_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getZoneFilename())), 1, wxEXPAND
+	);
+	zone_filename_ctrl->SetToolTip("External zone XML file, OTBM 5 (Crystal Server) maps only");
+
 	topsizer->Add(grid_sizer, wxSizerFlags(1).Expand().Border(wxALL, 20));
 
 	wxSizer* subsizer = newd wxBoxSizer(wxHORIZONTAL);
@@ -231,6 +240,7 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	map.setHouseFilename(nstr(house_filename_ctrl->GetValue()));
 	map.setSpawnFilename(nstr(spawn_filename_ctrl->GetValue()));
 	map.setWaypointFilename(nstr(waypoint_filename_ctrl->GetValue()));
+	map.setZoneFilename(nstr(zone_filename_ctrl->GetValue()));
 
 	const auto new_compression = (compression_choice->GetSelection() == 1) ? OtbmCompression::Gzip : OtbmCompression::None;
 	if (new_compression != map.getCompression()) {
