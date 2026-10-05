@@ -197,6 +197,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 			zone_overlay_drawer->drawFloor(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorHouses(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			zone_overlay_drawer->drawFloorCrystalZones(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
 		}
 
@@ -242,6 +243,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 			zone_overlay_drawer->drawFloor(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBlocking(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorHouses(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
+			zone_overlay_drawer->drawFloorCrystalZones(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
 		}
 

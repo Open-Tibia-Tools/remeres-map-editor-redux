@@ -374,6 +374,7 @@ void Settings::IO(IOMode mode) {
 	Bool(HIGHLIGHT_LOCKED_DOORS, true);
 	Bool(SHOW_CREATURES, true);
 	Bool(SHOW_HOUSES, true);
+	Bool(SHOW_CRYSTAL_ZONES, true);
 	Bool(SHOW_BLOCKING, false);
 	Bool(SHOW_TOOLTIPS, true);
 	Bool(SHOW_ONLY_TILEFLAGS, false);
