@@ -231,6 +231,17 @@ void Map::removeZone(uint16_t id) {
 	doChange();
 }
 
+std::vector<Position> Map::getZoneTilePositions(uint16_t id) {
+	std::vector<Position> positions;
+	// ponytail: full map scan per call (~1s on 19M tiles); add a zone -> tiles index if it gets used per frame
+	for (auto& tile_loc : tiles()) {
+		if (const Tile* tile = tile_loc.get(); tile && tile->hasZone(id)) {
+			positions.push_back(tile->getPosition());
+		}
+	}
+	return positions;
+}
+
 bool Map::addSpawn(Tile* tile) {
 	return MapSpawnManager::addSpawn(*this, tile);
 }

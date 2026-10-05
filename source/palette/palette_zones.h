@@ -32,6 +32,9 @@ private:
 	[[nodiscard]] uint16_t selectedZoneId() const;
 
 	void OnSelectZone(wxListEvent& event);
+	void OnActivateZone(wxListEvent& event);
+	void OnZoneContextMenu(wxListEvent& event);
+	void OnGoToZone(wxCommandEvent& event);
 	void OnClickAdd(wxCommandEvent& event);
 	void OnClickRename(wxCommandEvent& event);
 	void OnClickRemove(wxCommandEvent& event);

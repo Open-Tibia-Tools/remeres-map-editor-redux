@@ -150,6 +150,7 @@ public:
 	bool renameZone(uint16_t id, std::string name);
 	// Removes the zone and strips its id from every tile
 	void removeZone(uint16_t id);
+	[[nodiscard]] std::vector<Position> getZoneTilePositions(uint16_t id);
 
 	uint64_t getGeneration() const {
 		return generation;
