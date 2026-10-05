@@ -478,7 +478,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			const bool as_minimap = ctx.options.show_as_minimap;
 			const bool only_colors = as_minimap || ctx.options.show_only_colors;
 
-			if ((tile->creature && ctx.options.show_creatures && !only_colors) || tile->invalidZones ||
+			if ((tile->creature && ctx.options.show_creatures && !only_colors) || tile->hasInvalidZones() ||
 				(tile->ground && tile->ground->isInvalidOTBMItem())) {
 				chunk.markDynamicTile(tx, ty);
 			}

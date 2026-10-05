@@ -143,8 +143,8 @@ namespace TileOperations {
 		copy->statflags = tile->statflags;
 		copy->minimapColor = tile->minimapColor;
 		copy->house_id = tile->house_id;
-		if (tile->invalidZones) {
-			copy->invalidZones = std::make_unique<InvalidZoneState>(*tile->invalidZones);
+		if (tile->extra) {
+			copy->extra = std::make_unique<TileExtraData>(*tile->extra);
 		}
 		if (tile->spawn) {
 			copy->spawn = tile->spawn->deepCopy();
@@ -184,9 +184,14 @@ namespace TileOperations {
 		if (src->spawn) {
 			dest->spawn = std::move(src->spawn);
 		}
-		if (src->invalidZones) {
-			auto& dest_invalid_zones = dest->getOrCreateInvalidZones();
-			auto& src_invalid_zones = *src->invalidZones;
+		if (src->extra) {
+			for (const uint16_t zoneId : src->extra->zoneIds) {
+				dest->addZone(zoneId);
+			}
+		}
+		if (src->hasInvalidZones()) {
+			auto& dest_invalid_zones = dest->getOrCreateExtra();
+			auto& src_invalid_zones = *src->extra;
 
 			dest_invalid_zones.hasStructuralMismatch = dest_invalid_zones.hasStructuralMismatch || src_invalid_zones.hasStructuralMismatch;
 			dest_invalid_zones.rawMapFlags |= src_invalid_zones.rawMapFlags;
@@ -204,8 +209,8 @@ namespace TileOperations {
 				dest_invalid_zones.opaqueChildNodes.push_back(std::move(node));
 			}
 
-			src->invalidZones.reset();
 		}
+		src->extra.reset();
 
 		dest->items.reserve(dest->items.size() + src->items.size());
 		for (auto& item : src->items) {
