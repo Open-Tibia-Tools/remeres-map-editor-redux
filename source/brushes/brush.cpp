@@ -33,6 +33,7 @@
 #include "brushes/managers/brush_manager.h"
 
 #include "brushes/flag/flag_brush.h"
+#include "brushes/zone/zone_brush.h"
 #include "brushes/door/door_brush.h"
 #include "brushes/border/optional_border_brush.h"
 
@@ -99,6 +100,7 @@ void Brushes::init() {
 	addManagedBrush(g_brush_manager.rook_brush, TILESTATE_NOPVP);
 	addManagedBrush(g_brush_manager.nolog_brush, TILESTATE_NOLOGOUT);
 	addManagedBrush(g_brush_manager.pvp_brush, TILESTATE_PVPZONE);
+	addManagedBrush(g_brush_manager.zone_brush);
 
 	GroundBrush::init();
 	WallBrush::init();

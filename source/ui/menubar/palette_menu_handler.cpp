@@ -48,6 +48,9 @@ void SetMenuIcon(wxMenuItem* item, std::string_view icon) {
 	if (name == "Waypoint") {
 		return ICON_FLAG;
 	}
+	if (name == "Zone") {
+		return ICON_VECTOR_SQUARE;
+	}
 	return ICON_PALETTE;
 }
 
