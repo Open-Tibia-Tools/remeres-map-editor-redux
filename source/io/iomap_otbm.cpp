@@ -622,7 +622,7 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 	if (is_compressed) {
 		f = std::make_unique<GzipNodeFileWriteHandle>(toPath(identifier), magic);
 	} else {
-		f = std::make_unique<DiskNodeFileWriteHandle>(nstr(identifier.GetFullPath()), magic);
+		f = std::make_unique<DiskNodeFileWriteHandle>(std::string(identifier.GetFullPath().utf8_str()), magic);
 	}
 
 	if (!f->isOk()) {
