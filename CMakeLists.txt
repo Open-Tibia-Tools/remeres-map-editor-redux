@@ -5,6 +5,8 @@ project(rme)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# No C++20 modules are used; skip the per-file dependency scan step.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set(CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -83,13 +85,18 @@ add_executable(rme ${rme_H} ${rme_SRC} ${RME_PROTO_SRCS} ${RME_PROTO_HDRS})
 set_target_properties(rme PROPERTIES CXX_STANDARD 23)
 set_target_properties(rme PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_compile_definitions(rme PRIVATE WXWIN_COMPATIBILITY_3_3 NANOVG_GL3)
+target_precompile_headers(rme PRIVATE source/app/main.h)
+set_source_files_properties(${RME_PROTO_SRCS} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+if(MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")
+	target_compile_options(rme PRIVATE /MP)
+endif()
  
 # Copy assets to build directory
 add_custom_command(TARGET rme POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
 	"${CMAKE_CURRENT_SOURCE_DIR}/source/assets"
 	"$<TARGET_FILE_DIR:rme>/assets"
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
 	"${CMAKE_CURRENT_SOURCE_DIR}/data"
 	"$<TARGET_FILE_DIR:rme>/data"
 	COMMENT "Copying assets to output directory..."

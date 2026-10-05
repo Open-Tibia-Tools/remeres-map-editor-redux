@@ -65,6 +65,16 @@
       }
     },
     {
+      "name": "ninja-dev",
+      "displayName": "Ninja + vcpkg (Dev)",
+      "description": "Fast iteration build: RelWithDebInfo without LTO",
+      "inherits": "ninja-vcpkg",
+      "binaryDir": "${sourceDir}/build-ninja-dev",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
       "name": "vs2022-vcpkg",
       "displayName": "Visual Studio 2022 + vcpkg",
       "description": "Build using Visual Studio 2022 and vcpkg",
@@ -101,6 +111,11 @@
       "displayName": "Ninja Debug",
       "configurePreset": "ninja-vcpkg",
       "configuration": "Debug"
+    },
+    {
+      "name": "ninja-dev",
+      "displayName": "Ninja Dev",
+      "configurePreset": "ninja-dev"
     },
     {
       "name": "vs2022-release",
