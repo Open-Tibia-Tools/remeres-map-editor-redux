@@ -22,6 +22,24 @@ namespace {
 		TILESTATE_PVPZONE |
 		TILESTATE_REFRESH;
 
+	// Malformed zone nodes return false and stay preserved as opaque data.
+	bool readTileZones(FastOTBMNode& node, Tile& tile) {
+		uint16_t count = 0;
+		if (!node.stream.getU16(count)) {
+			return false;
+		}
+		std::vector<uint16_t> zoneIds(count);
+		for (uint16_t& zoneId : zoneIds) {
+			if (!node.stream.getU16(zoneId)) {
+				return false;
+			}
+		}
+		for (const uint16_t zoneId : zoneIds) {
+			tile.addZone(zoneId);
+		}
+		return true;
+	}
+
 	uint16_t decodeServerIdFromInlineBytes(const std::vector<uint8_t>& rawBytes) {
 		if (rawBytes.size() < 3) {
 			return 0;
@@ -239,6 +257,8 @@ void TileSerializationOTBM::readTileArea(
 						tile->addItemFast(std::move(item));
 					}
 				}
+			} else if (item_type == OTBM_TILE_ZONE && readTileZones(itemNode, *tile)) {
+				return;
 			} else {
 				tile->addOpaqueChildNode(itemNode.capturePreserved());
 			}
@@ -360,12 +380,20 @@ void TileSerializationOTBM::serializeTile(const IOMapOTBM& iomap, const Tile* sa
 		}
 	}
 
-	if (const InvalidZoneState* invalidZones = save_tile->getInvalidZones()) {
-		for (const auto& opaqueAttribute : invalidZones->opaqueTileAttributes) {
+	if (const TileExtraData* extra = save_tile->getExtra()) {
+		for (const auto& opaqueAttribute : extra->opaqueTileAttributes) {
 			writeRawInlineBytes(f, opaqueAttribute.rawBytes);
 		}
-		for (const auto& opaqueChildNode : invalidZones->opaqueChildNodes) {
+		for (const auto& opaqueChildNode : extra->opaqueChildNodes) {
 			writePreservedNode(f, opaqueChildNode);
+		}
+		if (!extra->zoneIds.empty()) {
+			f.addNode(OTBM_TILE_ZONE);
+			f.addU16(static_cast<uint16_t>(extra->zoneIds.size()));
+			for (const uint16_t zoneId : extra->zoneIds) {
+				f.addU16(zoneId);
+			}
+			f.endNode();
 		}
 	}
 

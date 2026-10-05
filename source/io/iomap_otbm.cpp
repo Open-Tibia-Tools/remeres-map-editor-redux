@@ -621,6 +621,11 @@ bool IOMapOTBM::loadMap(Map& map, const FileName& filename) {
 bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 	const std::string magic = g_settings.getInteger(Config::SAVE_WITH_OTB_MAGIC_NUMBER) ? "OTBM" : std::string(4, '\0');
 
+	// Zones created in the editor on a map that had none still need a file for the header to reference
+	if (map.getVersion().otbm == MAP_OTBM_5 && !map.zones.empty() && map.zonefile.empty()) {
+		map.zonefile = nstr(identifier.GetName() + "-zones.xml");
+	}
+
 	const bool is_compressed = (map.getCompression() == OtbmCompression::Gzip);
 	std::unique_ptr<NodeFileWriteHandle> f;
 	if (is_compressed) {
