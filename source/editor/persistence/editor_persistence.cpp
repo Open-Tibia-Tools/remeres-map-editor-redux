@@ -38,7 +38,7 @@ void EditorPersistence::loadMap(Editor& editor, const FileName& fn, const MapLoa
 	}
 
 	ScopedLoadingBar loadingBar("Loading OTBM map...");
-	editor.map.open(nstr(fn.GetFullPath()));
+	editor.map.open(std::string(fn.GetFullPath().utf8_str()));
 }
 
 bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdialog) {
@@ -421,7 +421,7 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 	editor.actionQueue->clear();
 
 	Map imported_map;
-	bool loaded = imported_map.open(nstr(filename.GetFullPath()));
+	bool loaded = imported_map.open(std::string(filename.GetFullPath().utf8_str()));
 
 	if (!loaded) {
 		DialogUtil::PopupDialog("Error", "Error loading map!\n" + imported_map.getError(), wxOK | wxICON_INFORMATION);
