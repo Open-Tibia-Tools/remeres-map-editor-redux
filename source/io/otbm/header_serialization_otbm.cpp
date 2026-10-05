@@ -147,9 +147,7 @@ bool HeaderSerializationOTBM::readMapAttributes(Map& map, FastOTBMStream& stream
 				break;
 			}
 			case OTBM_ATTR_EXT_SPAWN_NPC_FILE: {
-				// compatibility: skip Canary RME NPC spawn file tag
-				std::string stringToSkip;
-				if (!stream.getString(stringToSkip)) {
+				if (!stream.getString(map.npcfile)) {
 					spdlog::warn("Invalid map NPC spawnfile tag");
 					return true;
 				}
