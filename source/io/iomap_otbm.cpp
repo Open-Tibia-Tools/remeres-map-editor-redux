@@ -220,10 +220,14 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	};
 
 	loadAux(MapXMLIO::loadSpawns, "spawn", map.spawnfile);
+	loadAux(MapXMLIO::loadNpcSpawns, "npc", map.npcfile);
 	loadAux(MapXMLIO::loadHouses, "house", map.housefile);
+	loadAux(MapXMLIO::loadZones, "zones", map.zonefile);
 
 	// Waypoints handling
-	if (map.waypoints.size() > 0) {
+	if (map.getVersion().otbm == MAP_OTBM_5) {
+		// Crystal Server only reads waypoints from the OTBM, so they are neither migrated to nor merged with XML
+	} else if (map.waypoints.size() > 0) {
 		// Case 1: OTBM has waypoints
 		std::string waypointFile = map.waypointfile;
 
@@ -617,6 +621,11 @@ bool IOMapOTBM::loadMap(Map& map, const FileName& filename) {
 bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 	const std::string magic = g_settings.getInteger(Config::SAVE_WITH_OTB_MAGIC_NUMBER) ? "OTBM" : std::string(4, '\0');
 
+	// Zones created in the editor on a map that had none still need a file for the header to reference
+	if (map.getVersion().otbm == MAP_OTBM_5 && !map.zones.empty() && map.zonefile.empty()) {
+		map.zonefile = nstr(identifier.GetName() + "-zones.xml");
+	}
+
 	const bool is_compressed = (map.getCompression() == OtbmCompression::Gzip);
 	std::unique_ptr<NodeFileWriteHandle> f;
 	if (is_compressed) {
@@ -652,6 +661,14 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 	if (!MapXMLIO::saveHouses(map, identifier)) {
 		spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save houses");
 		return false;
+	}
+
+	if (map.getVersion().otbm == MAP_OTBM_5) {
+		if (!map.zones.empty() && !MapXMLIO::saveZones(map, identifier)) {
+			spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save zones");
+			return false;
+		}
+		return true; // Waypoints already live in the OTBM WAYPOINTS node
 	}
 
 	// Always save waypoints to XML if they exist, creating a default file if needed
@@ -709,12 +726,21 @@ bool IOMapOTBM::saveMap(Map& map, NodeFileWriteHandle& f) {
 			};
 
 			addExtFile(OTBM_ATTR_EXT_SPAWN_FILE, map.spawnfile);
+			if (mapVersion.otbm == MAP_OTBM_5) {
+				addExtFile(OTBM_ATTR_EXT_SPAWN_NPC_FILE, map.npcfile);
+			}
 			addExtFile(OTBM_ATTR_EXT_HOUSE_FILE, map.housefile);
+			if (mapVersion.otbm == MAP_OTBM_5 && !map.zones.empty()) {
+				addExtFile(OTBM_ATTR_EXT_ZONE_FILE, map.zonefile);
+			}
 
 			writeTileData(map, f);
 			writeTowns(map, f);
 
-			// Waypoints are strictly forbidden in OTBM (saved to XML only)
+			// Waypoints are saved to XML, except for Crystal Server, which only reads them from OTBM
+			if (mapVersion.otbm == MAP_OTBM_5) {
+				writeWaypoints(map, f, mapVersion);
+			}
 		}
 		f.endNode();
 	}

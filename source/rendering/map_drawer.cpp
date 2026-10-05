@@ -28,6 +28,7 @@
 #include "brushes/brush.h"
 #include "brushes/house/house_brush.h"
 #include "brushes/house/house_exit_brush.h"
+#include "brushes/zone/zone_brush.h"
 #include "game/sprites.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
@@ -61,12 +62,15 @@ MapDrawer::~MapDrawer() {
 
 void MapDrawer::SetupVars(const ViewportParameters& vp) {
 	options.current_house_id = 0;
+	options.current_zone_id = 0;
 	Brush* brush = g_brush_manager.GetCurrentBrush();
 	if (brush) {
 		if (brush->is<HouseBrush>()) {
 			options.current_house_id = brush->as<HouseBrush>()->getHouseID();
 		} else if (brush->is<HouseExitBrush>()) {
 			options.current_house_id = brush->as<HouseExitBrush>()->getHouseID();
+		} else if (brush->is<ZoneBrush>()) {
+			options.current_zone_id = brush->as<ZoneBrush>()->getZone();
 		}
 	}
 

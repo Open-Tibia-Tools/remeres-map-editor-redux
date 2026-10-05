@@ -18,6 +18,7 @@ class EraserBrush;
 class SpawnBrush;
 class DoorBrush;
 class FlagBrush;
+class ZoneBrush;
 
 class BrushManager {
 public:
@@ -142,6 +143,7 @@ public:
 	FlagBrush* rook_brush;
 	FlagBrush* nolog_brush;
 	FlagBrush* pvp_brush;
+	ZoneBrush* zone_brush;
 
 private:
 	Brush* current_brush;

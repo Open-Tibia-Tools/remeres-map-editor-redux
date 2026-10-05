@@ -70,17 +70,23 @@ struct InvalidOTBMItemData {
 	}
 };
 
-struct InvalidZoneState {
+// Rare per-tile data kept off the hot Tile struct: preserved invalid OTBM content and Crystal Server zone ids.
+struct TileExtraData {
 	std::vector<OpaqueTileAttributeRecord> opaqueTileAttributes;
 	std::vector<PreservedOTBMNode> opaqueChildNodes;
+	std::vector<uint16_t> zoneIds; // sorted, unique, never 0
 	uint32_t rawMapFlags = 0;
 	uint32_t unknownMapFlagBits = 0;
 	bool hasStructuralMismatch = false;
 
-	bool operator==(const InvalidZoneState&) const = default;
+	bool operator==(const TileExtraData&) const = default;
 
-	[[nodiscard]] bool hasContent() const {
+	[[nodiscard]] bool hasInvalidContent() const {
 		return !opaqueTileAttributes.empty() || !opaqueChildNodes.empty() || unknownMapFlagBits != 0 || hasStructuralMismatch;
+	}
+
+	[[nodiscard]] bool empty() const {
+		return !hasInvalidContent() && zoneIds.empty();
 	}
 };
 

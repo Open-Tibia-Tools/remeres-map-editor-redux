@@ -70,6 +70,7 @@ enum OTBM_NodeTypes_t : uint8_t {
 	OTBM_HOUSETILE = 14,
 	OTBM_WAYPOINTS = 15,
 	OTBM_WAYPOINT = 16,
+	OTBM_TILE_ZONE = 19, // Canary / Crystal Server: u16 count, then count * u16 zone id
 };
 
 enum class OTBMWriteResult {

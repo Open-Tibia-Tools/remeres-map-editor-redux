@@ -64,6 +64,8 @@ void Map::initializeEmpty() {
 	name = sname + ".otbm";
 	spawnfile = sname + "-spawn.xml";
 	housefile = sname + "-house.xml";
+	npcfile = sname + "-npc.xml";
+	zonefile = sname + "-zones.xml";
 	waypointfile = sname + "-waypoint.xml";
 	description = "No map description available.";
 	unnamed = true;
@@ -176,6 +178,68 @@ void Map::setSpawnFilename(const std::string& new_spawnfile) {
 void Map::setWaypointFilename(const std::string& new_waypointfile) {
 	waypointfile = new_waypointfile;
 	unnamed = false;
+}
+
+const Map::Zone* Map::findZone(uint16_t id) const {
+	const auto it = std::ranges::find(zones, id, &Zone::id);
+	return it != zones.end() ? &*it : nullptr;
+}
+
+const Map::Zone* Map::findZone(std::string_view name) const {
+	const auto it = std::ranges::find(zones, name, &Zone::name);
+	return it != zones.end() ? &*it : nullptr;
+}
+
+uint16_t Map::addZone(std::string name) {
+	if (name.empty() || findZone(name)) {
+		return 0;
+	}
+	uint16_t id = 1;
+	while (findZone(id)) {
+		if (id == UINT16_MAX) {
+			return 0;
+		}
+		++id;
+	}
+	zones.push_back({ std::move(name), id });
+	doChange();
+	return id;
+}
+
+bool Map::renameZone(uint16_t id, std::string name) {
+	const Zone* existing = findZone(name);
+	if (name.empty() || (existing && existing->id != id)) {
+		return false;
+	}
+	const auto it = std::ranges::find(zones, id, &Zone::id);
+	if (it == zones.end()) {
+		return false;
+	}
+	it->name = std::move(name);
+	doChange();
+	return true;
+}
+
+void Map::removeZone(uint16_t id) {
+	std::erase_if(zones, [id](const Zone& zone) { return zone.id == id; });
+	// ponytail: full map scan, fine for an occasional palette action; index tiles by zone if this ever gets hot
+	for (auto& tile_loc : tiles()) {
+		if (Tile* tile = tile_loc.get(); tile && tile->hasZone(id)) {
+			tile->removeZone(id);
+		}
+	}
+	doChange();
+}
+
+std::vector<Position> Map::getZoneTilePositions(uint16_t id) {
+	std::vector<Position> positions;
+	// ponytail: full map scan per call (~1s on 19M tiles); add a zone -> tiles index if it gets used per frame
+	for (auto& tile_loc : tiles()) {
+		if (const Tile* tile = tile_loc.get(); tile && tile->hasZone(id)) {
+			positions.push_back(tile->getPosition());
+		}
+	}
+	return positions;
 }
 
 bool Map::addSpawn(Tile* tile) {

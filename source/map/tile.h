@@ -29,8 +29,10 @@ class House;
 class Map;
 #include "app/rme_forward_declarations.h"
 #include <unordered_set>
+#include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <vector>
 
 enum {
@@ -70,7 +72,7 @@ public: // Members
 	uint32_t mapflags;
 	uint16_t statflags;
 	uint8_t minimapColor;
-	std::unique_ptr<InvalidZoneState> invalidZones;
+	std::unique_ptr<TileExtraData> extra;
 
 public:
 	// ALWAYS use this constructor if the Tile is EVER going to be placed on a map
@@ -151,13 +153,22 @@ public: // Functions
 	void reserveItems(size_t count) {
 		items.reserve(count);
 	}
-	InvalidZoneState& getOrCreateInvalidZones();
+	TileExtraData& getOrCreateExtra();
 	void clearInvalidZones();
 	void addOpaqueTileAttribute(OpaqueTileAttributeRecord record);
 	void addOpaqueChildNode(PreservedOTBMNode node);
 	void recordUnknownMapFlags(uint32_t rawFlags, uint32_t unknownBits);
-	[[nodiscard]] const InvalidZoneState* getInvalidZones() const;
+	[[nodiscard]] const TileExtraData* getExtra() const;
 	[[nodiscard]] bool hasInvalidZones() const;
+
+	// Crystal Server zones
+	[[nodiscard]] std::span<const uint16_t> getZoneIds() const;
+	[[nodiscard]] bool hasZones() const;
+	[[nodiscard]] bool hasZone(uint16_t zoneId) const;
+	void addZone(uint16_t zoneId);
+	void removeZone(uint16_t zoneId);
+	// Expects ids in getZoneIds() form (sorted, unique, no 0); an empty span clears the zones
+	void setZoneIds(std::span<const uint16_t> zoneIds);
 
 	bool isSelected() const {
 		return testFlags(statflags, TILESTATE_SELECTED);
@@ -266,49 +277,106 @@ inline uint32_t Tile::getHouseID() const {
 	return house_id;
 }
 
-inline InvalidZoneState& Tile::getOrCreateInvalidZones() {
-	if (!invalidZones) {
-		invalidZones = std::make_unique<InvalidZoneState>();
+inline TileExtraData& Tile::getOrCreateExtra() {
+	if (!extra) {
+		extra = std::make_unique<TileExtraData>();
 	}
-	return *invalidZones;
+	return *extra;
 }
 
 inline void Tile::clearInvalidZones() {
-	if (invalidZones && invalidZones->unknownMapFlagBits != 0) {
-		unsetMapFlags(invalidZones->unknownMapFlagBits);
+	if (!extra) {
+		return;
 	}
-	invalidZones.reset();
+	if (extra->unknownMapFlagBits != 0) {
+		unsetMapFlags(extra->unknownMapFlagBits);
+	}
+	std::vector<uint16_t> zoneIds = std::move(extra->zoneIds);
+	extra.reset();
+	if (!zoneIds.empty()) {
+		getOrCreateExtra().zoneIds = std::move(zoneIds);
+	}
 }
 
 inline void Tile::addOpaqueTileAttribute(OpaqueTileAttributeRecord record) {
-	auto& state = getOrCreateInvalidZones();
+	auto& state = getOrCreateExtra();
 	state.hasStructuralMismatch = true;
 	state.opaqueTileAttributes.push_back(std::move(record));
 }
 
 inline void Tile::addOpaqueChildNode(PreservedOTBMNode node) {
-	auto& state = getOrCreateInvalidZones();
+	auto& state = getOrCreateExtra();
 	state.hasStructuralMismatch = true;
 	state.opaqueChildNodes.push_back(std::move(node));
 }
 
 inline void Tile::recordUnknownMapFlags(uint32_t rawFlags, uint32_t unknownBits) {
-	auto& state = getOrCreateInvalidZones();
+	auto& state = getOrCreateExtra();
 	state.rawMapFlags = rawFlags;
 	state.unknownMapFlagBits |= unknownBits;
 	state.hasStructuralMismatch = state.hasStructuralMismatch || unknownBits != 0;
 }
 
-inline const InvalidZoneState* Tile::getInvalidZones() const {
-	return invalidZones.get();
+inline const TileExtraData* Tile::getExtra() const {
+	return extra.get();
 }
 
 inline bool Tile::hasInvalidZones() const {
-	return invalidZones && invalidZones->hasContent();
+	return extra && extra->hasInvalidContent();
+}
+
+inline std::span<const uint16_t> Tile::getZoneIds() const {
+	return extra ? std::span<const uint16_t>(extra->zoneIds) : std::span<const uint16_t>();
+}
+
+inline bool Tile::hasZones() const {
+	return extra && !extra->zoneIds.empty();
+}
+
+inline bool Tile::hasZone(uint16_t zoneId) const {
+	return std::ranges::binary_search(getZoneIds(), zoneId);
+}
+
+inline void Tile::addZone(uint16_t zoneId) {
+	if (zoneId == 0) {
+		return;
+	}
+	auto& ids = getOrCreateExtra().zoneIds;
+	const auto it = std::ranges::lower_bound(ids, zoneId);
+	if (it == ids.end() || *it != zoneId) {
+		ids.insert(it, zoneId);
+	}
+}
+
+inline void Tile::removeZone(uint16_t zoneId) {
+	if (!extra) {
+		return;
+	}
+	auto& ids = extra->zoneIds;
+	const auto it = std::ranges::lower_bound(ids, zoneId);
+	if (it != ids.end() && *it == zoneId) {
+		ids.erase(it);
+	}
+	if (extra->empty()) {
+		extra.reset();
+	}
+}
+
+inline void Tile::setZoneIds(std::span<const uint16_t> zoneIds) {
+	if (zoneIds.empty()) {
+		if (extra) {
+			extra->zoneIds.clear();
+			if (extra->empty()) {
+				extra.reset();
+			}
+		}
+		return;
+	}
+	getOrCreateExtra().zoneIds.assign(zoneIds.begin(), zoneIds.end());
 }
 
 inline void Tile::setMapFlags(uint32_t _flags) {
-	const uint32_t preservedUnknownBits = invalidZones ? invalidZones->unknownMapFlagBits : 0;
+	const uint32_t preservedUnknownBits = extra ? extra->unknownMapFlagBits : 0;
 	mapflags = _flags | preservedUnknownBits;
 }
 

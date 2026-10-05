@@ -3,6 +3,7 @@
 #include "app/main.h"
 #include "palette/house/house_palette.h"
 #include "palette/palette_waypoints.h"
+#include "palette/palette_zones.h"
 
 namespace {
 
@@ -26,12 +27,23 @@ void updateWaypointMap(PalettePanel* panel, Map* map) {
 	}
 }
 
+PalettePanel* createZonePanel(wxWindow* parent) {
+	return newd ZonePalettePanel(parent);
+}
+
+void updateZoneMap(PalettePanel* panel, Map* map) {
+	if (auto* zonePanel = dynamic_cast<ZonePalettePanel*>(panel)) {
+		zonePanel->SetMap(map);
+	}
+}
+
 } // namespace
 
 const std::vector<HardcodedPaletteProvider>& GetHardcodedPaletteProviders() {
 	static const std::vector<HardcodedPaletteProvider> providers {
 		{ "House", createHousePanel, updateHouseMap },
 		{ "Waypoint", createWaypointPanel, updateWaypointMap },
+		{ "Zone", createZonePanel, updateZoneMap },
 	};
 	return providers;
 }

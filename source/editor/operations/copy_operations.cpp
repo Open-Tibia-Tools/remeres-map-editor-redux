@@ -38,6 +38,7 @@ void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 		if (tile->ground && tile->ground->isSelected()) {
 			copied_tile->house_id = tile->house_id;
 			copied_tile->setMapFlags(tile->getMapFlags());
+			copied_tile->setZoneIds(tile->getZoneIds());
 		}
 
 		auto tile_selection = TileOperations::getSelectedItems(tile);
@@ -98,6 +99,8 @@ void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 			newtile->house_id = 0;
 			copied_tile->setMapFlags(tile->getMapFlags());
 			newtile->setMapFlags(TILESTATE_NONE);
+			copied_tile->setZoneIds(newtile->getZoneIds());
+			newtile->setZoneIds({});
 		}
 
 		auto tile_selection = TileOperations::popSelectedItems(newtile.get());

@@ -69,6 +69,15 @@ public:
 	                     const DrawingOptions& options,
 	                     const AtlasManager& atlas);
 
+	// Crystal Server zones: translucent fill colored per zone id plus outer borders; the zone brush's id is emphasized
+	void drawFloorCrystalZones(SpriteBatch& sprite_batch,
+	                           int z,
+	                           const RenderView& view,
+	                           const Map& map,
+	                           const BaseMap* secondary_map,
+	                           const DrawingOptions& options,
+	                           const AtlasManager& atlas);
+
 	void drawFloorHighlightItems(SpriteBatch& sprite_batch,
 	                             int z,
 	                             const RenderView& view,
@@ -150,6 +159,10 @@ private:
 	std::vector<uint32_t> house_row_curr_;
 	std::vector<uint32_t> house_row_next_;
 	std::vector<PendingBorderQuad> house_border_quads_;
+
+	std::vector<uint16_t> crystal_zone_row_prev_;
+	std::vector<uint16_t> crystal_zone_row_curr_;
+	std::vector<uint16_t> crystal_zone_row_next_;
 
 	std::vector<PendingHighlightQuad> highlight_quads_;
 };

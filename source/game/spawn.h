@@ -22,6 +22,12 @@ class Tile;
 
 class Spawn {
 public:
+	// Crystal Server spawn files this spawn was loaded from; spawns made in the editor have none
+	enum Kind : uint8_t {
+		MONSTERS = 1,
+		NPCS = 2,
+	};
+
 	Spawn(int size = 3) :
 		size(0), selected(false) {
 		setSize(size);
@@ -31,7 +37,24 @@ public:
 	std::unique_ptr<Spawn> deepCopy() {
 		std::unique_ptr<Spawn> copy = std::make_unique<Spawn>(size);
 		copy->selected = selected;
+		copy->kinds = kinds;
+		copy->npc_size = npc_size;
 		return copy;
+	}
+
+	uint8_t getKinds() const {
+		return kinds;
+	}
+	void addKind(Kind kind) {
+		kinds |= kind;
+	}
+
+	// ponytail: radius of a Crystal NPC spawn centered on the same tile as a monster spawn; only preserved, not editable
+	int getNpcSize() const {
+		return npc_size;
+	}
+	void setNpcSize(int newsize) {
+		npc_size = newsize;
 	}
 
 	bool isSelected() const {
@@ -62,6 +85,8 @@ public:
 
 protected:
 	int size;
+	int npc_size = 0;
+	uint8_t kinds = 0;
 	bool selected;
 };
 

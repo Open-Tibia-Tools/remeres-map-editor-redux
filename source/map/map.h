@@ -34,6 +34,11 @@ class MapSpawnManager;
 
 class Map : public BaseMap {
 public:
+	struct Zone {
+		std::string name;
+		uint16_t id;
+	};
+
 	// ctor and dtor
 	Map();
 	~Map() override;
@@ -130,6 +135,22 @@ public:
 	std::string getWaypointFilename() const {
 		return waypointfile;
 	}
+	std::string getZoneFilename() const {
+		return zonefile;
+	}
+	void setZoneFilename(const std::string& new_zonefile) {
+		zonefile = new_zonefile;
+	}
+
+	// Crystal Server zone registry; ids stay stable on rename because tiles reference them
+	[[nodiscard]] const Zone* findZone(uint16_t id) const;
+	[[nodiscard]] const Zone* findZone(std::string_view name) const;
+	// Returns the new zone id, or 0 when the name is empty, taken, or no id is left
+	uint16_t addZone(std::string name);
+	bool renameZone(uint16_t id, std::string name);
+	// Removes the zone and strips its id from every tile
+	void removeZone(uint16_t id);
+	[[nodiscard]] std::vector<Position> getZoneTilePositions(uint16_t id);
 
 	uint64_t getGeneration() const {
 		return generation;
@@ -168,9 +189,13 @@ protected:
 
 	std::string spawnfile; // The maps spawnfile
 	std::string housefile; // The housefile
+	std::string npcfile; // Crystal Server keeps NPC spawns in their own file
+	std::string zonefile; // Crystal Server zone names; tiles reference them by id
 	std::string waypointfile; // The waypoints file (stores extended waypoint information such as id, preferred icon and matching town)
 
 public:
+	std::vector<Zone> zones;
+
 	Towns towns;
 	Houses houses;
 	Spawns spawns;

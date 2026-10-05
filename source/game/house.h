@@ -50,6 +50,9 @@ public:
 	std::string name;
 	uint32_t townid;
 	bool guildhall;
+	// Crystal Server house XML fields, preserved across load/save
+	uint32_t clientid = 0;
+	int32_t beds = -1; // -1 when the house file has no beds attribute
 
 	void setExit(const Position& pos);
 	void setExit(Map* map, const Position& pos);
