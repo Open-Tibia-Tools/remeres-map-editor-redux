@@ -504,7 +504,9 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 		}
 	}
 
-	if (g_item_definitions.MinorVersion >= CLIENT_VERSION_820 && item.isCharged()) {
+	// Crystal Server item definitions report OTB minor 4, but its loader reads charges
+	const bool supportsCharges = maphandle.version.otbm == MAP_OTBM_5 || g_item_definitions.MinorVersion >= CLIENT_VERSION_820;
+	if (supportsCharges && item.isCharged()) {
 		f.addU8(OTBM_ATTR_CHARGES);
 		f.addU16(item.getSubtype());
 	}

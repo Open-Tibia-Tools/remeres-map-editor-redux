@@ -223,7 +223,9 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	loadAux(MapXMLIO::loadHouses, "house", map.housefile);
 
 	// Waypoints handling
-	if (map.waypoints.size() > 0) {
+	if (map.getVersion().otbm == MAP_OTBM_5) {
+		// Crystal Server only reads waypoints from the OTBM, so they are neither migrated to nor merged with XML
+	} else if (map.waypoints.size() > 0) {
 		// Case 1: OTBM has waypoints
 		std::string waypointFile = map.waypointfile;
 
@@ -654,6 +656,10 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 		return false;
 	}
 
+	if (map.getVersion().otbm == MAP_OTBM_5) {
+		return true; // Waypoints already live in the OTBM WAYPOINTS node
+	}
+
 	// Always save waypoints to XML if they exist, creating a default file if needed
 	if (map.waypoints.size() > 0) {
 		if (map.waypointfile.empty()) {
@@ -714,7 +720,10 @@ bool IOMapOTBM::saveMap(Map& map, NodeFileWriteHandle& f) {
 			writeTileData(map, f);
 			writeTowns(map, f);
 
-			// Waypoints are strictly forbidden in OTBM (saved to XML only)
+			// Waypoints are saved to XML, except for Crystal Server, which only reads them from OTBM
+			if (mapVersion.otbm == MAP_OTBM_5) {
+				writeWaypoints(map, f, mapVersion);
+			}
 		}
 		f.endNode();
 	}
