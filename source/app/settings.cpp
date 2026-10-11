@@ -438,6 +438,7 @@ void Settings::IO(IOMode mode) {
 	Bool(SHOW_TILESET_EDITOR, false);
 	Bool(USE_OTBM_4_FOR_ALL_MAPS, false);
 	Bool(SAVE_WITH_OTB_MAGIC_NUMBER, false);
+	Int(WAYPOINT_STORAGE_FORMAT, static_cast<int>(Config::WaypointStorageFormat::OTBM));
 	Int(REPLACE_SIZE, 500);
 	Int(COPY_POSITION_FORMAT, 0);
 	String(RECENT_EDITED_MAP_PATH, "");
