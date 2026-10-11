@@ -40,32 +40,20 @@ MapCompatibilityPage::MapCompatibilityPage(wxWindow* parent) : ScrollablePrefere
 
 	page_sizer->Add(waypoints_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
 
-	// Section 2: Zones (Foundation for upcoming zone system settings)
+	// Section 2: Zones
 	auto* zones_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
-		"Zones",
-		"Configure zone definitions and cross-server zone persistence."
+		"Zones (Placeholder)",
+		"Placeholder"
 	);
-
-	PreferencesLayout::AddNotice(
-		zones_section,
-		"Zone definitions are saved in OTBM tile zones (for OTBM 5 / Crystal Server & Canary) or mapped via external zone files."
-	);
-
 	page_sizer->Add(zones_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
 
-	// Section 3: Spawns & Creatures (Foundation for upcoming spawn system settings)
+	// Section 3: Spawns & NPCs
 	auto* spawns_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
-		"Spawns & Creatures",
-		"Configure spawn definitions for monster and NPC placements."
+		"Spawns & NPCs (Placeholder)",
+		"Placeholder"
 	);
-
-	PreferencesLayout::AddNotice(
-		spawns_section,
-		"Unified spawns (<map>-spawn.xml) are used for classic servers, while partitioned spawns (monster and NPC XMLs) are supported for modern servers."
-	);
-
 	page_sizer->Add(spawns_section, 0, wxEXPAND | wxALL, FromDIP(10));
 }
 
