@@ -56,14 +56,29 @@ bool MapBackupService::CreateSnapshot(
 
 	out_backup_path = nstr(target_file.GetFullPath());
 
+	const std::string original_spawnfile = editor.map.getSpawnFilename();
+	const std::string original_monsterfile = editor.map.getMonsterFilename();
+	const std::string original_npcfile = editor.map.getNpcFilename();
+	const std::string original_housefile = editor.map.getHouseFilename();
 	const std::string original_waypointfile = editor.map.getWaypointFilename();
 	const bool original_changed = editor.map.hasChanged();
 	const bool original_unnamed = editor.map.isUnnamed();
 
+	const std::string snapshot_base = nstr(target_file.GetName());
+	editor.map.setSpawnFilename(snapshot_base + "-spawn.xml");
+	editor.map.setMonsterFilename(snapshot_base + "-monster.xml");
+	editor.map.setNpcFilename(snapshot_base + "-npc.xml");
+	editor.map.setHouseFilename(snapshot_base + "-house.xml");
+	editor.map.setWaypointFilename(snapshot_base + "-waypoint.xml");
+
 	IOMapOTBM mapsaver(editor.map.getVersion());
 	const bool save_ok = mapsaver.saveMap(editor.map, target_file);
 
-	// Restore waypointfile, unnamed state, and preserve dirty state on both success and failure paths
+	// Restore original filenames, unnamed state, and preserve dirty state on both success and failure paths
+	editor.map.setSpawnFilename(original_spawnfile);
+	editor.map.setMonsterFilename(original_monsterfile);
+	editor.map.setNpcFilename(original_npcfile);
+	editor.map.setHouseFilename(original_housefile);
 	editor.map.setWaypointFilename(original_waypointfile);
 	editor.map.setUnnamed(original_unnamed);
 	if (!original_changed && editor.map.hasChanged()) {
@@ -71,6 +86,14 @@ bool MapBackupService::CreateSnapshot(
 	}
 
 	if (!save_ok) {
+		const std::string dir = nstr(target_file.GetPath(wxPATH_GET_SEPARATOR | wxPATH_GET_VOLUME));
+		std::remove(nstr(target_file.GetFullPath()).c_str());
+		std::remove((dir + snapshot_base + "-spawn.xml").c_str());
+		std::remove((dir + snapshot_base + "-monster.xml").c_str());
+		std::remove((dir + snapshot_base + "-npc.xml").c_str());
+		std::remove((dir + snapshot_base + "-house.xml").c_str());
+		std::remove((dir + snapshot_base + "-waypoint.xml").c_str());
+
 		out_error = "Failed to save backup map snapshot to: " + out_backup_path;
 		spdlog::error("MapBackupService::CreateSnapshot: {}", out_error);
 		return false;

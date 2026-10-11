@@ -223,6 +223,25 @@ void MapPropertiesWindow::UpdateSpawnControls() {
 	MapVersionID map_version = indexToMapVersion(version_choice->GetSelection());
 	const bool isOtbm5 = (map_version == MAP_OTBM_5);
 
+	wxFileName fn = wxstr(editor.map.getFilename().empty() ? editor.map.getName() : editor.map.getFilename());
+	wxString base_name = fn.GetName();
+	if (base_name.empty()) {
+		base_name = "untitled";
+	}
+
+	if (isOtbm5) {
+		if (monster_filename_ctrl->GetValue().Trim().empty()) {
+			monster_filename_ctrl->SetValue(base_name + "-monster.xml");
+		}
+		if (npc_filename_ctrl->GetValue().Trim().empty()) {
+			npc_filename_ctrl->SetValue(base_name + "-npc.xml");
+		}
+	} else {
+		if (spawn_filename_ctrl->GetValue().Trim().empty()) {
+			spawn_filename_ctrl->SetValue(base_name + "-spawn.xml");
+		}
+	}
+
 	spawn_label->Show(!isOtbm5);
 	spawn_filename_ctrl->Show(!isOtbm5);
 
@@ -264,11 +283,38 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 
+	wxFileName fn = wxstr(map.getFilename().empty() ? map.getName() : map.getFilename());
+	std::string base_name = nstr(fn.GetName());
+	if (base_name.empty()) {
+		base_name = "untitled";
+	}
+
+	std::string house_fn = nstr(house_filename_ctrl->GetValue());
+	std::string spawn_fn = nstr(spawn_filename_ctrl->GetValue());
+	std::string monster_fn = nstr(monster_filename_ctrl->GetValue());
+	std::string npc_fn = nstr(npc_filename_ctrl->GetValue());
+
+	if (house_fn.empty()) {
+		house_fn = base_name + "-house.xml";
+	}
+	if (new_ver.otbm == MAP_OTBM_5) {
+		if (monster_fn.empty()) {
+			monster_fn = base_name + "-monster.xml";
+		}
+		if (npc_fn.empty()) {
+			npc_fn = base_name + "-npc.xml";
+		}
+	} else {
+		if (spawn_fn.empty()) {
+			spawn_fn = base_name + "-spawn.xml";
+		}
+	}
+
 	map.setMapDescription(nstr(description_ctrl->GetValue()));
-	map.setHouseFilename(nstr(house_filename_ctrl->GetValue()));
-	map.setSpawnFilename(nstr(spawn_filename_ctrl->GetValue()));
-	map.setMonsterFilename(nstr(monster_filename_ctrl->GetValue()));
-	map.setNpcFilename(nstr(npc_filename_ctrl->GetValue()));
+	map.setHouseFilename(house_fn);
+	map.setSpawnFilename(spawn_fn);
+	map.setMonsterFilename(monster_fn);
+	map.setNpcFilename(npc_fn);
 	map.setWaypointFilename(nstr(waypoint_filename_ctrl->GetValue()));
 
 	const auto new_compression = (compression_choice->GetSelection() == 1) ? OtbmCompression::Gzip : OtbmCompression::None;

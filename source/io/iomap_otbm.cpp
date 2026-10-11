@@ -226,6 +226,20 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	}
 	loadAux(MapXMLIO::loadHouses, "house", map.housefile);
 
+	// Ensure all auxiliary filenames have defaults so converting between OTBM versions never encounters empty paths
+	if (map.spawnfile.empty()) {
+		map.spawnfile = nstr(filename.GetName()) + "-spawn.xml";
+	}
+	if (map.monsterfile.empty()) {
+		map.monsterfile = nstr(filename.GetName()) + "-monster.xml";
+	}
+	if (map.npcfile.empty()) {
+		map.npcfile = nstr(filename.GetName()) + "-npc.xml";
+	}
+	if (map.housefile.empty()) {
+		map.housefile = nstr(filename.GetName()) + "-house.xml";
+	}
+
 	// Waypoints handling: if OTBM has waypoints, it is the authority and XML is ignored entirely.
 	// Only load from companion XML if OTBM has no waypoints.
 	if (map.waypoints.empty()) {

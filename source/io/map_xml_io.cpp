@@ -170,6 +170,9 @@ namespace {
 	}
 
 	bool saveSpawnFile(const Map& map, const wxFileName& dir, const std::string& filename, const SpawnFileFormat& format) {
+		if (filename.empty()) {
+			return false;
+		}
 		auto paths = MapXMLIO::normalizeMapFilePaths(dir, filename);
 
 		pugi::xml_document doc;
@@ -345,9 +348,12 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 
 bool MapXMLIO::saveSpawns(const Map& map, const wxFileName& dir) {
 	if (map.getVersion().otbm == MAP_OTBM_5) {
-		return saveSpawnFile(map, dir, map.getMonsterFilename(), MONSTERS_SPAWN_FILE) && saveSpawnFile(map, dir, map.getNpcFilename(), NPCS_SPAWN_FILE);
+		const std::string monsterFile = map.getMonsterFilename().empty() ? (nstr(dir.GetName()) + "-monster.xml") : map.getMonsterFilename();
+		const std::string npcFile = map.getNpcFilename().empty() ? (nstr(dir.GetName()) + "-npc.xml") : map.getNpcFilename();
+		return saveSpawnFile(map, dir, monsterFile, MONSTERS_SPAWN_FILE) && saveSpawnFile(map, dir, npcFile, NPCS_SPAWN_FILE);
 	}
-	return saveSpawnFile(map, dir, map.getSpawnFilename(), STANDARD_SPAWN_FILE);
+	const std::string spawnFile = map.getSpawnFilename().empty() ? (nstr(dir.GetName()) + "-spawn.xml") : map.getSpawnFilename();
+	return saveSpawnFile(map, dir, spawnFile, STANDARD_SPAWN_FILE);
 }
 
 bool MapXMLIO::loadHouses(Map& map, const wxFileName& dir) {
@@ -420,7 +426,8 @@ bool MapXMLIO::loadHouses(Map& map, pugi::xml_document& doc) {
 }
 
 bool MapXMLIO::saveHouses(const Map& map, const wxFileName& dir) {
-	auto paths = normalizeMapFilePaths(dir, map.housefile);
+	const std::string houseFile = map.getHouseFilename().empty() ? (nstr(dir.GetName()) + "-house.xml") : map.getHouseFilename();
+	auto paths = normalizeMapFilePaths(dir, houseFile);
 
 	pugi::xml_document doc;
 	if (saveHouses(map, doc)) {

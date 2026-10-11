@@ -167,36 +167,48 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 				converter.SetFullName(wxstr(savefile));
 				std::string otbm_filename = map_path + nstr(converter.GetName());
 				std::rename(backup_otbm.c_str(), std::string(otbm_filename + ".otbm").c_str());
+			} else {
+				std::remove(savefile.c_str());
 			}
 
 			if (!backup_house.empty()) {
 				converter.SetFullName(wxstr(editor.map.getHouseFilename()));
 				std::string house_filename = map_path + nstr(converter.GetName());
 				std::rename(backup_house.c_str(), std::string(house_filename + ".xml").c_str());
+			} else if (!editor.map.getHouseFilename().empty()) {
+				std::remove((map_path + editor.map.getHouseFilename()).c_str());
 			}
 
 			if (!backup_spawn.empty()) {
 				converter.SetFullName(wxstr(editor.map.getSpawnFilename()));
 				std::string spawn_filename = map_path + nstr(converter.GetName());
 				std::rename(backup_spawn.c_str(), std::string(spawn_filename + ".xml").c_str());
+			} else if (!editor.map.getSpawnFilename().empty()) {
+				std::remove((map_path + editor.map.getSpawnFilename()).c_str());
 			}
 
 			if (!backup_monster.empty()) {
 				converter.SetFullName(wxstr(editor.map.getMonsterFilename()));
 				std::string monster_filename = map_path + nstr(converter.GetName());
 				std::rename(backup_monster.c_str(), std::string(monster_filename + ".xml").c_str());
+			} else if (!editor.map.getMonsterFilename().empty()) {
+				std::remove((map_path + editor.map.getMonsterFilename()).c_str());
 			}
 
 			if (!backup_npc.empty()) {
 				converter.SetFullName(wxstr(editor.map.getNpcFilename()));
 				std::string npc_filename = map_path + nstr(converter.GetName());
 				std::rename(backup_npc.c_str(), std::string(npc_filename + ".xml").c_str());
+			} else if (!editor.map.getNpcFilename().empty()) {
+				std::remove((map_path + editor.map.getNpcFilename()).c_str());
 			}
 
 			if (!backup_waypoint.empty()) {
 				converter.SetFullName(wxstr(editor.map.getWaypointFilename()));
 				std::string waypoint_filename = map_path + nstr(converter.GetName());
 				std::rename(backup_waypoint.c_str(), std::string(waypoint_filename + ".xml").c_str());
+			} else if (!editor.map.getWaypointFilename().empty()) {
+				std::remove((map_path + editor.map.getWaypointFilename()).c_str());
 			}
 
 			// Display the error
