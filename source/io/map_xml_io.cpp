@@ -21,11 +21,19 @@
 #include <ranges>
 
 std::pair<std::string, std::string> MapXMLIO::normalizeMapFilePaths(const wxFileName& dir, const std::string& filename) {
-	std::string utf8_path = (const char*)(dir.GetPath(wxPATH_GET_SEPARATOR | wxPATH_GET_VOLUME).mb_str(wxConvUTF8));
-	utf8_path += filename;
+	wxFileName resolved(dir.GetPath(wxPATH_GET_SEPARATOR | wxPATH_GET_VOLUME), wxstr(filename));
+	resolved.Normalize(wxPATH_NORM_ALL, dir.GetPath());
 
-	std::string encoded_path = (const char*)(dir.GetPath(wxPATH_GET_SEPARATOR | wxPATH_GET_VOLUME).mb_str(wxConvLocal));
-	encoded_path += filename;
+	// Security: Prevent path traversal attacks by ensuring the resolved sidecar path
+	// remains strictly contained within the map directory.
+	const wxString base_dir = dir.GetPath();
+	if (filename.find("..") != std::string::npos || (resolved.IsAbsolute() && !resolved.GetFullPath().StartsWith(base_dir))) {
+		spdlog::warn("MapXMLIO: Sidecar file '{}' attempts path traversal outside map directory. Constraining to base name.", filename);
+		resolved = wxFileName(base_dir, resolved.GetFullName());
+	}
+
+	std::string utf8_path = (const char*)(resolved.GetFullPath().mb_str(wxConvUTF8));
+	std::string encoded_path = (const char*)(resolved.GetFullPath().mb_str(wxConvLocal));
 
 	return { utf8_path, encoded_path };
 }
@@ -488,13 +496,18 @@ bool MapXMLIO::loadZones(Map& map, const wxFileName& dir) {
 
 	map.zones.clear();
 	for (auto zoneNode : node.children("zone")) {
-		std::string name = zoneNode.attribute("name").as_string();
-		uint16_t id = static_cast<uint16_t>(zoneNode.attribute("zoneid").as_uint());
-		if (name.empty() || id == 0) {
-			spdlog::warn("MapXMLIO: Malformed zone data, discarding...");
+		const std::string name = zoneNode.attribute("name").as_string();
+		const unsigned int raw_id = zoneNode.attribute("zoneid").as_uint();
+		if (name.empty() || raw_id == 0 || raw_id > 0xFFFF) {
+			spdlog::warn("MapXMLIO: Malformed zone data (name: '{}', id: {}), discarding...", name, raw_id);
 			continue;
 		}
-		map.zones.push_back({ std::move(name), id });
+		const uint16_t id = static_cast<uint16_t>(raw_id);
+		if (map.findZone(id) != nullptr || map.findZone(name) != nullptr) {
+			spdlog::warn("MapXMLIO: Duplicate zone id ({}) or name ('{}'), discarding...", id, name);
+			continue;
+		}
+		map.zones.push_back({ name, id });
 	}
 	return true;
 }

@@ -357,6 +357,11 @@ void SelectionOperations::destroySelection(Editor& editor) {
 				// Items are deleted when the unique_ptr in tile_selection goes out of scope
 			}
 
+			// Clear zones when deleting selected ground, matching cut and move behavior
+			if (tile->ground && !newtile->ground) {
+				newtile->setZoneIds({});
+			}
+
 			if (newtile->creature && newtile->creature->isSelected()) {
 				newtile->creature.reset();
 			}

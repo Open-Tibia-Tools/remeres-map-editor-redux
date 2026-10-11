@@ -22,7 +22,7 @@ namespace {
 		TILESTATE_PVPZONE |
 		TILESTATE_REFRESH;
 
-	// Malformed zone nodes return false and stay preserved as opaque data.
+	// Malformed zone nodes or nodes with surplus payload/children return false and stay preserved as opaque data.
 	bool readTileZones(FastOTBMNode& node, Tile& tile) {
 		uint16_t count = 0;
 		if (!node.stream.getU16(count)) {
@@ -33,6 +33,10 @@ namespace {
 			if (!node.stream.getU16(zoneId)) {
 				return false;
 			}
+		}
+		// Verify there are no surplus bytes and no child nodes
+		if (node.stream.hasMoreProps() || (node.stream.p < node.stream.end && *node.stream.p == OTBM_NODE_START)) {
+			return false;
 		}
 		for (const uint16_t zoneId : zoneIds) {
 			tile.addZone(zoneId);
@@ -258,7 +262,7 @@ void TileSerializationOTBM::readTileArea(
 						tile->addItemFast(std::move(item));
 					}
 				}
-			} else if (item_type == OTBM_TILE_ZONE && readTileZones(itemNode, *tile)) {
+			} else if (item_type == OTBM_TILE_ZONE && iomap.version.otbm == MAP_OTBM_5 && readTileZones(itemNode, *tile)) {
 				return;
 			} else {
 				tile->addOpaqueChildNode(itemNode.capturePreserved());

@@ -168,10 +168,17 @@ bool HeaderSerializationOTBM::readMapAttributes(Map& map, FastOTBMStream& stream
 				break;
 			}
 			case OTBM_ATTR_EXT_ZONE_FILE: {
-				if (!stream.getString(map.zonefile)) {
+				std::string zone_path;
+				if (!stream.getString(zone_path)) {
 					spdlog::warn("Invalid map zonefile tag");
 					return true;
 				}
+				if (zone_path.find("..") != std::string::npos || wxFileName(wxstr(zone_path)).IsAbsolute()) {
+					spdlog::warn("Map zonefile tag contains path traversal or absolute path: '{}'. Discarding.", zone_path);
+					map.zonefile.clear();
+					return true;
+				}
+				map.zonefile = std::move(zone_path);
 				break;
 			}
 			default: {

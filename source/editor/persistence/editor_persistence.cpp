@@ -532,6 +532,21 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 	importTowns(editor, imported_map, offset, house_import_type, town_id_map);
 	importHouses(editor, imported_map, offset, house_import_type, town_id_map, house_id_map);
 
+	std::unordered_map<uint16_t, uint16_t> zone_id_map;
+	if (editor.map.getVersion().otbm == MAP_OTBM_5 && imported_map.getVersion().otbm == MAP_OTBM_5) {
+		zone_id_map.reserve(imported_map.zones.size());
+		for (const auto& imported_zone : imported_map.zones) {
+			if (const auto* existing = editor.map.findZone(imported_zone.name)) {
+				zone_id_map[imported_zone.id] = existing->id;
+			} else {
+				const uint16_t new_id = editor.map.addZone(imported_zone.name);
+				if (new_id != 0) {
+					zone_id_map[imported_zone.id] = new_id;
+				}
+			}
+		}
+	}
+
 	std::map<Position, std::unique_ptr<Spawn>> spawn_map;
 	importSpawns(editor, imported_map, offset, spawn_import_type, spawn_map);
 
@@ -618,6 +633,20 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 
 		import_tile->spawn.reset();
 
+		if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+			if (!zone_id_map.empty() && import_tile->hasZones()) {
+				std::vector<uint16_t> remapped_zones;
+				for (const uint16_t zid : import_tile->getZoneIds()) {
+					if (auto it = zone_id_map.find(zid); it != zone_id_map.end()) {
+						remapped_zones.push_back(it->second);
+					}
+				}
+				import_tile->setZoneIds(remapped_zones);
+			}
+		} else if (import_tile->hasZones()) {
+			import_tile->setZoneIds({});
+		}
+
 		(void)editor.map.setTile(new_pos, std::move(moved_tile));
 	}
 
@@ -634,6 +663,10 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 		tile->spawn = std::move(spawn_entry.second);
 
 		editor.map.addSpawn(tile);
+	}
+
+	if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+		editor.map.rebuildZoneIndex();
 	}
 
 	g_gui.DestroyLoadBar();

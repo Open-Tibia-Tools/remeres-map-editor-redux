@@ -251,7 +251,7 @@ void MenuBarActionManager::UpdateState(MainMenuBar* mb) {
 	mb->EnableItem(SHOW_ZONES, is_otbm5);
 	mb->EnableItem(MAP_REMOVE_ITEMS, is_host);
 	mb->EnableItem(MAP_REMOVE_UNREACHABLE_TILES, is_local);
-	mb->EnableItem(MAP_CLEAN_INVALID_ZONES, is_local && is_otbm5);
+	mb->EnableItem(MAP_CLEAN_INVALID_ZONES, is_local);
 	mb->EnableItem(CLEAR_INVALID_HOUSES, is_local);
 	mb->EnableItem(CLEAR_MODIFIED_STATE, is_local);
 

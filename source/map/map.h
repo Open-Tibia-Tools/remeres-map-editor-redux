@@ -148,7 +148,11 @@ public:
 		return zonefile;
 	}
 	void setZoneFilename(const std::string& new_zonefile) {
-		zonefile = new_zonefile;
+		if (zonefile != new_zonefile) {
+			zonefile = new_zonefile;
+			unnamed = false;
+			doChange();
+		}
 	}
 
 	// OTBM 5 zone registry (Canary / Crystal Server); ids stay stable on rename because tiles reference them
