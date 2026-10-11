@@ -50,7 +50,7 @@ public:
 	std::string name;
 	uint32_t townid;
 	bool guildhall;
-	// Crystal Server house XML fields, preserved across load/save
+	// Extended house XML fields (OTBM 5), preserved across load/save
 	uint32_t clientid = 0;
 	int32_t beds = -1; // -1 when the house file has no beds attribute
 

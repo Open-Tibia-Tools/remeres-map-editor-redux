@@ -20,6 +20,7 @@ public:
 
 protected:
 	void UpdateProtocolList();
+	void UpdateSpawnControls();
 
 	MapTab* view;
 	Editor& editor;
@@ -30,7 +31,12 @@ protected:
 	wxChoice* compression_choice;
 	wxTextCtrl* description_ctrl;
 	wxTextCtrl* house_filename_ctrl;
+	wxStaticText* spawn_label;
 	wxTextCtrl* spawn_filename_ctrl;
+	wxStaticText* monster_label;
+	wxTextCtrl* monster_filename_ctrl;
+	wxStaticText* npc_label;
+	wxTextCtrl* npc_filename_ctrl;
 	wxTextCtrl* waypoint_filename_ctrl;
 	wxTextCtrl* zone_filename_ctrl;
 };

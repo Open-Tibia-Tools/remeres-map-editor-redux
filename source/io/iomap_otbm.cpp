@@ -26,7 +26,6 @@
 #include "app/settings.h"
 #include "ext/pugixml.hpp"
 #include "ui/gui.h"
-#include "ui/dialog_util.h"
 
 #include "game/creatures.h"
 #include "game/creature.h"
@@ -157,6 +156,22 @@ bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResul
 		return false;
 	}
 
+	if (out_info.otbm_version == 5) {
+		if (out_info.monster_xml_file.empty()) {
+			out_info.monster_xml_file = out_info.map_name + "-monster.xml";
+		}
+		if (out_info.npc_xml_file.empty()) {
+			out_info.npc_xml_file = out_info.map_name + "-npc.xml";
+		}
+	} else {
+		if (out_info.spawn_xml_file.empty()) {
+			out_info.spawn_xml_file = out_info.map_name + "-spawn.xml";
+		}
+	}
+	if (out_info.house_xml_file.empty()) {
+		out_info.house_xml_file = out_info.map_name + "-house.xml";
+	}
+
 	return true;
 }
 
@@ -219,88 +234,56 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 		}
 	};
 
-	loadAux(MapXMLIO::loadSpawns, "spawn", map.spawnfile);
-	loadAux(MapXMLIO::loadNpcSpawns, "npc", map.npcfile);
+	if (version.otbm == MAP_OTBM_5) {
+		loadAux(MapXMLIO::loadMonsterSpawns, "monster", map.monsterfile);
+		loadAux(MapXMLIO::loadNpcSpawns, "npc", map.npcfile);
+	} else {
+		loadAux(MapXMLIO::loadSpawns, "spawn", map.spawnfile);
+	}
 	loadAux(MapXMLIO::loadHouses, "house", map.housefile);
-	loadAux(MapXMLIO::loadZones, "zones", map.zonefile);
+	if (version.otbm == MAP_OTBM_5) {
+		loadAux(MapXMLIO::loadZones, "zones", map.zonefile);
+	}
 
-	// Waypoints handling
-	if (map.getVersion().otbm == MAP_OTBM_5) {
-		// Crystal Server only reads waypoints from the OTBM, so they are neither migrated to nor merged with XML
-	} else if (map.waypoints.size() > 0) {
-		// Case 1: OTBM has waypoints
+	// Ensure all auxiliary filenames have defaults so converting between OTBM versions never encounters empty paths
+	if (map.spawnfile.empty()) {
+		map.spawnfile = nstr(filename.GetName()) + "-spawn.xml";
+	}
+	if (map.monsterfile.empty()) {
+		map.monsterfile = nstr(filename.GetName()) + "-monster.xml";
+	}
+	if (map.npcfile.empty()) {
+		map.npcfile = nstr(filename.GetName()) + "-npc.xml";
+	}
+	if (map.housefile.empty()) {
+		map.housefile = nstr(filename.GetName()) + "-house.xml";
+	}
+	if (map.zonefile.empty()) {
+		map.zonefile = nstr(filename.GetName()) + "-zones.xml";
+	}
+
+	// Waypoints handling: if OTBM has waypoints, it is the authority and XML is ignored entirely.
+	// Only load from companion XML if OTBM has no waypoints.
+	if (map.waypoints.empty()) {
 		std::string waypointFile = map.waypointfile;
-
-		// If no external file linked, check the default one
 		if (waypointFile.empty()) {
 			waypointFile = nstr(filename.GetName()) + "-waypoint.xml";
 		}
 
-		auto paths = MapXMLIO::normalizeMapFilePaths(filename, waypointFile);
-		if (FileName(wxstr(paths.first)).FileExists()) {
-			// Case 3: Both exist - Merge and warn
-			// Ensure map knows about the file
+		auto waypointPaths = MapXMLIO::normalizeMapFilePaths(filename, waypointFile);
+		if (FileName(wxstr(waypointPaths.first)).FileExists()) {
 			if (map.waypointfile.empty()) {
 				map.waypointfile = waypointFile;
 			}
-
-			// Load from XML to merge with existing OTBM waypoints
-			// Pass false to NOT replace existing OTBM waypoints (OTBM takes precedence)
-			size_t beforeCount = map.waypoints.size();
 			if (MapXMLIO::loadWaypoints(map, filename, false)) {
-				size_t afterCount = map.waypoints.size();
-				if (afterCount > beforeCount) {
-					DialogUtil::PopupDialog(g_gui.root, "Warning", "Waypoints detected in both OTBM and external XML file.\n"
-																   "They have been merged.\n"
-																   "Note: OTBM waypoints took precedence over XML duplicates.\n"
-																   "\n"
-																   "Future saves will ONLY use the XML file.",
-											wxOK | wxICON_WARNING);
-				}
+				spdlog::info("IOMapOTBM: Loaded waypoints from '{}' (total waypoints: {})",
+					map.waypointfile, map.waypoints.size());
 			}
-		} else {
-			// Case 2: OTBM has waypoints, XML does not - Migrate
-			// Set the default filename if not set
-			if (map.waypointfile.empty()) {
-				map.waypointfile = waypointFile;
-			}
-
-			DialogUtil::PopupDialog(g_gui.root, "Waypoint Migration", std::format("Waypoints detected in OTBM file.\n\nThey have been migrated to the external file:\n{}\n\nThey will be removed from the OTBM file on the next save.", map.waypointfile), wxOK | wxICON_INFORMATION);
-
-			// Save immediately to XML
-			if (!MapXMLIO::saveWaypoints(map, filename)) {
-				// Migration failed
-				map.waypointfile.clear();
-				DialogUtil::PopupDialog(g_gui.root, "Error", "Failed to migrate waypoints to external XML file.\n"
-															 "Waypoints will REMAIN in the OTBM file until migration succeeds.",
-										wxOK | wxICON_ERROR);
-			}
-			// If successful, next save will skip OTBM writing because map.waypointfile is set
+		} else if (map.waypointfile.empty()) {
+			map.waypointfile = waypointFile;
 		}
-	} else {
-		// OTBM has no waypoints
-
-		bool expected = !map.waypointfile.empty();
-
-		// If map.waypointfile is empty (not set in OTBM), try to look for the default file
-		if (!expected) {
-			std::string defaultFile = nstr(filename.GetName()) + "-waypoint.xml";
-			auto paths = MapXMLIO::normalizeMapFilePaths(filename, defaultFile);
-			if (FileName(wxstr(paths.first)).FileExists()) {
-				map.waypointfile = defaultFile;
-				expected = true;
-			}
-		}
-
-		if (expected) {
-			// Try to load from XML
-			if (!MapXMLIO::loadWaypoints(map, filename)) {
-				spdlog::warn("Failed to load waypoint file: {}", map.waypointfile);
-			}
-		} else {
-			// No waypoint file specified and no default file found, just set the default for future saves
-			map.waypointfile = nstr(filename.GetName()) + "-waypoint.xml";
-		}
+	} else if (map.waypointfile.empty()) {
+		map.waypointfile = nstr(filename.GetName()) + "-waypoint.xml";
 	}
 
 	map.getChangeTracker().markAllDirty();
@@ -361,7 +344,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 	}
 
 	// Read header attributes
-	if (!HeaderSerializationOTBM::readMapAttributes(map, stream)) {
+	if (!HeaderSerializationOTBM::readMapAttributes(map, stream, version.otbm)) {
 		return false;
 	}
 	stream.skipRemainingProps();
@@ -631,7 +614,7 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 	if (is_compressed) {
 		f = std::make_unique<GzipNodeFileWriteHandle>(toPath(identifier), magic);
 	} else {
-		f = std::make_unique<DiskNodeFileWriteHandle>(nstr(identifier.GetFullPath()), magic);
+		f = std::make_unique<DiskNodeFileWriteHandle>(std::string(identifier.GetFullPath().utf8_str()), magic);
 	}
 
 	if (!f->isOk()) {
@@ -663,32 +646,33 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 		return false;
 	}
 
-	if (map.getVersion().otbm == MAP_OTBM_5) {
-		if (!map.zones.empty() && !MapXMLIO::saveZones(map, identifier)) {
+	if (map.getVersion().otbm == MAP_OTBM_5 && !map.zones.empty()) {
+		if (!MapXMLIO::saveZones(map, identifier)) {
 			spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save zones");
 			return false;
 		}
-		return true; // Waypoints already live in the OTBM WAYPOINTS node
 	}
 
-	// Always save waypoints to XML if they exist, creating a default file if needed
-	if (map.waypoints.size() > 0) {
-		if (map.waypointfile.empty()) {
-			map.waypointfile = identifier.GetName() + "-waypoint.xml";
-			// Notify user of auto-creation? Maybe not needed here as it's standard behavior now,
-			// but we could log it.
-			spdlog::info("Auto-created waypoint file: {}", map.waypointfile);
-		}
-		// Save waypoints to the external file
-		if (!MapXMLIO::saveWaypoints(map, identifier)) {
-			spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save waypoints");
-			return false;
-		}
-	} else if (!map.waypointfile.empty()) {
-		// If we have an empty waypoint list but a file is defined, we should probably still save (to verify emptiness/update file)
-		if (!MapXMLIO::saveWaypoints(map, identifier)) {
-			spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save waypoints");
-			return false;
+	const auto waypointFormat = static_cast<Config::WaypointStorageFormat>(
+		g_settings.getInteger(Config::WAYPOINT_STORAGE_FORMAT)
+	);
+
+	if (waypointFormat == Config::WaypointStorageFormat::XML || waypointFormat == Config::WaypointStorageFormat::BOTH) {
+		g_gui.SetLoadDone(99, "Saving waypoints...");
+		if (map.waypoints.size() > 0) {
+			if (map.waypointfile.empty()) {
+				map.waypointfile = identifier.GetName() + "-waypoint.xml";
+				spdlog::info("Auto-created waypoint file: {}", map.waypointfile);
+			}
+			if (!MapXMLIO::saveWaypoints(map, identifier)) {
+				spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save waypoints");
+				return false;
+			}
+		} else if (!map.waypointfile.empty()) {
+			if (!MapXMLIO::saveWaypoints(map, identifier)) {
+				spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save waypoints");
+				return false;
+			}
 		}
 	}
 
@@ -725,9 +709,11 @@ bool IOMapOTBM::saveMap(Map& map, NodeFileWriteHandle& f) {
 				f.addString(fname.empty() ? path_str : fname);
 			};
 
-			addExtFile(OTBM_ATTR_EXT_SPAWN_FILE, map.spawnfile);
 			if (mapVersion.otbm == MAP_OTBM_5) {
+				addExtFile(OTBM_ATTR_EXT_SPAWN_FILE, map.monsterfile);
 				addExtFile(OTBM_ATTR_EXT_SPAWN_NPC_FILE, map.npcfile);
+			} else {
+				addExtFile(OTBM_ATTR_EXT_SPAWN_FILE, map.spawnfile);
 			}
 			addExtFile(OTBM_ATTR_EXT_HOUSE_FILE, map.housefile);
 			if (mapVersion.otbm == MAP_OTBM_5 && !map.zones.empty()) {
@@ -737,9 +723,16 @@ bool IOMapOTBM::saveMap(Map& map, NodeFileWriteHandle& f) {
 			writeTileData(map, f);
 			writeTowns(map, f);
 
-			// Waypoints are saved to XML, except for Crystal Server, which only reads them from OTBM
-			if (mapVersion.otbm == MAP_OTBM_5) {
+			const auto waypointFormat = static_cast<Config::WaypointStorageFormat>(
+				g_settings.getInteger(Config::WAYPOINT_STORAGE_FORMAT)
+			);
+
+			if (waypointFormat == Config::WaypointStorageFormat::OTBM || waypointFormat == Config::WaypointStorageFormat::BOTH) {
 				writeWaypoints(map, f, mapVersion);
+			} else if (mapVersion.otbm == MAP_OTBM_5) {
+				// OTBM 5 loaders require the OTBM_WAYPOINTS node to be present even if empty
+				f.addNode(OTBM_WAYPOINTS);
+				f.endNode();
 			}
 		}
 		f.endNode();

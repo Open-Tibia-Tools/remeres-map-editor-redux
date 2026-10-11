@@ -109,13 +109,31 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	house_filename_ctrl->SetToolTip("External house XML file (leave empty for internal)");
 
 	grid_sizer->Add(
-		newd wxStaticText(this, wxID_ANY, "External Spawnfile")
+		spawn_label = newd wxStaticText(this, wxID_ANY, "External Spawnfile")
 	);
 
 	grid_sizer->Add(
 		spawn_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getSpawnFilename())), 1, wxEXPAND
 	);
-	spawn_filename_ctrl->SetToolTip("External spawn XML file (leave empty for internal)");
+	spawn_filename_ctrl->SetToolTip("External spawn XML file for all creatures (standard TFS / classic OTBM)");
+
+	grid_sizer->Add(
+		monster_label = newd wxStaticText(this, wxID_ANY, "External Monster Spawnfile")
+	);
+
+	grid_sizer->Add(
+		monster_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getMonsterFilename())), 1, wxEXPAND
+	);
+	monster_filename_ctrl->SetToolTip("External monster spawn XML file (OTBM 5 / partitioned spawn format)");
+
+	grid_sizer->Add(
+		npc_label = newd wxStaticText(this, wxID_ANY, "External NPC Spawnfile")
+	);
+
+	grid_sizer->Add(
+		npc_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getNpcFilename())), 1, wxEXPAND
+	);
+	npc_filename_ctrl->SetToolTip("External NPC spawn XML file (OTBM 5 / partitioned spawn format)");
 
 	grid_sizer->Add(
 		newd wxStaticText(this, wxID_ANY, "External Waypointfile")
@@ -152,6 +170,7 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	SetSizerAndFit(topsizer);
 	Centre(wxBOTH);
 	UpdateProtocolList();
+	UpdateSpawnControls();
 
 	const ClientVersion* current_version = ClientVersion::getByItemsVersion(map.getVersion().items_major, map.getVersion().client);
 	if (!current_version) {
@@ -209,8 +228,45 @@ void MapPropertiesWindow::UpdateProtocolList() {
 	protocol_choice->SetStringSelection(client);
 }
 
+void MapPropertiesWindow::UpdateSpawnControls() {
+	MapVersionID map_version = indexToMapVersion(version_choice->GetSelection());
+	const bool isOtbm5 = (map_version == MAP_OTBM_5);
+
+	wxFileName fn = wxstr(editor.map.getFilename().empty() ? editor.map.getName() : editor.map.getFilename());
+	wxString base_name = fn.GetName();
+	if (base_name.empty()) {
+		base_name = "untitled";
+	}
+
+	if (isOtbm5) {
+		if (monster_filename_ctrl->GetValue().Trim().empty()) {
+			monster_filename_ctrl->SetValue(base_name + "-monster.xml");
+		}
+		if (npc_filename_ctrl->GetValue().Trim().empty()) {
+			npc_filename_ctrl->SetValue(base_name + "-npc.xml");
+		}
+	} else {
+		if (spawn_filename_ctrl->GetValue().Trim().empty()) {
+			spawn_filename_ctrl->SetValue(base_name + "-spawn.xml");
+		}
+	}
+
+	spawn_label->Show(!isOtbm5);
+	spawn_filename_ctrl->Show(!isOtbm5);
+
+	monster_label->Show(isOtbm5);
+	monster_filename_ctrl->Show(isOtbm5);
+
+	npc_label->Show(isOtbm5);
+	npc_filename_ctrl->Show(isOtbm5);
+
+	Layout();
+	Fit();
+}
+
 void MapPropertiesWindow::OnChangeVersion(wxCommandEvent&) {
 	UpdateProtocolList();
+	UpdateSpawnControls();
 }
 
 void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
@@ -236,9 +292,38 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 
+	wxFileName fn = wxstr(map.getFilename().empty() ? map.getName() : map.getFilename());
+	std::string base_name = nstr(fn.GetName());
+	if (base_name.empty()) {
+		base_name = "untitled";
+	}
+
+	std::string house_fn = nstr(house_filename_ctrl->GetValue());
+	std::string spawn_fn = nstr(spawn_filename_ctrl->GetValue());
+	std::string monster_fn = nstr(monster_filename_ctrl->GetValue());
+	std::string npc_fn = nstr(npc_filename_ctrl->GetValue());
+
+	if (house_fn.empty()) {
+		house_fn = base_name + "-house.xml";
+	}
+	if (new_ver.otbm == MAP_OTBM_5) {
+		if (monster_fn.empty()) {
+			monster_fn = base_name + "-monster.xml";
+		}
+		if (npc_fn.empty()) {
+			npc_fn = base_name + "-npc.xml";
+		}
+	} else {
+		if (spawn_fn.empty()) {
+			spawn_fn = base_name + "-spawn.xml";
+		}
+	}
+
 	map.setMapDescription(nstr(description_ctrl->GetValue()));
-	map.setHouseFilename(nstr(house_filename_ctrl->GetValue()));
-	map.setSpawnFilename(nstr(spawn_filename_ctrl->GetValue()));
+	map.setHouseFilename(house_fn);
+	map.setSpawnFilename(spawn_fn);
+	map.setMonsterFilename(monster_fn);
+	map.setNpcFilename(npc_fn);
 	map.setWaypointFilename(nstr(waypoint_filename_ctrl->GetValue()));
 	map.setZoneFilename(nstr(zone_filename_ctrl->GetValue()));
 

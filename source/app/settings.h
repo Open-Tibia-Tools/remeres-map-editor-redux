@@ -90,6 +90,7 @@ namespace Config {
 		USE_UPDATER,
 		USE_OTBM_4_FOR_ALL_MAPS,
 		SAVE_WITH_OTB_MAGIC_NUMBER,
+		WAYPOINT_STORAGE_FORMAT,
 		REPLACE_SIZE,
 
 		USE_LARGE_CONTAINER_ICONS,
@@ -299,6 +300,12 @@ namespace Config {
 		SHOW_CRYSTAL_ZONES,
 
 		LAST,
+	};
+
+	enum class WaypointStorageFormat : uint32_t {
+		OTBM = 0, // Store in binary OTBM (standard / default for TFS, Canary, Crystal Server)
+		XML = 1,  // Store in external <map>-waypoint.xml
+		BOTH = 2  // Store in both OTBM and external XML
 	};
 }
 

@@ -7,7 +7,7 @@
 
 struct gzFile_s;
 
-// Streams the node file through zlib's gzip writer (Canary / Crystal Server compressed map format).
+// Streams the node file through zlib's gzip writer (compressed OTBM format).
 // close() must be called explicitly and isOk() checked afterwards: gzip errors surface on flush.
 class GzipNodeFileWriteHandle : public NodeFileWriteHandle {
 public:

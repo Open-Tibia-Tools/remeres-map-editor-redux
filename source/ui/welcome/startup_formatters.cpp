@@ -118,7 +118,7 @@ std::vector<StartupInfoField> BuildStartupMapFields(const OTBMStartupPeekResult*
 		};
 	}
 
-	return {
+	std::vector<StartupInfoField> fields = {
 		{ "Map Name", fallbackValue(info->map_name), std::string(ICON_FILE), wxNullColour, false },
 		{ "Client Version", formatMapClientVersion(info), std::string(ICON_CIRCLE_INFO), wxNullColour, false },
 		{ "Dimensions", formatMapDimensions(info), std::string(ICON_LIST), wxNullColour, true },
@@ -126,10 +126,20 @@ std::vector<StartupInfoField> BuildStartupMapFields(const OTBMStartupPeekResult*
 		{ "Items Major Version", formatUnsigned(info->items_major_version), std::string(ICON_LIST), wxNullColour, false },
 		{ "Items Minor Version", formatUnsigned(info->items_minor_version), std::string(ICON_LIST), wxNullColour, true },
 		{ "House File", fallbackValue(info->house_xml_file), std::string(ICON_FILE), wxNullColour, false },
-		{ "Spawn File", fallbackValue(info->spawn_xml_file), std::string(ICON_FILE), wxNullColour, false },
-		{ "Description", formatMapDescription(info), std::string(ICON_FILE_LINES), wxNullColour, false },
-		{ "Compression", info->is_compressed ? "GZIP" : "None", std::string(ICON_FILE_ZIPPER), wxNullColour, false },
 	};
+
+	if (info->otbm_version == 5) {
+		const wxString monster_file = !info->monster_xml_file.empty() ? info->monster_xml_file : info->spawn_xml_file;
+		fields.push_back({ "Monster Spawn File", fallbackValue(monster_file), std::string(ICON_FILE), wxNullColour, false });
+		fields.push_back({ "NPC Spawn File", fallbackValue(info->npc_xml_file), std::string(ICON_FILE), wxNullColour, false });
+	} else {
+		fields.push_back({ "Spawn File", fallbackValue(info->spawn_xml_file), std::string(ICON_FILE), wxNullColour, false });
+	}
+
+	fields.push_back({ "Description", formatMapDescription(info), std::string(ICON_FILE_LINES), wxNullColour, false });
+	fields.push_back({ "Compression", info->is_compressed ? "GZIP" : "None", std::string(ICON_FILE_ZIPPER), wxNullColour, false });
+
+	return fields;
 }
 
 std::vector<StartupInfoField> BuildStartupClientFields(ClientVersion* client) {

@@ -123,6 +123,12 @@ public:
 	std::string getSpawnFilename() const {
 		return spawnfile;
 	}
+	std::string getMonsterFilename() const {
+		return monsterfile;
+	}
+	std::string getNpcFilename() const {
+		return npcfile;
+	}
 
 	// Set some map data
 	void setWidth(int new_width);
@@ -130,6 +136,8 @@ public:
 	void setMapDescription(const std::string& new_description);
 	void setHouseFilename(const std::string& new_housefile);
 	void setSpawnFilename(const std::string& new_spawnfile);
+	void setMonsterFilename(const std::string& new_monsterfile);
+	void setNpcFilename(const std::string& new_npcfile);
 	void setWaypointFilename(const std::string& new_waypointfile);
 
 	std::string getWaypointFilename() const {
@@ -187,10 +195,11 @@ protected:
 	// Map Width and Height - for info purposes
 	uint16_t width, height;
 
-	std::string spawnfile; // The maps spawnfile
+	std::string spawnfile; // Standard spawnfile (<map>-spawn.xml, for TFS / classic OTBM)
+	std::string monsterfile; // Monster spawnfile (<map>-monster.xml, for OTBM 5)
 	std::string housefile; // The housefile
-	std::string npcfile; // Crystal Server keeps NPC spawns in their own file
-	std::string zonefile; // Crystal Server zone names; tiles reference them by id
+	std::string npcfile; // NPC spawnfile (<map>-npc.xml, for OTBM 5)
+	std::string zonefile; // Zone names file (<map>-zones.xml, for OTBM 5)
 	std::string waypointfile; // The waypoints file (stores extended waypoint information such as id, preferred icon and matching town)
 
 public:

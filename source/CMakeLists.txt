@@ -13,6 +13,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/graphics_page.h
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/interface_page.h
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/client_version_page.h
+    ${CMAKE_CURRENT_LIST_DIR}/app/preferences/map_compatibility_page.h
     ${CMAKE_CURRENT_LIST_DIR}/app/rme_forward_declarations.h
     ${CMAKE_CURRENT_LIST_DIR}/app/settings.h
     ${CMAKE_CURRENT_LIST_DIR}/app/threads.h
@@ -438,6 +439,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/graphics_page.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/interface_page.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/client_version_page.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/app/preferences/map_compatibility_page.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/settings.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/updater.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/managers/version_manager.cpp
@@ -569,7 +571,6 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/map/tile.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/tile_operations.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/spatial_change_tracker.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/mkpch.cpp
     ${CMAKE_CURRENT_LIST_DIR}/net/net_connection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/net/process_com.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_brushlist.cpp

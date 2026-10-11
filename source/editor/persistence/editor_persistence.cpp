@@ -38,7 +38,7 @@ void EditorPersistence::loadMap(Editor& editor, const FileName& fn, const MapLoa
 	}
 
 	ScopedLoadingBar loadingBar("Loading OTBM map...");
-	editor.map.open(nstr(fn.GetFullPath()));
+	editor.map.open(std::string(fn.GetFullPath().utf8_str()));
 }
 
 bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdialog) {
@@ -57,6 +57,8 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	const std::string prev_name = editor.map.getName();
 	const bool prev_unnamed = editor.map.unnamed;
 	const std::string prev_spawn = editor.map.getSpawnFilename();
+	const std::string prev_monster = editor.map.getMonsterFilename();
+	const std::string prev_npc = editor.map.getNpcFilename();
 	const std::string prev_house = editor.map.getHouseFilename();
 	const std::string prev_waypoint = editor.map.getWaypointFilename();
 
@@ -67,6 +69,10 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 
 		_name.SetName(filename.GetName() + "-spawn");
 		editor.map.setSpawnFilename(nstr(_name.GetFullName()));
+		_name.SetName(filename.GetName() + "-monster");
+		editor.map.setMonsterFilename(nstr(_name.GetFullName()));
+		_name.SetName(filename.GetName() + "-npc");
+		editor.map.setNpcFilename(nstr(_name.GetFullName()));
 		_name.SetName(filename.GetName() + "-house");
 		editor.map.setHouseFilename(nstr(_name.GetFullName()));
 		_name.SetName(filename.GetName() + "-npc");
@@ -89,6 +95,8 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	std::string backup_otbm;
 	std::string backup_house;
 	std::string backup_spawn;
+	std::string backup_monster;
+	std::string backup_npc;
 	std::string backup_waypoint;
 
 	if (converter.FileExists()) {
@@ -104,11 +112,27 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 		std::rename((map_path + editor.map.getHouseFilename()).c_str(), backup_house.c_str());
 	}
 
-	converter.SetFullName(wxstr(editor.map.getSpawnFilename()));
-	if (converter.FileExists()) {
-		backup_spawn = map_path + nstr(converter.GetName()) + ".xml~";
-		std::remove(backup_spawn.c_str());
-		std::rename((map_path + editor.map.getSpawnFilename()).c_str(), backup_spawn.c_str());
+	if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+		converter.SetFullName(wxstr(editor.map.getMonsterFilename()));
+		if (converter.FileExists()) {
+			backup_monster = map_path + nstr(converter.GetName()) + ".xml~";
+			std::remove(backup_monster.c_str());
+			std::rename((map_path + editor.map.getMonsterFilename()).c_str(), backup_monster.c_str());
+		}
+
+		converter.SetFullName(wxstr(editor.map.getNpcFilename()));
+		if (converter.FileExists()) {
+			backup_npc = map_path + nstr(converter.GetName()) + ".xml~";
+			std::remove(backup_npc.c_str());
+			std::rename((map_path + editor.map.getNpcFilename()).c_str(), backup_npc.c_str());
+		}
+	} else {
+		converter.SetFullName(wxstr(editor.map.getSpawnFilename()));
+		if (converter.FileExists()) {
+			backup_spawn = map_path + nstr(converter.GetName()) + ".xml~";
+			std::remove(backup_spawn.c_str());
+			std::rename((map_path + editor.map.getSpawnFilename()).c_str(), backup_spawn.c_str());
+		}
 	}
 
 	converter.SetFullName(wxstr(editor.map.getWaypointFilename()));
@@ -119,7 +143,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	}
 
 	// Save the map
-	MapBackupService::WriteCrashMarker({backup_otbm, backup_house, backup_spawn, backup_waypoint});
+	MapBackupService::WriteCrashMarker({backup_otbm, backup_house, backup_spawn, backup_monster, backup_npc, backup_waypoint});
 
 	{
 
@@ -147,24 +171,48 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 				converter.SetFullName(wxstr(savefile));
 				std::string otbm_filename = map_path + nstr(converter.GetName());
 				std::rename(backup_otbm.c_str(), std::string(otbm_filename + ".otbm").c_str());
+			} else {
+				std::remove(savefile.c_str());
 			}
 
 			if (!backup_house.empty()) {
 				converter.SetFullName(wxstr(editor.map.getHouseFilename()));
 				std::string house_filename = map_path + nstr(converter.GetName());
 				std::rename(backup_house.c_str(), std::string(house_filename + ".xml").c_str());
+			} else if (!editor.map.getHouseFilename().empty()) {
+				std::remove((map_path + editor.map.getHouseFilename()).c_str());
 			}
 
 			if (!backup_spawn.empty()) {
 				converter.SetFullName(wxstr(editor.map.getSpawnFilename()));
 				std::string spawn_filename = map_path + nstr(converter.GetName());
 				std::rename(backup_spawn.c_str(), std::string(spawn_filename + ".xml").c_str());
+			} else if (!editor.map.getSpawnFilename().empty()) {
+				std::remove((map_path + editor.map.getSpawnFilename()).c_str());
+			}
+
+			if (!backup_monster.empty()) {
+				converter.SetFullName(wxstr(editor.map.getMonsterFilename()));
+				std::string monster_filename = map_path + nstr(converter.GetName());
+				std::rename(backup_monster.c_str(), std::string(monster_filename + ".xml").c_str());
+			} else if (!editor.map.getMonsterFilename().empty()) {
+				std::remove((map_path + editor.map.getMonsterFilename()).c_str());
+			}
+
+			if (!backup_npc.empty()) {
+				converter.SetFullName(wxstr(editor.map.getNpcFilename()));
+				std::string npc_filename = map_path + nstr(converter.GetName());
+				std::rename(backup_npc.c_str(), std::string(npc_filename + ".xml").c_str());
+			} else if (!editor.map.getNpcFilename().empty()) {
+				std::remove((map_path + editor.map.getNpcFilename()).c_str());
 			}
 
 			if (!backup_waypoint.empty()) {
 				converter.SetFullName(wxstr(editor.map.getWaypointFilename()));
 				std::string waypoint_filename = map_path + nstr(converter.GetName());
 				std::rename(backup_waypoint.c_str(), std::string(waypoint_filename + ".xml").c_str());
+			} else if (!editor.map.getWaypointFilename().empty()) {
+				std::remove((map_path + editor.map.getWaypointFilename()).c_str());
 			}
 
 			// Display the error
@@ -180,6 +228,8 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 			editor.map.name = prev_name;
 			editor.map.unnamed = prev_unnamed;
 			editor.map.setSpawnFilename(prev_spawn);
+			editor.map.setMonsterFilename(prev_monster);
+			editor.map.setNpcFilename(prev_npc);
 			editor.map.setHouseFilename(prev_house);
 			editor.map.setWaypointFilename(prev_waypoint);
 			return false;
@@ -209,6 +259,18 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 			std::rename(backup_spawn.c_str(), std::string(spawn_filename + "." + date_str + ".xml").c_str());
 		}
 
+		if (!backup_monster.empty()) {
+			converter.SetFullName(wxstr(editor.map.getMonsterFilename()));
+			std::string monster_filename = map_path + nstr(converter.GetName());
+			std::rename(backup_monster.c_str(), std::string(monster_filename + "." + date_str + ".xml").c_str());
+		}
+
+		if (!backup_npc.empty()) {
+			converter.SetFullName(wxstr(editor.map.getNpcFilename()));
+			std::string npc_filename = map_path + nstr(converter.GetName());
+			std::rename(backup_npc.c_str(), std::string(npc_filename + "." + date_str + ".xml").c_str());
+		}
+
 		if (!backup_waypoint.empty()) {
 			converter.SetFullName(wxstr(editor.map.getWaypointFilename()));
 			std::string waypoint_filename = map_path + nstr(converter.GetName());
@@ -219,6 +281,8 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 		std::remove(backup_otbm.c_str());
 		std::remove(backup_house.c_str());
 		std::remove(backup_spawn.c_str());
+		std::remove(backup_monster.c_str());
+		std::remove(backup_npc.c_str());
 		std::remove(backup_waypoint.c_str());
 	}
 
@@ -425,7 +489,7 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 	editor.actionQueue->clear();
 
 	Map imported_map;
-	bool loaded = imported_map.open(nstr(filename.GetFullPath()));
+	bool loaded = imported_map.open(std::string(filename.GetFullPath().utf8_str()));
 
 	if (!loaded) {
 		DialogUtil::PopupDialog("Error", "Error loading map!\n" + imported_map.getError(), wxOK | wxICON_INFORMATION);

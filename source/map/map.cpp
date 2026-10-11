@@ -63,6 +63,7 @@ void Map::initializeEmpty() {
 	std::string sname = std::format("Untitled-{}", ++unnamed_counter);
 	name = sname + ".otbm";
 	spawnfile = sname + "-spawn.xml";
+	monsterfile = sname + "-monster.xml";
 	housefile = sname + "-house.xml";
 	npcfile = sname + "-npc.xml";
 	zonefile = sname + "-zones.xml";
@@ -172,6 +173,16 @@ void Map::setHouseFilename(const std::string& new_housefile) {
 
 void Map::setSpawnFilename(const std::string& new_spawnfile) {
 	spawnfile = new_spawnfile;
+	unnamed = false;
+}
+
+void Map::setMonsterFilename(const std::string& new_monsterfile) {
+	monsterfile = new_monsterfile;
+	unnamed = false;
+}
+
+void Map::setNpcFilename(const std::string& new_npcfile) {
+	npcfile = new_npcfile;
 	unnamed = false;
 }
 
