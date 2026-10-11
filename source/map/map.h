@@ -21,6 +21,7 @@
 #include <cstdint>
 #include "map/map_storage_format.h"
 #include "map/basemap.h"
+#include "map/spawn_issue.h"
 #include "map/tile.h"
 #include "game/town.h"
 #include "game/house.h"
@@ -65,6 +66,15 @@ public:
 	}
 	const std::vector<std::string>& getWarnings() const {
 		return warnings;
+	}
+	void clearSpawnIssues() {
+		spawnIssues.clear();
+	}
+	void addSpawnIssue(SpawnIssue issue) {
+		spawnIssues.push_back(std::move(issue));
+	}
+	const std::vector<SpawnIssue>& getSpawnIssues() const {
+		return spawnIssues;
 	}
 	bool hasError() const {
 		return error.size() != 0;
@@ -163,6 +173,7 @@ protected:
 
 protected:
 	std::vector<std::string> warnings;
+	std::vector<SpawnIssue> spawnIssues;
 	wxString error;
 
 	std::string name; // The map name, NOT the same as filename

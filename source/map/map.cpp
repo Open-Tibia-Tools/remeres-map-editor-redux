@@ -57,6 +57,7 @@ void Map::initializeEmpty() {
 	generation = g_nextMapGeneration.fetch_add(1, std::memory_order_relaxed);
 	height = 2048;
 	width = 2048;
+	spawnIssues.clear();
 
 	static int unnamed_counter = 0;
 
@@ -84,6 +85,7 @@ bool Map::open(const std::string& file) {
 
 	generation = g_nextMapGeneration.fetch_add(1, std::memory_order_relaxed);
 	tilecount = 0;
+	spawnIssues.clear();
 
 	IOMapOTBM maploader(getVersion());
 
