@@ -28,6 +28,7 @@
 #include "app/preferences/general_page.h"
 #include "app/preferences/graphics_page.h"
 #include "app/preferences/interface_page.h"
+#include "app/preferences/map_compatibility_page.h"
 
 class PreferencesWindow : public wxDialog {
 public:
@@ -49,6 +50,7 @@ protected:
 	GraphicsPage* graphics_page = nullptr;
 	InterfacePage* interface_page = nullptr;
 	ClientVersionPage* client_version_page = nullptr;
+	MapCompatibilityPage* map_compatibility_page = nullptr;
 };
 
 #endif

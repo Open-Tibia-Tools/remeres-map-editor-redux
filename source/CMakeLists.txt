@@ -13,6 +13,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/graphics_page.h
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/interface_page.h
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/client_version_page.h
+    ${CMAKE_CURRENT_LIST_DIR}/app/preferences/map_compatibility_page.h
     ${CMAKE_CURRENT_LIST_DIR}/app/rme_forward_declarations.h
     ${CMAKE_CURRENT_LIST_DIR}/app/settings.h
     ${CMAKE_CURRENT_LIST_DIR}/app/threads.h
@@ -436,6 +437,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/graphics_page.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/interface_page.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/client_version_page.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/app/preferences/map_compatibility_page.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/settings.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/updater.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/managers/version_manager.cpp
