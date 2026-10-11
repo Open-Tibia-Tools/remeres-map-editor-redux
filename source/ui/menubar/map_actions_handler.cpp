@@ -208,11 +208,11 @@ void MapActionsHandler::OnMapValidateSpawns(wxCommandEvent& WXUNUSED(event)) {
 		const auto& issue = issues[i];
 		rows.push_back(SearchResultRow {
 			.index = static_cast<uint32_t>(i + 1),
-			.name = wxString::Format("%s (%s, %s)", issue.name, issue.kind, issue.reason),
+			.name = wxString::Format("%s (%s, %s)", wxString(issue.name), wxString(issue.kind), wxString(issue.reason)),
 			.position = issue.pos,
 		});
 	}
 
 	g_gui.ShowSearchWindow()->SetResults(std::move(rows));
-	g_gui.SetStatusText(wxString::Format("%zu broken spawns found.", issues.size()));
+	g_gui.SetStatusText(wxString::Format("%u broken spawns found.", static_cast<unsigned int>(issues.size())));
 }
