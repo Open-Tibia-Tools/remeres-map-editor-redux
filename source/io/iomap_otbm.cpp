@@ -221,24 +221,28 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	loadAux(MapXMLIO::loadSpawns, "spawn", map.spawnfile);
 	loadAux(MapXMLIO::loadHouses, "house", map.housefile);
 
-	// Waypoints handling: seamlessly load and merge from XML companion file if present
-	std::string waypointFile = map.waypointfile;
-	if (waypointFile.empty()) {
-		waypointFile = nstr(filename.GetName()) + "-waypoint.xml";
-	}
+	// Waypoints handling: if OTBM has waypoints, it is the authority and XML is ignored entirely.
+	// Only load from companion XML if OTBM has no waypoints.
+	if (map.waypoints.empty()) {
+		std::string waypointFile = map.waypointfile;
+		if (waypointFile.empty()) {
+			waypointFile = nstr(filename.GetName()) + "-waypoint.xml";
+		}
 
-	auto waypointPaths = MapXMLIO::normalizeMapFilePaths(filename, waypointFile);
-	if (FileName(wxstr(waypointPaths.first)).FileExists()) {
-		if (map.waypointfile.empty()) {
+		auto waypointPaths = MapXMLIO::normalizeMapFilePaths(filename, waypointFile);
+		if (FileName(wxstr(waypointPaths.first)).FileExists()) {
+			if (map.waypointfile.empty()) {
+				map.waypointfile = waypointFile;
+			}
+			if (MapXMLIO::loadWaypoints(map, filename, false)) {
+				spdlog::info("IOMapOTBM: Loaded waypoints from '{}' (total waypoints: {})",
+					map.waypointfile, map.waypoints.size());
+			}
+		} else if (map.waypointfile.empty()) {
 			map.waypointfile = waypointFile;
 		}
-		// Load from XML to merge with existing OTBM waypoints (OTBM takes precedence on duplicate names)
-		if (MapXMLIO::loadWaypoints(map, filename, false)) {
-			spdlog::info("IOMapOTBM: Loaded waypoints from '{}' (total waypoints: {})",
-				map.waypointfile, map.waypoints.size());
-		}
 	} else if (map.waypointfile.empty()) {
-		map.waypointfile = waypointFile;
+		map.waypointfile = nstr(filename.GetName()) + "-waypoint.xml";
 	}
 
 	map.getChangeTracker().markAllDirty();
