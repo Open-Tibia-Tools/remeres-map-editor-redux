@@ -89,7 +89,7 @@ public:
 		this->direction = direction;
 	}
 
-	// ponytail: weight and alternatives are only preserved across load/save; there is no UI to edit them yet
+	// Weight and alternatives are preserved across load/save (UI editing to be added)
 	uint32_t getWeight() const {
 		return weight;
 	}

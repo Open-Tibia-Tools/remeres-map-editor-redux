@@ -49,7 +49,7 @@ public:
 		kinds |= kind;
 	}
 
-	// ponytail: radius of a Crystal NPC spawn centered on the same tile as a monster spawn; only preserved, not editable
+	// Radius of an NPC spawn centered on the same tile as a monster spawn; preserved across load/save
 	int getNpcSize() const {
 		return npc_size;
 	}
