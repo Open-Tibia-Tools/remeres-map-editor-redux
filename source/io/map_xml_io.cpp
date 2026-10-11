@@ -228,6 +228,9 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 		}
 
 		Tile* tile = map.getTile(spawnPosition);
+		// Centers missing from the OTBM are auto-created below so the editor can
+		// hold the spawn; the server has no such tile. Remember it for validation.
+		const bool centerMissing = (tile == nullptr);
 		if (!tile) {
 			tile = map.createTile(spawnPosition.x, spawnPosition.y, spawnPosition.z);
 		}
@@ -318,6 +321,13 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "missing-tile" });
 				spdlog::warn("MapXMLIO: Creature '{}' at invalid position {}:{}:{}", name, creaturePosition.x, creaturePosition.y, creaturePosition.z);
 				continue;
+			}
+
+			// Offset-(0,0) entries sit on the spawn center, which the loader
+			// auto-creates when absent from the OTBM: the server has no tile
+			// there and the spawn fails. Flag it, keep editor behavior.
+			if (centerMissing && creaturePosition == spawnPosition) {
+				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "missing-tile" });
 			}
 
 			if (creatureTile->creature) {
