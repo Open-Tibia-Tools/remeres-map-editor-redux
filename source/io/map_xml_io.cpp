@@ -268,7 +268,13 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 				continue;
 			}
 
-			int32_t spawntime = creatureNode.attribute("spawntime").as_int();
+			int32_t rawSpawntime = creatureNode.attribute("spawntime").as_int();
+			bool badSpawntime = false;
+			if (auto stAttr = creatureNode.attribute("spawntime")) {
+				rawSpawntime = stAttr.as_int();
+				badSpawntime = (rawSpawntime < 1 || rawSpawntime > 86400);
+			}
+			int32_t spawntime = rawSpawntime;
 			if (spawntime == 0) {
 				spawntime = g_settings.getInteger(Config::DEFAULT_SPAWNTIME);
 			}
@@ -304,7 +310,12 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 
 			Tile* creatureTile = (creaturePosition == spawnPosition) ? tile : map.getTile(creaturePosition);
 
+			if (badSpawntime) {
+				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "bad-spawntime" });
+			}
+
 			if (!creatureTile) {
+				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "missing-tile" });
 				spdlog::warn("MapXMLIO: Creature '{}' at invalid position {}:{}:{}", name, creaturePosition.x, creaturePosition.y, creaturePosition.z);
 				continue;
 			}
@@ -321,6 +332,7 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 
 			CreatureType* type = g_creatures[name];
 			if (!type) {
+				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "unknown-type" });
 				type = g_creatures.addMissingCreatureType(name, isNpc);
 			}
 
