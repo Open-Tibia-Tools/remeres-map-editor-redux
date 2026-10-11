@@ -156,6 +156,22 @@ bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResul
 		return false;
 	}
 
+	if (out_info.otbm_version == 5) {
+		if (out_info.monster_xml_file.empty()) {
+			out_info.monster_xml_file = out_info.map_name + "-monster.xml";
+		}
+		if (out_info.npc_xml_file.empty()) {
+			out_info.npc_xml_file = out_info.map_name + "-npc.xml";
+		}
+	} else {
+		if (out_info.spawn_xml_file.empty()) {
+			out_info.spawn_xml_file = out_info.map_name + "-spawn.xml";
+		}
+	}
+	if (out_info.house_xml_file.empty()) {
+		out_info.house_xml_file = out_info.map_name + "-house.xml";
+	}
+
 	return true;
 }
 

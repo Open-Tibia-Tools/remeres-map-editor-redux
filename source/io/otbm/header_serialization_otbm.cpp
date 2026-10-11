@@ -95,7 +95,11 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 				if (!map_header_node->getString(spawn_file)) {
 					return false;
 				}
-				out_info.spawn_xml_file = wxstr(spawn_file);
+				if (out_info.otbm_version == 5) {
+					out_info.monster_xml_file = wxstr(spawn_file);
+				} else {
+					out_info.spawn_xml_file = wxstr(spawn_file);
+				}
 				break;
 			}
 			case OTBM_ATTR_EXT_HOUSE_FILE: {
@@ -107,10 +111,11 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 				break;
 			}
 			case OTBM_ATTR_EXT_SPAWN_NPC_FILE: {
-				std::string ignored_string;
-				if (!map_header_node->getString(ignored_string)) {
+				std::string npc_file;
+				if (!map_header_node->getString(npc_file)) {
 					return false;
 				}
+				out_info.npc_xml_file = wxstr(npc_file);
 				break;
 			}
 			default:

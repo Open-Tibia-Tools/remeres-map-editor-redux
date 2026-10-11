@@ -82,6 +82,8 @@ struct OTBMStartupPeekResult {
 	uint32_t items_minor_version = 0;
 	wxString house_xml_file;
 	wxString spawn_xml_file;
+	wxString monster_xml_file;
+	wxString npc_xml_file;
 	wxString description;
 	wxDateTime modified_time;
 	bool has_error = false;
