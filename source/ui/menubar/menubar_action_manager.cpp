@@ -122,7 +122,7 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	MAKE_ACTION_ICON(SHOW_ONLY_COLORS, wxITEM_CHECK, ICON_PALETTE, OnChangeViewSettings);
 	MAKE_ACTION_ICON(SHOW_ONLY_MODIFIED, wxITEM_CHECK, ICON_ERASER, OnChangeViewSettings);
 	MAKE_ACTION_ICON(SHOW_HOUSES, wxITEM_CHECK, ICON_HOUSE, OnChangeViewSettings);
-	MAKE_ACTION_ICON(SHOW_CRYSTAL_ZONES, wxITEM_CHECK, ICON_VECTOR_SQUARE, OnChangeViewSettings);
+	MAKE_ACTION_ICON(SHOW_ZONES, wxITEM_CHECK, ICON_VECTOR_SQUARE, OnChangeViewSettings);
 	MAKE_ACTION_ICON(SHOW_PATHING, wxITEM_CHECK, ICON_ROUTE, OnChangeViewSettings);
 	MAKE_ACTION_ICON(SHOW_TOOLTIPS, wxITEM_CHECK, ICON_COMMENT_DOTS, OnChangeViewSettings);
 	MAKE_ACTION_ICON(SHOW_PREVIEW, wxITEM_CHECK, ICON_EYE, OnChangeViewSettings);
@@ -247,9 +247,11 @@ void MenuBarActionManager::UpdateState(MainMenuBar* mb) {
 	mb->EnableItem(JUMP_TO_BRUSH, loaded);
 	mb->EnableItem(JUMP_TO_ITEM_BRUSH, loaded);
 
+	const bool is_otbm5 = has_map && (g_gui.GetCurrentMap().getVersion().otbm == MAP_OTBM_5);
+	mb->EnableItem(SHOW_ZONES, is_otbm5);
 	mb->EnableItem(MAP_REMOVE_ITEMS, is_host);
 	mb->EnableItem(MAP_REMOVE_UNREACHABLE_TILES, is_local);
-	mb->EnableItem(MAP_CLEAN_INVALID_ZONES, is_local);
+	mb->EnableItem(MAP_CLEAN_INVALID_ZONES, is_local && is_otbm5);
 	mb->EnableItem(CLEAR_INVALID_HOUSES, is_local);
 	mb->EnableItem(CLEAR_MODIFIED_STATE, is_local);
 

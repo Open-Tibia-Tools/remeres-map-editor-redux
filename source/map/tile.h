@@ -161,7 +161,7 @@ public: // Functions
 	[[nodiscard]] const TileExtraData* getExtra() const;
 	[[nodiscard]] bool hasInvalidZones() const;
 
-	// Crystal Server zones
+	// OTBM 5 zones (Canary / Crystal Server)
 	[[nodiscard]] std::span<const uint16_t> getZoneIds() const;
 	[[nodiscard]] bool hasZones() const;
 	[[nodiscard]] bool hasZone(uint16_t zoneId) const;

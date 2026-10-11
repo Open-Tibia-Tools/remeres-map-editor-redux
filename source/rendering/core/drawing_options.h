@@ -76,7 +76,7 @@ struct DrawingOptions {
 	bool show_creatures;
 	bool show_spawns;
 	bool show_houses;
-	bool show_crystal_zones = false;
+	bool show_zones = false;
 	bool show_shade;
 	bool show_special_tiles;
 	bool show_items;

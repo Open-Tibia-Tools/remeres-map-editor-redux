@@ -647,6 +647,10 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 	}
 
 	if (map.getVersion().otbm == MAP_OTBM_5 && !map.zones.empty()) {
+		if (map.zonefile.empty()) {
+			map.zonefile = identifier.GetName() + "-zones.xml";
+			spdlog::info("Auto-created zone file: {}", map.zonefile);
+		}
 		if (!MapXMLIO::saveZones(map, identifier)) {
 			spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save zones");
 			return false;

@@ -132,6 +132,7 @@ std::vector<StartupInfoField> BuildStartupMapFields(const OTBMStartupPeekResult*
 		const wxString monster_file = !info->monster_xml_file.empty() ? info->monster_xml_file : info->spawn_xml_file;
 		fields.push_back({ "Monster Spawn File", fallbackValue(monster_file), std::string(ICON_FILE), wxNullColour, false });
 		fields.push_back({ "NPC Spawn File", fallbackValue(info->npc_xml_file), std::string(ICON_FILE), wxNullColour, false });
+		fields.push_back({ "Zone File", fallbackValue(info->zone_xml_file), std::string(ICON_FILE), wxNullColour, false });
 	} else {
 		fields.push_back({ "Spawn File", fallbackValue(info->spawn_xml_file), std::string(ICON_FILE), wxNullColour, false });
 	}

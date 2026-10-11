@@ -498,7 +498,7 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
 namespace {
 
 	// Golden-ratio hue spread keeps neighbouring ids visually distinct without a palette table
-	glm::vec3 crystalZoneColor(uint16_t zone_id) noexcept {
+	glm::vec3 zoneColor(uint16_t zone_id) noexcept {
 		const float hue = std::fmod(static_cast<float>(zone_id) * 0.618034f, 1.0f) * 6.0f;
 		const float x = 1.0f - std::fabs(std::fmod(hue, 2.0f) - 1.0f);
 		switch (static_cast<int>(hue)) {
@@ -521,14 +521,14 @@ namespace {
 
 } // namespace
 
-void ZoneOverlayDrawer::drawFloorCrystalZones(SpriteBatch& sprite_batch,
-                                              int z,
-                                              const RenderView& view,
-                                              const Map& map,
-                                              const BaseMap* secondary_map,
-                                              const DrawingOptions& options,
-                                              const AtlasManager& atlas) {
-	if (options.ingame || !options.show_crystal_zones || map.zones.empty() || view.zoom > kZoomLODCutoff) {
+void ZoneOverlayDrawer::drawFloorZones(SpriteBatch& sprite_batch,
+                                       int z,
+                                       const RenderView& view,
+                                       const Map& map,
+                                       const BaseMap* secondary_map,
+                                       const DrawingOptions& options,
+                                       const AtlasManager& atlas) {
+	if (options.ingame || !options.show_zones || map.zones.empty() || view.zoom > kZoomLODCutoff) {
 		return;
 	}
 
@@ -549,23 +549,23 @@ void ZoneOverlayDrawer::drawFloorCrystalZones(SpriteBatch& sprite_batch,
 		}
 	};
 
-	fetchRow(bounds.start_y - 1, crystal_zone_row_prev_);
-	fetchRow(bounds.start_y, crystal_zone_row_curr_);
+	fetchRow(bounds.start_y - 1, zone_row_prev_);
+	fetchRow(bounds.start_y, zone_row_curr_);
 
 	sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 	constexpr float kBorder = 2.0f;
 	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
-		fetchRow(y + 1, crystal_zone_row_next_);
+		fetchRow(y + 1, zone_row_next_);
 
 		for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
 			const int idx = x - min_x;
-			const uint16_t zone_id = crystal_zone_row_curr_[idx];
+			const uint16_t zone_id = zone_row_curr_[idx];
 			if (zone_id == 0) {
 				continue;
 			}
 
 			const bool active = zone_id == active_zone;
-			const glm::vec3 rgb = crystalZoneColor(zone_id);
+			const glm::vec3 rgb = zoneColor(zone_id);
 			int draw_x, draw_y;
 			view.getScreenPosition(x, y, z, draw_x, draw_y);
 			const float fx = static_cast<float>(draw_x);
@@ -575,22 +575,22 @@ void ZoneOverlayDrawer::drawFloorCrystalZones(SpriteBatch& sprite_batch,
 			sprite_batch.drawRect(fx, fy, 32.0f, 32.0f, glm::vec4(rgb, active ? 0.45f : 0.25f), atlas, depth);
 
 			const glm::vec4 edge(rgb, 0.9f);
-			if (crystal_zone_row_prev_[idx] != zone_id) {
+			if (zone_row_prev_[idx] != zone_id) {
 				sprite_batch.drawRect(fx, fy, 32.0f, kBorder, edge, atlas, depth);
 			}
-			if (crystal_zone_row_next_[idx] != zone_id) {
+			if (zone_row_next_[idx] != zone_id) {
 				sprite_batch.drawRect(fx, fy + 32.0f - kBorder, 32.0f, kBorder, edge, atlas, depth);
 			}
-			if (crystal_zone_row_curr_[idx - 1] != zone_id) {
+			if (zone_row_curr_[idx - 1] != zone_id) {
 				sprite_batch.drawRect(fx, fy, kBorder, 32.0f, edge, atlas, depth);
 			}
-			if (crystal_zone_row_curr_[idx + 1] != zone_id) {
+			if (zone_row_curr_[idx + 1] != zone_id) {
 				sprite_batch.drawRect(fx + 32.0f - kBorder, fy, kBorder, 32.0f, edge, atlas, depth);
 			}
 		}
 
-		std::swap(crystal_zone_row_prev_, crystal_zone_row_curr_);
-		std::swap(crystal_zone_row_curr_, crystal_zone_row_next_);
+		std::swap(zone_row_prev_, zone_row_curr_);
+		std::swap(zone_row_curr_, zone_row_next_);
 	}
 }
 

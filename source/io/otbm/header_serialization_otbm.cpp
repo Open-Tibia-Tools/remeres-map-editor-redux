@@ -119,10 +119,11 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 				break;
 			}
 			case OTBM_ATTR_EXT_ZONE_FILE: {
-				std::string ignored_string;
-				if (!map_header_node->getString(ignored_string)) {
+				std::string zone_file;
+				if (!map_header_node->getString(zone_file)) {
 					return false;
 				}
+				out_info.zone_xml_file = wxstr(zone_file);
 				break;
 			}
 			default:

@@ -142,7 +142,7 @@ void ZonePalettePanel::OnUpdate() {
 	add_button->Enable(enabled);
 	rename_button->Enable(enabled);
 	remove_button->Enable(enabled);
-	zone_list->SetToolTip(enabled || !map ? wxString() : wxString("Zones require an OTBM 5 (Crystal Server) map."));
+	zone_list->SetToolTip(enabled || !map ? wxString() : wxString("Zones require an OTBM 5 map (Canary / Crystal Server)."));
 }
 
 void ZonePalettePanel::OnSelectZone(wxListEvent& /*event*/) {

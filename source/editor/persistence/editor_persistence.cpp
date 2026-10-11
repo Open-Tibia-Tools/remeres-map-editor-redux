@@ -60,6 +60,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	const std::string prev_monster = editor.map.getMonsterFilename();
 	const std::string prev_npc = editor.map.getNpcFilename();
 	const std::string prev_house = editor.map.getHouseFilename();
+	const std::string prev_zone = editor.map.getZoneFilename();
 	const std::string prev_waypoint = editor.map.getWaypointFilename();
 
 	// If not named yet, propagate the file name to the auxilliary files
@@ -75,10 +76,8 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 		editor.map.setNpcFilename(nstr(_name.GetFullName()));
 		_name.SetName(filename.GetName() + "-house");
 		editor.map.setHouseFilename(nstr(_name.GetFullName()));
-		_name.SetName(filename.GetName() + "-npc");
-		editor.map.npcfile = nstr(_name.GetFullName());
 		_name.SetName(filename.GetName() + "-zones");
-		editor.map.zonefile = nstr(_name.GetFullName());
+		editor.map.setZoneFilename(nstr(_name.GetFullName()));
 		_name.SetName(filename.GetName() + "-waypoint");
 		editor.map.setWaypointFilename(nstr(_name.GetFullName()));
 
@@ -97,6 +96,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	std::string backup_spawn;
 	std::string backup_monster;
 	std::string backup_npc;
+	std::string backup_zone;
 	std::string backup_waypoint;
 
 	if (converter.FileExists()) {
@@ -126,6 +126,13 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 			std::remove(backup_npc.c_str());
 			std::rename((map_path + editor.map.getNpcFilename()).c_str(), backup_npc.c_str());
 		}
+
+		converter.SetFullName(wxstr(editor.map.getZoneFilename()));
+		if (converter.FileExists()) {
+			backup_zone = map_path + nstr(converter.GetName()) + ".xml~";
+			std::remove(backup_zone.c_str());
+			std::rename((map_path + editor.map.getZoneFilename()).c_str(), backup_zone.c_str());
+		}
 	} else {
 		converter.SetFullName(wxstr(editor.map.getSpawnFilename()));
 		if (converter.FileExists()) {
@@ -143,7 +150,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	}
 
 	// Save the map
-	MapBackupService::WriteCrashMarker({backup_otbm, backup_house, backup_spawn, backup_monster, backup_npc, backup_waypoint});
+	MapBackupService::WriteCrashMarker({backup_otbm, backup_house, backup_spawn, backup_monster, backup_npc, backup_zone, backup_waypoint});
 
 	{
 
@@ -207,6 +214,14 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 				std::remove((map_path + editor.map.getNpcFilename()).c_str());
 			}
 
+			if (!backup_zone.empty()) {
+				converter.SetFullName(wxstr(editor.map.getZoneFilename()));
+				std::string zone_filename = map_path + nstr(converter.GetName());
+				std::rename(backup_zone.c_str(), std::string(zone_filename + ".xml").c_str());
+			} else if (!editor.map.getZoneFilename().empty()) {
+				std::remove((map_path + editor.map.getZoneFilename()).c_str());
+			}
+
 			if (!backup_waypoint.empty()) {
 				converter.SetFullName(wxstr(editor.map.getWaypointFilename()));
 				std::string waypoint_filename = map_path + nstr(converter.GetName());
@@ -231,6 +246,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 			editor.map.setMonsterFilename(prev_monster);
 			editor.map.setNpcFilename(prev_npc);
 			editor.map.setHouseFilename(prev_house);
+			editor.map.setZoneFilename(prev_zone);
 			editor.map.setWaypointFilename(prev_waypoint);
 			return false;
 		}
@@ -271,6 +287,12 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 			std::rename(backup_npc.c_str(), std::string(npc_filename + "." + date_str + ".xml").c_str());
 		}
 
+		if (!backup_zone.empty()) {
+			converter.SetFullName(wxstr(editor.map.getZoneFilename()));
+			std::string zone_filename = map_path + nstr(converter.GetName());
+			std::rename(backup_zone.c_str(), std::string(zone_filename + "." + date_str + ".xml").c_str());
+		}
+
 		if (!backup_waypoint.empty()) {
 			converter.SetFullName(wxstr(editor.map.getWaypointFilename()));
 			std::string waypoint_filename = map_path + nstr(converter.GetName());
@@ -283,6 +305,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 		std::remove(backup_spawn.c_str());
 		std::remove(backup_monster.c_str());
 		std::remove(backup_npc.c_str());
+		std::remove(backup_zone.c_str());
 		std::remove(backup_waypoint.c_str());
 	}
 

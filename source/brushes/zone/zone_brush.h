@@ -7,7 +7,7 @@
 
 #include "brushes/brush.h"
 
-// Paints a Crystal Server zone id onto tiles; the active id is set by the zone palette
+// Paints an OTBM 5 zone id (Canary / Crystal Server) onto tiles; the active id is set by the zone palette
 class ZoneBrush : public Brush {
 public:
 	ZoneBrush() = default;

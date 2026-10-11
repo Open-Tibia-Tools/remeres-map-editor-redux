@@ -60,6 +60,7 @@ bool MapBackupService::CreateSnapshot(
 	const std::string original_monsterfile = editor.map.getMonsterFilename();
 	const std::string original_npcfile = editor.map.getNpcFilename();
 	const std::string original_housefile = editor.map.getHouseFilename();
+	const std::string original_zonefile = editor.map.getZoneFilename();
 	const std::string original_waypointfile = editor.map.getWaypointFilename();
 	const bool original_changed = editor.map.hasChanged();
 	const bool original_unnamed = editor.map.isUnnamed();
@@ -69,6 +70,7 @@ bool MapBackupService::CreateSnapshot(
 	editor.map.setMonsterFilename(snapshot_base + "-monster.xml");
 	editor.map.setNpcFilename(snapshot_base + "-npc.xml");
 	editor.map.setHouseFilename(snapshot_base + "-house.xml");
+	editor.map.setZoneFilename(snapshot_base + "-zones.xml");
 	editor.map.setWaypointFilename(snapshot_base + "-waypoint.xml");
 
 	IOMapOTBM mapsaver(editor.map.getVersion());
@@ -79,6 +81,7 @@ bool MapBackupService::CreateSnapshot(
 	editor.map.setMonsterFilename(original_monsterfile);
 	editor.map.setNpcFilename(original_npcfile);
 	editor.map.setHouseFilename(original_housefile);
+	editor.map.setZoneFilename(original_zonefile);
 	editor.map.setWaypointFilename(original_waypointfile);
 	editor.map.setUnnamed(original_unnamed);
 	if (!original_changed && editor.map.hasChanged()) {
@@ -92,6 +95,7 @@ bool MapBackupService::CreateSnapshot(
 		std::remove((dir + snapshot_base + "-monster.xml").c_str());
 		std::remove((dir + snapshot_base + "-npc.xml").c_str());
 		std::remove((dir + snapshot_base + "-house.xml").c_str());
+		std::remove((dir + snapshot_base + "-zones.xml").c_str());
 		std::remove((dir + snapshot_base + "-waypoint.xml").c_str());
 
 		out_error = "Failed to save backup map snapshot to: " + out_backup_path;

@@ -9,7 +9,7 @@
 
 #include "palette/palette_common.h"
 
-// Lists Crystal Server zones (OTBM 5 maps only) and feeds the selected id to the zone brush
+// Lists OTBM 5 zones (Canary / Crystal Server) and feeds the selected id to the zone brush
 class ZonePalettePanel : public PalettePanel {
 public:
 	explicit ZonePalettePanel(wxWindow* parent, wxWindowID id = wxID_ANY);
