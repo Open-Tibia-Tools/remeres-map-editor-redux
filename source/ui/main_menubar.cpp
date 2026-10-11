@@ -448,6 +448,10 @@ void MainMenuBar::OnMapStatistics(wxCommandEvent& WXUNUSED(event)) {
 	MapStatisticsDialog::Show(frame);
 }
 
+void MainMenuBar::OnMapValidateSpawns(wxCommandEvent& event) {
+	mapActionsHandler->OnMapValidateSpawns(event);
+}
+
 void MainMenuBar::OnMapCleanup(wxCommandEvent& event) {
 	mapActionsHandler->OnMapCleanup(event);
 }

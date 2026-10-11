@@ -89,6 +89,7 @@ namespace MenuBar {
 		MAP_CLEAN_HOUSE_ITEMS,
 		MAP_PROPERTIES,
 		MAP_STATISTICS,
+		MAP_VALIDATE_SPAWNS,
 		VIEW_TOOLBARS_BRUSHES,
 		VIEW_TOOLBARS_POSITION,
 		VIEW_TOOLBARS_SIZES,
@@ -267,6 +268,7 @@ public:
 	void OnMapEditMonsters(wxCommandEvent& event);
 
 	void OnMapStatistics(wxCommandEvent& event);
+	void OnMapValidateSpawns(wxCommandEvent& event);
 	void OnMapCleanup(wxCommandEvent& event);
 	void OnMapCleanInvalidZones(wxCommandEvent& event);
 	void OnMapProperties(wxCommandEvent& event);

@@ -2,6 +2,7 @@
 #include "ui/gui.h"
 #include "ui/dialog_util.h"
 #include "ui/find_item_window.h"
+#include "ui/result_window.h"
 #include "editor/editor.h"
 #include "editor/operations/clean_operations.h"
 #include "editor/operations/search_operations.h"
@@ -188,4 +189,30 @@ void MapActionsHandler::OnMapCleanInvalidZones(wxCommandEvent& WXUNUSED(event)) 
 		g_gui.GetCurrentMap().cleanInvalidZones(true);
 		g_gui.RefreshView();
 	}
+}
+
+void MapActionsHandler::OnMapValidateSpawns(wxCommandEvent& WXUNUSED(event)) {
+	if (!g_gui.IsEditorOpen()) {
+		return;
+	}
+
+	const auto& issues = g_gui.GetCurrentMap().getSpawnIssues();
+	if (issues.empty()) {
+		DialogUtil::PopupDialog("Validate Spawns", "No broken spawns found.", wxOK);
+		return;
+	}
+
+	std::vector<SearchResultRow> rows;
+	rows.reserve(issues.size());
+	for (size_t i = 0; i < issues.size(); ++i) {
+		const auto& issue = issues[i];
+		rows.push_back(SearchResultRow {
+			.index = static_cast<uint32_t>(i + 1),
+			.name = wxString::Format("%s (%s, %s)", issue.name, issue.kind, issue.reason),
+			.position = issue.pos,
+		});
+	}
+
+	g_gui.ShowSearchWindow()->SetResults(std::move(rows));
+	g_gui.SetStatusText(wxString::Format("%zu broken spawns found.", issues.size()));
 }
