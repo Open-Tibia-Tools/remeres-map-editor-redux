@@ -74,75 +74,132 @@ void CreatureType::preserve_assign_creature_fields(CreatureType* dest, const Cre
 	dest->standard = oldStandard;
 }
 
-CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::string>& warnings) {
-	pugi::xml_attribute attribute;
-	if (!(attribute = node.attribute("type"))) {
-		warnings.push_back("Couldn't read type tag of creature node.");
-		return nullptr;
+CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::string>& warnings, std::string_view fallbackType) {
+	std::string tmpType;
+	if (auto typeAttr = node.attribute("type")) {
+		tmpType = as_lower_str(typeAttr.as_string());
+	} else {
+		std::string tagName = as_lower_str(node.name());
+		if (tagName == "monster") {
+			tmpType = "monster";
+		} else if (tagName == "npc") {
+			tmpType = "npc";
+		} else if (!fallbackType.empty()) {
+			tmpType = fallbackType;
+		}
 	}
 
-	const std::string& tmpType = attribute.as_string();
 	if (tmpType != "monster" && tmpType != "npc") {
-		warnings.push_back((wxString("Invalid type tag of creature node \"") + wxstr(tmpType) + "\"").ToStdString());
+		warnings.push_back(std::format("Invalid or missing type for creature node '{}'", node.attribute("name").as_string()));
 		return nullptr;
 	}
 
-	if (!(attribute = node.attribute("name"))) {
+	pugi::xml_attribute nameAttr = node.attribute("name");
+	if (!nameAttr) {
 		warnings.push_back("Couldn't read name tag of creature node.");
 		return nullptr;
 	}
 
 	CreatureType* ct = newd CreatureType();
-	ct->name = attribute.as_string();
-	ct->isNpc = tmpType == "npc";
+	ct->name = nameAttr.as_string();
+	ct->isNpc = (tmpType == "npc");
 
-	pugi::xml_attribute lookTypeAttr = node.attribute("looktype");
+	// Look attributes can be either directly on the creature node or inside a child <look ...> node
+	pugi::xml_node lookNode = node.child("look");
+	auto getAttr = [&](const char* name) -> pugi::xml_attribute {
+		if (auto attr = node.attribute(name)) {
+			return attr;
+		}
+		if (lookNode) {
+			return lookNode.attribute(name);
+		}
+		return {};
+	};
+
+	pugi::xml_attribute lookTypeAttr = getAttr("looktype");
+	if (!lookTypeAttr && lookNode) {
+		lookTypeAttr = lookNode.attribute("type");
+	}
 	if (lookTypeAttr) {
 		ct->outfit.lookType = lookTypeAttr.as_int();
 	}
 
-	if ((attribute = node.attribute("lookitem"))) {
-		ct->outfit.lookItem = attribute.as_int();
+	if (auto attr = getAttr("lookitem")) {
+		ct->outfit.lookItem = attr.as_int();
+	} else if (lookNode) {
+		if (auto attr = lookNode.attribute("item")) {
+			ct->outfit.lookItem = attr.as_int();
+		} else if (auto attr = lookNode.attribute("lookex")) {
+			ct->outfit.lookItem = attr.as_int();
+		} else if (auto attr = lookNode.attribute("typeex")) {
+			ct->outfit.lookItem = attr.as_int();
+		}
 	}
 
-	if ((attribute = node.attribute("lookmount"))) {
-		ct->outfit.lookMount = attribute.as_int();
+	if (auto attr = getAttr("lookmount")) {
+		ct->outfit.lookMount = attr.as_int();
+	} else if (lookNode) {
+		if (auto attr = lookNode.attribute("mount")) {
+			ct->outfit.lookMount = attr.as_int();
+		}
 	}
 
-	if ((attribute = node.attribute("lookaddon"))) {
-		ct->outfit.lookAddon = attribute.as_int();
+	// Support both lookaddon (singular) and lookaddons (plural)
+	if (auto attr = getAttr("lookaddon")) {
+		ct->outfit.lookAddon = attr.as_int();
+	} else if (auto attr = getAttr("lookaddons")) {
+		ct->outfit.lookAddon = attr.as_int();
+	} else if (lookNode) {
+		if (auto attr = lookNode.attribute("addon")) {
+			ct->outfit.lookAddon = attr.as_int();
+		} else if (auto attr = lookNode.attribute("addons")) {
+			ct->outfit.lookAddon = attr.as_int();
+		}
 	}
 
-	if ((attribute = node.attribute("lookhead"))) {
-		ct->outfit.lookHead = attribute.as_int();
+	if (auto attr = getAttr("lookhead")) {
+		ct->outfit.lookHead = attr.as_int();
+	} else if (lookNode) {
+		if (auto attr = lookNode.attribute("head")) {
+			ct->outfit.lookHead = attr.as_int();
+		}
 	}
 
-	if ((attribute = node.attribute("lookbody"))) {
-		ct->outfit.lookBody = attribute.as_int();
+	if (auto attr = getAttr("lookbody")) {
+		ct->outfit.lookBody = attr.as_int();
+	} else if (lookNode) {
+		if (auto attr = lookNode.attribute("body")) {
+			ct->outfit.lookBody = attr.as_int();
+		}
 	}
 
-	if ((attribute = node.attribute("looklegs"))) {
-		ct->outfit.lookLegs = attribute.as_int();
+	if (auto attr = getAttr("looklegs")) {
+		ct->outfit.lookLegs = attr.as_int();
+	} else if (lookNode) {
+		if (auto attr = lookNode.attribute("legs")) {
+			ct->outfit.lookLegs = attr.as_int();
+		}
 	}
 
-	if ((attribute = node.attribute("lookfeet"))) {
-		ct->outfit.lookFeet = attribute.as_int();
+	if (auto attr = getAttr("lookfeet")) {
+		ct->outfit.lookFeet = attr.as_int();
+	} else if (lookNode) {
+		if (auto attr = lookNode.attribute("feet")) {
+			ct->outfit.lookFeet = attr.as_int();
+		}
 	}
 
-	if ((attribute = node.attribute("lookmounthead"))) {
-		ct->outfit.lookMountHead = attribute.as_int();
+	if (auto attr = getAttr("lookmounthead")) {
+		ct->outfit.lookMountHead = attr.as_int();
 	}
-
-	if ((attribute = node.attribute("lookmountbody"))) {
-		ct->outfit.lookMountBody = attribute.as_int();
+	if (auto attr = getAttr("lookmountbody")) {
+		ct->outfit.lookMountBody = attr.as_int();
 	}
-
-	if ((attribute = node.attribute("lookmountlegs"))) {
-		ct->outfit.lookMountLegs = attribute.as_int();
+	if (auto attr = getAttr("lookmountlegs")) {
+		ct->outfit.lookMountLegs = attr.as_int();
 	}
-
-	if ((attribute = node.attribute("lookmountfeet"))) {
-		ct->outfit.lookMountFeet = attribute.as_int();
+	if (auto attr = getAttr("lookmountfeet")) {
+		ct->outfit.lookMountFeet = attr.as_int();
 	}
 
 	if (ct->outfit.lookItem == 0) {
@@ -150,7 +207,7 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 			if (ct->outfit.lookType == 0) {
 				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			} else if (g_gui.gfx.getCreatureSprite(ct->outfit.lookType) == nullptr) {
-				warnings.push_back((wxString("Invalid creature \"") + wxstr(ct->name) + "\" look type #" + std::to_string(ct->outfit.lookType)).ToStdString());
+				warnings.push_back(std::format("Invalid creature \"{}\" look type #{}", ct->name, ct->outfit.lookType));
 				ct->outfit = DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			}
 		} else if (ct->outfit.lookType == 0) {
@@ -320,22 +377,30 @@ bool CreatureDatabase::loadFromXML(const FileName& filename, bool standard, wxSt
 		return false;
 	}
 
-	pugi::xml_node node = doc.child("creatures");
-	if (!node) {
-		error = "Invalid file signature, this file is not a valid creatures file.";
+	pugi::xml_node node;
+	std::string defaultKind;
+	if ((node = doc.child("creatures"))) {
+		defaultKind = "";
+	} else if ((node = doc.child("monsters"))) {
+		defaultKind = "monster";
+	} else if ((node = doc.child("npcs"))) {
+		defaultKind = "npc";
+	} else {
+		error = "Invalid file signature, this file is not a valid creatures/monsters/npcs file.";
 		return false;
 	}
 
 	for (pugi::xml_node creatureNode = node.first_child(); creatureNode; creatureNode = creatureNode.next_sibling()) {
-		if (as_lower_str(creatureNode.name()) != "creature") {
+		std::string nodeName = as_lower_str(creatureNode.name());
+		if (nodeName != "creature" && nodeName != "monster" && nodeName != "npc") {
 			continue;
 		}
 
-		CreatureType* creatureType = CreatureType::loadFromXML(creatureNode, warnings);
+		CreatureType* creatureType = CreatureType::loadFromXML(creatureNode, warnings, defaultKind);
 		if (creatureType) {
 			creatureType->standard = standard;
 			if ((*this)[creatureType->name]) {
-				warnings.push_back((wxString("Duplicate creature type name \"") + wxstr(creatureType->name) + "\"! Discarding...").ToStdString());
+				warnings.push_back(std::format("Duplicate creature type name \"{}\"! Discarding...", creatureType->name));
 				delete creatureType;
 			} else {
 				creature_map[as_lower_str(creatureType->name)] = creatureType;
