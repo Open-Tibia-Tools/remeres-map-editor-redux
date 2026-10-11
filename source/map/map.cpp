@@ -249,6 +249,10 @@ const std::vector<Position>& Map::getZoneTilePositions(uint16_t id) const noexce
 	return zone_index.getPositions(id);
 }
 
+const std::vector<ZoneCluster>& Map::getZoneClusters(uint16_t id) const {
+	return zone_index.getClusters(id);
+}
+
 void Map::addTileToZone(uint16_t id, const Position& pos) {
 	zone_index.addTile(id, pos);
 }

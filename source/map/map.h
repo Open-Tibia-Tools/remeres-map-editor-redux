@@ -160,6 +160,7 @@ public:
 	// Removes the zone and strips its id from every tile
 	void removeZone(uint16_t id);
 	[[nodiscard]] const std::vector<Position>& getZoneTilePositions(uint16_t id) const noexcept;
+	[[nodiscard]] const std::vector<ZoneCluster>& getZoneClusters(uint16_t id) const;
 	void addTileToZone(uint16_t id, const Position& pos);
 	void removeTileFromZone(uint16_t id, const Position& pos);
 	void updateTileZones(const Position& pos, std::span<const uint16_t> old_zones, std::span<const uint16_t> new_zones);

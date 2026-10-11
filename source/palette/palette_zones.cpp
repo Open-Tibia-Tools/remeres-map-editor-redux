@@ -58,37 +58,7 @@ ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 	Bind(wxEVT_MENU, &ZonePalettePanel::OnClickRemove, this, PALETTE_ZONE_REMOVE);
 }
 
-namespace {
 
-	// Zones can be split or concave, so jump to the real zone tile closest to the centroid of its busiest floor
-	std::optional<Position> zoneCenter(std::span<const Position> positions) {
-		if (positions.empty()) {
-			return std::nullopt;
-		}
-		std::array<int, MAP_LAYERS> floor_counts {};
-		for (const Position& pos : positions) {
-			++floor_counts[pos.z];
-		}
-		const int floor = static_cast<int>(std::ranges::max_element(floor_counts) - floor_counts.begin());
-
-		auto on_floor = positions | std::views::filter([floor](const Position& p) { return p.z == floor; });
-		double sum_x = 0.0;
-		double sum_y = 0.0;
-		for (const Position& pos : on_floor) {
-			sum_x += pos.x;
-			sum_y += pos.y;
-		}
-		const double cx = sum_x / floor_counts[floor];
-		const double cy = sum_y / floor_counts[floor];
-
-		return *std::ranges::min_element(on_floor, {}, [cx, cy](const Position& p) {
-			const double dx = p.x - cx;
-			const double dy = p.y - cy;
-			return dx * dx + dy * dy;
-		});
-	}
-
-} // namespace
 
 wxString ZonePalettePanel::GetName() const {
 	return "Zone";
@@ -176,10 +146,12 @@ void ZonePalettePanel::OnGoToZone(wxCommandEvent& /*event*/) {
 		return;
 	}
 	wxBusyCursor busy;
-	const auto& positions = map->getZoneTilePositions(id);
-	if (const auto center = zoneCenter(positions)) {
-		g_gui.SetScreenCenterPosition(*center);
-		g_gui.SetStatusText(wxstr(std::format("Zone {}: {} tiles", id, positions.size())));
+	const auto& clusters = map->getZoneClusters(id);
+	if (!clusters.empty()) {
+		const auto it = std::ranges::max_element(clusters, {}, &ZoneCluster::tile_count);
+		g_gui.SetScreenCenterPosition(it->centroid_pos);
+		const size_t total_tiles = map->getZoneTilePositions(id).size();
+		g_gui.SetStatusText(wxstr(std::format("Zone {}: {} tiles across {} room(s)", id, total_tiles, clusters.size())));
 	} else {
 		g_gui.SetStatusText("This zone has no tiles yet.");
 	}

@@ -15,10 +15,23 @@
 class Map;
 
 /**
+ * @brief Represents a single connected component / island of zone tiles on a specific floor.
+ */
+struct ZoneCluster {
+	Position centroid_pos;
+	int min_x = 0;
+	int max_x = 0;
+	int min_y = 0;
+	int max_y = 0;
+	uint32_t tile_count = 0;
+};
+
+/**
  * @brief High-throughput spatial index mapping OTBM 5 zone IDs to tile positions.
  *
  * Provides O(1) retrieval of all positions associated with a zone ID, eliminating
  * full-map tile scans for viewport labeling, camera jumping, and zone removal.
+ * Also provides cached 8-connected component clusters for dynamic per-room labeling.
  */
 class ZoneIndex {
 public:
@@ -42,6 +55,9 @@ public:
 	// Fast O(1) lookup returning a const reference to the contiguous position buffer.
 	[[nodiscard]] const std::vector<Position>& getPositions(uint16_t zoneId) const noexcept;
 
+	// Returns cached 8-connected clusters for this zone across all floors.
+	[[nodiscard]] const std::vector<ZoneCluster>& getClusters(uint16_t zoneId) const;
+
 	// Returns whether the index contains any tiles for the given zone.
 	[[nodiscard]] bool hasZone(uint16_t zoneId) const noexcept;
 
@@ -60,7 +76,15 @@ public:
 	}
 
 private:
-	std::unordered_map<uint16_t, std::vector<Position>> index_;
+	struct ZoneData {
+		std::vector<Position> positions;
+		mutable std::vector<ZoneCluster> clusters;
+		mutable bool clusters_dirty = true;
+	};
+
+	void updateClusters(const ZoneData& data) const;
+
+	std::unordered_map<uint16_t, ZoneData> index_;
 };
 
 #endif // RME_MAP_ZONE_INDEX_H_

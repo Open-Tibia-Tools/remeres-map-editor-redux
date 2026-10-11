@@ -318,89 +318,52 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 			if (zone.id == 0) {
 				continue;
 			}
-			const auto& all_tiles = map.getZoneTilePositions(zone.id);
-			if (all_tiles.empty()) {
-				continue;
-			}
-
-			int count = 0;
-			int min_x = std::numeric_limits<int>::max();
-			int max_x = std::numeric_limits<int>::min();
-			int min_y = std::numeric_limits<int>::max();
-			int max_y = std::numeric_limits<int>::min();
-			double sum_x = 0.0;
-			double sum_y = 0.0;
-
-			for (const auto& p : all_tiles) {
-				if (p.z == check_z) {
-					++count;
-					min_x = std::min(min_x, p.x);
-					max_x = std::max(max_x, p.x);
-					min_y = std::min(min_y, p.y);
-					max_y = std::max(max_y, p.y);
-					sum_x += p.x;
-					sum_y += p.y;
-				}
-			}
-
-			if (count == 0) {
-				continue;
-			}
-
-			// AABB culling against view bounds on active floor
-			if (max_x < floor_bounds.start_x || min_x > floor_bounds.end_x ||
-			    max_y < floor_bounds.start_y || min_y > floor_bounds.end_y) {
-				continue;
-			}
-
-			// Centroid of the room tiles on the active floor
-			const double avg_x = sum_x / static_cast<double>(count);
-			const double avg_y = sum_y / static_cast<double>(count);
-
-			// Choose the real room tile closest to centroid to guarantee it sits inside the room
-			Position best_pos;
-			double min_dist_sq = std::numeric_limits<double>::infinity();
-			for (const auto& p : all_tiles) {
-				if (p.z == check_z) {
-					const double dx = static_cast<double>(p.x) - avg_x;
-					const double dy = static_cast<double>(p.y) - avg_y;
-					const double dsq = dx * dx + dy * dy;
-					if (dsq < min_dist_sq) {
-						min_dist_sq = dsq;
-						best_pos = p;
-					}
-				}
-			}
-
-			int unscaled_x = 0, unscaled_y = 0;
-			if (!view.IsTileVisible(best_pos.x, best_pos.y, check_z, unscaled_x, unscaled_y)) {
-				continue;
-			}
-
-			const float screen_x = static_cast<float>(unscaled_x) * inv_zoom;
-			const float screen_y = static_cast<float>(unscaled_y) * inv_zoom;
-			if (screen_x < -64.0f || screen_x > screen_max_x || screen_y < -64.0f || screen_y > screen_max_y) {
+			const auto& clusters = map.getZoneClusters(zone.id);
+			if (clusters.empty()) {
 				continue;
 			}
 
 			std::string label_text = zone.name.empty() ? std::format("Zone {}", zone.id) : zone.name;
 			const CachedMetrics m = getMetrics(label_text);
-			const float labelX = screen_x + tile_size_screen * 0.5f;
-			const float labelY = resolveCollision(labelX, screen_y + tile_size_screen * 0.5f + (m.height * 0.5f) - paddingY, m.width, m.height);
-
 			const glm::vec3 rgb = getZoneColor(zone.id);
 			const bool is_active = (active_zone == zone.id);
 
-			visible_labels.push_back(VisibleMarkerLabel {
-				.x = labelX,
-				.y = labelY,
-				.width = m.width,
-				.height = m.height,
-				.text = std::move(label_text),
-				.type = MarkerLabelType::Zone,
-				.custom_color = nvgRGBAf(rgb.r, rgb.g, rgb.b, 1.0f),
-				.is_active = is_active
-			});
+			for (const auto& cluster : clusters) {
+				if (cluster.centroid_pos.z != check_z) {
+					continue;
+				}
+
+				// AABB culling against view bounds on active floor
+				if (cluster.max_x < floor_bounds.start_x || cluster.min_x > floor_bounds.end_x ||
+				    cluster.max_y < floor_bounds.start_y || cluster.min_y > floor_bounds.end_y) {
+					continue;
+				}
+
+				int unscaled_x = 0, unscaled_y = 0;
+				if (!view.IsTileVisible(cluster.centroid_pos.x, cluster.centroid_pos.y, check_z, unscaled_x, unscaled_y)) {
+					continue;
+				}
+
+				const float screen_x = static_cast<float>(unscaled_x) * inv_zoom;
+				const float screen_y = static_cast<float>(unscaled_y) * inv_zoom;
+				if (screen_x < -64.0f || screen_x > screen_max_x || screen_y < -64.0f || screen_y > screen_max_y) {
+					continue;
+				}
+
+				const float labelX = screen_x + tile_size_screen * 0.5f;
+				const float labelY = resolveCollision(labelX, screen_y + tile_size_screen * 0.5f + (m.height * 0.5f) - paddingY, m.width, m.height);
+
+				visible_labels.push_back(VisibleMarkerLabel {
+					.x = labelX,
+					.y = labelY,
+					.width = m.width,
+					.height = m.height,
+					.text = label_text,
+					.type = MarkerLabelType::Zone,
+					.custom_color = nvgRGBAf(rgb.r, rgb.g, rgb.b, 1.0f),
+					.is_active = is_active
+				});
+			}
 		}
 	}
 
