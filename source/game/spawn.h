@@ -22,7 +22,7 @@ class Tile;
 
 class Spawn {
 public:
-	// Crystal Server spawn files this spawn was loaded from; spawns made in the editor have none
+	// Partitioned spawn file origins this spawn was loaded from; spawns created in the editor have none
 	enum Kind : uint8_t {
 		MONSTERS = 1,
 		NPCS = 2,

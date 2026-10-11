@@ -121,7 +121,7 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 	return true;
 }
 
-bool HeaderSerializationOTBM::readMapAttributes(Map& map, FastOTBMStream& stream) {
+bool HeaderSerializationOTBM::readMapAttributes(Map& map, FastOTBMStream& stream, MapVersionID otbmVersion) {
 	uint8_t attribute;
 	while (stream.getU8(attribute)) {
 		switch (attribute) {
@@ -133,7 +133,8 @@ bool HeaderSerializationOTBM::readMapAttributes(Map& map, FastOTBMStream& stream
 				break;
 			}
 			case OTBM_ATTR_EXT_SPAWN_FILE: {
-				if (!stream.getString(map.spawnfile)) {
+				std::string& target = (otbmVersion == MAP_OTBM_5) ? map.monsterfile : map.spawnfile;
+				if (!stream.getString(target)) {
 					spdlog::warn("Invalid map spawnfile tag");
 					return true;
 				}
@@ -154,7 +155,7 @@ bool HeaderSerializationOTBM::readMapAttributes(Map& map, FastOTBMStream& stream
 				break;
 			}
 			case OTBM_ATTR_EXT_ZONE_FILE: {
-				// compatibility: skip CrystalServer zone file tag
+				// compatibility: skip zone file tag
 				std::string stringToSkip;
 				if (!stream.getString(stringToSkip)) {
 					spdlog::warn("Invalid map zonefile tag");

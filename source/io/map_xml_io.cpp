@@ -43,10 +43,10 @@ namespace {
 		CreatureFilter filter;
 	};
 
-	// Crystal Server splits spawns into a monster file and an NPC file, each with its own tag names
-	constexpr SpawnFileFormat LEGACY_SPAWNS { "spawns", "spawn", CreatureFilter::All };
-	constexpr SpawnFileFormat CRYSTAL_MONSTERS { "monsters", "monster", CreatureFilter::Monsters };
-	constexpr SpawnFileFormat CRYSTAL_NPCS { "npcs", "npc", CreatureFilter::Npcs };
+	// OTBM 5 splits spawns into a monster file and an NPC file, each with its own tag names
+	constexpr SpawnFileFormat STANDARD_SPAWN_FILE { "spawns", "spawn", CreatureFilter::All };
+	constexpr SpawnFileFormat MONSTERS_SPAWN_FILE { "monsters", "monster", CreatureFilter::Monsters };
+	constexpr SpawnFileFormat NPCS_SPAWN_FILE { "npcs", "npc", CreatureFilter::Npcs };
 
 	bool loadSpawnFile(Map& map, const wxFileName& dir, const std::string& filename) {
 		auto paths = MapXMLIO::normalizeMapFilePaths(dir, filename);
@@ -61,19 +61,19 @@ namespace {
 		return MapXMLIO::loadSpawns(map, doc);
 	}
 
-	void appendCreatureNode(pugi::xml_node spawnNode, const char* tag, int x, int y, int z, const SpawnAlternative& creature, bool crystal) {
+	void appendCreatureNode(pugi::xml_node spawnNode, const char* tag, int x, int y, int z, const SpawnAlternative& creature, bool isOtbm5) {
 		pugi::xml_node creatureNode = spawnNode.append_child(tag);
 		creatureNode.append_attribute("name") = creature.name.c_str();
 		creatureNode.append_attribute("x") = x;
 		creatureNode.append_attribute("y") = y;
-		if (crystal) {
+		if (isOtbm5) {
 			creatureNode.append_attribute("z") = z;
 		}
 		creatureNode.append_attribute("spawntime") = creature.spawntime;
 		if (creature.direction != NORTH) {
 			creatureNode.append_attribute("direction") = static_cast<int>(creature.direction);
 		}
-		if (crystal && creature.weight > 0) {
+		if (isOtbm5 && creature.weight > 0) {
 			creatureNode.append_attribute("weight") = creature.weight;
 		}
 	}
@@ -85,7 +85,7 @@ namespace {
 		}
 		decl.append_attribute("version") = "1.0";
 
-		const bool crystal = format.filter != CreatureFilter::All;
+		const bool isOtbm5 = format.filter != CreatureFilter::All;
 		pugi::xml_node rootNode = doc.append_child(format.root);
 		struct ResetSavedGuard {
 			std::vector<Creature*>& list;
@@ -108,7 +108,7 @@ namespace {
 				continue;
 			}
 			const uint8_t otherKindOnly = format.filter == CreatureFilter::Npcs ? Spawn::MONSTERS : Spawn::NPCS;
-			if (crystal && spawn->getKinds() == otherKindOnly) {
+			if (isOtbm5 && spawn->getKinds() == otherKindOnly) {
 				continue;
 			}
 
@@ -130,16 +130,16 @@ namespace {
 						continue;
 					}
 					Creature* creature = creatureTile->creature.get();
-					if (crystal && creature->isNpc() != (format.filter == CreatureFilter::Npcs)) {
+					if (isOtbm5 && creature->isNpc() != (format.filter == CreatureFilter::Npcs)) {
 						skippedOtherKind = true;
 						continue;
 					}
 
 					const SpawnAlternative entry { creature->getName(), creature->getSpawnTime(), creature->getDirection(), creature->getWeight() };
-					appendCreatureNode(spawnNode, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, crystal);
-					if (crystal) {
+					appendCreatureNode(spawnNode, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, isOtbm5);
+					if (isOtbm5) {
 						for (const auto& alternative : creature->getAlternatives()) {
-							appendCreatureNode(spawnNode, "monster", x, y, spawnPosition.z, alternative, crystal);
+							appendCreatureNode(spawnNode, "monster", x, y, spawnPosition.z, alternative, isOtbm5);
 						}
 					}
 
@@ -149,7 +149,7 @@ namespace {
 			}
 
 			// A spawn holding only the other kind of creature belongs to the other file; empty spawns stay with the monsters
-			if (crystal && !spawnNode.first_child() && (skippedOtherKind || format.filter == CreatureFilter::Npcs)) {
+			if (isOtbm5 && !spawnNode.first_child() && (skippedOtherKind || format.filter == CreatureFilter::Npcs)) {
 				rootNode.remove_child(spawnNode);
 			}
 		}
@@ -157,8 +157,8 @@ namespace {
 		return true;
 	}
 
-	// Crystal Server's editor counts every house tile that is not a wall, plus tables and doors
-	int32_t crystalHouseSize(const Map& map, const House& house) {
+	// In OTBM 5, house size counts every tile that is not a wall, plus tables and doors
+	int32_t calculateOtbm5HouseSize(const Map& map, const House& house) {
 		return static_cast<int32_t>(std::ranges::count_if(house.getTiles(), [&](const Position& pos) {
 			const Tile* tile = map.getTile(pos);
 			if (!tile) {
@@ -181,17 +181,21 @@ namespace {
 }
 
 bool MapXMLIO::loadSpawns(Map& map, const wxFileName& dir) {
-	return loadSpawnFile(map, dir, map.spawnfile);
+	return loadSpawnFile(map, dir, map.getSpawnFilename());
+}
+
+bool MapXMLIO::loadMonsterSpawns(Map& map, const wxFileName& dir) {
+	return loadSpawnFile(map, dir, map.getMonsterFilename());
 }
 
 bool MapXMLIO::loadNpcSpawns(Map& map, const wxFileName& dir) {
-	return loadSpawnFile(map, dir, map.npcfile);
+	return loadSpawnFile(map, dir, map.getNpcFilename());
 }
 
 bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 	pugi::xml_node node;
-	SpawnFileFormat format = LEGACY_SPAWNS;
-	for (const auto& candidate : { LEGACY_SPAWNS, CRYSTAL_MONSTERS, CRYSTAL_NPCS }) {
+	SpawnFileFormat format = STANDARD_SPAWN_FILE;
+	for (const auto& candidate : { STANDARD_SPAWN_FILE, MONSTERS_SPAWN_FILE, NPCS_SPAWN_FILE }) {
 		if ((node = doc.child(candidate.root))) {
 			format = candidate;
 			break;
@@ -230,7 +234,7 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 			continue;
 		}
 
-		// Crystal Server's monster and NPC files can each have a spawn on the same tile, with its own radius
+		// In partitioned spawn files (OTBM 5), monster and NPC files can each have a spawn on the same tile, with its own radius
 		const bool sharedNpcSpawn = format.filter == CreatureFilter::Npcs && tile->spawn && (tile->spawn->getKinds() & Spawn::MONSTERS);
 		const auto setRadius = [&](int32_t value) {
 			sharedNpcSpawn ? tile->spawn->setNpcSize(value) : tile->spawn->setSize(value);
@@ -341,9 +345,9 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 
 bool MapXMLIO::saveSpawns(const Map& map, const wxFileName& dir) {
 	if (map.getVersion().otbm == MAP_OTBM_5) {
-		return saveSpawnFile(map, dir, map.spawnfile, CRYSTAL_MONSTERS) && saveSpawnFile(map, dir, map.npcfile, CRYSTAL_NPCS);
+		return saveSpawnFile(map, dir, map.getMonsterFilename(), MONSTERS_SPAWN_FILE) && saveSpawnFile(map, dir, map.getNpcFilename(), NPCS_SPAWN_FILE);
 	}
-	return saveSpawnFile(map, dir, map.spawnfile, LEGACY_SPAWNS);
+	return saveSpawnFile(map, dir, map.getSpawnFilename(), STANDARD_SPAWN_FILE);
 }
 
 bool MapXMLIO::loadHouses(Map& map, const wxFileName& dir) {
@@ -451,9 +455,9 @@ bool MapXMLIO::saveHouses(const Map& map, pugi::xml_document& doc) {
 		}
 
 		houseNode.append_attribute("townid") = house->townid;
-		const bool crystal = map.getVersion().otbm == MAP_OTBM_5;
-		houseNode.append_attribute("size") = crystal ? crystalHouseSize(map, *house) : static_cast<int32_t>(house->size());
-		if (crystal) {
+		const bool isOtbm5 = map.getVersion().otbm == MAP_OTBM_5;
+		houseNode.append_attribute("size") = isOtbm5 ? calculateOtbm5HouseSize(map, *house) : static_cast<int32_t>(house->size());
+		if (isOtbm5) {
 			houseNode.append_attribute("clientid") = house->clientid;
 			if (house->beds >= 0) {
 				houseNode.append_attribute("beds") = house->beds;

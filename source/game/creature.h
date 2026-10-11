@@ -102,7 +102,7 @@ public:
 	void addAlternative(SpawnAlternative alternative) {
 		alternatives.push_back(std::move(alternative));
 	}
-	// Crystal Server NPC files can spawn NPCs that share their name with a monster type
+	// In partitioned spawn files (OTBM 5), NPC files can spawn NPCs that share their name with a monster type
 	void markAsNpcSpawn() {
 		npc_spawn = true;
 	}

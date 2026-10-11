@@ -109,13 +109,31 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	house_filename_ctrl->SetToolTip("External house XML file (leave empty for internal)");
 
 	grid_sizer->Add(
-		newd wxStaticText(this, wxID_ANY, "External Spawnfile")
+		spawn_label = newd wxStaticText(this, wxID_ANY, "External Spawnfile")
 	);
 
 	grid_sizer->Add(
 		spawn_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getSpawnFilename())), 1, wxEXPAND
 	);
-	spawn_filename_ctrl->SetToolTip("External spawn XML file (leave empty for internal)");
+	spawn_filename_ctrl->SetToolTip("External spawn XML file for all creatures (standard TFS / classic OTBM)");
+
+	grid_sizer->Add(
+		monster_label = newd wxStaticText(this, wxID_ANY, "External Monster Spawnfile")
+	);
+
+	grid_sizer->Add(
+		monster_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getMonsterFilename())), 1, wxEXPAND
+	);
+	monster_filename_ctrl->SetToolTip("External monster spawn XML file (OTBM 5 / partitioned spawn format)");
+
+	grid_sizer->Add(
+		npc_label = newd wxStaticText(this, wxID_ANY, "External NPC Spawnfile")
+	);
+
+	grid_sizer->Add(
+		npc_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getNpcFilename())), 1, wxEXPAND
+	);
+	npc_filename_ctrl->SetToolTip("External NPC spawn XML file (OTBM 5 / partitioned spawn format)");
 
 	grid_sizer->Add(
 		newd wxStaticText(this, wxID_ANY, "External Waypointfile")
@@ -143,6 +161,7 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	SetSizerAndFit(topsizer);
 	Centre(wxBOTH);
 	UpdateProtocolList();
+	UpdateSpawnControls();
 
 	const ClientVersion* current_version = ClientVersion::getByItemsVersion(map.getVersion().items_major, map.getVersion().client);
 	if (!current_version) {
@@ -200,8 +219,26 @@ void MapPropertiesWindow::UpdateProtocolList() {
 	protocol_choice->SetStringSelection(client);
 }
 
+void MapPropertiesWindow::UpdateSpawnControls() {
+	MapVersionID map_version = indexToMapVersion(version_choice->GetSelection());
+	const bool isOtbm5 = (map_version == MAP_OTBM_5);
+
+	spawn_label->Show(!isOtbm5);
+	spawn_filename_ctrl->Show(!isOtbm5);
+
+	monster_label->Show(isOtbm5);
+	monster_filename_ctrl->Show(isOtbm5);
+
+	npc_label->Show(isOtbm5);
+	npc_filename_ctrl->Show(isOtbm5);
+
+	Layout();
+	Fit();
+}
+
 void MapPropertiesWindow::OnChangeVersion(wxCommandEvent&) {
 	UpdateProtocolList();
+	UpdateSpawnControls();
 }
 
 void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
@@ -230,6 +267,8 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	map.setMapDescription(nstr(description_ctrl->GetValue()));
 	map.setHouseFilename(nstr(house_filename_ctrl->GetValue()));
 	map.setSpawnFilename(nstr(spawn_filename_ctrl->GetValue()));
+	map.setMonsterFilename(nstr(monster_filename_ctrl->GetValue()));
+	map.setNpcFilename(nstr(npc_filename_ctrl->GetValue()));
 	map.setWaypointFilename(nstr(waypoint_filename_ctrl->GetValue()));
 
 	const auto new_compression = (compression_choice->GetSelection() == 1) ? OtbmCompression::Gzip : OtbmCompression::None;

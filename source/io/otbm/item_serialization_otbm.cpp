@@ -504,7 +504,7 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 		}
 	}
 
-	// Crystal Server item definitions report OTB minor 4, but its loader reads charges
+	// OTBM 5 item definitions report OTB minor 4, but its loader reads charges
 	const bool supportsCharges = maphandle.version.otbm == MAP_OTBM_5 || g_item_definitions.MinorVersion >= CLIENT_VERSION_820;
 	if (supportsCharges && item.isCharged()) {
 		f.addU8(OTBM_ATTR_CHARGES);
@@ -543,7 +543,7 @@ void ItemSerializationOTBM::serializeItemAttributes(const IOMap& maphandle, Node
 		}
 	}
 
-	// CrystalServer (OTBM 5) only supports classic attributes in BasicItem::readAttr
+	// OTBM 5 only supports classic attributes in BasicItem::readAttr
 	if (maphandle.version.otbm != MAP_OTBM_5) {
 		uint16_t tier = item.getTier();
 		if (tier > 0) {
