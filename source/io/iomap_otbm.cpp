@@ -487,6 +487,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 	std::atomic<size_t> completed_buckets { 0 };
 	std::atomic<bool> worker_failed { false };
 	std::vector<std::vector<std::pair<uint32_t, Tile*>>> thread_house_tiles(n_threads);
+	std::vector<std::vector<std::pair<uint16_t, Position>>> thread_zone_tiles(n_threads);
 	std::vector<uint64_t> thread_tile_counts(n_threads, 0);
 
 	g_gui.SetLoadDone(20, "Loading map tiles in parallel...");
@@ -498,6 +499,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 	for (unsigned int tid = 0; tid < n_threads; ++tid) {
 		workers.emplace_back([&, tid]() {
 			auto& house_tiles = thread_house_tiles[tid];
+			auto& zone_tiles = thread_zone_tiles[tid];
 			auto& tile_count = thread_tile_counts[tid];
 			try {
 				while (true) {
@@ -509,7 +511,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 					auto& bucket = block_buckets[bidx];
 					for (const auto& job : bucket.jobs) {
 						FastOTBMNode areaNode(OTBM_TILE_AREA, job.node_start, job.node_end);
-						TileSerializationOTBM::readTileArea(*this, map, areaNode, &bucket.cell_indices, house_tiles, tile_count);
+						TileSerializationOTBM::readTileArea(*this, map, areaNode, &bucket.cell_indices, house_tiles, tile_count, zone_tiles);
 					}
 					completed_buckets.fetch_add(1, std::memory_order_relaxed);
 				}
@@ -547,10 +549,11 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 	// Process any unaligned jobs (single-threaded fallback)
 	if (!unaligned_jobs.empty()) {
 		auto& house_tiles = thread_house_tiles[0];
+		auto& zone_tiles = thread_zone_tiles[0];
 		auto& tile_count = thread_tile_counts[0];
 		for (const auto& job : unaligned_jobs) {
 			FastOTBMNode areaNode(OTBM_TILE_AREA, job.node_start, job.node_end);
-			TileSerializationOTBM::readTileArea(*this, map, areaNode, nullptr, house_tiles, tile_count);
+			TileSerializationOTBM::readTileArea(*this, map, areaNode, nullptr, house_tiles, tile_count, zone_tiles);
 		}
 	}
 
@@ -590,6 +593,14 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 				map.houses.addHouse(std::move(new_house));
 			}
 			house->addTile(tile);
+		}
+	}
+
+	// Register zone tiles sequentially into map.zone_index
+	map.zone_index.clear();
+	for (const auto& zlist : thread_zone_tiles) {
+		for (const auto& [zone_id, pos] : zlist) {
+			map.zone_index.addTile(zone_id, pos);
 		}
 	}
 

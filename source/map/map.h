@@ -27,6 +27,7 @@
 #include "game/spawn.h"
 #include "game/complexitem.h"
 #include "game/waypoints.h"
+#include "map/zone_index.h"
 #include "io/templates.h"
 
 class MapConverter;
@@ -158,7 +159,11 @@ public:
 	bool renameZone(uint16_t id, std::string name);
 	// Removes the zone and strips its id from every tile
 	void removeZone(uint16_t id);
-	[[nodiscard]] std::vector<Position> getZoneTilePositions(uint16_t id);
+	[[nodiscard]] const std::vector<Position>& getZoneTilePositions(uint16_t id) const noexcept;
+	void addTileToZone(uint16_t id, const Position& pos);
+	void removeTileFromZone(uint16_t id, const Position& pos);
+	void updateTileZones(const Position& pos, std::span<const uint16_t> old_zones, std::span<const uint16_t> new_zones);
+	void rebuildZoneIndex();
 
 	uint64_t getGeneration() const {
 		return generation;
@@ -204,6 +209,7 @@ protected:
 
 public:
 	std::vector<Zone> zones;
+	ZoneIndex zone_index;
 
 	Towns towns;
 	Houses houses;

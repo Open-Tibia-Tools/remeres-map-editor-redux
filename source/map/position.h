@@ -79,6 +79,14 @@ public:
 	}
 
 	bool operator>(const Position& p) const {
+		return p < *this;
+	}
+
+	bool operator<=(const Position& p) const {
+		return !(p < *this);
+	}
+
+	bool operator>=(const Position& p) const {
 		return !(*this < p);
 	}
 

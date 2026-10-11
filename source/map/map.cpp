@@ -70,6 +70,8 @@ void Map::initializeEmpty() {
 	waypointfile = sname + "-waypoint.xml";
 	description = "No map description available.";
 	unnamed = true;
+	zones.clear();
+	zone_index.clear();
 
 	doChange();
 }
@@ -233,24 +235,43 @@ bool Map::renameZone(uint16_t id, std::string name) {
 
 void Map::removeZone(uint16_t id) {
 	std::erase_if(zones, [id](const Zone& zone) { return zone.id == id; });
-	// ponytail: full map scan, fine for an occasional palette action; index tiles by zone if this ever gets hot
-	for (auto& tile_loc : tiles()) {
-		if (Tile* tile = tile_loc.get(); tile && tile->hasZone(id)) {
+	const std::vector<Position> positions = zone_index.getPositions(id);
+	for (const Position& pos : positions) {
+		if (Tile* tile = getTile(pos)) {
 			tile->removeZone(id);
 		}
 	}
+	zone_index.removeZone(id);
 	doChange();
 }
 
-std::vector<Position> Map::getZoneTilePositions(uint16_t id) {
-	std::vector<Position> positions;
-	// ponytail: full map scan per call (~1s on 19M tiles); add a zone -> tiles index if it gets used per frame
-	for (auto& tile_loc : tiles()) {
-		if (const Tile* tile = tile_loc.get(); tile && tile->hasZone(id)) {
-			positions.push_back(tile->getPosition());
+const std::vector<Position>& Map::getZoneTilePositions(uint16_t id) const noexcept {
+	return zone_index.getPositions(id);
+}
+
+void Map::addTileToZone(uint16_t id, const Position& pos) {
+	zone_index.addTile(id, pos);
+}
+
+void Map::removeTileFromZone(uint16_t id, const Position& pos) {
+	zone_index.removeTile(id, pos);
+}
+
+void Map::updateTileZones(const Position& pos, std::span<const uint16_t> old_zones, std::span<const uint16_t> new_zones) {
+	for (uint16_t old_id : old_zones) {
+		if (!std::ranges::binary_search(new_zones, old_id)) {
+			zone_index.removeTile(old_id, pos);
 		}
 	}
-	return positions;
+	for (uint16_t new_id : new_zones) {
+		if (!std::ranges::binary_search(old_zones, new_id)) {
+			zone_index.addTile(new_id, pos);
+		}
+	}
+}
+
+void Map::rebuildZoneIndex() {
+	zone_index.rebuild(*this);
 }
 
 bool Map::addSpawn(Tile* tile) {

@@ -119,7 +119,8 @@ void TileSerializationOTBM::readTileArea(
 	FastOTBMNode& mapNode,
 	const std::array<size_t, 16>* cell_indices,
 	std::vector<std::pair<uint32_t, Tile*>>& out_house_tiles,
-	uint64_t& out_tile_count)
+	uint64_t& out_tile_count,
+	std::vector<std::pair<uint16_t, Position>>& out_zone_tiles)
 {
 	uint16_t base_x, base_y;
 	uint8_t base_z;
@@ -267,6 +268,12 @@ void TileSerializationOTBM::readTileArea(
 		TileOperations::update(tile);
 		if (house_id != 0) {
 			out_house_tiles.emplace_back(house_id, tile);
+		}
+		if (tile->hasZones()) {
+			const Position pos(x, y, z);
+			for (const uint16_t zid : tile->getZoneIds()) {
+				out_zone_tiles.emplace_back(zid, pos);
+			}
 		}
 	});
 }

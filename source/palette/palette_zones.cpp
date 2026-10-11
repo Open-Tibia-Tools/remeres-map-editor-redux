@@ -176,7 +176,7 @@ void ZonePalettePanel::OnGoToZone(wxCommandEvent& /*event*/) {
 		return;
 	}
 	wxBusyCursor busy;
-	const std::vector<Position> positions = map->getZoneTilePositions(id);
+	const auto& positions = map->getZoneTilePositions(id);
 	if (const auto center = zoneCenter(positions)) {
 		g_gui.SetScreenCenterPosition(*center);
 		g_gui.SetStatusText(wxstr(std::format("Zone {}: {} tiles", id, positions.size())));

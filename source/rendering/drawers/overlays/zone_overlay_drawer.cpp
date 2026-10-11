@@ -4,6 +4,7 @@
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/indicators/zone_flags.h"
+#include "rendering/indicators/zone_colors.h"
 #include "rendering/indicators/technical_item_registry.h"
 #include "rendering/core/render_depth.h"
 #include "map/map.h"
@@ -497,20 +498,6 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
 
 namespace {
 
-	// Golden-ratio hue spread keeps neighbouring ids visually distinct without a palette table
-	glm::vec3 zoneColor(uint16_t zone_id) noexcept {
-		const float hue = std::fmod(static_cast<float>(zone_id) * 0.618034f, 1.0f) * 6.0f;
-		const float x = 1.0f - std::fabs(std::fmod(hue, 2.0f) - 1.0f);
-		switch (static_cast<int>(hue)) {
-			case 0: return { 1.0f, x, 0.0f };
-			case 1: return { x, 1.0f, 0.0f };
-			case 2: return { 0.0f, 1.0f, x };
-			case 3: return { 0.0f, x, 1.0f };
-			case 4: return { x, 0.0f, 1.0f };
-			default: return { 1.0f, 0.0f, x };
-		}
-	}
-
 	// A tile in several zones is drawn as the active brush zone when it has it, otherwise its lowest id
 	uint16_t displayedZone(const Tile* tile, uint16_t active_zone) noexcept {
 		if (!tile || !tile->hasZones()) {
@@ -565,7 +552,7 @@ void ZoneOverlayDrawer::drawFloorZones(SpriteBatch& sprite_batch,
 			}
 
 			const bool active = zone_id == active_zone;
-			const glm::vec3 rgb = zoneColor(zone_id);
+			const glm::vec3 rgb = getZoneColor(zone_id);
 			int draw_x, draw_y;
 			view.getScreenPosition(x, y, z, draw_x, draw_y);
 			const float fx = static_cast<float>(draw_x);

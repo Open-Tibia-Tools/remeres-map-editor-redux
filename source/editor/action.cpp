@@ -204,6 +204,10 @@ void Action::commit(DirtyList* dirty_list) {
 						editor.map.addSpawn(insertedTile);
 					}
 
+					if (!std::ranges::equal(insertedTile->getZoneIds(), displaced->getZoneIds())) {
+						editor.map.updateTileZones(pos, displaced->getZoneIds(), insertedTile->getZoneIds());
+					}
+
 					if (displaced->isSelected()) {
 						editor.selection.removeInternal(displaced);
 					}
@@ -227,6 +231,10 @@ void Action::commit(DirtyList* dirty_list) {
 					if (insertedTile->spawn) {
 						editor.map.addSpawn(insertedTile);
 					}
+
+					for (uint16_t zid : insertedTile->getZoneIds()) {
+						editor.map.addTileToZone(zid, pos);
+					}
 				} else if (displaced) {
 					if (displaced->isSelected()) {
 						editor.selection.removeInternal(displaced);
@@ -239,6 +247,10 @@ void Action::commit(DirtyList* dirty_list) {
 					}
 					if (displaced->spawn) {
 						editor.map.removeSpawn(displaced);
+					}
+
+					for (uint16_t zid : displaced->getZoneIds()) {
+						editor.map.removeTileFromZone(zid, pos);
 					}
 				}
 
@@ -375,6 +387,10 @@ void Action::undo(DirtyList* dirty_list) {
 							editor.map.removeSpawn(newtile);
 						}
 
+						if (!std::ranges::equal(newtile->getZoneIds(), oldtile->getZoneIds())) {
+							editor.map.updateTileZones(pos, newtile->getZoneIds(), oldtile->getZoneIds());
+						}
+
 						updateUndoTile(oldtile, type);
 						if (oldtile->isSelected()) {
 							editor.selection.addInternal(oldtile);
@@ -391,12 +407,20 @@ void Action::undo(DirtyList* dirty_list) {
 						if (oldtile->spawn) {
 							editor.map.addSpawn(oldtile);
 						}
+						for (uint16_t zid : oldtile->getZoneIds()) {
+							editor.map.addTileToZone(zid, pos);
+						}
 						updateUndoTile(oldtile, type);
 						if (oldtile->isSelected()) {
 							editor.selection.addInternal(oldtile);
 						}
 						uptr = std::move(newtile_uptr);
 					} else {
+						if (newtile) {
+							for (uint16_t zid : newtile->getZoneIds()) {
+								editor.map.removeTileFromZone(zid, pos);
+							}
+						}
 						uptr = std::move(newtile_uptr);
 					}
 				} else {
@@ -420,6 +444,9 @@ void Action::undo(DirtyList* dirty_list) {
 						}
 						if (removed->spawn) {
 							editor.map.removeSpawn(removed);
+						}
+						for (uint16_t zid : removed->getZoneIds()) {
+							editor.map.removeTileFromZone(zid, pos);
 						}
 					}
 					uptr = std::move(removedTile);

@@ -154,6 +154,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/map/map_statistics.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_converter.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_spawn_manager.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/zone_index.h
 
     ${CMAKE_CURRENT_LIST_DIR}/map/position.h
     ${CMAKE_CURRENT_LIST_DIR}/map/spatial_hash_grid.h
@@ -231,6 +232,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/indicator_drawing_utils.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/zone_flags.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/zone_cluster_finder.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/zone_colors.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/drag_shadow_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/live_cursor_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/entities/creature_drawer.h
@@ -567,6 +569,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/map/map_statistics.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/map_converter.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/map_spawn_manager.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/map/zone_index.cpp
 
     ${CMAKE_CURRENT_LIST_DIR}/map/tile.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/tile_operations.cpp
