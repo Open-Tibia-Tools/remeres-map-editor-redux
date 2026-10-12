@@ -330,6 +330,12 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "missing-tile" });
 			}
 
+			// The server drops empty tiles on load (no ground, no items), so
+			// spawns on them never place even though the OTBM has a tile node.
+			if (!creatureTile->hasGround() && creatureTile->items.empty()) {
+				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "empty-tile" });
+			}
+
 			if (creatureTile->creature) {
 				if (!isNpc && !creatureTile->creature->isNpc()) {
 					creatureTile->creature->addAlternative({ name, spawntime, direction, weight });
