@@ -313,27 +313,41 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 
 			Tile* creatureTile = (creaturePosition == spawnPosition) ? tile : map.getTile(creaturePosition);
 
+			// The server ignores the inner z attribute (entry z = center z),
+			// so the static verdict uses the center floor. Placement below
+			// keeps honoring the stored z; only validation uses serverPosition.
+			Position serverPosition = creaturePosition;
+			serverPosition.z = spawnPosition.z;
+			Tile* serverTile = (serverPosition == spawnPosition) ? tile : map.getTile(serverPosition);
+
 			if (badSpawntime) {
-				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "bad-spawntime" });
+				map.addSpawnIssue(SpawnIssue { name, serverPosition, isNpc ? "npc" : "monster", "bad-spawntime" });
 			}
 
-			if (!creatureTile) {
-				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "missing-tile" });
-				spdlog::warn("MapXMLIO: Creature '{}' at invalid position {}:{}:{}", name, creaturePosition.x, creaturePosition.y, creaturePosition.z);
-				continue;
+			if (!serverTile) {
+				map.addSpawnIssue(SpawnIssue { name, serverPosition, isNpc ? "npc" : "monster", "missing-tile" });
+				if (!creatureTile) {
+					spdlog::warn("MapXMLIO: Creature '{}' at invalid position {}:{}:{}", name, creaturePosition.x, creaturePosition.y, creaturePosition.z);
+					continue;
+				}
 			}
 
 			// Offset-(0,0) entries sit on the spawn center, which the loader
 			// auto-creates when absent from the OTBM: the server has no tile
 			// there and the spawn fails. Flag it, keep editor behavior.
-			if (centerMissing && creaturePosition == spawnPosition) {
-				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "missing-tile" });
+			if (centerMissing && serverPosition == spawnPosition) {
+				map.addSpawnIssue(SpawnIssue { name, serverPosition, isNpc ? "npc" : "monster", "missing-tile" });
 			}
 
 			// The server drops empty tiles on load (no ground, no items), so
 			// spawns on them never place even though the OTBM has a tile node.
-			if (!creatureTile->hasGround() && creatureTile->items.empty()) {
-				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "empty-tile" });
+			if (serverTile && !serverTile->hasGround() && serverTile->items.empty()) {
+				map.addSpawnIssue(SpawnIssue { name, serverPosition, isNpc ? "npc" : "monster", "empty-tile" });
+			}
+
+			if (!creatureTile) {
+				spdlog::warn("MapXMLIO: Creature '{}' at invalid position {}:{}:{}", name, creaturePosition.x, creaturePosition.y, creaturePosition.z);
+				continue;
 			}
 
 			if (creatureTile->creature) {
@@ -347,8 +361,12 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 			}
 
 			CreatureType* type = g_creatures[name];
+			// Missing placeholders (unknown to the data files) and opposite-kind
+			// types fail the server's per-kind lookup, so every entry flags them.
+			if (!type || type->missing || type->isNpc != isNpc) {
+				map.addSpawnIssue(SpawnIssue { name, serverPosition, isNpc ? "npc" : "monster", "unknown-type" });
+			}
 			if (!type) {
-				map.addSpawnIssue(SpawnIssue { name, creaturePosition, isNpc ? "npc" : "monster", "unknown-type" });
 				type = g_creatures.addMissingCreatureType(name, isNpc);
 			}
 

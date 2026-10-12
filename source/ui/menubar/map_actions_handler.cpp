@@ -198,6 +198,7 @@ void MapActionsHandler::OnMapValidateSpawns(wxCommandEvent& WXUNUSED(event)) {
 
 	const auto& issues = g_gui.GetCurrentMap().getSpawnIssues();
 	if (issues.empty()) {
+		g_gui.ShowSearchWindow()->Clear();
 		DialogUtil::PopupDialog("Validate Spawns", "No broken spawns found.", wxOK);
 		return;
 	}
