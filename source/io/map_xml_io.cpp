@@ -280,10 +280,28 @@ namespace {
 					}
 
 					const SpawnAlternative entry { creature->getName(), creature->getSpawnTime(), creature->getDirection(), creature->getWeight() };
-					appendCreatureNode(spawnNode, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, isOtbm5);
-					if (isOtbm5) {
+					if (!isOtbm5 && !creature->isNpc() && !creature->getAlternatives().empty()) {
+						pugi::xml_node monstersNode = spawnNode.append_child("monsters");
+						monstersNode.append_attribute("x") = x;
+						monstersNode.append_attribute("y") = y;
+						monstersNode.append_attribute("z") = spawnPosition.z;
+						monstersNode.append_attribute("spawntime") = creature->getSpawnTime();
+
+						pugi::xml_node primaryNode = monstersNode.append_child("monster");
+						primaryNode.append_attribute("name") = creature->getName().c_str();
+						primaryNode.append_attribute("chance") = creature->getWeight();
+
 						for (const auto& alternative : creature->getAlternatives()) {
-							appendCreatureNode(spawnNode, "monster", x, y, spawnPosition.z, alternative, isOtbm5);
+							pugi::xml_node altNode = monstersNode.append_child("monster");
+							altNode.append_attribute("name") = alternative.name.c_str();
+							altNode.append_attribute("chance") = alternative.weight;
+						}
+					} else {
+						appendCreatureNode(spawnNode, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, isOtbm5);
+						if (isOtbm5) {
+							for (const auto& alternative : creature->getAlternatives()) {
+								appendCreatureNode(spawnNode, "monster", x, y, spawnPosition.z, alternative, isOtbm5);
+							}
 						}
 					}
 
