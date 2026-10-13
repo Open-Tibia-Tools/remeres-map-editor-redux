@@ -512,6 +512,11 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 	return true;
 }
 
+bool MapXMLIO::saveSpawns(const Map& map, pugi::xml_document& doc) {
+	const SpawnFileFormat format = (map.getVersion().otbm == MAP_OTBM_5) ? MONSTERS_SPAWN_FILE : STANDARD_SPAWN_FILE;
+	return writeSpawnDocument(map, doc, format);
+}
+
 bool MapXMLIO::saveSpawns(const Map& map, const wxFileName& dir) {
 	if (map.getVersion().otbm == MAP_OTBM_5) {
 		const std::string monsterFile = map.getMonsterFilename().empty() ? (nstr(dir.GetName()) + "-monster.xml") : map.getMonsterFilename();
