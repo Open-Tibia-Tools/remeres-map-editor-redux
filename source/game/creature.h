@@ -89,6 +89,13 @@ public:
 		this->direction = direction;
 	}
 
+	const std::string& getTypeName() const {
+		return type_name;
+	}
+	void setTypeName(std::string name) {
+		type_name = std::move(name);
+	}
+
 	// Weight and alternatives are preserved across load/save (UI editing to be added)
 	uint32_t getWeight() const {
 		return weight;
@@ -98,6 +105,15 @@ public:
 	}
 	const std::vector<SpawnAlternative>& getAlternatives() const {
 		return alternatives;
+	}
+	std::vector<SpawnAlternative>& getAlternatives() {
+		return alternatives;
+	}
+	void setAlternatives(std::vector<SpawnAlternative> alts) {
+		alternatives = std::move(alts);
+	}
+	void clearAlternatives() {
+		alternatives.clear();
 	}
 	void addAlternative(SpawnAlternative alternative) {
 		alternatives.push_back(std::move(alternative));
@@ -147,7 +163,7 @@ inline const std::string& Creature::getName() const {
 	if (type) {
 		return type->name;
 	}
-	return empty_string;
+	return type_name.empty() ? empty_string : type_name;
 }
 inline CreatureBrush* Creature::getBrush() const {
 	CreatureType* type = g_creatures[type_name];

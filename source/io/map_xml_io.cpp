@@ -92,6 +92,150 @@ namespace {
 		return MapXMLIO::loadSpawns(map, doc);
 	}
 
+	void parseMonstersGroupNode(
+		Map& map,
+		pugi::xml_node monstersNode,
+		const Position& spawnPosition,
+		int32_t& radius,
+		const std::function<void(int32_t)>& setRadius,
+		Tile* tile,
+		size_t& alternatives
+	) {
+		auto xAttr = monstersNode.attribute("x");
+		auto yAttr = monstersNode.attribute("y");
+
+		if (!xAttr || !yAttr) {
+			spdlog::warn("MapXMLIO: <monsters> group missing offset position at spawn {}:{}:{}", spawnPosition.x, spawnPosition.y, spawnPosition.z);
+			return;
+		}
+
+		Position creaturePosition = spawnPosition;
+		creaturePosition.x += xAttr.as_int();
+		creaturePosition.y += yAttr.as_int();
+		if (auto zAttr = monstersNode.attribute("z")) {
+			creaturePosition.z = zAttr.as_int();
+		}
+
+		int32_t spawntime = monstersNode.attribute("spawntime").as_int();
+		if (spawntime <= 0) {
+			spawntime = g_settings.getInteger(Config::DEFAULT_SPAWNTIME);
+		}
+
+		radius = std::clamp<int32_t>(
+			std::max({ radius, std::abs(creaturePosition.x - spawnPosition.x), std::abs(creaturePosition.y - spawnPosition.y) }),
+			1,
+			g_settings.getInteger(Config::MAX_SPAWN_RADIUS)
+		);
+		setRadius(radius);
+
+		Tile* creatureTile = (creaturePosition == spawnPosition) ? tile : map.getTile(creaturePosition);
+		if (!creatureTile) {
+			spdlog::warn("MapXMLIO: <monsters> group at invalid position {}:{}:{}", creaturePosition.x, creaturePosition.y, creaturePosition.z);
+			return;
+		}
+
+		size_t monsterCount = 0;
+		for (auto child : monstersNode.children("monster")) {
+			++monsterCount;
+		}
+
+		if (monsterCount == 0) {
+			spdlog::warn("MapXMLIO: Empty <monsters> group at {}:{}:{}", creaturePosition.x, creaturePosition.y, creaturePosition.z);
+			return;
+		}
+
+		struct MonsterVariant {
+			std::string name;
+			uint32_t chance = 0;
+		};
+		std::vector<MonsterVariant> variants;
+		variants.reserve(monsterCount);
+		uint16_t totalChance = 0;
+
+		for (auto monsterNode : monstersNode.children("monster")) {
+			std::string name = monsterNode.attribute("name").as_string();
+			if (name.empty()) {
+				spdlog::warn("MapXMLIO: Monster missing name in <monsters> at {}:{}:{}", creaturePosition.x, creaturePosition.y, creaturePosition.z);
+				continue;
+			}
+
+			uint32_t chance = 0;
+			auto chanceAttr = monsterNode.attribute("chance");
+			if (chanceAttr) {
+				int rawChance = chanceAttr.as_int();
+				if (rawChance <= 0) {
+					spdlog::warn("MapXMLIO: Monster '{}' in <monsters> at {}:{}:{} has non-positive chance {}", name, creaturePosition.x, creaturePosition.y, creaturePosition.z, rawChance);
+					chance = 0;
+				} else if (rawChance > 100) {
+					spdlog::warn("MapXMLIO: Monster '{}' in <monsters> at {}:{}:{} chance {} exceeds 100, clamped", name, creaturePosition.x, creaturePosition.y, creaturePosition.z, rawChance);
+					chance = 100;
+				} else {
+					chance = static_cast<uint32_t>(rawChance);
+				}
+			} else {
+				chance = static_cast<uint32_t>(100 / std::max<size_t>(1, monsterCount));
+				spdlog::warn("MapXMLIO: Monster '{}' in <monsters> at {}:{}:{} missing chance attribute, defaulted to {}", name, creaturePosition.x, creaturePosition.y, creaturePosition.z, chance);
+			}
+
+			if (totalChance + chance > 100) {
+				uint32_t clampedChance = (totalChance < 100) ? (100 - totalChance) : 0;
+				spdlog::warn("MapXMLIO: Total chance exceeds 100 for monster '{}' in <monsters> at {}:{}:{}, clamped from {} to {}", name, creaturePosition.x, creaturePosition.y, creaturePosition.z, chance, clampedChance);
+				chance = clampedChance;
+				totalChance = 100;
+			} else {
+				totalChance += chance;
+			}
+
+			variants.push_back({ std::move(name), chance });
+		}
+
+		if (variants.empty()) {
+			spdlog::warn("MapXMLIO: No valid monsters found in <monsters> at {}:{}:{}", creaturePosition.x, creaturePosition.y, creaturePosition.z);
+			return;
+		}
+
+		if (totalChance < 100) {
+			spdlog::warn("MapXMLIO: Total chance in <monsters> at {}:{}:{} is {}% (< 100%)", creaturePosition.x, creaturePosition.y, creaturePosition.z, totalChance);
+		}
+
+		if (creatureTile->creature) {
+			if (!creatureTile->creature->isNpc()) {
+				for (const auto& variant : variants) {
+					creatureTile->creature->addAlternative({ variant.name, spawntime, NORTH, variant.chance });
+					++alternatives;
+				}
+			} else {
+				spdlog::warn("MapXMLIO: Duplicate creature/group at {}:{}:{}", creaturePosition.x, creaturePosition.y, creaturePosition.z);
+			}
+			return;
+		}
+
+		CreatureType* type = g_creatures[variants[0].name];
+		if (!type) {
+			type = g_creatures.addMissingCreatureType(variants[0].name, false);
+		}
+
+		creatureTile->creature = std::make_unique<Creature>(type);
+		creatureTile->creature->setDirection(NORTH);
+		creatureTile->creature->setSpawnTime(spawntime);
+		creatureTile->creature->setWeight(variants[0].chance);
+
+		for (size_t i = 1; i < variants.size(); ++i) {
+			if (!g_creatures[variants[i].name]) {
+				g_creatures.addMissingCreatureType(variants[i].name, false);
+			}
+			creatureTile->creature->addAlternative({ variants[i].name, spawntime, NORTH, variants[i].chance });
+			++alternatives;
+		}
+
+		if (creatureTile->getLocation()->getSpawnCount() == 0) {
+			if (!creatureTile->spawn) {
+				creatureTile->spawn = std::make_unique<Spawn>(5);
+				map.addSpawn(creatureTile);
+			}
+		}
+	}
+
 	void appendCreatureNode(pugi::xml_node spawnNode, const char* tag, int x, int y, int z, const SpawnAlternative& creature, bool isOtbm5) {
 		pugi::xml_node creatureNode = spawnNode.append_child(tag);
 		creatureNode.append_attribute("name") = creature.name.c_str();
@@ -163,10 +307,28 @@ namespace {
 					}
 
 					const SpawnAlternative entry { creature->getName(), creature->getSpawnTime(), creature->getDirection(), creature->getWeight() };
-					appendCreatureNode(spawnNode, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, isOtbm5);
-					if (isOtbm5) {
+					if (!isOtbm5 && !creature->isNpc() && !creature->getAlternatives().empty()) {
+						pugi::xml_node monstersNode = spawnNode.append_child("monsters");
+						monstersNode.append_attribute("x") = x;
+						monstersNode.append_attribute("y") = y;
+						monstersNode.append_attribute("z") = spawnPosition.z;
+						monstersNode.append_attribute("spawntime") = creature->getSpawnTime();
+
+						pugi::xml_node primaryNode = monstersNode.append_child("monster");
+						primaryNode.append_attribute("name") = creature->getName().c_str();
+						primaryNode.append_attribute("chance") = creature->getWeight();
+
 						for (const auto& alternative : creature->getAlternatives()) {
-							appendCreatureNode(spawnNode, "monster", x, y, spawnPosition.z, alternative, isOtbm5);
+							pugi::xml_node altNode = monstersNode.append_child("monster");
+							altNode.append_attribute("name") = alternative.name.c_str();
+							altNode.append_attribute("chance") = alternative.weight;
+						}
+					} else {
+						appendCreatureNode(spawnNode, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, isOtbm5);
+						if (isOtbm5) {
+							for (const auto& alternative : creature->getAlternatives()) {
+								appendCreatureNode(spawnNode, "monster", x, y, spawnPosition.z, alternative, isOtbm5);
+							}
 						}
 					}
 
@@ -284,6 +446,10 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 
 		for (auto creatureNode : spawnNode.children()) {
 			std::string nodeName = as_lower_str(creatureNode.name());
+			if (nodeName == "monsters") {
+				parseMonstersGroupNode(map, creatureNode, spawnPosition, radius, setRadius, tile, alternatives);
+				continue;
+			}
 			if (nodeName != "monster" && nodeName != "npc") {
 				continue;
 			}
@@ -371,6 +537,11 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 		spdlog::info("MapXMLIO: Kept {} weighted spawn alternatives (extra monsters sharing a tile; the server spawns one of them by weight)", alternatives);
 	}
 	return true;
+}
+
+bool MapXMLIO::saveSpawns(const Map& map, pugi::xml_document& doc) {
+	const SpawnFileFormat format = (map.getVersion().otbm == MAP_OTBM_5) ? MONSTERS_SPAWN_FILE : STANDARD_SPAWN_FILE;
+	return writeSpawnDocument(map, doc, format);
 }
 
 bool MapXMLIO::saveSpawns(const Map& map, const wxFileName& dir) {
