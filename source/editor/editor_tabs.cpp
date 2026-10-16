@@ -19,7 +19,9 @@
 
 #include "editor/editor_tabs.h"
 #include "editor/editor.h"
+#include "editor/managers/editor_manager.h"
 #include "live/live_tab.h"
+#include "ui/managers/status_manager.h"
 
 EditorTab::EditorTab() {
 	;
@@ -37,6 +39,7 @@ MapTabbook::MapTabbook(wxWindow* parent, wxWindowID id) :
 	SetSizerAndFit(wxz);
 
 	notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CLOSE, &MapTabbook::OnNotebookPageClose, this);
+	notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CLOSED, &MapTabbook::OnNotebookPageClosed, this);
 	notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED, &MapTabbook::OnNotebookPageChanged, this);
 }
 
@@ -80,6 +83,13 @@ void MapTabbook::OnNotebookPageClose(wxAuiNotebookEvent& evt) {
 		if (needRefresh) {
 			g_gui.RefreshPalettes(nullptr, false);
 			g_gui.UpdateMenus();
+
+			// Take the deletion over from wxAuiNotebook (which would otherwise
+			// free the whole map right after this handler returns, with no
+			// feedback) so the Closing progress bar can cover it.
+			evt.Veto();
+			SetFocusedTab(evt.GetInt());
+			g_editors.CloseCurrentEditor();
 		}
 		return;
 	}
@@ -90,8 +100,13 @@ void MapTabbook::OnNotebookPageClose(wxAuiNotebookEvent& evt) {
 	}
 }
 
-void MapTabbook::OnNotebookPageChanged(wxAuiNotebookEvent& evt) {
-	g_gui.UpdateMinimap();
+void MapTabbook::OnNotebookPageClosed(wxAuiNotebookEvent& evt) {
+	// The page is gone by now, so the map has finished being destroyed.
+	g_status.SetStatusText("Map closed.");
+	evt.Skip();
+}
+
+void MapTabbook::OnNotebookPageChanged(wxAuiNotebookEvent& evt) {	g_gui.UpdateMinimap();
 
 	int32_t oldSelection = evt.GetOldSelection();
 	int32_t newSelection = evt.GetSelection();

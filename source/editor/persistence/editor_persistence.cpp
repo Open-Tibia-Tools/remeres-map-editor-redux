@@ -162,12 +162,14 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 		editor.map.name = fn.GetFullName().mb_str(wxConvUTF8);
 
 		if (showdialog) {
-			g_gui.CreateLoadBar("Saving OTBM map...");
+			g_gui.CreateLoadBar("Saving map...", true, "Saving");
 		}
 
 		// Perform the actual save
 		IOMapOTBM mapsaver(editor.map.getVersion());
 		bool success = mapsaver.saveMap(editor.map, fn);
+		const bool cancelled = showdialog && g_gui.WasLoadCancelled();
+		bool keep_recovery_info = false;
 
 		if (showdialog) {
 			g_gui.DestroyLoadBar();
@@ -175,7 +177,23 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 
 		// Check for errors...
 		if (!success) {
-			auto restoreBackup = [](const std::string& backupPath, const std::string& targetPath) {
+			if (cancelled) {
+				// Keep the bar up while the partial write is rolled back so the
+				// user sees the cancellation being processed instead of a frozen
+				// window; it is destroyed below, after the rollback.
+				g_gui.SetLoadText("Cancelling...");
+				g_gui.SetStatusText("Saving cancelled.");
+			} else if (showdialog) {
+				// Error path: the bar has to go before the modal error dialog.
+				g_gui.DestroyLoadBar();
+			}
+
+			// Restore the temporary backups. A failed restore leaves the target
+			// partial and the previous data in the "~" backup, so it must be
+			// reported and kept recoverable instead of silently ignored.
+			std::vector<std::string> failed_restores;
+
+			auto restoreBackup = [&failed_restores](const std::string& backupPath, const std::string& targetPath) {
 				if (backupPath.empty()) {
 					if (!targetPath.empty()) {
 						std::error_code ec;
@@ -188,6 +206,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 				std::filesystem::rename(backupPath, targetPath, ec);
 				if (ec) {
 					spdlog::error("EditorPersistence: Failed to restore backup '{}' -> '{}': {}", backupPath, targetPath, ec.message());
+					failed_restores.push_back(backupPath);
 				}
 			};
 
@@ -214,12 +233,32 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 				restoreBackup(backup_waypoint, map_path + editor.map.getWaypointFilename());
 			}
 
-			// Display the error
-			DialogUtil::PopupDialog("Error", "Could not save, unable to open target for writing.", wxOK);
+			if (!failed_restores.empty()) {
+				// Keep the crash marker so the next start offers to recover the
+				// previous files, and tell the user where they are right now.
+				keep_recovery_info = true;
+
+				wxString message = "The save could not be rolled back completely. The previous data is kept in:\n\n";
+				for (const std::string& path : failed_restores) {
+					message += wxstr(path) + "\n";
+				}
+				message += "\nRestart the editor to recover those files, or rename them back manually.";
+				DialogUtil::PopupDialog("Save failed", message, wxOK | wxICON_ERROR);
+			} else if (!cancelled) {
+				DialogUtil::PopupDialog("Error", "Could not save, unable to open target for writing.", wxOK);
+			}
 		}
 
-		// Remove temporary save runfile
-		MapBackupService::ClearCrashMarker();
+		if (showdialog) {
+			g_gui.DestroyLoadBar();
+		}
+
+		// Remove the temporary save runfile, unless the rollback could not
+		// restore everything: then it has to survive so the next start can
+		// offer to recover the previous files.
+		if (!keep_recovery_info) {
+			MapBackupService::ClearCrashMarker();
+		}
 
 		// If failure, don't run the rest of the function
 		if (!success) {

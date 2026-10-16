@@ -30,7 +30,9 @@ class FastOTBMNode;
 class TileSerializationOTBM {
 public:
 	static void readTileArea(IOMapOTBM& iomap, Map& map, FastOTBMNode& mapNode, const std::array<size_t, 16>* cell_indices, std::vector<std::pair<uint32_t, Tile*>>& out_house_tiles, uint64_t& out_tile_count, std::vector<std::pair<uint16_t, Position>>& out_zone_tiles);
-	static void writeTileData(const IOMapOTBM& iomap, const Map& map, NodeFileWriteHandle& f, const std::function<void(int)>& progressCb = nullptr);
+	// progressCb receives how many tiles were written (0-100) and returns false
+	// to abort the write; writeTileData then returns false.
+	static bool writeTileData(const IOMapOTBM& iomap, const Map& map, NodeFileWriteHandle& f, const std::function<bool(int)>& progressCb = nullptr);
 	static void serializeTile(const IOMapOTBM& iomap, const Tile* tile, NodeFileWriteHandle& f);
 };
 

@@ -109,7 +109,18 @@ namespace {
 		}
 	}
 
-	bool writeSpawnDocument(const Map& map, pugi::xml_document& doc, const SpawnFileFormat& format) {
+	// Polling the progress dialog pumps events, so it is not free: the
+	// auxiliary writers check for cancellation every this many items.
+	constexpr size_t kCancelPollStride = 128;
+
+	bool shouldAbortWriting(const MapXMLIO::CancelCheck& shouldCancel, size_t& processed) {
+		if (!shouldCancel || ++processed % kCancelPollStride != 0) {
+			return false;
+		}
+		return shouldCancel();
+	}
+
+	bool writeSpawnDocument(const Map& map, pugi::xml_document& doc, const SpawnFileFormat& format, const MapXMLIO::CancelCheck& shouldCancel) {
 		pugi::xml_node decl = doc.prepend_child(pugi::node_declaration);
 		if (!decl) {
 			return false;
@@ -129,7 +140,12 @@ namespace {
 		std::vector<Creature*> creatureList;
 		ResetSavedGuard guard { creatureList };
 
+		size_t processed = 0;
 		for (const auto& spawnPos : map.spawns) {
+			if (shouldAbortWriting(shouldCancel, processed)) {
+				return false;
+			}
+
 			const Tile* tile = map.getTile(spawnPos);
 			if (!tile) {
 				continue;
@@ -196,14 +212,14 @@ namespace {
 		}));
 	}
 
-	bool saveSpawnFile(const Map& map, const wxFileName& dir, const std::string& filename, const SpawnFileFormat& format) {
+	bool saveSpawnFile(const Map& map, const wxFileName& dir, const std::string& filename, const SpawnFileFormat& format, const MapXMLIO::CancelCheck& shouldCancel) {
 		if (filename.empty()) {
 			return false;
 		}
 		auto paths = MapXMLIO::normalizeMapFilePaths(dir, filename);
 
 		pugi::xml_document doc;
-		if (writeSpawnDocument(map, doc, format)) {
+		if (writeSpawnDocument(map, doc, format, shouldCancel)) {
 			return saveXMLFile(doc, paths.first, paths.second);
 		}
 		return false;
@@ -373,14 +389,14 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 	return true;
 }
 
-bool MapXMLIO::saveSpawns(const Map& map, const wxFileName& dir) {
+bool MapXMLIO::saveSpawns(const Map& map, const wxFileName& dir, const CancelCheck& shouldCancel) {
 	if (map.getVersion().otbm == MAP_OTBM_5) {
 		const std::string monsterFile = map.getMonsterFilename().empty() ? (nstr(dir.GetName()) + "-monster.xml") : map.getMonsterFilename();
 		const std::string npcFile = map.getNpcFilename().empty() ? (nstr(dir.GetName()) + "-npc.xml") : map.getNpcFilename();
-		return saveSpawnFile(map, dir, monsterFile, MONSTERS_SPAWN_FILE) && saveSpawnFile(map, dir, npcFile, NPCS_SPAWN_FILE);
+		return saveSpawnFile(map, dir, monsterFile, MONSTERS_SPAWN_FILE, shouldCancel) && saveSpawnFile(map, dir, npcFile, NPCS_SPAWN_FILE, shouldCancel);
 	}
 	const std::string spawnFile = map.getSpawnFilename().empty() ? (nstr(dir.GetName()) + "-spawn.xml") : map.getSpawnFilename();
-	return saveSpawnFile(map, dir, spawnFile, STANDARD_SPAWN_FILE);
+	return saveSpawnFile(map, dir, spawnFile, STANDARD_SPAWN_FILE, shouldCancel);
 }
 
 bool MapXMLIO::loadHouses(Map& map, const wxFileName& dir) {
@@ -452,18 +468,18 @@ bool MapXMLIO::loadHouses(Map& map, pugi::xml_document& doc) {
 	return true;
 }
 
-bool MapXMLIO::saveHouses(const Map& map, const wxFileName& dir) {
+bool MapXMLIO::saveHouses(const Map& map, const wxFileName& dir, const CancelCheck& shouldCancel) {
 	const std::string houseFile = map.getHouseFilename().empty() ? (nstr(dir.GetName()) + "-house.xml") : map.getHouseFilename();
 	auto paths = normalizeMapFilePaths(dir, houseFile);
 
 	pugi::xml_document doc;
-	if (saveHouses(map, doc)) {
+	if (saveHouses(map, doc, shouldCancel)) {
 		return saveXMLFile(doc, paths.first, paths.second);
 	}
 	return false;
 }
 
-bool MapXMLIO::saveHouses(const Map& map, pugi::xml_document& doc) {
+bool MapXMLIO::saveHouses(const Map& map, pugi::xml_document& doc, const CancelCheck& shouldCancel) {
 	pugi::xml_node decl = doc.prepend_child(pugi::node_declaration);
 	if (!decl) {
 		return false;
@@ -471,7 +487,12 @@ bool MapXMLIO::saveHouses(const Map& map, pugi::xml_document& doc) {
 	decl.append_attribute("version") = "1.0";
 
 	pugi::xml_node houseNodes = doc.append_child("houses");
+	size_t processed = 0;
 	for (const auto& [id, housePtr] : map.houses) {
+		if (shouldAbortWriting(shouldCancel, processed)) {
+			return false;
+		}
+
 		const auto* house = housePtr.get();
 		pugi::xml_node houseNode = houseNodes.append_child("house");
 
@@ -589,17 +610,17 @@ bool MapXMLIO::loadWaypoints(Map& map, pugi::xml_document& doc, bool replace) {
 	return loadWaypoints(map, doc.child("waypoints"), replace);
 }
 
-bool MapXMLIO::saveWaypoints(const Map& map, const wxFileName& dir) {
+bool MapXMLIO::saveWaypoints(const Map& map, const wxFileName& dir, const CancelCheck& shouldCancel) {
 	auto paths = normalizeMapFilePaths(dir, map.waypointfile);
 
 	pugi::xml_document doc;
-	if (saveWaypoints(map, doc)) {
+	if (saveWaypoints(map, doc, shouldCancel)) {
 		return saveXMLFile(doc, paths.first, paths.second);
 	}
 	return false;
 }
 
-bool MapXMLIO::saveWaypoints(const Map& map, pugi::xml_document& doc) {
+bool MapXMLIO::saveWaypoints(const Map& map, pugi::xml_document& doc, const CancelCheck& shouldCancel) {
 	pugi::xml_node decl = doc.prepend_child(pugi::node_declaration);
 	if (!decl) {
 		return false;
@@ -608,7 +629,12 @@ bool MapXMLIO::saveWaypoints(const Map& map, pugi::xml_document& doc) {
 
 	pugi::xml_node rootNode = doc.append_child("waypoints");
 
+	size_t processed = 0;
 	for (const auto& [name, waypoint] : map.waypoints) {
+		if (shouldAbortWriting(shouldCancel, processed)) {
+			return false;
+		}
+
 		pugi::xml_node wpNode = rootNode.append_child("waypoint");
 
 		wpNode.append_attribute("name") = waypoint->name.c_str();

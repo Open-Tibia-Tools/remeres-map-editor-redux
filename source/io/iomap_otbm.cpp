@@ -57,6 +57,35 @@
 #include <unordered_map>
 #include <chrono>
 
+namespace {
+// Progress stages for saving. The progress bar closes itself when it reaches
+// 100%, so tile writing stops below that and the XML phases fill the rest.
+constexpr int32_t kTileWriteStagePercent = 85;
+constexpr int32_t kFinalizeStagePercent = 88;
+constexpr int32_t kSpawnStagePercent = 91;
+constexpr int32_t kHouseStagePercent = 94;
+constexpr int32_t kWaypointStagePercent = 97;
+
+// Reports a named save stage and tells whether the save should continue
+// (the user can abort through the progress dialog). Switching the message to
+// "Cancelling..." keeps the dialog responsive while the save unwinds.
+bool reportSaveStage(int32_t percent, const wxString& message) {
+	g_gui.SetLoadDone(percent, message);
+	if (g_gui.WasLoadCancelled()) {
+		g_gui.SetLoadText("Cancelling...");
+		return false;
+	}
+	return true;
+}
+
+// Cancellation predicate handed to the auxiliary XML writers, which poll it
+// while they build their documents: pumping here is what lets an Abort click
+// be observed during those phases.
+bool shouldAbortSave() {
+	return g_gui.PollCancellation();
+}
+} // namespace
+
 // Item OTBM operations delegated to ItemSerializationOTBM (used by LiveSocket)
 std::unique_ptr<Item> Item::Create_OTBM(const IOMap& maphandle, BinaryNode* stream) {
 	return ItemSerializationOTBM::createFromStream(maphandle, stream);
@@ -659,7 +688,12 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 		return false;
 	}
 
+	g_gui.SetLoadText("Writing tiles...");
 	if (!saveMap(map, *f)) {
+		return false;
+	}
+
+	if (!reportSaveStage(kFinalizeStagePercent, "Finishing file...")) {
 		return false;
 	}
 
@@ -671,14 +705,18 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 		}
 	}
 
-	g_gui.SetLoadDone(99, "Saving spawns...");
-	if (!MapXMLIO::saveSpawns(map, identifier)) {
+	if (!reportSaveStage(kSpawnStagePercent, "Saving spawns...")) {
+		return false;
+	}
+	if (!MapXMLIO::saveSpawns(map, identifier, shouldAbortSave)) {
 		spdlog::error("Failed to save spawns!");
 		return false;
 	}
 
-	g_gui.SetLoadDone(99, "Saving houses...");
-	if (!MapXMLIO::saveHouses(map, identifier)) {
+	if (!reportSaveStage(kHouseStagePercent, "Saving houses...")) {
+		return false;
+	}
+	if (!MapXMLIO::saveHouses(map, identifier, shouldAbortSave)) {
 		spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save houses");
 		return false;
 	}
@@ -701,22 +739,30 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 	}
 
 	if (waypointFormat == Config::WaypointStorageFormat::XML || waypointFormat == Config::WaypointStorageFormat::BOTH) {
-		g_gui.SetLoadDone(99, "Saving waypoints...");
+		if (!reportSaveStage(kWaypointStagePercent, "Saving waypoints...")) {
+			return false;
+		}
 		if (map.waypoints.size() > 0) {
 			if (map.waypointfile.empty()) {
 				map.waypointfile = identifier.GetName() + "-waypoint.xml";
 				spdlog::info("Auto-created waypoint file: {}", map.waypointfile);
 			}
-			if (!MapXMLIO::saveWaypoints(map, identifier)) {
+			if (!MapXMLIO::saveWaypoints(map, identifier, shouldAbortSave)) {
 				spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save waypoints");
 				return false;
 			}
 		} else if (!map.waypointfile.empty()) {
-			if (!MapXMLIO::saveWaypoints(map, identifier)) {
+			if (!MapXMLIO::saveWaypoints(map, identifier, shouldAbortSave)) {
 				spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save waypoints");
 				return false;
 			}
 		}
+	}
+
+	// An Abort clicked while the last files were written must still discard the
+	// save instead of accepting it and marking the map as clean.
+	if (shouldAbortSave()) {
+		return false;
 	}
 
 	return true;
@@ -783,7 +829,9 @@ bool IOMapOTBM::saveMap(Map& map, NodeFileWriteHandle& f) {
 				addExtFile(OTBM_ATTR_EXT_ZONE_FILE, map.zonefile);
 			}
 
-			writeTileData(map, f);
+			if (!writeTileData(map, f)) {
+				return false;
+			}
 			writeTowns(map, f);
 
 			const auto waypointFormat = static_cast<Config::WaypointStorageFormat>(
@@ -805,8 +853,18 @@ bool IOMapOTBM::saveMap(Map& map, NodeFileWriteHandle& f) {
 	return true;
 }
 
-void IOMapOTBM::writeTileData(const Map& map, NodeFileWriteHandle& f) {
-	TileSerializationOTBM::writeTileData(*this, map, f);
+bool IOMapOTBM::writeTileData(const Map& map, NodeFileWriteHandle& f) {
+	// Progress reported by the tile writer fills the tile stage of the bar;
+	// the callback returns false to abort a cancelled save, and reports the
+	// cancellation to the dialog before unwinding.
+	return TileSerializationOTBM::writeTileData(*this, map, f, [](int tilesWritten) {
+		g_gui.SetLoadDone(tilesWritten * kTileWriteStagePercent / 100);
+		if (g_gui.WasLoadCancelled()) {
+			g_gui.SetLoadText("Cancelling...");
+			return false;
+		}
+		return true;
+	});
 }
 
 void IOMapOTBM::writeTowns(const Map& map, NodeFileWriteHandle& f) {

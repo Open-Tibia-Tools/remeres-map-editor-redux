@@ -57,7 +57,17 @@ bool EditorManager::IsEditorOpen() const {
 void EditorManager::CloseCurrentEditor() {
 	spdlog::info("EditorManager::CloseCurrentEditor - Closing current tab");
 	g_palettes.RefreshPalettes();
-	g_gui.tabbook->DeleteTab(g_gui.tabbook->GetSelection());
+
+	{
+		// Destroying the tab frees the whole map and its GL resources, which
+		// can take a moment on large maps; tell the user what is happening.
+		ScopedBusyInfo closing("Closing map...");
+		g_gui.tabbook->DeleteTab(g_gui.tabbook->GetSelection());
+	}
+
+	// wxAuiNotebook does not emit PAGE_CLOSED when the close event was vetoed
+	// and the page was deleted here, so report the result from this path too.
+	g_status.SetStatusText("Map closed.");
 	g_gui.root->UpdateMenubar();
 	spdlog::info("EditorManager::CloseCurrentEditor - Closed current tab");
 }
@@ -202,8 +212,12 @@ bool EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
 			}
 
 			g_status.UpdateTitle();
-			g_gui.root->UpdateMenubar();
-			g_gui.root->Refresh();
+			if (success) {
+				// A cancelled or failed save left the document untouched; skip
+				// the full frame/canvas repaint and the menubar refresh.
+				g_gui.root->UpdateMenubar();
+				g_gui.root->Refresh();
+			}
 			return success;
 		}
 	}

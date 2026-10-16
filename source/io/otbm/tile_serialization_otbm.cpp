@@ -10,6 +10,7 @@
 #include "item_definitions/core/item_definition_store.h"
 #include "ui/gui.h"
 #include <algorithm>
+#include <chrono>
 #include <functional>
 #include <vector>
 
@@ -288,12 +289,19 @@ void TileSerializationOTBM::readTileArea(
 	});
 }
 
-void TileSerializationOTBM::writeTileData(const IOMapOTBM& iomap, const Map& map, NodeFileWriteHandle& f, const std::function<void(int)>& progressCb) {
+bool TileSerializationOTBM::writeTileData(const IOMapOTBM& iomap, const Map& map, NodeFileWriteHandle& f, const std::function<bool(int)>& progressCb) {
 	uint32_t tiles_saved = 0;
 	bool first = true;
 	int local_x = -1, local_y = -1, local_z = -1;
 
 	const uint64_t total_tiles = map.getTileCount();
+
+	// Progress is reported at most every kProgressIntervalMs: repainting the
+	// dialog on every tile would slow the save down, while a fixed stride
+	// makes the bar jump on small maps. This cadence also bounds how long a
+	// cancellation request takes to be noticed.
+	constexpr auto kProgressInterval = std::chrono::milliseconds(50);
+	auto last_progress = std::chrono::steady_clock::now();
 
 	// Use modern ranges for iteration if possible, but the spatial hash grid iterator is already custom
 	auto sorted_cells = map.getGrid().getSortedCells();
@@ -322,8 +330,14 @@ void TileSerializationOTBM::writeTileData(const IOMapOTBM& iomap, const Map& map
 					}
 
 					++tiles_saved;
-					if (tiles_saved % 8192 == 0 && total_tiles > 0 && progressCb) {
-						progressCb(std::min(100, static_cast<int>(100.0 * tiles_saved / total_tiles)));
+					if (progressCb && total_tiles > 0) {
+						const auto now = std::chrono::steady_clock::now();
+						if (now - last_progress >= kProgressInterval) {
+							last_progress = now;
+							if (!progressCb(std::min(100, static_cast<int>(100.0 * tiles_saved / total_tiles)))) {
+								return false;
+							}
+						}
 					}
 
 					const Position& pos = save_tile->getPosition();
@@ -350,6 +364,8 @@ void TileSerializationOTBM::writeTileData(const IOMapOTBM& iomap, const Map& map
 	if (!first) {
 		f.endNode();
 	}
+
+	return true;
 }
 
 void TileSerializationOTBM::serializeTile(const IOMapOTBM& iomap, const Tile* save_tile, NodeFileWriteHandle& f) {

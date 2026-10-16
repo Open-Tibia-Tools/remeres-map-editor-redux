@@ -25,6 +25,8 @@
 #include "ui/managers/welcome_manager.h"
 #include "ui/managers/gl_context_manager.h"
 
+#include <wx/busyinfo.h>
+
 class BaseMap;
 class Map;
 
@@ -101,11 +103,20 @@ public:
 		g_layout.LoadPerspective();
 	}
 
-	void CreateLoadBar(wxString message, bool canCancel = false) {
-		g_loading.CreateLoadBar(message, canCancel);
+	void CreateLoadBar(wxString message, bool canCancel = false, const wxString& title = "Loading") {
+		g_loading.CreateLoadBar(message, canCancel, title);
 	}
 	void SetLoadScale(int32_t from, int32_t to) {
 		g_loading.SetLoadScale(from, to);
+	}
+	void SetLoadText(const wxString& message) {
+		g_loading.SetLoadText(message);
+	}
+	bool PollCancellation() {
+		return g_loading.PollCancellation();
+	}
+	bool WasLoadCancelled() const {
+		return g_loading.WasCancelled();
 	}
 	bool SetLoadDone(int32_t done, const wxString& newMessage = "") {
 		return g_loading.SetLoadDone(done, newMessage);
@@ -416,8 +427,8 @@ public:
  */
 class ScopedLoadingBar {
 public:
-	ScopedLoadingBar(wxString message, bool canCancel = false) {
-		g_loading.CreateLoadBar(message, canCancel);
+	ScopedLoadingBar(wxString message, bool canCancel = false, const wxString& title = "Loading") {
+		g_loading.CreateLoadBar(message, canCancel, title);
 	}
 	~ScopedLoadingBar() {
 		g_loading.DestroyLoadBar();
@@ -427,9 +438,32 @@ public:
 		g_loading.SetLoadDone(done, newmessage);
 	}
 
+	void SetLoadText(const wxString& message) {
+		g_loading.SetLoadText(message);
+	}
+
+	bool WasLoadCancelled() const {
+		return g_loading.WasCancelled();
+	}
+
 	void SetLoadScale(int32_t from, int32_t to) {
 		g_loading.SetLoadScale(from, to);
 	}
+};
+
+/**
+ * Shows an informational window for work without measurable progress, such as
+ * closing a map or shutting the editor down. Unlike the progress bar it reports
+ * no percentage, and it does not pump events, which also makes it safe to use
+ * while windows and maps are being destroyed.
+ */
+class ScopedBusyInfo {
+public:
+	explicit ScopedBusyInfo(const wxString& message) :
+		info(message, wxTheApp ? wxTheApp->GetTopWindow() : nullptr) { }
+
+private:
+	wxBusyInfo info;
 };
 
 #define UnnamedRenderingLock() RenderingLock __unnamed_rendering_lock_##__LINE__
