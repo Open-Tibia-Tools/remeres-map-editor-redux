@@ -67,11 +67,15 @@
     {
       "name": "ninja-dev",
       "displayName": "Ninja + vcpkg (Dev)",
-      "description": "Fast iteration build: RelWithDebInfo without LTO",
+      "description": "Fast iteration build: RelWithDebInfo without LTO, embedded (/Z7) debug info",
       "inherits": "ninja-vcpkg",
       "binaryDir": "${sourceDir}/build-ninja-dev",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_MSVC_DEBUG_INFORMATION_FORMAT": {
+          "type": "STRING",
+          "value": "Embedded"
+        }
       }
     },
     {
