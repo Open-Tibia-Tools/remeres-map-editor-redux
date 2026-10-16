@@ -114,6 +114,7 @@
 		<item name="Remove unreachable tiles..." action="MAP_REMOVE_UNREACHABLE_TILES" help="Removes unreachable and invisible tiles from the map."/>
 		<item name="Properties..." hotkey="Ctrl+P" action="MAP_PROPERTIES" help="Show and change the map properties."/>
 		<item name="Statistics" hotkey="F8" action="MAP_STATISTICS" help="Show map statistics."/>
+		<item name="Validate Spawns..." action="MAP_VALIDATE_SPAWNS" help="List spawns that cannot be placed (missing or empty tile, unknown type, bad spawntime)."/>
 	</menu>
 	<menu name="Selection">
 		<item name="Replace Items on Selection" action="REPLACE_ON_SELECTION_ITEMS" help="Replace items on selected area."/>

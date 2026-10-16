@@ -20,6 +20,7 @@ public:
 	void OnRandomizeMap(wxCommandEvent& event);
 	void OnMapCleanup(wxCommandEvent& event);
 	void OnMapCleanInvalidZones(wxCommandEvent& event);
+	void OnMapValidateSpawns(wxCommandEvent& event);
 
 private:
 	MainFrame* frame;

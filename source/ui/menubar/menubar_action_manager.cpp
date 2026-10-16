@@ -88,6 +88,7 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	MAKE_ACTION_ICON(MAP_CLEAN_HOUSE_ITEMS, wxITEM_NORMAL, ICON_HOUSE_MEDICAL, OnMapCleanHouseItems);
 	MAKE_ACTION_ICON(MAP_PROPERTIES, wxITEM_NORMAL, ICON_GEAR, OnMapProperties);
 	MAKE_ACTION_ICON(MAP_STATISTICS, wxITEM_NORMAL, ICON_CHART_BAR, OnMapStatistics);
+	MAKE_ACTION_ICON(MAP_VALIDATE_SPAWNS, wxITEM_NORMAL, ICON_TRIANGLE_EXCLAMATION, OnMapValidateSpawns);
 
 	MAKE_ACTION_ICON(VIEW_TOOLBARS_BRUSHES, wxITEM_CHECK, ICON_PAINTBRUSH, OnToolbars);
 	MAKE_ACTION_ICON(VIEW_TOOLBARS_POSITION, wxITEM_CHECK, ICON_LOCATION, OnToolbars);
@@ -264,6 +265,7 @@ void MenuBarActionManager::UpdateState(MainMenuBar* mb) {
 	mb->EnableItem(MAP_CLEANUP, is_local);
 	mb->EnableItem(MAP_PROPERTIES, is_local);
 	mb->EnableItem(MAP_STATISTICS, is_local);
+	mb->EnableItem(MAP_VALIDATE_SPAWNS, has_map);
 
 	mb->EnableItem(NEW_VIEW, has_map);
 	mb->EnableItem(ZOOM_IN, has_map);
