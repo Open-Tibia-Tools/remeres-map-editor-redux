@@ -13,6 +13,7 @@
 #include "palette/house/house_palette.h"
 #include "palette/palette_waypoints.h"
 #include "palette/palette_zones.h"
+#include "palette/town/town_palette.h"
 #include "brushes/zone/zone_brush.h"
 #include "palette/panels/brush_palette_panel.h"
 #include "rendering/ui/map_display.h"
@@ -78,6 +79,9 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 		} else if (auto* zonePanel = dynamic_cast<ZonePalettePanel*>(panel)) {
 			zone_palette = zonePanel;
 			g_gui.zone_palette = zone_palette;
+		} else if (auto* townPanel = dynamic_cast<TownPalettePanel*>(panel)) {
+			town_palette = townPanel;
+			g_gui.town_palette = town_palette;
 		}
 		choicebook->AddPage(panel, wxstr(provider.name));
 	}
@@ -100,6 +104,9 @@ PaletteWindow::~PaletteWindow() {
 	}
 	if (g_gui.zone_palette == zone_palette) {
 		g_gui.zone_palette = nullptr;
+	}
+	if (g_gui.town_palette == town_palette) {
+		g_gui.town_palette = nullptr;
 	}
 
 	spdlog::info("PaletteWindow destructor finished");

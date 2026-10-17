@@ -15,18 +15,21 @@
 #include <ranges>
 #include <algorithm>
 
-// Layout Constants
-static const int CARD_PADDING = 20;
-static const int CARD_MARGIN_X = 10;
-static const int CARD_MARGIN_Y = 10;
-static const int HEADER_HEIGHT = 40;
-static const int ITEM_SIZE = 56;
-static const int ITEM_H = 110;
-static const int ITEM_SPACING = 10;
-static const int ARROW_WIDTH = 60;
-static const int SECTION_GAP = 20;
-static const int CARD_W = ITEM_SIZE + 20;
-static const int GHOST_SLOT_WIDTH = CARD_W;
+// Layout constants derive from the renderer so the panel's hit-testing and the
+// drawing can never disagree about the card metrics.
+namespace {
+	constexpr int CARD_PADDING = RuleCardRenderer::CARD_PADDING;
+	constexpr int CARD_MARGIN_X = RuleCardRenderer::CARD_MARGIN_X;
+	constexpr int CARD_MARGIN_Y = RuleCardRenderer::CARD_MARGIN_Y;
+	constexpr int HEADER_HEIGHT = RuleCardRenderer::HEADER_HEIGHT;
+	constexpr int ITEM_SIZE = RuleCardRenderer::ITEM_SIZE;
+	constexpr int ITEM_H = RuleCardRenderer::ITEM_H;
+	constexpr int ITEM_SPACING = RuleCardRenderer::ITEM_SPACING;
+	constexpr int ARROW_WIDTH = RuleCardRenderer::ARROW_WIDTH;
+	constexpr int SECTION_GAP = RuleCardRenderer::SECTION_GAP;
+	constexpr int CARD_W = RuleCardRenderer::CARD_W;
+	constexpr int GHOST_SLOT_WIDTH = RuleCardRenderer::CARD_W;
+} // namespace
 
 // ----------------------------------------------------------------------------
 // ItemDropTarget
@@ -205,7 +208,7 @@ void RuleBuilderPanel::LayoutRules() {
 	}
 	m_totalHeight = currentY;
 
-	int footerHeight = RuleCardRenderer::ITEM_H + (RuleCardRenderer::CARD_MARGIN_Y * 2);
+	int footerHeight = RuleCardRenderer::NEW_RULE_AREA_H + (RuleCardRenderer::CARD_MARGIN_Y * 2);
 	UpdateScrollbar(m_totalHeight + footerHeight);
 }
 

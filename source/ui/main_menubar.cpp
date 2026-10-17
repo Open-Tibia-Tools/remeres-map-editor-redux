@@ -26,7 +26,6 @@
 #include "map/map_statistics.h"
 #include "map/map_search.h"
 #include "ui/managers/recent_files_manager.h"
-#include "ui/map/towns_window.h"
 #include "ui/map/map_properties_window.h"
 
 #include "ui/about_window.h"
@@ -429,11 +428,7 @@ void MainMenuBar::OnMapCleanHouseItems(wxCommandEvent& event) {
 }
 
 void MainMenuBar::OnMapEditTowns(wxCommandEvent& WXUNUSED(event)) {
-	if (g_gui.GetCurrentEditor()) {
-		wxDialog* town_dialog = newd EditTownsDialog(frame, *g_gui.GetCurrentEditor());
-		town_dialog->ShowModal();
-		town_dialog->Destroy();
-	}
+	g_gui.SelectPalettePage("Town");
 }
 
 void MainMenuBar::OnMapEditItems(wxCommandEvent& WXUNUSED(event)) {

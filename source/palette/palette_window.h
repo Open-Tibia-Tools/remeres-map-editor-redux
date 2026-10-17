@@ -29,6 +29,7 @@ struct HardcodedPaletteProvider;
 class HousePalette;
 class WaypointPalettePanel;
 class ZonePalettePanel;
+class TownPalettePanel;
 
 class PaletteWindow : public wxPanel {
 public:
@@ -79,6 +80,7 @@ protected:
 	HousePalette* house_palette;
 	WaypointPalettePanel* waypoint_palette;
 	ZonePalettePanel* zone_palette = nullptr;
+	TownPalettePanel* town_palette = nullptr;
 
 	void updateZonePage(Map* map);
 };

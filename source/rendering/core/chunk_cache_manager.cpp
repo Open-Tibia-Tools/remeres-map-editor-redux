@@ -793,9 +793,6 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				if (loc->getTownCount() > 0) {
 					pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::INDICATOR_TOWN_BASE, indicator_depth);
 				}
-				if (loc->getWaypointCount() > 0) {
-					pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::INDICATOR_WAYPOINT_BASE, indicator_depth);
-				}
 			}
 
 			// 4. Creature on tile (Painter's Algorithm: NW-to-SE order ensures occlusion by adjacent South/East walls and structures)

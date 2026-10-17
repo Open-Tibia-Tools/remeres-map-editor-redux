@@ -4,7 +4,6 @@
 #include "ui/theme.h"
 #include "editor/editor.h"
 #include "ui/gui.h"
-#include "ui/gui.h"
 #include "app/settings.h"
 #include "app/managers/version_manager.h"
 #include <algorithm> // For std::find
@@ -33,7 +32,44 @@
 #include "brushes/carpet/carpet_brush.h"
 #include "ui/replace_tool/card_panel.h"
 #include "util/image_manager.h"
-#include <wx/splitter.h>
+
+namespace {
+
+// Tiles currently visible in the active map viewport (all map positions at
+// the current floor framed by the canvas view).
+std::vector<Position> collectViewportPositions() {
+	MapTab* activeTab = g_gui.GetCurrentMapTab();
+	if (!activeTab || !activeTab->GetCanvas()) {
+		return {};
+	}
+
+	MapCanvas* canvas = activeTab->GetCanvas();
+	wxSize canvasSize = canvas->GetClientSize();
+
+	int startX, startY, endX, endY;
+	canvas->ScreenToMap(0, 0, &startX, &startY);
+	canvas->ScreenToMap(canvasSize.x, canvasSize.y, &endX, &endY);
+
+	// Ensure bounds are consistent
+	if (startX > endX) {
+		std::swap(startX, endX);
+	}
+	if (startY > endY) {
+		std::swap(startY, endY);
+	}
+
+	const int z = canvas->GetFloor();
+
+	std::vector<Position> positions;
+	for (int x = startX; x <= endX; ++x) {
+		for (int y = startY; y <= endY; ++y) {
+			positions.push_back(Position(x, y, z));
+		}
+	}
+	return positions;
+}
+
+} // namespace
 
 ReplaceToolWindow::ReplaceToolWindow(wxWindow* parent, Editor* editor) : wxDialog(parent, wxID_ANY, "Advanced Replace Tool", wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
 																		 editor(editor) {
@@ -53,7 +89,7 @@ ReplaceToolWindow::ReplaceToolWindow(wxWindow* parent, Editor* editor) : wxDialo
 
 	if (w < 600 || h < 400) {
 		// Default size (Logical -> Physical)
-		SetSize(FromDIP(wxSize(1400, 850)));
+		SetSize(FromDIP(wxSize(1120, 700)));
 	} else {
 		// Restored size (Already Physical)
 		SetSize(wxSize(w, h));
@@ -136,112 +172,114 @@ void ReplaceToolWindow::InitLayout() {
 
 	similarItemsGrid = new ItemGridPanel(col3Card, this);
 	similarItemsGrid->SetDraggable(true);
+
+	TilesetGridToolbar::Actions suggestionActions;
+	suggestionActions.filter = [this](const std::string& query) {
+		similarItemsGrid->SetFilter(wxstr(query));
+	};
+	suggestionActions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
+		similarItemsGrid->SetSort(key, dir);
+		similarItemsGrid->SetFilter(wxstr(m_suggestionsToolbar->GetFilterQuery()));
+	};
+	suggestionActions.clear_sort = [this]() {
+		similarItemsGrid->ClearSort();
+		similarItemsGrid->SetFilter(wxstr(m_suggestionsToolbar->GetFilterQuery()));
+	};
+	suggestionActions.show_labels = [this](bool show) {
+		similarItemsGrid->SetShowLabels(show);
+	};
+	suggestionActions.icon_size = [this](int size) {
+		similarItemsGrid->SetIconSize(size);
+	};
+
+	m_suggestionsToolbar = new TilesetGridToolbar(col3Card, std::move(suggestionActions));
+	m_suggestionsToolbar->SetState(similarItemsGrid->GetShowLabels(), similarItemsGrid->GetIconSize(), false, TilesetSortKey::Name, TilesetSortDirection::Ascending, false);
+
+	col3Card->GetContentSizer()->Add(m_suggestionsToolbar, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT | wxTOP, padding));
 	col3Card->GetContentSizer()->Add(similarItemsGrid, wxSizerFlags(1).Expand().Border(wxALL, padding));
 	mainRowSizer->Add(col3Card, wxSizerFlags(3).Expand().Border(wxLEFT | wxRIGHT, padding / 2)); // Flex 3
 
 	// ---------------------------------------------------------
-	// COLUMN 4: Saved Rules (Split: List / Actions)
+	// COLUMN 4: Saved Rules
 	// ---------------------------------------------------------
-	// We use a splitter, but instead of raw panels, we put CardPanels inside to get the headers
-	wxSplitterWindow* splitter = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_LIVE_UPDATE | wxSP_3DSASH | wxSP_NOBORDER);
-
-	// -- Top Card: Rules List --
-	CardPanel* savedRulesCard = new CardPanel(splitter, wxID_ANY);
+	CardPanel* savedRulesCard = new CardPanel(this, wxID_ANY);
 	savedRulesCard->SetTitle("SAVED RULES");
 	savedRulesCard->SetShowFooter(false);
 
 	savedRulesList = new RuleListControl(savedRulesCard, this);
 	savedRulesCard->GetContentSizer()->Add(savedRulesList, wxSizerFlags(1).Expand().Border(wxALL, padding));
 
-	// -- Bottom Card: Actions --
-	CardPanel* actionsCard = new CardPanel(splitter, wxID_ANY);
-	actionsCard->SetTitle("ACTIONS");
-	actionsCard->SetShowFooter(false);
+	mainRowSizer->Add(savedRulesCard, wxSizerFlags(2).Expand().Border(wxALL, padding / 2)); // Flex 2
 
-	wxBoxSizer* actionsSizer = new wxBoxSizer(wxVERTICAL);
+	// ---------------------------------------------------------
+	// FOOTER: rule set management, scope and execution
+	//
+	// These used to take a whole column; in one row they free the width for
+	// the library, the rule builder and the suggestions.
+	// ---------------------------------------------------------
+	wxBoxSizer* footerSizer = newd wxBoxSizer(wxHORIZONTAL);
 
-	// Grid for management buttons (Add, Edit, Del)
-	wxBoxSizer* manageBtnsSizer = new wxBoxSizer(wxHORIZONTAL);
-
-	m_addRuleBtn = new wxButton(actionsCard, wxID_ANY, "ADD", wxDefaultPosition, FromDIP(wxSize(-1, 28)));
+	m_addRuleBtn = newd wxButton(this, wxID_ANY, "ADD", wxDefaultPosition, FromDIP(wxSize(-1, 28)));
 	m_addRuleBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
 	m_addRuleBtn->SetBackgroundColour(wxColour(40, 180, 40)); // Green
 	m_addRuleBtn->SetForegroundColour(*wxWHITE);
 	m_addRuleBtn->SetFont(Theme::GetFont(9, true));
 
-	m_editRuleBtn = new wxButton(actionsCard, wxID_ANY, "EDIT", wxDefaultPosition, FromDIP(wxSize(-1, 28)));
+	m_editRuleBtn = newd wxButton(this, wxID_ANY, "EDIT", wxDefaultPosition, FromDIP(wxSize(-1, 28)));
 	m_editRuleBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN_TO_SQUARE, wxSize(16, 16)));
 	m_editRuleBtn->SetBackgroundColour(wxColour(80, 80, 80)); // Neutral Dark Gray
 	m_editRuleBtn->SetForegroundColour(*wxWHITE);
 	m_editRuleBtn->SetFont(Theme::GetFont(9, true));
 
-	m_deleteRuleBtn = new wxButton(actionsCard, wxID_ANY, "DEL", wxDefaultPosition, FromDIP(wxSize(-1, 28)));
+	m_deleteRuleBtn = newd wxButton(this, wxID_ANY, "DEL", wxDefaultPosition, FromDIP(wxSize(-1, 28)));
 	m_deleteRuleBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_TRASH_CAN, wxSize(16, 16)));
 	m_deleteRuleBtn->SetBackgroundColour(wxColour(180, 40, 40)); // Red
 	m_deleteRuleBtn->SetForegroundColour(*wxWHITE);
 	m_deleteRuleBtn->SetFont(Theme::GetFont(9, true));
 
-	manageBtnsSizer->Add(m_addRuleBtn, wxSizerFlags(1).Border(wxRIGHT, 2));
-	manageBtnsSizer->Add(m_editRuleBtn, wxSizerFlags(1).Border(wxLEFT | wxRIGHT, 2));
-	manageBtnsSizer->Add(m_deleteRuleBtn, wxSizerFlags(1).Border(wxLEFT, 2));
+	footerSizer->Add(m_addRuleBtn, wxSizerFlags(0).Center().Border(wxRIGHT, 2));
+	footerSizer->Add(m_editRuleBtn, wxSizerFlags(0).Center().Border(wxRIGHT, 2));
+	footerSizer->Add(m_deleteRuleBtn, wxSizerFlags(0).Center().Border(wxRIGHT, padding));
 
-	actionsSizer->Add(manageBtnsSizer, wxSizerFlags(0).Expand().Border(wxALL, padding));
-
-	m_addVisibleBtn = new wxButton(actionsCard, wxID_ANY, "ADD VISIBLE FROM VIEWPORT", wxDefaultPosition, FromDIP(wxSize(-1, 28)));
+	m_addVisibleBtn = newd wxButton(this, wxID_ANY, "ADD VISIBLE FROM VIEWPORT", wxDefaultPosition, FromDIP(wxSize(-1, 28)));
 	m_addVisibleBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS_SQUARE, wxSize(16, 16)));
 	m_addVisibleBtn->SetBackgroundColour(wxColour(45, 120, 180)); // Sky Blue
 	m_addVisibleBtn->SetForegroundColour(*wxWHITE);
 	m_addVisibleBtn->SetFont(Theme::GetFont(9, true));
-	actionsSizer->Add(m_addVisibleBtn, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
+	footerSizer->Add(m_addVisibleBtn, wxSizerFlags(0).Center().Border(wxRIGHT, padding));
 
-	// Scope Selection
-	wxBoxSizer* scopeSizer = new wxBoxSizer(wxHORIZONTAL);
-	wxStaticText* scopeLabel = new wxStaticText(actionsCard, wxID_ANY, "SCOPE:");
+	wxStaticText* scopeLabel = newd wxStaticText(this, wxID_ANY, "SCOPE:");
 	scopeLabel->SetForegroundColour(wxColour(180, 180, 180));
 	scopeLabel->SetFont(Theme::GetFont(9, true));
+	footerSizer->Add(scopeLabel, wxSizerFlags(0).Center().Border(wxRIGHT, 5));
 
 	wxArrayString scopes;
 	scopes.Add("SELECTION");
 	scopes.Add("VIEWPORT");
 	scopes.Add("ALL MAP");
-	m_scopeChoice = new wxChoice(actionsCard, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(-1, 24)), scopes);
+	m_scopeChoice = newd wxChoice(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(140, 24)), scopes);
 	m_scopeChoice->SetSelection(0);
 	if (editor && editor->selection.empty()) {
 		m_scopeChoice->SetSelection(1); // Default to Viewport if no selection
 	}
+	footerSizer->Add(m_scopeChoice, wxSizerFlags(0).Center());
 
-	scopeSizer->Add(scopeLabel, wxSizerFlags(0).Center().Border(wxRIGHT, 5));
-	scopeSizer->Add(m_scopeChoice, wxSizerFlags(1).Center());
+	footerSizer->AddStretchSpacer(1);
 
-	actionsSizer->Add(scopeSizer, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
-
-	actionsSizer->AddStretchSpacer(1);
-
-	// Execute Button
-	m_executeBtn = new wxButton(actionsCard, wxID_ANY, "EXECUTE REPLACE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
+	m_executeBtn = newd wxButton(this, wxID_ANY, "EXECUTE REPLACE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
 	m_executeBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLAY, wxSize(16, 16)));
 	m_executeBtn->SetDefault();
 	m_executeBtn->SetBackgroundColour(Theme::Get(Theme::Role::Accent)); // Blue
 	m_executeBtn->SetForegroundColour(*wxWHITE);
 	m_executeBtn->SetFont(Theme::GetFont(10, true));
-	actionsSizer->Add(m_executeBtn, wxSizerFlags(0).Expand().Border(wxALL, padding));
+	footerSizer->Add(m_executeBtn, wxSizerFlags(0).Center().Border(wxLEFT, padding));
 
-	// Close Button
-	wxButton* closeBtn = new wxButton(actionsCard, wxID_ANY, "CLOSE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
+	wxButton* closeBtn = newd wxButton(this, wxID_ANY, "CLOSE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
 	closeBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
 	closeBtn->SetBackgroundColour(wxColour(120, 120, 120)); // Gray
 	closeBtn->SetForegroundColour(*wxWHITE);
 	closeBtn->SetFont(Theme::GetFont(10, true));
-	actionsSizer->Add(closeBtn, wxSizerFlags(0).Expand().Border(wxALL, padding));
-
-	actionsCard->GetContentSizer()->Add(actionsSizer, wxSizerFlags(1).Expand());
-
-	// Setup Splitter
-	splitter->SetMinimumPaneSize(FromDIP(100));
-	splitter->SplitHorizontally(savedRulesCard, actionsCard);
-	splitter->SetSashGravity(0.65); // Give 65% to the list
-
-	mainRowSizer->Add(splitter, wxSizerFlags(2).Expand().Border(wxALL, padding / 2)); // Flex 2
+	footerSizer->Add(closeBtn, wxSizerFlags(0).Center().Border(wxLEFT, padding));
 
 	// ---------------------------------------------------------
 	// BINDINGS
@@ -286,8 +324,9 @@ void ReplaceToolWindow::InitLayout() {
 		}
 	});
 
-	// Add Main Row to Root
+	// Add Main Row and footer to Root
 	rootSizer->Add(mainRowSizer, wxSizerFlags(1).Expand().Border(wxALL, padding / 2));
+	rootSizer->Add(footerSizer, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
 
 	SetSizer(rootSizer);
 	Layout();
@@ -298,6 +337,7 @@ void ReplaceToolWindow::OnLibraryItemSelected(uint16_t itemId) {
 		return;
 	}
 	similarItemsGrid->SetItems(VisualSimilarityService::Get().FindSimilar(itemId));
+	similarItemsGrid->SetFilter(wxstr(m_suggestionsToolbar->GetFilterQuery()));
 }
 
 void ReplaceToolWindow::OnRuleSelected(const RuleSet& rs) {
@@ -305,6 +345,7 @@ void ReplaceToolWindow::OnRuleSelected(const RuleSet& rs) {
 	ruleBuilder->SetRules(rs.rules);
 	if (!rs.rules.empty()) {
 		similarItemsGrid->SetItems(VisualSimilarityService::Get().FindSimilar(rs.rules[0].fromId));
+		similarItemsGrid->SetFilter(wxstr(m_suggestionsToolbar->GetFilterQuery()));
 	} else {
 		similarItemsGrid->SetItems({});
 	}
@@ -368,47 +409,39 @@ void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 		return;
 	}
 
-	int confirm = wxMessageBox(
-		"Are you sure you want to execute replacements on the map?",
-		"Confirm Bulk Replacement",
-		wxYES_NO | wxNO_DEFAULT | wxICON_WARNING
-	);
+	// Preview: count what each rule would touch before asking for confirmation.
+	std::vector<Position> viewportPos;
+	if (scope == ReplaceScope::Viewport) {
+		viewportPos = collectViewportPositions();
+	}
 
+	std::vector<uint32_t> counts = engine.CountMatchesByRule(editor, rules, scope, scope == ReplaceScope::Viewport ? &viewportPos : nullptr);
+
+	uint32_t totalMatches = 0;
+	for (uint32_t count : counts) {
+		totalMatches += count;
+	}
+
+	if (totalMatches == 0) {
+		wxMessageBox("No items matching the rules were found in the selected scope.", "Replace", wxOK | wxICON_INFORMATION);
+		return;
+	}
+
+	wxString preview = "Up to " + wxString::Format("%u", totalMatches) + " item(s) can be replaced:\n\n";
+	for (size_t index = 0; index < rules.size() && index < counts.size(); ++index) {
+		if (counts[index] == 0) {
+			continue;
+		}
+		preview += wxString::Format("Item %u: %u hit(s)\n", rules[index].fromId, counts[index]);
+	}
+	preview += "\nProbabilities below 100% leave some matches untouched.\nExecute the replacements?";
+
+	int confirm = wxMessageBox(preview, "Confirm Bulk Replacement", wxYES_NO | wxNO_DEFAULT | wxICON_WARNING);
 	if (confirm != wxYES) {
 		return;
 	}
 
-	if (scope == ReplaceScope::Viewport) {
-		MapTab* activeTab = g_gui.GetCurrentMapTab();
-		if (activeTab && activeTab->GetCanvas()) {
-			MapCanvas* canvas = activeTab->GetCanvas();
-			wxSize canvasSize = canvas->GetClientSize();
-
-			int startX, startY, endX, endY;
-			canvas->ScreenToMap(0, 0, &startX, &startY);
-			canvas->ScreenToMap(canvasSize.x, canvasSize.y, &endX, &endY);
-
-			// Ensure bounds are consistent
-			if (startX > endX) {
-				std::swap(startX, endX);
-			}
-			if (startY > endY) {
-				std::swap(startY, endY);
-			}
-
-			int z = canvas->GetFloor();
-
-			std::vector<Position> pv;
-			for (int x = startX; x <= endX; ++x) {
-				for (int y = startY; y <= endY; ++y) {
-					pv.push_back(Position(x, y, z));
-				}
-			}
-			engine.ExecuteReplacement(editor, rules, scope, &pv);
-		}
-	} else {
-		engine.ExecuteReplacement(editor, rules, scope);
-	}
+	engine.ExecuteReplacement(editor, rules, scope, scope == ReplaceScope::Viewport ? &viewportPos : nullptr);
 }
 
 void ReplaceToolWindow::OnAddVisibleTiles(wxCommandEvent&) {

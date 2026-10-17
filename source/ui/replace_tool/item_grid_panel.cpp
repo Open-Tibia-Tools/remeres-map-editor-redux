@@ -23,9 +23,9 @@ ItemGridPanel::ItemGridPanel(wxWindow* parent, Listener* listener) :
 ItemGridPanel::~ItemGridPanel() {
 }
 
-void ItemGridPanel::SetItems(const std::vector<uint16_t>& items) {
+void ItemGridPanel::SetItems(const std::vector<uint16_t>& items, std::map<uint16_t, wxString> names) {
 	allItems = items;
-	m_nameOverrides.clear();
+	m_nameOverrides = std::move(names);
 	ClearCache(); // Clear old textures
 	SetFilter("");
 }
@@ -50,6 +50,7 @@ void ItemGridPanel::SetFilter(const wxString& filter) {
 			}
 		}
 	}
+	ApplySortTo(filteredItems);
 	SetScrollPosition(0);
 	RefreshGrid();
 }
@@ -101,8 +102,17 @@ void ItemGridPanel::OnMotion(wxMouseEvent& event) {
 	}
 }
 
+std::string ItemGridPanel::GetSortName(uint16_t id) const {
+	auto it = m_nameOverrides.find(id);
+	if (it != m_nameOverrides.end()) {
+		return it->second.ToStdString();
+	}
+	return VirtualItemGrid::GetSortName(id);
+}
+
 void ItemGridPanel::SetOverrideNames(const std::map<uint16_t, wxString>& names) {
 	m_nameOverrides = names;
+	ApplySortTo(filteredItems);
 	Refresh();
 }
 

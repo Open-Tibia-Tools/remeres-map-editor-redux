@@ -134,6 +134,14 @@ void Map::convertHouseTiles(uint32_t fromId, uint32_t toId) {
 	MapConverter::convertHouseTiles(*this, fromId, toId);
 }
 
+void Map::updateTownIdForHouses(uint32_t old_town_id, uint32_t new_town_id) {
+	for (auto& [_, house] : houses) {
+		if (house && house->townid == old_town_id) {
+			house->townid = new_town_id;
+		}
+	}
+}
+
 MapVersion Map::getVersion() const {
 	return mapVersion;
 }

@@ -73,3 +73,43 @@ void Waypoints::removeWaypoint(std::string name) {
 	}
 	waypoints.erase(iter);
 }
+
+bool Waypoints::renameWaypoint(const std::string& old_name, const std::string& new_name) {
+	if (new_name.empty()) {
+		return false;
+	}
+
+	const std::string old_key = as_lower_str(old_name);
+	const std::string new_key = as_lower_str(new_name);
+
+	if (old_key == new_key) {
+		auto it = waypoints.find(old_key);
+		if (it != waypoints.end()) {
+			if (it->second->name == new_name) {
+				return true;
+			}
+			it->second->name = new_name;
+			map.doChange();
+			return true;
+		}
+		return false;
+	}
+
+	if (waypoints.contains(new_key)) {
+		return false;
+	}
+
+	auto it = waypoints.find(old_key);
+	if (it == waypoints.end()) {
+		return false;
+	}
+
+	auto node = waypoints.extract(it);
+	node.key() = new_key;
+	node.mapped()->name = new_name;
+	waypoints.insert(std::move(node));
+
+	map.doChange();
+	return true;
+}
+

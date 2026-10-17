@@ -46,15 +46,32 @@ void LibraryPanel::InitLayout() {
 	wxPanel* itemListPage = new wxPanel(m_notebook);
 	wxBoxSizer* itemListSizer = new wxBoxSizer(wxVERTICAL);
 
-	m_itemSearch = new wxSearchCtrl(itemListPage, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxBORDER_NONE);
-	m_itemSearch->ShowCancelButton(true);
-	m_itemSearch->SetBackgroundColour(Theme::Get(Theme::Role::Background));
-	m_itemSearch->Bind(wxEVT_TEXT, &LibraryPanel::OnSearchChange, this);
-	m_itemSearch->Bind(wxEVT_SEARCHCTRL_SEARCH_BTN, &LibraryPanel::OnSearchChange, this);
-	itemListSizer->Add(m_itemSearch, 0, wxEXPAND | wxALL, padding);
-
 	m_allItemsGrid = new ItemGridPanel(itemListPage, this);
 	m_allItemsGrid->SetDraggable(true);
+
+	TilesetGridToolbar::Actions itemActions;
+	itemActions.filter = [this](const std::string& query) {
+		m_allItemsGrid->SetFilter(wxstr(query));
+	};
+	itemActions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
+		m_allItemsGrid->SetSort(key, dir);
+		m_allItemsGrid->SetFilter(wxstr(m_itemsToolbar->GetFilterQuery()));
+	};
+	itemActions.clear_sort = [this]() {
+		m_allItemsGrid->ClearSort();
+		m_allItemsGrid->SetFilter(wxstr(m_itemsToolbar->GetFilterQuery()));
+	};
+	itemActions.show_labels = [this](bool show) {
+		m_allItemsGrid->SetShowLabels(show);
+	};
+	itemActions.icon_size = [this](int size) {
+		m_allItemsGrid->SetIconSize(size);
+	};
+
+	m_itemsToolbar = new TilesetGridToolbar(itemListPage, std::move(itemActions));
+	m_itemsToolbar->SetState(m_allItemsGrid->GetShowLabels(), m_allItemsGrid->GetIconSize(), false, TilesetSortKey::Name, TilesetSortDirection::Ascending, false);
+	itemListSizer->Add(m_itemsToolbar, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, padding);
+
 	itemListSizer->Add(m_allItemsGrid, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
 
 	itemListPage->SetSizer(itemListSizer);
@@ -69,16 +86,30 @@ void LibraryPanel::InitLayout() {
 	wxPanel* brushesPanel = new wxPanel(brushSplitter);
 	wxBoxSizer* brushesSizer = new wxBoxSizer(wxVERTICAL);
 
-	m_brushSearch = new wxSearchCtrl(brushesPanel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxBORDER_NONE);
-	m_brushSearch->ShowCancelButton(true);
-	m_brushSearch->SetBackgroundColour(Theme::Get(Theme::Role::Background));
-	m_brushSearch->Bind(wxEVT_TEXT, &LibraryPanel::OnBrushSearchChange, this);
-	m_brushSearch->Bind(wxEVT_SEARCHCTRL_SEARCH_BTN, &LibraryPanel::OnBrushSearchChange, this);
-	brushesSizer->Add(m_brushSearch, 0, wxEXPAND | wxALL, 2);
-
 	m_brushGrid = new ItemGridPanel(brushesPanel, this);
-	m_brushGrid->SetShowDetails(false);
-	brushesSizer->Add(new wxStaticText(brushesPanel, wxID_ANY, "Available Brushes"), 0, wxALL, 2);
+
+	TilesetGridToolbar::Actions brushActions;
+	brushActions.filter = [this](const std::string&) {
+		PopulateBrushGrid();
+	};
+	brushActions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
+		m_brushGrid->SetSort(key, dir);
+		PopulateBrushGrid();
+	};
+	brushActions.clear_sort = [this]() {
+		m_brushGrid->ClearSort();
+		PopulateBrushGrid();
+	};
+	brushActions.show_labels = [this](bool show) {
+		m_brushGrid->SetShowLabels(show);
+	};
+	brushActions.icon_size = [this](int size) {
+		m_brushGrid->SetIconSize(size);
+	};
+
+	m_brushesToolbar = new TilesetGridToolbar(brushesPanel, std::move(brushActions));
+	m_brushesToolbar->SetState(m_brushGrid->GetShowLabels(), m_brushGrid->GetIconSize(), false, TilesetSortKey::Name, TilesetSortDirection::Ascending, false);
+	brushesSizer->Add(m_brushesToolbar, 0, wxEXPAND);
 	brushesSizer->Add(m_brushGrid, 1, wxEXPAND);
 	brushesPanel->SetSizer(brushesSizer);
 
@@ -113,15 +144,6 @@ void LibraryPanel::OnItemSelected(ItemGridPanel* source, uint16_t itemId) {
 		m_listener->OnLibraryItemSelected(itemId);
 	}
 }
-
-void LibraryPanel::OnSearchChange(wxCommandEvent&) {
-	m_allItemsGrid->SetFilter(m_itemSearch->GetValue());
-}
-
-void LibraryPanel::OnBrushSearchChange(wxCommandEvent&) {
-	PopulateBrushGrid();
-}
-
 uint16_t LibraryPanel::GetSidFromCid(uint16_t cid) {
 	if (m_cidToSidCache.empty()) {
 		const auto all_ids = g_item_definitions.allIds();
@@ -143,7 +165,7 @@ void LibraryPanel::PopulateBrushGrid() {
 	std::map<uint16_t, wxString> overrides;
 	m_brushLookup.clear();
 
-	wxString query = m_brushSearch->GetValue().Lower();
+	wxString query = m_brushesToolbar ? wxstr(m_brushesToolbar->GetFilterQuery()).Lower() : wxString();
 
 	for (const auto& pair : g_brushes.getMap()) {
 		Brush* brush = pair.second.get();
@@ -174,8 +196,7 @@ void LibraryPanel::PopulateBrushGrid() {
 			}
 		}
 	}
-	m_brushGrid->SetItems(brushIds);
-	m_brushGrid->SetOverrideNames(overrides);
+	m_brushGrid->SetItems(brushIds, std::move(overrides));
 }
 
 void LibraryPanel::PopulateRelatedItems(uint16_t brushLookId) {

@@ -5,6 +5,7 @@
 #include "item_definitions/core/item_definition_store.h"
 #include "rendering/core/graphics.h"
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <vector>
 #include <memory>
@@ -14,6 +15,12 @@
 VisualSimilarityService& VisualSimilarityService::Get() {
 	static VisualSimilarityService instance;
 	return instance;
+}
+
+namespace {
+	// Suggestions below this score are visual noise: the aHash/Dice scoring
+	// maps a perfect match to 1.0, so keep only convincing candidates.
+	constexpr double kMinimumSimilarityScore = 0.55;
 }
 
 VisualSimilarityService::VisualSimilarityService() : m_timer(this), m_nextIdToIndex(1), isIndexed(false) {
@@ -103,47 +110,6 @@ static std::vector<bool> ExtractBinaryMaskRGBA(std::span<const uint8_t> rgba, in
 	return mask;
 }
 
-static std::vector<float> CalculateHistogramRGBA(std::span<const uint8_t> rgba, uint8_t threshold = 10) {
-	const int BINS = 8;
-	std::vector<int> hist(BINS * BINS * BINS, 0);
-	int pixel_count = 0;
-	size_t count = rgba.size() / 4;
-
-	for (size_t i = 0; i < count; ++i) {
-		if (rgba[i * 4 + 3] > threshold) {
-			int r_bin = std::min((int)(rgba[i * 4 + 0] * BINS / 256), BINS - 1);
-			int g_bin = std::min((int)(rgba[i * 4 + 1] * BINS / 256), BINS - 1);
-			int b_bin = std::min((int)(rgba[i * 4 + 2] * BINS / 256), BINS - 1);
-
-			int bin_idx = r_bin * BINS * BINS + g_bin * BINS + b_bin;
-			hist[bin_idx]++;
-			pixel_count++;
-		}
-	}
-
-	std::vector<float> normalized(hist.size(), 0.0f);
-	if (pixel_count > 0) {
-		for (size_t i = 0; i < hist.size(); ++i) {
-			normalized[i] = (float)hist[i] / pixel_count;
-		}
-	}
-	return normalized;
-}
-
-static float CompareHistograms(std::span<const float> h1, std::span<const float> h2) {
-	if (h1.empty() || h2.empty()) {
-		return 0.0f;
-	}
-	float intersection = 0.0f;
-	size_t minSize = std::min(h1.size(), h2.size());
-	for (size_t i = 0; i < minSize; ++i) {
-		intersection += std::min(h1[i], h2[i]);
-	}
-	return intersection;
-}
-
-#include <bit>
-
 static int HammingDistance(uint64_t h1, uint64_t h2) {
 	return std::popcount(h1 ^ h2);
 }
@@ -208,7 +174,6 @@ VisualSimilarityService::VisualItemData VisualSimilarityService::CalculateData(u
 	// Store both for robustness
 	data.aHash = CalculateAHashRGBA({composite.get(), static_cast<size_t>(w * h * 4)}, w, h);
 	data.binaryMask = ExtractBinaryMaskRGBA({composite.get(), static_cast<size_t>(w * h * 4)}, data.truePixels);
-	data.histogram = CalculateHistogramRGBA({composite.get(), static_cast<size_t>(w * h * 4)});
 
 	return data;
 }
@@ -262,7 +227,6 @@ std::vector<uint16_t> VisualSimilarityService::FindSimilar(uint16_t itemId, size
 	struct ScoredItem {
 		uint16_t id;
 		double score;
-		float histogram;
 		bool operator<(const ScoredItem& other) const {
 			// mappingtool: sort by similarity_score DESC, then ID ASC
 			if (std::abs(score - other.score) > 0.00001) {
@@ -282,7 +246,6 @@ std::vector<uint16_t> VisualSimilarityService::FindSimilar(uint16_t itemId, size
 			}
 
 			double score = 0.0;
-			float histScore = CompareHistograms(sourceData.histogram, target.histogram);
 
 			if (sourceData.isOpaque) {
 				// Strategy A: aHash for opaque sprites
@@ -337,8 +300,8 @@ std::vector<uint16_t> VisualSimilarityService::FindSimilar(uint16_t itemId, size
 				}
 			}
 
-			if (score > 0.0) {
-				candidates.push_back({ target.id, score, histScore });
+			if (score >= kMinimumSimilarityScore) {
+				candidates.push_back({ target.id, score });
 			}
 		}
 	}

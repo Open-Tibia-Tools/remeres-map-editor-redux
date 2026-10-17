@@ -17,7 +17,7 @@ public:
 	virtual ~ItemGridPanel();
 
 	// Data Management
-	void SetItems(const std::vector<uint16_t>& items);
+	void SetItems(const std::vector<uint16_t>& items, std::map<uint16_t, wxString> names = {});
 	void SetFilter(const wxString& filter);
 
 	// VirtualItemGrid Implementation
@@ -25,6 +25,7 @@ public:
 	uint16_t GetItem(size_t index) const override;
 	wxString GetItemName(size_t index) const override;
 	void OnItemSelected(int index) override;
+	std::string GetSortName(uint16_t id) const override;
 
 	// Overrides
 	void OnMotion(wxMouseEvent& event) override; // Drag&Drop Hook

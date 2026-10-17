@@ -33,6 +33,7 @@ class Editor;
 class Tile;
 class House;
 class Waypoint;
+class Town;
 class Change;
 class Action;
 class BatchAction;
@@ -43,6 +44,7 @@ enum ChangeType {
 	CHANGE_TILE,
 	CHANGE_MOVE_HOUSE_EXIT,
 	CHANGE_MOVE_WAYPOINT,
+	CHANGE_MOVE_TOWN_TEMPLE,
 };
 
 struct HouseExitChangeData {
@@ -55,9 +57,14 @@ struct WaypointChangeData {
 	Position pos;
 };
 
+struct TownTempleChangeData {
+	uint32_t townId;
+	Position pos;
+};
+
 class Change {
 private:
-	using Data = std::variant<std::monostate, std::unique_ptr<Tile>, HouseExitChangeData, WaypointChangeData>;
+	using Data = std::variant<std::monostate, std::unique_ptr<Tile>, HouseExitChangeData, WaypointChangeData, TownTempleChangeData>;
 	ChangeType type;
 	Position position;
 	Data data;
@@ -69,6 +76,7 @@ public:
 	Change(std::unique_ptr<Tile> tile, const Position& pos);
 	static Change* Create(House* house, const Position& where);
 	static Change* Create(Waypoint* wp, const Position& where);
+	static Change* Create(Town* town, const Position& where);
 	~Change();
 	void clear();
 
@@ -78,6 +86,7 @@ public:
 	const Tile* getTile() const;
 	const HouseExitChangeData* getHouseExitData() const;
 	const WaypointChangeData* getWaypointData() const;
+	const TownTempleChangeData* getTownTempleData() const;
 
 	// Get memory footprint
 	uint32_t memsize() const;

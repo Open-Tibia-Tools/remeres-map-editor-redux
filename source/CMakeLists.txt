@@ -57,6 +57,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/brushes/wall/wall_brush_loader.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/waypoint/waypoint_brush.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/zone/zone_brush.h
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/town/town_temple_brush.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/action.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/action_queue.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/copybuffer.h
@@ -172,8 +173,12 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_zones.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/house/house_palette.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/house/edit_house_dialog.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/town/town_palette.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/town/edit_town_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_window.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/controls/virtual_brush_grid.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/controls/tileset_grid_toolbar.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/controls/palette_search_ctrl.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_palette_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/animator.h
@@ -327,7 +332,6 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/find_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/missing_items_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/map_properties_window.h
-    ${CMAKE_CURRENT_LIST_DIR}/ui/map/towns_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/import_map_window.h
 
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/export_minimap_window.h
@@ -374,7 +378,6 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_layout.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/item_properties_window.h
     ${CMAKE_CURRENT_LIST_DIR}/util/image_manager.h
-    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_items_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/item_grid_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/library_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_card_renderer.h
@@ -399,9 +402,11 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_surface.h
     ${CMAKE_CURRENT_LIST_DIR}/util/common.h
+    ${CMAKE_CURRENT_LIST_DIR}/util/grid_view_options.h
     ${CMAKE_CURRENT_LIST_DIR}/util/json.h
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_canvas.h
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_listbox.h
+    ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_table_ctrl.h
     ${CMAKE_CURRENT_LIST_DIR}/util/phase_profiler.h
     ${CMAKE_CURRENT_LIST_DIR}/util/virtual_item_grid.h
 )
@@ -490,6 +495,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/brushes/wall/wall_brush_arrays.cpp
     ${CMAKE_CURRENT_LIST_DIR}/brushes/waypoint/waypoint_brush.cpp
     ${CMAKE_CURRENT_LIST_DIR}/brushes/zone/zone_brush.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/town/town_temple_brush.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/action.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/action_queue.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/copybuffer.cpp
@@ -588,8 +594,12 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_zones.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/house/house_palette.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/house/edit_house_dialog.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/town/town_palette.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/town/edit_town_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/controls/virtual_brush_grid.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/controls/tileset_grid_toolbar.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/controls/palette_search_ctrl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_palette_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/animator.cpp
@@ -726,7 +736,6 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/find_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/missing_items_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/map_properties_window.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ui/map/towns_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/import_map_window.cpp
 
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/export_minimap_window.cpp
@@ -773,7 +782,6 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_layout.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/item_properties_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/positionctrl.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_items_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/item_grid_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/library_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_card_renderer.cpp
@@ -798,6 +806,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/util/common.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_canvas.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_listbox.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_table_ctrl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/virtual_item_grid.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_surface.cpp

@@ -2,11 +2,7 @@
 #include "ui/gui.h"
 #include "game/materials.h"
 #include "palette/palette_window.h"
-#include "util/image_manager.h"
-#include "ui/theme.h"
-#include <spdlog/spdlog.h>
-#include <wx/menu.h>
-#include <wx/srchctrl.h>
+#include "palette/controls/tileset_grid_toolbar.h"
 
 TilesetSortKey BrushPalettePanel::s_defaultSortKey = TilesetSortKey::Name;
 TilesetSortDirection BrushPalettePanel::s_defaultSortDir = TilesetSortDirection::Ascending;
@@ -25,28 +21,6 @@ std::string toLowerString(std::string_view s) {
 	}
 	return res;
 }
-
-class PaletteSearchCtrl final : public wxSearchCtrl {
-public:
-	using wxSearchCtrl::wxSearchCtrl;
-
-	bool IsTopNavigationDomain(NavigationKind kind) const override {
-		if (kind == Navigation_Accel) {
-			return true;
-		}
-		return wxSearchCtrl::IsTopNavigationDomain(kind);
-	}
-
-#ifdef __WXMSW__
-	bool MSWTranslateMessage(WXMSG* msg) override {
-		return false;
-	}
-
-	bool MSWShouldPreProcessMessage(WXMSG* msg) override {
-		return false;
-	}
-#endif
-};
 
 class PaletteChoicebook final : public wxChoicebook {
 public:
@@ -171,10 +145,7 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	PalettePanel(parent, id),
 	palette_name(palette.name),
 	m_paletteDef(&palette),
-	choicebook(nullptr),
-	toolbar(nullptr),
-	m_searchCtrl(nullptr),
-	m_searchToolbar(nullptr) {
+	choicebook(nullptr) {
 	EnsureDefaultsLoaded();
 	LoadPaletteFilters();
 	m_sortKey = s_defaultSortKey;
@@ -197,72 +168,49 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	ts_sizer->Add(tmp_choicebook, 1, wxEXPAND);
 	topsizer->Add(ts_sizer, 1, wxEXPAND);
 
-	const wxSize iconSize = wxWindow::FromDIP(wxSize(16, 16), this);
-	const long toolbarStyle = (wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_PLAIN_BACKGROUND) & ~wxAUI_TB_GRIPPER;
-	toolbar = newd wxAuiToolBar(tmp_choicebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, toolbarStyle);
-	toolbar->SetToolBitmapSize(iconSize);
-	toolbar->SetMargins(1, 1, 1, 1);
-	toolbar->SetToolBorderPadding(2);
-	toolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
-
-	const wxColour iconColor = Theme::Get(Theme::Role::Text);
-	toolbar->AddTool(TOOL_SORT_AZ, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_DOWN, iconSize, iconColor), "Sort ascending (A-Z)", wxITEM_NORMAL);
-	toolbar->AddTool(TOOL_SORT_ZA, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_UP, iconSize, iconColor), "Sort descending (Z-A)", wxITEM_NORMAL);
-	toolbar->AddTool(TOOL_TOGGLE_LABELS, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_TAG, iconSize, iconColor), "Toggle labels", wxITEM_CHECK);
-	toolbar->AddTool(TOOL_CHANGE_SIZE, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_MAXIMIZE, iconSize, iconColor), "Tile size", wxITEM_NORMAL);
-
-	toolbar->ToggleTool(TOOL_TOGGLE_LABELS, m_showLabels);
-	toolbar->Realize();
-	toolbar->Bind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
-
-	m_searchToolbar = newd wxAuiToolBar(tmp_choicebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, toolbarStyle);
-	m_searchToolbar->SetToolBitmapSize(iconSize);
-	m_searchToolbar->SetMargins(1, 1, 1, 1);
-	m_searchToolbar->SetToolBorderPadding(2);
-	m_searchToolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
-	m_searchToolbar->AddTool(TOOL_FILTER_ALL, wxEmptyString, IMAGE_MANAGER.GetBitmap(ICON_FILTER, iconSize, iconColor), "Filter all tilesets and palettes", wxITEM_CHECK);
-	m_searchToolbar->ToggleTool(TOOL_FILTER_ALL, m_filterAll);
-	m_searchToolbar->Realize();
-	m_searchToolbar->Bind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
-
-	m_searchCtrl = newd PaletteSearchCtrl(tmp_choicebook, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
-	m_searchCtrl->SetDescriptiveText("Search...");
-	m_searchCtrl->ShowCancelButton(true);
-	m_searchCtrl->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
-	m_searchCtrl->SetForegroundColour(Theme::Get(Theme::Role::Text));
-	m_searchCtrl->SetMinSize(wxSize(60, -1));
-	if (!m_filterQuery.empty()) {
-		m_searchCtrl->ChangeValue(wxstr(m_filterQuery));
-	}
-
-	m_searchCtrl->Bind(wxEVT_TEXT, &BrushPalettePanel::OnSearchText, this);
-	m_searchCtrl->Bind(wxEVT_SEARCHCTRL_CANCEL_BTN, &BrushPalettePanel::OnSearchCancel, this);
-	m_searchCtrl->Bind(wxEVT_SEARCHCTRL_SEARCH_BTN, &BrushPalettePanel::OnSearchText, this);
-	m_searchCtrl->Bind(wxEVT_TEXT_ENTER, &BrushPalettePanel::OnSearchText, this);
-
-	auto bindEvents = [this](wxWindow* w) {
-		if (!w) {
-			return;
-		}
-		w->Bind(wxEVT_CHAR_HOOK, [this](wxKeyEvent& evt) {
-			if (evt.GetKeyCode() == WXK_ESCAPE) {
-				if (m_searchCtrl && !m_searchCtrl->GetValue().empty()) {
-					ResetFilter();
-					return;
-				}
-			}
-			evt.Skip();
-		});
-		w->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& evt) {
+	{
+		TilesetGridToolbar::Actions actions;
+		actions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
+			SetSort(key, dir);
+		};
+		actions.clear_sort = [this]() {
+			ClearSort();
+		};
+		actions.show_labels = [this](bool show) {
+			SetShowLabels(show);
+		};
+		actions.icon_size = [this](int size) {
+			SetTileSize(size);
+		};
+		actions.filter = [this](const std::string& query) {
+			m_filterQuery = query;
+			ApplyFilter();
+		};
+		actions.filter_committed = [this]() {
+			CommitFilter();
+		};
+		actions.filter_cleared = [this]() {
+			ResetFilter();
+		};
+		actions.filter_focus_lost = [this]() {
 			SavePaletteFilters();
-			evt.Skip();
-		});
-	};
-	bindEvents(m_searchCtrl);
-	for (wxWindow* child : m_searchCtrl->GetChildren()) {
-		bindEvents(child);
-	}
+		};
+		actions.filter_all = [this](bool all) {
+			m_filterAll = all;
+			s_defaultFilterAll = all;
+			g_settings.setInteger(Config::PALETTE_FILTER_ALL, all ? 1 : 0);
+			SavePaletteFilters();
+			if (choicebook && choicebook->GetChoiceCtrl()) {
+				choicebook->GetChoiceCtrl()->Enable(!all || m_filterQuery.empty());
+			}
+			ApplyFilter();
+		};
 
+		gridToolbar = newd TilesetGridToolbar(tmp_choicebook, std::move(actions), true);
+		gridToolbar->SetStacked(true);
+		gridToolbar->SetState(m_showLabels, m_tileSize, m_hasSort, m_sortKey, m_sortDir, m_filterAll);
+		gridToolbar->SetFilterQuery(m_filterQuery);
+	}
 	wxChoice* choice = tmp_choicebook->GetChoiceCtrl();
 	auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(tmp_choicebook->GetControlSizer());
 	if (ctrlSizer && choice) {
@@ -271,13 +219,8 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 
 		wxBoxSizer* topRowSizer = newd wxBoxSizer(wxHORIZONTAL);
 		topRowSizer->Add(choice, 1, wxALIGN_CENTER_VERTICAL);
-		topRowSizer->Add(toolbar, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
 		ctrlSizer->Add(topRowSizer, 0, wxEXPAND | wxBOTTOM, 2);
-
-		wxBoxSizer* searchRowSizer = newd wxBoxSizer(wxHORIZONTAL);
-		searchRowSizer->Add(m_searchCtrl, 1, wxALIGN_CENTER_VERTICAL);
-		searchRowSizer->Add(m_searchToolbar, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
-		ctrlSizer->Add(searchRowSizer, 0, wxEXPAND | wxBOTTOM, 2);
+		ctrlSizer->Add(gridToolbar, 0, wxEXPAND | wxBOTTOM, 2);
 
 		if (m_filterAll && !m_filterQuery.empty()) {
 			choice->Enable(false);
@@ -307,12 +250,6 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 
 BrushPalettePanel::~BrushPalettePanel() {
 	SavePaletteFilters();
-	if (toolbar) {
-		toolbar->Unbind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
-	}
-	if (m_searchToolbar) {
-		m_searchToolbar->Unbind(wxEVT_TOOL, &BrushPalettePanel::OnToolClick, this);
-	}
 }
 
 
@@ -507,15 +444,12 @@ void BrushPalettePanel::OnSwitchIn() {
 		ClearSort();
 	}
 
-	if (m_searchToolbar && m_searchToolbar->GetToolToggled(TOOL_FILTER_ALL) != m_filterAll) {
-		m_searchToolbar->ToggleTool(TOOL_FILTER_ALL, m_filterAll);
-		m_searchToolbar->Refresh();
+	if (gridToolbar) {
+		gridToolbar->SetState(m_showLabels, m_tileSize, m_hasSort, m_sortKey, m_sortDir, m_filterAll);
+		gridToolbar->SetFilterQuery(m_filterQuery);
 	}
 	if (choicebook && choicebook->GetChoiceCtrl()) {
 		choicebook->GetChoiceCtrl()->Enable(!m_filterAll || m_filterQuery.empty());
-	}
-	if (m_searchCtrl && m_searchCtrl->GetValue().ToStdString() != m_filterQuery) {
-		m_searchCtrl->ChangeValue(wxstr(m_filterQuery));
 	}
 
 	LoadCurrentContents();
@@ -572,9 +506,8 @@ void BrushPalettePanel::SetShowLabels(bool show) {
 	g_settings.setInteger(Config::PALETTE_SHOW_LABELS, show ? 1 : 0);
 	g_settings.save();
 
-	if (toolbar && toolbar->GetToolToggled(TOOL_TOGGLE_LABELS) != show) {
-		toolbar->ToggleTool(TOOL_TOGGLE_LABELS, show);
-		toolbar->Refresh();
+	if (gridToolbar) {
+		gridToolbar->SetState(m_showLabels, m_tileSize, m_hasSort, m_sortKey, m_sortDir, m_filterAll);
 	}
 
 	if (!choicebook) {
@@ -609,147 +542,45 @@ void BrushPalettePanel::SetTileSize(int sizePx) {
 }
 
 void BrushPalettePanel::ApplyTheme() {
-	const wxSize iconSize = wxWindow::FromDIP(wxSize(16, 16), this);
-	const wxColour iconColor = Theme::Get(Theme::Role::Text);
-	if (toolbar) {
-		toolbar->SetToolBitmap(TOOL_SORT_AZ, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_DOWN, iconSize, iconColor));
-		toolbar->SetToolBitmap(TOOL_SORT_ZA, IMAGE_MANAGER.GetBitmap(ICON_SORT_ALPHA_UP, iconSize, iconColor));
-		toolbar->SetToolBitmap(TOOL_TOGGLE_LABELS, IMAGE_MANAGER.GetBitmap(ICON_TAG, iconSize, iconColor));
-		toolbar->SetToolBitmap(TOOL_CHANGE_SIZE, IMAGE_MANAGER.GetBitmap(ICON_MAXIMIZE, iconSize, iconColor));
-		toolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
-		toolbar->SetForegroundColour(Theme::Get(Theme::Role::Text));
-		toolbar->Refresh();
-	}
-	if (m_searchToolbar) {
-		m_searchToolbar->SetToolBitmap(TOOL_FILTER_ALL, IMAGE_MANAGER.GetBitmap(ICON_FILTER, iconSize, iconColor));
-		m_searchToolbar->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
-		m_searchToolbar->SetForegroundColour(Theme::Get(Theme::Role::Text));
-		m_searchToolbar->Refresh();
-	}
-	if (m_searchCtrl) {
-		m_searchCtrl->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
-		m_searchCtrl->SetForegroundColour(Theme::Get(Theme::Role::Text));
-		for (wxWindow* child : m_searchCtrl->GetChildren()) {
-			if (child) {
-				child->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
-				child->SetForegroundColour(Theme::Get(Theme::Role::Text));
-				child->Refresh();
-			}
-		}
-		m_searchCtrl->Refresh();
+	if (gridToolbar) {
+		gridToolbar->ApplyTheme();
 	}
 }
 
-void BrushPalettePanel::OnToolClick(wxCommandEvent& event) {
-	int id = event.GetId();
-	if (id == TOOL_SORT_AZ) {
-		OnSortButtonClick(TilesetSortDirection::Ascending, id);
-	} else if (id == TOOL_SORT_ZA) {
-		OnSortButtonClick(TilesetSortDirection::Descending, id);
-	} else if (id == TOOL_TOGGLE_LABELS) {
-		SetShowLabels(toolbar ? toolbar->GetToolToggled(TOOL_TOGGLE_LABELS) : event.IsChecked());
-	} else if (id == TOOL_CHANGE_SIZE) {
-		OnSizeButtonClick(id);
-	} else if (id == TOOL_FILTER_ALL) {
-		m_filterAll = m_searchToolbar ? m_searchToolbar->GetToolToggled(TOOL_FILTER_ALL) : event.IsChecked();
-		s_defaultFilterAll = m_filterAll;
-		g_settings.setInteger(Config::PALETTE_FILTER_ALL, m_filterAll ? 1 : 0);
-		SavePaletteFilters();
-		if (choicebook && choicebook->GetChoiceCtrl()) {
-			choicebook->GetChoiceCtrl()->Enable(!m_filterAll || m_filterQuery.empty());
-		}
-		ApplyFilter();
+void BrushPalettePanel::CommitFilter() {
+	if (!choicebook) {
+		return;
 	}
-}
 
-void BrushPalettePanel::OnSortButtonClick(TilesetSortDirection dir, int toolId) {
-	wxMenu menu;
-	auto* itemID = menu.AppendCheckItem(MENU_SORT_BY_ID, "By ID");
-	auto* itemName = menu.AppendCheckItem(MENU_SORT_BY_NAME, "By Name");
-	auto* itemDefault = menu.AppendCheckItem(MENU_SORT_DEFAULT, "Default");
-	if (!m_hasSort) {
-		itemDefault->Check(true);
-	} else if (m_sortKey == TilesetSortKey::ID) {
-		itemID->Check(true);
+	SavePaletteFilters();
+
+	wxWindow* w = GetParent();
+	PaletteWindow* pw = nullptr;
+	while (w) {
+		pw = dynamic_cast<PaletteWindow*>(w);
+		if (pw) {
+			g_gui.ActivatePalette(pw);
+			break;
+		}
+		w = w->GetParent();
+	}
+
+	BrushPanel* panel = dynamic_cast<BrushPanel*>(choicebook->GetCurrentPage());
+	if (!panel) {
+		return;
+	}
+
+	panel->SelectFirstBrush();
+	Brush* brush = panel->GetSelectedBrush();
+	if (!brush) {
+		return;
+	}
+
+	if (m_filterAll && pw) {
+		pw->JumpToBrush(brush, palette_name);
 	} else {
-		itemName->Check(true);
+		g_gui.SelectBrushInternal(brush);
 	}
-
-	wxRect rect = toolbar->GetToolRect(toolId);
-	wxPoint pos(rect.x, rect.y + rect.height);
-	int selected = toolbar->GetPopupMenuSelectionFromUser(menu, pos);
-	if (selected == MENU_SORT_BY_ID) {
-		SetSort(TilesetSortKey::ID, dir);
-	} else if (selected == MENU_SORT_BY_NAME) {
-		SetSort(TilesetSortKey::Name, dir);
-	} else if (selected == MENU_SORT_DEFAULT) {
-		ClearSort();
-	}
-}
-
-void BrushPalettePanel::OnSizeButtonClick(int toolId) {
-	wxMenu menu;
-	auto* item32 = menu.AppendCheckItem(MENU_SIZE_32, "32x32");
-	auto* item64 = menu.AppendCheckItem(MENU_SIZE_64, "64x64");
-	auto* item128 = menu.AppendCheckItem(MENU_SIZE_128, "128x128");
-
-	if (m_tileSize == 64) {
-		item64->Check(true);
-	} else if (m_tileSize == 128) {
-		item128->Check(true);
-	} else {
-		item32->Check(true);
-	}
-
-	wxRect rect = toolbar->GetToolRect(toolId);
-	wxPoint pos(rect.x, rect.y + rect.height);
-	int selected = toolbar->GetPopupMenuSelectionFromUser(menu, pos);
-	if (selected == MENU_SIZE_32) {
-		SetTileSize(32);
-	} else if (selected == MENU_SIZE_64) {
-		SetTileSize(64);
-	} else if (selected == MENU_SIZE_128) {
-		SetTileSize(128);
-	}
-}
-
-void BrushPalettePanel::OnSearchText(wxCommandEvent& event) {
-	if (m_searchCtrl) {
-		m_filterQuery = m_searchCtrl->GetValue().ToStdString();
-		ApplyFilter();
-
-		const auto eventType = event.GetEventType();
-		if ((eventType == wxEVT_TEXT_ENTER || eventType == wxEVT_SEARCHCTRL_SEARCH_BTN) && choicebook) {
-			SavePaletteFilters();
-			wxWindow* w = GetParent();
-			PaletteWindow* pw = nullptr;
-			while (w) {
-				pw = dynamic_cast<PaletteWindow*>(w);
-				if (pw) {
-					g_gui.ActivatePalette(pw);
-					break;
-				}
-				w = w->GetParent();
-			}
-
-			BrushPanel* panel = dynamic_cast<BrushPanel*>(choicebook->GetCurrentPage());
-			if (panel) {
-				panel->SelectFirstBrush();
-				Brush* brush = panel->GetSelectedBrush();
-				if (brush) {
-					if (m_filterAll && pw) {
-						pw->JumpToBrush(brush, palette_name);
-					} else {
-						g_gui.SelectBrushInternal(brush);
-					}
-				}
-			}
-		}
-	}
-}
-
-void BrushPalettePanel::OnSearchCancel(wxCommandEvent& event) {
-	ResetFilter();
 }
 
 void BrushPalettePanel::ApplyFilter() {
@@ -787,8 +618,8 @@ void BrushPalettePanel::ApplyFilter() {
 }
 
 void BrushPalettePanel::ResetFilter() {
-	if (m_searchCtrl) {
-		m_searchCtrl->ChangeValue(wxEmptyString);
+	if (gridToolbar) {
+		gridToolbar->SetFilterQuery(std::string());
 	}
 	m_filterQuery.clear();
 	SavePaletteFilters();
@@ -801,8 +632,8 @@ bool BrushPalettePanel::JumpToTilesetAndBrush(std::string_view tilesetName, cons
 	}
 
 	// 1. Clear active filter on this panel
-	if (m_searchCtrl) {
-		m_searchCtrl->ChangeValue(wxEmptyString);
+	if (gridToolbar) {
+		gridToolbar->SetFilterQuery(std::string());
 	}
 	m_filterQuery.clear();
 	SavePaletteFilters();

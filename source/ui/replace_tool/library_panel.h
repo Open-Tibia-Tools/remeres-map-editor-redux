@@ -2,9 +2,9 @@
 #define RME_LIBRARY_PANEL_H_
 
 #include "ui/replace_tool/item_grid_panel.h"
+#include "palette/controls/tileset_grid_toolbar.h"
 #include <wx/wx.h>
 #include <wx/notebook.h>
-#include <wx/srchctrl.h>
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -28,15 +28,13 @@ private:
 	void InitLayout();
 	void PopulateBrushGrid();
 	void PopulateRelatedItems(uint16_t brushLookId);
-	void OnSearchChange(wxCommandEvent& event);
-	void OnBrushSearchChange(wxCommandEvent& event);
 	uint16_t GetSidFromCid(uint16_t cid);
 
 	Listener* m_listener;
 
 	wxNotebook* m_notebook;
-	wxSearchCtrl* m_itemSearch;
-	wxSearchCtrl* m_brushSearch;
+	TilesetGridToolbar* m_itemsToolbar = nullptr;
+	TilesetGridToolbar* m_brushesToolbar = nullptr;
 	ItemGridPanel* m_allItemsGrid;
 	ItemGridPanel* m_brushGrid;
 	ItemGridPanel* m_relatedGrid;

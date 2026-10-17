@@ -492,6 +492,7 @@ bool EditorManager::DoUndo() {
 		g_status.SetStatusText("Undo action");
 		g_gui.UpdateMinimap();
 		g_gui.UpdateZonePalette(0);
+		g_gui.UpdateHousePalette(0);
 		g_gui.root->UpdateMenubar();
 		g_gui.root->Refresh();
 		return true;
@@ -509,6 +510,7 @@ bool EditorManager::DoRedo() {
 		g_status.SetStatusText("Redo action");
 		g_gui.UpdateMinimap();
 		g_gui.UpdateZonePalette(0);
+		g_gui.UpdateHousePalette(0);
 		g_gui.root->UpdateMenubar();
 		g_gui.root->Refresh();
 		return true;

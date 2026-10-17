@@ -25,6 +25,7 @@
 #include "editor/hotkey_manager.h"
 #include "editor/editor.h"
 #include "brushes/brush.h"
+#include "brushes/town/town_temple_brush.h"
 
 void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 	switch (event.GetKeyCode()) {
@@ -108,6 +109,19 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 		case 'd':
 		case 'D': {
 			canvas->keyCode = WXK_CONTROL_D;
+			break;
+		}
+		case WXK_ESCAPE: {
+			if (g_gui.GetCurrentBrush() && g_gui.GetCurrentBrush()->is<TownTempleBrush>()) {
+				auto* temple_brush = g_gui.GetCurrentBrush()->as<TownTempleBrush>();
+				if (temple_brush && temple_brush->hasPlacementCallback()) {
+					temple_brush->invokeCancelCallback();
+				}
+				g_gui.SelectPreviousBrush();
+				g_gui.SetStatusText("Temple placement cancelled.");
+				break;
+			}
+			event.Skip();
 			break;
 		}
 		default: {

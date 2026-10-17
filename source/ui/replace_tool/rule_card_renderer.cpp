@@ -10,8 +10,6 @@
 #include "ui/replace_tool/rule_builder_panel.h"
 #include "ui/theme.h"
 
-const int RuleCardRenderer::CARD_W = RuleCardRenderer::ITEM_SIZE + 20;
-
 void RuleCardRenderer::DrawTrashIcon(NVGcontext* vg, float x, float y, float size, bool highlight) {
 	nvgBeginPath(vg);
 	float w = size * 0.6f;
@@ -222,7 +220,7 @@ void RuleCardRenderer::DrawNewRuleArea(NVGcontext* vg, float width, float y, boo
 	NVGcolor accentCol = NvgUtils::ToNvColor(Theme::Get(Theme::Role::Accent));
 	NVGcolor subTextCol = NvgUtils::ToNvColor(Theme::Get(Theme::Role::TextSubtle));
 
-	float dropH = 60.0f;
+	float dropH = static_cast<float>(NEW_RULE_AREA_H);
 	float cardX = CARD_MARGIN_X;
 	float cardW = width - CARD_MARGIN_X * 2;
 

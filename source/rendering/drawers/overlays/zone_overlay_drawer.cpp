@@ -13,6 +13,7 @@
 #include "map/tile.h"
 #include "game/item.h"
 #include "game/spawn.h"
+#include "game/waypoints.h"
 #include "app/settings.h"
 #include <algorithm>
 #include <cmath>
@@ -775,6 +776,45 @@ void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
 			sprite_batch.draw(b.x, b.y, b.w, b.h, *white_pixel, 1.0f, 1.0f, 1.0f, b.alpha,
 			                  INDICATOR_SPAWN_BASE, 0u, b.depth);
 		}
+	}
+}
+
+void ZoneOverlayDrawer::drawFloorWaypoints(SpriteBatch& sprite_batch,
+                                           int z,
+                                           const RenderView& view,
+                                           const Map& map,
+                                           const DrawingOptions& options,
+                                           const AtlasManager& atlas) {
+	if (options.ingame || !options.show_waypoints || map.waypoints.empty() || view.zoom > kZoomLODCutoff) {
+		return;
+	}
+
+	const AtlasRegion* white_pixel = atlas.getWhitePixel();
+	if (!white_pixel) {
+		return;
+	}
+
+	for (const auto& [wp_name, wp_ptr] : map.waypoints) {
+		if (!wp_ptr) {
+			continue;
+		}
+		const Position& pos = wp_ptr->pos;
+		if (pos.z != z || pos == Position()) {
+			continue;
+		}
+		int draw_x = 0;
+		int draw_y = 0;
+		if (!view.IsTileVisible(pos.x, pos.y, pos.z, draw_x, draw_y)) {
+			continue;
+		}
+
+		sprite_batch.draw(
+			static_cast<float>(draw_x), static_cast<float>(draw_y),
+			32.0f, 32.0f,
+			*white_pixel,
+			1.0f, 1.0f, 1.0f, 1.0f,
+			INDICATOR_WAYPOINT_BASE, 0u, 0.0f
+		);
 	}
 }
 

@@ -9,10 +9,17 @@
 
 StatusManager g_status;
 
-void StatusManager::SetStatusText(const wxString& text, int field) {
+void StatusManager::SetStatusText(const wxString& text, int field, int duration_ms) {
 	if (g_gui.root) {
 		g_gui.root->SetStatusText(text, field);
 	}
+	if (field == 1 && duration_ms > 0) {
+		message_expiry_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(duration_ms);
+	}
+}
+
+bool StatusManager::HasActiveMessage() const {
+	return std::chrono::steady_clock::now() < message_expiry_;
 }
 
 void StatusManager::SetTitle(const wxString& title) {

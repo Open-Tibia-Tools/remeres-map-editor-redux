@@ -511,6 +511,15 @@ void MapCanvas::UpdateZoomStatus() {
 	ZoomController::UpdateStatus(this);
 }
 
+void MapCanvas::UpdateCursor() {
+	Brush* brush = g_gui.GetCurrentBrush();
+	if (brush && brush->getCursor() == BrushCursor::Crosshair) {
+		SetCursor(wxCursor(wxCURSOR_CROSS));
+	} else {
+		SetCursor(wxNullCursor);
+	}
+}
+
 void MapCanvas::SyncCursorHoverState() {
 	int mouse_map_x, mouse_map_y;
 	MouseToMap(&mouse_map_x, &mouse_map_y);
@@ -520,6 +529,7 @@ void MapCanvas::SyncCursorHoverState() {
 	last_cursor_map_y = mouse_map_y;
 	last_cursor_map_z = floor;
 
+	UpdateCursor();
 	g_gui.UpdateAutoborderPreview(Position(mouse_map_x, mouse_map_y, floor));
 	UpdatePositionStatus(cursor_x, cursor_y);
 	UpdateZoomStatus();

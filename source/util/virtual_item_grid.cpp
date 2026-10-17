@@ -7,11 +7,23 @@
 #include <algorithm>
 #include <format>
 #include <cmath>
+#include <ranges>
+
+namespace {
+	// Two lines of 12 px text plus breathing room, matching the palette grid
+	// label area, and the padding above the icon inside a card.
+	constexpr int kLabelArea = 32;
+	constexpr int kIconTopPadding = 8;
+	constexpr int kIconBottomPadding = 4;
+	constexpr int kMinIconSize = 16;
+	constexpr int kMaxIconSize = 128;
+} // namespace
 
 VirtualItemGrid::VirtualItemGrid(wxWindow* parent, wxWindowID id) :
 	NanoVGCanvas(parent, id, wxVSCROLL | wxWANTS_CHARS),
-	m_itemSize(80), // Larger for text area
 	m_padding(6),
+	m_iconSize(32),
+	m_showLabels(true),
 	m_columns(1),
 	m_selectedIndex(-1),
 	m_hoverIndex(-1),
@@ -20,12 +32,77 @@ VirtualItemGrid::VirtualItemGrid(wxWindow* parent, wxWindowID id) :
 	Bind(wxEVT_LEFT_DOWN, &VirtualItemGrid::OnMouseDown, this);
 	Bind(wxEVT_MOTION, &VirtualItemGrid::OnMotion, this);
 	Bind(wxEVT_LEAVE_WINDOW, &VirtualItemGrid::OnLeave, this);
-
-	// Optional timer for smooth effects if needed
-	// Bind(wxEVT_TIMER, &VirtualItemGrid::OnTimer, this);
 }
 
 VirtualItemGrid::~VirtualItemGrid() {
+}
+
+int VirtualItemGrid::CardSize() const {
+	return kIconTopPadding + m_iconSize + (m_showLabels ? kLabelArea : 0) + kIconBottomPadding;
+}
+
+void VirtualItemGrid::SetShowLabels(bool show) {
+	if (m_showLabels == show) {
+		return;
+	}
+	m_showLabels = show;
+	RefreshGrid();
+}
+
+void VirtualItemGrid::SetIconSize(int sizePx) {
+	const int clamped = std::clamp(sizePx, kMinIconSize, kMaxIconSize);
+	if (m_iconSize == clamped) {
+		return;
+	}
+	m_iconSize = clamped;
+	RefreshGrid();
+}
+
+void VirtualItemGrid::SetSort(TilesetSortKey key, TilesetSortDirection dir) {
+	m_sortKey = key;
+	m_sortDir = dir;
+	m_hasSort = true;
+}
+
+void VirtualItemGrid::ClearSort() {
+	m_hasSort = false;
+}
+
+void VirtualItemGrid::ApplySortTo(std::vector<uint16_t>& items) const {
+	if (!m_hasSort || items.size() < 2) {
+		return;
+	}
+
+	const bool ascending = m_sortDir == TilesetSortDirection::Ascending;
+	if (m_sortKey == TilesetSortKey::ID) {
+		std::ranges::sort(items, [ascending](uint16_t a, uint16_t b) {
+			return ascending ? a < b : a > b;
+		});
+		return;
+	}
+
+	// Name ordering: resolve the names once instead of on every comparison.
+	std::vector<std::pair<std::string, uint16_t>> keyed;
+	keyed.reserve(items.size());
+	for (uint16_t id : items) {
+		keyed.emplace_back(GetSortName(id), id);
+	}
+
+	std::ranges::sort(keyed, [ascending](const auto& lhs, const auto& rhs) {
+		if (lhs.first != rhs.first) {
+			return ascending ? lhs.first < rhs.first : lhs.first > rhs.first;
+		}
+		return lhs.second < rhs.second;
+	});
+
+	std::ranges::transform(keyed, items.begin(), [](const auto& entry) {
+		return entry.second;
+	});
+}
+
+std::string VirtualItemGrid::GetSortName(uint16_t id) const {
+	const auto definition = g_item_definitions.get(id);
+	return definition ? std::string(definition.name()) : std::string();
 }
 
 void VirtualItemGrid::RefreshGrid() {
@@ -39,10 +116,11 @@ void VirtualItemGrid::UpdateLayout() {
 		width = 200;
 	}
 
-	m_columns = std::max(1, (width - m_padding) / (m_itemSize + m_padding));
+	const int card = CardSize();
+	m_columns = std::max(1, (width - m_padding) / (card + m_padding));
 	size_t count = GetItemCount();
 	int rows = (count + m_columns - 1) / m_columns;
-	int contentHeight = rows * (m_itemSize + m_padding) + m_padding;
+	int contentHeight = rows * (card + m_padding) + m_padding;
 
 	UpdateScrollbar(contentHeight);
 }
@@ -52,10 +130,11 @@ wxSize VirtualItemGrid::DoGetBestClientSize() const {
 }
 
 int VirtualItemGrid::HitTest(int x, int y) const {
+	const int card = CardSize();
 	int scrollPos = GetScrollPosition();
 	int realY = y + scrollPos;
-	int col = (x - m_padding) / (m_itemSize + m_padding);
-	int row = (realY - m_padding) / (m_itemSize + m_padding);
+	int col = (x - m_padding) / (card + m_padding);
+	int row = (realY - m_padding) / (card + m_padding);
 
 	if (col < 0 || col >= m_columns || row < 0) {
 		return -1;
@@ -73,13 +152,14 @@ int VirtualItemGrid::HitTest(int x, int y) const {
 }
 
 wxRect VirtualItemGrid::GetItemRect(int index) const {
+	const int card = CardSize();
 	int row = index / m_columns;
 	int col = index % m_columns;
 	return wxRect(
-		m_padding + col * (m_itemSize + m_padding),
-		m_padding + row * (m_itemSize + m_padding),
-		m_itemSize,
-		m_itemSize
+		m_padding + col * (card + m_padding),
+		m_padding + row * (card + m_padding),
+		card,
+		card
 	);
 }
 
@@ -175,7 +255,8 @@ wxString VirtualItemGrid::GetItemName(size_t index) const {
 }
 
 void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
-	int rowHeight = m_itemSize + m_padding;
+	const int card = CardSize();
+	int rowHeight = card + m_padding;
 	int scrollPos = GetScrollPosition();
 
 	size_t count = GetItemCount();
@@ -248,21 +329,19 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 			nvgStroke(vg);
 		}
 
-		// Draw Item Icon (Fixed 32x32 size for consistency)
+		// Draw Item Icon (fixed icon area, size follows the view options)
 		uint16_t id = GetItem(i);
 		const auto definition = g_item_definitions.get(id);
 		const uint16_t cid = definition ? definition.clientId() : 0;
 		const auto tech = rme::rendering::TechnicalItemRegistry::Classify(id, cid);
+		const float iconSize = static_cast<float>(m_iconSize);
 		if (tech != rme::rendering::TileIndicatorType::None) {
-			const float iconSize = 32.0f;
 			const float bx = x + (w - iconSize) / 2.0f;
-			const float by = y + 8.0f;
+			const float by = y + static_cast<float>(kIconTopPadding);
 			rme::rendering::DrawNanoVGIndicatorBadge(vg, tech, bx, by, iconSize);
 		} else {
 			int tex = GetOrCreateItemTexture(vg, id);
 			if (tex > 0) {
-				// Fixed 32x32 rendering area
-				float iconSize = 32.0f;
 				int tw, th;
 				nvgImageSize(vg, tex, &tw, &th);
 
@@ -274,7 +353,7 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 				float dw = tw * scale;
 				float dh = th * scale;
 				float dx = x + (w - dw) / 2.0f;
-				float dy = y + 8.0f; // Top padding
+				float dy = y + static_cast<float>(kIconTopPadding);
 
 				NVGpaint imgPaint = nvgImagePattern(vg, dx, dy, dw, dh, 0.0f, tex, 1.0f);
 				nvgBeginPath(vg);
@@ -284,9 +363,9 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 			}
 		}
 
-		// Draw Text (2 Lines)
+		// Draw the item name under the icon when labels are enabled
 		wxString name = GetItemName(i);
-		if (!name.IsEmpty()) {
+		if (m_showLabels && !name.IsEmpty()) {
 			nvgFontSize(vg, 12.0f); // Larger font
 			nvgFontFace(vg, "sans");
 			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_TOP);
@@ -298,7 +377,7 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 				nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 230));
 			}
 
-			float textY = y + 44.0f; // Below the 32px icon area + padding
+			float textY = y + static_cast<float>(kIconTopPadding + m_iconSize + kIconBottomPadding);
 			float maxWidth = w - 4.0f;
 
 			// NvgTextBox approach for wrapping

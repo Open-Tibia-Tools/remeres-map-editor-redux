@@ -48,6 +48,7 @@ public:
 	void cleanInvalidTiles(bool showdialog = false);
 	void cleanInvalidZones(bool showdialog = false);
 	void convertHouseTiles(uint32_t fromId, uint32_t toId);
+	void updateTownIdForHouses(uint32_t old_town_id, uint32_t new_town_id);
 
 	// Save a bmp image of the minimap
 

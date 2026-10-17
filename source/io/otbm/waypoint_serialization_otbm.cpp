@@ -24,6 +24,11 @@ void WaypointSerializationOTBM::readWaypoints(Map& map, FastOTBMNode& mapNode) {
 			return;
 		}
 
+		if (name.empty() || x == 0 || y == 0) {
+			spdlog::warn("Discarding malformed waypoint '{}'", name);
+			return;
+		}
+
 		Waypoint wp;
 		wp.name = std::move(name);
 		wp.pos = { x, y, z };

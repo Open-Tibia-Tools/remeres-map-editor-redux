@@ -11,17 +11,20 @@ struct ReplacementRule;
 
 class RuleCardRenderer {
 public:
-	// Layout Constants (Shared)
-	static const int CARD_PADDING = 20;
-	static const int CARD_MARGIN_X = 10;
-	static const int CARD_MARGIN_Y = 10;
-	static const int HEADER_HEIGHT = 40;
-	static const int ITEM_SIZE = 56;
-	static const int ITEM_H = 110;
-	static const int ITEM_SPACING = 10;
-	static const int ARROW_WIDTH = 60;
-	static const int SECTION_GAP = 20;
-	static const int CARD_W; // ITEM_SIZE + 20
+	// Layout Constants (Shared: the panel lays out with these, the renderer
+	// draws with them, so hit-testing and drawing cannot diverge).
+	static constexpr int CARD_PADDING = 12;
+	static constexpr int CARD_MARGIN_X = 10;
+	static constexpr int CARD_MARGIN_Y = 8;
+	static constexpr int HEADER_HEIGHT = 32;
+	static constexpr int ITEM_SIZE = 56;
+	static constexpr int ITEM_H = 110;
+	static constexpr int ITEM_SPACING = 8;
+	static constexpr int ARROW_WIDTH = 48;
+	static constexpr int SECTION_GAP = 16;
+	static constexpr int CARD_W = ITEM_SIZE + 20;
+	/** Height of the "drop a new rule" area. */
+	static constexpr int NEW_RULE_AREA_H = 52;
 
 	static void DrawRuleItemCard(NanoVGCanvas* canvas, NVGcontext* vg, float x, float y, float w, float h, uint16_t id, bool highlight, bool isTrash, bool showDeleteOverlay, int probability = -1);
 	static void DrawTrashIcon(NVGcontext* vg, float x, float y, float size, bool highlight);

@@ -29,6 +29,7 @@
 #include "brushes/waypoint/waypoint_brush.h"
 #include "brushes/door/door_brush.h"
 #include "brushes/zone/zone_brush.h"
+#include "brushes/town/town_temple_brush.h"
 
 DrawingController::DrawingController(MapCanvas* canvas, Editor& editor) :
 	canvas(canvas),
@@ -159,7 +160,7 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 						editor.draw(tilestodraw, tilestoborder, alt_down);
 					}
 				} else if (brush->oneSizeFitsAll()) {
-					if (brush->is<HouseExitBrush>() || brush->is<WaypointBrush>()) {
+					if (brush->is<HouseExitBrush>() || brush->is<WaypointBrush>() || brush->is<TownTempleBrush>()) {
 						editor.draw(mouse_map_pos, alt_down);
 					} else {
 						PositionVector tilestodraw;
@@ -385,6 +386,16 @@ void DrawingController::HandleRelease(const Position& mouse_map_pos, bool shift_
 	Brush* brush = g_gui.GetCurrentBrush();
 	if (brush && brush->is<ZoneBrush>()) {
 		g_gui.UpdateZonePalette(static_cast<ZoneBrush*>(brush)->getZone());
+	} else if (brush && (brush->is<HouseBrush>() || brush->is<HouseExitBrush>())) {
+		uint32_t house_id = 0;
+		if (auto* hb = dynamic_cast<HouseBrush*>(brush)) {
+			house_id = hb->getHouseID();
+		} else if (auto* heb = dynamic_cast<HouseExitBrush*>(brush)) {
+			house_id = heb->getHouseID();
+		}
+		g_gui.UpdateHousePalette(house_id);
+	} else if (brush && brush->is<TownTempleBrush>()) {
+		g_gui.RefreshPalettes();
 	}
 
 	editor.actionQueue->resetTimer();

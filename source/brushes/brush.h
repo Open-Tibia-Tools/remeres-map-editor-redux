@@ -54,8 +54,14 @@ class SpawnBrush;
 class HouseBrush;
 class HouseExitBrush;
 class WaypointBrush;
+class TownTempleBrush;
 class FlagBrush;
 class EraserBrush;
+
+enum class BrushCursor {
+	Default,
+	Crosshair,
+};
 
 //=============================================================================
 // Brushes, holds all brushes
@@ -149,6 +155,10 @@ public:
 
 	virtual bool oneSizeFitsAll() const {
 		return false;
+	}
+
+	virtual BrushCursor getCursor() const {
+		return BrushCursor::Default;
 	}
 
 	virtual int32_t getMaxVariation() const {

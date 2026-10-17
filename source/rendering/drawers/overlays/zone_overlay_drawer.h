@@ -94,6 +94,13 @@ public:
 	                     const DrawingOptions& options,
 	                     const AtlasManager& atlas);
 
+	void drawFloorWaypoints(SpriteBatch& sprite_batch,
+	                       int z,
+	                       const RenderView& view,
+	                       const Map& map,
+	                       const DrawingOptions& options,
+	                       const AtlasManager& atlas);
+
 private:
 	ZoneClusterFinder cluster_finder_;
 

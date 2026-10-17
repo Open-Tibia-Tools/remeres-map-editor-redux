@@ -100,6 +100,7 @@ public:
 	virtual void UpdatePositionStatus(int x = -1, int y = -1);
 	virtual void UpdateZoomStatus();
 	void SyncCursorHoverState();
+	void UpdateCursor();
 
 	virtual void ChangeFloor(int new_floor);
 	int GetFloor() const {

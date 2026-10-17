@@ -61,6 +61,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
 	wxStatusBar* statusbar = CreateStatusBar();
 	statusbar->SetFieldsCount(4);
+	// FPS | tile description (stretch) | coordinates | floor/zoom
+	const int status_widths[4] = { FromDIP(80), -1, FromDIP(150), FromDIP(160) };
+	statusbar->SetStatusWidths(4, status_widths);
 	SetStatusText(wxString("Welcome to ") << __W_RME_APPLICATION_NAME__ << " " << __W_RME_VERSION__);
 
 	// Le sizer

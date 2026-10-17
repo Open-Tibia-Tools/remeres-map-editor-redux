@@ -103,11 +103,7 @@
 		<item name="Find Everything" action="SEARCH_ON_MAP_EVERYTHING" help="Find all unique/action/text/container items."/>
 	</menu>
 	<menu name="Map">
-		<item name="Edit Towns" hotkey="Ctrl+T" action="EDIT_TOWNS" help="Edit towns."/>
-		<!-- these were never implemented
-		<item name="Edit Items" hotkey="Ctrl+I" action="EDIT_ITEMS" help="Edit items."/>
-		<item name="Edit Monsters" action="EDIT_MONSTERS" help="Edit monsters."/>
-		-->
+		<item name="Edit Towns..." action="EDIT_TOWNS" help="Open towns palette."/>
 		<separator/>
 		<item name="Cleanup invalid tiles..." action="MAP_CLEANUP" help="Removes all invalid or unresolved items from the map."/>
 		<item name="Cleanup invalid zones..." action="MAP_CLEAN_INVALID_ZONES" help="Removes preserved invalid tile flags and opaque OTBM tile fragments from the map."/>

@@ -99,6 +99,19 @@ wxString b2yn(bool v);
 
 wxColor colorFromEightBit(int color);
 
+// Formats an integer with thousand separators (e.g. 1000 -> "1,000", 100000000 -> "100,000,000")
+template <std::integral T>
+inline std::string format_thousands_separator(T value, char separator = ',') {
+	std::string s = std::to_string(value);
+	int insert_pos = static_cast<int>(s.length()) - 3;
+	const int min_pos = (value < 0) ? 1 : 0;
+	while (insert_pos > min_pos) {
+		s.insert(insert_pos, 1, separator);
+		insert_pos -= 3;
+	}
+	return s;
+}
+
 // Standard math functions are now used via <cmath> and <algorithm>
 // std::abs, std::min, std::max should be used instead.
 

@@ -220,6 +220,8 @@ void MapWindow::SetScreenCenterPosition(const Position& position) {
 
 	Scroll(x, y, true);
 	canvas->ChangeFloor(position.z);
+	canvas->SyncCursorHoverState();
+	canvas->RequestLocalRefresh(true);
 }
 
 void MapWindow::GoToPreviousCenterPosition() {

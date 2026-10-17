@@ -13,6 +13,7 @@ class Brush;
 class HouseBrush;
 class HouseExitBrush;
 class WaypointBrush;
+class TownTempleBrush;
 class OptionalBorderBrush;
 class EraserBrush;
 class SpawnBrush;
@@ -152,6 +153,7 @@ public:
 	FlagBrush* nolog_brush;
 	FlagBrush* pvp_brush;
 	ZoneBrush* zone_brush;
+	TownTempleBrush* temple_brush;
 
 private:
 	Brush* current_brush;
