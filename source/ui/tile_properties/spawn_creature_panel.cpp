@@ -62,7 +62,7 @@ void SpawnCreaturePanel::SetTile(Tile* tile) {
 	if (tile && tile->creature) {
 		const size_t altsCount = tile->creature->getAlternatives().size();
 		if (altsCount > 0) {
-			creature_text->SetLabelText(wxString::Format("%s (+%zu variant%s)", tile->creature->getName(), altsCount, altsCount > 1 ? "s" : ""));
+			creature_text->SetLabelText(wxString::Format("%s (+%zu variant%s)", wxString(tile->creature->getName()), altsCount, altsCount > 1 ? "s" : ""));
 		} else {
 			creature_text->SetLabelText(wxString(tile->creature->getName()));
 		}

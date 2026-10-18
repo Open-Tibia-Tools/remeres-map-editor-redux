@@ -70,6 +70,9 @@ CreaturePropertyPanel::CreaturePropertyPanel(wxWindow* parent) :
 			if (new_tile->creature) {
 				alternatives_editor->ApplyToCreature(new_tile->creature.get());
 				new_tile->creature->setSpawnTime(spawntime_spin->GetValue());
+				if (!new_tile->creature->getAlternatives().empty()) {
+					new_tile->creature->setDirection(NORTH);
+				}
 				for (auto& alt : new_tile->creature->getAlternatives()) {
 					alt.spawntime = spawntime_spin->GetValue();
 					alt.direction = NORTH;

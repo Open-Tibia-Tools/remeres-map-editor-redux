@@ -10,6 +10,8 @@
 #include <format>
 #include <cmath>
 #include <sstream>
+#include <map>
+#include <tuple>
 
 #include "ext/pugixml.hpp"
 #include "ext/pugixml.cpp"
@@ -83,7 +85,7 @@ private:
 	bool isNpc_ = false;
 	Direction direction_ = NORTH;
 	int spawntime_ = 60;
-	uint32_t weight_ = 100;
+	uint32_t weight_ = 0;
 	std::vector<SpawnAlternative> alternatives_;
 };
 
@@ -189,12 +191,13 @@ std::vector<SpawnEntry> parseSpawnsFromXml(const std::string& xmlContent) {
 	pugi::xml_node rootNode = doc.child("spawns");
 	assert(rootNode);
 
+	std::map<std::tuple<int, int, int>, Creature*> tileCreatures;
+
 	for (auto spawnNode : rootNode.children("spawn")) {
-		SpawnEntry entry;
-		entry.center.x = spawnNode.attribute("centerx").as_int();
-		entry.center.y = spawnNode.attribute("centery").as_int();
-		entry.center.z = spawnNode.attribute("centerz").as_int();
-		entry.radius = spawnNode.attribute("radius").as_int(5);
+		int centerX = spawnNode.attribute("centerx").as_int();
+		int centerY = spawnNode.attribute("centery").as_int();
+		int centerZ = spawnNode.attribute("centerz").as_int();
+		int radius = spawnNode.attribute("radius").as_int(5);
 
 		for (auto childNode : spawnNode.children()) {
 			std::string tag = childNode.name();
@@ -205,11 +208,21 @@ std::vector<SpawnEntry> parseSpawnsFromXml(const std::string& xmlContent) {
 					continue; // Discard invalid offset
 				}
 
+				SpawnEntry entry;
+				entry.center.x = centerX;
+				entry.center.y = centerY;
+				entry.center.z = centerZ;
+				entry.radius = radius;
 				entry.creatureOffset.x = xAttr.as_int();
 				entry.creatureOffset.y = yAttr.as_int();
 				if (auto zAttr = childNode.attribute("z")) {
 					entry.creatureOffset.z = zAttr.as_int() - entry.center.z;
 				}
+
+				int creatureWorldX = entry.center.x + entry.creatureOffset.x;
+				int creatureWorldY = entry.center.y + entry.creatureOffset.y;
+				int creatureWorldZ = entry.center.z + entry.creatureOffset.z;
+				auto tileKey = std::make_tuple(creatureWorldX, creatureWorldY, creatureWorldZ);
 
 				int spawntime = childNode.attribute("spawntime").as_int(60);
 				if (spawntime <= 0) spawntime = 60;
@@ -266,6 +279,11 @@ std::vector<SpawnEntry> parseSpawnsFromXml(const std::string& xmlContent) {
 					continue;
 				}
 
+				if (tileCreatures.contains(tileKey)) {
+					// Duplicate creature or group on this tile - production skips it
+					continue;
+				}
+
 				auto primary = std::make_unique<Creature>(variants[0].name, false);
 				primary->setDirection(NORTH);
 				primary->setSpawnTime(spawntime);
@@ -276,6 +294,7 @@ std::vector<SpawnEntry> parseSpawnsFromXml(const std::string& xmlContent) {
 				}
 
 				entry.creature = std::move(primary);
+				tileCreatures[tileKey] = entry.creature.get();
 				resultSpawns.push_back(std::move(entry));
 			} else if (tag == "monster" || tag == "npc") {
 				bool isNpc = (tag == "npc");
@@ -290,15 +309,32 @@ std::vector<SpawnEntry> parseSpawnsFromXml(const std::string& xmlContent) {
 					continue;
 				}
 
+				SpawnEntry entry;
+				entry.center.x = centerX;
+				entry.center.y = centerY;
+				entry.center.z = centerZ;
+				entry.radius = radius;
 				entry.creatureOffset.x = xAttr.as_int();
 				entry.creatureOffset.y = yAttr.as_int();
 				if (auto zAttr = childNode.attribute("z")) {
 					entry.creatureOffset.z = zAttr.as_int() - entry.center.z;
 				}
 
+				int creatureWorldX = entry.center.x + entry.creatureOffset.x;
+				int creatureWorldY = entry.center.y + entry.creatureOffset.y;
+				int creatureWorldZ = entry.center.z + entry.creatureOffset.z;
+				auto tileKey = std::make_tuple(creatureWorldX, creatureWorldY, creatureWorldZ);
+
 				int spawntime = childNode.attribute("spawntime").as_int(60);
 				Direction direction = static_cast<Direction>(childNode.attribute("direction").as_int(static_cast<int>(NORTH)));
-				uint32_t weight = childNode.attribute("weight").as_uint(100);
+				uint32_t weight = childNode.attribute("weight").as_uint(0);
+
+				if (auto it = tileCreatures.find(tileKey); it != tileCreatures.end()) {
+					if (!isNpc && !it->second->isNpc()) {
+						it->second->addAlternative({ name, spawntime, direction, weight });
+					}
+					continue;
+				}
 
 				auto creature = std::make_unique<Creature>(name, isNpc);
 				creature->setSpawnTime(spawntime);
@@ -306,6 +342,7 @@ std::vector<SpawnEntry> parseSpawnsFromXml(const std::string& xmlContent) {
 				creature->setWeight(weight);
 
 				entry.creature = std::move(creature);
+				tileCreatures[tileKey] = entry.creature.get();
 				resultSpawns.push_back(std::move(entry));
 			}
 		}
@@ -536,6 +573,23 @@ void testScenario6_ParserResilience() {
 	auto parsedNameless = parseSpawnsFromXml(xmlNameless);
 	assert(parsedNameless.size() == 1);
 	assert(parsedNameless[0].creature->getName() == "Snake");
+
+	// Duplicate <monsters> group on the same tile is discarded (CodeRabbit fix)
+	const std::string xmlDuplicate =
+		"<spawns>"
+		"<spawn centerx=\"100\" centery=\"100\" centerz=\"7\" radius=\"5\">"
+		"<monsters x=\"0\" y=\"0\" z=\"7\" spawntime=\"60\">"
+		"<monster name=\"Rat\" chance=\"100\"/>"
+		"</monsters>"
+		"<monsters x=\"0\" y=\"0\" z=\"7\" spawntime=\"60\">"
+		"<monster name=\"Cave Rat\" chance=\"100\"/>"
+		"</monsters>"
+		"</spawn>"
+		"</spawns>";
+	auto parsedDuplicate = parseSpawnsFromXml(xmlDuplicate);
+	assert(parsedDuplicate.size() == 1);
+	assert(parsedDuplicate[0].creature->getName() == "Rat");
+	assert(parsedDuplicate[0].creature->getAlternatives().empty());
 
 	std::cout << "  -> Passed: Corrupted and edge-case XML gracefully handled.\n";
 }

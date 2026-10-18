@@ -18,7 +18,12 @@ MonsterSelectDialog::MonsterSelectDialog(wxWindow* parent, const std::string& cu
 	std::ranges::sort(all_monsters, [](const std::string& a, const std::string& b) {
 		return as_lower_str(a) < as_lower_str(b);
 	});
-	all_monsters.erase(std::unique(all_monsters.begin(), all_monsters.end()), all_monsters.end());
+	all_monsters.erase(
+		std::unique(all_monsters.begin(), all_monsters.end(), [](const std::string& a, const std::string& b) {
+			return as_lower_str(a) == as_lower_str(b);
+		}),
+		all_monsters.end()
+	);
 
 	wxBoxSizer* main_sizer = newd wxBoxSizer(wxVERTICAL);
 

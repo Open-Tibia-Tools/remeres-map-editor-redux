@@ -168,14 +168,7 @@ namespace {
 		}
 
 		if (creatureTile->creature) {
-			if (!creatureTile->creature->isNpc()) {
-				for (const auto& variant : variants) {
-					creatureTile->creature->addAlternative({ variant.name, spawntime, NORTH, variant.chance });
-					++alternatives;
-				}
-			} else {
-				spdlog::warn("MapXMLIO: Duplicate creature/group at {}:{}:{}", creaturePosition.x, creaturePosition.y, creaturePosition.z);
-			}
+			spdlog::warn("MapXMLIO: Duplicate creature/group at {}:{}:{}", creaturePosition.x, creaturePosition.y, creaturePosition.z);
 			return;
 		}
 

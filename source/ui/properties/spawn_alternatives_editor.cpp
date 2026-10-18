@@ -95,7 +95,9 @@ void SpawnAlternativesEditor::ApplyToCreature(Creature* creature) {
 
 	if (variants.size() == 1) {
 		creature->setTypeName(variants[0].name);
-		creature->setWeight(0);
+		if (!creature->getAlternatives().empty()) {
+			creature->setWeight(0);
+		}
 		creature->clearAlternatives();
 	} else {
 		creature->setTypeName(variants[0].name);
