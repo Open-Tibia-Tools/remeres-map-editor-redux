@@ -17,13 +17,7 @@
 // Helper
 #include <ranges>
 #include <algorithm>
-#include <cctype>
 #include <string_view>
-
-// Helper for C++20 case-insensitive comparison (zero allocation)
-static const auto iequal = [](char a, char b) {
-	return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
-};
 
 bool DoodadBrushLoader::load(pugi::xml_node node, DoodadBrushItems& items, DoodadBrushSettings& settings, std::vector<std::string>& warnings, DoodadBrush* brushPtr) {
 	pugi::xml_attribute attribute;

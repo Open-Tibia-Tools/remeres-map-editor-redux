@@ -61,6 +61,10 @@ public:
 		return true;
 	}
 
+	const TableBrushItems& getItems() const {
+		return items;
+	}
+
 protected:
 	TableBrushItems items;
 

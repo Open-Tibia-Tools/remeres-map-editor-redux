@@ -4,6 +4,7 @@
 #include "app/main.h"
 #include "game/material_database.h"
 #include "brushes/brush.h"
+#include "util/grid_view_options.h"
 
 enum BrushListType {
 	BRUSHLIST_ICONS_32,
@@ -11,16 +12,6 @@ enum BrushListType {
 	BRUSHLIST_ICONS_128,
 	BRUSHLIST_LISTBOX,
 	BRUSHLIST_TEXT_LISTBOX,
-};
-
-enum class TilesetSortKey {
-	ID,
-	Name
-};
-
-enum class TilesetSortDirection {
-	Ascending,
-	Descending
 };
 
 class BrushBoxInterface {

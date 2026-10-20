@@ -25,6 +25,10 @@ public:
 
 	struct GridCell {
 		std::array<std::unique_ptr<MapNode>, NODES_IN_CELL> nodes;
+		// For each floor z in [0, MAP_LAYERS), bit (ciy * 4 + cix) is 1 iff the 16x16 chunk
+		// (cix, ciy) inside this 64x64 cell has at least one allocated Floor on layer z.
+		// Maintained by MapNode::createFloor (Floors are never deallocated while a cell lives).
+		std::array<uint16_t, MAP_LAYERS> floor_chunk_mask {};
 		GridCell();
 		~GridCell();
 	};
@@ -87,23 +91,51 @@ public:
 		return (index < cells_.size()) ? cells_[index].cell.get() : nullptr;
 	}
 
-	template <typename CellType = GridCell>
-	[[nodiscard]] static bool chunkHasFloor(const CellType& cell, int chunk_ix, int chunk_iy, int map_z) noexcept {
-		if (map_z < 0 || map_z >= MAP_LAYERS) {
-			return false;
+	/**
+	 * Caller-owned single-entry cache for sequential lookups.
+	 *
+	 * Consecutive coordinates in the same 64x64 cell then reuse one binary search
+	 * instead of paying for one per call. The state lives on the caller's stack,
+	 * so const readers share nothing and stay free of data races (unlike the
+	 * grid-owned cache used by the mutating accessors).
+	 */
+	struct CellCursor {
+		uint64_t key = 0;
+		size_t index = 0;
+		bool valid = false;
+		bool has_cell = false;
+		const GridCell* cell = nullptr;
+		// When getFloor returns nullptr, empty_span_mask is 63 (whole 64x64 cell has no Floor on z),
+		// 15 (whole 16x16 chunk has no Floor on z), or 3 (this 4x4 node has no Floor on z), so a row
+		// sweep can advance to (x | empty_span_mask) + 1 in one step.
+		int empty_span_mask = 63;
+		// Four consecutive x in a row share one 4x4 node and its Floor, so caching the Floor
+		// turns three out of four lookups into a single indexed load (no cell or node walk).
+		int node_x = -1;
+		int node_y = -1;
+		int floor_z = -1;
+		const Floor* floor = nullptr;
+	};
+
+	/**
+	 * Const variant of getLeaf that skips the binary search when the previous
+	 * lookup already resolved the containing cell.
+	 */
+	[[nodiscard]] const MapNode* getLeafCached(int x, int y, CellCursor& cursor) const noexcept {
+		const uint64_t key = makeKey(x, y);
+		if (!cursor.valid || cursor.key != key) {
+			cursor.key = key;
+			cursor.index = findCellIndex(key);
+			cursor.valid = true;
+			cursor.cell = (cursor.index < cells_.size()) ? cells_[cursor.index].cell.get() : nullptr;
+			cursor.has_cell = (cursor.cell != nullptr);
 		}
-		const int start_lx = chunk_ix << 2; // chunk_ix * 4
-		const int start_ly = chunk_iy << 2; // chunk_iy * 4
-		for (int dy = 0; dy < 4; ++dy) {
-			const int row_base = (start_ly + dy) << NODES_PER_CELL_SHIFT; // * 16
-			for (int dx = 0; dx < 4; ++dx) {
-				const MapNode* node = cell.nodes[row_base + start_lx + dx].get();
-				if (node && node->getFloor(map_z)) {
-					return true;
-				}
-			}
+		if (!cursor.cell) {
+			return nullptr;
 		}
-		return false;
+		const int nx = (x >> NODE_SHIFT) & (NODES_PER_CELL - 1);
+		const int ny = (y >> NODE_SHIFT) & (NODES_PER_CELL - 1);
+		return cursor.cell->nodes[ny * NODES_PER_CELL + nx].get();
 	}
 
 	/**
@@ -113,7 +145,7 @@ public:
 	 */
 	template <typename Func>
 	void visitPopulatedChunks(int min_cx, int min_cy, int max_cx, int max_cy, int map_z, Func&& func) const {
-		if (cells_.empty() || min_cx > max_cx || min_cy > max_cy) {
+		if (cells_.empty() || min_cx > max_cx || min_cy > max_cy || map_z < 0 || map_z >= MAP_LAYERS) {
 			return;
 		}
 
@@ -128,6 +160,11 @@ public:
 		const size_t cell_region_area = cell_region_w * cell_region_h;
 
 		auto processCell = [&](const GridCell& cell, int cell_x, int cell_y) {
+			const uint16_t mask = cell.floor_chunk_mask[map_z];
+			if (mask == 0) {
+				return;
+			}
+
 			const int cell_base_cx = cell_x << 2;
 			const int cell_base_cy = cell_y << 2;
 
@@ -138,7 +175,7 @@ public:
 
 			for (int ciy = local_min_cy; ciy <= local_max_cy; ++ciy) {
 				for (int cix = local_min_cx; cix <= local_max_cx; ++cix) {
-					if (chunkHasFloor(cell, cix, ciy, map_z)) {
+					if ((mask & static_cast<uint16_t>(1u << ((ciy << 2) | cix))) != 0) {
 						func(cell_base_cx + cix, cell_base_cy + ciy);
 					}
 				}

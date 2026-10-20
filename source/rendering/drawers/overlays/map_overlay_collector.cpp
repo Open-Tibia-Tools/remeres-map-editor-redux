@@ -77,6 +77,7 @@ namespace {
 
 		data.pos = pos;
 		data.itemId = id;
+		data.clientId = static_cast<uint16_t>(item->getClientID());
 		data.itemName = itemName;
 		data.actionId = action;
 		data.uniqueId = unique;

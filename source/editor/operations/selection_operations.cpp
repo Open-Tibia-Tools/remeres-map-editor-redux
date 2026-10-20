@@ -124,6 +124,8 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 			new_src_tile->house_id = 0;
 			tmp_storage_tile->setMapFlags(new_src_tile->getMapFlags());
 			new_src_tile->setMapFlags(TILESTATE_NONE);
+			tmp_storage_tile->setZoneIds(new_src_tile->getZoneIds());
+			new_src_tile->setZoneIds({});
 			doborders = true;
 		}
 
@@ -226,7 +228,7 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 			} else {
 				new_dest_tile = editor.map.allocator(location);
 			}
-			TileOperations::merge(new_dest_tile.get(), tile);
+			TileOperations::merge(new_dest_tile.get(), tile, &editor.map);
 			// Removing old tile from memory since we merged it
 			delete tile;
 		} else {
@@ -353,6 +355,11 @@ void SelectionOperations::destroySelection(Editor& editor) {
 			for (auto& item : tile_selection) {
 				++item_count;
 				// Items are deleted when the unique_ptr in tile_selection goes out of scope
+			}
+
+			// Clear zones when deleting selected ground, matching cut and move behavior
+			if ((tile->ground && !newtile->ground) || newtile->empty()) {
+				newtile->setZoneIds({});
 			}
 
 			if (newtile->creature && newtile->creature->isSelected()) {

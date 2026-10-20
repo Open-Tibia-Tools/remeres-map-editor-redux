@@ -6,6 +6,7 @@
 #include "ui/theme.h"
 #include "util/image_manager.h"
 #include "util/nanovg_canvas.h"
+#include "util/nvg_utils.h"
 
 #include <nanovg.h>
 
@@ -17,10 +18,6 @@
 #include <wx/stattext.h>
 
 namespace {
-	[[nodiscard]] NVGcolor toColor(const wxColour& colour) {
-		return nvgRGBA(colour.Red(), colour.Green(), colour.Blue(), colour.Alpha());
-	}
-
 	constexpr int kEmptyStateInset = 18;
 }
 
@@ -96,7 +93,7 @@ protected:
 		const wxColour surface = Theme::Get(Theme::Role::Surface);
 		nvgBeginPath(vg);
 		nvgRect(vg, 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
-		nvgFillColor(vg, toColor(surface));
+		nvgFillColor(vg, NvgUtils::ToNvColor(surface));
 		nvgFill(vg);
 
 		if (owner_->rows_.empty()) {
@@ -226,11 +223,11 @@ private:
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 
 		nvgFontSize(vg, 14.0f);
-		nvgFillColor(vg, toColor(Theme::Get(Theme::Role::TextSubtle)));
+		nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::TextSubtle)));
 		nvgText(vg, static_cast<float>(FromDIP(kEmptyStateInset)), height * 0.45f, "No search results", nullptr);
 
 		nvgFontSize(vg, 12.0f);
-		nvgFillColor(vg, toColor(Theme::Get(Theme::Role::TextSubtle)));
+		nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::TextSubtle)));
 		nvgText(vg, static_cast<float>(FromDIP(kEmptyStateInset)), height * 0.54f, "Run a map search to populate this list.", nullptr);
 	}
 
@@ -245,13 +242,13 @@ private:
 		const wxColour fill = selected ? selected_fill : (hovered ? hover_fill : row_fill);
 		nvgBeginPath(vg);
 		nvgRect(vg, static_cast<float>(rect.x), static_cast<float>(rect.y), static_cast<float>(rect.width), static_cast<float>(rect.height));
-		nvgFillColor(vg, toColor(fill));
+		nvgFillColor(vg, NvgUtils::ToNvColor(fill));
 		nvgFill(vg);
 
 		if (selected) {
 			nvgBeginPath(vg);
 			nvgRect(vg, 0.0f, static_cast<float>(rect.y), static_cast<float>(FromDIP(3)), static_cast<float>(rect.height));
-			nvgFillColor(vg, toColor(Theme::Get(Theme::Role::AccentHover)));
+			nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::AccentHover)));
 			nvgFill(vg);
 		}
 
@@ -259,7 +256,7 @@ private:
 		nvgMoveTo(vg, 0.0f, static_cast<float>(rect.GetBottom()));
 		nvgLineTo(vg, static_cast<float>(width), static_cast<float>(rect.GetBottom()));
 		nvgStrokeWidth(vg, 1.0f);
-		nvgStrokeColor(vg, toColor(separator));
+		nvgStrokeColor(vg, NvgUtils::ToNvColor(separator));
 		nvgStroke(vg);
 
 		nvgFontFace(vg, "sans");
@@ -270,12 +267,12 @@ private:
 		const float name_y = static_cast<float>(rect.y + FromDIP(12));
 		const float coords_y = static_cast<float>(rect.y + rect.height - FromDIP(10));
 
-		nvgFillColor(vg, toColor(meta_text));
+		nvgFillColor(vg, NvgUtils::ToNvColor(meta_text));
 		nvgFontSize(vg, 11.0f);
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgText(vg, left, static_cast<float>(rect.y + rect.height / 2), wxString::Format("#%u", row.index).utf8_str(), nullptr);
 
-		nvgFillColor(vg, toColor(name_text));
+		nvgFillColor(vg, NvgUtils::ToNvColor(name_text));
 		nvgFontSize(vg, 12.0f);
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgSave(vg);
@@ -284,7 +281,7 @@ private:
 		nvgRestore(vg);
 
 		const wxString coords = wxString::Format("[%d, %d, %d]", row.position.x, row.position.y, row.position.z);
-		nvgFillColor(vg, toColor(meta_text));
+		nvgFillColor(vg, NvgUtils::ToNvColor(meta_text));
 		nvgFontSize(vg, 10.0f);
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgSave(vg);

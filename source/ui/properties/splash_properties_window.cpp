@@ -30,8 +30,13 @@ SplashPropertiesWindow::SplashPropertiesWindow(wxWindow* parent, const Map* map,
 	wxFlexGridSizer* subsizer = newd wxFlexGridSizer(2, 10, 10);
 	subsizer->AddGrowableCol(1);
 
-	subsizer->Add(newd wxStaticText(this, wxID_ANY, "ID " + i2ws(item->getID())));
+	if (item->getClientID() != 0 && item->getClientID() != item->getID()) {
+		subsizer->Add(newd wxStaticText(this, wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
+	} else {
+		subsizer->Add(newd wxStaticText(this, wxID_ANY, std::format("ID: {}", item->getID())));
+	}
 	subsizer->Add(newd wxStaticText(this, wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
+
 
 	subsizer->Add(newd wxStaticText(this, wxID_ANY, "Type"));
 

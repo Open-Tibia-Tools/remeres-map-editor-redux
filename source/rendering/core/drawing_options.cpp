@@ -22,6 +22,7 @@ void DrawingOptions::SetDefault() {
 	show_waypoints = true;
 	ingame = false;
 	is_drawing_mode = false;
+	is_drawing = false;
 	dragging = false;
 	boundbox_selection = false;
 
@@ -31,6 +32,7 @@ void DrawingOptions::SetDefault() {
 	show_creatures = true;
 	show_spawns = true;
 	show_houses = true;
+	show_zones = true;
 	show_shade = true;
 	show_special_tiles = true;
 	show_items = true;
@@ -104,6 +106,7 @@ void DrawingOptions::SetIngame() {
 	show_creatures = true;
 	show_spawns = false;
 	show_houses = false;
+	show_zones = false;
 	show_shade = false;
 	show_special_tiles = false;
 	show_items = true;
@@ -180,6 +183,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const bool new_show_creatures = settings.getBoolean(Config::SHOW_CREATURES);
 	const bool new_show_spawns = settings.getBoolean(Config::SHOW_SPAWNS);
 	const bool new_show_houses = settings.getBoolean(Config::SHOW_HOUSES);
+	const bool new_show_zones = settings.getBoolean(Config::SHOW_ZONES);
 	const bool new_show_shade = settings.getBoolean(Config::SHOW_SHADE);
 	const bool new_show_special_tiles = settings.getBoolean(Config::SHOW_SPECIAL_TILES);
 	const bool new_show_items = settings.getBoolean(Config::SHOW_ITEMS);
@@ -273,6 +277,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	show_creatures = new_show_creatures;
 	show_spawns = new_show_spawns;
 	show_houses = new_show_houses;
+	show_zones = new_show_zones;
 	show_shade = new_show_shade;
 	show_special_tiles = new_show_special_tiles;
 	show_items = new_show_items;

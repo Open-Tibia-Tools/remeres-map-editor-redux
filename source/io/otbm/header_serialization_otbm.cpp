@@ -118,6 +118,14 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 				out_info.npc_xml_file = wxstr(npc_file);
 				break;
 			}
+			case OTBM_ATTR_EXT_ZONE_FILE: {
+				std::string zone_file;
+				if (!map_header_node->getString(zone_file)) {
+					return false;
+				}
+				out_info.zone_xml_file = wxstr(zone_file);
+				break;
+			}
 			default:
 				return true;
 		}
@@ -160,12 +168,17 @@ bool HeaderSerializationOTBM::readMapAttributes(Map& map, FastOTBMStream& stream
 				break;
 			}
 			case OTBM_ATTR_EXT_ZONE_FILE: {
-				// compatibility: skip zone file tag
-				std::string stringToSkip;
-				if (!stream.getString(stringToSkip)) {
+				std::string zone_path;
+				if (!stream.getString(zone_path)) {
 					spdlog::warn("Invalid map zonefile tag");
 					return true;
 				}
+				if (zone_path.find("..") != std::string::npos || wxFileName(wxstr(zone_path)).IsAbsolute()) {
+					spdlog::warn("Map zonefile tag contains path traversal or absolute path: '{}'. Discarding.", zone_path);
+					map.zonefile.clear();
+					return true;
+				}
+				map.zonefile = std::move(zone_path);
 				break;
 			}
 			default: {

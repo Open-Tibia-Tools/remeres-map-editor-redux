@@ -58,7 +58,7 @@ GLuint ShaderProgram::GetID() const {
 	return program_ ? program_->GetID() : 0;
 }
 
-GLint ShaderProgram::GetUniformLocation(const std::string& name) const {
+GLint ShaderProgram::GetUniformLocation(std::string_view name) const {
 	if (!program_) {
 		return -1;
 	}
@@ -67,44 +67,42 @@ GLint ShaderProgram::GetUniformLocation(const std::string& name) const {
 		return it->second;
 	}
 
-	GLint location = glGetUniformLocation(program_->GetID(), name.c_str());
-	if (location == -1) {
-	}
-
-	uniform_cache[name] = location;
+	std::string key(name);
+	const GLint location = glGetUniformLocation(program_->GetID(), key.c_str());
+	uniform_cache.emplace(std::move(key), location);
 	return location;
 }
 
-void ShaderProgram::SetBool(const std::string& name, bool value) const {
+void ShaderProgram::SetBool(std::string_view name, bool value) const {
 	// OpenGL doesn't have a native bool uniform type, so we cast to int (0 or 1)
 	glUniform1i(GetUniformLocation(name), static_cast<int>(value));
 }
 
-void ShaderProgram::SetInt(const std::string& name, int value) const {
+void ShaderProgram::SetInt(std::string_view name, int value) const {
 	glUniform1i(GetUniformLocation(name), value);
 }
 
-void ShaderProgram::SetUint(const std::string& name, unsigned int value) const {
+void ShaderProgram::SetUint(std::string_view name, unsigned int value) const {
 	glUniform1ui(GetUniformLocation(name), value);
 }
 
-void ShaderProgram::SetFloat(const std::string& name, float value) const {
+void ShaderProgram::SetFloat(std::string_view name, float value) const {
 	glUniform1f(GetUniformLocation(name), value);
 }
 
-void ShaderProgram::SetVec2(const std::string& name, const glm::vec2& value) const {
+void ShaderProgram::SetVec2(std::string_view name, const glm::vec2& value) const {
 	glUniform2fv(GetUniformLocation(name), 1, &value[0]);
 }
 
-void ShaderProgram::SetVec3(const std::string& name, const glm::vec3& value) const {
+void ShaderProgram::SetVec3(std::string_view name, const glm::vec3& value) const {
 	glUniform3fv(GetUniformLocation(name), 1, &value[0]);
 }
 
-void ShaderProgram::SetVec4(const std::string& name, const glm::vec4& value) const {
+void ShaderProgram::SetVec4(std::string_view name, const glm::vec4& value) const {
 	glUniform4fv(GetUniformLocation(name), 1, &value[0]);
 }
 
-void ShaderProgram::SetMat4(const std::string& name, const glm::mat4& value) const {
+void ShaderProgram::SetMat4(std::string_view name, const glm::mat4& value) const {
 	glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, &value[0][0]);
 }
 

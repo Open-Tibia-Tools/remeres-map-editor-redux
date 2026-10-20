@@ -7,6 +7,8 @@
 
 #include "app/main.h"
 
+#include <chrono>
+
 class MainMenuBar;
 class MainToolBar;
 
@@ -53,6 +55,8 @@ public:
 protected:
 	std::unique_ptr<MainMenuBar> menu_bar;
 	std::unique_ptr<MainToolBar> tool_bar;
+	// Throttles the idle pass that re-evaluates the menu bar and toolbar.
+	std::chrono::steady_clock::time_point last_ui_update_ {};
 
 	friend class Application;
 	friend class GUI;

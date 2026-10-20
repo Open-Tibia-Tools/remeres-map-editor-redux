@@ -29,7 +29,7 @@ namespace TileOperations {
 
 	// Moved from Tile class
 	std::unique_ptr<Tile> deepCopy(const Tile* tile, BaseMap& map);
-	void merge(Tile* dest, Tile* src);
+	void merge(Tile* dest, Tile* src, const BaseMap* target_map = nullptr);
 	Item* transformItem(Item* old_item, uint16_t new_id, Tile* parent = nullptr);
 
 	void select(Tile* tile);

@@ -238,6 +238,7 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 	if (tooltip.category == TooltipCategory::WAYPOINT) {
 		addField("Waypoint", tooltip.waypointName, Theme::Role::TooltipWaypoint);
 	} else {
+
 		if (tooltip.actionId > 0) {
 			size_t start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}", tooltip.actionId);

@@ -19,6 +19,7 @@
 #include "brushes/creature/creature_brush.h"
 #include "brushes/raw/raw_brush.h"
 #include "ui/dialog_helper.h"
+#include "rendering/core/floor_visibility_mode.h"
 
 SelectionController::SelectionController(MapCanvas* canvas, Editor& editor) :
 	canvas(canvas),
@@ -346,6 +347,7 @@ void SelectionController::ExecuteBoundboxSelection(const Position& start_pos, co
 			s_y = start_y;
 			e_x = end_x;
 			e_y = end_y;
+			numtiles = (e_x - s_x + 1) * (e_y - s_y + 1);
 			break;
 		}
 		case SELECT_ALL_FLOORS: {
@@ -354,7 +356,7 @@ void SelectionController::ExecuteBoundboxSelection(const Position& start_pos, co
 			s_z = MAP_MAX_LAYER;
 			e_x = end_x;
 			e_y = end_y;
-			e_z = floor;
+			e_z = 0;
 
 			if (g_settings.getInteger(Config::COMPENSATED_SELECT)) {
 				s_x -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
@@ -364,20 +366,19 @@ void SelectionController::ExecuteBoundboxSelection(const Position& start_pos, co
 				e_y -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
 			}
 
-			numtiles = (s_z - e_z) * (e_x - s_x) * (e_y - s_y);
+			numtiles = (s_z - e_z + 1) * (e_x - s_x + 1) * (e_y - s_y + 1);
 			break;
 		}
 		case SELECT_VISIBLE_FLOORS: {
 			s_x = start_x;
 			s_y = start_y;
-			if (floor <= GROUND_LAYER) {
-				s_z = GROUND_LAYER;
-			} else {
-				s_z = std::min(MAP_MAX_LAYER, floor + 2);
-			}
+			const bool show_all_floors = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
+			const auto mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
+			const auto range = BuildFloorVisibilityRange(floor, show_all_floors, mode);
+			s_z = std::max(range.start_floor, range.end_floor);
+			e_z = std::min(range.start_floor, range.end_floor);
 			e_x = end_x;
 			e_y = end_y;
-			e_z = floor;
 
 			if (g_settings.getInteger(Config::COMPENSATED_SELECT)) {
 				s_x -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
@@ -386,6 +387,8 @@ void SelectionController::ExecuteBoundboxSelection(const Position& start_pos, co
 				e_x -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
 				e_y -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
 			}
+
+			numtiles = (s_z - e_z + 1) * (e_x - s_x + 1) * (e_y - s_y + 1);
 			break;
 		}
 	}

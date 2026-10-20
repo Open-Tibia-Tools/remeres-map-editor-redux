@@ -5,40 +5,58 @@
 #include <memory>
 #include <algorithm>
 
+namespace {
+
+	/** Mixes a tint into a base colour; wxColour has no blend in this version. */
+	wxColour MixColour(const wxColour& base, const wxColour& tint, int weightPercent) {
+		const double weight = weightPercent / 100.0;
+		const auto mix = [weight](unsigned char from, unsigned char to) {
+			return static_cast<unsigned char>(from * (1.0 - weight) + to * weight);
+		};
+		return wxColour(mix(base.Red(), tint.Red()), mix(base.Green(), tint.Green()), mix(base.Blue(), tint.Blue()));
+	}
+
+} // namespace
+
 RuleListControl::RuleListControl(wxWindow* parent, Listener* listener) : NanoVGCanvas(parent, wxID_ANY, wxVSCROLL | wxNO_BORDER | wxWANTS_CHARS),
 																		 m_listener(listener) {
 	// NanoVGCanvas handles background style
 	m_itemHeight = FromDIP(56);
+	// The base class owns scrolling; this control used to keep a second scroll
+	// position, which made a click load a different item than the one drawn.
+	SetScrollStep(m_itemHeight * 3);
 
 	Bind(wxEVT_SIZE, &RuleListControl::OnSize, this);
 	Bind(wxEVT_LEFT_DOWN, &RuleListControl::OnMouse, this);
 	Bind(wxEVT_MOTION, &RuleListControl::OnMouse, this);
 	Bind(wxEVT_LEAVE_WINDOW, &RuleListControl::OnMouse, this);
-	Bind(wxEVT_MOUSEWHEEL, &RuleListControl::OnMouseWheel, this);
 	Bind(wxEVT_CONTEXT_MENU, &RuleListControl::OnContextMenu, this);
-
-	// Bind scroll events - NanoVGCanvas might handle some, but we keep our logic for now to ensure behavior
-	Bind(wxEVT_SCROLLWIN_TOP, &RuleListControl::OnScroll, this);
-	Bind(wxEVT_SCROLLWIN_BOTTOM, &RuleListControl::OnScroll, this);
-	Bind(wxEVT_SCROLLWIN_LINEUP, &RuleListControl::OnScroll, this);
-	Bind(wxEVT_SCROLLWIN_LINEDOWN, &RuleListControl::OnScroll, this);
-	Bind(wxEVT_SCROLLWIN_PAGEUP, &RuleListControl::OnScroll, this);
-	Bind(wxEVT_SCROLLWIN_PAGEDOWN, &RuleListControl::OnScroll, this);
-	Bind(wxEVT_SCROLLWIN_THUMBTRACK, &RuleListControl::OnScroll, this);
-	Bind(wxEVT_SCROLLWIN_THUMBRELEASE, &RuleListControl::OnScroll, this);
 }
 
 void RuleListControl::SetRuleSets(const std::vector<std::string>& ruleSetNames) {
 	m_ruleSetNames = ruleSetNames;
 	m_selectedIndex = -1;
+
+	// The active set is tracked by name, so it survives a refresh and reordering.
+	if (!m_activeRuleSet.empty() && std::ranges::find(m_ruleSetNames, m_activeRuleSet) == m_ruleSetNames.end()) {
+		m_activeRuleSet.clear();
+	}
+
 	RefreshVirtualSize();
 	Refresh();
 }
 
+void RuleListControl::SetActiveRuleSet(const std::string& name, bool dirty, bool saved) {
+	if (m_activeRuleSet == name && m_activeDirty == dirty && m_activeSaved == saved) {
+		return;
+	}
+	m_activeRuleSet = name;
+	m_activeDirty = dirty;
+	m_activeSaved = saved;
+	Refresh();
+}
 void RuleListControl::RefreshVirtualSize() {
-	wxSize clientSize = GetClientSize();
-	int totalHeight = m_ruleSetNames.size() * m_itemHeight;
-	SetScrollbar(wxVERTICAL, GetScrollPos(wxVERTICAL), clientSize.y, totalHeight);
+	UpdateScrollbar(static_cast<int>(m_ruleSetNames.size()) * m_itemHeight);
 }
 
 wxSize RuleListControl::DoGetBestClientSize() const {
@@ -50,9 +68,8 @@ void RuleListControl::OnSize(wxSizeEvent& event) {
 	Refresh();
 	event.Skip();
 }
-
 void RuleListControl::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
-	int scrollPos = GetScrollPos(wxVERTICAL);
+	const int scrollPos = GetScrollPosition();
 	// Assumption: NanoVGCanvas applies nvgTranslate(0, -scrollPos) automatically.
 	// So we draw items at their absolute Y position.
 
@@ -65,14 +82,10 @@ void RuleListControl::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 	static const float radius = 4.0f;
 	static const float FONT_SIZE = 16.0f; // 10pt equivalent, adjusted for better visual weight
 
-	// Card Colors
-	wxColour cardBase = Theme::Get(Theme::Role::CardBase);
-	wxColour cardBaseHover = Theme::Get(Theme::Role::CardBaseHover);
-	wxColour cardBaseSelected = Theme::Get(Theme::Role::Accent);
-	wxColour textNormal = Theme::Get(Theme::Role::Text);
-	wxColour textSelected = Theme::Get(Theme::Role::TextOnAccent);
-	wxColour borderNormal = Theme::Get(Theme::Role::CardBorder);
-	wxColour borderSelected = Theme::Get(Theme::Role::TextOnAccent);
+	const wxColour cardBase = Theme::Get(Theme::Role::CardBase);
+	const wxColour cardBaseHover = Theme::Get(Theme::Role::CardBaseHover);
+	const wxColour borderNormal = Theme::Get(Theme::Role::CardBorder);
+	const wxColour textNormal = Theme::Get(Theme::Role::Text);
 
 	nvgFontSize(vg, FONT_SIZE);
 	if (nvgFindFont(vg, "sans") != -1) {
@@ -80,20 +93,37 @@ void RuleListControl::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 	}
 	nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 
+	// Rule sets are colour coded by state:
+	//   selected        blue    - the set whose rules are in the table
+	//   selected, edited orange - loaded, but the table has unsaved changes
+	//   saved           green   - loaded and written to disk
 	for (int i = startIdx; i <= endIdx; ++i) {
 		float y = i * m_itemHeight + padding;
 		float x = padding;
 		float w = width - 2 * padding;
 		float h = m_itemHeight - 2 * padding;
 
-		// Determine State
-		bool isSelected = (i == m_selectedIndex);
-		bool isHovered = (i == m_hoveredIndex);
+		const bool isSelected = (i == m_selectedIndex);
+		const bool isHovered = (i == m_hoveredIndex);
+
+		// Only the set being edited is colour coded, and its colour is the state
+		// of its edits:
+		//   blue   - loaded, unchanged since
+		//   orange - edited, not written to disk
+		//   green  - written to disk
+		// Everything else is a set sitting on disk and stays neutral, otherwise
+		// the list would be one colour forever and say nothing.
+		const bool isActive = (!m_activeRuleSet.empty() && m_ruleSetNames[i] == m_activeRuleSet);
+
+		wxColour stateColour = Theme::Get(Theme::Role::Text);
+		if (isActive) {
+			stateColour = Theme::Get(m_activeDirty ? Theme::Role::Warning : (m_activeSaved ? Theme::Role::Success : Theme::Role::Accent));
+		}
 
 		wxColour fillColor = cardBase;
-		if (isSelected) {
-			fillColor = cardBaseSelected;
-		} else if (isHovered) {
+		if (isActive) {
+			fillColor = MixColour(cardBase, stateColour, 40);
+		} else if (isSelected || isHovered) {
 			fillColor = cardBaseHover;
 		}
 
@@ -112,16 +142,24 @@ void RuleListControl::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 		nvgFill(vg);
 
 		// Border
-		wxColour borderColor = isSelected ? borderSelected : borderNormal;
+		wxColour borderColor = isActive ? stateColour : borderNormal;
 		nvgStrokeColor(vg, nvgRGBA(borderColor.Red(), borderColor.Green(), borderColor.Blue(), borderColor.Alpha()));
-		nvgStrokeWidth(vg, 1.0f);
+		nvgStrokeWidth(vg, isActive ? 2.0f : 1.0f);
 		nvgStroke(vg);
 
 		// Text
-		wxColour textColor = isSelected ? textSelected : textNormal;
+		wxColour textColor = isActive ? stateColour : textNormal;
 		nvgFillColor(vg, nvgRGBA(textColor.Red(), textColor.Green(), textColor.Blue(), textColor.Alpha()));
 
-		nvgText(vg, x + 10, y + h / 2.0f, m_ruleSetNames[i].c_str(), nullptr);
+		nvgText(vg, x + 14, y + h / 2.0f, m_ruleSetNames[i].c_str(), nullptr);
+
+		// A solid state bar on the left, on the set being edited.
+		if (isActive) {
+			nvgBeginPath(vg);
+			nvgRoundedRect(vg, x, y, 5.0f, h, 2.0f);
+			nvgFillColor(vg, nvgRGBA(stateColour.Red(), stateColour.Green(), stateColour.Blue(), 255));
+			nvgFill(vg);
+		}
 	}
 }
 
@@ -130,7 +168,7 @@ wxRect RuleListControl::GetItemRect(int index) const {
 		return wxRect();
 	}
 	wxSize clientSize = GetClientSize();
-	int scrollPos = GetScrollPos(wxVERTICAL);
+	const int scrollPos = GetScrollPosition();
 	return wxRect(0, index * m_itemHeight - scrollPos, clientSize.x, m_itemHeight);
 }
 
@@ -140,7 +178,7 @@ void RuleListControl::OnMouse(wxMouseEvent& event) {
 	if (event.GetEventType() == wxEVT_LEAVE_WINDOW) {
 		m_hoveredIndex = -1;
 	} else {
-		int scrollPos = GetScrollPos(wxVERTICAL);
+		const int scrollPos = GetScrollPosition();
 		int y = event.GetY() + scrollPos;
 		int idx = y / m_itemHeight;
 
@@ -161,47 +199,6 @@ void RuleListControl::OnMouse(wxMouseEvent& event) {
 	if (oldHover != m_hoveredIndex || event.LeftDown()) {
 		Refresh();
 	}
-}
-
-void RuleListControl::OnMouseWheel(wxMouseEvent& event) {
-	int rotation = event.GetWheelRotation();
-	int delta = (rotation / 120) * 3; // 3 items per notch
-	int newPos = GetScrollPos(wxVERTICAL) - delta * m_itemHeight;
-
-	int totalHeight = m_ruleSetNames.size() * m_itemHeight;
-	int maxScroll = std::max(0, totalHeight - GetClientSize().y);
-	newPos = std::clamp(newPos, 0, maxScroll);
-
-	SetScrollPos(wxVERTICAL, newPos);
-	Refresh();
-}
-
-void RuleListControl::OnScroll(wxScrollWinEvent& event) {
-	int pos = GetScrollPos(wxVERTICAL);
-	int h = GetClientSize().y;
-	int total = m_ruleSetNames.size() * m_itemHeight;
-	int maxScroll = std::max(0, total - h);
-
-	wxEventType type = event.GetEventType();
-	if (type == wxEVT_SCROLLWIN_TOP) {
-		pos = 0;
-	} else if (type == wxEVT_SCROLLWIN_BOTTOM) {
-		pos = maxScroll;
-	} else if (type == wxEVT_SCROLLWIN_LINEUP) {
-		pos -= m_itemHeight;
-	} else if (type == wxEVT_SCROLLWIN_LINEDOWN) {
-		pos += m_itemHeight;
-	} else if (type == wxEVT_SCROLLWIN_PAGEUP) {
-		pos -= h;
-	} else if (type == wxEVT_SCROLLWIN_PAGEDOWN) {
-		pos += h;
-	} else if (type == wxEVT_SCROLLWIN_THUMBTRACK || type == wxEVT_SCROLLWIN_THUMBRELEASE) {
-		pos = event.GetPosition();
-	}
-
-	pos = std::clamp(pos, 0, maxScroll);
-	SetScrollPos(wxVERTICAL, pos);
-	Refresh();
 }
 
 void RuleListControl::OnContextMenu(wxContextMenuEvent& event) {

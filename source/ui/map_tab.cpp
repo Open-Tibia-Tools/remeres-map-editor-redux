@@ -24,6 +24,8 @@
 #include "ui/map_tab.h"
 #include "editor/editor_tabs.h"
 #include "rendering/ui/map_display.h"
+#include "brushes/managers/brush_manager.h"
+#include "brushes/town/town_temple_brush.h"
 
 #include <spdlog/spdlog.h>
 
@@ -55,6 +57,11 @@ MapTab::MapTab(const MapTab* other) :
 }
 
 MapTab::~MapTab() {
+	if (g_brush_manager.temple_brush) {
+		g_brush_manager.temple_brush->invokeCancelCallback();
+	}
+	CloseReplaceItemsDialog();
+	CloseSpawnValidatorDialog();
 	spdlog::info("MapTab destroying [Tab={}] (Owner count: {})", (void*)this, iref->owner_count);
 	iref->owner_count--;
 	if (iref->owner_count <= 0) {

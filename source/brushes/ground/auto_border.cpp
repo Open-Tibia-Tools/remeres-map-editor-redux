@@ -73,7 +73,6 @@ bool AutoBorder::load(pugi::xml_node node, std::vector<std::string>& warnings, G
 		}
 
 		if (ground) { // We are a ground border
-			g_item_definitions.setGroup(itemid, ITEM_GROUP_NONE);
 			g_item_definitions.setAttribute(itemid, ItemAttributeKey::BorderBaseGroundId, border_base_ground_id);
 			g_item_definitions.mutableEditorData(itemid).brush = owner;
 		}

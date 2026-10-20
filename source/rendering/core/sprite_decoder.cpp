@@ -9,8 +9,6 @@
 
 namespace {
 
-	constexpr int RGBA_COMPONENTS = 4;
-
 	struct DecompressionContext {
 		int id;
 		uint8_t bpp;

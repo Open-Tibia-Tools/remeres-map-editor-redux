@@ -57,6 +57,15 @@ GLContextManager g_gl_context;
 GLContextManager::GLContextManager() = default;
 GLContextManager::~GLContextManager() = default;
 
+const wxGLAttributes& GLContextManager::CanvasAttributes() {
+	static const wxGLAttributes attributes = [] {
+		wxGLAttributes attr;
+		attr.PlatformDefaults().Defaults().RGBA().DoubleBuffer().Depth(24).Stencil(8).EndList();
+		return attr;
+	}();
+	return attributes;
+}
+
 wxGLContext* GLContextManager::GetGLContext(wxGLCanvas* win) {
 	if (win) {
 		RegisterCanvas(win);

@@ -38,6 +38,7 @@ void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 		if (tile->ground && tile->ground->isSelected()) {
 			copied_tile->house_id = tile->house_id;
 			copied_tile->setMapFlags(tile->getMapFlags());
+			copied_tile->setZoneIds(tile->getZoneIds());
 		}
 
 		auto tile_selection = TileOperations::getSelectedItems(tile);
@@ -98,6 +99,8 @@ void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 			newtile->house_id = 0;
 			copied_tile->setMapFlags(tile->getMapFlags());
 			newtile->setMapFlags(TILESTATE_NONE);
+			copied_tile->setZoneIds(newtile->getZoneIds());
+			newtile->setZoneIds({});
 		}
 
 		auto tile_selection = TileOperations::popSelectedItems(newtile.get());
@@ -184,6 +187,9 @@ void CopyOperations::paste(Editor& editor, CopyBuffer& buffer, const Position& t
 
 		TileLocation* dest_location = editor.map.createTileL(pos);
 		std::unique_ptr<Tile> copy_tile = TileOperations::deepCopy(buffer_tile, editor.map);
+		if (!editor.map.supportsZones() && copy_tile->hasZones()) {
+			copy_tile->setZoneIds({});
+		}
 		Tile* old_dest_tile = dest_location->get();
 		std::unique_ptr<Tile> new_dest_tile_ptr;
 		copy_tile->setLocation(dest_location);
@@ -195,7 +201,7 @@ void CopyOperations::paste(Editor& editor, CopyBuffer& buffer, const Position& t
 				new_dest_tile_ptr = editor.map.allocator(dest_location);
 			}
 			// copy_tile may be partially moved-from after the merge call
-			TileOperations::merge(new_dest_tile_ptr.get(), copy_tile.get());
+			TileOperations::merge(new_dest_tile_ptr.get(), copy_tile.get(), &editor.map);
 		} else {
 			// If the copied tile has ground, replace target tile
 			new_dest_tile_ptr = std::move(copy_tile);

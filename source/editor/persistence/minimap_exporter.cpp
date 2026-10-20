@@ -15,8 +15,6 @@ namespace minimap_export {
 
 namespace {
 
-constexpr int kMaxWebpDimension = 16383;
-constexpr int kMaxJpegDimension = 65500;
 constexpr uint64_t kMaxFullImageBytes = 1536ULL * 1024ULL * 1024ULL;
 constexpr uint64_t kRgbPixelBytes = 3;
 

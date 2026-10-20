@@ -33,12 +33,6 @@
 #include <nlohmann/json.hpp>
 #include <format>
 
-namespace {
-	const int PREVIEW_SIZE = 192;
-	const int OUTFIT_TILE_WIDTH = 100;
-	const int OUTFIT_TILE_HEIGHT = 120;
-}
-
 // ============================================================================
 // OutfitChooserDialog
 // ============================================================================

@@ -84,6 +84,7 @@ struct OTBMStartupPeekResult {
 	wxString spawn_xml_file;
 	wxString monster_xml_file;
 	wxString npc_xml_file;
+	wxString zone_xml_file;
 	wxString description;
 	wxDateTime modified_time;
 	bool has_error = false;

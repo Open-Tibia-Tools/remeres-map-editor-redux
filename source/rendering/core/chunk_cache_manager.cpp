@@ -22,13 +22,104 @@
 #include "game/outfit.h"
 #include "rendering/utilities/pattern_calculator.h"
 #include "rendering/core/sprite_preloader.h"
+#include "util/phase_profiler.h"
+#include <thread>
 #include "rendering/shaders/chunk_shader.h"
 #include "rendering/indicators/technical_item_registry.h"
 #include "rendering/core/render_depth.h"
 #include <spdlog/spdlog.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+
+namespace {
+
+	using ChunkFloors = std::array<std::array<const Floor*, 4>, 4>;
+
+	// A 16x16 chunk always lies inside one 64x64 grid cell, so a single cell lookup resolves its 4x4 nodes.
+	bool gatherChunkFloors(const Map& map, int32_t cx, int32_t cy, int32_t z, ChunkFloors& floors) {
+		floors = {};
+		if (z < 0 || z >= MAP_LAYERS) {
+			return false;
+		}
+		const auto& grid = map.getGrid();
+		const auto* cell = grid.getCell(grid.findCellIndex(SpatialHashGrid::makeKeyFromCell(cx >> 2, cy >> 2)));
+		if (!cell) {
+			return false;
+		}
+
+		const int chunk_ix = cx & 3;
+		const int chunk_iy = cy & 3;
+		if ((cell->floor_chunk_mask[z] & static_cast<uint16_t>(1u << ((chunk_iy << 2) | chunk_ix))) == 0) {
+			return false;
+		}
+
+		bool any_floor = false;
+		for (int ny = 0; ny < 4; ++ny) {
+			const int row_base = ((chunk_iy << 2) + ny) << 4;
+			for (int nx = 0; nx < 4; ++nx) {
+				const MapNode* nd = cell->nodes[row_base + (chunk_ix << 2) + nx].get();
+				if (nd) {
+					floors[nx][ny] = nd->getFloor(z);
+					any_floor = any_floor || floors[nx][ny] != nullptr;
+				}
+			}
+		}
+		return any_floor;
+	}
+
+	const TileLocation* chunkTileLocation(const ChunkFloors& floors, int tx, int ty) {
+		const Floor* fl = floors[tx >> 2][ty >> 2];
+		return fl ? &fl->locs[(tx & 3) * 4 + (ty & 3)] : nullptr;
+	}
+
+	bool isBakeableRegion(const AtlasRegion* reg) {
+		return reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL;
+	}
+
+	// Writes the frame-dependent fields; house_id must already be set.
+	void writeRegionGeometry(TileInstance& inst, const AtlasRegion& reg, int draw_x, int draw_y) {
+		inst.x = static_cast<float>(draw_x);
+		inst.y = static_cast<float>(draw_y);
+		inst.w = (inst.house_id >= 1000000.0f) ? 32.0f : static_cast<float>(reg.pixel_width);
+		inst.h = (inst.house_id >= 1000000.0f) ? 32.0f : static_cast<float>(reg.pixel_height);
+		inst.sprite_id = static_cast<float>(reg.debug_sprite_id);
+	}
+
+	// Visits the atlas regions of one sprite occurrence in bake order, with their draw positions.
+	// With allow_upload=false the bake reports a not-yet-loaded sprite as a null region instead
+	// of loading it inline, so asset loading happens on the sprite preloader's workers and never
+	// blocks the render thread.
+	template <typename Visitor>
+	void forEachSpriteRegion(GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, bool allow_upload, Visitor&& visit) {
+		if (spr->width == 1 && spr->height == 1 && spr->layers == 1) {
+			const AtlasRegion* reg = nullptr;
+			if (spr->is_simple && pat.subtype == -1 && pat.x == 0 && pat.y == 0 && pat.z == 0 && pat.frame == 0) {
+				reg = spr->getCachedDefaultRegion();
+			}
+			if (!reg) {
+				reg = spr->getAtlasRegion(0, 0, 0, pat.subtype, pat.x, pat.y, pat.z, pat.frame, allow_upload);
+			}
+			visit(reg, draw_base_x, draw_base_y);
+			return;
+		}
+
+		const auto composite_metrics = spr->getPlainLayoutMetrics(pat.subtype, pat.x, pat.y, pat.z, pat.frame);
+		int x_offset = 0;
+		for (int cx = 0; cx < composite_metrics.num_columns; ++cx) {
+			int y_offset = 0;
+			for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
+				for (int cf = 0; cf < spr->layers; ++cf) {
+					visit(spr->getAtlasRegion(cx, cy, cf, pat.subtype, pat.x, pat.y, pat.z, pat.frame, allow_upload), draw_base_x - x_offset, draw_base_y - y_offset);
+				}
+				y_offset += composite_metrics.row_heights[cy];
+			}
+			x_offset += composite_metrics.column_widths[cx];
+		}
+	}
+
+} // namespace
 
 ChunkCacheManager::ChunkCacheManager() {
 	bake_buffer_.reserve(2048);
@@ -218,66 +309,46 @@ void ChunkCacheManager::uploadChunk(CachedChunk& chunk, const std::vector<TileIn
 	}
 }
 
-void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const RenderFrameContext& ctx) {
+void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const RenderFrameContext& ctx, bool allow_upload) {
+	// Items are not drawn beyond the LOD cutoff when hide_items_when_zoomed is on, so
+	// do not bake them: they would only cost bake time (the dominant burst cost) and
+	// VBO memory. The chunk records whether items were baked so it can be re-baked if
+	// items become visible again.
+	const bool bake_items = !(ctx.view.zoom > 10.0f && ctx.options.hide_items_when_zoomed);
+	// Set when the bake had to skip a sprite that is not uploaded yet (only possible while
+	// allow_upload is false). Such a chunk is marked incomplete and retried later.
+	bool skipped = false;
+	// Creatures animate independently of sprite frame runs, so the chunk records the frame
+	// step of the creature animation it baked (0 when it holds none).
+	uint16_t creature_step_ms = 0;
 	bake_buffer_.clear();
 	chunk.clearDynamicTiles();
-	chunk.has_animated_terrain = false;
-	chunk.sample_animated_sprite = nullptr;
-	chunk.min_anim_duration = 350;
+	chunk.animated_sprites.clear();
+	chunk.animated_runs.clear();
 
 	const int32_t base_x = chunk.coord.cx * CHUNK_SIZE;
 	const int32_t base_y = chunk.coord.cy * CHUNK_SIZE;
 	const int32_t z = chunk.coord.z;
 
-	const int32_t cell_x = chunk.coord.cx >> 2;
-	const int32_t cell_y = chunk.coord.cy >> 2;
-	const int32_t chunk_ix = chunk.coord.cx & 3;
-	const int32_t chunk_iy = chunk.coord.cy & 3;
-
-	const Floor* floors[4][4] = {};
-	bool any_floor = false;
-
-	// Single lookup for the containing 64x64 cell
-	const auto& grid = map.getGrid();
-	const uint64_t cell_key = SpatialHashGrid::makeKeyFromCell(cell_x, cell_y);
-	const size_t cell_idx = grid.findCellIndex(cell_key);
-
-	if (cell_idx < grid.cellCount()) {
-		const auto* cell_ptr = grid.getCell(cell_idx);
-		if (cell_ptr) {
-			const auto& cell = *cell_ptr;
-			for (int ny = 0; ny < 4; ++ny) {
-				const int node_y = (chunk_iy << 2) + ny;
-				const int row_base = node_y << 4; // * 16
-				for (int nx = 0; nx < 4; ++nx) {
-					const int node_x = (chunk_ix << 2) + nx;
-					const MapNode* nd = cell.nodes[row_base + node_x].get();
-					if (nd) {
-						floors[nx][ny] = nd->getFloor(z);
-						if (floors[nx][ny]) {
-							any_floor = true;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (!any_floor) {
+	ChunkFloors floors;
+	if (!gatherChunkFloors(map, chunk.coord.cx, chunk.coord.cy, z, floors)) {
 		chunk.is_empty = true;
 		chunk.is_dirty = false;
 		chunk.instance_count = 0;
+		chunk.baked_with_items = bake_items;
+		chunk.is_complete = true;
+		chunk.rebake_attempts = 0;
+		chunk.force_load = false;
+		chunk.animated_sprites.clear();
+		chunk.animated_runs.clear();
+		chunk.animated_step_ms = 0;
+		chunk.animated_shadow.clear();
 		return;
 	}
 
 	auto pushRegionInstance = [&](const AtlasRegion* reg, int draw_x, int draw_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE) {
-		if (reg && reg->debug_sprite_id != AtlasRegion::INVALID_SENTINEL) {
+		if (isBakeableRegion(reg)) {
 			TileInstance inst;
-			inst.x = static_cast<float>(draw_x);
-			inst.y = static_cast<float>(draw_y);
-			inst.w = (house_id >= 1000000.0f) ? 32.0f : static_cast<float>(reg->pixel_width);
-			inst.h = (house_id >= 1000000.0f) ? 32.0f : static_cast<float>(reg->pixel_height);
-			inst.sprite_id = static_cast<float>(reg->debug_sprite_id);
 			inst.flags = flags;
 			inst.r = rf;
 			inst.g = gf;
@@ -285,53 +356,46 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			inst.a = af;
 			inst.house_id = house_id;
 			inst.depth = depth;
+			writeRegionGeometry(inst, *reg, draw_x, draw_y);
 			bake_buffer_.push_back(inst);
 		}
 	};
 
-	auto pushColorRect = [&](int rx, int ry, int rw, int rh, float rf, float gf, float bf, float af, float depth = 0.0f) {
-		TileInstance inst;
-		inst.x = static_cast<float>(rx);
-		inst.y = static_cast<float>(ry);
-		inst.w = static_cast<float>(rw);
-		inst.h = static_cast<float>(rh);
-		inst.sprite_id = 0.0f;
-		inst.flags = TILE_INSTANCE_FLAG_SOLID_COLOR; // SOLID_COLOR: direct color quad, bypasses texture atlas and LUT
-		inst.r = rf;
-		inst.g = gf;
-		inst.b = bf;
-		inst.a = af;
-		inst.house_id = 0.0f;
-		inst.depth = depth;
-		bake_buffer_.push_back(inst);
+	auto emitSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE, bool upload = false) {
+		forEachSpriteRegion(spr, pat, draw_base_x, draw_base_y, upload || allow_upload, [&](const AtlasRegion* reg, int draw_x, int draw_y) {
+			if (!reg) {
+				// Not uploaded yet. The caller queued it to the sprite preloader, so the chunk
+				// is simply re-baked once it becomes available.
+				skipped = true;
+				return;
+			}
+			pushRegionInstance(reg, draw_x, draw_y, rf, gf, bf, af, house_id, depth, flags);
+		});
 	};
 
-	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE) {
-		const bool is_simple = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
-		if (is_simple) {
-			const AtlasRegion* reg = nullptr;
-			if (spr->is_simple && pat.subtype == -1 && pat.x == 0 && pat.y == 0 && pat.z == 0 && pat.frame == 0) {
-				reg = spr->getCachedDefaultRegion();
-			}
-			if (!reg) {
-				reg = spr->getAtlasRegion(0, 0, 0, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
-			}
-			pushRegionInstance(reg, draw_base_x, draw_base_y, rf, gf, bf, af, house_id, depth, flags);
-		} else {
-			const auto composite_metrics = spr->getPlainLayoutMetrics(pat.subtype, pat.x, pat.y, pat.z, pat.frame);
-			int x_offset = 0;
-			for (int cx = 0; cx < composite_metrics.num_columns; ++cx) {
-				int y_offset = 0;
-				for (int cy = 0; cy < composite_metrics.num_rows; ++cy) {
-					for (int cf = 0; cf < spr->layers; ++cf) {
-						const AtlasRegion* reg = spr->getAtlasRegion(cx, cy, cf, pat.subtype, pat.x, pat.y, pat.z, pat.frame);
-						pushRegionInstance(reg, draw_base_x - x_offset, draw_base_y - y_offset, rf, gf, bf, af, house_id, depth, flags);
-					}
-					y_offset += composite_metrics.row_heights[cy];
-				}
-				x_offset += composite_metrics.column_widths[cx];
-			}
+	// Map items and grounds animate; their runs are tracked so frame changes can be patched in place.
+	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE, bool upload = false) {
+		const size_t first_instance = bake_buffer_.size();
+		emitSpriteInstances(spr, pat, draw_base_x, draw_base_y, rf, gf, bf, af, house_id, depth, flags, upload);
+		if (!spr->isAnimated()) {
+			return;
 		}
+
+		auto slot = std::ranges::find(chunk.animated_sprites, spr, &AnimatedSpriteFrame::sprite);
+		if (slot == chunk.animated_sprites.end()) {
+			slot = chunk.animated_sprites.insert(slot, AnimatedSpriteFrame { .sprite = spr, .frame = pat.frame });
+		}
+		chunk.animated_runs.push_back(AnimatedSpriteRun {
+			.first_instance = static_cast<uint32_t>(first_instance),
+			.instance_count = static_cast<uint32_t>(bake_buffer_.size() - first_instance),
+			.sprite_slot = static_cast<uint32_t>(slot - chunk.animated_sprites.begin()),
+			.draw_x = draw_base_x,
+			.draw_y = draw_base_y,
+			.pattern_x = static_cast<int16_t>(pat.x),
+			.pattern_y = static_cast<int16_t>(pat.y),
+			.pattern_z = static_cast<int16_t>(pat.z),
+			.subtype = static_cast<int16_t>(pat.subtype),
+		});
 	};
 
 	auto pushCreatureInstances = [&](const Creature* creature, int screenx, int screeny, float depth = 0.0f) {
@@ -358,7 +422,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					const int item_x = screenx - draw_offset_x;
 					const int item_y = screeny - draw_offset_y;
 					const SpritePatterns pat { .x = 0, .y = 0, .z = 0, .frame = 0, .subtype = -1 };
-					pushSpriteInstances(ispr, pat, item_x, item_y, rf, gf, bf, af, 0.0f, depth);
+					emitSpriteInstances(ispr, pat, item_x, item_y, rf, gf, bf, af, 0.0f, depth);
 				}
 			}
 			return;
@@ -375,6 +439,15 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		}
 		if (!spr) {
 			return;
+		}
+
+		// The creature's sprite animation determines how often this chunk can change.
+		if (spr->animator) {
+			int step = spr->animator->getFrameStepMs();
+			if (step <= 0) {
+				step = ITEM_FRAME_DURATION;
+			}
+			creature_step_ms = static_cast<uint16_t>(std::min(step, 65000));
 		}
 
 		int pattern_z = 0;
@@ -457,14 +530,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				continue;
 			}
 
-			const Floor* fl = floors[tx >> 2][ty >> 2];
-			if (!fl) {
-				continue;
-			}
-
-			const int loc_idx = (tx & 3) * 4 + (ty & 3);
-			const TileLocation* loc = &fl->locs[loc_idx];
-			const Tile* tile = loc->get();
+			const TileLocation* loc = chunkTileLocation(floors, tx, ty);
+			const Tile* tile = loc ? loc->get() : nullptr;
 			if (!tile) {
 				continue;
 			}
@@ -478,7 +545,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			const bool as_minimap = ctx.options.show_as_minimap;
 			const bool only_colors = as_minimap || ctx.options.show_only_colors;
 
-			if ((tile->creature && ctx.options.show_creatures && !only_colors) || tile->invalidZones ||
+			if ((tile->creature && ctx.options.show_creatures && !only_colors) || tile->hasInvalidZones() ||
 				(tile->ground && tile->ground->isInvalidOTBMItem())) {
 				chunk.markDynamicTile(tx, ty);
 			}
@@ -508,13 +575,6 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				} else if (git && !git.isMetaItem()) {
 					GameSprite* gspr = ctx.gfx.getGameSprite(git.clientId());
 					if (gspr) {
-						if (gspr->isAnimated()) {
-							chunk.has_animated_terrain = true;
-							if (!chunk.sample_animated_sprite) {
-								chunk.sample_animated_sprite = gspr;
-							}
-						}
-
 						const SpritePatterns g_pat = PatternCalculator::Calculate(gspr, git, tile->ground.get(), tile, Position(x, y, z), ctx.elapsed_time);
 						if (!gspr->isSimpleAndLoaded()) {
 							rme::collectTileSprites(gspr, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
@@ -531,13 +591,20 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 						const int ground_x = x * 32 - g_off_x;
 						const int ground_y = y * 32 - g_off_y;
 
+						// The ground is what makes a chunk visible at all: without it a chunk
+						// (water in particular, whose ground is an animated sprite) renders as a
+						// black hole until the preloader catches up. Resolve it with loading
+						// allowed, and keep the (far more numerous) borders and items on the
+						// non-blocking path.
 						pushSpriteInstances(gspr, g_pat, ground_x, ground_y,
 							static_cast<float>(r) * (1.0f / 255.0f),
 							static_cast<float>(g) * (1.0f / 255.0f),
 							static_cast<float>(b) * (1.0f / 255.0f),
 							1.0f,
 							-tile_house_id,
-							ground_depth);
+							ground_depth,
+							TILE_INSTANCE_FLAG_TEXTURE,
+							/*upload=*/true);
 					}
 				}
 			}
@@ -569,13 +636,6 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
 				if (!ispr) {
 					continue;
-				}
-
-				if (ispr->isAnimated()) {
-					chunk.has_animated_terrain = true;
-					if (!chunk.sample_animated_sprite) {
-						chunk.sample_animated_sprite = ispr;
-					}
 				}
 
 				const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z), ctx.elapsed_time);
@@ -618,14 +678,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				continue;
 			}
 
-			const Floor* fl = floors[tx >> 2][ty >> 2];
-			if (!fl) {
-				continue;
-			}
-
-			const int loc_idx = (tx & 3) * 4 + (ty & 3);
-			const TileLocation* loc = &fl->locs[loc_idx];
-			const Tile* tile = loc->get();
+			const TileLocation* loc = chunkTileLocation(floors, tx, ty);
+			const Tile* tile = loc ? loc->get() : nullptr;
 			if (!tile) {
 				continue;
 			}
@@ -641,102 +695,91 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 
 			const float tile_house_id = tile->isHouseTile() ? static_cast<float>(tile->getHouseID()) : 0.0f;
 
-			// 3. Static items & structures with elevation stacking
+			// 3. Static items & structures with elevation stacking. Skipped entirely when
+			// items are not drawn at this zoom: the item pass is the dominant cost of a
+			// pan/zoom bake burst.
 			int elev = 0;
-			for (const auto& item : tile->items) {
-				if (!item || item->isBorder()) {
-					continue;
-				}
-				if (item->isInvalidOTBMItem()) {
-					chunk.markDynamicTile(tx, ty);
-					continue;
-				}
-				const ItemDefinitionView it = item->getDefinition();
-				const uint16_t item_client_id = it ? it.clientId() : 0;
-				const uint16_t item_server_id = item->getID();
-
-				rme::rendering::RenderSublayer sublayer = rme::rendering::RenderSublayer::CommonItem;
-				if (item->isAlwaysOnBottom()) {
-					sublayer = rme::rendering::RenderSublayer::BottomItem;
-				} else if (it && it.hasFlag(ItemFlag::TopEffect)) {
-					sublayer = rme::rendering::RenderSublayer::TopItem;
-				}
-				const float item_depth = rme::rendering::calculateTileDepth(x, y, sublayer, elev > 0 ? 1 : 0);
-
-				const auto tech_type = (ctx.options.show_tech_items && !ctx.options.ingame)
-					? rme::rendering::TechnicalItemRegistry::Classify(item_server_id, item_client_id)
-					: rme::rendering::TileIndicatorType::None;
-				if (tech_type != rme::rendering::TileIndicatorType::None) {
-					const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
-					if (white_pixel) {
-						pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type), item_depth);
+			if (bake_items) {
+				for (const auto& item : tile->items) {
+					if (!item || item->isBorder()) {
+						continue;
 					}
-					continue;
-				}
-
-				if (!it || it.isMetaItem() || (!ctx.options.show_items && it.hasFlag(ItemFlag::Pickupable))) {
-					continue;
-				}
-				GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
-				if (!ispr) {
-					continue;
-				}
-				if (ispr->isAnimated()) {
-					chunk.has_animated_terrain = true;
-					if (!chunk.sample_animated_sprite) {
-						chunk.sample_animated_sprite = ispr;
+					if (item->isInvalidOTBMItem()) {
+						chunk.markDynamicTile(tx, ty);
+						continue;
 					}
-					if (ispr->animator) {
-						const FrameDuration* fd = ispr->animator->getFrameDuration(0);
-						if (fd) {
-							const int dur = fd->getDuration();
-							if (dur > 0 && dur < chunk.min_anim_duration) {
-								chunk.min_anim_duration = dur;
-							}
+					const ItemDefinitionView it = item->getDefinition();
+					const uint16_t item_client_id = it ? it.clientId() : 0;
+					const uint16_t item_server_id = item->getID();
+
+					rme::rendering::RenderSublayer sublayer = rme::rendering::RenderSublayer::CommonItem;
+					if (item->isAlwaysOnBottom()) {
+						sublayer = rme::rendering::RenderSublayer::BottomItem;
+					} else if (it && it.hasFlag(ItemFlag::TopEffect)) {
+						sublayer = rme::rendering::RenderSublayer::TopItem;
+					}
+					const float item_depth = rme::rendering::calculateTileDepth(x, y, sublayer, elev > 0 ? 1 : 0);
+
+					const auto tech_type = (ctx.options.show_tech_items && !ctx.options.ingame)
+						? rme::rendering::TechnicalItemRegistry::Classify(item_server_id, item_client_id)
+						: rme::rendering::TileIndicatorType::None;
+					if (tech_type != rme::rendering::TileIndicatorType::None) {
+						const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
+						if (white_pixel) {
+							pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type), item_depth);
 						}
+						continue;
+					}
+
+					if (!it || it.isMetaItem() || (!ctx.options.show_items && it.hasFlag(ItemFlag::Pickupable))) {
+						continue;
+					}
+					GameSprite* ispr = ctx.gfx.getGameSprite(it.clientId());
+					if (!ispr) {
+						continue;
+					}
+
+					const auto [draw_offset_x, draw_offset_y] = ispr->getDrawOffset();
+					const int item_x = x * 32 - elev - draw_offset_x;
+					const int item_y = y * 32 - elev - draw_offset_y;
+
+					const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z), ctx.elapsed_time);
+					if (!ispr->isSimpleAndLoaded()) {
+						rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
+					}
+
+					uint8_t r = 255, g = 255, b = 255, a = 255;
+					if (item->isSelected()) {
+						r >>= 1;
+						g >>= 1;
+						b >>= 1;
+					}
+
+					if (ctx.options.transparent_items && (!it.isGroundTile() || ispr->width > 1 || ispr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || ispr->width > 1 || ispr->height > 1)) {
+						a >>= 1;
+					}
+
+					const float item_house_id = (ctx.options.extended_house_shader) ? tile_house_id : 0.0f;
+					const bool is_blocking_item = item->isBlocking() &&
+						!rme::rendering::TechnicalItemRegistry::IsInvisibleWall(item_server_id, item_client_id);
+					const float item_flags = (ctx.options.extended_pathing_shader && is_blocking_item)
+						? TILE_INSTANCE_FLAG_BLOCKING
+						: TILE_INSTANCE_FLAG_TEXTURE;
+
+					pushSpriteInstances(ispr, i_pat, item_x, item_y,
+						static_cast<float>(r) * (1.0f / 255.0f),
+						static_cast<float>(g) * (1.0f / 255.0f),
+						static_cast<float>(b) * (1.0f / 255.0f),
+						static_cast<float>(a) * (1.0f / 255.0f),
+						item_house_id,
+						item_depth,
+						item_flags);
+
+					if (ispr->hasElevation()) {
+						elev += ispr->draw_height;
 					}
 				}
-
-				const auto [draw_offset_x, draw_offset_y] = ispr->getDrawOffset();
-				const int item_x = x * 32 - elev - draw_offset_x;
-				const int item_y = y * 32 - elev - draw_offset_y;
-
-				const SpritePatterns i_pat = PatternCalculator::Calculate(ispr, it, item.get(), tile, Position(x, y, z), ctx.elapsed_time);
-				if (!ispr->isSimpleAndLoaded()) {
-					rme::collectTileSprites(ispr, i_pat.x, i_pat.y, i_pat.z, i_pat.frame);
-				}
-
-				uint8_t r = 255, g = 255, b = 255, a = 255;
-				if (item->isSelected()) {
-					r >>= 1;
-					g >>= 1;
-					b >>= 1;
-				}
-
-				if (ctx.options.transparent_items && (!it.isGroundTile() || ispr->width > 1 || ispr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || ispr->width > 1 || ispr->height > 1)) {
-					a >>= 1;
-				}
-
-				const float item_house_id = (ctx.options.extended_house_shader) ? tile_house_id : 0.0f;
-				const bool is_blocking_item = item->isBlocking() &&
-					!rme::rendering::TechnicalItemRegistry::IsInvisibleWall(item_server_id, item_client_id);
-				const float item_flags = (ctx.options.extended_pathing_shader && is_blocking_item)
-					? TILE_INSTANCE_FLAG_BLOCKING
-					: TILE_INSTANCE_FLAG_TEXTURE;
-
-				pushSpriteInstances(ispr, i_pat, item_x, item_y,
-					static_cast<float>(r) * (1.0f / 255.0f),
-					static_cast<float>(g) * (1.0f / 255.0f),
-					static_cast<float>(b) * (1.0f / 255.0f),
-					static_cast<float>(a) * (1.0f / 255.0f),
-					item_house_id,
-					item_depth,
-					item_flags);
-
-				if (ispr->hasElevation()) {
-					elev += ispr->draw_height;
-				}
-			}
+			} // bake_items
 
 			// 3.5. Tile point indicators (rendered on top of items and ground)
 			const AtlasRegion* white_pixel = ctx.atlas.getWhitePixel();
@@ -749,9 +792,6 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 				}
 				if (loc->getTownCount() > 0) {
 					pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::INDICATOR_TOWN_BASE, indicator_depth);
-				}
-				if (loc->getWaypointCount() > 0) {
-					pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, rme::rendering::INDICATOR_WAYPOINT_BASE, indicator_depth);
 				}
 			}
 
@@ -766,18 +806,153 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 	chunk.item_instance_count = static_cast<uint32_t>(bake_buffer_.size()) - chunk.terrain_instance_count;
 	chunk.instance_count = static_cast<uint32_t>(bake_buffer_.size());
 
-	chunk.last_baked_anim_time = ctx.elapsed_time;
-	if (chunk.sample_animated_sprite && chunk.sample_animated_sprite->animator) {
-		chunk.last_baked_frame = chunk.sample_animated_sprite->animator->getFrame(ctx.elapsed_time);
+	// getFrameStepMs() is constant per animator, so resolve the shortest animation frame
+	// duration once per bake; the frame loop reads this cached value instead of re-walking
+	// every AnimatedSpriteFrame of every visible chunk.
+	uint16_t sprite_step_ms = 0;
+	for (const AnimatedSpriteFrame& entry : chunk.animated_sprites) {
+		if (entry.sprite && entry.sprite->animator) {
+			const int step = entry.sprite->animator->getFrameStepMs();
+			if (step > 0 && (sprite_step_ms == 0 || static_cast<uint32_t>(step) < sprite_step_ms)) {
+				sprite_step_ms = static_cast<uint16_t>(step);
+			}
+		}
+	}
+	chunk.animated_step_ms = sprite_step_ms;
+
+	const std::vector<TileInstance>* upload_buffer = &bake_buffer_;
+	if (chunk.animated_runs.empty()) {
+		chunk.animated_shadow = {};
 	} else {
-		chunk.last_baked_frame = -1;
+		// Swap the bake buffer in instead of deep-copying it: animated_shadow takes ownership
+		// and bake_buffer_ keeps the recycled capacity of the previous shadow for the next bake.
+		chunk.animated_shadow.swap(bake_buffer_);
+		upload_buffer = &chunk.animated_shadow;
 	}
 
-	uploadChunk(chunk, bake_buffer_);
+	uploadChunk(chunk, *upload_buffer);
 	chunk.is_dirty = false;
+	chunk.baked_with_items = bake_items;
+	chunk.creature_animation_step_ms = creature_step_ms;
+	if (skipped && !allow_upload) {
+		chunk.is_complete = false;
+		chunk.rebake_attempts = std::min(chunk.rebake_attempts + 1, MAX_INCOMPLETE_REBAKES);
+		chunk.rebake_at_ms = steadyNowMs() + INCOMPLETE_REBAKE_DELAY_MS;
+	} else {
+		// Complete, or baked with loading allowed: nothing is left to wait for.
+		chunk.is_complete = true;
+		chunk.rebake_attempts = 0;
+		chunk.force_load = false;
+	}
+}
+
+bool ChunkCacheManager::refreshAnimatedFrames(CachedChunk& chunk, long elapsed_time) {
+	// ponytail: a chunk rarely holds more than a handful of distinct animated sprites, so a linear scan and a
+	// 64-bit changed mask are enough; chunks with more than 64 distinct animated sprites fall back to re-baking.
+	if (chunk.animated_sprites.size() > 64) {
+		return false;
+	}
+	uint64_t changed_slots = 0;
+	for (size_t slot = 0; slot < chunk.animated_sprites.size(); ++slot) {
+		AnimatedSpriteFrame& entry = chunk.animated_sprites[slot];
+		const int frame = entry.sprite->animator->getFrame(elapsed_time);
+		if (frame != entry.frame) {
+			entry.frame = frame;
+			changed_slots |= uint64_t { 1 } << slot;
+		}
+	}
+	if (changed_slots == 0) {
+		return true;
+	}
+
+	size_t patch_begin = chunk.animated_shadow.size();
+	size_t patch_end = 0;
+	for (const AnimatedSpriteRun& run : chunk.animated_runs) {
+		if ((changed_slots & (uint64_t { 1 } << run.sprite_slot)) == 0) {
+			continue;
+		}
+
+		GameSprite* spr = chunk.animated_sprites[run.sprite_slot].sprite;
+		const SpritePatterns pat {
+			.x = run.pattern_x,
+			.y = run.pattern_y,
+			.z = run.pattern_z,
+			.frame = chunk.animated_sprites[run.sprite_slot].frame,
+			.subtype = run.subtype,
+		};
+		if (!spr->isSimpleAndLoaded()) {
+			rme::collectTileSprites(spr, pat.x, pat.y, pat.z, pat.frame);
+		}
+
+		uint32_t written = 0;
+		bool layout_changed = false;
+		forEachSpriteRegion(spr, pat, run.draw_x, run.draw_y, true, [&](const AtlasRegion* reg, int draw_x, int draw_y) {
+			if (!isBakeableRegion(reg)) {
+				return;
+			}
+			if (written == run.instance_count) {
+				layout_changed = true;
+				return;
+			}
+			writeRegionGeometry(chunk.animated_shadow[run.first_instance + written], *reg, draw_x, draw_y);
+			++written;
+		});
+		if (layout_changed || written != run.instance_count) {
+			return false;
+		}
+
+		patch_begin = std::min<size_t>(patch_begin, run.first_instance);
+		patch_end = std::max<size_t>(patch_end, run.first_instance + run.instance_count);
+	}
+
+	if (patch_begin < patch_end) {
+		glNamedBufferSubData(chunk.vbo, static_cast<GLintptr>(patch_begin * sizeof(TileInstance)), static_cast<GLsizeiptr>((patch_end - patch_begin) * sizeof(TileInstance)), chunk.animated_shadow.data() + patch_begin);
+	}
+	++stats_.anim_patches;
+	return true;
+}
+
+void ChunkCacheManager::recordFrameStats() {
+	const auto now = std::chrono::steady_clock::now();
+	if (last_frame_start_ != std::chrono::steady_clock::time_point {}) {
+		const double frame_ms = std::chrono::duration<double, std::milli>(now - last_frame_start_).count();
+		++stats_.frames;
+		stats_.frame_ms_total += frame_ms;
+		stats_.frame_ms_max = std::max(stats_.frame_ms_max, frame_ms);
+		stats_.bake_ms_total += frame_bake_ms_;
+		stats_.bake_ms_max = std::max(stats_.bake_ms_max, frame_bake_ms_);
+	}
+	last_frame_start_ = now;
+	frame_bake_ms_ = 0.0;
+
+	if (stats_.frames < PRUNE_INTERVAL_FRAMES) {
+		return;
+	}
+	const double frames = static_cast<double>(stats_.frames);
+	if (rme::prof::enabled()) {
+		spdlog::info("[ChunkCacheStats] {} frames | frame ms avg {:.2f} max {:.2f} | bake ms avg {:.3f} max {:.2f} | bakes new {} edit {} anim {} deferred {} | anim patches {} | draws/frame {:.0f} | instances/frame {:.0f}",
+			stats_.frames, stats_.frame_ms_total / frames, stats_.frame_ms_max,
+			stats_.bake_ms_total / frames, stats_.bake_ms_max,
+			stats_.baked_new, stats_.baked_edit, stats_.baked_anim, stats_.baked_deferred, stats_.anim_patches,
+			static_cast<double>(stats_.draws) / frames, static_cast<double>(stats_.instances) / frames);
+	} else {
+		// Not profiling: the same numbers are still useful when debugging (debug level) but
+		// must not write a log line every 2 s in a user's normal session.
+		spdlog::debug("[ChunkCacheStats] {} frames | frame ms avg {:.2f} max {:.2f} | bake ms avg {:.3f} max {:.2f} | bakes new {} edit {} anim {} deferred {} | anim patches {} | draws/frame {:.0f} | instances/frame {:.0f}",
+			stats_.frames, stats_.frame_ms_total / frames, stats_.frame_ms_max,
+			stats_.bake_ms_total / frames, stats_.bake_ms_max,
+			stats_.baked_new, stats_.baked_edit, stats_.baked_anim, stats_.baked_deferred, stats_.anim_patches,
+			static_cast<double>(stats_.draws) / frames, static_cast<double>(stats_.instances) / frames);
+	}
+	stats_ = {};
 }
 
 void ChunkCacheManager::advanceFrame(int current_floor) {
+	recordFrameStats();
+	// Recomputed by the floors rendered this frame (see renderFloorTerrain).
+	visible_animation_step_ms_ = 0;
+	incomplete_chunks_ = 0;
+	cold_start_frame_ = cached_chunks_.empty();
 	++current_frame_;
 	if (current_frame_ % PRUNE_INTERVAL_FRAMES == 0) {
 		prune(current_floor);
@@ -832,42 +1007,168 @@ void ChunkCacheManager::renderFloorTerrain(
 	uint32_t rendered_instance_count = 0;
 
 	// Sparse Query: Touches ONLY populated chunks on map_z!
+	const bool profile_enabled = rme::prof::enabled();
+	incomplete_visible_.clear();
+	auto drawChunk = [&](CachedChunk& chunk) {
+		if (chunk.is_empty || chunk.terrain_instance_count == 0 || chunk.vbo == 0) {
+			return;
+		}
+		rme::prof::Scope draw_scope(rme::prof::Phase::TerrainDraw);
+		glVertexArrayVertexBuffer(vao_, 1, chunk.vbo, 0, sizeof(TileInstance));
+		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk.terrain_instance_count));
+		++rendered_chunk_count;
+		rendered_instance_count += chunk.terrain_instance_count;
+	};
+	const auto query_start = std::chrono::steady_clock::now();
 	map.visitPopulatedChunks(min_cx, min_cy, max_cx, max_cy, map_z, [&](int cx, int cy) {
 		const ChunkCoord coord{ cx, cy, map_z };
+		const size_t cached_before = cached_chunks_.size();
 		CachedChunk& chunk = getOrCreateChunk(coord);
+		const bool is_new = cached_chunks_.size() != cached_before;
+		const bool was_dirty = chunk.is_dirty;
 
-		if (chunk.has_animated_terrain && ctx.options.show_preview && ctx.view.zoom < 10.0) {
-			bool frame_changed = false;
-			if (chunk.sample_animated_sprite && chunk.sample_animated_sprite->animator) {
-				const int cur_frame = chunk.sample_animated_sprite->animator->getFrame(ctx.elapsed_time);
-				if (cur_frame != chunk.last_baked_frame) {
-					frame_changed = true;
-				}
+		// An incomplete chunk must not be animated-patched: the patch path assumes a complete
+		// layout, so a missing sprite would fail it and force a full re-bake every frame.
+		if (!chunk.is_dirty && chunk.is_complete && !chunk.animated_runs.empty() && ctx.options.show_preview && ctx.view.zoom < 10.0) {
+			rme::prof::Scope patch_scope(rme::prof::Phase::AnimPatch);
+			const auto patch_start = std::chrono::steady_clock::now();
+			if (!refreshAnimatedFrames(chunk, ctx.elapsed_time)) {
+				chunk.is_dirty = true;
 			}
-			const int check_interval = (chunk.min_anim_duration > 0) ? chunk.min_anim_duration : 200;
-			if (!frame_changed && std::abs(ctx.elapsed_time - chunk.last_baked_anim_time) >= check_interval) {
-				frame_changed = true;
-			}
-			if (frame_changed) {
+			frame_bake_ms_ += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - patch_start).count();
+		}
+
+		// On-screen test drives both the bake budget and the draw cull below.
+		const int chunk_screen_x = cx * (CHUNK_SIZE * TILE_SIZE) + static_cast<int>(translation.x);
+		const int chunk_screen_y = cy * (CHUNK_SIZE * TILE_SIZE) + static_cast<int>(translation.y);
+		const bool chunk_visible = ctx.view.IsRectVisible(chunk_screen_x, chunk_screen_y, CHUNK_SIZE * TILE_SIZE, CHUNK_SIZE * TILE_SIZE);
+
+		// Items are needed again once we are back inside the LOD range: re-bake chunks
+		// that were baked without them.
+		const bool want_items = !(ctx.view.zoom > 10.0f && ctx.options.hide_items_when_zoomed);
+		if (want_items && !chunk.baked_with_items) {
+			chunk.is_dirty = true;
+		}
+
+		// Re-bake an incomplete chunk so the sprites the last bake skipped appear as soon as
+		// the preloader has loaded them. The retries are bounded; the last one may load inline
+		// (force_load), which guarantees the chunk ends up complete.
+		if (!chunk.is_complete && !chunk.is_dirty) {
+			if (chunk.rebake_attempts >= MAX_INCOMPLETE_REBAKES) {
+				chunk.force_load = true;
+				chunk.is_dirty = true;
+			} else if (steadyNowMs() >= chunk.rebake_at_ms) {
 				chunk.is_dirty = true;
 			}
 		}
 
 		if (chunk.is_dirty) {
-			bakeChunk(chunk, map, ctx);
-			++baked_count;
+			// Never defer an on-screen chunk: leaving it un-baked shows a black hole
+			// while the user pans. Only the off-screen bake-ahead margin is budgeted.
+			if (!chunk_visible && frame_bake_ms_ >= MAX_BAKE_MS_PER_FRAME) {
+				++stats_.baked_deferred;
+			} else {
+				rme::prof::Scope bake_scope(rme::prof::Phase::ChunkBake);
+				const auto bake_start = std::chrono::steady_clock::now();
+				bakeChunk(chunk, map, ctx, chunk.force_load);
+				frame_bake_ms_ += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - bake_start).count();
+				if (is_new) {
+					++stats_.baked_new;
+				} else if (was_dirty) {
+					++stats_.baked_edit;
+				} else {
+					++stats_.baked_anim;
+				}
+				++baked_count;
+			}
 		}
 		chunk.last_accessed_frame = current_frame_;
 
-		if (!chunk.is_empty && chunk.terrain_instance_count > 0 && chunk.vbo != 0) {
-			glVertexArrayVertexBuffer(vao_, 1, chunk.vbo, 0, sizeof(TileInstance));
-			glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk.terrain_instance_count));
-			++rendered_chunk_count;
-			rendered_instance_count += chunk.terrain_instance_count;
+		// Off-screen margin chunks are still kept warm for pan-ahead, but are not
+		// drawn and do not join the active list, so their items and dynamic overlays
+		// are skipped as well.
+		if (!chunk_visible) {
+			return;
+		}
+
+		if (!chunk.is_complete) {
+			// The bake skipped sprites that were not uploaded yet, which leaves a hole - most
+			// visible where water and its borders should be. Do not draw this chunk yet: the
+			// pass below drains the preloader and bakes these chunks again, with the sprites in
+			// place, so the hole is never shown.
+			incomplete_visible_.push_back(&chunk);
+		} else {
+			drawChunk(chunk);
 		}
 
 		active_visible_chunks_.push_back(&chunk);
+		if (!chunk.is_complete) {
+			++incomplete_chunks_;
+		}
+		// Animations are only drawn inside the LOD range. When they are, the shortest visible
+		// animation frame decides how often the view can actually change, which is what the
+		// repaint loop should follow instead of repainting at 60 Hz. Both step values are
+		// cached on the chunk at bake time, so this is O(1) per visible chunk.
+		if (ctx.view.zoom < 10.0) {
+			if (chunk.creature_animation_step_ms > 0) {
+				const uint32_t step = chunk.creature_animation_step_ms;
+				if (visible_animation_step_ms_ == 0 || step < visible_animation_step_ms_) {
+					visible_animation_step_ms_ = step;
+				}
+			}
+			if (chunk.animated_step_ms > 0) {
+				const uint32_t step = chunk.animated_step_ms;
+				if (visible_animation_step_ms_ == 0 || step < visible_animation_step_ms_) {
+					visible_animation_step_ms_ = step;
+				}
+			}
+		}
 	});
+
+	// Chunks whose bake had to skip not-yet-loaded sprites are finished here, before anything is
+	// drawn: the bake already queued every sprite they need, so drain the preloader (its workers
+	// decode sheets in parallel) and bake them again with the sprites in place. This is what keeps
+	// water and its borders from flickering while the map loads or while panning into new area;
+	// the wait ends as soon as the queue is empty and is capped so a single frame stays bounded.
+	if (!incomplete_visible_.empty()) {
+		auto& preloader = SpritePreloader::get();
+		const auto drain_start = std::chrono::steady_clock::now();		// A trickle (panning reveals one or two chunks) must not cost a frame; a burst (a freshly
+		// opened map, a relocation, which make a whole screen of chunks new at once) is worth
+		// finishing before drawing, because that is exactly when the missing sprites would show as
+		// water and borders flickering in. The loop stops as soon as the preloader has no work.
+		const bool burst = cold_start_frame_ || incomplete_visible_.size() > INCOMPLETE_BURST_CHUNKS;
+		const auto cap = burst ? COLD_START_DRAIN_CAP_MS : INCOMPLETE_DRAIN_CAP_MS;
+		const auto budget = std::chrono::milliseconds(std::min<uint64_t>(
+			cap,
+			INCOMPLETE_DRAIN_BASE_MS + INCOMPLETE_DRAIN_PER_CHUNK_MS * incomplete_visible_.size()));
+		while (preloader.hasPendingWork() && std::chrono::steady_clock::now() - drain_start < budget) {
+			preloader.update();
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		for (CachedChunk* chunk : incomplete_visible_) {
+			bakeChunk(*chunk, map, ctx, false);
+		}
+		// Last resort: if a chunk is still incomplete after the drain, bake it once with loading
+		// allowed. By now the preloader has most of what it needs, so this loads only the few
+		// sprites it did not reach - and it guarantees the frame never shows a chunk with holes,
+		// which is what made water and its borders flicker while panning.
+		for (CachedChunk* chunk : incomplete_visible_) {
+			if (!chunk->is_complete) {
+				bakeChunk(*chunk, map, ctx, true);
+			}
+		}
+		frame_bake_ms_ += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - drain_start).count();
+		for (CachedChunk* chunk : incomplete_visible_) {
+			drawChunk(*chunk);
+		}
+	}
+
+	if (profile_enabled) {
+		rme::prof::add(rme::prof::Phase::ChunkQuery, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - query_start).count());
+	}
+
+	stats_.draws += rendered_chunk_count;
+	stats_.instances += rendered_instance_count;
 
 	if (baked_count > 0) {
 		spdlog::debug("[ChunkCache] Floor {}: Baked {} new/dirty chunk(s) | Visible: {} chunks ({} instances) | Total cached: {}/{}",
@@ -910,14 +1211,25 @@ void ChunkCacheManager::renderFloorItems(
 
 	glBindVertexArray(vao_);
 
-	for (const CachedChunk* chunk_ptr : active_visible_chunks_) {
-		if (!chunk_ptr || chunk_ptr->is_empty || chunk_ptr->item_instance_count == 0 || chunk_ptr->vbo == 0) {
-			continue;
-		}
+	{
+		rme::prof::Scope items_scope(rme::prof::Phase::ItemDraw);
+		// Far-zoom gating is per chunk. Chunks baked without items hold only the town/waypoint/
+		// house-exit indicators and creature instances in their item range, which must stay
+		// visible at every zoom; only a chunk still carrying baked items (its re-bake at this
+		// zoom is pending) keeps the range suppressed so stale subpixel items never appear.
+		const bool item_range_visible = !(ctx.view.zoom > 10.0f && ctx.options.hide_items_when_zoomed);
+		for (const CachedChunk* chunk_ptr : active_visible_chunks_) {
+			if (!chunk_ptr || chunk_ptr->is_empty || chunk_ptr->item_instance_count == 0 || chunk_ptr->vbo == 0
+				|| (!item_range_visible && chunk_ptr->baked_with_items)) {
+				continue;
+			}
 
-		const GLintptr byte_offset = static_cast<GLintptr>(chunk_ptr->terrain_instance_count * sizeof(TileInstance));
-		glVertexArrayVertexBuffer(vao_, 1, chunk_ptr->vbo, byte_offset, sizeof(TileInstance));
-		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk_ptr->item_instance_count));
+			const GLintptr byte_offset = static_cast<GLintptr>(chunk_ptr->terrain_instance_count * sizeof(TileInstance));
+			glVertexArrayVertexBuffer(vao_, 1, chunk_ptr->vbo, byte_offset, sizeof(TileInstance));
+			glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk_ptr->item_instance_count));
+			++stats_.draws;
+			stats_.instances += chunk_ptr->item_instance_count;
+		}
 	}
 
 	glBindVertexArray(0);
@@ -1034,6 +1346,8 @@ void ChunkCacheManager::renderDynamicOverlays(
 		return;
 	}
 
+	rme::prof::Scope dynamic_scope(rme::prof::Phase::DynamicOverlay);
+
 	const int offset = (map_z <= GROUND_LAYER)
 		? (GROUND_LAYER - map_z) * TILE_SIZE
 		: TILE_SIZE * (ctx.view.floor - map_z);
@@ -1052,6 +1366,15 @@ void ChunkCacheManager::renderDynamicOverlays(
 		const int chunk_base_x = chunk.coord.cx * CHUNK_SIZE;
 		const int chunk_base_y = chunk.coord.cy * CHUNK_SIZE;
 
+		ChunkFloors floors;
+		if (!gatherChunkFloors(map, chunk.coord.cx, chunk.coord.cy, map_z, floors)) {
+			continue;
+		}
+		ChunkFloors floors_above {};
+		if (map_z == GROUND_LAYER + 1) {
+			gatherChunkFloors(map, chunk.coord.cx, chunk.coord.cy, GROUND_LAYER, floors_above);
+		}
+
 		for (size_t w = 0; w < 4; ++w) {
 			uint64_t word = chunk.dynamic_tile_mask[w];
 			while (word != 0) {
@@ -1067,9 +1390,12 @@ void ChunkCacheManager::renderDynamicOverlays(
 				const int draw_y = y * TILE_SIZE + base_draw_y;
 
 				if (ctx.view.IsPixelVisible(draw_x, draw_y)) {
-					const TileLocation* loc = map.getTileL(x, y, map_z);
+					const TileLocation* loc = chunkTileLocation(floors, tx, ty);
+					ASSERT(loc == map.getTileL(x, y, map_z));
 					if (loc) {
-						const Tile* tile_above = (map_z == GROUND_LAYER + 1) ? map.getTile(x, y, GROUND_LAYER) : nullptr;
+						const TileLocation* loc_above = chunkTileLocation(floors_above, tx, ty);
+						const Tile* tile_above = loc_above ? loc_above->get() : nullptr;
+						ASSERT(tile_above == ((map_z == GROUND_LAYER + 1) ? map.getTile(x, y, GROUND_LAYER) : nullptr));
 						tile_renderer.RenderDynamicPasses(sprite_batch, loc, ctx, draw_x, draw_y, tile_above);
 					}
 				}

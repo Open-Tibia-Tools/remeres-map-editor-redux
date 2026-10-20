@@ -12,7 +12,7 @@ public:
 		return true;
 	}
 
-	const AtlasRegion* getAtlasRegion();
+	const AtlasRegion* getAtlasRegion(bool allow_upload = true);
 
 	// We use the sprite id as key
 	uint32_t id;

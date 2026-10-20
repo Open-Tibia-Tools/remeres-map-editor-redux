@@ -8,6 +8,7 @@
 #include "brushes/flag/flag_brush.h"
 #include "map/tile.h"
 #include "game/sprites.h"
+#include "app/managers/version_manager.h"
 
 #include <toml++/toml.h>
 #include <algorithm>
@@ -39,14 +40,16 @@ namespace {
 	TechnicalItemLists s_technical_lists = TechnicalItemRegistry::CreateDefaultTechnicalLists();
 }
 
+bool TechnicalIdFilter::matches_client(uint32_t cid) const noexcept {
+	return cid != 0 && !client_ids.empty() && std::ranges::binary_search(client_ids, cid);
+}
+
+bool TechnicalIdFilter::matches_server(uint32_t sid) const noexcept {
+	return g_version.lastLoadHasOtb() && sid != 0 && !server_ids.empty() && std::ranges::binary_search(server_ids, sid);
+}
+
 bool TechnicalIdFilter::matches(uint32_t sid, uint32_t cid) const noexcept {
-	if (sid != 0 && !server_ids.empty() && std::ranges::binary_search(server_ids, sid)) {
-		return true;
-	}
-	if (cid != 0 && !client_ids.empty() && std::ranges::binary_search(client_ids, cid)) {
-		return true;
-	}
-	return false;
+	return matches_client(cid) || matches_server(sid);
 }
 
 void TechnicalIdFilter::sort_and_dedup() {
@@ -113,17 +116,34 @@ const TechnicalItemLists& TechnicalItemRegistry::GetLists() noexcept {
 }
 
 TileIndicatorType TechnicalItemRegistry::Classify(uint32_t server_id, uint32_t client_id) noexcept {
-	if (s_technical_lists.invisible_stairs.matches(server_id, client_id)) {
-		return TileIndicatorType::TechInvisibleStair;
+	if (client_id != 0) {
+		if (s_technical_lists.invisible_stairs.matches_client(client_id)) {
+			return TileIndicatorType::TechInvisibleStair;
+		}
+		if (s_technical_lists.invisible_walkable.matches_client(client_id)) {
+			return TileIndicatorType::TechInvisibleWalkable;
+		}
+		if (s_technical_lists.invisible_walls.matches_client(client_id)) {
+			return TileIndicatorType::TechInvisibleWall;
+		}
+		if (s_technical_lists.primal_lights.matches_client(client_id)) {
+			return TileIndicatorType::TechPrimalLight;
+		}
 	}
-	if (s_technical_lists.invisible_walkable.matches(server_id, client_id)) {
-		return TileIndicatorType::TechInvisibleWalkable;
-	}
-	if (s_technical_lists.invisible_walls.matches(server_id, client_id)) {
-		return TileIndicatorType::TechInvisibleWall;
-	}
-	if (s_technical_lists.primal_lights.matches(server_id, client_id)) {
-		return TileIndicatorType::TechPrimalLight;
+
+	if (server_id != 0 && g_version.lastLoadHasOtb()) {
+		if (s_technical_lists.invisible_stairs.matches_server(server_id)) {
+			return TileIndicatorType::TechInvisibleStair;
+		}
+		if (s_technical_lists.invisible_walkable.matches_server(server_id)) {
+			return TileIndicatorType::TechInvisibleWalkable;
+		}
+		if (s_technical_lists.invisible_walls.matches_server(server_id)) {
+			return TileIndicatorType::TechInvisibleWall;
+		}
+		if (s_technical_lists.primal_lights.matches_server(server_id)) {
+			return TileIndicatorType::TechPrimalLight;
+		}
 	}
 
 	return TileIndicatorType::None;

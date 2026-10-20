@@ -22,6 +22,7 @@
 #include "game/material_database.h"
 
 class CreatureType;
+class RAWBrush;
 
 class Materials {
 public:
@@ -32,6 +33,9 @@ public:
 
 	const MaterialsExtensionList& getExtensions();
 	MaterialsExtensionList getExtensionsByVersion(const ClientVersionID& version_id);
+
+	RAWBrush* ensureRawBrush(ServerItemId item_id);
+	void ensureAllRawBrushes();
 
 	[[nodiscard]] PaletteCatalog& paletteCatalog() {
 		return database.paletteCatalog();
@@ -47,6 +51,7 @@ public:
 	bool needSave() const {
 		return modified;
 	}
+
 
 	void modify(bool newValue = true) {
 		this->modified = newValue;

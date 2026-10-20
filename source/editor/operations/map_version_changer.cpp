@@ -39,6 +39,18 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 	Map& map = editor.map;
 	MapVersion old_ver = map.getVersion();
 
+	if (old_ver.otbm == MAP_OTBM_5 && new_ver.otbm < MAP_OTBM_5 && !map.zones.empty()) {
+		int ret = DialogUtil::PopupDialog(
+			parent,
+			"Warning: Zone Data Loss",
+			"Downgrading from OTBM 5 to an earlier OTBM version will permanently remove all Zone definitions and tile zone assignments when saving. Are you sure you want to proceed?",
+			wxYES | wxNO
+		);
+		if (ret != wxID_YES) {
+			return false;
+		}
+	}
+
 	const bool client_changed = (new_ver.client != old_ver.client || new_ver.items_major != old_ver.items_major);
 	if (client_changed) {
 		if (g_gui.GetOpenMapCount() > 1) {

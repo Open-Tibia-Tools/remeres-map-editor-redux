@@ -22,6 +22,7 @@
 #include "live/live_tab.h"
 #include "live/live_client.h"
 #include "io/iomap_otbm.h"
+#include "map/map_initial_position_resolver.h"
 
 #include <set>
 #include <sstream>
@@ -389,16 +390,8 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 	g_gui.FitViewToMap(mapTab);
 	g_gui.root->UpdateMenubar();
 
-	std::string path = g_settings.getString(Config::RECENT_EDITED_MAP_PATH);
-	if (!path.empty()) {
-		FileName file(path);
-		if (file == fileName) {
-			std::istringstream stream(g_settings.getString(Config::RECENT_EDITED_MAP_POSITION));
-			Position position;
-			stream >> position;
-			mapTab->SetScreenCenterPosition(position);
-		}
-	}
+	const Position initial_pos = MapInitialPositionResolver::Resolve(*mapTab->GetMap(), fileName.GetFullPath().ToStdString());
+	mapTab->SetScreenCenterPosition(initial_pos);
 
 	mapTab->GetView()->ResetMinimapViewportToCurrentView();
 	g_minimap.InvalidateAll(*mapTab->GetMap());
@@ -491,6 +484,8 @@ bool EditorManager::DoUndo() {
 		}
 		g_status.SetStatusText("Undo action");
 		g_gui.UpdateMinimap();
+		g_gui.UpdateZonePalette(0);
+		g_gui.UpdateHousePalette(0);
 		g_gui.root->UpdateMenubar();
 		g_gui.root->Refresh();
 		return true;
@@ -507,6 +502,8 @@ bool EditorManager::DoRedo() {
 		}
 		g_status.SetStatusText("Redo action");
 		g_gui.UpdateMinimap();
+		g_gui.UpdateZonePalette(0);
+		g_gui.UpdateHousePalette(0);
 		g_gui.root->UpdateMenubar();
 		g_gui.root->Refresh();
 		return true;

@@ -12,6 +12,7 @@
 #include "palette/managers/palette_manager.h"
 #include "palette/palette_window.h"
 #include "palette/house/house_palette.h"
+#include "brushes/town/town_temple_brush.h"
 #include "map/map.h"
 #include "map/basemap.h"
 #include "ui/gui.h"
@@ -40,6 +41,8 @@ BrushManager::BrushManager() :
 	rook_brush(nullptr),
 	nolog_brush(nullptr),
 	pvp_brush(nullptr),
+	zone_brush(nullptr),
+	temple_brush(nullptr),
 
 	current_brush(nullptr),
 	previous_brush(nullptr),
@@ -89,6 +92,12 @@ bool BrushManager::SelectBrush(const Brush* whatbrush) {
 }
 
 void BrushManager::SelectBrushInternal(Brush* brush) {
+	if (current_brush && current_brush != brush) {
+		if (auto* tb = current_brush->as<TownTempleBrush>()) {
+			tb->invokeCancelCallback();
+		}
+	}
+
 	if (current_brush != brush && brush) {
 		previous_brush = current_brush;
 	}
@@ -143,6 +152,8 @@ void BrushManager::Clear() {
 	rook_brush = nullptr;
 	nolog_brush = nullptr;
 	pvp_brush = nullptr;
+	zone_brush = nullptr;
+	temple_brush = nullptr;
 }
 
 BrushShape BrushManager::GetBrushShape() const {

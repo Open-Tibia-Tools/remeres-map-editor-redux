@@ -6,7 +6,8 @@
 #include "brushes/carpet/carpet_brush.h"
 #include <array>
 
-namespace {
+// Unique namespace: unity builds concatenate this with the other *_brush_arrays.cpp files.
+namespace carpet_brush_arrays {
 	// Bitmapping (consistent with TILE_ enums)
 	enum {
 		NW = TILE_NORTHWEST,
@@ -278,6 +279,6 @@ namespace {
 
 void CarpetBrush::init() {
 	for (int i = 0; i < 256; ++i) {
-		CarpetBrush::carpet_types[i] = carpet_type_table[i];
+		CarpetBrush::carpet_types[i] = carpet_brush_arrays::carpet_type_table[i];
 	}
 }

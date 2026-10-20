@@ -17,6 +17,7 @@
 #include "item_definitions/core/item_definition_fragments.h"
 #include "item_definitions/core/item_definition_types.h"
 #include "item_definitions/formats/dat/dat_item_parser.h"
+#include "rendering/core/sprite_archive.h"
 #include "util/json.h"
 
 namespace {
@@ -158,19 +159,6 @@ namespace {
 		return successes;
 	}
 
-	bool readSpriteCount(FileReadHandle& file, bool extended, uint32_t& sprite_count) {
-		if (extended) {
-			return file.getU32(sprite_count);
-		}
-
-		uint16_t compact_count = 0;
-		if (!file.getU16(compact_count)) {
-			return false;
-		}
-		sprite_count = compact_count;
-		return true;
-	}
-
 	bool validateSpriteRunEncoding(std::span<const uint8_t> blob, uint8_t colored_bpp) {
 		size_t read = 0;
 		size_t written_pixels = 0;
@@ -198,7 +186,7 @@ namespace {
 	}
 
 	std::optional<std::vector<uint32_t>> collectSpriteSamples(FileReadHandle& file, bool extended, uint32_t& sprite_count) {
-		if (!readSpriteCount(file, extended, sprite_count)) {
+		if (!SpriteArchive::readSpriteCount(file, extended, sprite_count)) {
 			return std::nullopt;
 		}
 		if (sprite_count == 0 || sprite_count > MAX_SPRITES) {

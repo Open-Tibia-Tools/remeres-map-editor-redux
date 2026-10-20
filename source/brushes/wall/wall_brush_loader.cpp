@@ -64,11 +64,6 @@ namespace {
 		items.addDoorItem(alignment, id, WALL_HATCH_WINDOW, locked);
 	}
 
-	// Helper for C++20 case-insensitive comparison (zero allocation)
-	const auto iequal = [](char a, char b) {
-		return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
-	};
-
 } // namespace
 
 bool WallBrushLoader::load(WallBrush* brush, WallBrushItems& items, pugi::xml_node node, std::vector<std::string>& warnings) {

@@ -3,6 +3,7 @@
 
 #include "app/main.h"
 #include "util/nanovg_canvas.h"
+#include "util/grid_cell_renderer.h"
 #include "palette/panels/brush_panel.h"
 
 /**
@@ -23,7 +24,6 @@ public:
 	 */
 	VirtualBrushGrid(wxWindow* parent, const DynamicTilesetDefinition* _tileset, int iconSizePx);
 	~VirtualBrushGrid() override;
-
 	wxWindow* GetSelfWindow() override {
 		return this;
 	}
@@ -38,11 +38,8 @@ public:
 		List
 	};
 
-	static constexpr int LIST_ROW_HEIGHT = 36;
-	static constexpr int GRID_PADDING = 4;
-	static constexpr int GRID_ITEM_SIZE_BASE = 32;
-	static constexpr int ICON_OFFSET = 2;
-
+	// Cell metrics live in util/grid_cell_renderer.h so every grid that shows
+	// tiles agrees on them.
 	void SetDisplayMode(DisplayMode mode);
 
 	// Toolbar support
@@ -51,8 +48,6 @@ public:
 	void SetShowLabels(bool show) override;
 	void SetTileSize(int sizePx) override;
 	void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr) override;
-
-	static constexpr int LABEL_HEIGHT = 32;
 
 protected:
 	/**
@@ -84,7 +79,6 @@ protected:
 	int hover_index;
 	int columns;
 	int item_size;
-	int padding;
 	size_t observed_tileset_size;
 
 	std::vector<Brush*> m_display_brushes;
@@ -96,13 +90,8 @@ protected:
 	std::vector<Brush*> m_overrideBrushes;
 	bool m_hasOverrideBrushes = false;
 
-	// Optimization: UTF8 name cache and truncated label cache
-	struct CachedLabel {
-		std::string line1;
-		std::string line2;
-	};
-	mutable std::unordered_map<const Brush*, std::string> m_utf8NameCache;
-	mutable std::unordered_map<const Brush*, CachedLabel> m_truncatedLabelCache;
+	// Optimization: wrapped label cache shared with the item grids.
+	rme::ui::grid::LabelCache m_labelCache;
 
 	// Animation state
 	wxTimer m_animTimer;

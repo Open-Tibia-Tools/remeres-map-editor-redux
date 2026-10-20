@@ -79,8 +79,10 @@ Floor::Floor(int sx, int sy, int z) {
 
 //**************** MapNode **********************
 
-MapNode::MapNode(BaseMap& map) :
+MapNode::MapNode(BaseMap& map, uint16_t* cell_floor_chunks, uint16_t chunk_bit) :
 	map(map),
+	cell_floor_chunks_(cell_floor_chunks),
+	chunk_bit_(chunk_bit),
 	visible(0) {
 	// std::array<std::unique_ptr> initializes to nullptr automatically
 }
@@ -92,6 +94,9 @@ MapNode::~MapNode() {
 Floor* MapNode::createFloor(int x, int y, int z) {
 	if (!array[z]) {
 		array[z] = std::make_unique<Floor>(x, y, z);
+		if (cell_floor_chunks_) {
+			cell_floor_chunks_[z] |= chunk_bit_;
+		}
 	}
 	return array[z].get();
 }
@@ -326,9 +331,11 @@ MapNode* SpatialHashGrid::getLeafForce(int x, int y) {
 	if (last_valid_ && key == last_key_ && last_idx_ < cells_.size() && cells_[last_idx_].key == key && cells_[last_idx_].cell) {
 		int nx = (x >> NODE_SHIFT) & (NODES_PER_CELL - 1);
 		int ny = (y >> NODE_SHIFT) & (NODES_PER_CELL - 1);
-		auto& node = cells_[last_idx_].cell->nodes[ny * NODES_PER_CELL + nx];
+		GridCell& cell = *cells_[last_idx_].cell;
+		auto& node = cell.nodes[ny * NODES_PER_CELL + nx];
 		if (!node) {
-			node = std::make_unique<MapNode>(map);
+			const uint16_t chunk_bit = static_cast<uint16_t>(1u << (((ny >> 2) << 2) | (nx >> 2)));
+			node = std::make_unique<MapNode>(map, cell.floor_chunk_mask.data(), chunk_bit);
 		}
 		return node.get();
 	}
@@ -340,9 +347,11 @@ MapNode* SpatialHashGrid::getLeafForce(int x, int y) {
 
 	int nx = (x >> NODE_SHIFT) & (NODES_PER_CELL - 1);
 	int ny = (y >> NODE_SHIFT) & (NODES_PER_CELL - 1);
-	auto& node = cells_[idx].cell->nodes[ny * NODES_PER_CELL + nx];
+	GridCell& cell = *cells_[idx].cell;
+	auto& node = cell.nodes[ny * NODES_PER_CELL + nx];
 	if (!node) {
-		node = std::make_unique<MapNode>(map);
+		const uint16_t chunk_bit = static_cast<uint16_t>(1u << (((ny >> 2) << 2) | (nx >> 2)));
+		node = std::make_unique<MapNode>(map, cell.floor_chunk_mask.data(), chunk_bit);
 	}
 	return node.get();
 }
@@ -353,9 +362,11 @@ MapNode* SpatialHashGrid::getLeafForceInCell(size_t cell_idx, int x, int y) {
 	}
 	int nx = (x >> NODE_SHIFT) & (NODES_PER_CELL - 1);
 	int ny = (y >> NODE_SHIFT) & (NODES_PER_CELL - 1);
-	auto& node = cells_[cell_idx].cell->nodes[ny * NODES_PER_CELL + nx];
+	GridCell& cell = *cells_[cell_idx].cell;
+	auto& node = cell.nodes[ny * NODES_PER_CELL + nx];
 	if (!node) {
-		node = std::make_unique<MapNode>(map);
+		const uint16_t chunk_bit = static_cast<uint16_t>(1u << (((ny >> 2) << 2) | (nx >> 2)));
+		node = std::make_unique<MapNode>(map, cell.floor_chunk_mask.data(), chunk_bit);
 	}
 	return node.get();
 }

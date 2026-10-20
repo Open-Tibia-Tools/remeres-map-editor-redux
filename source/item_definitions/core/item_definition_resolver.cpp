@@ -9,10 +9,6 @@
 #include <utility>
 
 namespace {
-	constexpr uint64_t flagMask(ItemFlag flag) {
-		return uint64_t { 1 } << static_cast<uint8_t>(flag);
-	}
-
 	constexpr bool isTooltipType(ItemTypes_t type) {
 		switch (type) {
 			case ITEM_TYPE_DEPOT:

@@ -43,6 +43,31 @@ bool Towns::addTown(std::unique_ptr<Town> town) {
 	return true;
 }
 
+bool Towns::changeId(Town* town, uint32_t newID) {
+	if (!town || town->getID() == newID || getTown(newID) != nullptr) {
+		return false;
+	}
+	auto it = towns.find(town->getID());
+	if (it != towns.end()) {
+		auto town_ptr = std::move(it->second);
+		towns.erase(it);
+		town_ptr->setID(newID);
+		towns[newID] = std::move(town_ptr);
+		return true;
+	}
+	return false;
+}
+
+void Towns::removeTown(Town* town) {
+	if (!town) {
+		return;
+	}
+	auto it = towns.find(town->getID());
+	if (it != towns.end()) {
+		towns.erase(it);
+	}
+}
+
 uint32_t Towns::getEmptyID() {
 	uint32_t empty = 0;
 	for (const auto& [_, town] : towns) {

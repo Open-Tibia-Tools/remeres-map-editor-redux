@@ -35,7 +35,7 @@ HouseExitBrush::~HouseExitBrush() {
 }
 
 void HouseExitBrush::setHouse(House* house) {
-	draw_house = house->getID();
+	draw_house = house ? house->getID() : 0;
 }
 
 uint32_t HouseExitBrush::getHouseID() const {
@@ -43,6 +43,9 @@ uint32_t HouseExitBrush::getHouseID() const {
 }
 
 bool HouseExitBrush::canDraw(BaseMap* map, const Position& position) const {
+	if (draw_house == 0) {
+		return false;
+	}
 	Tile* tile = map->getTile(position);
 	if (!tile || !tile->hasGround()) {
 		return false;

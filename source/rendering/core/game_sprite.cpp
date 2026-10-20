@@ -235,7 +235,7 @@ size_t GameSprite::getIndex(int width, int height, int layer, int pattern_x, int
 	return idx;
 }
 
-const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _layer, int _count, int _pattern_x, int _pattern_y, int _pattern_z, int _frame) {
+const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _layer, int _count, int _pattern_x, int _pattern_y, int _pattern_z, int _frame, bool allow_upload) {
 	if (numsprites == 0) {
 		return nullptr;
 	}
@@ -255,7 +255,7 @@ const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _layer, int _c
 			}
 
 			// Cache miss or staleness suspected: Use the getter to ensure self-healing check runs
-			const AtlasRegion* valid_region = spriteList[0]->getAtlasRegion();
+			const AtlasRegion* valid_region = spriteList[0]->getAtlasRegion(allow_upload);
 			if (valid_region && spriteList[0]->isGLLoaded) {
 				cached_default_region = valid_region;
 				cached_generation_id = spriteList[0]->generation_id;
@@ -285,7 +285,7 @@ const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _layer, int _c
 	}
 
 	if (spriteList[v]) {
-		return spriteList[v]->getAtlasRegion();
+		return spriteList[v]->getAtlasRegion(allow_upload);
 	}
 	return nullptr;
 }
@@ -316,7 +316,7 @@ TemplateImage* GameSprite::getTemplateImage(int sprite_index, const Outfit& outf
 	return ptr;
 }
 
-const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _dir, int _addon, int _pattern_z, const Outfit& _outfit, int _frame) {
+const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _dir, int _addon, int _pattern_z, const Outfit& _outfit, int _frame, bool allow_upload) {
 	if (numsprites == 0) {
 		return nullptr;
 	}
@@ -331,10 +331,10 @@ const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _dir, int _add
 	}
 	if (layers > 1) { // Template
 		TemplateImage* img = getTemplateImage(v, _outfit);
-		return img->getAtlasRegion();
+		return img->getAtlasRegion(allow_upload);
 	}
 	if (spriteList[v]) {
-		return spriteList[v]->getAtlasRegion();
+		return spriteList[v]->getAtlasRegion(allow_upload);
 	}
 	return nullptr;
 }

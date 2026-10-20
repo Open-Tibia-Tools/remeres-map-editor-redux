@@ -19,6 +19,12 @@ public:
 	RuleListControl(wxWindow* parent, Listener* listener);
 
 	void SetRuleSets(const std::vector<std::string>& ruleSetNames);
+	/**
+	 * Marks the set whose rules are in the table. Its colour follows the
+	 * workflow: blue while it is freshly loaded, orange once edited, green
+	 * after it was written to disk.
+	 */
+	void SetActiveRuleSet(const std::string& name, bool dirty, bool saved);
 	wxSize DoGetBestClientSize() const override;
 
 	int GetSelectedIndex() const {
@@ -31,15 +37,16 @@ public:
 protected:
 	void OnNanoVGPaint(NVGcontext* vg, int width, int height) override;
 	void OnMouse(wxMouseEvent& event);
-	void OnMouseWheel(wxMouseEvent& event);
 	void OnContextMenu(wxContextMenuEvent& event);
-	void OnScroll(wxScrollWinEvent& event);
 	void OnSize(wxSizeEvent& event);
 
 	void RefreshVirtualSize();
 	wxRect GetItemRect(int index) const;
 
 	std::vector<std::string> m_ruleSetNames;
+	std::string m_activeRuleSet;
+	bool m_activeDirty = false;
+	bool m_activeSaved = false;
 	int m_selectedIndex = -1;
 	int m_hoveredIndex = -1;
 	int m_itemHeight;

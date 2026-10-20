@@ -18,8 +18,6 @@ void OutfitColorizer::ColorizePixel(uint8_t color, uint8_t& red, uint8_t& green,
 }
 
 void OutfitColorizer::ColorizeTemplatePixels(uint8_t* dest, const uint8_t* mask, size_t pixelCount, int lookHead, int lookBody, int lookLegs, int lookFeet, bool destHasAlpha) {
-	constexpr int RGB_COMPONENTS = 3;
-	constexpr int RGBA_COMPONENTS = 4;
 	const int dest_step = destHasAlpha ? RGBA_COMPONENTS : RGB_COMPONENTS;
 	const int mask_step = RGB_COMPONENTS;
 

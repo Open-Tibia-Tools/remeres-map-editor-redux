@@ -10,10 +10,6 @@
 #include <limits>
 
 namespace {
-	constexpr uint64_t flagMask(ItemFlag flag) {
-		return uint64_t { 1 } << static_cast<uint8_t>(flag);
-	}
-
 	constexpr uint8_t remapFlag(uint8_t flag, DatFormat format) {
 		if (format >= DAT_FORMAT_1010) {
 			if (flag == 16) {

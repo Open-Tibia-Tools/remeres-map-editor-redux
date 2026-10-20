@@ -42,6 +42,12 @@ LuaOverlayDrawer::CacheKey LuaOverlayDrawer::makeCacheKey(const RenderView& view
 	const ActionQueue* actionQueue = editor.actionQueue ? editor.actionQueue.get() : nullptr;
 	LuaScriptManager& scripts = lua_scripts ? *lua_scripts : g_luaScripts;
 
+	// Without initialized scripts that actually show overlays, no command can ever be
+	// produced, so selection/history invalidation inputs are pointless: hashing the whole
+	// selection three times per frame would then be pure overhead. The overlay revision
+	// changes as soon as scripts initialize or add shows, which re-enables them.
+	const bool has_shows = scripts.isInitialized() && !scripts.getMapOverlayShows().empty();
+
 	return CacheKey {
 		.start_x = view.start_x,
 		.start_y = view.start_y,
@@ -55,10 +61,10 @@ LuaOverlayDrawer::CacheKey LuaOverlayDrawer::makeCacheKey(const RenderView& view
 		.screen_width = view.screensize_x,
 		.screen_height = view.screensize_y,
 		.overlay_revision = scripts.getOverlayRevision(),
-		.selection_count = selection ? selection->size() : 0,
-		.selection_hash = selection ? hashSelection(*selection) : 0,
-		.history_index = actionQueue ? actionQueue->getCurrentIndex() : 0,
-		.history_size = actionQueue ? actionQueue->getSize() : 0
+		.selection_count = has_shows && selection ? selection->size() : 0,
+		.selection_hash = has_shows && selection ? hashSelection(*selection) : 0,
+		.history_index = has_shows && actionQueue ? actionQueue->getCurrentIndex() : 0,
+		.history_size = has_shows && actionQueue ? actionQueue->getSize() : 0
 	};
 }
 

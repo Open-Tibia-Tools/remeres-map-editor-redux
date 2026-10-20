@@ -52,7 +52,6 @@ const AtlasRegion* Image::EnsureAtlasSprite(uint32_t sprite_id, std::unique_ptr<
 			}
 
 			// Fallback: Create a magenta texture to distinguish failure from garbage
-			constexpr int RGBA_COMPONENTS = 4;
 			rgba = std::make_unique<uint8_t[]>(image_dimensions.pixelCount() * RGBA_COMPONENTS);
 			std::span<uint8_t> buffer(rgba.get(), image_dimensions.pixelCount() * RGBA_COMPONENTS);
 			for (size_t i : std::views::iota(size_t { 0 }, image_dimensions.pixelCount())) {

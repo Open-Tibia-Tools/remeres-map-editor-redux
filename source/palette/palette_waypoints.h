@@ -18,10 +18,12 @@
 #ifndef RME_PALETTE_WAYPOINTS_H_
 #define RME_PALETTE_WAYPOINTS_H_
 
-#include <wx/listctrl.h>
-
+#include "util/nanovg_table_ctrl.h"
+#include "palette/controls/palette_search_ctrl.h"
 #include "game/waypoints.h"
 #include "palette/palette_common.h"
+
+#include <string>
 
 class WaypointPalettePanel : public PalettePanel {
 public:
@@ -39,28 +41,38 @@ public:
 	// Select the brush in the parameter, this only changes the look of the panel
 	bool SelectBrush(const Brush* whatbrush) override;
 
-	// Called sometimes?
 	void OnUpdate() override;
-	// Called when this page is about to be displayed
 	void OnSwitchIn() override;
-	// Called when this page is hidden
 	void OnSwitchOut() override;
 
-public:
-	// wxWidgets event handling
-	void OnClickWaypoint(wxListEvent& event);
-	void OnBeginEditWaypointLabel(wxListEvent& event);
-	void OnEditWaypointLabel(wxListEvent& event);
+	// Table callbacks
+	void OnSelectWaypoint(int index, const TableRow& row);
+	void OnActivateWaypoint(int index, const TableRow& row);
+	void OnSortWaypoints(int column, bool ascending);
+	void OnWaypointContextMenu(int index, const TableRow* row, const wxPoint& pos);
+
+	// Event handlers
+	void OnSearchChange(wxCommandEvent& event);
 	void OnClickAddWaypoint(wxCommandEvent& event);
+	void OnClickRenameWaypoint(wxCommandEvent& event);
 	void OnClickRemoveWaypoint(wxCommandEvent& event);
+	void OnGoToWaypoint(wxCommandEvent& event);
 
 	void SetMap(Map* map);
 
 protected:
-	Map* map;
-	wxListCtrl* waypoint_list;
-	wxButton* add_waypoint_button;
-	wxButton* remove_waypoint_button;
+	void RemoveWaypointFromMap(Waypoint* wp);
+	Waypoint* GetSelectedWaypoint() const;
+
+	Map* map = nullptr;
+	std::string selected_waypoint_name_;
+
+	PaletteSearchCtrl* search_ctrl = nullptr;
+	NanoVGTableCtrl* waypoint_table = nullptr;
+	wxButton* add_waypoint_button = nullptr;
+	wxButton* rename_waypoint_button = nullptr;
+	wxButton* remove_waypoint_button = nullptr;
 };
 
 #endif
+

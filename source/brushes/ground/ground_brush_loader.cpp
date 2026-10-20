@@ -8,14 +8,10 @@
 #include "brushes/brush.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "ext/pugixml.hpp"
+#include "util/common.h"
 #include <wx/string.h>
 
 extern Brushes g_brushes;
-
-// Helper for C++20 case-insensitive comparison (zero allocation)
-static const auto iequal = [](char a, char b) {
-	return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
-};
 
 bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vector<std::string>& warnings) {
 	pugi::xml_attribute attribute;

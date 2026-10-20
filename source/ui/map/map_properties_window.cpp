@@ -144,6 +144,15 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	);
 	waypoint_filename_ctrl->SetToolTip("External waypoint XML file (leave empty for internal)");
 
+	grid_sizer->Add(
+		zone_label = newd wxStaticText(this, wxID_ANY, "External Zonefile")
+	);
+
+	grid_sizer->Add(
+		zone_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getZoneFilename())), 1, wxEXPAND
+	);
+	zone_filename_ctrl->SetToolTip("External zone XML file, OTBM 5 maps (Canary / Crystal Server) only");
+
 	topsizer->Add(grid_sizer, wxSizerFlags(1).Expand().Border(wxALL, 20));
 
 	wxSizer* subsizer = newd wxBoxSizer(wxHORIZONTAL);
@@ -195,14 +204,11 @@ void MapPropertiesWindow::UpdateProtocolList() {
 			map_version = MAP_OTBM_1;
 		}
 
-		if (map_version >= MAP_OTBM_4) {
+		if (map_version == MAP_OTBM_5) {
+			protocols = ClientVersion::getAllVisible();
+		} else if (map_version >= MAP_OTBM_4) {
 			protocols = ClientVersion::getAllForOTBMVersion(MAP_OTBM_3);
 			for (auto* c : ClientVersion::getAllForOTBMVersion(MAP_OTBM_4)) {
-				if (std::find(protocols.begin(), protocols.end(), c) == protocols.end()) {
-					protocols.push_back(c);
-				}
-			}
-			for (auto* c : ClientVersion::getAllForOTBMVersion(MAP_OTBM_5)) {
 				if (std::find(protocols.begin(), protocols.end(), c) == protocols.end()) {
 					protocols.push_back(c);
 				}
@@ -212,11 +218,23 @@ void MapPropertiesWindow::UpdateProtocolList() {
 		}
 	}
 
+	// Always retain the active client version if valid so switching map formats
+	// never unexpectedly mutates the loaded client version.
+	if (!client.empty()) {
+		if (ClientVersion* cur = ClientVersion::get(nstr(client))) {
+			if (std::find(protocols.begin(), protocols.end(), cur) == protocols.end()) {
+				protocols.push_back(cur);
+			}
+		}
+	}
+
 	for (ClientVersionList::const_iterator p = protocols.begin(); p != protocols.end(); ++p) {
 		protocol_choice->Append(wxstr((*p)->getName()));
 	}
 	protocol_choice->SetSelection(0);
-	protocol_choice->SetStringSelection(client);
+	if (!client.empty()) {
+		protocol_choice->SetStringSelection(client);
+	}
 }
 
 void MapPropertiesWindow::UpdateSpawnControls() {
@@ -236,6 +254,9 @@ void MapPropertiesWindow::UpdateSpawnControls() {
 		if (npc_filename_ctrl->GetValue().Trim().empty()) {
 			npc_filename_ctrl->SetValue(base_name + "-npc.xml");
 		}
+		if (zone_filename_ctrl->GetValue().Trim().empty()) {
+			zone_filename_ctrl->SetValue(base_name + "-zones.xml");
+		}
 	} else {
 		if (spawn_filename_ctrl->GetValue().Trim().empty()) {
 			spawn_filename_ctrl->SetValue(base_name + "-spawn.xml");
@@ -250,6 +271,9 @@ void MapPropertiesWindow::UpdateSpawnControls() {
 
 	npc_label->Show(isOtbm5);
 	npc_filename_ctrl->Show(isOtbm5);
+
+	zone_label->Show(isOtbm5);
+	zone_filename_ctrl->Show(isOtbm5);
 
 	Layout();
 	Fit();
@@ -293,6 +317,7 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	std::string spawn_fn = nstr(spawn_filename_ctrl->GetValue());
 	std::string monster_fn = nstr(monster_filename_ctrl->GetValue());
 	std::string npc_fn = nstr(npc_filename_ctrl->GetValue());
+	std::string zone_fn = nstr(zone_filename_ctrl->GetValue());
 
 	if (house_fn.empty()) {
 		house_fn = base_name + "-house.xml";
@@ -303,6 +328,9 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		}
 		if (npc_fn.empty()) {
 			npc_fn = base_name + "-npc.xml";
+		}
+		if (zone_fn.empty()) {
+			zone_fn = base_name + "-zones.xml";
 		}
 	} else {
 		if (spawn_fn.empty()) {
@@ -316,6 +344,7 @@ void MapPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	map.setMonsterFilename(monster_fn);
 	map.setNpcFilename(npc_fn);
 	map.setWaypointFilename(nstr(waypoint_filename_ctrl->GetValue()));
+	map.setZoneFilename(zone_fn);
 
 	const auto new_compression = (compression_choice->GetSelection() == 1) ? OtbmCompression::Gzip : OtbmCompression::None;
 	if (new_compression != map.getCompression()) {

@@ -48,9 +48,10 @@ class SearchResultWindow;
 class MinimapWindow;
 class PaletteWindow;
 class ItemPropertiesWindow;
-class EditTownsDialog;
 class ItemButton;
 class HousePalette;
+class ZonePalettePanel;
+class TownPalettePanel;
 
 class LiveSocket;
 
@@ -234,6 +235,9 @@ public:
 	// Additional brush parameters
 	void SetSpawnTime(int time);
 
+	int GetDefaultCreatureWeight() const;
+	void SetDefaultCreatureWeight(int weight);
+
 	void SetLightIntensity(int v);
 	int GetLightIntensity() const;
 
@@ -334,6 +338,8 @@ public:
 	void RebuildPalettes();
 	// Refresh only updates the content (such as house/waypoint list)
 	void RefreshPalettes(Map* m = nullptr, bool usedfault = true);
+	void UpdateZonePalette(uint16_t zone_id = 0);
+	void UpdateHousePalette(uint32_t house_id = 0);
 	// Won't refresh the palette in the parameter
 	void RefreshOtherPalettes(PaletteWindow* p);
 	// If no palette is shown, this displays the primary palette
@@ -363,6 +369,8 @@ public:
 	GraphicManager& gfx = g_graphics;
 
 	HousePalette* house_palette;
+	ZonePalettePanel* zone_palette;
+	TownPalettePanel* town_palette;
 
 	ToolOptionsWindow* tool_options;
 	TilePropertiesPanel* tile_properties_panel;

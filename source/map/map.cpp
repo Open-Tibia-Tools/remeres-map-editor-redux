@@ -66,9 +66,13 @@ void Map::initializeEmpty() {
 	monsterfile = sname + "-monster.xml";
 	housefile = sname + "-house.xml";
 	npcfile = sname + "-npc.xml";
+	zonefile = sname + "-zones.xml";
 	waypointfile = sname + "-waypoint.xml";
 	description = "No map description available.";
 	unnamed = true;
+	zones.clear();
+	zone_index.clear();
+	max_assigned_zone_id = 0;
 
 	doChange();
 }
@@ -130,6 +134,14 @@ void Map::convertHouseTiles(uint32_t fromId, uint32_t toId) {
 	MapConverter::convertHouseTiles(*this, fromId, toId);
 }
 
+void Map::updateTownIdForHouses(uint32_t old_town_id, uint32_t new_town_id) {
+	for (auto& [_, house] : houses) {
+		if (house && house->townid == old_town_id) {
+			house->townid = new_town_id;
+		}
+	}
+}
+
 MapVersion Map::getVersion() const {
 	return mapVersion;
 }
@@ -188,6 +200,116 @@ void Map::setNpcFilename(const std::string& new_npcfile) {
 void Map::setWaypointFilename(const std::string& new_waypointfile) {
 	waypointfile = new_waypointfile;
 	unnamed = false;
+}
+
+const Map::Zone* Map::findZone(uint16_t id) const {
+	const auto it = std::ranges::find(zones, id, &Zone::id);
+	return it != zones.end() ? &*it : nullptr;
+}
+
+const Map::Zone* Map::findZone(std::string_view name) const {
+	const auto it = std::ranges::find(zones, name, &Zone::name);
+	return it != zones.end() ? &*it : nullptr;
+}
+
+uint16_t Map::addZone(std::string name) {
+	if (!supportsZones() || name.empty() || findZone(name)) {
+		return 0;
+	}
+	uint16_t id = std::max<uint16_t>(max_assigned_zone_id + 1, 1);
+	// Skip IDs referenced by tiles too: a sidecar may omit a zone the tiles
+	// still point at, and handing that ID to a new zone would silently adopt
+	// those tiles.
+	while (findZone(id) || zone_index.hasZone(id)) {
+		if (id == UINT16_MAX) {
+			return 0;
+		}
+		++id;
+	}
+	max_assigned_zone_id = id;
+	zones.push_back({ std::move(name), id });
+	doChange();
+	return id;
+}
+
+bool Map::renameZone(uint16_t id, std::string name) {
+	if (!supportsZones()) {
+		return false;
+	}
+	const Zone* existing = findZone(name);
+	if (name.empty() || (existing && existing->id != id)) {
+		return false;
+	}
+	const auto it = std::ranges::find(zones, id, &Zone::id);
+	if (it == zones.end()) {
+		return false;
+	}
+	it->name = std::move(name);
+	doChange();
+	return true;
+}
+
+void Map::removeZone(uint16_t id) {
+	if (!supportsZones()) {
+		return;
+	}
+	std::erase_if(zones, [id](const Zone& zone) { return zone.id == id; });
+	const auto& positions = zone_index.getPositions(id);
+	for (const Position& pos : positions) {
+		if (Tile* tile = getTile(pos)) {
+			tile->removeZone(id);
+		}
+	}
+	zone_index.removeZone(id);
+	doChange();
+}
+
+const std::vector<Position>& Map::getZoneTilePositions(uint16_t id) const noexcept {
+	static const std::vector<Position> s_empty;
+	return supportsZones() ? zone_index.getPositions(id) : s_empty;
+}
+
+const std::vector<ZoneCluster>& Map::getZoneClusters(uint16_t id, bool recompute_if_dirty) const {
+	static const std::vector<ZoneCluster> s_empty;
+	return supportsZones() ? zone_index.getClusters(id, recompute_if_dirty) : s_empty;
+}
+
+void Map::addTileToZone(uint16_t id, const Position& pos) {
+	if (!supportsZones()) {
+		return;
+	}
+	zone_index.addTile(id, pos);
+}
+
+void Map::removeTileFromZone(uint16_t id, const Position& pos) {
+	if (!supportsZones()) {
+		return;
+	}
+	zone_index.removeTile(id, pos);
+}
+
+void Map::updateTileZones(const Position& pos, std::span<const uint16_t> old_zones, std::span<const uint16_t> new_zones) {
+	if (!supportsZones()) {
+		return;
+	}
+	for (uint16_t old_id : old_zones) {
+		if (!std::ranges::binary_search(new_zones, old_id)) {
+			zone_index.removeTile(old_id, pos);
+		}
+	}
+	for (uint16_t new_id : new_zones) {
+		if (!std::ranges::binary_search(old_zones, new_id)) {
+			zone_index.addTile(new_id, pos);
+		}
+	}
+}
+
+void Map::rebuildZoneIndex() {
+	if (!supportsZones()) {
+		zone_index.clear();
+		return;
+	}
+	zone_index.rebuild(*this);
 }
 
 bool Map::addSpawn(Tile* tile) {

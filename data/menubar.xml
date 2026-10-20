@@ -103,17 +103,14 @@
 		<item name="Find Everything" action="SEARCH_ON_MAP_EVERYTHING" help="Find all unique/action/text/container items."/>
 	</menu>
 	<menu name="Map">
-		<item name="Edit Towns" hotkey="Ctrl+T" action="EDIT_TOWNS" help="Edit towns."/>
-		<!-- these were never implemented
-		<item name="Edit Items" hotkey="Ctrl+I" action="EDIT_ITEMS" help="Edit items."/>
-		<item name="Edit Monsters" action="EDIT_MONSTERS" help="Edit monsters."/>
-		-->
+		<item name="Edit Towns..." hotkey="Ctrl+T" action="EDIT_TOWNS" help="Open towns palette."/>
 		<separator/>
 		<item name="Cleanup invalid tiles..." action="MAP_CLEANUP" help="Removes all invalid or unresolved items from the map."/>
 		<item name="Cleanup invalid zones..." action="MAP_CLEAN_INVALID_ZONES" help="Removes preserved invalid tile flags and opaque OTBM tile fragments from the map."/>
 		<item name="Remove unreachable tiles..." action="MAP_REMOVE_UNREACHABLE_TILES" help="Removes unreachable and invisible tiles from the map."/>
 		<item name="Properties..." hotkey="Ctrl+P" action="MAP_PROPERTIES" help="Show and change the map properties."/>
 		<item name="Statistics" hotkey="F8" action="MAP_STATISTICS" help="Show map statistics."/>
+		<item name="Validate Spawns..." action="MAP_VALIDATE_SPAWNS" help="Validate spawns for invalid times, unknown creatures, and wall/unwalkable collisions."/>
 	</menu>
 	<menu name="Selection">
 		<item name="Replace Items on Selection" action="REPLACE_ON_SELECTION_ITEMS" help="Replace items on selected area."/>
@@ -133,7 +130,7 @@
 			<item name="Compensate Selection" action="SELECT_MODE_COMPENSATE" help="Compensate for floor difference when selecting."/>
 			<separator/>
 			<item name="Current Floor" action="SELECT_MODE_CURRENT" help="Select only current floor."/>
-			<item name="Lower Floors" action="SELECT_MODE_LOWER" help="Select all lower floors."/>
+			<item name="All Floors" action="SELECT_MODE_LOWER" help="Select all floors."/>
 			<item name="Visible Floors" action="SELECT_MODE_VISIBLE" help="Select only visible floors."/>
 		</menu>
 		<separator/>
@@ -171,6 +168,7 @@
 		<item name="Show spawns" hotkey="S" action="SHOW_SPAWNS" help="Show spawns on the map."/>
 		<item name="Show special" hotkey="E" action="SHOW_SPECIAL" help="Show special tiles on the map, like PZ."/>
 		<item name="Show houses" hotkey="Ctrl+H" action="SHOW_HOUSES" help="Show houses on the map."/>
+		<item name="Show zones" hotkey="Shift+Z" action="SHOW_ZONES" help="Show OTBM 5 zones (Canary / Crystal Server) as colored areas."/>
 		<item name="Show pathing" hotkey="O" action="SHOW_PATHING" help="Show blocking tiles."/>
 		<item name="Show towns" hotkey="" action="SHOW_TOWNS" help="Show temple positions."/>
 		<item name="Show waypoints" hotkey="Shift+W" action="SHOW_WAYPOINTS" help="Show waypoints."/>

@@ -59,6 +59,8 @@ struct TechnicalIdFilter {
 	std::vector<uint32_t> client_ids;
 
 	[[nodiscard]] bool matches(uint32_t sid, uint32_t cid) const noexcept;
+	[[nodiscard]] bool matches_client(uint32_t cid) const noexcept;
+	[[nodiscard]] bool matches_server(uint32_t sid) const noexcept;
 	void sort_and_dedup();
 };
 

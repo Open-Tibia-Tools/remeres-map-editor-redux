@@ -133,7 +133,7 @@ public:
 
 class MapNode {
 public:
-	MapNode(BaseMap& map);
+	MapNode(BaseMap& map, uint16_t* cell_floor_chunks = nullptr, uint16_t chunk_bit = 0);
 	~MapNode();
 
 	MapNode(const MapNode&) = delete;
@@ -171,6 +171,8 @@ public:
 
 protected:
 	BaseMap& map;
+	uint16_t* cell_floor_chunks_ = nullptr;
+	uint16_t chunk_bit_ = 0;
 	uint32_t visible;
 	std::array<std::unique_ptr<Floor>, MAP_LAYERS> array;
 

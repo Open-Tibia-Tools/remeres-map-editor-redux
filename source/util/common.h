@@ -22,6 +22,7 @@
 #include "map/position.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <cctype>
 #include <cmath>
 #include <iomanip>
 #include <string>
@@ -71,6 +72,10 @@ void to_lower_str(std::string& source);
 void to_upper_str(std::string& source);
 std::string as_lower_str(const std::string& other);
 std::string as_upper_str(const std::string& other);
+// Case-insensitive char predicate, e.g. std::ranges::equal(a, b, iequal)
+inline constexpr auto iequal = [](char a, char b) {
+	return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+};
 
 // isFalseString returns true if the string is either "0", "false", "no", "not" or blank
 // isTrueString returns the opposite value of isFalseString
@@ -93,6 +98,19 @@ bool posFromClipboard(Position& position, const int mapWidth = MAP_MAX_WIDTH, co
 wxString b2yn(bool v);
 
 wxColor colorFromEightBit(int color);
+
+// Formats an integer with thousand separators (e.g. 1000 -> "1,000", 100000000 -> "100,000,000")
+template <std::integral T>
+inline std::string format_thousands_separator(T value, char separator = ',') {
+	std::string s = std::to_string(value);
+	int insert_pos = static_cast<int>(s.length()) - 3;
+	const int min_pos = (value < 0) ? 1 : 0;
+	while (insert_pos > min_pos) {
+		s.insert(insert_pos, 1, separator);
+		insert_pos -= 3;
+	}
+	return s;
+}
 
 // Standard math functions are now used via <cmath> and <algorithm>
 // std::abs, std::min, std::max should be used instead.

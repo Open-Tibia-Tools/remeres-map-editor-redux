@@ -429,9 +429,26 @@ void Selection::finish(SessionFlags flags) {
 	selectionChanged = false;
 }
 
+void Selection::addListener(uintptr_t id, std::function<void(size_t)> callback) {
+	removeListener(id);
+	listeners.push_back({ id, std::move(callback) });
+}
+
+void Selection::removeListener(uintptr_t id) {
+	std::erase_if(listeners, [id](const SelectionListener& l) {
+		return l.id == id;
+	});
+}
+
 void Selection::updateSelectionCount() {
 	if (onSelectionChange) {
 		onSelectionChange(size());
+	}
+	const size_t currentSize = size();
+	for (const auto& listener : listeners) {
+		if (listener.callback) {
+			listener.callback(currentSize);
+		}
 	}
 }
 

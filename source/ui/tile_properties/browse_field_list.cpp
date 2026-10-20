@@ -117,7 +117,7 @@ void TilePropertiesListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_
 		nvgFillColor(vg, nvgRGBA(textColour.Red(), textColour.Green(), textColour.Blue(), 255));
 	}
 
-	std::string label = std::format("{} - {}", item->getID(), item->getName());
+	const std::string label = std::format("{} - {}", item->getID(), item->getName());
 
 	nvgFontSize(vg, 12.0f);
 	nvgFontFace(vg, "sans");

@@ -140,6 +140,10 @@ constexpr int PAINTERS_ALGORITHM_SAFETY_MARGIN_PIXELS = TILE_SIZE * 6;
 #define SPRITE_PIXELS 32
 #define SPRITE_PIXELS_SIZE SPRITE_PIXELS* SPRITE_PIXELS
 
+// Bytes per pixel in RGB / RGBA buffers
+constexpr int RGB_COMPONENTS = 3;
+constexpr int RGBA_COMPONENTS = 4;
+
 // The sea layer
 #define GROUND_LAYER 7
 

@@ -28,6 +28,7 @@
 #include "brushes/brush.h"
 #include "brushes/house/house_brush.h"
 #include "brushes/house/house_exit_brush.h"
+#include "brushes/zone/zone_brush.h"
 #include "game/sprites.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
@@ -61,12 +62,15 @@ MapDrawer::~MapDrawer() {
 
 void MapDrawer::SetupVars(const ViewportParameters& vp) {
 	options.current_house_id = 0;
+	options.current_zone_id = 0;
 	Brush* brush = g_brush_manager.GetCurrentBrush();
 	if (brush) {
 		if (brush->is<HouseBrush>()) {
 			options.current_house_id = brush->as<HouseBrush>()->getHouseID();
 		} else if (brush->is<HouseExitBrush>()) {
 			options.current_house_id = brush->as<HouseExitBrush>()->getHouseID();
+		} else if (brush->is<ZoneBrush>()) {
+			options.current_zone_id = brush->as<ZoneBrush>()->getZone();
 		}
 	}
 
@@ -383,7 +387,7 @@ void MapDrawer::DrawCreatureNames(NVGcontext* vg) {
 }
 
 void MapDrawer::DrawMarkerLabels(NVGcontext* vg) {
-	if (!options.ingame && (options.show_waypoints || options.show_towns || options.show_houses) && view.zoom <= 10.0f) {
+	if (!options.ingame && (options.show_waypoints || options.show_towns || options.show_houses || options.show_zones) && view.zoom <= 10.0f) {
 		marker_label_drawer.draw(vg, editor.map, view, options);
 	}
 }
@@ -396,7 +400,8 @@ bool MapDrawer::hasOverlays() {
 	if (!options.ingame && can_read_labels &&
 	    ((options.show_waypoints && !editor.map.waypoints.empty()) ||
 	     (options.show_towns && !editor.map.towns.empty()) ||
-	     (options.show_houses && editor.map.houses.count() > 0))) {
+	     (options.show_houses && editor.map.houses.count() > 0) ||
+	     (options.show_zones && !editor.map.zones.empty()))) {
 		return true;
 	}
 	if (options.show_tooltips && !tooltip_drawer.empty() && can_read_labels) {

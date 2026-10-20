@@ -34,6 +34,13 @@ class Selection {
 public:
 	std::function<void(size_t)> onSelectionChange;
 
+	struct SelectionListener {
+		uintptr_t id = 0;
+		std::function<void(size_t)> callback;
+	};
+	void addListener(uintptr_t id, std::function<void(size_t)> callback);
+	void removeListener(uintptr_t id);
+
 	Selection(Editor& editor);
 	~Selection();
 
@@ -138,6 +145,7 @@ private:
 	std::vector<Tile*> tiles;
 	std::vector<Tile*> pending_adds;
 	std::vector<Tile*> pending_removes;
+	std::vector<SelectionListener> listeners;
 
 	mutable std::atomic<bool> bounds_dirty;
 	mutable Position cached_min;

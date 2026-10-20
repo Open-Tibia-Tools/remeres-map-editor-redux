@@ -180,8 +180,8 @@ std::unique_ptr<Tile> Tile::deepCopy() const {
 	copy->mapflags = mapflags;
 	copy->statflags = statflags;
 	copy->minimapColor = minimapColor;
-	if (invalidZones) {
-		copy->invalidZones = std::make_unique<InvalidZoneState>(*invalidZones);
+	if (extra) {
+		copy->extra = std::make_unique<TileExtraData>(*extra);
 	}
 	return copy;
 }
@@ -200,16 +200,20 @@ uint32_t Tile::memsize() const {
 	}
 
 	mem += sizeof(std::unique_ptr<Item>) * items.capacity();
-	if (invalidZones) {
-		mem += sizeof(InvalidZoneState);
-		mem += static_cast<uint32_t>(invalidZones->opaqueTileAttributes.capacity() * sizeof(OpaqueTileAttributeRecord));
-		for (const auto& attribute : invalidZones->opaqueTileAttributes) {
-			mem += static_cast<uint32_t>(attribute.rawBytes.capacity());
+	if (extra) {
+		mem += sizeof(TileExtraData);
+		if (extra->invalidContent) {
+			mem += sizeof(TileInvalidContent);
+			mem += static_cast<uint32_t>(extra->invalidContent->opaqueTileAttributes.capacity() * sizeof(OpaqueTileAttributeRecord));
+			for (const auto& attribute : extra->invalidContent->opaqueTileAttributes) {
+				mem += static_cast<uint32_t>(attribute.rawBytes.capacity());
+			}
+			mem += static_cast<uint32_t>(extra->invalidContent->opaqueChildNodes.capacity() * sizeof(PreservedOTBMNode));
+			for (const auto& node : extra->invalidContent->opaqueChildNodes) {
+				mem += preservedNodeHeapSize(node);
+			}
 		}
-		mem += static_cast<uint32_t>(invalidZones->opaqueChildNodes.capacity() * sizeof(PreservedOTBMNode));
-		for (const auto& node : invalidZones->opaqueChildNodes) {
-			mem += preservedNodeHeapSize(node);
-		}
+		mem += static_cast<uint32_t>(extra->zoneIds.heapSize());
 	}
 
 	return mem;
@@ -233,7 +237,7 @@ int Tile::size() const {
 	if (mapflags) {
 		++sz;
 	}
-	if (hasInvalidZones()) {
+	if (hasInvalidZones() || hasZones()) {
 		++sz;
 	}
 	const TileLocation* loc = location ? location : ownedLocation;
@@ -502,10 +506,12 @@ bool Tile::isContentEqual(const Tile* other) const {
 		return false;
 	}
 
-	if (static_cast<bool>(invalidZones) != static_cast<bool>(other->invalidZones)) {
+	const bool this_has_extra = extra && !extra->empty();
+	const bool other_has_extra = other->extra && !other->extra->empty();
+	if (this_has_extra != other_has_extra) {
 		return false;
 	}
-	if (invalidZones && other->invalidZones && *invalidZones != *other->invalidZones) {
+	if (this_has_extra && *extra != *other->extra) {
 		return false;
 	}
 

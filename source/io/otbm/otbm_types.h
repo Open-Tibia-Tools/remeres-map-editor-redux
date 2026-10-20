@@ -70,6 +70,9 @@ enum OTBM_NodeTypes_t : uint8_t {
 	OTBM_HOUSETILE = 14,
 	OTBM_WAYPOINTS = 15,
 	OTBM_WAYPOINT = 16,
+	// OTBM 5 format (Canary / Crystal Server): u16 count, followed by count * u16 zone id.
+	// NOTE: Classic TFS 1.x / OTBM 1-4 does NOT support this node; incompatible with TFS custom zone systems.
+	OTBM_TILE_ZONE = 19,
 };
 
 enum class OTBMWriteResult {

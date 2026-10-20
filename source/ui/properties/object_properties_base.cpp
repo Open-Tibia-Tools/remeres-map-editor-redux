@@ -4,6 +4,7 @@
 
 #include "app/main.h"
 #include "ui/properties/object_properties_base.h"
+#include "item_definitions/core/item_definition_store.h"
 
 // ============================================================================
 // Object properties base
@@ -53,4 +54,8 @@ Creature* ObjectPropertiesWindowBase::getCreatureBeingEdited() {
 
 Spawn* ObjectPropertiesWindowBase::getSpawnBeingEdited() {
 	return edit_spawn;
+}
+
+bool ObjectPropertiesWindowBase::supportsClassificationTiers() {
+	return g_item_definitions.MajorVersion > 3 || (g_item_definitions.MajorVersion == 3 && g_item_definitions.MinorVersion >= 60);
 }

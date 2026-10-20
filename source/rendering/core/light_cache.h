@@ -91,6 +91,12 @@ public:
 		return chunks_.size();
 	}
 
+	// True when getOrBakeChunk would (re)bake this chunk.
+	[[nodiscard]] bool needsBake(int32_t cx, int32_t cy, int32_t z) const {
+		const auto it = chunks_.find(ChunkCoord { cx, cy, z });
+		return it == chunks_.end() || !it->second.is_valid;
+	}
+
 private:
 	void bakeChunk(
 		CachedLightChunk& chunk,

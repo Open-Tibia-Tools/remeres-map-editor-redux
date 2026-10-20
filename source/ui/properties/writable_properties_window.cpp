@@ -30,8 +30,13 @@ WritablePropertiesWindow::WritablePropertiesWindow(wxWindow* parent, const Map* 
 	wxFlexGridSizer* subsizer = newd wxFlexGridSizer(2, 10, 10);
 	subsizer->AddGrowableCol(1);
 
-	subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "ID " + i2ws(item->getID())));
+	if (item->getClientID() != 0 && item->getClientID() != item->getID()) {
+		subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
+	} else {
+		subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, std::format("ID: {}", item->getID())));
+	}
 	subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
+
 
 	subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Action ID"));
 	action_id_field = newd wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, i2ws(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());

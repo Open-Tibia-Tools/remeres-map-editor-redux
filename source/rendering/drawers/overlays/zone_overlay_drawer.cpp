@@ -4,15 +4,19 @@
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/indicators/zone_flags.h"
+#include "rendering/indicators/zone_colors.h"
 #include "rendering/indicators/technical_item_registry.h"
 #include "rendering/core/render_depth.h"
+#include "util/phase_profiler.h"
 #include "map/map.h"
 #include "map/basemap.h"
 #include "map/tile.h"
 #include "game/item.h"
 #include "game/spawn.h"
+#include "game/waypoints.h"
 #include "app/settings.h"
 #include <algorithm>
+#include <cmath>
 #include <vector>
 #include <limits>
 
@@ -66,6 +70,8 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		return;
 	}
 
+	rme::prof::Scope zone_scope(rme::prof::Phase::ZoneOverlay);
+
 	const AtlasRegion* white_pixel = atlas.getWhitePixel();
 	if (!white_pixel) {
 		return;
@@ -81,26 +87,47 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		const int max_x = bounds.end_x + 1;
 		const int row_width = max_x - min_x + 1;
 
-		auto fetchRow = [&](int ry, std::vector<CachedRowTile>& row) {
+		// Caller-owned cell cursors: consecutive x in a row share the containing
+		// 64x64 cell and 4x4 Floor, so empty cells/floors skip 64 or 4 tiles at once.
+		SpatialHashGrid::CellCursor secondary_cursor;
+		SpatialHashGrid::CellCursor primary_cursor;
+		auto encodeZoneMask = [](const Tile* t) noexcept -> uint8_t {
+			if (!t) {
+				return 0;
+			}
+			const uint32_t mf = t->getMapFlags();
+			return static_cast<uint8_t>(
+				((mf & TILESTATE_PROTECTIONZONE) ? 1u : 0u) |
+				((mf & TILESTATE_NOPVP)          ? 2u : 0u) |
+				((mf & TILESTATE_NOLOGOUT)       ? 4u : 0u) |
+				((mf & TILESTATE_PVPZONE)        ? 8u : 0u));
+		};
+		auto fetchRow = [&](int ry, std::vector<uint8_t>& row) {
 			row.resize(row_width);
-			for (int x = min_x; x <= max_x; ++x) {
-				const Tile* t = secondary_map ? secondary_map->getTile(x, ry, z) : nullptr;
-				if (!t) {
-					t = map.getTile(x, ry, z);
+			uint8_t* out = row.data();
+			if (secondary_map) {
+				for (int x = min_x; x <= max_x; ++x) {
+					const Tile* t = secondary_map->getTile(x, ry, z, secondary_cursor);
+					if (!t) {
+						t = map.getTile(x, ry, z, primary_cursor);
+					}
+					out[x - min_x] = encodeZoneMask(t);
 				}
-				CachedRowTile& ct = row[x - min_x];
-				ct.tile = t;
-				if (t) {
-					ct.is_pz = t->isPZ();
-					const uint32_t mf = t->getMapFlags();
-					ct.is_nopvp = (mf & TILESTATE_NOPVP) != 0;
-					ct.is_nolog = (mf & TILESTATE_NOLOGOUT) != 0;
-					ct.is_pvp = (mf & TILESTATE_PVPZONE) != 0;
-				} else {
-					ct.is_pz = false;
-					ct.is_nopvp = false;
-					ct.is_nolog = false;
-					ct.is_pvp = false;
+				return;
+			}
+			const int ly = ry & 3;
+			for (int x = min_x; x <= max_x;) {
+				const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
+				if (!floor) {
+					const int span_end = std::min(max_x, x | primary_cursor.empty_span_mask);
+					std::fill(out + (x - min_x), out + (span_end - min_x + 1), uint8_t { 0 });
+					x = span_end + 1;
+					continue;
+				}
+				const int node_end = std::min(max_x, x | 3);
+				for (; x <= node_end; ++x) {
+					const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
+					out[x - min_x] = encodeZoneMask(t);
 				}
 			}
 		};
@@ -113,55 +140,44 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 
 			for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
 				const int idx = x - min_x;
-				const CachedRowTile& ct = row_curr_[idx];
-				if (!ct.tile) {
+				const uint8_t zmask = row_curr_[idx];
+				if (zmask == 0) {
 					continue;
 				}
 
-				// Special Zones (PZ, No-PvP, No-Logout, PvP Zone)
-				if (ct.is_pz || ct.is_nopvp || ct.is_nolog || ct.is_pvp) {
-					uint32_t tile_zone_flags = 0;
-					if (ct.is_pz)    tile_zone_flags |= ZONE_FLAG_PZ;
-					if (ct.is_nopvp) tile_zone_flags |= ZONE_FLAG_NOPVP;
-					if (ct.is_nolog) tile_zone_flags |= ZONE_FLAG_NOLOGOUT;
-					if (ct.is_pvp)   tile_zone_flags |= ZONE_FLAG_PVPZONE;
+				uint32_t tile_zone_flags = 0;
+				if (zmask & 1u) tile_zone_flags |= ZONE_FLAG_PZ;
+				if (zmask & 2u) tile_zone_flags |= ZONE_FLAG_NOPVP;
+				if (zmask & 4u) tile_zone_flags |= ZONE_FLAG_NOLOGOUT;
+				if (zmask & 8u) tile_zone_flags |= ZONE_FLAG_PVPZONE;
 
-					auto checkNeighbor = [&](const CachedRowTile& n, uint32_t border_bit) {
-						const bool n_has_any = n.is_pz || n.is_nopvp || n.is_nolog || n.is_pvp;
-						if (!n_has_any) {
-							tile_zone_flags |= border_bit;
-						}
-					};
+				if (row_prev_[idx] == 0)     tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_N;
+				if (row_next_[idx] == 0)     tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_S;
+				if (row_curr_[idx - 1] == 0) tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_W;
+				if (row_curr_[idx + 1] == 0) tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_E;
 
-					checkNeighbor(row_prev_[idx],     ZONE_FLAG_ZONE_BORDER_N);
-					checkNeighbor(row_next_[idx],     ZONE_FLAG_ZONE_BORDER_S);
-					checkNeighbor(row_curr_[idx - 1], ZONE_FLAG_ZONE_BORDER_W);
-					checkNeighbor(row_curr_[idx + 1], ZONE_FLAG_ZONE_BORDER_E);
+				visible_zone_tiles_.push_back({ x, y, zmask });
 
-					uint8_t zmask = (ct.is_pz ? 1 : 0) | (ct.is_nopvp ? 2 : 0) | (ct.is_nolog ? 4 : 0) | (ct.is_pvp ? 8 : 0);
-					visible_zone_tiles_.push_back({ x, y, zmask });
+				bool is_mult = false;
+				if ((zmask & 1u) && options.zone_pz_blend_mode == 1) is_mult = true;
+				if ((zmask & 2u) && options.zone_nopvp_blend_mode == 1) is_mult = true;
+				if ((zmask & 4u) && options.zone_nologout_blend_mode == 1) is_mult = true;
+				if ((zmask & 8u) && options.zone_pvp_blend_mode == 1) is_mult = true;
 
-					bool is_mult = false;
-					if (ct.is_pz && options.zone_pz_blend_mode == 1) is_mult = true;
-					if (ct.is_nopvp && options.zone_nopvp_blend_mode == 1) is_mult = true;
-					if (ct.is_nolog && options.zone_nologout_blend_mode == 1) is_mult = true;
-					if (ct.is_pvp && options.zone_pvp_blend_mode == 1) is_mult = true;
+				int draw_x, draw_y;
+				view.getScreenPosition(x, y, z, draw_x, draw_y);
+				const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
 
-					int draw_x, draw_y;
-					view.getScreenPosition(x, y, z, draw_x, draw_y);
-					const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
+				if (is_mult) {
+					tile_zone_flags |= ZONE_FLAG_MULTIPLICATIVE;
+					mult_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags, depth });
+				} else {
+					alpha_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags, depth });
+				}
 
-					if (is_mult) {
-						tile_zone_flags |= ZONE_FLAG_MULTIPLICATIVE;
-						mult_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags, depth });
-					} else {
-						alpha_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags, depth });
-					}
-
-					if (options.show_zone_borders && (tile_zone_flags & (ZONE_FLAG_ZONE_BORDER_N | ZONE_FLAG_ZONE_BORDER_S | ZONE_FLAG_ZONE_BORDER_W | ZONE_FLAG_ZONE_BORDER_E))) {
-						uint32_t border_flags = (tile_zone_flags & ~ZONE_FLAG_MULTIPLICATIVE) | ZONE_FLAG_BORDER_PASS;
-						border_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), border_flags, depth });
-					}
+				if (options.show_zone_borders && (tile_zone_flags & (ZONE_FLAG_ZONE_BORDER_N | ZONE_FLAG_ZONE_BORDER_S | ZONE_FLAG_ZONE_BORDER_W | ZONE_FLAG_ZONE_BORDER_E))) {
+					uint32_t border_flags = (tile_zone_flags & ~ZONE_FLAG_MULTIPLICATIVE) | ZONE_FLAG_BORDER_PASS;
+					border_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), border_flags, depth });
 				}
 			}
 
@@ -325,6 +341,7 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	if (options.ingame || !options.show_blocking || view.zoom > kZoomLODCutoff) {
 		return;
 	}
+	rme::prof::Scope blocking_scope(rme::prof::Phase::BlockingOverlay);
 
 	const AtlasRegion* white_pixel = atlas.getWhitePixel();
 	if (!white_pixel) {
@@ -344,14 +361,35 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 
 	blocking_border_quads_.clear();
 
+	SpatialHashGrid::CellCursor secondary_cursor;
+	SpatialHashGrid::CellCursor primary_cursor;
 	auto fetchRow = [&](int ry, std::vector<uint8_t>& row) {
 		row.resize(row_width);
-		for (int x = min_x; x <= max_x; ++x) {
-			const Tile* t = secondary_map ? secondary_map->getTile(x, ry, z) : nullptr;
-			if (!t) {
-				t = map.getTile(x, ry, z);
+		uint8_t* out = row.data();
+		if (secondary_map) {
+			for (int x = min_x; x <= max_x; ++x) {
+				const Tile* t = secondary_map->getTile(x, ry, z, secondary_cursor);
+				if (!t) {
+					t = map.getTile(x, ry, z, primary_cursor);
+				}
+				out[x - min_x] = (t && IsTilePathBlocking(t)) ? 1 : 0;
 			}
-			row[x - min_x] = (t && IsTilePathBlocking(t)) ? 1 : 0;
+			return;
+		}
+		const int ly = ry & 3;
+		for (int x = min_x; x <= max_x;) {
+			const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
+			if (!floor) {
+				const int span_end = std::min(max_x, x | primary_cursor.empty_span_mask);
+				std::fill(out + (x - min_x), out + (span_end - min_x + 1), uint8_t { 0 });
+				x = span_end + 1;
+				continue;
+			}
+			const int node_end = std::min(max_x, x | 3);
+			for (; x <= node_end; ++x) {
+				const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
+				out[x - min_x] = (t && IsTilePathBlocking(t)) ? 1 : 0;
+			}
 		}
 	};
 
@@ -420,9 +458,13 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
                                         const BaseMap* secondary_map,
                                         const DrawingOptions& options,
                                         const AtlasManager& atlas) {
-	if (options.ingame || !options.show_houses || view.zoom > kZoomLODCutoff) {
+	// This pass only emits house border quads, and those only when zone borders are
+	// enabled (house tints come from the sprite batch shader). Without borders it
+	// would sweep the whole viewport with a getTile per tile for no output at all.
+	if (options.ingame || !options.show_houses || !options.show_zone_borders || view.zoom > kZoomLODCutoff) {
 		return;
 	}
+	rme::prof::Scope houses_scope(rme::prof::Phase::HouseOverlay);
 
 	const AtlasRegion* white_pixel = atlas.getWhitePixel();
 	if (!white_pixel) {
@@ -438,14 +480,35 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
 
 	house_border_quads_.clear();
 
+	SpatialHashGrid::CellCursor secondary_cursor;
+	SpatialHashGrid::CellCursor primary_cursor;
 	auto fetchRow = [&](int ry, std::vector<uint32_t>& row) {
 		row.resize(row_width);
-		for (int x = min_x; x <= max_x; ++x) {
-			const Tile* t = secondary_map ? secondary_map->getTile(x, ry, z) : nullptr;
-			if (!t) {
-				t = map.getTile(x, ry, z);
+		uint32_t* out = row.data();
+		if (secondary_map) {
+			for (int x = min_x; x <= max_x; ++x) {
+				const Tile* t = secondary_map->getTile(x, ry, z, secondary_cursor);
+				if (!t) {
+					t = map.getTile(x, ry, z, primary_cursor);
+				}
+				out[x - min_x] = (t && t->isHouseTile()) ? static_cast<uint32_t>(t->getHouseID()) : 0u;
 			}
-			row[x - min_x] = (t && t->isHouseTile()) ? static_cast<uint32_t>(t->getHouseID()) : 0u;
+			return;
+		}
+		const int ly = ry & 3;
+		for (int x = min_x; x <= max_x;) {
+			const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
+			if (!floor) {
+				const int span_end = std::min(max_x, x | primary_cursor.empty_span_mask);
+				std::fill(out + (x - min_x), out + (span_end - min_x + 1), uint32_t { 0 });
+				x = span_end + 1;
+				continue;
+			}
+			const int node_end = std::min(max_x, x | 3);
+			for (; x <= node_end; ++x) {
+				const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
+				out[x - min_x] = (t && t->isHouseTile()) ? static_cast<uint32_t>(t->getHouseID()) : 0u;
+			}
 		}
 	};
 
@@ -494,6 +557,111 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
 	}
 }
 
+namespace {
+} // namespace
+
+void ZoneOverlayDrawer::drawFloorZones(SpriteBatch& sprite_batch,
+                                       int z,
+                                       const RenderView& view,
+                                       const Map& map,
+                                       const BaseMap* secondary_map,
+                                       const DrawingOptions& options,
+                                       const AtlasManager& atlas) {
+	if (!map.supportsZones() || options.ingame || !options.show_zones || view.zoom > kZoomLODCutoff) {
+		return;
+	}
+
+	if (map.zone_index.totalTileCount() == 0 && (!secondary_map || !secondary_map->supportsZones())) {
+		return;
+	}
+
+	const ViewBounds bounds = view.getBoundsForFloor(z);
+
+	if (!map.zone_index.hasFloor(z) && (!secondary_map || !secondary_map->supportsZones())) {
+		return;
+	}
+
+	const int min_x = bounds.start_x - 1;
+	const int max_x = bounds.end_x + 1;
+	const int row_width = max_x - min_x + 1;
+	const uint16_t active_zone = options.current_zone_id;
+
+	auto fetchRow = [&](int ry, std::vector<ZoneRowCell>& row) {
+		row.resize(row_width);
+		for (int x = min_x; x <= max_x; ++x) {
+			const Tile* t = secondary_map ? secondary_map->getTile(x, ry, z) : nullptr;
+			if (!t) {
+				t = map.getTile(x, ry, z);
+			}
+			if (!t || !t->hasZones()) {
+				row[x - min_x] = ZoneRowCell{ 0, 0 };
+				continue;
+			}
+			const auto ids = t->getZoneIds();
+			uint16_t prim = (active_zone != 0 && std::ranges::binary_search(ids, active_zone)) ? active_zone : ids.front();
+			uint16_t sec = 0;
+			if (ids.size() > 1) {
+				sec = (ids.front() == prim) ? ids[1] : ids.front();
+			}
+			row[x - min_x] = ZoneRowCell{ prim, sec };
+		}
+	};
+
+	fetchRow(bounds.start_y - 1, zone_row_prev_);
+	fetchRow(bounds.start_y, zone_row_curr_);
+
+	sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+	constexpr float kBorder = 2.0f;
+	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
+		fetchRow(y + 1, zone_row_next_);
+
+		for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
+			const int idx = x - min_x;
+			const ZoneRowCell cell = zone_row_curr_[idx];
+			const uint16_t zone_id = cell.primary;
+			if (zone_id == 0) {
+				continue;
+			}
+
+			const bool active = (zone_id == active_zone);
+			const glm::vec3 rgb = getZoneColor(zone_id);
+			int draw_x, draw_y;
+			view.getScreenPosition(x, y, z, draw_x, draw_y);
+			const float fx = static_cast<float>(draw_x);
+			const float fy = static_cast<float>(draw_y);
+			const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
+
+			if (cell.secondary != 0) {
+				const glm::vec3 sec_rgb = getZoneColor(cell.secondary);
+				const bool sec_active = (cell.secondary == active_zone);
+				sprite_batch.drawRect(fx, fy, 32.0f, 16.0f, glm::vec4(rgb, active ? 0.45f : 0.25f), atlas, depth);
+				sprite_batch.drawRect(fx, fy + 16.0f, 32.0f, 16.0f, glm::vec4(sec_rgb, sec_active ? 0.45f : 0.25f), atlas, depth);
+			} else {
+				sprite_batch.drawRect(fx, fy, 32.0f, 32.0f, glm::vec4(rgb, active ? 0.45f : 0.25f), atlas, depth);
+			}
+
+			if (options.show_zone_borders) {
+				const glm::vec4 edge(rgb, 0.9f);
+				if (zone_row_prev_[idx].primary != zone_id) {
+					sprite_batch.drawRect(fx, fy, 32.0f, kBorder, edge, atlas, depth);
+				}
+				if (zone_row_next_[idx].primary != zone_id) {
+					sprite_batch.drawRect(fx, fy + 32.0f - kBorder, 32.0f, kBorder, edge, atlas, depth);
+				}
+				if (zone_row_curr_[idx - 1].primary != zone_id) {
+					sprite_batch.drawRect(fx, fy, kBorder, 32.0f, edge, atlas, depth);
+				}
+				if (zone_row_curr_[idx + 1].primary != zone_id) {
+					sprite_batch.drawRect(fx + 32.0f - kBorder, fy, kBorder, 32.0f, edge, atlas, depth);
+				}
+			}
+		}
+
+		std::swap(zone_row_prev_, zone_row_curr_);
+		std::swap(zone_row_curr_, zone_row_next_);
+	}
+}
+
 void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
                                                 int z,
                                                 const RenderView& view,
@@ -504,6 +672,7 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 	if (options.ingame || !options.highlight_items || view.zoom > kZoomLODCutoff) {
 		return;
 	}
+	rme::prof::Scope highlight_scope(rme::prof::Phase::HighlightOverlay);
 
 	const AtlasRegion* white_pixel = atlas.getWhitePixel();
 	if (!white_pixel) {
@@ -514,22 +683,43 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 
 	highlight_quads_.clear();
 
+	SpatialHashGrid::CellCursor secondary_cursor;
+	SpatialHashGrid::CellCursor primary_cursor;
 	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
-		for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
-			const Tile* t = secondary_map ? secondary_map->getTile(x, y, z) : nullptr;
-			if (!t) {
-				t = map.getTile(x, y, z);
+		if (secondary_map) {
+			for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
+				const Tile* t = secondary_map->getTile(x, y, z, secondary_cursor);
+				if (!t) {
+					t = map.getTile(x, y, z, primary_cursor);
+				}
+				if (!t || t->items.empty() || t->items.back()->isBorder()) {
+					continue;
+				}
+				int draw_x, draw_y;
+				view.getScreenPosition(x, y, z, draw_x, draw_y);
+				const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
+				highlight_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), MakeHighlightItemsFlags(), depth });
 			}
-			if (!t || t->items.empty() || t->items.back()->isBorder()) {
+			continue;
+		}
+		const int ly = y & 3;
+		for (int x = bounds.start_x; x <= bounds.end_x;) {
+			const Floor* floor = map.getFloor(x, y, z, primary_cursor);
+			if (!floor) {
+				x = std::min(bounds.end_x, x | primary_cursor.empty_span_mask) + 1;
 				continue;
 			}
-
-			int draw_x, draw_y;
-			view.getScreenPosition(x, y, z, draw_x, draw_y);
-
-			const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
-			uint32_t flags = MakeHighlightItemsFlags();
-			highlight_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), flags, depth });
+			const int node_end = std::min(bounds.end_x, x | 3);
+			for (; x <= node_end; ++x) {
+				const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
+				if (!t || t->items.empty() || t->items.back()->isBorder()) {
+					continue;
+				}
+				int draw_x, draw_y;
+				view.getScreenPosition(x, y, z, draw_x, draw_y);
+				const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
+				highlight_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), MakeHighlightItemsFlags(), depth });
+			}
 		}
 	}
 
@@ -557,6 +747,7 @@ void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
 	if (!white_pixel) {
 		return;
 	}
+	rme::prof::Scope badges_scope(rme::prof::Phase::BadgeOverlay);
 
 	const ViewBounds bounds = view.getBoundsForFloor(z);
 	const float floor_alpha = 1.0f;
@@ -585,6 +776,45 @@ void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
 			sprite_batch.draw(b.x, b.y, b.w, b.h, *white_pixel, 1.0f, 1.0f, 1.0f, b.alpha,
 			                  INDICATOR_SPAWN_BASE, 0u, b.depth);
 		}
+	}
+}
+
+void ZoneOverlayDrawer::drawFloorWaypoints(SpriteBatch& sprite_batch,
+                                           int z,
+                                           const RenderView& view,
+                                           const Map& map,
+                                           const DrawingOptions& options,
+                                           const AtlasManager& atlas) {
+	if (options.ingame || !options.show_waypoints || map.waypoints.empty() || view.zoom > kZoomLODCutoff) {
+		return;
+	}
+
+	const AtlasRegion* white_pixel = atlas.getWhitePixel();
+	if (!white_pixel) {
+		return;
+	}
+
+	for (const auto& [wp_name, wp_ptr] : map.waypoints) {
+		if (!wp_ptr) {
+			continue;
+		}
+		const Position& pos = wp_ptr->pos;
+		if (pos.z != z || pos == Position()) {
+			continue;
+		}
+		int draw_x = 0;
+		int draw_y = 0;
+		if (!view.IsTileVisible(pos.x, pos.y, pos.z, draw_x, draw_y)) {
+			continue;
+		}
+
+		sprite_batch.draw(
+			static_cast<float>(draw_x), static_cast<float>(draw_y),
+			32.0f, 32.0f,
+			*white_pixel,
+			1.0f, 1.0f, 1.0f, 1.0f,
+			INDICATOR_WAYPOINT_BASE, 0u, 0.0f
+		);
 	}
 }
 

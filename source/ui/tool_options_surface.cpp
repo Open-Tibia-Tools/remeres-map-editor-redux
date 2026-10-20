@@ -5,6 +5,7 @@
 #include "brushes/managers/brush_manager.h"
 #include "brushes/border/optional_border_brush.h"
 #include "brushes/creature/creature_brush.h"
+#include "brushes/creature/monster_brush.h"
 #include "brushes/doodad/doodad_brush.h"
 #include "brushes/door/door_brush.h"
 #include "brushes/flag/flag_brush.h"
@@ -19,6 +20,7 @@
 #include "ui/icons/sprite_icon_service.h"
 #include "ui/icons/editor_icon_registry.h"
 #include "ui/gui.h"
+#include "map/map.h"
 #include "util/image_manager.h"
 
 #include <algorithm>
@@ -178,6 +180,25 @@ void ToolOptionsSurface::BuildUi() {
 	spawn_size_panel->SetSizer(spawn_size_row);
 	other_sizer->Add(spawn_size_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 
+	weight_panel = newd wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
+	auto* weight_row = newd wxBoxSizer(wxHORIZONTAL);
+	weight_label = newd wxStaticText(weight_panel, wxID_ANY, "Weight");
+	weight_row->Add(weight_label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+	weight_spin = newd wxSpinCtrl(
+		weight_panel,
+		wxID_ANY,
+		wxEmptyString,
+		wxDefaultPosition,
+		FromDIP(wxSize(72, 20)),
+		wxSP_ARROW_KEYS,
+		0,
+		100000,
+		g_gui.GetDefaultCreatureWeight()
+	);
+	weight_row->Add(weight_spin, 0, wxALIGN_CENTER_VERTICAL);
+	weight_panel->SetSizer(weight_row);
+	other_sizer->Add(weight_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+
 	preview_border_checkbox = newd wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Preview Border");
 	lock_doors_checkbox = newd wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Lock Doors (Shift)");
 	other_sizer->Add(preview_border_checkbox, 0, wxEXPAND | wxALL, FromDIP(6));
@@ -196,6 +217,7 @@ void ToolOptionsSurface::BuildUi() {
 	place_spawn_with_creature_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnPlaceSpawnWithCreatureToggled, this);
 	spawn_time_spin->Bind(wxEVT_SPINCTRL, &ToolOptionsSurface::OnSpawnTimeChanged, this);
 	spawn_size_spin->Bind(wxEVT_SPINCTRL, &ToolOptionsSurface::OnSpawnSizeChanged, this);
+	weight_spin->Bind(wxEVT_SPINCTRL, &ToolOptionsSurface::OnWeightChanged, this);
 }
 
 void ToolOptionsSurface::SetActiveBrush(Brush* brush) {
@@ -330,6 +352,9 @@ void ToolOptionsSurface::RefreshFromState() {
 	spawn_time_spin->SetValue(std::max(MIN_SPAWN_TIME, g_settings.getInteger(Config::DEFAULT_SPAWNTIME)));
 	spawn_size_spin->SetRange(1, g_settings.getInteger(Config::MAX_SPAWN_RADIUS));
 	spawn_size_spin->SetValue(std::clamp(g_settings.getInteger(Config::CURRENT_SPAWN_RADIUS), 1, g_settings.getInteger(Config::MAX_SPAWN_RADIUS)));
+	if (weight_spin) {
+		weight_spin->SetValue(g_gui.GetDefaultCreatureWeight());
+	}
 	UpdateSizeLabels();
 	UpdateModeButtons();
 	thickness_value->SetLabel(std::format("{}%", thickness_slider->GetValue()));
@@ -347,7 +372,8 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 	const bool show_preview_border = HasPreviewBorderControl();
 	const bool show_lock_doors = HasLockDoorsControl();
 	const bool show_spawn_controls = HasSpawnControls();
-	const bool show_other = show_thickness || show_preview_border || show_lock_doors || show_spawn_controls;
+	const bool show_weight = HasWeightControl();
+	const bool show_other = show_thickness || show_preview_border || show_lock_doors || show_spawn_controls || show_weight;
 
 	main_sizer->Show(main_tools_sizer, show_tools, true);
 	main_sizer->Show(size_sizer, show_size, true);
@@ -357,6 +383,7 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 	DetachWindowIfPresent(other_sizer, spawn_time_panel);
 	DetachWindowIfPresent(other_sizer, place_spawn_with_creature_checkbox);
 	DetachWindowIfPresent(other_sizer, spawn_size_panel);
+	DetachWindowIfPresent(other_sizer, weight_panel);
 	DetachWindowIfPresent(other_sizer, preview_border_checkbox);
 	DetachWindowIfPresent(other_sizer, lock_doors_checkbox);
 
@@ -366,6 +393,9 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 	if (show_spawn_controls) {
 		AddWindowToSizer(other_sizer, spawn_time_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 		AddWindowToSizer(other_sizer, spawn_size_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+		if (show_weight) {
+			AddWindowToSizer(other_sizer, weight_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+		}
 		AddWindowToSizer(other_sizer, place_spawn_with_creature_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 	}
 	if (show_preview_border) {
@@ -456,6 +486,13 @@ bool ToolOptionsSurface::HasLockDoorsControl() const {
 
 bool ToolOptionsSurface::HasSpawnControls() const {
 	return IsCreatureToolMode();
+}
+
+bool ToolOptionsSurface::HasWeightControl() const {
+	if (!active_brush || !active_brush->is<MonsterBrush>()) {
+		return false;
+	}
+	return g_gui.IsEditorOpen() && g_gui.GetCurrentMap().getVersion().otbm == MAP_OTBM_5;
 }
 
 Brush* ToolOptionsSurface::GetSelectedCreatureBrush() const {
@@ -724,4 +761,12 @@ void ToolOptionsSurface::OnSpawnSizeChanged(wxSpinEvent& event) {
 	}
 
 	g_gui.SetBrushSize(event.GetPosition());
+}
+
+void ToolOptionsSurface::OnWeightChanged(wxSpinEvent& event) {
+	if (IsMutatingUi()) {
+		return;
+	}
+
+	g_gui.SetDefaultCreatureWeight(event.GetPosition());
 }

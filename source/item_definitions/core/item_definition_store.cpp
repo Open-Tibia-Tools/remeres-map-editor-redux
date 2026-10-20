@@ -3,12 +3,6 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace {
-	constexpr uint64_t flagMask(ItemFlag flag) {
-		return uint64_t { 1 } << static_cast<uint8_t>(flag);
-	}
-}
-
 ItemDefinitionStore g_item_definitions;
 
 ItemDefinitionView::ItemDefinitionView(const ItemDefinitionStore* store, DefinitionId index) :
@@ -58,6 +52,10 @@ std::string_view ItemDefinitionView::description() const {
 
 bool ItemDefinitionView::hasFlag(ItemFlag flag) const {
 	return isValid() && store_->isFlagSet(index_, flag);
+}
+
+uint64_t ItemDefinitionView::flagMask() const {
+	return (isValid() && index_ < store_->flags_.masks.size()) ? store_->flags_.masks[index_] : 0;
 }
 
 int64_t ItemDefinitionView::attribute(ItemAttributeKey key) const {

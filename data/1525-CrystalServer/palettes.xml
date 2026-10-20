@@ -109,8 +109,8 @@
     </palette>
     <palette name="Creature">
         <tileset>
+            <include file="tilesets/creatures/Monsters.xml" />
             <include file="tilesets/creatures/NPCs.xml" />
-            <include file="tilesets/creatures/Others.xml" />
         </tileset>
     </palette>
     <palette name="Raw">

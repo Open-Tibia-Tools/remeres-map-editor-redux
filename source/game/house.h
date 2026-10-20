@@ -62,6 +62,22 @@ public:
 	const PositionList& getTiles() const noexcept {
 		return tiles;
 	}
+
+	// Summary of the house's tiles on one floor, as the label overlay needs it: the room's
+	// bounding box and its tile closest to the room centroid. Computing it walks every tile
+	// of the house, and the overlay used to do that twice per house per frame, so it is
+	// cached and recomputed only when the tile list or the requested floor changes.
+	struct FloorSummary {
+		int count = 0;
+		int min_x = 0;
+		int max_x = 0;
+		int min_y = 0;
+		int max_y = 0;
+		Position best_tile;
+	};
+
+	[[nodiscard]] const FloorSummary& getFloorSummary(int z) const;
+
 	uint8_t getEmptyDoorID() const;
 	Position getDoorPositionByID(uint8_t id) const;
 
@@ -72,6 +88,15 @@ protected:
 	Map* map;
 	PositionList tiles;
 	Position exit;
+
+	// Mutable cache for getFloorSummary(); summary_valid_ is cleared by every tile mutation.
+	mutable FloorSummary summary_;
+	mutable int summary_z = -1;
+	mutable bool summary_valid_ = false;
+
+	void invalidateSummary() const noexcept {
+		summary_valid_ = false;
+	}
 
 	friend class Houses;
 };

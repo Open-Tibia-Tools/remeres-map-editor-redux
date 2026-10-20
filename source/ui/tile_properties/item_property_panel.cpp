@@ -18,7 +18,12 @@ ItemPropertyPanel::ItemPropertyPanel(wxWindow* parent) :
 
 	wxBoxSizer* main_sizer = newd wxBoxSizer(wxVERTICAL);
 
+	item_info_label = newd wxStaticText(this, wxID_ANY, "");
+	item_info_label->SetFont(item_info_label->GetFont().Bold());
+	main_sizer->Add(item_info_label, 0, wxEXPAND | wxALL, 5);
+
 	wxStaticBoxSizer* action_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Action");
+
 	wxFlexGridSizer* action_grid = newd wxFlexGridSizer(2, 2, 5, 5);
 	action_grid->AddGrowableCol(1);
 
@@ -64,6 +69,11 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 	current_map = map;
 
 	if (item) {
+		if (item->getClientID() != 0 && item->getClientID() != item->getID()) {
+			item_info_label->SetLabel(wxstr(std::format("SID: {}   CID: {} - {}", item->getID(), item->getClientID(), item->getName())));
+		} else {
+			item_info_label->SetLabel(wxstr(std::format("{} - {}", item->getID(), item->getName())));
+		}
 		action_id_spin->SetValue(item->getActionID());
 		unique_id_spin->SetValue(item->getUniqueID());
 		action_id_spin->Enable(true);
@@ -127,6 +137,7 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 			text_ctrl->Enable(false);
 		}
 	} else {
+		item_info_label->SetLabel("");
 		action_id_spin->SetValue(0);
 		unique_id_spin->SetValue(0);
 		action_id_spin->Enable(false);

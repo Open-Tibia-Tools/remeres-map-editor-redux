@@ -12,16 +12,6 @@
 namespace {
 	using namespace canary::protobuf::appearances;
 
-	constexpr uint64_t flagMask(ItemFlag flag) {
-		return uint64_t { 1 } << static_cast<uint8_t>(flag);
-	}
-
-	void setMappedFlag(uint64_t& flags, bool enabled, ItemFlag flag) {
-		if (enabled) {
-			flags |= flagMask(flag);
-		}
-	}
-
 	const FrameGroup* selectFrameGroup(const Appearance& appearance) {
 		const FrameGroup* fallback = nullptr;
 		for (const auto& frame_group : appearance.frame_group()) {

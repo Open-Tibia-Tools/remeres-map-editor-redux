@@ -8,10 +8,6 @@
 #include <unordered_map>
 
 namespace {
-	constexpr uint64_t flagMask(ItemFlag flag) {
-		return uint64_t { 1 } << static_cast<uint8_t>(flag);
-	}
-
 	void parseType(XmlItemFragment& fragment, std::string value) {
 		to_lower_str(value);
 		if (value == "depot") fragment.type = ITEM_TYPE_DEPOT;

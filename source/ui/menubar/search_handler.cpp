@@ -43,101 +43,72 @@ namespace {
 		return nullptr;
 	}
 
-	void selectFoundBrush(const FindItemDialog& dialog) {
-		if (const Brush* brush = dialog.getResult()) {
-			g_gui.SelectBrush(brush);
-		}
+}
+
+void SearchResults::SelectFoundBrush(const FindItemDialog& dialog) {
+	if (const Brush* brush = dialog.getResult()) {
+		g_gui.SelectBrush(brush);
+	}
+}
+
+void SearchResults::ShowItems(Map* map, uint16_t item_id, const wxString& load_bar_label, bool on_selection, uint32_t page_offset) {
+	Map* search_map = resolvePagedSearchMap(map);
+	if (search_map == nullptr) {
+		return;
 	}
 
-	void showItemSearchResults(Map* map, uint16_t item_id, const wxString& load_bar_label, uint32_t page_offset = 0) {
-		Map* search_map = resolvePagedSearchMap(map);
-		if (search_map == nullptr) {
-			return;
-		}
+	const uint32_t page_limit = searchResultsLimit();
+	EditorOperations::ItemSearcher finder(item_id, page_limit, page_offset);
+	g_gui.CreateLoadBar(load_bar_label);
+	foreach_ItemOnMap(*search_map, finder, on_selection);
+	g_gui.DestroyLoadBar();
 
-		const uint32_t page_limit = searchResultsLimit();
-		EditorOperations::ItemSearcher finder(item_id, page_limit, page_offset);
-		g_gui.CreateLoadBar(load_bar_label);
-		foreach_ItemOnMap(*search_map, finder, false);
-		g_gui.DestroyLoadBar();
-
-		SearchResultWindow* window = g_gui.ShowSearchWindow();
-		std::vector<SearchResultRow> rows;
-		rows.reserve(finder.result.size());
-		for (size_t index = 0; index < finder.result.size(); ++index) {
-			const auto& [tile, item] = finder.result[index];
-			rows.push_back(makeSearchResultRow(page_offset + static_cast<uint32_t>(index) + 1, wxstr(item->getName()), tile->getPosition()));
+	SearchResultWindow* window = g_gui.ShowSearchWindow();
+	std::vector<SearchResultRow> rows;
+	rows.reserve(finder.result.size());
+	for (size_t index = 0; index < finder.result.size(); ++index) {
+		const auto& [tile, item] = finder.result[index];
+		rows.push_back(makeSearchResultRow(page_offset + static_cast<uint32_t>(index) + 1, wxstr(item->getName()), tile->getPosition()));
+	}
+	window->SetResults(
+		std::move(rows),
+		finder.totalMatches,
+		page_offset,
+		page_limit,
+		[map, item_id, load_bar_label, on_selection](uint32_t next_offset) {
+			ShowItems(map, item_id, load_bar_label, on_selection, next_offset);
 		}
-		window->SetResults(
-			std::move(rows),
-			finder.totalMatches,
-			page_offset,
-			page_limit,
-			[map, item_id, load_bar_label](uint32_t next_offset) {
-				showItemSearchResults(map, item_id, load_bar_label, next_offset);
-			}
-		);
+	);
+}
+
+void SearchResults::ShowCreatures(Map* map, const Brush* creature_brush, const wxString& load_bar_label, uint32_t page_offset) {
+	Map* search_map = resolvePagedSearchMap(map);
+	if (search_map == nullptr) {
+		return;
 	}
 
-	void showCreatureSearchResults(Map* map, const Brush* creature_brush, const wxString& load_bar_label, uint32_t page_offset = 0) {
-		Map* search_map = resolvePagedSearchMap(map);
-		if (search_map == nullptr) {
-			return;
-		}
+	const uint32_t page_limit = searchResultsLimit();
+	EditorOperations::CreatureSearcher finder(creature_brush, page_limit, page_offset);
+	g_gui.CreateLoadBar(load_bar_label);
+	foreach_TileOnMap(*search_map, finder);
+	g_gui.DestroyLoadBar();
 
-		const uint32_t page_limit = searchResultsLimit();
-		EditorOperations::CreatureSearcher finder(creature_brush, page_limit, page_offset);
-		g_gui.CreateLoadBar(load_bar_label);
-		foreach_TileOnMap(*search_map, finder);
-		g_gui.DestroyLoadBar();
-
-		SearchResultWindow* window = g_gui.ShowSearchWindow();
-		std::vector<SearchResultRow> rows;
-		rows.reserve(finder.result.size());
-		for (size_t index = 0; index < finder.result.size(); ++index) {
-			const auto& [tile, creature] = finder.result[index];
-			rows.push_back(makeSearchResultRow(page_offset + static_cast<uint32_t>(index) + 1, wxstr(creature->getName()), tile->getPosition()));
-		}
-		window->SetResults(
-			std::move(rows),
-			finder.totalMatches,
-			page_offset,
-			page_limit,
-			[map, creature_brush, load_bar_label](uint32_t next_offset) {
-				showCreatureSearchResults(map, creature_brush, load_bar_label, next_offset);
-			}
-		);
+	SearchResultWindow* window = g_gui.ShowSearchWindow();
+	std::vector<SearchResultRow> rows;
+	rows.reserve(finder.result.size());
+	for (size_t index = 0; index < finder.result.size(); ++index) {
+		const auto& [tile, creature] = finder.result[index];
+		rows.push_back(makeSearchResultRow(page_offset + static_cast<uint32_t>(index) + 1, wxstr(creature->getName()), tile->getPosition()));
 	}
-
-	void showItemSearchResultsOnSelection(Map* map, uint16_t item_id, const wxString& load_bar_label, uint32_t page_offset = 0) {
-		Map* search_map = resolvePagedSearchMap(map);
-		if (search_map == nullptr) {
-			return;
+	window->SetResults(
+		std::move(rows),
+		finder.totalMatches,
+		page_offset,
+		page_limit,
+		[map, creature_brush, load_bar_label](uint32_t next_offset) {
+			ShowCreatures(map, creature_brush, load_bar_label, next_offset);
 		}
-
-		const uint32_t page_limit = searchResultsLimit();
-		EditorOperations::ItemSearcher finder(item_id, page_limit, page_offset);
-		g_gui.CreateLoadBar(load_bar_label);
-		foreach_ItemOnMap(*search_map, finder, true);
-		g_gui.DestroyLoadBar();
-
-		SearchResultWindow* window = g_gui.ShowSearchWindow();
-		std::vector<SearchResultRow> rows;
-		rows.reserve(finder.result.size());
-		for (size_t index = 0; index < finder.result.size(); ++index) {
-			const auto& [tile, item] = finder.result[index];
-			rows.push_back(makeSearchResultRow(page_offset + static_cast<uint32_t>(index) + 1, wxstr(item->getName()), tile->getPosition()));
-		}
-		window->SetResults(
-			std::move(rows),
-			finder.totalMatches,
-			page_offset,
-			page_limit,
-			[map, item_id, load_bar_label](uint32_t next_offset) {
-				showItemSearchResultsOnSelection(map, item_id, load_bar_label, next_offset);
-			}
-		);
-	}
+	);
 }
 
 SearchHandler::SearchHandler(MainFrame* frame) :
@@ -155,12 +126,12 @@ void SearchHandler::OnSearchForItem(wxCommandEvent& WXUNUSED(event)) {
 		Map* current_map = &g_gui.GetCurrentMap();
 		if (dialog.getResultAction() == FindItemDialog::ResultAction::SearchMap) {
 			if (dialog.getResultKind() == AdvancedFinderCatalogKind::Creature) {
-				showCreatureSearchResults(current_map, dialog.getResult(), "Searching map...");
+				SearchResults::ShowCreatures(current_map, dialog.getResult(), "Searching map...");
 			} else {
-				showItemSearchResults(current_map, dialog.getResultID(), "Searching map...");
+				SearchResults::ShowItems(current_map, dialog.getResultID(), "Searching map...");
 			}
 		} else if (dialog.getResultAction() == FindItemDialog::ResultAction::SelectItem) {
-			selectFoundBrush(dialog);
+			SearchResults::SelectFoundBrush(dialog);
 		}
 	}
 }
@@ -224,7 +195,7 @@ void SearchHandler::OnSearchForItemOnSelection(wxCommandEvent& WXUNUSED(event)) 
 
 	FindItemDialog dialog(frame, "Search on Selection", false, FindItemDialog::ActionSet::ConfirmOnly);
 	if (dialog.ShowModal() == wxID_OK) {
-		showItemSearchResultsOnSelection(&g_gui.GetCurrentMap(), dialog.getResultID(), "Searching on selected area...");
+		SearchResults::ShowItems(&g_gui.GetCurrentMap(), dialog.getResultID(), "Searching on selected area...", true);
 	}
 }
 
@@ -261,12 +232,6 @@ void SearchHandler::OnRemoveItemOnSelection(wxCommandEvent& WXUNUSED(event)) {
 	}
 }
 
-struct SearchResult {
-	Tile* tile;
-	Item* item;
-	std::string description;
-};
-
 void SearchHandler::SearchItems(bool unique, bool action, bool container, bool writable, bool onSelection /* = false*/) {
 	if (!unique && !action && !container && !writable) {
 		return;
@@ -292,23 +257,14 @@ void SearchHandler::SearchItems(bool unique, bool action, bool container, bool w
 	foreach_ItemOnMap(g_gui.GetCurrentMap(), finder, onSelection);
 	finder.sort();
 
-	std::vector<SearchResult> found;
+	std::vector<SearchResultRow> rows;
+	rows.reserve(finder.found.size());
 	for (const auto& [tile, item] : finder.found) {
-		SearchResult res;
-		res.tile = tile;
-		res.item = item;
-		res.description = finder.desc(item).utf8_string();
-		found.push_back(res);
+		rows.push_back(makeSearchResultRow(static_cast<uint32_t>(rows.size() + 1), finder.desc(item), tile->getPosition()));
 	}
 
 	g_gui.DestroyLoadBar();
 
-	SearchResultWindow* result = g_gui.ShowSearchWindow();
-	std::vector<SearchResultRow> rows;
-	rows.reserve(found.size());
-	for (size_t index = 0; index < found.size(); ++index) {
-		const auto& res = found[index];
-		rows.push_back(makeSearchResultRow(static_cast<uint32_t>(index + 1), wxstr(res.description), res.tile->getPosition()));
-	}
-	result->SetResults(std::move(rows), static_cast<uint32_t>(found.size()));
+	const auto total = static_cast<uint32_t>(rows.size());
+	g_gui.ShowSearchWindow()->SetResults(std::move(rows), total);
 }

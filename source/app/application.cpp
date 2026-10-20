@@ -264,11 +264,15 @@ bool Application::OnInit() {
 	if (save_failed_file.FileExists()) {
 		std::ifstream f(nstr(save_failed_file.GetFullPath()).c_str(), std::ios::in);
 
-		std::string backup_otbm, backup_house, backup_spawn;
+		std::string backup_otbm, backup_house, backup_spawn, backup_monster, backup_npc, backup_zone, backup_waypoint;
 
 		getline(f, backup_otbm);
 		getline(f, backup_house);
 		getline(f, backup_spawn);
+		getline(f, backup_monster);
+		getline(f, backup_npc);
+		getline(f, backup_zone);
+		getline(f, backup_waypoint);
 
 		// Remove the file
 		f.close();
@@ -276,31 +280,40 @@ bool Application::OnInit() {
 
 		// Query file retrieval if possible
 		if (!backup_otbm.empty()) {
+			wxString files_msg = wxstr(backup_otbm);
+			if (!backup_house.empty()) files_msg << "\n" << wxstr(backup_house);
+			if (!backup_spawn.empty()) files_msg << "\n" << wxstr(backup_spawn);
+			if (!backup_monster.empty()) files_msg << "\n" << wxstr(backup_monster);
+			if (!backup_npc.empty()) files_msg << "\n" << wxstr(backup_npc);
+			if (!backup_zone.empty()) files_msg << "\n" << wxstr(backup_zone);
+			if (!backup_waypoint.empty()) files_msg << "\n" << wxstr(backup_waypoint);
+
 			long ret = DialogUtil::PopupDialog(
 				"Editor Crashed",
 				wxString(
 					"IMPORTANT! THE EDITOR CRASHED WHILE SAVING!\n\n"
 					"Do you want to recover the lost map? (it will be opened immediately):\n"
-				) << wxstr(backup_otbm)
-				  << "\n"
-				  << wxstr(backup_house) << "\n"
-				  << wxstr(backup_spawn) << "\n",
+				) << files_msg,
 				wxYES | wxNO
 			);
 
 			if (ret == wxID_YES) {
 				// Recover if the user so wishes
-				std::remove(backup_otbm.substr(0, backup_otbm.size() - 1).c_str());
-				std::rename(backup_otbm.c_str(), backup_otbm.substr(0, backup_otbm.size() - 1).c_str());
+				auto restoreFile = [](const std::string& path) {
+					if (!path.empty() && path.back() == '~') {
+						std::string target = path.substr(0, path.size() - 1);
+						std::remove(target.c_str());
+						std::rename(path.c_str(), target.c_str());
+					}
+				};
 
-				if (!backup_house.empty()) {
-					std::remove(backup_house.substr(0, backup_house.size() - 1).c_str());
-					std::rename(backup_house.c_str(), backup_house.substr(0, backup_house.size() - 1).c_str());
-				}
-				if (!backup_spawn.empty()) {
-					std::remove(backup_spawn.substr(0, backup_spawn.size() - 1).c_str());
-					std::rename(backup_spawn.c_str(), backup_spawn.substr(0, backup_spawn.size() - 1).c_str());
-				}
+				restoreFile(backup_otbm);
+				restoreFile(backup_house);
+				restoreFile(backup_spawn);
+				restoreFile(backup_monster);
+				restoreFile(backup_npc);
+				restoreFile(backup_zone);
+				restoreFile(backup_waypoint);
 
 				// Load the map
 				g_gui.LoadMap(wxstr(backup_otbm.substr(0, backup_otbm.size() - 1)));

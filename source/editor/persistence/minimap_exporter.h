@@ -17,6 +17,10 @@ enum class MinimapExportFormat : uint8_t {
 	Webp,
 };
 
+// Largest image side each encoder accepts
+inline constexpr int kMaxWebpDimension = 16383;
+inline constexpr int kMaxJpegDimension = 65500;
+
 using MinimapExportFloorMask = std::array<bool, MAP_LAYERS>;
 
 [[nodiscard]] constexpr MinimapExportFloorMask allMinimapExportFloors() {

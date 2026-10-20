@@ -21,8 +21,6 @@
 namespace {
 
 constexpr std::array<int, 8> kImageSizes { 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536 };
-constexpr int kMaxWebpDimension = 16383;
-constexpr int kMaxJpegDimension = 65500;
 constexpr int kMaxSafeImageDimension = 16384;
 
 [[nodiscard]] wxString defaultFileName(const Editor& editor) {

@@ -61,6 +61,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
 	wxStatusBar* statusbar = CreateStatusBar();
 	statusbar->SetFieldsCount(4);
+	// FPS | tile description (stretch) | coordinates | floor/zoom
+	const int status_widths[4] = { FromDIP(80), -1, FromDIP(150), FromDIP(160) };
+	statusbar->SetStatusWidths(4, status_widths);
 	SetStatusText(wxString("Welcome to ") << __W_RME_APPLICATION_NAME__ << " " << __W_RME_VERSION__);
 
 	// Le sizer
@@ -109,13 +112,23 @@ MainFrame::~MainFrame() {
 }
 
 void MainFrame::OnIdle(wxIdleEvent& event) {
-	if (menu_bar) {
-		menu_bar->Update();
+	// Re-evaluating the whole menu bar and toolbar is expensive (every item/button
+	// goes through wx update-UI dispatch and GDI). Doing it on every idle together
+	// with event.RequestMore() turned the idle loop into a full-CPU spin that
+	// starved the render timer: the profiler showed the main thread almost entirely
+	// in menu/toolbar/GDI work, never in the map render. Update at most a few times
+	// per second and do not request an immediate re-entry; idle events still fire
+	// whenever the message queue drains, so the UI stays current.
+	const auto now = std::chrono::steady_clock::now();
+	if (last_ui_update_ == std::chrono::steady_clock::time_point{} || now - last_ui_update_ >= std::chrono::milliseconds(100)) {
+		last_ui_update_ = now;
+		if (menu_bar) {
+			menu_bar->Update();
+		}
+		if (tool_bar) {
+			tool_bar->UpdateButtons();
+		}
 	}
-	if (tool_bar) {
-		tool_bar->UpdateButtons();
-	}
-	event.RequestMore();
 	event.Skip();
 }
 

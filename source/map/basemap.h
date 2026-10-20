@@ -84,6 +84,9 @@ public:
 
 	// This doesn't destroy the map structure, just clears it, if param is true, delete all tiles too.
 	void clear(bool del = true);
+	[[nodiscard]] virtual bool supportsZones() const noexcept {
+		return false;
+	}
 	MapIterator begin();
 	MapIterator end();
 	auto tiles() {
@@ -107,6 +110,13 @@ public:
 	TileLocation* createTileL(const Position& pos);
 	const TileLocation* getTileL(int x, int y, int z) const;
 	const TileLocation* getTileL(const Position& pos) const;
+
+	// Sequential-scan variants: reuse a caller-owned cell cursor so a row sweep
+	// performs one binary search per 64x64 cell instead of one per tile.
+	// See SpatialHashGrid::CellCursor.
+	const Tile* getTile(int x, int y, int z, SpatialHashGrid::CellCursor& cursor) const;
+	const TileLocation* getTileL(int x, int y, int z, SpatialHashGrid::CellCursor& cursor) const;
+	const Floor* getFloor(int x, int y, int z, SpatialHashGrid::CellCursor& cursor) const;
 
 	// Get a Map Node from the map
 	MapNode* getLeaf(int x, int y) {
@@ -204,6 +214,38 @@ inline const Tile* BaseMap::getTile(int x, int y, int z) const {
 
 inline const Tile* BaseMap::getTile(const Position& pos) const {
 	const TileLocation* l = getTileL(pos);
+	return l ? l->get() : nullptr;
+}
+
+inline const Floor* BaseMap::getFloor(int x, int y, int z, SpatialHashGrid::CellCursor& cursor) const {
+	ASSERT(z < MAP_LAYERS);
+	const int nx = x >> 2;
+	const int ny = y >> 2;
+	if (cursor.node_x != nx || cursor.node_y != ny || cursor.floor_z != z) {
+		cursor.node_x = nx;
+		cursor.node_y = ny;
+		cursor.floor_z = z;
+		const MapNode* leaf = grid.getLeafCached(x, y, cursor);
+		cursor.floor = leaf ? leaf->getFloor(z) : nullptr;
+		if (!cursor.floor) {
+			if (!cursor.cell || cursor.cell->floor_chunk_mask[z] == 0) {
+				cursor.empty_span_mask = 63;
+			} else {
+				const int chunk_bit_idx = ((ny & 12) | ((nx >> 2) & 3));
+				cursor.empty_span_mask = ((cursor.cell->floor_chunk_mask[z] & static_cast<uint16_t>(1u << chunk_bit_idx)) == 0) ? 15 : 3;
+			}
+		}
+	}
+	return cursor.floor;
+}
+
+inline const TileLocation* BaseMap::getTileL(int x, int y, int z, SpatialHashGrid::CellCursor& cursor) const {
+	const Floor* floor = getFloor(x, y, z, cursor);
+	return floor ? &floor->locs[(x & 3) * 4 + (y & 3)] : nullptr;
+}
+
+inline const Tile* BaseMap::getTile(int x, int y, int z, SpatialHashGrid::CellCursor& cursor) const {
+	const TileLocation* l = getTileL(x, y, z, cursor);
 	return l ? l->get() : nullptr;
 }
 

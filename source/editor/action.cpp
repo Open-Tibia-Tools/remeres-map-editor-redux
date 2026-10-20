@@ -23,6 +23,7 @@
 #include "app/settings.h"
 #include "map/map.h"
 #include "map/tile.h"
+#include "game/town.h"
 #include "editor/editor.h"
 #include "ui/gui.h"
 
@@ -85,6 +86,14 @@ Change* Change::Create(Waypoint* wp, const Position& where) {
 	return c;
 }
 
+Change* Change::Create(Town* town, const Position& where) {
+	Change* c = newd Change();
+	c->type = CHANGE_MOVE_TOWN_TEMPLE;
+	c->position = where;
+	c->data = TownTempleChangeData { .townId = town->getID(), .pos = where };
+	return c;
+}
+
 Change::~Change() {
 	clear();
 }
@@ -109,6 +118,10 @@ const WaypointChangeData* Change::getWaypointData() const {
 	return std::get_if<WaypointChangeData>(&data);
 }
 
+const TownTempleChangeData* Change::getTownTempleData() const {
+	return std::get_if<TownTempleChangeData>(&data);
+}
+
 uint32_t Change::memsize() const {
 	uint32_t mem = sizeof(*this);
 	if (auto* t = std::get_if<std::unique_ptr<Tile>>(&data)) {
@@ -119,6 +132,8 @@ uint32_t Change::memsize() const {
 		mem += wp->name.capacity();
 	} else if (auto* house = std::get_if<HouseExitChangeData>(&data)) {
 		mem += sizeof(HouseExitChangeData);
+	} else if (auto* temple = std::get_if<TownTempleChangeData>(&data)) {
+		mem += sizeof(TownTempleChangeData);
 	}
 	return mem;
 }
@@ -204,6 +219,10 @@ void Action::commit(DirtyList* dirty_list) {
 						editor.map.addSpawn(insertedTile);
 					}
 
+					if (editor.map.supportsZones() && !std::ranges::equal(insertedTile->getZoneIds(), displaced->getZoneIds())) {
+						editor.map.updateTileZones(pos, displaced->getZoneIds(), insertedTile->getZoneIds());
+					}
+
 					if (displaced->isSelected()) {
 						editor.selection.removeInternal(displaced);
 					}
@@ -227,6 +246,12 @@ void Action::commit(DirtyList* dirty_list) {
 					if (insertedTile->spawn) {
 						editor.map.addSpawn(insertedTile);
 					}
+
+					if (editor.map.supportsZones()) {
+						for (uint16_t zid : insertedTile->getZoneIds()) {
+							editor.map.addTileToZone(zid, pos);
+						}
+					}
 				} else if (displaced) {
 					if (displaced->isSelected()) {
 						editor.selection.removeInternal(displaced);
@@ -239,6 +264,12 @@ void Action::commit(DirtyList* dirty_list) {
 					}
 					if (displaced->spawn) {
 						editor.map.removeSpawn(displaced);
+					}
+
+					if (editor.map.supportsZones()) {
+						for (uint16_t zid : displaced->getZoneIds()) {
+							editor.map.removeTileFromZone(zid, pos);
+						}
 					}
 				}
 
@@ -262,8 +293,18 @@ void Action::commit(DirtyList* dirty_list) {
 
 				if (whathouse) {
 					Position oldpos = whathouse->getExit();
-					whathouse->setExit(p.pos);
+					Position newpos = p.pos;
+					whathouse->setExit(newpos);
 					p.pos = oldpos;
+
+					if (oldpos != Position() && oldpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(oldpos);
+						g_minimap.MarkTileDirty(editor.map, oldpos);
+					}
+					if (newpos != Position() && newpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(newpos);
+						g_minimap.MarkTileDirty(editor.map, newpos);
+					}
 				}
 				break;
 			}
@@ -278,18 +319,65 @@ void Action::commit(DirtyList* dirty_list) {
 					TileLocation* newtile = editor.map.getTileL(p.pos);
 
 					// Only need to remove from old if it actually exists
-					if (p.pos != Position()) {
+					if (wp->pos != Position()) {
 						if (oldtile && oldtile->getWaypointCount() > 0) {
 							oldtile->decreaseWaypointCount();
 						}
 					}
 
-					newtile->increaseWaypointCount();
+					if (p.pos != Position() && newtile) {
+						newtile->increaseWaypointCount();
+					}
 
 					// Update shit
 					Position oldpos = wp->pos;
-					wp->pos = p.pos;
+					Position newpos = p.pos;
+					wp->pos = newpos;
 					p.pos = oldpos;
+
+					if (oldpos != Position() && oldpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(oldpos);
+						g_minimap.MarkTileDirty(editor.map, oldpos);
+					}
+					if (newpos != Position() && newpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(newpos);
+						g_minimap.MarkTileDirty(editor.map, newpos);
+					}
+				}
+				break;
+			}
+
+			case CHANGE_MOVE_TOWN_TEMPLE: {
+				auto& p = std::get<TownTempleChangeData>(c->data);
+				Town* town = editor.map.towns.getTown(p.townId);
+
+				if (town) {
+					TileLocation* oldtile = editor.map.getTileL(town->getTemplePosition());
+					TileLocation* newtile = editor.map.getTileL(p.pos);
+
+					if (town->getTemplePosition() != Position()) {
+						if (oldtile && oldtile->getTownCount() > 0) {
+							oldtile->decreaseTownCount();
+						}
+					}
+
+					if (p.pos != Position() && newtile) {
+						newtile->increaseTownCount();
+					}
+
+					Position oldpos = town->getTemplePosition();
+					Position newpos = p.pos;
+					town->setTemplePosition(newpos);
+					p.pos = oldpos;
+
+					if (oldpos != Position() && oldpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(oldpos);
+						g_minimap.MarkTileDirty(editor.map, oldpos);
+					}
+					if (newpos != Position() && newpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(newpos);
+						g_minimap.MarkTileDirty(editor.map, newpos);
+					}
 				}
 				break;
 			}
@@ -375,6 +463,10 @@ void Action::undo(DirtyList* dirty_list) {
 							editor.map.removeSpawn(newtile);
 						}
 
+						if (editor.map.supportsZones() && !std::ranges::equal(newtile->getZoneIds(), oldtile->getZoneIds())) {
+							editor.map.updateTileZones(pos, newtile->getZoneIds(), oldtile->getZoneIds());
+						}
+
 						updateUndoTile(oldtile, type);
 						if (oldtile->isSelected()) {
 							editor.selection.addInternal(oldtile);
@@ -391,12 +483,22 @@ void Action::undo(DirtyList* dirty_list) {
 						if (oldtile->spawn) {
 							editor.map.addSpawn(oldtile);
 						}
+						if (editor.map.supportsZones()) {
+							for (uint16_t zid : oldtile->getZoneIds()) {
+								editor.map.addTileToZone(zid, pos);
+							}
+						}
 						updateUndoTile(oldtile, type);
 						if (oldtile->isSelected()) {
 							editor.selection.addInternal(oldtile);
 						}
 						uptr = std::move(newtile_uptr);
 					} else {
+						if (newtile && editor.map.supportsZones()) {
+							for (uint16_t zid : newtile->getZoneIds()) {
+								editor.map.removeTileFromZone(zid, pos);
+							}
+						}
 						uptr = std::move(newtile_uptr);
 					}
 				} else {
@@ -421,6 +523,9 @@ void Action::undo(DirtyList* dirty_list) {
 						if (removed->spawn) {
 							editor.map.removeSpawn(removed);
 						}
+						for (uint16_t zid : removed->getZoneIds()) {
+							editor.map.removeTileFromZone(zid, pos);
+						}
 					}
 					uptr = std::move(removedTile);
 				}
@@ -442,8 +547,18 @@ void Action::undo(DirtyList* dirty_list) {
 				House* whathouse = editor.map.houses.getHouse(p.houseId);
 				if (whathouse) {
 					Position oldpos = whathouse->getExit();
-					whathouse->setExit(p.pos);
+					Position newpos = p.pos;
+					whathouse->setExit(newpos);
 					p.pos = oldpos;
+
+					if (oldpos != Position() && oldpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(oldpos);
+						g_minimap.MarkTileDirty(editor.map, oldpos);
+					}
+					if (newpos != Position() && newpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(newpos);
+						g_minimap.MarkTileDirty(editor.map, newpos);
+					}
 				}
 				break;
 			}
@@ -458,20 +573,65 @@ void Action::undo(DirtyList* dirty_list) {
 					TileLocation* newtile = editor.map.getTileL(p.pos);
 
 					// Only need to remove from old if it actually exists
-					if (p.pos != Position()) {
+					if (wp->pos != Position()) {
 						if (oldtile && oldtile->getWaypointCount() > 0) {
 							oldtile->decreaseWaypointCount();
 						}
 					}
 
-					if (newtile) {
+					if (p.pos != Position() && newtile) {
 						newtile->increaseWaypointCount();
 					}
 
 					// Update shit
 					Position oldpos = wp->pos;
-					wp->pos = p.pos;
+					Position newpos = p.pos;
+					wp->pos = newpos;
 					p.pos = oldpos;
+
+					if (oldpos != Position() && oldpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(oldpos);
+						g_minimap.MarkTileDirty(editor.map, oldpos);
+					}
+					if (newpos != Position() && newpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(newpos);
+						g_minimap.MarkTileDirty(editor.map, newpos);
+					}
+				}
+				break;
+			}
+
+			case CHANGE_MOVE_TOWN_TEMPLE: {
+				auto& p = std::get<TownTempleChangeData>(c->data);
+				Town* town = editor.map.towns.getTown(p.townId);
+
+				if (town) {
+					TileLocation* oldtile = editor.map.getTileL(town->getTemplePosition());
+					TileLocation* newtile = editor.map.getTileL(p.pos);
+
+					if (town->getTemplePosition() != Position()) {
+						if (oldtile && oldtile->getTownCount() > 0) {
+							oldtile->decreaseTownCount();
+						}
+					}
+
+					if (p.pos != Position() && newtile) {
+						newtile->increaseTownCount();
+					}
+
+					Position oldpos = town->getTemplePosition();
+					Position newpos = p.pos;
+					town->setTemplePosition(newpos);
+					p.pos = oldpos;
+
+					if (oldpos != Position() && oldpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(oldpos);
+						g_minimap.MarkTileDirty(editor.map, oldpos);
+					}
+					if (newpos != Position() && newpos.isValid()) {
+						editor.map.getChangeTracker().markTileDirty(newpos);
+						g_minimap.MarkTileDirty(editor.map, newpos);
+					}
 				}
 				break;
 			}

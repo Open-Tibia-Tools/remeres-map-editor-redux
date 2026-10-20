@@ -2,6 +2,7 @@
 #include "ui/main_menubar.h"
 #include "ui/gui.h"
 #include "app/preferences.h"
+#include "map/map.h"
 #include <format>
 
 ViewSettingsHandler::ViewSettingsHandler(MainMenuBar* menuBar) :
@@ -43,6 +44,8 @@ void ViewSettingsHandler::LoadValues() {
 
 	menuBar->CheckItem(AUTOMAGIC, g_settings.getBoolean(Config::USE_AUTOMAGIC));
 
+	const bool supports_zones = g_gui.IsEditorOpen() && g_gui.GetCurrentMap().supportsZones();
+
 	menuBar->CheckItem(SHOW_SHADE, g_settings.getBoolean(Config::SHOW_SHADE));
 	menuBar->CheckItem(SHOW_INGAME_BOX, g_settings.getBoolean(Config::SHOW_INGAME_BOX));
 	menuBar->CheckItem(SHOW_LIGHTS, g_settings.getBoolean(Config::SHOW_LIGHTS));
@@ -65,6 +68,7 @@ void ViewSettingsHandler::LoadValues() {
 	menuBar->CheckItem(SHOW_ONLY_COLORS, g_settings.getBoolean(Config::SHOW_ONLY_TILEFLAGS));
 	menuBar->CheckItem(SHOW_ONLY_MODIFIED, g_settings.getBoolean(Config::SHOW_ONLY_MODIFIED_TILES));
 	menuBar->CheckItem(SHOW_HOUSES, g_settings.getBoolean(Config::SHOW_HOUSES));
+	menuBar->CheckItem(SHOW_ZONES, supports_zones && g_settings.getBoolean(Config::SHOW_ZONES));
 	menuBar->CheckItem(SHOW_PATHING, g_settings.getBoolean(Config::SHOW_BLOCKING));
 	menuBar->CheckItem(SHOW_TOOLTIPS, g_settings.getBoolean(Config::SHOW_TOOLTIPS));
 	menuBar->CheckItem(SHOW_PREVIEW, g_settings.getBoolean(Config::SHOW_PREVIEW));
@@ -81,6 +85,8 @@ void ViewSettingsHandler::OnChangeViewSettings(wxCommandEvent& event) {
 
 	bool old_grid = g_settings.getBoolean(Config::SHOW_GRID);
 	bool old_ghost = g_settings.getBoolean(Config::TRANSPARENT_ITEMS);
+
+	const bool supports_zones = g_gui.IsEditorOpen() && g_gui.GetCurrentMap().supportsZones();
 
 	g_settings.setInteger(Config::SHOW_ALL_FLOORS, menuBar->IsItemChecked(SHOW_ALL_FLOORS));
 	if (menuBar->IsItemChecked(SHOW_ALL_FLOORS)) {
@@ -99,7 +105,6 @@ void ViewSettingsHandler::OnChangeViewSettings(wxCommandEvent& event) {
 	g_settings.setInteger(Config::SHOW_LIGHT_STR, menuBar->IsItemChecked(SHOW_LIGHT_STR));
 	g_settings.setInteger(Config::SHOW_TECHNICAL_ITEMS, menuBar->IsItemChecked(SHOW_TECHNICAL_ITEMS));
 	g_settings.setInteger(Config::SHOW_INVALID_TILES, menuBar->IsItemChecked(SHOW_INVALID_TILES));
-	g_settings.setInteger(Config::SHOW_INVALID_ZONES, menuBar->IsItemChecked(SHOW_INVALID_ZONES));
 	g_settings.setInteger(Config::SHOW_WAYPOINTS, menuBar->IsItemChecked(SHOW_WAYPOINTS));
 	g_settings.setInteger(Config::SHOW_GRID, menuBar->IsItemChecked(SHOW_GRID));
 	g_settings.setInteger(Config::SHOW_EXTRA, !menuBar->IsItemChecked(SHOW_EXTRA));
@@ -119,7 +124,13 @@ void ViewSettingsHandler::OnChangeViewSettings(wxCommandEvent& event) {
 	g_settings.setInteger(Config::SHOW_PREVIEW, menuBar->IsItemChecked(SHOW_PREVIEW));
 	g_settings.setInteger(Config::SHOW_WALL_HOOKS, menuBar->IsItemChecked(SHOW_WALL_HOOKS));
 	g_settings.setInteger(Config::SHOW_TOWNS, menuBar->IsItemChecked(SHOW_TOWNS));
+
+	g_settings.setInteger(Config::SHOW_INVALID_ZONES, menuBar->IsItemChecked(SHOW_INVALID_ZONES));
 	g_settings.setInteger(Config::ALWAYS_SHOW_ZONES, menuBar->IsItemChecked(ALWAYS_SHOW_ZONES));
+
+	if (supports_zones) {
+		g_settings.setInteger(Config::SHOW_ZONES, menuBar->IsItemChecked(SHOW_ZONES));
+	}
 	g_settings.setInteger(Config::EXT_HOUSE_SHADER, menuBar->IsItemChecked(EXT_HOUSE_SHADER));
 	g_settings.setInteger(Config::EXT_PATHING_SHADER, menuBar->IsItemChecked(EXT_PATHING_SHADER));
 

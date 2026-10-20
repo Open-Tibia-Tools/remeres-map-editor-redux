@@ -69,6 +69,15 @@ public:
 	                     const DrawingOptions& options,
 	                     const AtlasManager& atlas);
 
+	// OTBM 5 zones (Canary / Crystal Server): translucent fill colored per zone id plus outer borders; the zone brush's id is emphasized
+	void drawFloorZones(SpriteBatch& sprite_batch,
+	                    int z,
+	                    const RenderView& view,
+	                    const Map& map,
+	                    const BaseMap* secondary_map,
+	                    const DrawingOptions& options,
+	                    const AtlasManager& atlas);
+
 	void drawFloorHighlightItems(SpriteBatch& sprite_batch,
 	                             int z,
 	                             const RenderView& view,
@@ -85,16 +94,15 @@ public:
 	                     const DrawingOptions& options,
 	                     const AtlasManager& atlas);
 
+	void drawFloorWaypoints(SpriteBatch& sprite_batch,
+	                       int z,
+	                       const RenderView& view,
+	                       const Map& map,
+	                       const DrawingOptions& options,
+	                       const AtlasManager& atlas);
+
 private:
 	ZoneClusterFinder cluster_finder_;
-
-	struct CachedRowTile {
-		const Tile* tile = nullptr;
-		bool is_pz = false;
-		bool is_nopvp = false;
-		bool is_nolog = false;
-		bool is_pvp = false;
-	};
 
 	struct PendingZoneQuad {
 		float x = 0.0f;
@@ -127,10 +135,11 @@ private:
 		float depth = 0.0f;
 	};
 
-	// Contiguous reusable buffers across render frames (DOD)
-	std::vector<CachedRowTile> row_prev_;
-	std::vector<CachedRowTile> row_curr_;
-	std::vector<CachedRowTile> row_next_;
+	// Contiguous reusable buffers across render frames (DOD): 1 byte per tile (4-bit zone mask)
+	// instead of a 16-byte pointer+bools struct.
+	std::vector<uint8_t> row_prev_;
+	std::vector<uint8_t> row_curr_;
+	std::vector<uint8_t> row_next_;
 	std::vector<VisibleZoneTile> visible_zone_tiles_;
 	std::vector<PendingZoneQuad> alpha_zone_quads_;
 	std::vector<PendingZoneQuad> mult_zone_quads_;
@@ -150,6 +159,14 @@ private:
 	std::vector<uint32_t> house_row_curr_;
 	std::vector<uint32_t> house_row_next_;
 	std::vector<PendingBorderQuad> house_border_quads_;
+
+	struct ZoneRowCell {
+		uint16_t primary = 0;
+		uint16_t secondary = 0;
+	};
+	std::vector<ZoneRowCell> zone_row_prev_;
+	std::vector<ZoneRowCell> zone_row_curr_;
+	std::vector<ZoneRowCell> zone_row_next_;
 
 	std::vector<PendingHighlightQuad> highlight_quads_;
 };

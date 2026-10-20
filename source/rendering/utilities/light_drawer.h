@@ -44,7 +44,7 @@ public:
 
 	void updateDirtyState(SpatialChangeTracker& tracker) {
 		if (cache_.updateDirtyState(tracker)) {
-			force_texture_rebuild_ = true;
+			has_dirty_chunks_ = true;
 		}
 	}
 
@@ -63,6 +63,12 @@ private:
 		GraphicManager& gfx,
 		const rme::lighting::LightConfig& config,
 		int min_cx, int min_cy, int max_cx, int max_cy
+	);
+	void uploadDirtyChunks(
+		const RenderView& view,
+		const BaseMap& map,
+		GraphicManager& gfx,
+		const rme::lighting::LightConfig& config
 	);
 
 	void computeBrightness(const RenderView& view, const LightBuffer& light_buffer, const DrawingOptions& options);
@@ -86,6 +92,8 @@ private:
 	int last_floor_ = -1;
 	rme::lighting::LightConfig last_config_;
 	bool force_texture_rebuild_ = true;
+	// Some chunks inside the uploaded range were invalidated; only those need re-baking and re-uploading.
+	bool has_dirty_chunks_ = false;
 	uint64_t current_frame_ = 0;
 
 	// Viewport active texture dimensions

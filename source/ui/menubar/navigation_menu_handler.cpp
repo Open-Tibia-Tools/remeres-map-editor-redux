@@ -7,105 +7,7 @@
 #include "ui/dialogs/goto_position_dialog.h"
 #include "ui/find_item_window.h"
 #include "ui/main_menubar.h"
-#include "app/preferences.h"
-#include "ui/result_window.h"
-#include "editor/operations/search_operations.h"
-
-#include <algorithm>
-
-namespace {
-	[[nodiscard]] uint32_t searchResultsLimit() {
-		return static_cast<uint32_t>(std::clamp(g_settings.getInteger(Config::SEARCH_RESULTS_LIMIT), 1, 100000));
-	}
-
-	[[nodiscard]] SearchResultRow makeSearchResultRow(uint32_t index, const wxString& name, const Position& position) {
-		return SearchResultRow {
-			.index = index,
-			.name = name,
-			.position = position,
-		};
-	}
-
-	[[nodiscard]] Map* resolvePagedSearchMap(Map* map) {
-		if (map == nullptr) {
-			return nullptr;
-		}
-
-		for (int index = 0; index < g_gui.GetTabCount(); ++index) {
-			if (auto* tab = dynamic_cast<MapTab*>(g_gui.GetTab(index)); tab != nullptr && tab->GetMap() == map) {
-				return tab->GetMap();
-			}
-		}
-
-		return nullptr;
-	}
-
-	void selectFoundBrush(const FindItemDialog& dialog) {
-		if (const Brush* brush = dialog.getResult()) {
-			g_gui.SelectBrush(brush);
-		}
-	}
-
-	void showItemSearchResults(Map* map, uint16_t item_id, const wxString& load_bar_label, uint32_t page_offset = 0) {
-		Map* search_map = resolvePagedSearchMap(map);
-		if (search_map == nullptr) {
-			return;
-		}
-
-		const uint32_t page_limit = searchResultsLimit();
-		EditorOperations::ItemSearcher finder(item_id, page_limit, page_offset);
-		g_gui.CreateLoadBar(load_bar_label);
-		foreach_ItemOnMap(*search_map, finder, false);
-		g_gui.DestroyLoadBar();
-
-		SearchResultWindow* window = g_gui.ShowSearchWindow();
-		std::vector<SearchResultRow> rows;
-		rows.reserve(finder.result.size());
-		for (size_t index = 0; index < finder.result.size(); ++index) {
-			const auto& [tile, item] = finder.result[index];
-			rows.push_back(makeSearchResultRow(page_offset + static_cast<uint32_t>(index) + 1, wxstr(item->getName()), tile->getPosition()));
-		}
-		window->SetResults(
-			std::move(rows),
-			finder.totalMatches,
-			page_offset,
-			page_limit,
-			[map, item_id, load_bar_label](uint32_t next_offset) {
-				showItemSearchResults(map, item_id, load_bar_label, next_offset);
-			}
-		);
-	}
-
-	void showCreatureSearchResults(Map* map, const Brush* creature_brush, const wxString& load_bar_label, uint32_t page_offset = 0) {
-		Map* search_map = resolvePagedSearchMap(map);
-		if (search_map == nullptr) {
-			return;
-		}
-
-		const uint32_t page_limit = searchResultsLimit();
-		EditorOperations::CreatureSearcher finder(creature_brush, page_limit, page_offset);
-		g_gui.CreateLoadBar(load_bar_label);
-		foreach_TileOnMap(*search_map, finder);
-		g_gui.DestroyLoadBar();
-
-		SearchResultWindow* window = g_gui.ShowSearchWindow();
-		std::vector<SearchResultRow> rows;
-		rows.reserve(finder.result.size());
-		for (size_t index = 0; index < finder.result.size(); ++index) {
-			const auto& [tile, creature] = finder.result[index];
-			rows.push_back(makeSearchResultRow(page_offset + static_cast<uint32_t>(index) + 1, wxstr(creature->getName()), tile->getPosition()));
-		}
-		window->SetResults(
-			std::move(rows),
-			finder.totalMatches,
-			page_offset,
-			page_limit,
-			[map, creature_brush, load_bar_label](uint32_t next_offset) {
-				showCreatureSearchResults(map, creature_brush, load_bar_label, next_offset);
-			}
-		);
-	}
-}
+#include "ui/menubar/search_handler.h"
 
 NavigationMenuHandler::NavigationMenuHandler(MainFrame* frame, MainMenuBar* menubar) :
 	frame(frame), menubar(menubar) {
@@ -180,12 +82,12 @@ void NavigationMenuHandler::OnJumpToItemBrush(wxCommandEvent& WXUNUSED(event)) {
 
 			Map* current_map = &g_gui.GetCurrentMap();
 			if (dialog.getResultKind() == AdvancedFinderCatalogKind::Creature) {
-				showCreatureSearchResults(current_map, dialog.getResult(), "Searching map...");
+				SearchResults::ShowCreatures(current_map, dialog.getResult(), "Searching map...");
 			} else {
-				showItemSearchResults(current_map, dialog.getResultID(), "Searching map...");
+				SearchResults::ShowItems(current_map, dialog.getResultID(), "Searching map...");
 			}
 		} else if (dialog.getResultAction() == FindItemDialog::ResultAction::SelectItem) {
-			selectFoundBrush(dialog);
+			SearchResults::SelectFoundBrush(dialog);
 		}
 	}
 }

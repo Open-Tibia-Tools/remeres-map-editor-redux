@@ -67,11 +67,25 @@
     {
       "name": "ninja-dev",
       "displayName": "Ninja + vcpkg (Dev)",
-      "description": "Fast iteration build: RelWithDebInfo without LTO",
+      "description": "Fast iteration build: RelWithDebInfo without LTO, embedded (/Z7) debug info",
       "inherits": "ninja-vcpkg",
       "binaryDir": "${sourceDir}/build-ninja-dev",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_MSVC_DEBUG_INFORMATION_FORMAT": {
+          "type": "STRING",
+          "value": "Embedded"
+        }
+      }
+    },
+    {
+      "name": "ninja-unity",
+      "displayName": "Ninja + vcpkg (Unity)",
+      "description": "Fastest clean build: ninja-dev with unity (jumbo) translation units; slower incremental rebuilds",
+      "inherits": "ninja-dev",
+      "binaryDir": "${sourceDir}/build-ninja-unity",
+      "cacheVariables": {
+        "CMAKE_UNITY_BUILD": "ON"
       }
     },
     {
@@ -116,6 +130,11 @@
       "name": "ninja-dev",
       "displayName": "Ninja Dev",
       "configurePreset": "ninja-dev"
+    },
+    {
+      "name": "ninja-unity",
+      "displayName": "Ninja Unity",
+      "configurePreset": "ninja-unity"
     },
     {
       "name": "vs2022-release",

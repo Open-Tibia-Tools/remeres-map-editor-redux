@@ -75,6 +75,7 @@ public:
 	std::string_view description() const;
 	std::string_view passiveMetadataJson() const;
 	bool hasFlag(ItemFlag flag) const;
+	uint64_t flagMask() const;
 	int64_t attribute(ItemAttributeKey key) const;
 	const ItemEditorData& editorData() const;
 

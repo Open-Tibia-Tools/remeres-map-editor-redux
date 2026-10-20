@@ -52,14 +52,18 @@ std::string RAWBrush::getName() const {
 		return "RAWBrush";
 	}
 
+	const std::string_view defName = definition.name();
+	const std::string name = !defName.empty() ? std::string(defName) : std::format("Item {}", item_id);
+
 	if (definition.hasFlag(ItemFlag::HookSouth)) {
-		return std::format("{} - {} (Hook South)", item_id, definition.name());
+		return std::format("{} - {} (Hook South)", item_id, name);
 	} else if (definition.hasFlag(ItemFlag::HookEast)) {
-		return std::format("{} - {} (Hook East)", item_id, definition.name());
+		return std::format("{} - {} (Hook East)", item_id, name);
 	}
 
-	return std::format("{} - {}{}", item_id, definition.name(), definition.editorSuffix());
+	return std::format("{} - {}{}", item_id, name, definition.editorSuffix());
 }
+
 
 void RAWBrush::undraw(BaseMap* map, Tile* tile) {
 	if (tile->ground && tile->ground->getID() == item_id) {

@@ -64,6 +64,10 @@ public:
 		name = newName;
 	}
 
+	const CarpetBrushItems& getItems() const {
+		return m_items;
+	}
+
 protected:
 	uint16_t getRandomCarpet(BorderType alignment);
 

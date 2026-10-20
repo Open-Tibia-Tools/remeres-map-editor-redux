@@ -4,6 +4,15 @@
 #include <wx/wx.h>
 
 class MainFrame;
+class Map;
+class Brush;
+class FindItemDialog;
+
+namespace SearchResults {
+	void ShowItems(Map* map, uint16_t item_id, const wxString& load_bar_label, bool on_selection = false, uint32_t page_offset = 0);
+	void ShowCreatures(Map* map, const Brush* creature_brush, const wxString& load_bar_label, uint32_t page_offset = 0);
+	void SelectFoundBrush(const FindItemDialog& dialog);
+}
 
 class SearchHandler {
 public:

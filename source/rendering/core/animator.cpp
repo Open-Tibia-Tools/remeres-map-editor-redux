@@ -19,9 +19,18 @@
 #ifndef ASSERT
 #define ASSERT(x) assert(x)
 #endif
+#include <mutex>
 #include "util/common.h"
 #include "rendering/core/animator.h"
 #include "rendering/core/graphics.h"
+
+namespace {
+	// getFrame advances per-sprite animation state, so concurrent callers (chunk bakes
+	// running on worker threads) must not enter it at the same time. The critical
+	// section is a handful of integer updates, so a single process-wide mutex is far
+	// cheaper than the work it protects.
+	std::mutex g_animator_mutex;
+}
 
 Animator::Animator(int frame_count, int start_frame, int loop_count, bool async) :
 	frame_count(frame_count),
@@ -59,6 +68,7 @@ FrameDuration* Animator::getFrameDuration(int frame) {
 }
 
 int Animator::getFrame(long elapsed_time) {
+	const std::lock_guard<std::mutex> lock(g_animator_mutex);
 	long time = (elapsed_time >= 0) ? elapsed_time : g_graphics.getElapsedTime();
 	if (time != last_time && !is_complete) {
 		long elapsed = time - last_time;

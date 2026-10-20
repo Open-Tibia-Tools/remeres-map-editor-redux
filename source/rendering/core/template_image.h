@@ -17,7 +17,7 @@ public:
 	virtual std::unique_ptr<uint8_t[]> getRGBAData() override;
 	ImageDimensions getDimensions() const override;
 
-	const AtlasRegion* getAtlasRegion();
+	const AtlasRegion* getAtlasRegion(bool allow_upload = true);
 	const AtlasRegion* atlas_region;
 
 	uint32_t texture_id; // Unique ID for AtlasManager key

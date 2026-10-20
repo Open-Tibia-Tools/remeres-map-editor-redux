@@ -22,6 +22,34 @@ namespace {
 		TILESTATE_PVPZONE |
 		TILESTATE_REFRESH;
 
+	// Malformed zone nodes or nodes with surplus payload/children return false and stay preserved as opaque data.
+	bool readTileZones(FastOTBMNode& node, Tile& tile) {
+		uint16_t count = 0;
+		if (!node.stream.getU16(count)) {
+			return false;
+		}
+		if (node.stream.remaining() < static_cast<size_t>(count) * sizeof(uint16_t)) {
+			return false;
+		}
+		std::vector<uint16_t> zoneIds;
+		zoneIds.reserve(count);
+		for (size_t i = 0; i < count; ++i) {
+			uint16_t zoneId = 0;
+			if (!node.stream.getU16(zoneId)) {
+				return false;
+			}
+			zoneIds.push_back(zoneId);
+		}
+		// Verify there are no surplus bytes and no child nodes
+		if (node.stream.hasMoreProps() || (node.stream.p < node.stream.end && *node.stream.p == OTBM_NODE_START)) {
+			return false;
+		}
+		for (const uint16_t zoneId : zoneIds) {
+			tile.addZone(zoneId);
+		}
+		return true;
+	}
+
 	uint16_t decodeServerIdFromInlineBytes(const std::vector<uint8_t>& rawBytes) {
 		if (rawBytes.size() < 3) {
 			return 0;
@@ -101,7 +129,8 @@ void TileSerializationOTBM::readTileArea(
 	FastOTBMNode& mapNode,
 	const std::array<size_t, 16>* cell_indices,
 	std::vector<std::pair<uint32_t, Tile*>>& out_house_tiles,
-	uint64_t& out_tile_count)
+	uint64_t& out_tile_count,
+	std::vector<std::pair<uint16_t, Position>>& out_zone_tiles)
 {
 	uint16_t base_x, base_y;
 	uint8_t base_z;
@@ -239,6 +268,8 @@ void TileSerializationOTBM::readTileArea(
 						tile->addItemFast(std::move(item));
 					}
 				}
+			} else if (item_type == OTBM_TILE_ZONE && iomap.version.otbm == MAP_OTBM_5 && readTileZones(itemNode, *tile)) {
+				return;
 			} else {
 				tile->addOpaqueChildNode(itemNode.capturePreserved());
 			}
@@ -247,6 +278,12 @@ void TileSerializationOTBM::readTileArea(
 		TileOperations::update(tile);
 		if (house_id != 0) {
 			out_house_tiles.emplace_back(house_id, tile);
+		}
+		if (tile->hasZones()) {
+			const Position pos(x, y, z);
+			for (const uint16_t zid : tile->getZoneIds()) {
+				out_zone_tiles.emplace_back(zid, pos);
+			}
 		}
 	});
 }
@@ -360,12 +397,25 @@ void TileSerializationOTBM::serializeTile(const IOMapOTBM& iomap, const Tile* sa
 		}
 	}
 
-	if (const InvalidZoneState* invalidZones = save_tile->getInvalidZones()) {
-		for (const auto& opaqueAttribute : invalidZones->opaqueTileAttributes) {
-			writeRawInlineBytes(f, opaqueAttribute.rawBytes);
+	if (const TileExtraData* extra = save_tile->getExtra()) {
+		if (extra->invalidContent) {
+			for (const auto& opaqueAttribute : extra->invalidContent->opaqueTileAttributes) {
+				writeRawInlineBytes(f, opaqueAttribute.rawBytes);
+			}
+			for (const auto& opaqueChildNode : extra->invalidContent->opaqueChildNodes) {
+				writePreservedNode(f, opaqueChildNode);
+			}
 		}
-		for (const auto& opaqueChildNode : invalidZones->opaqueChildNodes) {
-			writePreservedNode(f, opaqueChildNode);
+		// OTBM_TILE_ZONE (node 19) is strictly an OTBM 5 feature used by Canary and Crystal Server.
+		// Older formats (OTBM 1-4 / classic TFS 1.x) do not recognize tile child node 19 and fail/crash on load.
+		// Legacy TFS zone mechanisms are incompatible, so never emit node 19 for non-OTBM 5 targets.
+		if (iomap.version.otbm == MAP_OTBM_5 && !extra->zoneIds.empty()) {
+			f.addNode(OTBM_TILE_ZONE);
+			f.addU16(static_cast<uint16_t>(extra->zoneIds.size()));
+			for (const uint16_t zoneId : extra->zoneIds) {
+				f.addU16(zoneId);
+			}
+			f.endNode();
 		}
 	}
 

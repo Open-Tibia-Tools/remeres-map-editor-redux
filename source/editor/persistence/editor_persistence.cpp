@@ -20,7 +20,9 @@
 #include "lua/lua_script_manager.h"
 
 #include <fstream>
+#include <filesystem>
 #include <format>
+#include <algorithm>
 #include <unordered_map>
 #include <spdlog/spdlog.h>
 
@@ -60,6 +62,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	const std::string prev_monster = editor.map.getMonsterFilename();
 	const std::string prev_npc = editor.map.getNpcFilename();
 	const std::string prev_house = editor.map.getHouseFilename();
+	const std::string prev_zone = editor.map.getZoneFilename();
 	const std::string prev_waypoint = editor.map.getWaypointFilename();
 
 	// If not named yet, propagate the file name to the auxilliary files
@@ -75,6 +78,8 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 		editor.map.setNpcFilename(nstr(_name.GetFullName()));
 		_name.SetName(filename.GetName() + "-house");
 		editor.map.setHouseFilename(nstr(_name.GetFullName()));
+		_name.SetName(filename.GetName() + "-zones");
+		editor.map.setZoneFilename(nstr(_name.GetFullName()));
 		_name.SetName(filename.GetName() + "-waypoint");
 		editor.map.setWaypointFilename(nstr(_name.GetFullName()));
 
@@ -93,6 +98,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	std::string backup_spawn;
 	std::string backup_monster;
 	std::string backup_npc;
+	std::string backup_zone;
 	std::string backup_waypoint;
 
 	if (converter.FileExists()) {
@@ -122,6 +128,13 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 			std::remove(backup_npc.c_str());
 			std::rename((map_path + editor.map.getNpcFilename()).c_str(), backup_npc.c_str());
 		}
+
+		converter.SetFullName(wxstr(editor.map.getZoneFilename()));
+		if (converter.FileExists()) {
+			backup_zone = map_path + nstr(converter.GetName()) + ".xml~";
+			std::remove(backup_zone.c_str());
+			std::rename((map_path + editor.map.getZoneFilename()).c_str(), backup_zone.c_str());
+		}
 	} else {
 		converter.SetFullName(wxstr(editor.map.getSpawnFilename()));
 		if (converter.FileExists()) {
@@ -139,7 +152,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	}
 
 	// Save the map
-	MapBackupService::WriteCrashMarker({backup_otbm, backup_house, backup_spawn, backup_monster, backup_npc, backup_waypoint});
+	MapBackupService::WriteCrashMarker({backup_otbm, backup_house, backup_spawn, backup_monster, backup_npc, backup_zone, backup_waypoint});
 
 	{
 
@@ -162,53 +175,43 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 
 		// Check for errors...
 		if (!success) {
-			// Rename the temporary backup files back to their previous names
-			if (!backup_otbm.empty()) {
-				converter.SetFullName(wxstr(savefile));
-				std::string otbm_filename = map_path + nstr(converter.GetName());
-				std::rename(backup_otbm.c_str(), std::string(otbm_filename + ".otbm").c_str());
+			auto restoreBackup = [](const std::string& backupPath, const std::string& targetPath) {
+				if (backupPath.empty()) {
+					if (!targetPath.empty()) {
+						std::error_code ec;
+						std::filesystem::remove(targetPath, ec);
+					}
+					return;
+				}
+				std::error_code ec;
+				std::filesystem::remove(targetPath, ec);
+				std::filesystem::rename(backupPath, targetPath, ec);
+				if (ec) {
+					spdlog::error("EditorPersistence: Failed to restore backup '{}' -> '{}': {}", backupPath, targetPath, ec.message());
+				}
+			};
+
+			restoreBackup(backup_otbm, savefile);
+			if (!editor.map.getHouseFilename().empty()) {
+				restoreBackup(backup_house, map_path + editor.map.getHouseFilename());
+			}
+			if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+				if (!editor.map.getMonsterFilename().empty()) {
+					restoreBackup(backup_monster, map_path + editor.map.getMonsterFilename());
+				}
+				if (!editor.map.getNpcFilename().empty()) {
+					restoreBackup(backup_npc, map_path + editor.map.getNpcFilename());
+				}
+				if (!editor.map.getZoneFilename().empty()) {
+					restoreBackup(backup_zone, map_path + editor.map.getZoneFilename());
+				}
 			} else {
-				std::remove(savefile.c_str());
+				if (!editor.map.getSpawnFilename().empty()) {
+					restoreBackup(backup_spawn, map_path + editor.map.getSpawnFilename());
+				}
 			}
-
-			if (!backup_house.empty()) {
-				converter.SetFullName(wxstr(editor.map.getHouseFilename()));
-				std::string house_filename = map_path + nstr(converter.GetName());
-				std::rename(backup_house.c_str(), std::string(house_filename + ".xml").c_str());
-			} else if (!editor.map.getHouseFilename().empty()) {
-				std::remove((map_path + editor.map.getHouseFilename()).c_str());
-			}
-
-			if (!backup_spawn.empty()) {
-				converter.SetFullName(wxstr(editor.map.getSpawnFilename()));
-				std::string spawn_filename = map_path + nstr(converter.GetName());
-				std::rename(backup_spawn.c_str(), std::string(spawn_filename + ".xml").c_str());
-			} else if (!editor.map.getSpawnFilename().empty()) {
-				std::remove((map_path + editor.map.getSpawnFilename()).c_str());
-			}
-
-			if (!backup_monster.empty()) {
-				converter.SetFullName(wxstr(editor.map.getMonsterFilename()));
-				std::string monster_filename = map_path + nstr(converter.GetName());
-				std::rename(backup_monster.c_str(), std::string(monster_filename + ".xml").c_str());
-			} else if (!editor.map.getMonsterFilename().empty()) {
-				std::remove((map_path + editor.map.getMonsterFilename()).c_str());
-			}
-
-			if (!backup_npc.empty()) {
-				converter.SetFullName(wxstr(editor.map.getNpcFilename()));
-				std::string npc_filename = map_path + nstr(converter.GetName());
-				std::rename(backup_npc.c_str(), std::string(npc_filename + ".xml").c_str());
-			} else if (!editor.map.getNpcFilename().empty()) {
-				std::remove((map_path + editor.map.getNpcFilename()).c_str());
-			}
-
-			if (!backup_waypoint.empty()) {
-				converter.SetFullName(wxstr(editor.map.getWaypointFilename()));
-				std::string waypoint_filename = map_path + nstr(converter.GetName());
-				std::rename(backup_waypoint.c_str(), std::string(waypoint_filename + ".xml").c_str());
-			} else if (!editor.map.getWaypointFilename().empty()) {
-				std::remove((map_path + editor.map.getWaypointFilename()).c_str());
+			if (!editor.map.getWaypointFilename().empty()) {
+				restoreBackup(backup_waypoint, map_path + editor.map.getWaypointFilename());
 			}
 
 			// Display the error
@@ -227,6 +230,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 			editor.map.setMonsterFilename(prev_monster);
 			editor.map.setNpcFilename(prev_npc);
 			editor.map.setHouseFilename(prev_house);
+			editor.map.setZoneFilename(prev_zone);
 			editor.map.setWaypointFilename(prev_waypoint);
 			return false;
 		}
@@ -267,6 +271,12 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 			std::rename(backup_npc.c_str(), std::string(npc_filename + "." + date_str + ".xml").c_str());
 		}
 
+		if (!backup_zone.empty()) {
+			converter.SetFullName(wxstr(editor.map.getZoneFilename()));
+			std::string zone_filename = map_path + nstr(converter.GetName());
+			std::rename(backup_zone.c_str(), std::string(zone_filename + "." + date_str + ".xml").c_str());
+		}
+
 		if (!backup_waypoint.empty()) {
 			converter.SetFullName(wxstr(editor.map.getWaypointFilename()));
 			std::string waypoint_filename = map_path + nstr(converter.GetName());
@@ -279,6 +289,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 		std::remove(backup_spawn.c_str());
 		std::remove(backup_monster.c_str());
 		std::remove(backup_npc.c_str());
+		std::remove(backup_zone.c_str());
 		std::remove(backup_waypoint.c_str());
 	}
 
@@ -505,6 +516,21 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 	importTowns(editor, imported_map, offset, house_import_type, town_id_map);
 	importHouses(editor, imported_map, offset, house_import_type, town_id_map, house_id_map);
 
+	std::unordered_map<uint16_t, uint16_t> zone_id_map;
+	if (editor.map.getVersion().otbm == MAP_OTBM_5 && imported_map.getVersion().otbm == MAP_OTBM_5) {
+		zone_id_map.reserve(imported_map.zones.size());
+		for (const auto& imported_zone : imported_map.zones) {
+			if (const auto* existing = editor.map.findZone(imported_zone.name)) {
+				zone_id_map[imported_zone.id] = existing->id;
+			} else {
+				const uint16_t new_id = editor.map.addZone(imported_zone.name);
+				if (new_id != 0) {
+					zone_id_map[imported_zone.id] = new_id;
+				}
+			}
+		}
+	}
+
 	std::map<Position, std::unique_ptr<Spawn>> spawn_map;
 	importSpawns(editor, imported_map, offset, spawn_import_type, spawn_map);
 
@@ -591,6 +617,23 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 
 		import_tile->spawn.reset();
 
+		if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+			if (import_tile->hasZones()) {
+				std::vector<uint16_t> remapped_zones;
+				for (const uint16_t zid : import_tile->getZoneIds()) {
+					if (auto it = zone_id_map.find(zid); it != zone_id_map.end()) {
+						remapped_zones.push_back(it->second);
+					}
+				}
+				std::sort(remapped_zones.begin(), remapped_zones.end());
+				const auto last = std::unique(remapped_zones.begin(), remapped_zones.end());
+				remapped_zones.erase(last, remapped_zones.end());
+				import_tile->setZoneIds(remapped_zones);
+			}
+		} else if (import_tile->hasZones()) {
+			import_tile->setZoneIds({});
+		}
+
 		(void)editor.map.setTile(new_pos, std::move(moved_tile));
 	}
 
@@ -607,6 +650,10 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 		tile->spawn = std::move(spawn_entry.second);
 
 		editor.map.addSpawn(tile);
+	}
+
+	if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+		editor.map.rebuildZoneIndex();
 	}
 
 	g_gui.DestroyLoadBar();

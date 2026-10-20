@@ -54,6 +54,7 @@ private:
 	[[nodiscard]] bool HasPreviewBorderControl() const;
 	[[nodiscard]] bool HasLockDoorsControl() const;
 	[[nodiscard]] bool HasSpawnControls() const;
+	[[nodiscard]] bool HasWeightControl() const;
 	[[nodiscard]] Brush* GetSelectedCreatureBrush() const;
 	[[nodiscard]] std::vector<Brush*> GetDefaultTools() const;
 	[[nodiscard]] wxBitmap CreateToolBitmap(const ToolButtonEntry& entry) const;
@@ -71,6 +72,7 @@ private:
 	void OnPlaceSpawnWithCreatureToggled(wxCommandEvent& event);
 	void OnSpawnTimeChanged(wxSpinEvent& event);
 	void OnSpawnSizeChanged(wxSpinEvent& event);
+	void OnWeightChanged(wxSpinEvent& event);
 
 	Brush* active_brush = nullptr;
 	bool mutating_ui = false;
@@ -82,6 +84,7 @@ private:
 	wxStaticBoxSizer* other_sizer = nullptr;
 	wxPanel* thickness_panel = nullptr;
 	wxPanel* spawn_time_panel = nullptr;
+	wxPanel* weight_panel = nullptr;
 	wxCheckBox* place_spawn_with_creature_checkbox = nullptr;
 	wxPanel* spawn_size_panel = nullptr;
 
@@ -100,6 +103,8 @@ private:
 	wxSpinCtrl* spawn_time_spin = nullptr;
 	wxStaticText* spawn_size_label = nullptr;
 	wxSpinCtrl* spawn_size_spin = nullptr;
+	wxStaticText* weight_label = nullptr;
+	wxSpinCtrl* weight_spin = nullptr;
 
 	std::vector<ToolButtonEntry> tool_buttons;
 };

@@ -65,6 +65,7 @@ struct DrawingOptions {
 	bool show_waypoints;
 	bool ingame;
 	bool is_drawing_mode;
+	bool is_drawing = false;
 	bool dragging;
 	bool boundbox_selection;
 
@@ -76,6 +77,7 @@ struct DrawingOptions {
 	bool show_creatures;
 	bool show_spawns;
 	bool show_houses;
+	bool show_zones = false;
 	bool show_shade;
 	bool show_special_tiles;
 	bool show_items;
@@ -99,6 +101,7 @@ struct DrawingOptions {
 	bool draw_floor_shadow;
 
 	uint32_t current_house_id;
+	uint16_t current_zone_id = 0;
 	SpriteLight server_light;
 	float minimum_ambient_light;
 

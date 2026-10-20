@@ -1,6 +1,7 @@
 #include "ui/dialogs/find_dialog.h"
 
 #include "brushes/brush.h"
+#include "game/materials.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "ui/gui.h"
 #include "ui/theme.h"
@@ -214,12 +215,30 @@ void FindBrushDialog::OnClickOKInternal() {
 				if (!result_brush) {
 					// Then let's search the RAWs
 					for (ServerItemId id : g_item_definitions.allIds()) {
-						RAWBrush* raw_brush = g_item_definitions.editorData(id).raw_brush;
-						if (!raw_brush) {
+						if (id < 100) {
+							continue;
+						}
+						const auto definition = g_item_definitions.get(id);
+						if (!definition) {
 							continue;
 						}
 
-						if (!caseInsensitiveContains(raw_brush->getName(), search_string)) {
+						RAWBrush* raw_brush = definition.editorData().raw_brush;
+						const std::string sid_str = std::to_string(id);
+						const std::string cid_str = definition.clientId() != 0 ? std::to_string(definition.clientId()) : std::string{};
+						const bool matches = (raw_brush && caseInsensitiveContains(raw_brush->getName(), search_string)) ||
+							caseInsensitiveContains(definition.name(), search_string) ||
+							sid_str == search_string ||
+							(!cid_str.empty() && cid_str == search_string);
+
+						if (!matches) {
+							continue;
+						}
+
+						if (!raw_brush) {
+							raw_brush = g_materials.ensureRawBrush(id);
+						}
+						if (!raw_brush) {
 							continue;
 						}
 
@@ -265,12 +284,30 @@ void FindBrushDialog::RefreshContentsInternal() {
 		}
 
 		for (ServerItemId id : g_item_definitions.allIds()) {
-			RAWBrush* raw_brush = g_item_definitions.editorData(id).raw_brush;
-			if (!raw_brush) {
+			if (id < 100) {
+				continue;
+			}
+			const auto definition = g_item_definitions.get(id);
+			if (!definition) {
 				continue;
 			}
 
-			if (!caseInsensitiveContains(raw_brush->getName(), search_string)) {
+			RAWBrush* raw_brush = definition.editorData().raw_brush;
+			const std::string sid_str = std::to_string(id);
+			const std::string cid_str = definition.clientId() != 0 ? std::to_string(definition.clientId()) : std::string{};
+			const bool matches = (raw_brush && caseInsensitiveContains(raw_brush->getName(), search_string)) ||
+				caseInsensitiveContains(definition.name(), search_string) ||
+				sid_str == search_string ||
+				(!cid_str.empty() && cid_str == search_string);
+
+			if (!matches) {
+				continue;
+			}
+
+			if (!raw_brush) {
+				raw_brush = g_materials.ensureRawBrush(id);
+			}
+			if (!raw_brush) {
 				continue;
 			}
 

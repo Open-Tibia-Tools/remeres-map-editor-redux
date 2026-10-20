@@ -13,11 +13,13 @@ class Brush;
 class HouseBrush;
 class HouseExitBrush;
 class WaypointBrush;
+class TownTempleBrush;
 class OptionalBorderBrush;
 class EraserBrush;
 class SpawnBrush;
 class DoorBrush;
 class FlagBrush;
+class ZoneBrush;
 
 class BrushManager {
 public:
@@ -70,6 +72,14 @@ public:
 	// Additional brush parameters
 	void SetSpawnTime(int time) {
 		creature_spawntime = time;
+	}
+
+	// Default weight applied to newly placed creatures (0 = no weight attribute)
+	void SetDefaultCreatureWeight(int weight) {
+		creature_default_weight = weight;
+	}
+	[[nodiscard]] int GetDefaultCreatureWeight() const {
+		return creature_default_weight;
 	}
 
 	void SetLightIntensity(int v) {
@@ -142,6 +152,8 @@ public:
 	FlagBrush* rook_brush;
 	FlagBrush* nolog_brush;
 	FlagBrush* pvp_brush;
+	ZoneBrush* zone_brush;
+	TownTempleBrush* temple_brush;
 
 private:
 	Brush* current_brush;
@@ -153,6 +165,7 @@ private:
 	bool aspect_ratio_locked;
 	int brush_variation;
 	int creature_spawntime;
+	int creature_default_weight = 0;
 
 	void UpdateDoodadPreview();
 	void NotifyBrushSizeChanged();

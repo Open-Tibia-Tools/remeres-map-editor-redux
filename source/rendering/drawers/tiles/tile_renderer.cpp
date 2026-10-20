@@ -457,7 +457,10 @@ void TileRenderer::RenderDynamicEntities(SpriteBatch& sprite_batch, const TileLo
 			}
 		}
 
-		const bool need_waypoint = !options.ingame && options.show_waypoints;
+		// Only resolve the waypoint when markers will actually be drawn: the chunk
+		// dynamic pass runs with render_markers=false, where this lookup (a linear
+		// scan over all waypoints) would be discarded.
+		const bool need_waypoint = render_markers && !options.ingame && options.show_waypoints;
 		const Waypoint* waypoint = nullptr;
 		if (need_waypoint && location->getWaypointCount() > 0 && editor) {
 			waypoint = editor->map.waypoints.getWaypoint(location);

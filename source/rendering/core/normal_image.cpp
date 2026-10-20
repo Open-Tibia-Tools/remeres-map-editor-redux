@@ -5,8 +5,6 @@
 #include <cstring>
 #include <ranges>
 
-constexpr int RGB_COMPONENTS = 3;
-
 namespace {
 	bool loadRgbaFromArchive(uint32_t id, std::unique_ptr<uint8_t[]>& rgba, ImageDimensions& dimensions) {
 		const auto archive = g_graphics.getSpriteArchive();
@@ -111,7 +109,7 @@ std::unique_ptr<uint8_t[]> NormalImage::getRGBAData() {
 	return rgba;
 }
 
-const AtlasRegion* NormalImage::getAtlasRegion() {
+const AtlasRegion* NormalImage::getAtlasRegion(bool allow_upload) {
 	if (isGLLoaded && atlas_region) {
 		// Self-Healing: Check for stale atlas region pointer (e.g. from memory reuse)
 		// Force reload if Owner is INVALID or DOES NOT MATCH
@@ -126,6 +124,11 @@ const AtlasRegion* NormalImage::getAtlasRegion() {
 	}
 
 	if (!isGLLoaded) {
+		if (!allow_upload) {
+			// A bake that must not stall the frame on asset loading reports the sprite as not
+			// ready; the preloader loads it and the chunk is re-baked once it is available.
+			return nullptr;
+		}
 		atlas_region = EnsureAtlasSprite(id);
 	}
 	visit();

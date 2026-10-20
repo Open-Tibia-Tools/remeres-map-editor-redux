@@ -16,6 +16,8 @@
 #include <span>
 #include <utility>
 #include <lzma.h>
+#include <future>
+#include <exception>
 
 namespace {
 	constexpr uint32_t kLegacySpriteDataOffset = 3;
@@ -24,19 +26,6 @@ namespace {
 	constexpr int kBmpHeaderPadding = 122;
 	constexpr size_t kDecodedSheetCacheLimit = 64;
 	constexpr std::array<uint8_t, 5> kProtobufSheetMagic { 0x70, 0x0A, 0xFA, 0x80, 0x24 };
-
-	bool readSpriteCount(FileReadHandle& file, bool is_extended, uint32_t& sprite_count) {
-		if (is_extended) {
-			return file.getU32(sprite_count);
-		}
-
-		uint16_t compact_count = 0;
-		if (!file.getU16(compact_count)) {
-			return false;
-		}
-		sprite_count = compact_count;
-		return true;
-	}
 
 	bool readSpriteOffsets(FileReadHandle& file, uint32_t sprite_count, std::vector<uint32_t>& offsets) {
 		offsets.assign(static_cast<size_t>(sprite_count) + 1, 0);
@@ -77,6 +66,19 @@ SpriteArchive::SpriteArchive(std::string filename, uint32_t sprite_count, std::v
 	backend_(Backend::Protobuf),
 	protobuf_sheets_(std::move(sheets)),
 	protobuf_sheet_lookup_(std::move(sheet_lookup)) {
+}
+
+bool SpriteArchive::readSpriteCount(FileReadHandle& file, bool is_extended, uint32_t& sprite_count) {
+	if (is_extended) {
+		return file.getU32(sprite_count);
+	}
+
+	uint16_t compact_count = 0;
+	if (!file.getU16(compact_count)) {
+		return false;
+	}
+	sprite_count = compact_count;
+	return true;
 }
 
 std::shared_ptr<SpriteArchive> SpriteArchive::load(const std::filesystem::path& path, bool is_extended, std::string& error, std::vector<std::string>& warnings) {
@@ -246,33 +248,29 @@ bool SpriteArchive::readLegacyRgba(uint32_t sprite_id, bool use_alpha, std::uniq
 	return target != nullptr;
 }
 
-bool SpriteArchive::loadSheetPixels(const ProtobufSheet& sheet) const {
-	if (sheet.decoded_pixels) {
-		return true;
-	}
-
-	std::ifstream file(sheet.path, std::ios::binary | std::ios::in);
+std::shared_ptr<std::vector<uint8_t>> SpriteArchive::decodeSheetPixels(const std::string& path) const {
+	std::ifstream file(path, std::ios::binary | std::ios::in);
 	if (!file.is_open()) {
-		spdlog::error("SpriteArchive: failed to open protobuf sprite sheet {}", sheet.path);
-		return false;
+		spdlog::error("SpriteArchive: failed to open protobuf sprite sheet {}", path);
+		return nullptr;
 	}
 
 	file.seekg(0, std::ios::end);
 	const std::streamsize size = file.tellg();
 	if (size <= 0) {
-		spdlog::error("SpriteArchive: protobuf sprite sheet {} is empty", sheet.path);
-		return false;
+		spdlog::error("SpriteArchive: protobuf sprite sheet {} is empty", path);
+		return nullptr;
 	}
 
 	file.seekg(0, std::ios::beg);
 	std::vector<uint8_t> buffer(static_cast<size_t>(size));
 	if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
-		spdlog::error("SpriteArchive: failed to read protobuf sprite sheet {}", sheet.path);
-		return false;
+		spdlog::error("SpriteArchive: failed to read protobuf sprite sheet {}", path);
+		return nullptr;
 	}
 	if (buffer.empty()) {
-		spdlog::error("SpriteArchive: protobuf sprite sheet {} is empty", sheet.path);
-		return false;
+		spdlog::error("SpriteArchive: protobuf sprite sheet {} is empty", path);
+		return nullptr;
 	}
 
 	size_t position = 0;
@@ -280,22 +278,22 @@ bool SpriteArchive::loadSheetPixels(const ProtobufSheet& sheet) const {
 		++position;
 	}
 	if (position >= buffer.size()) {
-		spdlog::error("SpriteArchive: protobuf sprite sheet {} is missing the CipSoft header", sheet.path);
-		return false;
+		spdlog::error("SpriteArchive: protobuf sprite sheet {} is missing the CipSoft header", path);
+		return nullptr;
 	}
 
 	if (position + kProtobufSheetMagic.size() > buffer.size()
 		|| !std::equal(kProtobufSheetMagic.begin(), kProtobufSheetMagic.end(), buffer.begin() + static_cast<std::ptrdiff_t>(position))) {
-		spdlog::error("SpriteArchive: protobuf sprite sheet {} has an invalid header", sheet.path);
-		return false;
+		spdlog::error("SpriteArchive: protobuf sprite sheet {} has an invalid header", path);
+		return nullptr;
 	}
 
 	position += kProtobufSheetMagic.size();
 	while (position < buffer.size() && (buffer[position++] & 0x80) == 0x80) {
 	}
 	if (position + 13 > buffer.size()) {
-		spdlog::error("SpriteArchive: protobuf sprite sheet {} has an incomplete LZMA header", sheet.path);
-		return false;
+		spdlog::error("SpriteArchive: protobuf sprite sheet {} has an incomplete LZMA header", path);
+		return nullptr;
 	}
 
 	const uint8_t lclppb = buffer[position++];
@@ -309,6 +307,15 @@ bool SpriteArchive::loadSheetPixels(const ProtobufSheet& sheet) const {
 	for (uint8_t byte_index = 0; byte_index < 4; ++byte_index) {
 		dictionary_size += static_cast<uint32_t>(buffer[position++]) << (byte_index * 8);
 	}
+	// The dictionary size comes from the sheet header, so a crafted sheet could request an
+	// arbitrarily large allocation (eight concurrent sheet decoders make the worst case worse).
+	// Real client sheets compress a few hundred KB with well under 1 MB of dictionary; anything
+	// larger cannot be a legitimate sprite sheet.
+	constexpr uint32_t kMaxLzmaDictSize = 64u * 1024u * 1024u;
+	if (dictionary_size > kMaxLzmaDictSize) {
+		spdlog::error("SpriteArchive: protobuf sprite sheet {} requests a {} byte LZMA dictionary, rejecting it", path, dictionary_size);
+		return nullptr;
+	}
 	options.dict_size = dictionary_size;
 
 	position += 8; // Skip compressed-size field.
@@ -320,8 +327,8 @@ bool SpriteArchive::loadSheetPixels(const ProtobufSheet& sheet) const {
 	};
 
 	if (lzma_raw_decoder(&stream, filters) != LZMA_OK) {
-		spdlog::error("SpriteArchive: failed to initialize LZMA decoder for {}", sheet.path);
-		return false;
+		spdlog::error("SpriteArchive: failed to initialize LZMA decoder for {}", path);
+		return nullptr;
 	}
 
 	auto decompressed = std::make_unique<uint8_t[]>(kSheetBytes + kBmpHeaderPadding);
@@ -333,15 +340,15 @@ bool SpriteArchive::loadSheetPixels(const ProtobufSheet& sheet) const {
 	const lzma_ret ret = lzma_code(&stream, LZMA_RUN);
 	lzma_end(&stream);
 	if (ret != LZMA_STREAM_END || stream.total_out < static_cast<uint64_t>(kBmpHeaderPadding) + kSheetBytes) {
-		spdlog::error("SpriteArchive: failed to decode protobuf sprite sheet {} (lzma ret={})", sheet.path, static_cast<int>(ret));
-		return false;
+		spdlog::error("SpriteArchive: failed to decode protobuf sprite sheet {} (lzma ret={})", path, static_cast<int>(ret));
+		return nullptr;
 	}
 
 	uint32_t pixel_offset = 0;
 	std::memcpy(&pixel_offset, decompressed.get() + 10, sizeof(uint32_t));
 	if (pixel_offset > static_cast<uint32_t>(kBmpHeaderPadding)) {
-		spdlog::error("SpriteArchive: protobuf sprite sheet {} has an invalid BMP pixel offset", sheet.path);
-		return false;
+		spdlog::error("SpriteArchive: protobuf sprite sheet {} has an invalid BMP pixel offset", path);
+		return nullptr;
 	}
 
 	auto decoded_pixels = std::make_shared<std::vector<uint8_t>>(kSheetBytes, 0);
@@ -350,10 +357,7 @@ bool SpriteArchive::loadSheetPixels(const ProtobufSheet& sheet) const {
 		const int source_row = kSheetDimension - row - 1;
 		std::memcpy(decoded_pixels->data() + row * kSheetDimension * 4, pixel_data + source_row * kSheetDimension * 4, static_cast<size_t>(kSheetDimension) * 4);
 	}
-
-	sheet.decoded_pixels = std::move(decoded_pixels);
-	++decoded_sheet_count_;
-	return true;
+	return decoded_pixels;
 }
 
 void SpriteArchive::pruneDecodedSheetCache(int32_t keep_sheet_index) const {
@@ -402,15 +406,80 @@ bool SpriteArchive::readProtobufRgba(uint32_t sprite_id, std::unique_ptr<uint8_t
 		return false;
 	}
 
-	std::lock_guard<std::mutex> lock(protobuf_mutex_);
-	auto& sheet = protobuf_sheets_[static_cast<size_t>(sheet_index)];
-	if (!loadSheetPixels(sheet) || !sheet.decoded_pixels) {
+	// The decoded sheet is immutable once built, so a local shared_ptr keeps it alive for
+	// this call even if the cache evicts it meanwhile. The lock only guards cache bookkeeping;
+	// decoding happens outside it so workers decode different sheets concurrently, and a sheet
+	// that several workers miss at once is decoded by exactly one of them.
+	std::shared_ptr<std::vector<uint8_t>> pixels;
+	uint32_t sheet_first_id = 0;
+	ProtobufSpriteLayout sheet_layout = ProtobufSpriteLayout::OneByOne;
+	std::string sheet_path;
+	bool own_decode = false;
+	std::shared_future<std::shared_ptr<std::vector<uint8_t>>> pending_decode;
+	// Only allocated when this call is the one that decodes: std::promise creates its shared
+	// state eagerly, and this is the per-sprite path.
+	std::unique_ptr<std::promise<std::shared_ptr<std::vector<uint8_t>>>> own_promise;
+	{
+		std::lock_guard<std::mutex> lock(protobuf_mutex_);
+		auto& sheet = protobuf_sheets_[static_cast<size_t>(sheet_index)];
+		sheet_first_id = sheet.first_id;
+		sheet_layout = sheet.layout;
+		sheet_path = sheet.path;
+		pixels = sheet.decoded_pixels;
+		if (pixels) {
+			sheet.last_access_tick = ++protobuf_sheet_access_tick_;
+			pruneDecodedSheetCache(sheet_index);
+		} else if (sheet.decode_future.valid()) {
+			pending_decode = sheet.decode_future;
+		} else {
+			own_promise = std::make_unique<std::promise<std::shared_ptr<std::vector<uint8_t>>>>();
+			pending_decode = own_promise->get_future().share();
+			sheet.decode_future = pending_decode;
+			own_decode = true;
+		}
+	}
+
+	if (own_decode) {
+		std::shared_ptr<std::vector<uint8_t>> decoded;
+		try {
+			decoded = decodeSheetPixels(sheet_path);
+		} catch (const std::exception& e) {
+			// A decode that throws must be treated like a failed decode: clearing the cached
+			// future (below) is what lets a later call decode the sheet again. Leaving
+			// decode_future set would make waiters keep failing on a broken promise forever.
+			spdlog::warn("SpriteArchive: decoding sheet {} failed: {}", sheet_path, e.what());
+			decoded.reset();
+		}
+		{
+			std::lock_guard<std::mutex> lock(protobuf_mutex_);
+			auto& sheet = protobuf_sheets_[static_cast<size_t>(sheet_index)];
+			if (decoded) {
+				sheet.decoded_pixels = std::move(decoded);
+				++decoded_sheet_count_;
+			}
+			// Cleared whether or not the decode worked, so a failed sheet can be retried.
+			sheet.decode_future = {};
+			pixels = sheet.decoded_pixels;
+			if (pixels) {
+				sheet.last_access_tick = ++protobuf_sheet_access_tick_;
+				pruneDecodedSheetCache(sheet_index);
+			}
+		}
+		own_promise->set_value(pixels);
+	} else if (pending_decode.valid()) {
+		try {
+			pixels = pending_decode.get();
+		} catch (const std::exception& e) {
+			spdlog::warn("SpriteArchive: waiting for sheet {} failed: {}", sheet_path, e.what());
+			pixels.reset();
+		}
+	}
+
+	if (!pixels) {
 		return false;
 	}
-	sheet.last_access_tick = ++protobuf_sheet_access_tick_;
-	pruneDecodedSheetCache(sheet_index);
 
-	const auto [source_width, source_height] = protobufSourceDimensions(sheet.layout);
+	const auto [source_width, source_height] = protobufSourceDimensions(sheet_layout);
 	dimensions = ImageDimensions {
 		static_cast<uint16_t>(source_width),
 		static_cast<uint16_t>(source_height),
@@ -418,19 +487,19 @@ bool SpriteArchive::readProtobufRgba(uint32_t sprite_id, std::unique_ptr<uint8_t
 	target = std::make_unique<uint8_t[]>(dimensions.pixelCount() * 4);
 	std::fill(target.get(), target.get() + dimensions.pixelCount() * 4, 0);
 
-	const uint32_t sprite_offset = sprite_id - sheet.first_id;
+	const uint32_t sprite_offset = sprite_id - sheet_first_id;
 	const int columns = kSheetDimension / source_width;
 	const int sprite_row = static_cast<int>(sprite_offset / static_cast<uint32_t>(columns));
 	const int rows = kSheetDimension / source_height;
 	if (sprite_row >= rows) {
-		spdlog::error("SpriteArchive: sprite {} is outside the bounds of sheet {}", sprite_id, sheet.path);
+		spdlog::error("SpriteArchive: sprite {} is outside the bounds of sheet {}", sprite_id, sheet_path);
 		target.reset();
 		dimensions = {};
 		return false;
 	}
 
 	const int sprite_column = static_cast<int>(sprite_offset % static_cast<uint32_t>(columns));
-	const auto* pixels = sheet.decoded_pixels->data();
+	const auto* pixel_data = pixels->data();
 
 	for (int row = 0; row < source_height; ++row) {
 		const size_t source_offset = (static_cast<size_t>(sprite_row * source_height + row) * kSheetDimension + static_cast<size_t>(sprite_column * source_width)) * 4;
@@ -438,10 +507,10 @@ bool SpriteArchive::readProtobufRgba(uint32_t sprite_id, std::unique_ptr<uint8_t
 		for (int column = 0; column < source_width; ++column) {
 			const size_t source_pixel = source_offset + static_cast<size_t>(column) * 4;
 			const size_t destination_pixel = destination_offset + static_cast<size_t>(column) * 4;
-			target[destination_pixel + 0] = pixels[source_pixel + 2];
-			target[destination_pixel + 1] = pixels[source_pixel + 1];
-			target[destination_pixel + 2] = pixels[source_pixel + 0];
-			target[destination_pixel + 3] = pixels[source_pixel + 3];
+			target[destination_pixel + 0] = pixel_data[source_pixel + 2];
+			target[destination_pixel + 1] = pixel_data[source_pixel + 1];
+			target[destination_pixel + 2] = pixel_data[source_pixel + 0];
+			target[destination_pixel + 3] = pixel_data[source_pixel + 3];
 		}
 	}
 

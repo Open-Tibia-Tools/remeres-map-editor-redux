@@ -17,6 +17,7 @@
 
 #include "map/tile_operations.h"
 #include "app/main.h"
+#include <limits>
 
 #include "game/complexitem.h" // Door
 #include "game/house.h"
@@ -117,6 +118,7 @@ House::~House() {
 }
 
 void House::clean() {
+	invalidateSummary();
 	for (const auto& pos : tiles) {
 		Tile* tile = map->getTile(pos);
 		if (tile) {
@@ -145,6 +147,7 @@ void House::addTile(Tile* tile) {
 	ASSERT(tile);
 	tile->setHouse(this);
 	tiles.push_back(tile->getPosition());
+	invalidateSummary();
 }
 
 void House::removeTile(Tile* tile) {
@@ -153,7 +156,67 @@ void House::removeTile(Tile* tile) {
 	if (it != tiles.end()) {
 		tiles.erase(it);
 		tile->setHouse(nullptr);
+		invalidateSummary();
 	}
+}
+
+const House::FloorSummary& House::getFloorSummary(int z) const {
+	if (summary_valid_ && summary_z == z) {
+		return summary_;
+	}
+
+	summary_ = FloorSummary {};
+	summary_z = z;
+	summary_valid_ = true;
+
+	double sum_x = 0.0;
+	double sum_y = 0.0;
+	int min_x = std::numeric_limits<int>::max();
+	int max_x = std::numeric_limits<int>::min();
+	int min_y = std::numeric_limits<int>::max();
+	int max_y = std::numeric_limits<int>::min();
+
+	for (const auto& pos : tiles) {
+		if (pos.z != z) {
+			continue;
+		}
+		++summary_.count;
+		min_x = std::min(min_x, pos.x);
+		max_x = std::max(max_x, pos.x);
+		min_y = std::min(min_y, pos.y);
+		max_y = std::max(max_y, pos.y);
+		sum_x += pos.x;
+		sum_y += pos.y;
+	}
+
+	if (summary_.count == 0) {
+		return summary_;
+	}
+
+	summary_.min_x = min_x;
+	summary_.max_x = max_x;
+	summary_.min_y = min_y;
+	summary_.max_y = max_y;
+
+	// Tile of the room closest to its centroid, so the label sits inside the room.
+	const double avg_x = sum_x / static_cast<double>(summary_.count);
+	const double avg_y = sum_y / static_cast<double>(summary_.count);
+
+	double min_dist_sq = std::numeric_limits<double>::infinity();
+	for (const auto& pos : tiles) {
+		if (pos.z != z) {
+			continue;
+		}
+		const double dx = static_cast<double>(pos.x) - avg_x;
+		const double dy = static_cast<double>(pos.y) - avg_y;
+		const double dist_sq = dx * dx + dy * dy;
+		if (dist_sq < min_dist_sq) {
+			min_dist_sq = dist_sq;
+			summary_.best_tile = pos;
+		}
+	}
+
+	return summary_;
 }
 
 uint8_t House::getEmptyDoorID() const {

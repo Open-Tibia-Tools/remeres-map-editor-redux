@@ -2,6 +2,7 @@
 
 #include "app/main.h"
 #include "game/materials.h"
+#include "map/map.h"
 #include "palette/hardcoded_palette_registry.h"
 #include "palette/house/house_palette.h"
 #include "ui/gui.h"
@@ -38,18 +39,31 @@ void SetMenuIcon(wxMenuItem* item, std::string_view icon) {
 	if (name == "Waypoint") {
 		return "Waypoint\tW";
 	}
+	if (name == "Town") {
+		return "Town\tT";
+	}
 	return wxString::FromUTF8(std::string(name).c_str());
 }
 
 [[nodiscard]] std::string_view PaletteIcon(std::string_view name) {
+	if (name == "All items") {
+		return ICON_BOXES_STACKED;
+	}
 	if (name == "House") {
 		return ICON_HOUSE;
 	}
 	if (name == "Waypoint") {
 		return ICON_FLAG;
 	}
+	if (name == "Zone") {
+		return ICON_VECTOR_SQUARE;
+	}
+	if (name == "Town") {
+		return ICON_CITY;
+	}
 	return ICON_PALETTE;
 }
+
 
 } // namespace
 
@@ -80,6 +94,14 @@ void PaletteMenuHandler::OnSelectWaypointPalette(wxCommandEvent& event) {
 }
 
 void PaletteMenuHandler::OnSelectCatalogPalette(wxCommandEvent& event) {
+	// Menu selections carry the owning wxMenu (or the item, on some paths) as
+	// their event object. A source-less event is synthetic, so don't let it
+	// reopen palettes; this handler is bound frame-wide for all catalog ids.
+	const wxObject* const source = event.GetEventObject();
+	if (!source || (!wxDynamicCast(source, wxMenu) && !wxDynamicCast(source, wxMenuItem))) {
+		return;
+	}
+
 	const auto it = catalog_menu_ids.find(event.GetId());
 	if (it == catalog_menu_ids.end()) {
 		return;
@@ -117,7 +139,11 @@ std::vector<std::string> PaletteMenuHandler::CurrentPaletteMenuEntries() const {
 	for (const auto& palette : g_materials.paletteCatalog().dynamicPalettes()) {
 		entries.push_back(palette.name);
 	}
+	const bool supports_zones = g_gui.IsEditorOpen() && g_gui.GetCurrentMap().supportsZones();
 	for (const auto& provider : GetHardcodedPaletteProviders()) {
+		if (provider.name == "Zone" && !supports_zones) {
+			continue;
+		}
 		entries.push_back(std::string(provider.name));
 	}
 	return entries;
@@ -150,17 +176,22 @@ void PaletteMenuHandler::RebuildPaletteMenu() {
 			}
 		}
 
-		const size_t providerOffset = palettes.size();
+		size_t menuSlot = palettes.size();
+		const bool supports_zones = g_gui.IsEditorOpen() && g_gui.GetCurrentMap().supportsZones();
 		const auto& providers = GetHardcodedPaletteProviders();
-		if (!providers.empty() && providerOffset < maxMenuCount) {
+		if (!providers.empty() && menuSlot < maxMenuCount) {
 			palette_menu->AppendSeparator();
-			for (size_t index = 0; index < providers.size() && providerOffset + index < maxMenuCount; ++index) {
-				const int menuId = MAIN_FRAME_MENU + PALETTE_MENU_FIRST + static_cast<int>(providerOffset + index);
+			for (size_t index = 0; index < providers.size() && menuSlot < maxMenuCount; ++index) {
+				if (providers[index].name == "Zone" && !supports_zones) {
+					continue;
+				}
+				const int menuId = MAIN_FRAME_MENU + PALETTE_MENU_FIRST + static_cast<int>(menuSlot);
 				const std::string providerName(providers[index].name);
 				const wxString label = PaletteLabel(providers[index].name);
 				wxMenuItem* item = palette_menu->Append(menuId, label, "Select the " + wxString::FromUTF8(providerName.c_str()) + " palette.");
 				SetMenuIcon(item, PaletteIcon(providers[index].name));
 				catalog_menu_ids.emplace(menuId, providerName);
+				++menuSlot;
 			}
 		}
 	}

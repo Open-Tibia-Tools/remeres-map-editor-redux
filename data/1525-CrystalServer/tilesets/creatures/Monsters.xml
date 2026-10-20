@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<tileset name="Others">
+<tileset name="Monsters">
     <creature name="1st Mate Ratticus" />
     <creature name="a carved stone tile" />
     <creature name="A Greedy Eye" />
@@ -599,6 +599,7 @@
     <creature name="Freed Soul" />
     <creature name="Freegoiz" />
     <creature name="Frenzy" />
+    <creature name="Freshwater Turtle" />
     <creature name="Frost Dragon" />
     <creature name="Frost Dragon Hatchling" />
     <creature name="Frost Flower Asura" />
@@ -800,6 +801,9 @@
     <creature name="Infernal Phantom" />
     <creature name="Infernalist" />
     <creature name="Infernatil" />
+    <creature name="Infernoid Blob" />
+    <creature name="Infernoid Hound" />
+    <creature name="Infernoid Soul" />
     <creature name="Ink Blob" />
     <creature name="Ink Splash" />
     <creature name="Inkwing" />
@@ -884,13 +888,18 @@
     <creature name="Little Corym Charlatan" />
     <creature name="Lizard Abomination" />
     <creature name="Lizard Chosen" />
+    <creature name="Lizard Commander" />
     <creature name="Lizard Dragon Priest" />
+    <creature name="Lizard Executioner" />
+    <creature name="Lizard Henchman" />
     <creature name="Lizard High Guard" />
     <creature name="Lizard Legionnaire" />
+    <creature name="Lizard Magician" />
     <creature name="Lizard Magistratus" />
     <creature name="Lizard Noble" />
     <creature name="Lizard Sentinel" />
     <creature name="Lizard Snakecharmer" />
+    <creature name="Lizard Swordmaster" />
     <creature name="Lizard Templar" />
     <creature name="Lizard Zaogun" />
     <creature name="Lloyd" />
@@ -1197,10 +1206,14 @@
     <creature name="Pirat Mate" />
     <creature name="Pirat Scoundrel" />
     <creature name="Pirate Buccaneer" />
+    <creature name="Pirate Cook" />
     <creature name="Pirate Corsair" />
     <creature name="Pirate Cutthroat" />
     <creature name="Pirate Ghost" />
+    <creature name="Pirate Gunner" />
     <creature name="Pirate Marauder" />
+    <creature name="Pirate Navigator" />
+    <creature name="Pirate Quartermaster" />
     <creature name="Pirate Skeleton" />
     <creature name="Pixie" />
     <creature name="Plagirath" />
@@ -1339,6 +1352,7 @@
     <creature name="Schiach" />
     <creature name="Scorn of the Emperor" />
     <creature name="Scorpion" />
+    <creature name="Sea Captain" />
     <creature name="Sea Serpent" />
     <creature name="Seacrest Serpent" />
     <creature name="Seagull" />

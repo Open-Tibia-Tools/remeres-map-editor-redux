@@ -187,7 +187,7 @@ std::unique_ptr<uint8_t[]> TemplateImage::getRGBAData() {
 	return rgbadata;
 }
 
-const AtlasRegion* TemplateImage::getAtlasRegion() {
+const AtlasRegion* TemplateImage::getAtlasRegion(bool allow_upload) {
 	if (isGLLoaded && atlas_region) {
 		// Self-Healing: Check for stale atlas region pointer
 		if (atlas_region->debug_sprite_id == AtlasRegion::INVALID_SENTINEL || (atlas_region->debug_sprite_id != 0 && atlas_region->debug_sprite_id != texture_id)) {
@@ -201,6 +201,10 @@ const AtlasRegion* TemplateImage::getAtlasRegion() {
 	}
 
 	if (!isGLLoaded) {
+		if (!allow_upload) {
+			// See NormalImage::getAtlasRegion: a bake must not stall on asset loading.
+			return nullptr;
+		}
 		atlas_region = EnsureAtlasSprite(texture_id);
 	}
 	visit();

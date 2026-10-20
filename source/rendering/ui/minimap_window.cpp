@@ -20,20 +20,12 @@
 #include "rendering/ui/minimap_window.h"
 #include "ui/dialog_util.h"
 #include "ui/gui.h"
+#include "ui/managers/gl_context_manager.h"
 #include "ui/map_tab.h"
 #include "ui/map_window.h"
 #include "util/image_manager.h"
 
 namespace {
-
-wxGLAttributes& GetCoreProfileAttributes() {
-	static wxGLAttributes attributes = []() {
-		wxGLAttributes attr;
-		attr.PlatformDefaults().Defaults().RGBA().DoubleBuffer().Depth(24).Stencil(8).EndList();
-		return attr;
-	}();
-	return attributes;
-}
 
 wxSize dipSize(wxWindow* window, const wxSize& size) {
 	return window->FromDIP(size);
@@ -394,7 +386,7 @@ void MinimapWindow::PositionHelpPanel() {
 }
 
 MinimapCanvas::MinimapCanvas(MinimapWindow* parent) :
-	wxGLCanvas(parent, GetCoreProfileAttributes(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS),
+	wxGLCanvas(parent, GLContextManager::CanvasAttributes(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS),
 	owner_(parent),
 	drawer(std::make_unique<MinimapDrawer>()),
 	update_timer(this) {

@@ -23,12 +23,6 @@
 #include "item_definitions/core/item_definition_store.h"
 #include "util/image_manager.h"
 
-namespace {
-	bool supportsClassificationTiers() {
-		return g_item_definitions.MajorVersion > 3 || (g_item_definitions.MajorVersion == 3 && g_item_definitions.MinorVersion >= 60);
-	}
-}
-
 // ============================================================================
 // Item Properties Window
 
@@ -89,9 +83,14 @@ ItemPropertiesWindow::ItemPropertiesWindow(wxWindow* win_parent, const Map* map,
 }
 
 void ItemPropertiesWindow::createHeaderFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
-	subsizer->Add(newd wxStaticText(parent, wxID_ANY, "ID " + i2ws(edit_item->getID())));
+	if (edit_item->getClientID() != 0 && edit_item->getClientID() != edit_item->getID()) {
+		subsizer->Add(newd wxStaticText(parent, wxID_ANY, std::format("SID: {}   CID: {}", edit_item->getID(), edit_item->getClientID())));
+	} else {
+		subsizer->Add(newd wxStaticText(parent, wxID_ANY, std::format("ID: {}", edit_item->getID())));
+	}
 	subsizer->Add(newd wxStaticText(parent, wxID_ANY, "\"" + wxstr(edit_item->getName()) + "\""));
 }
+
 
 void ItemPropertiesWindow::createGenericFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
 	subsizer->Add(newd wxStaticText(parent, wxID_ANY, (edit_item->isCharged() ? "Charges" : "Count")));

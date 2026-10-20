@@ -12,8 +12,6 @@
 #include "game/complexitem.h"
 #include "game/creature.h"
 
-static constexpr int OUTFIT_COLOR_MAX = 133;
-
 bool PropertyValidator::validateItemProperties(wxWindow* parent, int uid, int aid, int tier) {
 	if ((uid < 1000 || uid > 0xFFFF) && uid != 0) {
 		DialogUtil::PopupDialog(parent, "Error", "Unique ID must be between 1000 and 65535.", wxOK);

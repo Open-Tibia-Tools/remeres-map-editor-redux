@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
+#include <format>
 #include "editor/operations/draw_operations.h"
 #include "editor/editor.h"
 #include "editor/action_queue.h"
@@ -14,12 +15,14 @@
 #include "brushes/border/optional_border_brush.h"
 #include "brushes/house/house_exit_brush.h"
 #include "brushes/waypoint/waypoint_brush.h"
+#include "brushes/town/town_temple_brush.h"
 #include "brushes/wall/wall_brush.h"
 #include "brushes/carpet/carpet_brush.h"
 #include "brushes/table/table_brush.h"
 #include "brushes/creature/creature_brush.h"
 #include "brushes/spawn/spawn_brush.h"
 #include "brushes/door/door_brush.h"
+#include "game/town.h"
 #include "map/map.h"
 #include "map/tile.h"
 #include "map/tile_operations.h"
@@ -70,14 +73,14 @@ namespace {
 						std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
 						SelectionOperations::removeDuplicateWalls(buffer_tile, new_tile.get());
 						SelectionOperations::doSurroundingBorders(brush, tilestoborder, buffer_tile, new_tile.get());
-						TileOperations::merge(new_tile.get(), buffer_tile);
+						TileOperations::merge(new_tile.get(), buffer_tile, &editor.map);
 						action->addChange(std::make_unique<Change>(std::move(new_tile)));
 					}
 				} else {
 					std::unique_ptr<Tile> new_tile(editor.map.allocator(location));
 					SelectionOperations::removeDuplicateWalls(buffer_tile, new_tile.get());
 					SelectionOperations::doSurroundingBorders(brush, tilestoborder, buffer_tile, new_tile.get());
-					TileOperations::merge(new_tile.get(), buffer_tile);
+					TileOperations::merge(new_tile.get(), buffer_tile, &editor.map);
 					action->addChange(std::make_unique<Change>(std::move(new_tile)));
 				}
 			} else {
@@ -95,7 +98,7 @@ namespace {
 						std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
 						SelectionOperations::removeDuplicateWalls(buffer_tile, new_tile.get());
 						SelectionOperations::doSurroundingBorders(brush, tilestoborder, buffer_tile, new_tile.get());
-						TileOperations::merge(new_tile.get(), buffer_tile);
+						TileOperations::merge(new_tile.get(), buffer_tile, &editor.map);
 						action->addChange(std::make_unique<Change>(std::move(new_tile)));
 					}
 				}
@@ -299,6 +302,16 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 	} else if (brush->is<HouseExitBrush>()) {
 		HouseExitBrush* house_exit_brush = brush->as<HouseExitBrush>();
 		if (!house_exit_brush->canDraw(&editor.map, offset)) {
+			Tile* tile = editor.map.getTile(offset);
+			if (house_exit_brush->getHouseID() == 0) {
+				g_gui.SetStatusText("Cannot place exit: no house selected.");
+			} else if (!tile || !tile->hasGround()) {
+				g_gui.SetStatusText("Cannot place house exit on void (tile must have ground).");
+			} else if (tile->isHouseTile()) {
+				g_gui.SetStatusText("Cannot place house exit inside a house tile (exit must be a walkable tile outside the house).");
+			} else if (tile->isBlocking()) {
+				g_gui.SetStatusText("Cannot place house exit on a blocking tile (must be a walkable tile outside).");
+			}
 			return;
 		}
 
@@ -312,6 +325,7 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 		action->addChange(std::unique_ptr<Change>(Change::Create(house, offset)));
 		batch->addAndCommitAction(std::move(action));
 		editor.addBatch(std::move(batch), 2);
+		g_gui.SetStatusText(wxstr(std::format("House \"{}\" (ID: {}) exit set to ({}, {}, {})", house->name, house->getID(), offset.x, offset.y, offset.z)));
 	} else if (brush->is<WaypointBrush>()) {
 		WaypointBrush* waypoint_brush = brush->as<WaypointBrush>();
 		if (!waypoint_brush->canDraw(&editor.map, offset)) {
@@ -328,6 +342,39 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 		action->addChange(std::unique_ptr<Change>(Change::Create(waypoint, offset)));
 		batch->addAndCommitAction(std::move(action));
 		editor.addBatch(std::move(batch), 2);
+		g_gui.SetStatusText(wxstr(std::format("Waypoint \"{}\" moved to ({}, {}, {})", waypoint->name, offset.x, offset.y, offset.z)));
+	} else if (brush->is<TownTempleBrush>()) {
+		TownTempleBrush* temple_brush = brush->as<TownTempleBrush>();
+		if (!temple_brush->canDraw(&editor.map, offset)) {
+			g_gui.SetStatusText("Cannot set temple position here: tile must have ground.");
+			return;
+		}
+
+		if (temple_brush->hasPlacementCallback()) {
+			temple_brush->invokePlacementCallback(offset);
+			g_gui.SelectPreviousBrush();
+			return;
+		}
+
+		Town* town = editor.map.towns.getTown(temple_brush->getTownID());
+		if (!town) {
+			return;
+		}
+		if (town->getTemplePosition() == offset) {
+			g_gui.SetStatusText(wxstr(std::format("Town \"{}\" (ID: {}) temple position is already at ({}, {}, {}).", town->getName(), town->getID(), offset.x, offset.y, offset.z)));
+			g_gui.SelectPreviousBrush();
+			return;
+		}
+
+		std::unique_ptr<BatchAction> batch = editor.actionQueue->createBatch(ACTION_DRAW);
+		std::unique_ptr<Action> action = editor.actionQueue->createAction(batch.get());
+		action->addChange(std::unique_ptr<Change>(Change::Create(town, offset)));
+		batch->addAndCommitAction(std::move(action));
+		editor.addBatch(std::move(batch), 2);
+		g_gui.SetStatusText(wxstr(std::format("Town \"{}\" (ID: {}) temple position set to ({}, {}, {})", town->getName(), town->getID(), offset.x, offset.y, offset.z)));
+		g_gui.SelectPreviousBrush();
+		g_gui.RefreshPalettes();
+		g_gui.RefreshView();
 	} else if (brush->is<WallBrush>()) {
 		std::unique_ptr<BatchAction> batch = editor.actionQueue->createBatch(ACTION_DRAW);
 		std::unique_ptr<Action> action = editor.actionQueue->createAction(batch.get());

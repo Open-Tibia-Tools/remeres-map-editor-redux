@@ -21,6 +21,8 @@ public:
 	~GLContextManager();
 
 	wxGLContext* GetGLContext(wxGLCanvas* win);
+	// Every canvas sharing the GL context must be created with these attributes.
+	[[nodiscard]] static const wxGLAttributes& CanvasAttributes();
 
 	// Tries to make the context current on the preferred canvas, or falls back to
 	// other available canvases if the preferred one is hidden (to avoid assertions).

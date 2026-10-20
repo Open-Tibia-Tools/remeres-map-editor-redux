@@ -63,12 +63,6 @@ bool UnreachableCleaner::IsWalkable(const Tile* tile) {
 		return false;
 	}
 
-	// Border items are edges/fringe, not walkable ground
-	if (ground_def.hasFlag(ItemFlag::IsBorder) || ground_def.hasFlag(ItemFlag::IsOptionalBorder)) {
-		++g_stats.non_walkable_count;
-		return false;
-	}
-
 	// Unpassable (DatFlagNotWalkable) or pathfinder blocking tiles cannot be walked on
 	if (ground_def.hasFlag(ItemFlag::Unpassable) || ground_def.hasFlag(ItemFlag::BlockPathfinder)) {
 		++g_stats.non_walkable_count;

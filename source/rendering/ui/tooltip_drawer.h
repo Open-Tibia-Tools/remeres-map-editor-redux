@@ -54,6 +54,7 @@ struct TooltipData {
 
 	// Header info
 	uint16_t itemId = 0;
+	uint16_t clientId = 0;
 	std::string_view itemName;
 
 	// Optional fields (0 or empty = not shown)
@@ -106,6 +107,7 @@ struct TooltipData {
 		pos = Position();
 		category = TooltipCategory::ITEM;
 		itemId = 0;
+		clientId = 0;
 		// clear strings
 		itemName = {};
 		actionId = 0;

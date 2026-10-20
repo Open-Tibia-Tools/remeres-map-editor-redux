@@ -9,12 +9,6 @@ class Brushes;
 class CreatureDatabase;
 class ItemDefinitionStore;
 
-enum class CreatureImportTarget {
-	None,
-	Monster,
-	Npc,
-};
-
 enum class PaletteBrushRegistrationResult {
 	Added,
 	AlreadyRegistered,
@@ -24,7 +18,7 @@ enum class PaletteBrushRegistrationResult {
 struct DynamicTilesetDefinition {
 	std::string name;
 	std::vector<Brush*> brushes;
-	CreatureImportTarget creatureImportTarget = CreatureImportTarget::None;
+	bool is_import_target = false;
 
 	[[nodiscard]] size_t size() const {
 		return brushes.size();

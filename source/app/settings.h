@@ -297,6 +297,8 @@ namespace Config {
 		CURSOR_BLEND_MODE,
 		CURSOR_ALT_BLEND_MODE,
 
+		SHOW_ZONES,
+
 		LAST,
 	};
 
