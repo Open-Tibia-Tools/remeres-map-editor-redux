@@ -70,6 +70,8 @@ public:
 	void setAlternatives(std::vector<SpawnAlternative> alts) { alternatives_ = std::move(alts); }
 	void clearAlternatives() noexcept { alternatives_.clear(); }
 	void addAlternative(SpawnAlternative alt) { alternatives_.push_back(std::move(alt)); }
+	[[nodiscard]] bool isVaryingSpawn() const noexcept { return varying_spawn_ || !alternatives_.empty(); }
+	void markAsVaryingSpawn(bool varying = true) noexcept { varying_spawn_ = varying; }
 
 	[[nodiscard]] std::unique_ptr<Creature> deepCopy() const {
 		auto copy = std::make_unique<Creature>(name_, isNpc_);
@@ -77,12 +79,14 @@ public:
 		copy->spawntime_ = spawntime_;
 		copy->weight_ = weight_;
 		copy->alternatives_ = alternatives_;
+		copy->varying_spawn_ = varying_spawn_;
 		return copy;
 	}
 
 private:
 	std::string name_;
 	bool isNpc_ = false;
+	bool varying_spawn_ = false;
 	Direction direction_ = NORTH;
 	int spawntime_ = 60;
 	uint32_t weight_ = 0;
@@ -117,7 +121,7 @@ std::string serializeSpawnsToXml(const std::vector<SpawnEntry>& spawns, bool isO
 
 		const auto* creature = entry.creature.get();
 
-		if (!isOtbm5 && !creature->isNpc() && !creature->getAlternatives().empty()) {
+		if (!isOtbm5 && !creature->isNpc() && creature->isVaryingSpawn()) {
 			// TFS Varying Spawn Group
 			pugi::xml_node monstersNode = spawnNode.append_child("monsters");
 			monstersNode.append_attribute("x") = entry.creatureOffset.x;
@@ -288,6 +292,7 @@ std::vector<SpawnEntry> parseSpawnsFromXml(const std::string& xmlContent) {
 				primary->setDirection(NORTH);
 				primary->setSpawnTime(spawntime);
 				primary->setWeight(variants[0].chance);
+				primary->markAsVaryingSpawn(true);
 
 				for (size_t i = 1; i < variants.size(); ++i) {
 					primary->addAlternative({ variants[i].name, spawntime, NORTH, variants[i].chance });
@@ -408,6 +413,24 @@ void testScenario1_TfsVaryingSpawnRoundTrip() {
 	assert(c2->getAlternatives().size() == 1);
 	assert(c2->getAlternatives()[0].name == "Skunk");
 	assert(c2->getAlternatives()[0].weight == 30);
+
+	// Also test single-child <monsters> group (preserve one-entry varying groups)
+	const std::string singleChildXml =
+		"<spawns>"
+		"<spawn centerx=\"100\" centery=\"100\" centerz=\"7\" radius=\"5\">"
+		"<monsters x=\"0\" y=\"0\" z=\"7\" spawntime=\"120\">"
+		"<monster name=\"Rabbit\" chance=\"70\"/>"
+		"</monsters>"
+		"</spawn>"
+		"</spawns>";
+	auto parsedSingle = parseSpawnsFromXml(singleChildXml);
+	assert(parsedSingle.size() == 1);
+	assert(parsedSingle[0].creature->isVaryingSpawn());
+	assert(parsedSingle[0].creature->getAlternatives().empty());
+	assert(parsedSingle[0].creature->getWeight() == 70);
+	std::string serializedSingle = serializeSpawnsToXml(parsedSingle, false);
+	assert(serializedSingle.find("<monsters") != std::string::npos);
+	assert(serializedSingle.find("chance=\"70\"") != std::string::npos);
 
 	std::cout << "  -> Passed: TFS varying spawn parsed and serialized with 100% fidelity.\n";
 }

@@ -66,7 +66,13 @@ CreaturePropertyPanel::CreaturePropertyPanel(wxWindow* parent) :
 				return;
 			}
 
-			std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, *current_map);
+			Position pos = current_tile->getPosition();
+			Tile* live_tile = current_map->getTile(pos);
+			if (!live_tile) {
+				live_tile = current_tile;
+			}
+
+			std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(live_tile, *current_map);
 			if (new_tile->creature) {
 				alternatives_editor->ApplyToCreature(new_tile->creature.get());
 				new_tile->creature->setSpawnTime(spawntime_spin->GetValue());
@@ -81,6 +87,10 @@ CreaturePropertyPanel::CreaturePropertyPanel(wxWindow* parent) :
 				std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
 				action->addChange(std::make_unique<Change>(std::move(new_tile)));
 				editor->addAction(std::move(action));
+				current_tile = current_map->getTile(pos);
+				if (current_tile) {
+					current_creature = current_tile->creature.get();
+				}
 				g_gui.RefreshView();
 			}
 		}
@@ -149,7 +159,13 @@ void CreaturePropertyPanel::OnSpawnTimeChange(wxSpinEvent& event) {
 			return;
 		}
 
-		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, *current_map);
+		Position pos = current_tile->getPosition();
+		Tile* live_tile = current_map->getTile(pos);
+		if (!live_tile) {
+			live_tile = current_tile;
+		}
+
+		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(live_tile, *current_map);
 		if (new_tile->creature) {
 			new_tile->creature->setSpawnTime(spawntime_spin->GetValue());
 			for (auto& alt : new_tile->creature->getAlternatives()) {
@@ -160,6 +176,10 @@ void CreaturePropertyPanel::OnSpawnTimeChange(wxSpinEvent& event) {
 			std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
 			action->addChange(std::make_unique<Change>(std::move(new_tile)));
 			editor->addAction(std::move(action));
+			current_tile = current_map->getTile(pos);
+			if (current_tile) {
+				current_creature = current_tile->creature.get();
+			}
 		}
 	}
 }
@@ -171,7 +191,13 @@ void CreaturePropertyPanel::OnDirectionChange(wxCommandEvent& event) {
 			return;
 		}
 
-		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, *current_map);
+		Position pos = current_tile->getPosition();
+		Tile* live_tile = current_map->getTile(pos);
+		if (!live_tile) {
+			live_tile = current_tile;
+		}
+
+		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(live_tile, *current_map);
 		if (new_tile->creature) {
 			int new_dir = (int)(intptr_t)direction_choice->GetClientData(direction_choice->GetSelection());
 			new_tile->creature->setDirection((Direction)new_dir);
@@ -179,6 +205,10 @@ void CreaturePropertyPanel::OnDirectionChange(wxCommandEvent& event) {
 			std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
 			action->addChange(std::make_unique<Change>(std::move(new_tile)));
 			editor->addAction(std::move(action));
+			current_tile = current_map->getTile(pos);
+			if (current_tile) {
+				current_creature = current_tile->creature.get();
+			}
 			g_gui.RefreshView();
 		}
 	}

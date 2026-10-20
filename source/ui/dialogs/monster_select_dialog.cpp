@@ -35,6 +35,12 @@ MonsterSelectDialog::MonsterSelectDialog(wxWindow* parent, const std::string& cu
 	main_sizer->Add(monster_list, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
 
 	PopulateList(current_selection);
+	if (!current_selection.empty()) {
+		int sel = monster_list->FindString(current_selection);
+		if (sel != wxNOT_FOUND) {
+			monster_list->SetSelection(sel);
+		}
+	}
 
 	wxBoxSizer* btn_sizer = newd wxBoxSizer(wxHORIZONTAL);
 	wxButton* ok_btn = newd wxButton(this, wxID_OK, "OK");
@@ -66,10 +72,6 @@ void MonsterSelectDialog::PopulateList(const std::string& filter) {
 			monster_list->Append(name);
 		}
 	}
-
-	if (monster_list->GetCount() > 0) {
-		monster_list->SetSelection(0);
-	}
 	monster_list->Thaw();
 }
 
@@ -77,21 +79,47 @@ void MonsterSelectDialog::OnSearchText(wxCommandEvent& WXUNUSED(event)) {
 	PopulateList(search_ctrl->GetValue().ToStdString());
 }
 
-void MonsterSelectDialog::OnListDClick(wxCommandEvent& event) {
-	OnOK(event);
-}
-
-void MonsterSelectDialog::OnOK(wxCommandEvent& WXUNUSED(event)) {
+void MonsterSelectDialog::OnListDClick(wxCommandEvent& WXUNUSED(event)) {
 	int sel = monster_list->GetSelection();
 	if (sel != wxNOT_FOUND) {
 		selected_monster = monster_list->GetString(sel).ToStdString();
 		EndModal(wxID_OK);
+	}
+}
+
+void MonsterSelectDialog::OnOK(wxCommandEvent& WXUNUSED(event)) {
+	wxString typed = search_ctrl->GetValue().Trim();
+	const std::string typed_name = typed.ToStdString();
+
+	if (!typed_name.empty()) {
+		auto it = std::ranges::find_if(all_monsters, [&typed_name](const std::string& m) {
+			return as_lower_str(m) == as_lower_str(typed_name);
+		});
+		if (it != all_monsters.end()) {
+			selected_monster = *it;
+			EndModal(wxID_OK);
+			return;
+		}
+
+		int sel = monster_list->GetSelection();
+		if (sel != wxNOT_FOUND) {
+			selected_monster = monster_list->GetString(sel).ToStdString();
+			EndModal(wxID_OK);
+			return;
+		}
+
+		CreatureType* type = g_creatures[typed_name];
+		if (!type || !type->isNpc) {
+			selected_monster = typed_name;
+			EndModal(wxID_OK);
+			return;
+		}
 		return;
 	}
 
-	wxString typed = search_ctrl->GetValue().Trim();
-	if (!typed.IsEmpty()) {
-		selected_monster = typed.ToStdString();
+	int sel = monster_list->GetSelection();
+	if (sel != wxNOT_FOUND) {
+		selected_monster = monster_list->GetString(sel).ToStdString();
 		EndModal(wxID_OK);
 		return;
 	}

@@ -159,6 +159,12 @@ namespace {
 				continue;
 			}
 
+			CreatureType* existingType = g_creatures[name];
+			if (existingType && existingType->isNpc) {
+				spdlog::warn("MapXMLIO: NPC '{}' not allowed in <monsters> group at {}:{}:{}", name, creaturePosition.x, creaturePosition.y, creaturePosition.z);
+				continue;
+			}
+
 			uint32_t chance = 0;
 			auto chanceAttr = monsterNode.attribute("chance");
 			if (chanceAttr) {
@@ -212,6 +218,7 @@ namespace {
 		creatureTile->creature->setDirection(NORTH);
 		creatureTile->creature->setSpawnTime(spawntime);
 		creatureTile->creature->setWeight(variants[0].chance);
+		creatureTile->creature->markAsVaryingSpawn(true);
 
 		for (size_t i = 1; i < variants.size(); ++i) {
 			if (!g_creatures[variants[i].name]) {
@@ -300,7 +307,7 @@ namespace {
 					}
 
 					const SpawnAlternative entry { creature->getName(), creature->getSpawnTime(), creature->getDirection(), creature->getWeight() };
-					if (!isOtbm5 && !creature->isNpc() && !creature->getAlternatives().empty()) {
+					if (!isOtbm5 && !creature->isNpc() && creature->isVaryingSpawn()) {
 						pugi::xml_node monstersNode = spawnNode.append_child("monsters");
 						monstersNode.append_attribute("x") = x;
 						monstersNode.append_attribute("y") = y;

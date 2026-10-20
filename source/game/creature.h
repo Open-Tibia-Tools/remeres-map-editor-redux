@@ -123,6 +123,13 @@ public:
 		npc_spawn = true;
 	}
 
+	bool isVaryingSpawn() const {
+		return varying_spawn || !alternatives.empty();
+	}
+	void markAsVaryingSpawn(bool varying = true) {
+		varying_spawn = varying;
+	}
+
 protected:
 	std::string type_name;
 	Direction direction;
@@ -130,6 +137,7 @@ protected:
 	uint32_t weight = 0; // 0 when the spawn file has no weight attribute
 	std::vector<SpawnAlternative> alternatives;
 	bool npc_spawn = false;
+	bool varying_spawn = false;
 	bool saved;
 	bool selected;
 };

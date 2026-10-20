@@ -63,6 +63,12 @@ SpawnAlternativesEditor::SpawnAlternativesEditor(wxWindow* parent) :
 }
 
 void SpawnAlternativesEditor::SetCreature(Creature* creature) {
+	std::string prev_selected_name;
+	if (selected_index >= 0 && selected_index < static_cast<int>(variants.size())) {
+		prev_selected_name = variants[selected_index].name;
+	}
+	int prev_index = selected_index;
+
 	variants.clear();
 	selected_index = -1;
 
@@ -81,8 +87,20 @@ void SpawnAlternativesEditor::SetCreature(Creature* creature) {
 
 	RefreshList();
 	if (!variants.empty()) {
-		selected_index = 0;
-		list_ctrl->SetItemState(0, wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED, wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED);
+		int target_index = 0;
+		if (!prev_selected_name.empty()) {
+			for (size_t i = 0; i < variants.size(); ++i) {
+				if (variants[i].name == prev_selected_name) {
+					target_index = static_cast<int>(i);
+					break;
+				}
+			}
+		} else if (prev_index >= 0 && prev_index < static_cast<int>(variants.size())) {
+			target_index = prev_index;
+		}
+
+		selected_index = target_index;
+		list_ctrl->SetItemState(target_index, wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED, wxLIST_STATE_SELECTED | wxLIST_STATE_FOCUSED);
 	}
 	UpdateButtonStates();
 	UpdateTotalChanceLabel();
@@ -97,12 +115,17 @@ void SpawnAlternativesEditor::ApplyToCreature(Creature* creature) {
 		creature->setTypeName(variants[0].name);
 		if (!creature->getAlternatives().empty()) {
 			creature->setWeight(0);
+			creature->markAsVaryingSpawn(false);
+		} else if (variants[0].chance < 100) {
+			creature->setWeight(variants[0].chance);
+			creature->markAsVaryingSpawn(true);
 		}
 		creature->clearAlternatives();
 	} else {
 		creature->setTypeName(variants[0].name);
 		creature->setWeight(variants[0].chance);
 		creature->setDirection(NORTH); // TFS varying monster spawns are locked to NORTH
+		creature->markAsVaryingSpawn(true);
 		creature->clearAlternatives();
 
 		for (size_t i = 1; i < variants.size(); ++i) {
