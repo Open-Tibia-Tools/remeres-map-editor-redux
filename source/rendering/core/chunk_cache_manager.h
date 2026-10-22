@@ -11,6 +11,7 @@
 #include "rendering/core/tile_instance.h"
 #include "map/spatial_change_tracker.h"
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 class Map;
@@ -28,6 +29,9 @@ struct HardwareBudget;
 
 struct AnimatedSpriteFrame {
 	GameSprite* sprite = nullptr;
+	int tile_x = 0;
+	int tile_y = 0;
+	int tile_z = 0;
 	int frame = 0;
 };
 
@@ -72,7 +76,7 @@ struct CachedChunk {
 	// keeps the animation repaint loop alive.
 	uint16_t creature_animation_step_ms = 0;
 	// Shortest average frame duration among the chunk's animated sprites, or 0 when none.
-	// Constant per animator, so it is resolved once per bake instead of scanning every
+	// Constant per animated sprite, so it is resolved once per bake instead of scanning every
 	// AnimatedSpriteFrame on every frame to pace the repaint loop.
 	uint16_t animated_step_ms = 0;
 	std::vector<AnimatedSpriteFrame> animated_sprites;
@@ -358,6 +362,8 @@ private:
 
 	std::unordered_map<ChunkCoord, CachedChunk, ChunkCoordHash> cached_chunks_;
 	std::vector<TileInstance> bake_buffer_;
+	std::vector<uint8_t> scratch_changed_slots_;
+	std::vector<std::pair<GameSprite*, uint32_t>> scratch_sync_slots_;
 	uint64_t current_frame_ = 0;
 
 	std::vector<CachedChunk*> active_visible_chunks_;

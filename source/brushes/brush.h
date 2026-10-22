@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <string>
 #include <memory>
+#include <limits>
 #include <string_view>
 
 // Thanks to a million forward declarations, we don't have to include any files!
@@ -116,6 +117,8 @@ extern Brushes g_brushes;
 
 class Brush {
 public:
+	static constexpr uint32_t WILDCARD_ID = std::numeric_limits<uint32_t>::max();
+
 	Brush();
 	virtual ~Brush();
 

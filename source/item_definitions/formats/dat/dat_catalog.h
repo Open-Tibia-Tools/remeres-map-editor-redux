@@ -17,7 +17,7 @@ struct DatAnimationFrameDuration {
 struct DatAnimationInfo {
 	bool asynchronous = false;
 	int loop_count = 0;
-	int8_t start_frame = 0;
+	int16_t start_frame = 0;
 	std::vector<DatAnimationFrameDuration> frame_durations;
 };
 

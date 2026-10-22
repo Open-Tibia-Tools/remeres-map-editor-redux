@@ -249,7 +249,7 @@ TerrainBrush::~TerrainBrush() {
 bool TerrainBrush::friendOf(TerrainBrush* other) {
 	const uint32_t borderID = other->getID();
 	const bool found = std::ranges::any_of(friends, [borderID](uint32_t friendId) {
-		return friendId == borderID || friendId == 0xFFFFFFFF;
+		return friendId == borderID || friendId == Brush::WILDCARD_ID;
 	});
 	return found ? !hate_friends : hate_friends;
 }

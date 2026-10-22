@@ -19,6 +19,7 @@
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
 #include "rendering/indicators/technical_item_registry.h"
+#include "rendering/indicators/zone_flags.h"
 
 namespace {
 	GameSprite* resolveSprite(const ItemDefinitionView& definition, const RenderFrameContext* ctx) {
@@ -109,15 +110,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 				const float bf = static_cast<float>(blue) / 255.0f;
 				const float af = static_cast<float>(alpha) / 255.0f;
 				const auto invalid_type = (item && item->isGroundTile()) ? rme::rendering::TileIndicatorType::InvalidGround : rme::rendering::TileIndicatorType::InvalidItem;
-				sprite_batch.draw(
-					static_cast<float>(draw_x), static_cast<float>(draw_y),
-					32.0f, 32.0f,
-					*white_pixel,
-					rf, gf, bf, af,
-					rme::rendering::TechnicalItemRegistry::GetMarkerId(invalid_type),
-					0u,
-					params.depth
-				);
+				sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y), 32.0f, 32.0f, *white_pixel, rf, gf, bf, af, 0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(invalid_type)), params.depth);
 			}
 		}
 		return;
@@ -131,7 +124,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		if (tech_type != rme::rendering::TileIndicatorType::None) {
 			const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;
 			if (white_pixel) {
-				sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, static_cast<float>(alpha) / 255.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type), 0u, params.depth);
+				sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, static_cast<float>(alpha) / 255.0f, 0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(tech_type)), params.depth);
 			}
 			return;
 		}
@@ -154,11 +147,11 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	if (cached_patterns && spr == original_spr) {
 		patterns = *cached_patterns;
 	} else {
-		const long elapsed_time = params.ctx ? params.ctx->elapsed_time : -1;
+		const std::optional<int64_t> elapsed_time = params.ctx ? std::optional<int64_t>(params.ctx->elapsed_time) : std::nullopt;
 		patterns = PatternCalculator::Calculate(spr, it, item, tile, pos, elapsed_time);
 	}
 
-	int subtype = patterns.subtype;
+	const int subtype = patterns.subtype.value_or(-1);
 	int pattern_x = patterns.x;
 	int pattern_y = patterns.y;
 	int pattern_z = patterns.z;
@@ -180,7 +173,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	if (is_simple_sprite) {
 		const AtlasRegion* region = nullptr;
-		if (spr->is_simple && subtype == -1 && pattern_x == 0 && pattern_y == 0 && pattern_z == 0 && frame == 0) {
+		if (spr->is_simple && !patterns.subtype.has_value() && pattern_x == 0 && pattern_y == 0 && pattern_z == 0 && frame == 0) {
 			region = spr->getCachedDefaultRegion();
 		}
 		if (!region) {
@@ -274,7 +267,7 @@ void ItemDrawer::DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_dr
 	if (tech_type != rme::rendering::TileIndicatorType::None) {
 		const AtlasRegion* white_pixel = ctx->atlas.getWhitePixel();
 		if (white_pixel) {
-			sprite_batch.draw(static_cast<float>(screenx), static_cast<float>(screeny), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, static_cast<float>(alpha) / 255.0f, rme::rendering::TechnicalItemRegistry::GetMarkerId(tech_type));
+			sprite_batch.draw(static_cast<float>(screenx), static_cast<float>(screeny), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, static_cast<float>(alpha) / 255.0f, 0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(tech_type)));
 		}
 		return;
 	}

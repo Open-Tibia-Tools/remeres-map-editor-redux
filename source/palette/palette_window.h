@@ -43,6 +43,8 @@ public:
 	void InvalidateContents();
 	// (Re)Loads all currently displayed data, called from InvalidateContents implicitly
 	void LoadCurrentContents();
+	void ReloadDynamicPages();
+	bool SelectTilesetInCurrentPalette(std::string_view tilesetName);
 	// Goes to the selected page and selects any brush there
 	void SelectPage(std::string_view paletteName);
 	// The currently selected brush in this palette

@@ -122,6 +122,7 @@ struct ItemDefinitionLoadInput {
 	ClientVersion* client_version = nullptr;
 	GraphicManager* graphics = nullptr;
 	const DatCatalog* dat_catalog = nullptr;
+	size_t max_entries = 0;
 };
 
 #endif

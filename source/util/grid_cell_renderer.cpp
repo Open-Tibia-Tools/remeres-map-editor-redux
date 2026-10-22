@@ -253,6 +253,32 @@ namespace rme::ui::grid {
 		}
 	}
 
+	void DrawRemoveBadge(NVGcontext* vg, const wxRect& cell, bool hovered) {
+		const float size = static_cast<float>(kBadgeSize);
+		const float x = static_cast<float>(cell.GetRight()) - size - 2.0f;
+		const float y = static_cast<float>(cell.y) + 2.0f;
+
+		nvgBeginPath(vg);
+		nvgRoundedRect(vg, x, y, size, size, 2.0f);
+		nvgFillColor(vg, hovered ? NvgColor(Theme::Role::Error) : NvgColor(Theme::Role::RaisedSurface));
+		nvgFill(vg);
+		nvgStrokeColor(vg, hovered ? NvgColor(Theme::Role::Error) : NvgColor(Theme::Role::Border, 200));
+		nvgStrokeWidth(vg, 1.0f);
+		nvgStroke(vg);
+
+		const float arm = size * 0.22f;
+		const float cx = x + size / 2.0f;
+		const float cy = y + size / 2.0f;
+		nvgBeginPath(vg);
+		nvgMoveTo(vg, cx - arm, cy - arm);
+		nvgLineTo(vg, cx + arm, cy + arm);
+		nvgMoveTo(vg, cx + arm, cy - arm);
+		nvgLineTo(vg, cx - arm, cy + arm);
+		nvgStrokeColor(vg, hovered ? NvgColor(Theme::Role::TextOnAccent) : NvgColor(Theme::Role::Text, 220));
+		nvgStrokeWidth(vg, 1.5f);
+		nvgStroke(vg);
+	}
+
 	void DrawListLabel(NVGcontext* vg, const wxRect& row, const wxString& text) {
 		nvgFontSize(vg, static_cast<float>(kListLabelFontSize));
 		nvgFontFace(vg, "sans");

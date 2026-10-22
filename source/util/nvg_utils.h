@@ -7,6 +7,7 @@
 #include <vector>
 #include <algorithm>
 #include <memory>
+#include <optional>
 
 namespace NvgUtils {
 
@@ -19,8 +20,17 @@ namespace NvgUtils {
 
 	// Creates a composite RGBA buffer from a GameSprite.
 	// Returns a unique_ptr to the buffer, or nullptr on failure.
-	inline std::unique_ptr<uint8_t[]> CreateCompositeRGBA(GameSprite& gs, int& outW, int& outH) {
-		const auto metrics = gs.getPlainLayoutMetrics(-1, (gs.pattern_x >= 3) ? 2 : 0, 0, 0, 0);
+	inline std::unique_ptr<uint8_t[]> CreateCompositeRGBA(GameSprite& gs, int& outW, int& outH, std::optional<bool> is_stackable_opt = std::nullopt) {
+		bool is_stackable = false;
+		if (is_stackable_opt.has_value()) {
+			is_stackable = *is_stackable_opt;
+		} else if (gs.getId() != 0) {
+			if (const auto sid = g_item_definitions.findByClientId(gs.getId())) {
+				is_stackable = g_item_definitions.get(*sid).hasFlag(ItemFlag::Stackable);
+			}
+		}
+		const int pattern_x = (is_stackable && gs.pattern_x >= 3) ? 2 : 0;
+		const auto metrics = gs.getPlainLayoutMetrics(-1, pattern_x, 0, 0, 0);
 		outW = metrics.total_width;
 		outH = metrics.total_height;
 
@@ -31,8 +41,6 @@ namespace NvgUtils {
 		size_t bufferSize = static_cast<size_t>(outW) * outH * 4;
 		auto composite = std::make_unique<uint8_t[]>(bufferSize);
 		std::fill(composite.get(), composite.get() + bufferSize, 0);
-
-		int pattern_x = (gs.pattern_x >= 3) ? 2 : 0;
 		int pattern_y = 0;
 		int pattern_z = 0;
 		int frame = 0;
@@ -116,7 +124,7 @@ namespace NvgUtils {
 		}
 
 		int w, h;
-		auto composite = CreateCompositeRGBA(*gs, w, h);
+		auto composite = CreateCompositeRGBA(*gs, w, h, it.hasFlag(ItemFlag::Stackable));
 		if (!composite) {
 			return 0;
 		}

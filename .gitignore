@@ -122,3 +122,6 @@ __pycache__/
 *$py.class
 /tools/crystal_data
 /tools/cd2
+
+# Local agent runtime state (goals, loop logs): contains session ids
+/.opencode/

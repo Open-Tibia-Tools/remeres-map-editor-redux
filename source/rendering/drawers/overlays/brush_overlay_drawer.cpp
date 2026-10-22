@@ -470,7 +470,7 @@ void BrushOverlayDrawer::draw(
 						const AtlasRegion* white_pixel = atlas.getWhitePixel();
 						if (white_pixel) {
 							if (x == 0 && y == 0) {
-								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, rme::rendering::INDICATOR_SPAWN_BASE);
+								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, 0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(rme::rendering::TileIndicatorType::Spawn)));
 							} else {
 								uint32_t border_flags = 0u;
 								if (y == footprint.min_offset_y) border_flags |= rme::rendering::ZONE_FLAG_SPAWN_BORDER_N;
@@ -483,12 +483,12 @@ void BrushOverlayDrawer::draw(
 					} else if (brush->is<WaypointBrush>()) {
 						const AtlasRegion* white_pixel = atlas.getWhitePixel();
 						if (white_pixel) {
-							sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, rme::rendering::INDICATOR_WAYPOINT_BASE);
+							sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, 0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(rme::rendering::TileIndicatorType::Waypoint)));
 						}
 					} else if (brush->is<HouseExitBrush>()) {
 						const AtlasRegion* white_pixel = atlas.getWhitePixel();
 						if (white_pixel) {
-							sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, rme::rendering::INDICATOR_HOUSE_ENTRY_BASE);
+							sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.9f, 0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(rme::rendering::TileIndicatorType::HouseEntry)));
 						}
 					} else if (brush->is<FlagBrush>()) {
 						const AtlasRegion* white_pixel = atlas.getWhitePixel();

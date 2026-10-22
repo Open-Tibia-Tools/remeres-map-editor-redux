@@ -70,6 +70,7 @@ void MapPopupMenu::Update() {
 
 	if (anything_selected) {
 		Append(MAP_POPUP_MENU_ADVANCED_REPLACE, "Replace tiles...", "Open Advanced Replace Tool for selected items")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_WAND_MAGIC, wxSize(16, 16)));
+		Append(MAP_POPUP_MENU_ADD_TO_COLLECTION, "Add to tileset...", "Add selected items and brushes to a tileset")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_LAYER_GROUP, wxSize(16, 16)));
 	}
 
 	if (anything_selected) {

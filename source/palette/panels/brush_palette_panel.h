@@ -47,11 +47,14 @@ public:
 	void ClearSort();
 	void SetShowLabels(bool show);
 	void SetTileSize(int sizePx);
+	void SetDisplayMode(TilesetDisplayMode mode);
 	void ApplyTheme();
 
 	// Search and filter operations
 	void ResetFilter();
 	bool JumpToTilesetAndBrush(std::string_view tilesetName, const Brush* brush);
+	bool SelectTileset(std::string_view tilesetName);
+	void ReloadPages();
 
 protected:
 	void ApplyFilter();
@@ -74,6 +77,7 @@ protected:
 	bool m_hasSort;
 	bool m_showLabels;
 	int m_tileSize;
+	bool m_isListMode = false;
 
 	static TilesetSortKey s_defaultSortKey;
 	static TilesetSortDirection s_defaultSortDir;
@@ -81,6 +85,7 @@ protected:
 	static bool s_defaultShowLabels;
 	static int s_defaultTileSize;
 	static bool s_defaultFilterAll;
+	static bool s_defaultIsListMode;
 	static bool s_defaultsLoaded;
 
 	// No size_panel, it was unused

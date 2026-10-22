@@ -35,7 +35,7 @@
 #include <array>
 #include <string_view>
 
-std::unique_ptr<Item> Item::Create(ServerItemId _type, uint16_t _subtype /*= 0xFFFF*/) {
+std::unique_ptr<Item> Item::Create(ServerItemId _type, std::optional<uint16_t> _subtype /*= std::nullopt*/) {
 	if (_type == 0) {
 		return nullptr;
 	}
@@ -54,7 +54,7 @@ std::unique_ptr<Item> Item::Create(ServerItemId _type, uint16_t _subtype /*= 0xF
 			newItem = std::make_unique<Door>(_type);
 		} else if (definition.isPodium()) {
 			newItem = std::make_unique<Podium>(_type);
-		} else if (_subtype == 0xFFFF) {
+		} else if (!_subtype.has_value()) {
 			if (definition.isFluidContainer()) {
 				newItem = std::make_unique<Item>(_type, LIQUID_NONE);
 			} else if (definition.isSplash()) {
@@ -65,10 +65,10 @@ std::unique_ptr<Item> Item::Create(ServerItemId _type, uint16_t _subtype /*= 0xF
 				newItem = std::make_unique<Item>(_type, 1);
 			}
 		} else {
-			newItem = std::make_unique<Item>(_type, _subtype);
+			newItem = std::make_unique<Item>(_type, *_subtype);
 		}
 	} else {
-		newItem = std::make_unique<Item>(_type, _subtype);
+		newItem = std::make_unique<Item>(_type, _subtype.value_or(1));
 	}
 
 	return newItem;

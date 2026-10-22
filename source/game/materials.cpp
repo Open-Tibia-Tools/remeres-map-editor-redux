@@ -37,7 +37,11 @@ Materials g_materials;
 
 namespace {
 	[[nodiscard]] std::string tilesetSourceKey(const FileName& file) {
-		return file.GetFullPath().ToStdString();
+		FileName fn = file;
+		fn.Normalize(wxPATH_NORM_ALL);
+		wxString s = fn.GetFullPath();
+		s.Replace("\\", "/");
+		return s.Lower().ToStdString();
 	}
 }
 
@@ -278,7 +282,7 @@ void Materials::ensureAllRawBrushes() {
 }
 
 
-static CreatureBrush* ensureCreatureBrush(CreatureType* type) {
+CreatureBrush* Materials::ensureCreatureBrush(CreatureType* type) {
 	if (!type) {
 		return nullptr;
 	}
@@ -303,12 +307,18 @@ PaletteBrushRegistrationResult Materials::registerImportedCreature(CreatureType&
 	return database.paletteCatalog().registerImportedCreatureBrush(brush, creature.isNpc);
 }
 
-static void loadTilesetBrushEntry(pugi::xml_node node, DynamicTilesetDefinition& tileset, std::vector<std::string>& warnings) {
+static void loadTilesetBrushEntry(pugi::xml_node node, DynamicTilesetDefinition& tileset, std::vector<std::string>& warnings, Materials& materials) {
 	const auto brushName = node.attribute("name");
 	if (!brushName) {
 		return;
 	}
-	if (Brush* brush = g_brushes.getBrush(brushName.as_string())) {
+	Brush* brush = g_brushes.getBrush(brushName.as_string());
+	if (!brush) {
+		if (CreatureType* type = g_creatures[brushName.as_string()]) {
+			brush = materials.ensureCreatureBrush(type);
+		}
+	}
+	if (brush) {
 		brush->flagAsVisible();
 		if (!tileset.containsBrush(brush)) {
 			tileset.brushes.push_back(brush);
@@ -363,7 +373,7 @@ static void loadTilesetItemEntry(pugi::xml_node node, DynamicTilesetDefinition& 
 	}
 }
 
-static void loadTilesetCreatureEntry(pugi::xml_node node, DynamicTilesetDefinition& tileset, std::vector<std::string>& warnings) {
+static void loadTilesetCreatureEntry(pugi::xml_node node, DynamicTilesetDefinition& tileset, std::vector<std::string>& warnings, Materials& materials) {
 	const auto creatureName = node.attribute("name");
 	if (!creatureName) {
 		return;
@@ -373,7 +383,7 @@ static void loadTilesetCreatureEntry(pugi::xml_node node, DynamicTilesetDefiniti
 		warnings.push_back(std::format("tileset_creature_references: tileset=\"{}\" creature=\"{}\"", tileset.name, creatureName.as_string()));
 		return;
 	}
-	CreatureBrush* brush = ensureCreatureBrush(type);
+	CreatureBrush* brush = materials.ensureCreatureBrush(type);
 	brush->flagAsVisible();
 	if (!tileset.containsBrush(brush)) {
 		tileset.brushes.push_back(brush);
@@ -434,8 +444,7 @@ bool Materials::loadTilesetInclude(const FileName& manifest, pugi::xml_node incl
 	if (const auto folderAttribute = includeNode.attribute("folder")) {
 		FileName folder = MaterialIncludeResolver::resolveRelativeFolder(manifest, folderAttribute.as_string());
 		if (!folder.DirExists()) {
-			error = "Missing tileset include folder: " + folder.GetFullPath();
-			return false;
+			return true;
 		}
 		for (const FileName& file : MaterialIncludeResolver::collectXmlFiles(folder, includeNode.attribute("subfolders").as_bool(false))) {
 			if (!database.isKnownTilesetSource(tilesetSourceKey(file))) {
@@ -488,14 +497,24 @@ bool Materials::loadDynamicTilesetFile(const FileName& filename, DynamicPaletteD
 		targetTileset->name = tilesetName;
 	}
 
+	const bool isCollection = as_lower_str(palette.name) == "collection";
 	for (pugi::xml_node childNode = root.first_child(); childNode; childNode = childNode.next_sibling()) {
 		const std::string childName = as_lower_str(childNode.name());
 		if (childName == "brush") {
-			loadTilesetBrushEntry(childNode, *targetTileset, warnings);
+			loadTilesetBrushEntry(childNode, *targetTileset, warnings, *this);
 		} else if (childName == "item") {
 			loadTilesetItemEntry(childNode, *targetTileset, warnings, *this);
 		} else if (childName == "creature") {
-			loadTilesetCreatureEntry(childNode, *targetTileset, warnings);
+			loadTilesetCreatureEntry(childNode, *targetTileset, warnings, *this);
+		}
+	}
+
+	if (isCollection) {
+		for (Brush* b : targetTileset->brushes) {
+			if (b) {
+				b->flagAsVisible();
+				b->setCollection();
+			}
 		}
 	}
 

@@ -24,6 +24,7 @@
 #include "rendering/core/map_view_math.h"
 #include "ui/replace_tool/replace_tool_window.h"
 #include "ui/dialogs/spawn_validator_window.h"
+#include "ui/dialogs/collection_studio_window.h"
 
 void ReplaceToolWindowDeleter::operator()(ReplaceToolWindow* w) {
 	if (w) {
@@ -32,6 +33,12 @@ void ReplaceToolWindowDeleter::operator()(ReplaceToolWindow* w) {
 }
 
 void SpawnValidatorWindowDeleter::operator()(SpawnValidatorWindow* w) {
+	if (w) {
+		w->Destroy();
+	}
+}
+
+void CollectionStudioWindowDeleter::operator()(CollectionStudioWindow* w) {
 	if (w) {
 		w->Destroy();
 	}
@@ -92,6 +99,7 @@ MapWindow::MapWindow(wxWindow* parent, Editor& editor) :
 MapWindow::~MapWindow() {
 	DetachReplaceItemsDialog();
 	DetachSpawnValidatorDialog();
+	DetachCollectionStudio();
 }
 
 void MapWindow::ShowReplaceItemsDialog(bool selectionOnly) {
@@ -163,6 +171,38 @@ void MapWindow::DetachSpawnValidatorDialog() {
 void MapWindow::ForgetSpawnValidatorDialog() {
 	if (spawnValidatorDialog) {
 		spawnValidatorDialog.release();
+	}
+}
+
+void MapWindow::ShowCollectionStudio(Editor* editorPtr) {
+	if (m_collectionStudioDialog) {
+		m_collectionStudioDialog->AppendFromSelection(editorPtr);
+		m_collectionStudioDialog->Raise();
+		m_collectionStudioDialog->SetFocus();
+		return;
+	}
+
+	m_collectionStudioDialog.reset(new CollectionStudioWindow(this, editorPtr));
+	m_collectionStudioDialog->AppendFromSelection(editorPtr);
+	m_collectionStudioDialog->Show();
+}
+
+void MapWindow::CloseCollectionStudio() {
+	if (m_collectionStudioDialog) {
+		m_collectionStudioDialog->DetachEditor();
+		m_collectionStudioDialog->Close();
+	}
+}
+
+void MapWindow::DetachCollectionStudio() {
+	if (m_collectionStudioDialog) {
+		m_collectionStudioDialog->DetachEditor();
+	}
+}
+
+void MapWindow::ForgetCollectionStudio() {
+	if (m_collectionStudioDialog) {
+		m_collectionStudioDialog.release();
 	}
 }
 

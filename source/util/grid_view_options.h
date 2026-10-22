@@ -15,4 +15,9 @@ enum class TilesetSortDirection {
 	Descending
 };
 
+enum class TilesetDisplayMode {
+	Grid,
+	List
+};
+
 #endif

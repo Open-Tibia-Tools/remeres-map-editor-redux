@@ -166,12 +166,11 @@ inline bool Creature::isNpc() const {
 }
 
 inline const std::string& Creature::getName() const {
-	static const std::string empty_string;
 	CreatureType* type = g_creatures[type_name];
 	if (type) {
 		return type->name;
 	}
-	return type_name.empty() ? empty_string : type_name;
+	return type_name;
 }
 inline CreatureBrush* Creature::getBrush() const {
 	CreatureType* type = g_creatures[type_name];

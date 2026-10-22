@@ -262,13 +262,18 @@ bool MainFrame::DoQuerySave(bool doclose) {
 
 		if (ret == wxID_YES) {
 			if (g_gui.GetCurrentMap().hasFile()) {
-				g_gui.SaveCurrentMap(true);
+				if (!g_gui.SaveCurrentMap(true)) {
+					// The save failed or was cancelled: keep the map open
+					// instead of closing it and losing the changes.
+					return false;
+				}
 			} else {
 				wxFileDialog file(this, "Save...", "", "", "*.otbm", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 				int32_t result = file.ShowModal();
-				if (result == wxID_OK) {
-					g_gui.SaveCurrentMap(file.GetPath(), true);
-				} else {
+				if (result != wxID_OK) {
+					return false;
+				}
+				if (!g_gui.SaveCurrentMap(file.GetPath(), true)) {
 					return false;
 				}
 			}
@@ -336,18 +341,32 @@ void MainFrame::OnExit(wxCloseEvent& event) {
 		}
 	}
 	g_layout.SavePerspective();
-	g_palettes.DestroyPalettes();
-	g_minimap.Destroy();
-	g_search.DestroySearchWindow();
-	LuaDialog::DestroyDockPanelsForShutdown();
 
-	if (g_gui.aui_manager) {
-		g_gui.aui_manager->UnInit();
-		delete g_gui.aui_manager;
-		g_gui.aui_manager = nullptr;
+	// Nothing here can be cancelled or measured, but the editor must not look
+	// dead (nor be dragged around) while it frees the maps, the GL resources and
+	// the version data. The dialog is destroyed inside this scope, before the
+	// frame itself, and each step updates its message.
+	{
+		ScopedInfoBar closing("Closing editor...");
+
+		g_palettes.DestroyPalettes();
+
+		closing.SetText("Closing windows...");
+		g_minimap.Destroy();
+		g_search.DestroySearchWindow();
+		LuaDialog::DestroyDockPanelsForShutdown();
+
+		closing.SetText("Closing docked panels...");
+		if (g_gui.aui_manager) {
+			g_gui.aui_manager->UnInit();
+			delete g_gui.aui_manager;
+			g_gui.aui_manager = nullptr;
+		}
+
+		closing.SetText("Saving settings...");
+		static_cast<Application&>(wxGetApp()).Unload();
 	}
 
-	static_cast<Application&>(wxGetApp()).Unload();
 	Destroy();
 }
 

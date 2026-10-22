@@ -83,15 +83,18 @@ uniform int uBlockingBlendMode;
 )") + std::string(HIGHLIGHT_ITEMS_SHADER_GLSL) + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + std::string(ZONE_SHADER_GLSL) + R"(
 
 void main() {
-    if (evaluateTileIndicator(vQuadCoord, vHouseId,
-                              uShowHouses, uShowSpawns, uShowTowns,
-                              uShowWaypoints, uShowTechItems,
-                              uShowInvalidTiles, uShowInvalidZones,
-                              Tint, FragColor)) {
-        return;
+    uint indicatorType = (vZoneFlags >> 25) & 0xFu;
+    if (indicatorType != 0u) {
+        if (evaluateTileIndicator(vQuadCoord, indicatorType,
+                                  uShowHouses, uShowSpawns, uShowTowns,
+                                  uShowWaypoints, uShowTechItems,
+                                  uShowInvalidTiles, uShowInvalidZones,
+                                  Tint, FragColor)) {
+            return;
+        }
     }
 
-    uint overlayFlags = (vZoneFlags & ~((1u << 23) | (1u << 19)));
+    uint overlayFlags = (vZoneFlags & ~((0xFu << 25) | (1u << 24) | (1u << 23) | (1u << 19)));
     if (overlayFlags != 0u) {
         vec4 highlightColor;
         if (evaluateHighlightItems(vZoneFlags, highlightColor)) {
@@ -121,7 +124,8 @@ void main() {
         discard;
     }
 
-    applyHouseOverlay(FragColor, vWorldPos, vHouseId, uCurrentHouseId, uShowHouses);
+    bool isGround = (vZoneFlags & (1u << 24)) != 0u;
+    applyHouseOverlay(FragColor, vWorldPos, vHouseId, uCurrentHouseId, uShowHouses, isGround);
     bool isBlocking = ((vZoneFlags & (1u << 23)) != 0u);
     applyPathingOverlay(FragColor, isBlocking, uShowBlocking, uExtendedPathingShader, uBlockingWash, uBlockingBlendMode);
 }

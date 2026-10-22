@@ -25,6 +25,8 @@
 #include "ui/managers/welcome_manager.h"
 #include "ui/managers/gl_context_manager.h"
 
+#include <wx/utils.h>
+
 class BaseMap;
 class Map;
 
@@ -101,11 +103,20 @@ public:
 		g_layout.LoadPerspective();
 	}
 
-	void CreateLoadBar(wxString message, bool canCancel = false) {
-		g_loading.CreateLoadBar(message, canCancel);
+	void CreateLoadBar(wxString message, bool canCancel = false, const wxString& title = "Loading") {
+		g_loading.CreateLoadBar(message, canCancel, title);
 	}
 	void SetLoadScale(int32_t from, int32_t to) {
 		g_loading.SetLoadScale(from, to);
+	}
+	void SetLoadText(const wxString& message) {
+		g_loading.SetLoadText(message);
+	}
+	bool PollCancellation() {
+		return g_loading.PollCancellation();
+	}
+	bool WasLoadCancelled() const {
+		return g_loading.WasCancelled();
 	}
 	bool SetLoadDone(int32_t done, const wxString& newMessage = "") {
 		return g_loading.SetLoadDone(done, newMessage);
@@ -269,6 +280,7 @@ public:
 	void SetCurrentMapSecondaryMap(BaseMap* secondary_map);
 	// Refresh the view canvas
 	void RefreshView(bool immediate = false);
+	void ReleaseAllChunkCaches();
 	void SyncCurrentMapCanvasPreviewState();
 	// Fit all/specified current map view to map dimensions
 	void FitViewToMap();
@@ -381,8 +393,6 @@ public:
 	bool hotkeys_enabled;
 
 protected:
-	wxWindowDisabler* winDisabler;
-
 	int disabled_counter;
 
 	std::mutex pending_live_clients_mutex;
@@ -406,8 +416,10 @@ public:
 		release();
 	}
 	void release() {
-		g_gui.EnableRendering();
-		acquired = false;
+		if (acquired) {
+			acquired = false;
+			g_gui.EnableRendering();
+		}
 	}
 };
 
@@ -418,8 +430,8 @@ public:
  */
 class ScopedLoadingBar {
 public:
-	ScopedLoadingBar(wxString message, bool canCancel = false) {
-		g_loading.CreateLoadBar(message, canCancel);
+	ScopedLoadingBar(wxString message, bool canCancel = false, const wxString& title = "Loading") {
+		g_loading.CreateLoadBar(message, canCancel, title);
 	}
 	~ScopedLoadingBar() {
 		g_loading.DestroyLoadBar();
@@ -429,9 +441,44 @@ public:
 		g_loading.SetLoadDone(done, newmessage);
 	}
 
+	void SetLoadText(const wxString& message) {
+		g_loading.SetLoadText(message);
+	}
+
+	bool WasLoadCancelled() const {
+		return g_loading.WasCancelled();
+	}
+
 	void SetLoadScale(int32_t from, int32_t to) {
 		g_loading.SetLoadScale(from, to);
 	}
+
+	ScopedLoadingBar(const ScopedLoadingBar&) = delete;
+	ScopedLoadingBar& operator=(const ScopedLoadingBar&) = delete;
+};
+
+/**
+ * RAII wrapper for the informational, app-modal operation dialog used by
+ * operations without measurable progress, such as closing a map or shutting the
+ * editor down. It is the same kind of dialog as the progress bar (owned by the
+ * editor window, centred on it, app-modal so the editor cannot be used nor
+ * dragged around), only without a gauge.
+ */
+class ScopedInfoBar {
+public:
+	explicit ScopedInfoBar(const wxString& message, const wxString& title = "Closing") {
+		g_loading.CreateInfoBar(message, title);
+	}
+	~ScopedInfoBar() {
+		g_loading.DestroyLoadBar();
+	}
+
+	void SetText(const wxString& message) {
+		g_loading.SetLoadText(message);
+	}
+
+	ScopedInfoBar(const ScopedInfoBar&) = delete;
+	ScopedInfoBar& operator=(const ScopedInfoBar&) = delete;
 };
 
 #define UnnamedRenderingLock() RenderingLock __unnamed_rendering_lock_##__LINE__

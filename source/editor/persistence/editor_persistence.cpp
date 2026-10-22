@@ -39,7 +39,15 @@ void EditorPersistence::loadMap(Editor& editor, const FileName& fn, const MapLoa
 		throw std::runtime_error(std::format("Client version mismatch. Expected protocol {} (OTB major {}) but got protocol {} (OTB major {})", ver.client, ver.items_major, g_version.GetCurrentVersion().getProtocolID(), loaded_major));
 	}
 
-	ScopedLoadingBar loadingBar("Loading OTBM map...");
+	// Report the file being opened and its size up front; the loader then
+	// reports its own stages (decompression, tile blocks, node types).
+	std::error_code size_ec;
+	const auto file_bytes = std::filesystem::file_size(std::filesystem::path(fn.GetFullPath().utf8_string()), size_ec);
+	wxString load_message = wxstr(std::format("Loading {}", nstr(fn.GetFullName())));
+	if (!size_ec) {
+		load_message = wxstr(std::format("Loading {} ({:.1f} MB)", nstr(fn.GetFullName()), static_cast<double>(file_bytes) / (1024.0 * 1024.0)));
+	}
+	ScopedLoadingBar loadingBar(load_message);
 	editor.map.open(std::string(fn.GetFullPath().utf8_str()));
 }
 
@@ -101,54 +109,56 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	std::string backup_zone;
 	std::string backup_waypoint;
 
+	auto createBackup = [](const std::string& sourcePath, const std::string& backupPath) {
+		std::error_code ec;
+		std::filesystem::remove(backupPath, ec);
+		std::filesystem::rename(sourcePath, backupPath, ec);
+		if (ec) {
+			spdlog::warn("EditorPersistence: Failed to create backup '{}' -> '{}': {}", sourcePath, backupPath, ec.message());
+		}
+	};
+
 	if (converter.FileExists()) {
 		backup_otbm = map_path + nstr(converter.GetName()) + ".otbm~";
-		std::remove(backup_otbm.c_str());
-		std::rename(savefile.c_str(), backup_otbm.c_str());
+		createBackup(savefile, backup_otbm);
 	}
 
 	converter.SetFullName(wxstr(editor.map.getHouseFilename()));
 	if (converter.FileExists()) {
 		backup_house = map_path + nstr(converter.GetName()) + ".xml~";
-		std::remove(backup_house.c_str());
-		std::rename((map_path + editor.map.getHouseFilename()).c_str(), backup_house.c_str());
+		createBackup(map_path + editor.map.getHouseFilename(), backup_house);
 	}
 
 	if (editor.map.getVersion().otbm == MAP_OTBM_5) {
 		converter.SetFullName(wxstr(editor.map.getMonsterFilename()));
 		if (converter.FileExists()) {
 			backup_monster = map_path + nstr(converter.GetName()) + ".xml~";
-			std::remove(backup_monster.c_str());
-			std::rename((map_path + editor.map.getMonsterFilename()).c_str(), backup_monster.c_str());
+			createBackup(map_path + editor.map.getMonsterFilename(), backup_monster);
 		}
 
 		converter.SetFullName(wxstr(editor.map.getNpcFilename()));
 		if (converter.FileExists()) {
 			backup_npc = map_path + nstr(converter.GetName()) + ".xml~";
-			std::remove(backup_npc.c_str());
-			std::rename((map_path + editor.map.getNpcFilename()).c_str(), backup_npc.c_str());
+			createBackup(map_path + editor.map.getNpcFilename(), backup_npc);
 		}
 
 		converter.SetFullName(wxstr(editor.map.getZoneFilename()));
 		if (converter.FileExists()) {
 			backup_zone = map_path + nstr(converter.GetName()) + ".xml~";
-			std::remove(backup_zone.c_str());
-			std::rename((map_path + editor.map.getZoneFilename()).c_str(), backup_zone.c_str());
+			createBackup(map_path + editor.map.getZoneFilename(), backup_zone);
 		}
 	} else {
 		converter.SetFullName(wxstr(editor.map.getSpawnFilename()));
 		if (converter.FileExists()) {
 			backup_spawn = map_path + nstr(converter.GetName()) + ".xml~";
-			std::remove(backup_spawn.c_str());
-			std::rename((map_path + editor.map.getSpawnFilename()).c_str(), backup_spawn.c_str());
+			createBackup(map_path + editor.map.getSpawnFilename(), backup_spawn);
 		}
 	}
 
 	converter.SetFullName(wxstr(editor.map.getWaypointFilename()));
 	if (converter.FileExists()) {
 		backup_waypoint = map_path + nstr(converter.GetName()) + ".xml~";
-		std::remove(backup_waypoint.c_str());
-		std::rename((map_path + editor.map.getWaypointFilename()).c_str(), backup_waypoint.c_str());
+		createBackup(map_path + editor.map.getWaypointFilename(), backup_waypoint);
 	}
 
 	// Save the map
@@ -162,20 +172,34 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 		editor.map.name = fn.GetFullName().mb_str(wxConvUTF8);
 
 		if (showdialog) {
-			g_gui.CreateLoadBar("Saving OTBM map...");
+			g_gui.CreateLoadBar("Saving map...", true, "Saving");
 		}
 
 		// Perform the actual save
 		IOMapOTBM mapsaver(editor.map.getVersion());
 		bool success = mapsaver.saveMap(editor.map, fn);
-
-		if (showdialog) {
-			g_gui.DestroyLoadBar();
-		}
+		const bool cancelled = showdialog && g_gui.WasLoadCancelled();
+		bool keep_recovery_info = false;
 
 		// Check for errors...
 		if (!success) {
-			auto restoreBackup = [](const std::string& backupPath, const std::string& targetPath) {
+			if (cancelled) {
+				// Keep the bar up while the partial write is rolled back so the
+				// user sees the cancellation being processed instead of a frozen
+				// window; it is destroyed below, after the rollback.
+				g_gui.SetLoadText("Cancelling...");
+				g_gui.SetStatusText("Saving cancelled.");
+			} else if (showdialog) {
+				// Error path: the bar has to go before the modal error dialog.
+				g_gui.DestroyLoadBar();
+			}
+
+			// Restore the temporary backups. A failed restore leaves the target
+			// partial and the previous data in the "~" backup, so it must be
+			// reported and kept recoverable instead of silently ignored.
+			std::vector<std::string> failed_restores;
+
+			auto restoreBackup = [&failed_restores](const std::string& backupPath, const std::string& targetPath) {
 				if (backupPath.empty()) {
 					if (!targetPath.empty()) {
 						std::error_code ec;
@@ -188,6 +212,7 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 				std::filesystem::rename(backupPath, targetPath, ec);
 				if (ec) {
 					spdlog::error("EditorPersistence: Failed to restore backup '{}' -> '{}': {}", backupPath, targetPath, ec.message());
+					failed_restores.push_back(backupPath);
 				}
 			};
 
@@ -214,12 +239,32 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 				restoreBackup(backup_waypoint, map_path + editor.map.getWaypointFilename());
 			}
 
-			// Display the error
-			DialogUtil::PopupDialog("Error", "Could not save, unable to open target for writing.", wxOK);
+			if (!failed_restores.empty()) {
+				// Keep the crash marker so the next start offers to recover the
+				// previous files, and tell the user where they are right now.
+				keep_recovery_info = true;
+
+				wxString message = "The save could not be rolled back completely. The previous data is kept in:\n\n";
+				for (const std::string& path : failed_restores) {
+					message += wxstr(path) + "\n";
+				}
+				message += "\nRestart the editor to recover those files, or rename them back manually.";
+				DialogUtil::PopupDialog("Save failed", message, wxOK | wxICON_ERROR);
+			} else if (!cancelled) {
+				DialogUtil::PopupDialog("Error", "Could not save, unable to open target for writing.", wxOK);
+			}
 		}
 
-		// Remove temporary save runfile
-		MapBackupService::ClearCrashMarker();
+		if (showdialog) {
+			g_gui.DestroyLoadBar();
+		}
+
+		// Remove the temporary save runfile, unless the rollback could not
+		// restore everything: then it has to survive so the next start can
+		// offer to recover the previous files.
+		if (!keep_recovery_info) {
+			MapBackupService::ClearCrashMarker();
+		}
 
 		// If failure, don't run the rest of the function
 		if (!success) {

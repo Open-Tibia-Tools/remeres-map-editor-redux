@@ -20,6 +20,7 @@
 
 #include "item_definitions/core/item_definition_store.h"
 #include <memory>
+#include <optional>
 #include <string_view>
 #include "io/iomap_otbm.h"
 #include "io/otbm/invalid_otbm_content.h"
@@ -89,7 +90,7 @@ public:
 	inline static const std::string ATTR_TIER = "tier";
 
 	// Factory member to create item of right type based on type
-	static std::unique_ptr<Item> Create(ServerItemId _type, uint16_t _subtype = 0xFFFF);
+	static std::unique_ptr<Item> Create(ServerItemId _type, std::optional<uint16_t> _subtype = std::nullopt);
 	static std::unique_ptr<Item> Create(pugi::xml_node);
 	static std::unique_ptr<Item> Create_OTBM(const IOMap& maphandle, BinaryNode* stream);
 

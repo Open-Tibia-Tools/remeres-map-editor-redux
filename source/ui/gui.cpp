@@ -49,6 +49,7 @@
 #include "palette/house/house_palette.h"
 #include "palette/palette_zones.h"
 #include "rendering/ui/map_display.h"
+#include "rendering/map_drawer.h"
 #include "app/application.h"
 #include "ui/welcome_dialog.h"
 #include "ui/tool_options_window.h"
@@ -328,6 +329,21 @@ void GUI::SetCurrentZoom(double zoom) {
 }
 
 // Search Results moved to SearchManager
+
+void GUI::ReleaseAllChunkCaches() {
+	if (!tabbook) {
+		return;
+	}
+	for (int index = 0; index < tabbook->GetTabCount(); ++index) {
+		if (auto* tab = dynamic_cast<MapTab*>(tabbook->GetTab(index))) {
+			if (auto* canvas = tab->GetCanvas()) {
+				if (canvas->drawer) {
+					canvas->drawer->getChunkCacheManager().invalidateAll();
+				}
+			}
+		}
+	}
+}
 
 void GUI::FitViewToMap() {
 	for (int index = 0; index < tabbook->GetTabCount(); ++index) {

@@ -57,8 +57,22 @@ void LayoutManager::LoadPerspective() {
 			palette_list.push_back(tmp);
 		}
 
-		for (const std::string& name : palette_list) {
-			PaletteWindow* palette = g_gui.CreatePalette();
+		// Restoring the perspective runs twice on a normal start (application
+		// init and, later, when the client version is loaded), so the palettes
+		// already registered for these saved panes are reused instead of
+		// creating a second palette with the same pane name.
+		for (size_t index = 0; index < palette_list.size(); ++index) {
+			const std::string& name = palette_list[index];
+
+			PaletteWindow* palette = nullptr;
+			if (index < g_palettes.palettes.size()) {
+				palette = *std::next(g_palettes.palettes.begin(), static_cast<std::ptrdiff_t>(index));
+			} else {
+				palette = g_gui.CreatePalette();
+			}
+			if (!palette) {
+				continue;
+			}
 
 			wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(palette);
 			g_gui.aui_manager->LoadPaneInfo(wxstr(name), info);

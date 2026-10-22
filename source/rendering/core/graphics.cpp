@@ -68,12 +68,9 @@ void GraphicManager::clear() {
 	SpritePreloader::get().clear();
 	sprite_space.clear();
 	image_space.clear();
-	resident_images.clear();
-	resident_game_sprites.clear();
 
 	item_count = 0;
 	creature_count = 0;
-	collector.Clear();
 	spritefile = "";
 	sprite_archive_.reset();
 
@@ -158,9 +155,6 @@ uint16_t GraphicManager::getCreatureSpriteMaxID() const {
 	return creature_count;
 }
 
-void GraphicManager::garbageCollection() {
-	collector.GarbageCollect(resident_game_sprites, resident_images, cached_time_);
-}
 
 void NVGDeleter::operator()(NVGcontext* nvg) const {
 	if (nvg) {

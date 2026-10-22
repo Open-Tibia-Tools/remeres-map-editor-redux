@@ -7,9 +7,9 @@
 
 #include "game/outfit.h"
 #include "util/common.h"
-#include "rendering/core/animator.h"
+#include "rendering/core/sprite_animation.h"
+#include <optional>
 #include "rendering/core/sprite_light.h"
-#include "rendering/core/texture_garbage_collector.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/core/render_timer.h"
 #include "rendering/core/normal_image.h"
@@ -82,7 +82,6 @@ public:
 
 	ImageDimensions GetSize() const override;
 
-	void clean(time_t time, int longevity = -1);
 
 	int getDrawHeight() const;
 	[[nodiscard]] const std::pair<int, int>& getDrawOffset() const {
@@ -104,7 +103,16 @@ public:
 	}
 
 	[[nodiscard]] bool isAnimated() const noexcept {
-		return frames > 1 && animator != nullptr;
+		return frames > 1 && animation_data.has_value();
+	}
+	[[nodiscard]] uint16_t getFrameStepMs() const noexcept {
+		return animation_data ? animation_data->shortest_step_ms : 0;
+	}
+	[[nodiscard]] int getAnimationFrame(int64_t elapsed_ms, int tile_x = 0, int tile_y = 0, int tile_z = 0) const noexcept {
+		if (!animation_data) {
+			return 0;
+		}
+		return rme::rendering::SpriteAnimation::getFrame(*animation_data, elapsed_ms, tile_x, tile_y, tile_z);
 	}
 	[[nodiscard]] bool hasElevation() const noexcept {
 		return draw_height > 0;
@@ -115,8 +123,6 @@ public:
 
 	static void ColorizeTemplatePixels(uint8_t* dest, const uint8_t* mask, size_t pixelCount, int lookHead, int lookBody, int lookLegs, int lookFeet, bool destHasAlpha);
 
-	// Exposed for NormalImage::clean to invalidate cache
-	void invalidateCache(const AtlasRegion* region);
 
 private:
 	using PlainLayoutCacheKey = ::PlainLayoutCacheKey;
@@ -157,7 +163,7 @@ public:
 	uint32_t getDebugImageId(size_t index = 0) const;
 	ImageDimensions getCompositePixelSize() const;
 
-	std::unique_ptr<Animator> animator;
+	std::optional<rme::rendering::SpriteAnimationData> animation_data;
 
 	uint16_t draw_height;
 	uint16_t drawoffset_x;
@@ -171,12 +177,10 @@ public:
 	std::vector<uint32_t> sprite_ids;
 	std::vector<NormalImage*> spriteList;
 	std::vector<std::unique_ptr<TemplateImage>> instanced_templates; // Templates that use this sprite
-	bool is_resident = false; // Tracks if this GameSprite is in resident_game_sprites
 
 	friend class GraphicManager;
 	friend class GraphicsAssembler;
 	friend class SpriteIconService;
-	friend class TextureGarbageCollector;
 	friend class TooltipDrawer;
 	friend class SpritePreloader;
 

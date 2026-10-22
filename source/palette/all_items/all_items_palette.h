@@ -64,6 +64,7 @@ protected:
 	bool has_sort = true;
 	bool show_labels = false;
 	int tile_size = 32;
+	bool is_list_mode = false;
 	bool loaded = false;
 };
 

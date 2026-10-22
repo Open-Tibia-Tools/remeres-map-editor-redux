@@ -102,6 +102,32 @@ void PaletteManager::SelectPalettePage(std::string_view name) {
 	g_brush_manager.SelectBrushInternal(p->GetSelectedBrush());
 }
 
+void PaletteManager::ReloadDynamicPalettes() {
+	for (auto* p : palettes) {
+		if (p) {
+			p->ReloadDynamicPages();
+		}
+	}
+	g_gui.aui_manager->Update();
+}
+
+bool PaletteManager::SelectTilesetInPalette(std::string_view paletteName, std::string_view tilesetName) {
+	if (palettes.empty()) {
+		CreatePalette();
+	}
+	PaletteWindow* p = GetPalette();
+	if (!p) {
+		return false;
+	}
+
+	ShowPalette();
+	p->SelectPage(paletteName);
+	bool success = p->SelectTilesetInCurrentPalette(tilesetName);
+	g_gui.aui_manager->Update();
+	g_brush_manager.SelectBrushInternal(p->GetSelectedBrush());
+	return success;
+}
+
 void PaletteManager::DestroyPalettes() {
 	spdlog::info("PaletteManager::DestroyPalettes called - destroying {} palettes", palettes.size());
 	spdlog::default_logger()->flush();
@@ -129,7 +155,16 @@ PaletteWindow* PaletteManager::CreatePalette() {
 	}
 
 	auto* palette = newd PaletteWindow(g_gui.root, g_materials.paletteCatalog());
-	wxString name = wxstr(std::format("Palette_{}", ++palette_creation_counter));
+
+	// The counter alone is not enough: a restored perspective can already own a
+	// pane with the generated name (LoadPaneInfo renames panes to the saved
+	// name), and wxAuiManager asserts on duplicate pane names, which then
+	// blocks the editor. Pick the first free name.
+	wxString name;
+	do {
+		name = wxstr(std::format("Palette_{}", ++palette_creation_counter));
+	} while (g_gui.aui_manager->GetPane(name).IsOk());
+
 	g_gui.aui_manager->AddPane(palette, wxAuiPaneInfo().Name(name).Caption("Palette").TopDockable(true).BottomDockable(true));
 	g_gui.aui_manager->Update();
 

@@ -130,7 +130,7 @@
 			<item name="Compensate Selection" action="SELECT_MODE_COMPENSATE" help="Compensate for floor difference when selecting."/>
 			<separator/>
 			<item name="Current Floor" action="SELECT_MODE_CURRENT" help="Select only current floor."/>
-			<item name="All Floors" action="SELECT_MODE_LOWER" help="Select all floors."/>
+			<item name="Floors Below" action="SELECT_MODE_LOWER" help="Select current floor and all floors below."/>
 			<item name="Visible Floors" action="SELECT_MODE_VISIBLE" help="Select only visible floors."/>
 		</menu>
 		<separator/>

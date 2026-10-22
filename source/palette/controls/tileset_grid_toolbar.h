@@ -32,6 +32,8 @@ public:
 		std::function<void(bool)> show_labels;
 		/** Icon render size in pixels (32, 64, 128). */
 		std::function<void(int)> icon_size;
+		/** List view mode toggle. */
+		std::function<void(bool)> list_mode;
 		/** Live text typed in the search box. */
 		std::function<void(const std::string&)> filter;
 		/** Search committed (Enter or the search button). */
@@ -69,7 +71,7 @@ public:
 	TilesetGridToolbar(wxWindow* parent, Actions actions, unsigned parts = Part_Standard);
 
 	/** Reflects the current state without invoking the callbacks. */
-	void SetState(bool show_labels, int icon_size, bool has_sort, TilesetSortKey sort_key, TilesetSortDirection sort_dir, bool filter_all);
+	void SetState(bool show_labels, int icon_size, bool has_sort, TilesetSortKey sort_key, TilesetSortDirection sort_dir, bool filter_all, bool is_list_mode = false);
 	void SetFilterQuery(const std::string& query);
 	std::string GetFilterQuery() const;
 
@@ -82,6 +84,10 @@ public:
 	bool GetFilterAll() const {
 		return m_filterAll;
 	}
+	bool IsListMode() const {
+		return m_isListMode;
+	}
+	void SetListMode(bool listMode);
 
 	void ApplyTheme();
 	void FocusSearch();
@@ -118,6 +124,7 @@ private:
 	TilesetSortKey m_sortKey = TilesetSortKey::Name;
 	TilesetSortDirection m_sortDir = TilesetSortDirection::Ascending;
 	bool m_filterAll = false;
+	bool m_isListMode = false;
 };
 
 #endif

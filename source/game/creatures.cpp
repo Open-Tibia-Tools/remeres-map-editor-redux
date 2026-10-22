@@ -322,11 +322,26 @@ CreatureDatabase::~CreatureDatabase() {
 	clear();
 }
 
-void CreatureDatabase::clear() {
-	for (auto& [_, creature] : creature_map) {
-		delete creature;
+void CreatureDatabase::clear(bool standard_only) {
+	if (!standard_only) {
+		for (auto& [_, creature] : creature_map) {
+			delete creature;
+		}
+		creature_map.clear();
+		return;
 	}
-	creature_map.clear();
+
+	for (auto it = creature_map.begin(); it != creature_map.end(); ) {
+		if (it->second && it->second->standard) {
+			delete it->second;
+			it = creature_map.erase(it);
+		} else {
+			if (it->second) {
+				it->second->brush = nullptr;
+			}
+			++it;
+		}
+	}
 }
 
 CreatureType* CreatureDatabase::operator[](const std::string& name) {
@@ -399,9 +414,15 @@ bool CreatureDatabase::loadFromXML(const FileName& filename, bool standard, wxSt
 		CreatureType* creatureType = CreatureType::loadFromXML(creatureNode, warnings, defaultKind);
 		if (creatureType) {
 			creatureType->standard = standard;
-			if ((*this)[creatureType->name]) {
-				warnings.push_back(std::format("Duplicate creature type name \"{}\"! Discarding...", creatureType->name));
-				delete creatureType;
+			CreatureType* existing = (*this)[creatureType->name];
+			if (existing) {
+				if (existing->missing || (!existing->standard && standard)) {
+					delete existing;
+					creature_map[as_lower_str(creatureType->name)] = creatureType;
+				} else {
+					warnings.push_back(std::format("Duplicate creature type name \"{}\"! Discarding...", creatureType->name));
+					delete creatureType;
+				}
 			} else {
 				creature_map[as_lower_str(creatureType->name)] = creatureType;
 			}

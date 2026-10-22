@@ -17,13 +17,30 @@ BrushPanel::BrushPanel(wxWindow* parent) :
 	tileset(nullptr),
 	brushbox(nullptr),
 	loaded(false),
-	list_type(BRUSHLIST_LISTBOX) {
+	list_type(BRUSHLIST_ICONS_32) {
 	sizer = newd wxBoxSizer(wxVERTICAL);
 	SetSizerAndFit(sizer);
 }
 
 BrushPanel::~BrushPanel() {
 	////
+}
+
+void BrushPanel::SetDisplayMode(TilesetDisplayMode mode) {
+	if (mode == TilesetDisplayMode::List) {
+		list_type = BRUSHLIST_LISTBOX;
+	} else {
+		if (tile_size_px == 64) {
+			list_type = BRUSHLIST_ICONS_64;
+		} else if (tile_size_px == 128) {
+			list_type = BRUSHLIST_ICONS_128;
+		} else {
+			list_type = BRUSHLIST_ICONS_32;
+		}
+	}
+	if (brushbox) {
+		brushbox->SetDisplayMode(mode);
+	}
 }
 
 void BrushPanel::AssignTileset(const DynamicTilesetDefinition* _tileset) {

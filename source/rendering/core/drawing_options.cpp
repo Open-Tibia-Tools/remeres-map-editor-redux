@@ -1,6 +1,7 @@
 #include "app/definitions.h"
 #include "brushes/managers/brush_manager.h"
 #include "rendering/core/drawing_options.h"
+#include "rendering/core/graphics.h"
 #include "rendering/core/light_defaults.h"
 
 
@@ -288,6 +289,13 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	show_as_minimap = new_show_as_minimap;
 	show_only_colors = new_show_only_colors;
 	show_only_modified = new_show_only_modified;
+	if (new_show_preview != show_preview) {
+		if (new_show_preview) {
+			g_graphics.resumeAnimation();
+		} else {
+			g_graphics.pauseAnimation();
+		}
+	}
 	show_preview = new_show_preview;
 	show_hooks = new_show_hooks;
 	hide_items_when_zoomed = new_hide_items_when_zoomed;

@@ -53,6 +53,10 @@
 #include <wx/snglinst.h>
 #include <wx/stdpaths.h>
 #include <spdlog/spdlog.h>
+#ifdef __WINDOWS__
+#include <timeapi.h>
+#pragma comment(lib, "winmm.lib")
+#endif
 #include <chrono>
 #include <thread>
 
@@ -68,6 +72,9 @@ Application::~Application() {
 }
 
 bool Application::OnInit() {
+#ifdef __WINDOWS__
+	timeBeginPeriod(1);
+#endif
 #if defined __DEBUG_MODE__ && defined __WINDOWS__
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
@@ -390,7 +397,7 @@ void Application::Unload() {
 #endif
 
 	g_gui.CloseAllEditors();
-	g_version.UnloadVersion();
+	g_version.UnloadVersion(true);
 	g_hotkeys.SaveHotkeys();
 	g_gui.root->SaveRecentFiles();
 	ClientVersion::saveVersions();
@@ -405,6 +412,9 @@ void Application::Unload() {
 }
 
 int Application::OnExit() {
+#ifdef __WINDOWS__
+	timeEndPeriod(1);
+#endif
 	// Shutdown Lua scripting system
 	g_luaScripts.shutdown();
 

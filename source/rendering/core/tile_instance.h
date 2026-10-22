@@ -10,6 +10,13 @@
 inline constexpr float TILE_INSTANCE_FLAG_TEXTURE     = 0.0f;
 inline constexpr float TILE_INSTANCE_FLAG_SOLID_COLOR = 1.0f;
 inline constexpr float TILE_INSTANCE_FLAG_BLOCKING    = 2.0f;
+inline constexpr float TILE_INSTANCE_FLAG_IS_GROUND   = 4.0f;
+inline constexpr float MakeTileIndicatorFlag(uint8_t indicator_type) {
+	return static_cast<float>(static_cast<uint32_t>(indicator_type) << 4);
+}
+inline constexpr uint8_t GetTileIndicatorType(float flags) {
+	return static_cast<uint8_t>((static_cast<uint32_t>(flags + 0.5f) >> 4) & 0x0Fu);
+}
 
 /**
  * TileInstance represents a single sprite instance in a chunk buffer.

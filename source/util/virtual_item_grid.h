@@ -33,8 +33,8 @@ public:
 	int GetIconSize() const {
 		return m_iconSize;
 	}
-	void SetSort(TilesetSortKey key, TilesetSortDirection dir);
-	void ClearSort();
+	virtual void SetSort(TilesetSortKey key, TilesetSortDirection dir);
+	virtual void ClearSort();
 	bool HasSort() const {
 		return m_hasSort;
 	}

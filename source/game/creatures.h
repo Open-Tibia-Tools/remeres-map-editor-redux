@@ -42,7 +42,7 @@ public:
 	CreatureDatabase();
 	~CreatureDatabase();
 
-	void clear();
+	void clear(bool standard_only = false);
 
 	CreatureType* operator[](const std::string& name);
 	CreatureType* addMissingCreatureType(const std::string& name, bool isNpc);

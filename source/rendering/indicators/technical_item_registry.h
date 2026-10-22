@@ -38,18 +38,6 @@ enum class TileIndicatorType : uint8_t {
 	House = 16               // "HOUSE" - House Tile (Amber)
 };
 
-// Base float IDs encoded in vertex attribute `house_id` / `marker_id`
-inline constexpr float INDICATOR_HOUSE_ENTRY_BASE     = 1000000.0f;
-inline constexpr float INDICATOR_SPAWN_BASE           = 2000000.0f;
-inline constexpr float INDICATOR_TOWN_BASE            = 3000000.0f;
-inline constexpr float INDICATOR_WAYPOINT_BASE        = 4000000.0f;
-inline constexpr float INDICATOR_TECH_STAIR_BASE      = 5000000.0f;
-inline constexpr float INDICATOR_TECH_WALK_BASE       = 6000000.0f;
-inline constexpr float INDICATOR_TECH_BLOCK_BASE      = 7000000.0f;
-inline constexpr float INDICATOR_TECH_LIGHT_BASE      = 8000000.0f;
-inline constexpr float INDICATOR_INVALID_GROUND_BASE  = 9000000.0f;
-inline constexpr float INDICATOR_INVALID_ITEM_BASE    = 10000000.0f;
-inline constexpr float INDICATOR_INVALID_ZONE_BASE    = 11000000.0f;
 
 /**
  * @brief Separate Server and Client ID filters for technical items.
@@ -97,21 +85,8 @@ public:
 		return Classify(server_id, client_id) == TileIndicatorType::TechInvisibleWall;
 	}
 
-	[[nodiscard]] static constexpr float GetMarkerId(TileIndicatorType type) noexcept {
-		switch (type) {
-			case TileIndicatorType::HouseEntry:            return INDICATOR_HOUSE_ENTRY_BASE;
-			case TileIndicatorType::Spawn:                 return INDICATOR_SPAWN_BASE;
-			case TileIndicatorType::TownTemple:            return INDICATOR_TOWN_BASE;
-			case TileIndicatorType::Waypoint:              return INDICATOR_WAYPOINT_BASE;
-			case TileIndicatorType::TechInvisibleStair:    return INDICATOR_TECH_STAIR_BASE;
-			case TileIndicatorType::TechInvisibleWalkable: return INDICATOR_TECH_WALK_BASE;
-			case TileIndicatorType::TechInvisibleWall:     return INDICATOR_TECH_BLOCK_BASE;
-			case TileIndicatorType::TechPrimalLight:       return INDICATOR_TECH_LIGHT_BASE;
-			case TileIndicatorType::InvalidGround:         return INDICATOR_INVALID_GROUND_BASE;
-			case TileIndicatorType::InvalidItem:           return INDICATOR_INVALID_ITEM_BASE;
-			case TileIndicatorType::InvalidZone:           return INDICATOR_INVALID_ZONE_BASE;
-			default: return 0.0f;
-		}
+	[[nodiscard]] static constexpr uint8_t GetIndicatorId(TileIndicatorType type) noexcept {
+		return static_cast<uint8_t>(type);
 	}
 
 	/**

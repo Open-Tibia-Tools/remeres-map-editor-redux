@@ -39,25 +39,6 @@ void NormalImage::fulfillPreload(std::unique_ptr<uint8_t[]> data) {
 	is_preloading = false;
 }
 
-void NormalImage::clean(time_t time, int longevity) {
-	if (longevity <= 0) {
-		return;
-	}
-	if (isGLLoaded && time - static_cast<time_t>(lastaccess.load(std::memory_order_relaxed)) > longevity) {
-		if (g_graphics.hasAtlasManager()) {
-			g_graphics.getAtlasManager()->removeSprite(id);
-		}
-
-		isGLLoaded = false;
-		atlas_region = nullptr;
-		is_preloading = false;
-
-		// Invalidate any pending preloads for this sprite ID
-		generation_id++;
-
-		g_graphics.collector.NotifyTextureUnloaded();
-	}
-}
 std::unique_ptr<uint8_t[]> NormalImage::getRGBData() {
 	if (id == 0) {
 		const auto dimensions = getDimensions();
@@ -118,7 +99,6 @@ const AtlasRegion* NormalImage::getAtlasRegion(bool allow_upload) {
 			isGLLoaded = false;
 			atlas_region = nullptr;
 		} else {
-			visit();
 			return atlas_region;
 		}
 	}
@@ -131,6 +111,5 @@ const AtlasRegion* NormalImage::getAtlasRegion(bool allow_upload) {
 		}
 		atlas_region = EnsureAtlasSprite(id);
 	}
-	visit();
 	return atlas_region;
 }

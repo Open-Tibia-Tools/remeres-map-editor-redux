@@ -380,29 +380,7 @@ void RuleBuilderRenderer::DrawGhostSlot(NVGcontext* vg, const wxRect& rect, bool
 }
 
 void RuleBuilderRenderer::DrawRemoveBadge(NVGcontext* vg, const wxRect& rect, bool hovered) {
-	const float size = static_cast<float>(LayoutMetrics::kBadgeSize);
-	const float x = static_cast<float>(rect.GetRight()) - size - 3.0f;
-	const float y = static_cast<float>(rect.y) + 3.0f;
-
-	nvgBeginPath(vg);
-	nvgRoundedRect(vg, x, y, size, size, 3.0f);
-	nvgFillColor(vg, hovered ? rme::ui::grid::NvgColor(Theme::Role::Error) : rme::ui::grid::NvgColor(Theme::Role::RaisedSurface));
-	nvgFill(vg);
-	nvgStrokeColor(vg, hovered ? rme::ui::grid::NvgColor(Theme::Role::Error) : rme::ui::grid::NvgColor(Theme::Role::Border, 200));
-	nvgStrokeWidth(vg, 1.0f);
-	nvgStroke(vg);
-
-	const float arm = size * 0.24f;
-	const float cx = x + size / 2.0f;
-	const float cy = y + size / 2.0f;
-	nvgBeginPath(vg);
-	nvgMoveTo(vg, cx - arm, cy - arm);
-	nvgLineTo(vg, cx + arm, cy + arm);
-	nvgMoveTo(vg, cx + arm, cy - arm);
-	nvgLineTo(vg, cx - arm, cy + arm);
-	nvgStrokeColor(vg, hovered ? rme::ui::grid::NvgColor(Theme::Role::TextOnAccent) : rme::ui::grid::NvgColor(Theme::Role::Text, 220));
-	nvgStrokeWidth(vg, 2.0f);
-	nvgStroke(vg);
+	rme::ui::grid::DrawRemoveBadge(vg, rect, hovered);
 }
 
 void RuleBuilderRenderer::DrawRowDelete(NVGcontext* vg, const wxRect& rect, bool hovered) {

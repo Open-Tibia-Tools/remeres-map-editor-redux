@@ -9,7 +9,7 @@
 #include "rendering/core/sprite_batch.h"
 #include "rendering/core/game_sprite.h"
 #include "rendering/core/graphics.h"
-#include "rendering/core/animator.h"
+#include "rendering/core/sprite_animation.h"
 #include "rendering/core/light_buffer.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/render_frame_context.h"
@@ -130,12 +130,14 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 			registerCreatureSpriteLight(*options.light_buffer, *options.view, *spr, screenx, screeny, spr->getLight(), false);
 		}
 
-		// Resolve animation frame for walk animation
-		// For in-game preview: animationPhase controls walk animation
-		// - When > 0: walking (use the provided animation phase)
-		// - When == 0: standing idle (ALWAYS use frame 0, NOT the global animator)
-		// The global animator is for idle creatures on the map, NOT for the player
-		int resolvedFrame = options.animationPhase > 0 ? options.animationPhase : 0;
+		// Resolve animation frame for creature
+		const long elapsed_time = options.ctx ? options.ctx->elapsed_time : 0;
+		int resolvedFrame = 0;
+		if (options.animationPhase > 0) {
+			resolvedFrame = options.animationPhase % std::max<int>(1, spr->frames);
+		} else if (spr->isAnimated() && !options.preview_local_player) {
+			resolvedFrame = spr->getAnimationFrame(elapsed_time);
+		}
 
 		// mount and addon drawing thanks to otc code
 		// mount colors by Zbizu
@@ -156,8 +158,15 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 				GameSprite::SpriteLayoutMetrics mount_metrics {};
 				bool has_mount_metrics = false;
 
+				int mount_frame = 0;
+				if (options.animationPhase > 0) {
+					mount_frame = options.animationPhase % std::max<int>(1, mountSpr->frames);
+				} else if (mountSpr->isAnimated()) {
+					mount_frame = mountSpr->getAnimationFrame(elapsed_time);
+				}
+
 				if (options.light_buffer && options.view && mountSpr->hasLight()) {
-					mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, resolvedFrame);
+					mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, mount_frame);
 					has_mount_metrics = true;
 					registerCreatureSpriteLight(*options.light_buffer, *options.view, screenx, screeny, mount_draw_offset, mount_metrics, mountSpr->getLight(), false);
 				}
@@ -165,7 +174,7 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 				const int mount_base_x = screenx - mount_draw_offset.first;
 				const int mount_base_y = screeny - mount_draw_offset.second;
 				if (is_simple_mount) {
-					const AtlasRegion* region = mountSpr->getAtlasRegion(0, 0, static_cast<int>(dir), 0, 0, mountOutfit, resolvedFrame);
+					const AtlasRegion* region = mountSpr->getAtlasRegion(0, 0, static_cast<int>(dir), 0, 0, mountOutfit, mount_frame);
 					if (region) {
 						sprite_drawer->glBlitAtlasQuad(
 							sprite_batch,
@@ -177,13 +186,13 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 					}
 				} else {
 					if (!has_mount_metrics) {
-						mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, resolvedFrame);
+						mount_metrics = mountSpr->getOutfitLayoutMetrics(static_cast<int>(dir), 0, 0, mount_frame);
 					}
 					int mount_x_offset = 0;
 					for (int cx = 0; cx < mount_metrics.num_columns; ++cx) {
 						int mount_y_offset = 0;
 						for (int cy = 0; cy < mount_metrics.num_rows; ++cy) {
-							const AtlasRegion* region = mountSpr->getAtlasRegion(cx, cy, static_cast<int>(dir), 0, 0, mountOutfit, resolvedFrame);
+							const AtlasRegion* region = mountSpr->getAtlasRegion(cx, cy, static_cast<int>(dir), 0, 0, mountOutfit, mount_frame);
 							if (region) {
 								sprite_drawer->glBlitAtlasQuad(
 									sprite_batch,
@@ -199,7 +208,7 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 					}
 				}
 
-				pattern_z = std::clamp(spr->pattern_z - 1, 0, 1);
+				pattern_z = (spr->pattern_z > 1) ? 1 : 0;
 			}
 		}
 

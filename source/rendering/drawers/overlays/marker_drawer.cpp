@@ -1,6 +1,7 @@
 #include "rendering/drawers/overlays/marker_drawer.h"
 #include "rendering/core/sprite_batch.h"
 #include "rendering/indicators/technical_item_registry.h"
+#include "rendering/indicators/zone_flags.h"
 #include "map/tile.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/core/render_frame_context.h"
@@ -20,18 +21,18 @@ void MarkerDrawer::draw(SpriteBatch& sprite_batch, int draw_x, int draw_y, const
 	// House entry ("ENTRY")
 	if (options.show_houses && tile->isHouseExit()) {
 		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
-			rme::rendering::INDICATOR_HOUSE_ENTRY_BASE, 0u, depth);
+			0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(rme::rendering::TileIndicatorType::HouseEntry)), depth);
 	}
 
 	// Town temple ("TOWN")
 	if (options.show_towns && tile->isTownExit()) {
 		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
-			rme::rendering::INDICATOR_TOWN_BASE, 0u, depth);
+			0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(rme::rendering::TileIndicatorType::TownTemple)), depth);
 	}
 
 	// Waypoint ("WAYPT")
 	if (!options.ingame && options.show_waypoints && waypoint) {
 		sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f,
-			rme::rendering::INDICATOR_WAYPOINT_BASE, 0u, depth);
+			0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(rme::rendering::TileIndicatorType::Waypoint)), depth);
 	}
 }

@@ -88,22 +88,26 @@ void VirtualItemGrid::ApplySortTo(std::vector<uint16_t>& items) const {
 		return;
 	}
 
-	// Name ordering: resolve the names once instead of on every comparison.
-	std::vector<std::pair<std::string, uint16_t>> keyed;
+	// Name ordering: resolve the lowercase names once instead of on every comparison.
+	struct KeyedItem {
+		std::string lowerName;
+		uint16_t id = 0;
+	};
+	std::vector<KeyedItem> keyed;
 	keyed.reserve(items.size());
 	for (uint16_t id : items) {
-		keyed.emplace_back(GetSortName(id), id);
+		keyed.push_back({ as_lower_str(GetSortName(id)), id });
 	}
 
 	std::ranges::sort(keyed, [ascending](const auto& lhs, const auto& rhs) {
-		if (lhs.first != rhs.first) {
-			return ascending ? lhs.first < rhs.first : lhs.first > rhs.first;
+		if (lhs.lowerName != rhs.lowerName) {
+			return ascending ? lhs.lowerName < rhs.lowerName : lhs.lowerName > rhs.lowerName;
 		}
-		return lhs.second < rhs.second;
+		return ascending ? lhs.id < rhs.id : lhs.id > rhs.id;
 	});
 
 	std::ranges::transform(keyed, items.begin(), [](const auto& entry) {
-		return entry.second;
+		return entry.id;
 	});
 }
 

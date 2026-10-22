@@ -367,7 +367,7 @@ namespace {
 		if (sprite && sprite->hasLight()) {
 			mask |= advancedFinderBit(AdvancedFinderVisualFilter::HasLight);
 		}
-		if (sprite && (sprite->animator != nullptr || sprite->frames > 1)) {
+		if (sprite && (sprite->isAnimated() || sprite->frames > 1)) {
 			mask |= advancedFinderBit(AdvancedFinderVisualFilter::Animation);
 		}
 		if (definition.attribute(ItemAttributeKey::AlwaysOnTopOrder) > 0) {

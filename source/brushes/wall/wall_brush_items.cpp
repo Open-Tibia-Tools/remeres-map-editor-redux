@@ -20,7 +20,7 @@ void WallBrushItems::addWallItem(int alignment, uint16_t id, int chance) {
 }
 
 void WallBrushItems::addDoorItem(int alignment, uint16_t id, ::DoorType type, bool locked) {
-	if (alignment < 0 || alignment >= 17) {
+	if (alignment < 0 || alignment >= WALL_ALIGNMENT_COUNT) {
 		return;
 	}
 
@@ -29,6 +29,7 @@ void WallBrushItems::addDoorItem(int alignment, uint16_t id, ::DoorType type, bo
 	item.id = id;
 	item.locked = locked;
 	door_items[alignment].push_back(item);
+	door_type_map.try_emplace(id, type);
 }
 
 uint16_t WallBrushItems::getRandomWallId(int alignment) const {
@@ -68,10 +69,12 @@ bool WallBrushItems::hasWall(uint16_t id, int alignment) const {
 }
 
 bool WallBrushItems::hasDoor(uint16_t id, int alignment) const {
-	if (alignment < 0 || alignment >= 17) {
+	if (alignment < 0 || alignment >= WALL_ALIGNMENT_COUNT) {
 		return false;
 	}
-
+	if (!door_type_map.contains(id)) {
+		return false;
+	}
 	const auto& doors = door_items[alignment];
 	for (const auto& door : doors) {
 		if (door.id == id) {
@@ -82,12 +85,6 @@ bool WallBrushItems::hasDoor(uint16_t id, int alignment) const {
 }
 
 ::DoorType WallBrushItems::getDoorTypeFromID(uint16_t id) const {
-	for (const auto& doors : door_items) {
-		for (const auto& door : doors) {
-			if (door.id == id) {
-				return door.type;
-			}
-		}
-	}
-	return WALL_UNDEFINED;
+	const auto it = door_type_map.find(id);
+	return (it != door_type_map.end()) ? it->second : WALL_UNDEFINED;
 }

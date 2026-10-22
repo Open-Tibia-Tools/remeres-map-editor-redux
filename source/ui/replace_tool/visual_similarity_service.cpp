@@ -193,7 +193,7 @@ VisualSimilarityService::VisualItemData VisualSimilarityService::CalculateData(u
 	}
 
 	int w, h;
-	auto composite = NvgUtils::CreateCompositeRGBA(*gs, w, h);
+	auto composite = NvgUtils::CreateCompositeRGBA(*gs, w, h, it.hasFlag(ItemFlag::Stackable));
 	if (!composite) {
 		return data;
 	}

@@ -23,6 +23,7 @@
 
 class CreatureType;
 class RAWBrush;
+class CreatureBrush;
 
 class Materials {
 public:
@@ -36,6 +37,7 @@ public:
 
 	RAWBrush* ensureRawBrush(ServerItemId item_id);
 	void ensureAllRawBrushes();
+	CreatureBrush* ensureCreatureBrush(CreatureType* type);
 
 	[[nodiscard]] PaletteCatalog& paletteCatalog() {
 		return database.paletteCatalog();
@@ -43,6 +45,14 @@ public:
 
 	[[nodiscard]] const PaletteCatalog& paletteCatalog() const {
 		return database.paletteCatalog();
+	}
+
+	[[nodiscard]] MaterialDatabase& getDatabase() {
+		return database;
+	}
+
+	[[nodiscard]] const MaterialDatabase& getDatabase() const {
+		return database;
 	}
 
 	[[nodiscard]] PaletteBrushRegistrationResult registerImportedCreature(CreatureType& creature);

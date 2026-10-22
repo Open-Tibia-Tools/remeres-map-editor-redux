@@ -312,9 +312,17 @@ int NanoVGCanvas::GetOrCreateEditorIconTexture(NVGcontext* vg, EditorIcon* icon,
 	return tex;
 }
 
-int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64_t spriteId) {
+int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64_t spriteId, std::optional<bool> is_stackable_opt) {
 	// Calculate composite size
-	const int pattern_x = (gs->pattern_x >= 3) ? 2 : 0;
+	bool is_stackable = false;
+	if (is_stackable_opt.has_value()) {
+		is_stackable = *is_stackable_opt;
+	} else if (gs && gs->getId() != 0) {
+		if (const auto sid = g_item_definitions.findByClientId(gs->getId())) {
+			is_stackable = g_item_definitions.get(*sid).hasFlag(ItemFlag::Stackable);
+		}
+	}
+	const int pattern_x = (is_stackable && gs->pattern_x >= 3) ? 2 : 0;
 	const auto metrics = gs->getPlainLayoutMetrics(-1, pattern_x, 0, 0, 0);
 	int w = metrics.total_width;
 	int h = metrics.total_height;

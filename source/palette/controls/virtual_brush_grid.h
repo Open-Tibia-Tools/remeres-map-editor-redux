@@ -33,14 +33,11 @@ public:
 	Brush* GetSelectedBrush() const override;
 	bool SelectBrush(const Brush* brush) override;
 
-	enum class DisplayMode {
-		Grid,
-		List
-	};
+	using DisplayMode = TilesetDisplayMode;
 
 	// Cell metrics live in util/grid_cell_renderer.h so every grid that shows
 	// tiles agrees on them.
-	void SetDisplayMode(DisplayMode mode);
+	void SetDisplayMode(DisplayMode mode) override;
 
 	// Toolbar support
 	void SetSort(TilesetSortKey key, TilesetSortDirection dir) override;

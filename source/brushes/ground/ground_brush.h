@@ -47,6 +47,13 @@ public:
 		std::unique_ptr<AutoBorder> owned_autoborder;
 		AutoBorder* autoborder;
 		std::vector<std::unique_ptr<SpecificCaseBlock>> specific_cases;
+
+		[[nodiscard]] constexpr bool matches(uint32_t target_id) const noexcept {
+			return to == target_id || to == Brush::WILDCARD_ID;
+		}
+		[[nodiscard]] constexpr bool isWildcard() const noexcept {
+			return to == Brush::WILDCARD_ID;
+		}
 	};
 
 	struct ItemChanceBlock {

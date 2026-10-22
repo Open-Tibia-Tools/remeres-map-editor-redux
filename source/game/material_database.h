@@ -31,7 +31,7 @@ struct DynamicPaletteDefinition {
 	std::string name;
 	// Palette UI panels keep pointers to elements in this vector. Tileset objects stay fixed after publication;
 	// their brush membership may grow through PaletteCatalog runtime registration.
-	std::vector<DynamicTilesetDefinition> tilesets;
+	std::deque<DynamicTilesetDefinition> tilesets;
 
 	[[nodiscard]] bool containsBrush(const Brush* brush) const;
 };
@@ -40,10 +40,11 @@ class PaletteCatalog {
 public:
 	void clear();
 	void addDynamicPalette(DynamicPaletteDefinition palette);
+	void setTilesetBrushes(std::string_view paletteName, std::string_view tilesetName, std::vector<Brush*> brushes);
 	void prepareCreatureImportTargets();
 	[[nodiscard]] PaletteBrushRegistrationResult registerImportedCreatureBrush(Brush* brush, bool isNpc);
 
-	[[nodiscard]] const std::vector<DynamicPaletteDefinition>& dynamicPalettes() const {
+	[[nodiscard]] const std::deque<DynamicPaletteDefinition>& dynamicPalettes() const {
 		return palettes;
 	}
 
@@ -51,7 +52,7 @@ public:
 	[[nodiscard]] const DynamicPaletteDefinition* findPaletteContainingBrush(const Brush* brush, std::string_view preferredPalette = {}) const;
 
 private:
-	std::vector<DynamicPaletteDefinition> palettes;
+	std::deque<DynamicPaletteDefinition> palettes;
 };
 
 class MaterialDatabase {
@@ -59,6 +60,7 @@ public:
 	void clear();
 	void bindSourceTruth(Brushes& brushRegistry, ItemDefinitionStore& itemRegistry, CreatureDatabase& creatureRegistry);
 	void setTilesetSources(std::vector<std::string> sources);
+	void addTilesetSource(std::string key);
 
 	[[nodiscard]] Brushes& brushes() const;
 	[[nodiscard]] ItemDefinitionStore& items() const;

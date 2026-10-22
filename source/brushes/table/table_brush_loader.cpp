@@ -39,8 +39,8 @@ bool TableBrushLoader::load(pugi::xml_node node, TableBrush& brush, TableBrushIt
 			continue;
 		}
 
-		uint32_t alignment = getAlignment(alignString, warnings);
-		if (alignment == 0xFFFFFFFF) { // Sentinel for error
+		const auto alignment = getAlignment(alignString, warnings);
+		if (!alignment) {
 			continue;
 		}
 
@@ -76,7 +76,7 @@ bool TableBrushLoader::load(pugi::xml_node node, TableBrush& brush, TableBrushIt
 
 			g_item_definitions.setFlag(id, ItemFlag::IsTable, true);
 			g_item_definitions.mutableEditorData(id).brush = &brush;
-			items.addItem(alignment, id, chance);
+			items.addItem(*alignment, id, chance);
 		}
 	}
 
@@ -85,7 +85,7 @@ bool TableBrushLoader::load(pugi::xml_node node, TableBrush& brush, TableBrushIt
 	return true;
 }
 
-uint32_t TableBrushLoader::getAlignment(const std::string& alignString, std::vector<std::string>& warnings) {
+std::optional<uint32_t> TableBrushLoader::getAlignment(std::string_view alignString, std::vector<std::string>& warnings) {
 	static constexpr std::pair<std::string_view, uint32_t> alignments[] = {
 		{ "vertical", TABLE_VERTICAL },
 		{ "horizontal", TABLE_HORIZONTAL },
@@ -103,5 +103,5 @@ uint32_t TableBrushLoader::getAlignment(const std::string& alignString, std::vec
 	}
 
 	warnings.push_back((wxString("Unknown table alignment '") + wxstr(alignString) + "'\n").ToStdString());
-	return 0xFFFFFFFF;
+	return std::nullopt;
 }

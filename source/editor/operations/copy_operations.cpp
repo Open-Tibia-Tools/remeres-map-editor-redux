@@ -15,6 +15,8 @@
 #include "editor/action_queue.h"
 #include "app/settings.h"
 
+#include <algorithm>
+#include <limits>
 #include <sstream>
 
 void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
@@ -28,7 +30,8 @@ void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 
 	int tile_count = 0;
 	int item_count = 0;
-	buffer.copyPos = Position(0xFFFF, 0xFFFF, floor);
+	int min_x = std::numeric_limits<int>::max();
+	int min_y = std::numeric_limits<int>::max();
 
 	for (Tile* tile : editor.selection) {
 		++tile_count;
@@ -56,14 +59,11 @@ void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 			copied_tile->spawn = tile->spawn->deepCopy();
 		}
 
-		if (copied_tile->getX() < buffer.copyPos.x) {
-			buffer.copyPos.x = copied_tile->getX();
-		}
-
-		if (copied_tile->getY() < buffer.copyPos.y) {
-			buffer.copyPos.y = copied_tile->getY();
-		}
+		min_x = std::min(min_x, copied_tile->getX());
+		min_y = std::min(min_y, copied_tile->getY());
 	}
+
+	buffer.copyPos = Position(min_x, min_y, floor);
 
 	std::ostringstream ss;
 	ss << "Copied " << tile_count << " tile" << (tile_count > 1 ? "s" : "") << " (" << item_count << " item" << (item_count > 1 ? "s" : "") << ")";
@@ -81,7 +81,8 @@ void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 
 	int tile_count = 0;
 	int item_count = 0;
-	buffer.copyPos = Position(0xFFFF, 0xFFFF, floor);
+	int min_x = std::numeric_limits<int>::max();
+	int min_y = std::numeric_limits<int>::max();
 
 	std::unique_ptr<BatchAction> batch = editor.actionQueue->createBatch(ACTION_CUT_TILES);
 	std::unique_ptr<Action> action = editor.actionQueue->createAction(batch.get());
@@ -119,13 +120,8 @@ void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 			copied_tile->spawn = std::move(newtile->spawn);
 		}
 
-		if (copied_tile->getX() < buffer.copyPos.x) {
-			buffer.copyPos.x = copied_tile->getX();
-		}
-
-		if (copied_tile->getY() < buffer.copyPos.y) {
-			buffer.copyPos.y = copied_tile->getY();
-		}
+		min_x = std::min(min_x, copied_tile->getX());
+		min_y = std::min(min_y, copied_tile->getY());
 
 		if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
 			for (int y = -1; y <= 1; y++) {
@@ -136,6 +132,8 @@ void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 		}
 		action->addChange(std::make_unique<Change>(std::move(newtile)));
 	}
+
+	buffer.copyPos = Position(min_x, min_y, floor);
 
 	batch->addAndCommitAction(std::move(action));
 

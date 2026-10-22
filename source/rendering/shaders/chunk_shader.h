@@ -88,15 +88,18 @@ uniform int uBlockingBlendMode;
 )") + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + R"(
 
 void main() {
-	if (evaluateTileIndicator(vQuadCoord, vHouseId,
-	                          uShowHouses, 0, uShowTowns,
-	                          uShowWaypoints, uShowTechItems,
-	                          uShowInvalidTiles, uShowInvalidZones,
-	                          vColor, FragColor)) {
-		return;
+	int flagBits = int(vFlags + 0.5);
+	uint indicatorType = uint((flagBits >> 4) & 0xF);
+	if (indicatorType != 0u) {
+		if (evaluateTileIndicator(vQuadCoord, indicatorType,
+		                          uShowHouses, 0, uShowTowns,
+		                          uShowWaypoints, uShowTechItems,
+		                          uShowInvalidTiles, uShowInvalidZones,
+		                          vColor, FragColor)) {
+			return;
+		}
 	}
 
-	int flagBits = int(vFlags + 0.5);
 	if ((flagBits & 1) != 0) {
 		FragColor = vColor;
 		if (FragColor.a < 0.01) {
@@ -111,7 +114,8 @@ void main() {
 		discard;
 	}
 
-	applyHouseOverlay(FragColor, vWorldPos, vHouseId, uCurrentHouseId, uShowHouses);
+	bool isGround = ((flagBits & 4) != 0);
+	applyHouseOverlay(FragColor, vWorldPos, vHouseId, uCurrentHouseId, uShowHouses, isGround);
 	bool isBlocking = ((flagBits & 2) != 0);
 	applyPathingOverlay(FragColor, isBlocking, uShowBlocking, uExtendedPathingShader, uBlockingWash, uBlockingBlendMode);
 }

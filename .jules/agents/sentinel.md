@@ -135,7 +135,7 @@ Scan the rendering code for issues you haven't fixed yet — legacy immediate mo
 
 - **`rendering/core/sprite_batch.h`** — `MAX_SPRITES_PER_BATCH = 100000` (6.4MB). Uses MDI + RingBuffer triple-buffering. Verify no GPU stalls.
 - **`rendering/map_drawer.h`** — `MapDrawer::Draw()` calls 18+ drawers sequentially. Check if CPU prep can overlap GPU draw.
-- **`rendering/core/texture_garbage_collector.h`** — Check that it runs asynchronously, not blocking render.
+- **`rendering/core/texture_atlas.h`** — Single GL_TEXTURE_2D_ARRAY for all sprites. Managed without runtime eviction; chunks render via SpriteAtlasLUT.
 - **`rendering/core/sync_handle.h`** — Fence sync for ring buffer. Verify no `glFinish()` in hot paths.
 - **`rendering/drawers/tiles/`** (8 files) — Tile rendering. Check for per-tile state changes.
 - **`rendering/core/light_buffer.h`** + `LightDrawer` — Lights disappear on large viewports (known issue area).

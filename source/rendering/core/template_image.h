@@ -11,7 +11,6 @@ public:
 	TemplateImage(GameSprite* parent, int v, const Outfit& outfit);
 	~TemplateImage() override;
 
-	void clean(time_t time, int longevity) override;
 
 	virtual std::unique_ptr<uint8_t[]> getRGBData() override;
 	virtual std::unique_ptr<uint8_t[]> getRGBAData() override;

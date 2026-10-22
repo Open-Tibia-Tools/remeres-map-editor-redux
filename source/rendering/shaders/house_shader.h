@@ -20,12 +20,12 @@ uniform vec4 uHouseInactiveWash;
 uniform int uHouseActiveBlendMode;
 uniform int uHouseInactiveBlendMode;
 
-void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint currentHouseId, int showHouses) {
-    if (showHouses == 0 || houseId >= 1000000.0) {
+void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint currentHouseId, int showHouses, bool isGround) {
+    if (showHouses == 0 || houseId <= 0.0) {
         return;
     }
 
-    uint uHouseId = uint(abs(houseId) + 0.5);
+    uint uHouseId = uint(houseId + 0.5);
     if (uHouseId == 0u) {
         return;
     }
@@ -37,7 +37,7 @@ void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint 
     int blendMode = isActive ? uHouseActiveBlendMode : uHouseInactiveBlendMode;
 
     if (blendMode == 1) {
-        if (houseId < 0.0) {
+        if (isGround) {
             // Base House Shader (ground): multiplicative tint
             fragColor.rgb *= mix(vec3(1.0), zWash.rgb, zWash.a);
         } else {
@@ -47,7 +47,7 @@ void applyHouseOverlay(inout vec4 fragColor, vec2 worldPos, float houseId, uint 
             fragColor.rgb *= mix(vec3(1.0), darkRgb, wallAlpha);
         }
     } else {
-        if (houseId < 0.0) {
+        if (isGround) {
             // Base House Shader (ground): clean wash
             fragColor.rgb = mix(fragColor.rgb, zWash.rgb, zWash.a);
         } else {

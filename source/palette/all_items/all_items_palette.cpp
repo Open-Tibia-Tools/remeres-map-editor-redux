@@ -43,7 +43,22 @@ AllItemsPalette::AllItemsPalette(wxWindow* parent, wxWindowID id) :
 		SetShowLabels(show);
 	};
 	actions.icon_size = [this](int size) {
+		if (is_list_mode) {
+			is_list_mode = false;
+			if (grid) {
+				grid->SetDisplayMode(TilesetDisplayMode::Grid);
+			}
+		}
 		SetTileSize(size);
+	};
+	actions.list_mode = [this](bool list) {
+		is_list_mode = list;
+		if (grid) {
+			grid->SetDisplayMode(list ? TilesetDisplayMode::List : TilesetDisplayMode::Grid);
+		}
+		if (toolbar) {
+			toolbar->SetState(show_labels, tile_size, has_sort, sort_key, sort_dir, false, is_list_mode);
+		}
 	};
 	actions.filter = [this](const std::string& query) {
 		filter_query = query;
@@ -61,7 +76,7 @@ AllItemsPalette::AllItemsPalette(wxWindow* parent, wxWindowID id) :
 	actions.filter_focus_lost = []() {};
 
 	toolbar = newd TilesetGridToolbar(this, std::move(actions), TilesetGridToolbar::Part_Standard);
-	toolbar->SetState(show_labels, tile_size, has_sort, sort_key, sort_dir, false);
+	toolbar->SetState(show_labels, tile_size, has_sort, sort_key, sort_dir, false, is_list_mode);
 	main_sizer->Add(toolbar, 0, wxEXPAND | wxBOTTOM, 2);
 
 	SetSizer(main_sizer);
@@ -109,6 +124,9 @@ void AllItemsPalette::LoadCurrentContents() {
 	EnsureBrushesLoaded();
 	if (!grid) {
 		grid = newd VirtualBrushGrid(this, &tileset_def, tile_size);
+		if (is_list_mode) {
+			grid->SetDisplayMode(TilesetDisplayMode::List);
+		}
 		if (has_sort) {
 			grid->SetSort(sort_key, sort_dir);
 		}
@@ -181,6 +199,15 @@ void AllItemsPalette::SetShowLabels(bool show) {
 
 void AllItemsPalette::SetTileSize(int sizePx) {
 	tile_size = sizePx;
+	if (is_list_mode) {
+		is_list_mode = false;
+		if (grid) {
+			grid->SetDisplayMode(TilesetDisplayMode::Grid);
+		}
+	}
+	if (toolbar) {
+		toolbar->SetState(show_labels, tile_size, has_sort, sort_key, sort_dir, false, is_list_mode);
+	}
 	if (grid) {
 		grid->SetTileSize(sizePx);
 	}

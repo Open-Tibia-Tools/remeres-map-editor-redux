@@ -12,7 +12,9 @@ std::vector<FileName> collectXmlFiles(const FileName& directory, bool recursive)
 	std::vector<FileName> result;
 	result.reserve(files.size());
 	for (const auto& file : files) {
-		result.emplace_back(file);
+		FileName fn(file);
+		fn.Normalize(wxPATH_NORM_ALL);
+		result.emplace_back(std::move(fn));
 	}
 	std::ranges::sort(result, [](const FileName& lhs, const FileName& rhs) {
 		return lhs.GetFullPath().CmpNoCase(rhs.GetFullPath()) < 0;

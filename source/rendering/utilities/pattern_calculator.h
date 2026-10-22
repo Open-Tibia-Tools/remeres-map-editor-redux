@@ -7,13 +7,14 @@
 #include "map/tile.h"
 #include <bit>
 #include <cstdint>
+#include <optional>
 
 struct SpritePatterns {
 	int x = 0;
 	int y = 0;
 	int z = 0;
 	int frame = 0;
-	int subtype = -1;
+	std::optional<int> subtype = std::nullopt;
 };
 
 class PatternCalculator {
@@ -29,7 +30,7 @@ private:
 	}
 
 public:
-	static SpritePatterns Calculate(const GameSprite* spr, const ItemDefinitionView& it, const Item* item, const Tile* tile, const Position& pos, long elapsed_time = -1) {
+	static SpritePatterns Calculate(const GameSprite* spr, const ItemDefinitionView& it, const Item* item, const Tile* tile, const Position& pos, std::optional<int64_t> elapsed_time = std::nullopt) {
 		SpritePatterns patterns;
 
 		if (!spr) {
@@ -44,7 +45,7 @@ public:
 		patterns.y = calculatePatternOffset(pos.y, spr->pattern_y);
 		patterns.z = calculatePatternOffset(pos.z, spr->pattern_z);
 
-		patterns.frame = (spr->animator) ? spr->animator->getFrame(elapsed_time) : 0;
+		patterns.frame = (spr->isAnimated() && elapsed_time.has_value()) ? spr->getAnimationFrame(*elapsed_time, pos.x, pos.y, pos.z) : 0;
 
 		if (it.isSplash() || it.isFluidContainer()) {
 			const uint16_t fluid = item ? item->getSubtype() : 0;

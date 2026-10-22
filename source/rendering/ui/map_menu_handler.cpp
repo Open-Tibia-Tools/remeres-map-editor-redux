@@ -56,6 +56,7 @@ void MapMenuHandler::BindEvents() {
 	canvas->Bind(wxEVT_MENU, &MapMenuHandler::OnSelectHouseBrush, this, MAP_POPUP_MENU_SELECT_HOUSE_BRUSH);
 	canvas->Bind(wxEVT_MENU, &MapMenuHandler::OnProperties, this, MAP_POPUP_MENU_PROPERTIES);
 	canvas->Bind(wxEVT_MENU, &MapMenuHandler::OnAdvancedReplace, this, MAP_POPUP_MENU_ADVANCED_REPLACE);
+	canvas->Bind(wxEVT_MENU, &MapMenuHandler::OnAddToCollection, this, MAP_POPUP_MENU_ADD_TO_COLLECTION);
 	canvas->Bind(wxEVT_MENU, &MapMenuHandler::OnBrowseTile, this, MAP_POPUP_MENU_BROWSE_TILE);
 	canvas->Bind(wxEVT_MENU, &MapMenuHandler::OnTileProperties, this, MAP_POPUP_MENU_TILE_PROPERTIES);
 	for (int i = MAP_POPUP_MENU_SCRIPT_FIRST; i <= MAP_POPUP_MENU_SCRIPT_LAST; ++i) {
@@ -116,11 +117,11 @@ void MapMenuHandler::OnScriptMenu(wxCommandEvent& event) {
 		try {
 			const auto& item = menuItems[index];
 			if (item.callback.valid()) {
-				Tile* tile = editor.map.getTile(canvas->last_click_map_x, canvas->last_click_map_y, canvas->GetFloor());
+				Tile* tile = editor.map.getTile(canvas->last_click_map_x, canvas->last_click_map_y, canvas->last_click_map_z);
 				if (tile) {
 					item.callback(tile);
 				} else {
-					item.callback(Position(canvas->last_click_map_x, canvas->last_click_map_y, canvas->GetFloor()));
+					item.callback(Position(canvas->last_click_map_x, canvas->last_click_map_y, canvas->last_click_map_z));
 				}
 			}
 		} catch (const sol::error& e) {
@@ -214,5 +215,12 @@ void MapMenuHandler::OnAdvancedReplace(wxCommandEvent& WXUNUSED(event)) {
 	MapTab* tab = g_gui.GetCurrentMapTab();
 	if (tab) {
 		tab->ShowAdvancedReplaceForSelection(sortedIds);
+	}
+}
+
+void MapMenuHandler::OnAddToCollection(wxCommandEvent& WXUNUSED(event)) {
+	MapTab* tab = g_gui.GetCurrentMapTab();
+	if (tab) {
+		tab->ShowCollectionStudio(&editor);
 	}
 }

@@ -21,6 +21,7 @@ namespace {
 		MENU_SIZE_32,
 		MENU_SIZE_64,
 		MENU_SIZE_128,
+		MENU_SIZE_LIST,
 	};
 } // namespace
 
@@ -118,13 +119,14 @@ void TilesetGridToolbar::SetStacked(bool stacked) {
 	Layout();
 }
 
-void TilesetGridToolbar::SetState(bool show_labels, int icon_size, bool has_sort, TilesetSortKey sort_key, TilesetSortDirection sort_dir, bool filter_all) {
+void TilesetGridToolbar::SetState(bool show_labels, int icon_size, bool has_sort, TilesetSortKey sort_key, TilesetSortDirection sort_dir, bool filter_all, bool is_list_mode) {
 	m_showLabels = show_labels;
 	m_iconSize = std::clamp(icon_size, 16, 128);
 	m_hasSort = has_sort;
 	m_sortKey = sort_key;
 	m_sortDir = sort_dir;
 	m_filterAll = filter_all;
+	m_isListMode = is_list_mode;
 
 	if (m_toolbar) {
 		if (m_toolbar->GetToolIndex(TOOL_TOGGLE_LABELS) != wxNOT_FOUND) {
@@ -273,8 +275,14 @@ void TilesetGridToolbar::OnSizeButtonClick(int toolId) {
 	auto* item32 = menu.AppendCheckItem(MENU_SIZE_32, "32x32");
 	auto* item64 = menu.AppendCheckItem(MENU_SIZE_64, "64x64");
 	auto* item128 = menu.AppendCheckItem(MENU_SIZE_128, "128x128");
+	wxMenuItem* itemList = nullptr;
+	if (m_actions.list_mode) {
+		itemList = menu.AppendCheckItem(MENU_SIZE_LIST, "List");
+	}
 
-	if (m_iconSize == 64) {
+	if (m_isListMode && itemList) {
+		itemList->Check(true);
+	} else if (m_iconSize == 64) {
 		item64->Check(true);
 	} else if (m_iconSize == 128) {
 		item128->Check(true);
@@ -290,11 +298,29 @@ void TilesetGridToolbar::OnSizeButtonClick(int toolId) {
 
 	const int selected = m_toolbar ? m_toolbar->GetPopupMenuSelectionFromUser(menu, pos) : wxID_NONE;
 	if (selected == MENU_SIZE_32) {
+		if (m_isListMode) {
+			SetListMode(false);
+		}
 		SetIconSize(32);
 	} else if (selected == MENU_SIZE_64) {
+		if (m_isListMode) {
+			SetListMode(false);
+		}
 		SetIconSize(64);
 	} else if (selected == MENU_SIZE_128) {
+		if (m_isListMode) {
+			SetListMode(false);
+		}
 		SetIconSize(128);
+	} else if (selected == MENU_SIZE_LIST) {
+		SetListMode(true);
+	}
+}
+
+void TilesetGridToolbar::SetListMode(bool listMode) {
+	m_isListMode = listMode;
+	if (m_actions.list_mode) {
+		m_actions.list_mode(m_isListMode);
 	}
 }
 

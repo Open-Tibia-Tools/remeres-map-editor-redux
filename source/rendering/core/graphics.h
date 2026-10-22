@@ -35,16 +35,13 @@ struct NVGDeleter {
 
 #include "app/client_version.h"
 
-#include "animator.h"
 
 class MapCanvas;
 class GraphicManager;
 class FileReadHandle;
-class Animator;
 class SpriteArchive;
 
 #include "rendering/core/sprite_light.h"
-#include "rendering/core/texture_garbage_collector.h"
 #include "rendering/core/render_timer.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/core/game_sprite.h"
@@ -88,14 +85,6 @@ public:
 	uint16_t getItemSpriteMaxID() const;
 	uint16_t getCreatureSpriteMaxID() const;
 
-	// Cleans old & unused textures according to config settings
-	void garbageCollection();
-	void setGCOptions(const TextureGCOptions& options) {
-		collector.SetOptions(options);
-	}
-	[[nodiscard]] const TextureGCOptions& getGCOptions() const {
-		return collector.GetOptions();
-	}
 
 	std::filesystem::path getMetadataPath() const {
 		return client_version ? std::filesystem::path(client_version->getMetadataPath().GetFullPath().ToStdString()) : std::filesystem::path();
@@ -143,10 +132,6 @@ private:
 	using ImageVector = std::vector<std::unique_ptr<Image>>;
 	ImageVector image_space;
 
-	// Active Resident Sets: Track only what's currently occupying memory/VRAM
-	// This avoids O(N) scans of the entire database.
-	std::vector<void*> resident_images;
-	std::vector<GameSprite*> resident_game_sprites;
 
 	DatFormat dat_format;
 	uint16_t item_count;
@@ -155,7 +140,6 @@ private:
 	bool has_transparency;
 	bool has_frame_durations;
 	bool has_frame_groups;
-	TextureGarbageCollector collector;
 
 	std::unique_ptr<RenderTimer> animation_timer;
 	time_t cached_time_ = 0;

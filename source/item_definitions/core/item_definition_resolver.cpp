@@ -185,6 +185,15 @@ bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input,
 			}
 		}
 
+		// Pre-index OTB client IDs to avoid O(N * M) linear scans inside the XML validation loop
+		std::unordered_set<ClientItemId> otb_client_ids;
+		otb_client_ids.reserve(fragments.otb.size());
+		for (const auto& [sid, otb] : fragments.otb) {
+			if (otb.client_id != 0) {
+				otb_client_ids.insert(otb.client_id);
+			}
+		}
+
 		// Collect XML entries that reference non-existent OTB server IDs
 		for (const auto& [server_id, xml] : fragments.xml) {
 			// Skip server-side fluid types and special items (IDs < 100)
@@ -196,13 +205,8 @@ bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input,
 				continue;
 			}
 			// If XML entry has a client_id override that maps to an existing OTB entry, it's valid
-			if (xml.client_id.has_value()) {
-				bool foundInOtb = std::ranges::any_of(fragments.otb, [&](const auto& p) {
-					return p.second.client_id == xml.client_id.value();
-				});
-				if (foundInOtb) {
-					continue;
-				}
+			if (xml.client_id.has_value() && otb_client_ids.contains(xml.client_id.value())) {
+				continue;
 			}
 			missingReport->xml_no_otb.push_back({
 				.server_id = server_id,

@@ -23,6 +23,7 @@
 #include "rendering/ui/minimap_viewport.h"
 class ReplaceToolWindow;
 class SpawnValidatorWindow;
+class CollectionStudioWindow;
 #include <memory>
 
 struct ReplaceToolWindowDeleter {
@@ -31,6 +32,10 @@ struct ReplaceToolWindowDeleter {
 
 struct SpawnValidatorWindowDeleter {
 	inline void operator()(SpawnValidatorWindow* w);
+};
+
+struct CollectionStudioWindowDeleter {
+	inline void operator()(CollectionStudioWindow* w);
 };
 
 class MapCanvas;
@@ -108,6 +113,11 @@ public:
 	void DetachSpawnValidatorDialog();
 	void ForgetSpawnValidatorDialog();
 
+	void ShowCollectionStudio(Editor* editor);
+	void CloseCollectionStudio();
+	void DetachCollectionStudio();
+	void ForgetCollectionStudio();
+
 protected:
 	// For internal use, call to resize the scrollbars with
 	// the newd dimensions of *this* window
@@ -124,6 +134,7 @@ protected:
 private:
 	std::unique_ptr<ReplaceToolWindow, ReplaceToolWindowDeleter> replaceItemsDialog;
 	std::unique_ptr<SpawnValidatorWindow, SpawnValidatorWindowDeleter> spawnValidatorDialog;
+	std::unique_ptr<CollectionStudioWindow, CollectionStudioWindowDeleter> m_collectionStudioDialog;
 	MinimapViewportState minimap_viewport_state;
 	Position previous_position;
 

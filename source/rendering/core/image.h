@@ -22,11 +22,8 @@ public:
 	virtual ~Image() = default;
 
 	bool isGLLoaded = false;
-	mutable std::atomic<int64_t> lastaccess;
 	uint32_t generation_id = 0;
 
-	void visit() const;
-	virtual void clean(time_t time, int longevity);
 
 	virtual std::unique_ptr<uint8_t[]> getRGBData() = 0;
 	virtual std::unique_ptr<uint8_t[]> getRGBAData() = 0;

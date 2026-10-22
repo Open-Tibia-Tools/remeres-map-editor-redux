@@ -1,7 +1,7 @@
 #include "rendering/core/graphics_assembler.h"
 
 #include "item_definitions/formats/dat/dat_catalog.h"
-#include "rendering/core/animator.h"
+#include "rendering/core/sprite_animation.h"
 #include "rendering/core/game_sprite.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/normal_image.h"
@@ -69,18 +69,56 @@ NormalImage* GraphicsAssembler::ensureImage(GraphicManager& manager, const DatCa
 }
 
 void GraphicsAssembler::installAnimation(GameSprite& sprite, const DatCatalogEntry& entry) {
-	if (!entry.animation.has_value()) {
-		sprite.animator.reset();
+	if (entry.frames <= 1) {
+		sprite.animation_data.reset();
 		return;
 	}
 
-	const auto& animation = *entry.animation;
-	sprite.animator = std::make_unique<Animator>(entry.frames, animation.start_frame, animation.loop_count, animation.asynchronous);
-	for (size_t frame_index = 0; frame_index < animation.frame_durations.size(); ++frame_index) {
-		FrameDuration* duration = sprite.animator->getFrameDuration(static_cast<int>(frame_index));
-		duration->setValues(static_cast<int>(animation.frame_durations[frame_index].minimum), static_cast<int>(animation.frame_durations[frame_index].maximum));
+	rme::rendering::SpriteAnimationData data;
+	data.frame_count = entry.frames;
+
+	if (entry.animation.has_value() && !entry.animation->frame_durations.empty()) {
+		const auto& animation = *entry.animation;
+		data.start_frame = animation.start_frame;
+		data.loop_count = static_cast<int8_t>(animation.loop_count);
+		data.is_async = animation.asynchronous;
+
+		data.durations.reserve(animation.frame_durations.size());
+		uint32_t total_dur = 0;
+		uint32_t shortest = 0;
+
+		for (const auto& dur : animation.frame_durations) {
+			const uint32_t min_d = dur.minimum;
+			const uint32_t max_d = dur.maximum;
+			data.durations.push_back(rme::rendering::AnimationDuration {
+				.min_ms = min_d,
+				.max_ms = max_d
+			});
+			const uint32_t avg = (min_d + max_d) / 2;
+			total_dur += avg;
+
+			const uint32_t candidate = min_d > 0 ? min_d : max_d;
+			if (candidate > 0 && (shortest == 0 || candidate < shortest)) {
+				shortest = candidate;
+			}
+		}
+
+		data.total_duration_ms = total_dur;
+
+		if (shortest == 0) {
+			data.shortest_step_ms = data.frame_count > 0 ? std::max(1u, total_dur / data.frame_count) : 500;
+		} else {
+			data.shortest_step_ms = std::max<uint32_t>(16, shortest);
+		}
+	} else {
+		// Pre-10.50 (7.x - 9.x) uniform 500ms pacing: all classic client animations (water, shorelines, borders) are globally synchronized.
+		data.shortest_step_ms = rme::rendering::ITEM_FRAME_DURATION;
+		data.total_duration_ms = static_cast<uint32_t>(data.frame_count) * rme::rendering::ITEM_FRAME_DURATION;
+		data.is_async = false;
+		data.start_frame = 0;
 	}
-	sprite.animator->reset();
+
+	sprite.animation_data = std::move(data);
 }
 
 bool GraphicsAssembler::installSpriteEntry(GraphicManager& manager, const DatCatalog& catalog, const std::shared_ptr<SpriteArchive>& sprite_archive, const DatCatalogEntry& entry, std::vector<std::string>& warnings) {
@@ -128,9 +166,6 @@ void GraphicsAssembler::resetRuntimeState(GraphicManager& manager) {
 	manager.spritefile.clear();
 	manager.sprite_space.clear();
 	manager.image_space.clear();
-	manager.resident_images.clear();
-	manager.resident_game_sprites.clear();
-	manager.collector.Clear();
 	if (manager.atlas_manager_) {
 		manager.atlas_manager_->clear();
 		manager.atlas_manager_.reset();

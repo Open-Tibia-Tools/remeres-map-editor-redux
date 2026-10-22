@@ -48,6 +48,16 @@ inline constexpr uint32_t ZONE_FLAG_HOUSE           = 1u << 22; // Bit 22: House
 
 // Extended pathing shader: item blocking tint (Bit 23)
 inline constexpr uint32_t ZONE_FLAG_ITEM_BLOCKING   = 1u << 23; // Bit 23: Extended pathing shader item blocking tint
+inline constexpr uint32_t ZONE_FLAG_HOUSE_GROUND    = 1u << 24; // Bit 24: House ground tile (vs item/wall)
+inline constexpr uint32_t ZONE_FLAG_INDICATOR_SHIFT = 25u;
+inline constexpr uint32_t ZONE_FLAG_INDICATOR_MASK  = 0xFu << ZONE_FLAG_INDICATOR_SHIFT;
+
+[[nodiscard]] constexpr uint32_t MakeIndicatorZoneFlag(uint8_t indicator_type) noexcept {
+	return static_cast<uint32_t>(indicator_type) << ZONE_FLAG_INDICATOR_SHIFT;
+}
+[[nodiscard]] constexpr uint8_t GetIndicatorTypeFromZoneFlags(uint32_t flags) noexcept {
+	return static_cast<uint8_t>((flags >> ZONE_FLAG_INDICATOR_SHIFT) & 0xFu);
+}
 
 [[nodiscard]] constexpr uint32_t MakeHighlightItemsFlags() noexcept {
 	return ZONE_FLAG_HIGHLIGHT_ITEMS | ZONE_FLAG_MULTIPLICATIVE;

@@ -82,7 +82,7 @@ void SpriteDrawer::BlitSprite(SpriteBatch& sprite_batch, int screenx, int screen
 	screeny -= draw_offset.second;
 
 	const long elapsed_time = ctx ? ctx->elapsed_time : -1;
-	const int tme = spr->animator ? spr->animator->getFrame(elapsed_time) : 0;
+	const int tme = spr->isAnimated() ? spr->getAnimationFrame(elapsed_time) : 0;
 
 	// Fast path for single 1x1x1 sprites (waypoints, markers, simple items) — skip metric cache
 	if (spr->width == 1 && spr->height == 1 && spr->layers == 1) {

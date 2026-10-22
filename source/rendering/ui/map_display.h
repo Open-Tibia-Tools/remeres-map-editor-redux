@@ -24,7 +24,6 @@
 #include "rendering/utilities/fps_counter.h"
 
 #include "ui/map_popup_menu.h"
-#include "game/animation_timer.h"
 #include "rendering/core/graphics.h"
 #include <chrono>
 #include <memory>
@@ -83,7 +82,6 @@ public:
 
 	void RequestLocalRefresh(bool immediate = false);
 	void RequestSharedMapRefresh(bool immediate = false);
-	void RequestAnimationRepaint();
 	void SetHoverPreviewActive(bool active);
 
 	virtual void ScreenToMap(int screen_x, int screen_y, int* map_x, int* map_y);
@@ -120,15 +118,6 @@ public:
 
 	void TakeScreenshot(wxFileName path, wxString format);
 
-	enum {
-		BLOCK_SIZE = 100
-	};
-
-	inline int getFillIndex(int x, int y) const {
-		return x + BLOCK_SIZE * y;
-	}
-
-	static bool processed[BLOCK_SIZE * BLOCK_SIZE];
 	Editor& editor;
 	std::unique_ptr<MapDrawer> drawer;
 	int keyCode;
@@ -167,9 +156,7 @@ public:
 
 	uint32_t current_house_id;
 
-	wxStopWatch refresh_watch;
 	std::unique_ptr<MapPopupMenu> popup_menu;
-	std::unique_ptr<AnimationTimer> animation_timer;
 
 	FPSCounter fps_counter;
 
@@ -182,18 +169,14 @@ public:
 
 private:
 	bool IsAnimationEnabled() const;
-	int GetAnimationRefreshIntervalMs() const noexcept;
 	void QueueNativeRefresh(bool immediate);
 	void EnsureNanoVG();
 	void DrawOverlays(NVGcontext* vg, const DrawingOptions& options);
-	void PerformGarbageCollection();
 
 	MapWindow* GetMapWindow() const;
 	BaseMap* GetSecondaryMap() const;
 	bool renderer_initialized = false;
-	long m_last_gc_time = 0;
 	bool hover_preview_active_ = false;
-	std::chrono::steady_clock::time_point last_animation_refresh_time_{};
 };
 
 #endif

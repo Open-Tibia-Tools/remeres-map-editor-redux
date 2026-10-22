@@ -26,6 +26,9 @@ Creature::Creature(CreatureType* ctype) :
 	direction(SOUTH), spawntime(0), saved(false), selected(false) {
 	if (ctype) {
 		type_name = ctype->name;
+		if (ctype->isNpc) {
+			npc_spawn = true;
+		}
 	}
 }
 

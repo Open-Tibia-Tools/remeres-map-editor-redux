@@ -120,7 +120,7 @@ protected:
 
 	bool saveMap(Map& map, NodeFileWriteHandle& handle);
 
-	void writeTileData(const Map& map, NodeFileWriteHandle& f);
+	bool writeTileData(const Map& map, NodeFileWriteHandle& f);
 	void writeTowns(const Map& map, NodeFileWriteHandle& f);
 	WriteResult writeWaypoints(const Map& map, NodeFileWriteHandle& f, MapVersion mapVersion);
 };

@@ -48,6 +48,7 @@ public:
 	}
 
 private:
+	[[nodiscard]] Tile* FindSelectedTileUnderCursor(const Position& mouse_map_pos) const;
 	void ExecuteBoundboxSelection(const Position& start_pos, const Position& end_pos, int floor);
 
 	MapCanvas* canvas;
