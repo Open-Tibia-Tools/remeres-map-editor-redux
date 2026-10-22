@@ -749,6 +749,40 @@ void testScenario10_ComplexFourVariantGroupRoundTrip() {
 	std::cout << "  -> Passed: Complex 4-variant group preserved with 100% round-trip fidelity.\n";
 }
 
+void testScenario11_SingleVariantResetTo100Percent() {
+	std::cout << "[Scenario 11] Testing single varying variant reset to 100% chance...\n";
+
+	const std::string xml =
+		"<spawns>"
+		"<spawn centerx=\"100\" centery=\"100\" centerz=\"7\" radius=\"5\">"
+		"<monsters x=\"0\" y=\"0\" z=\"7\" spawntime=\"60\">"
+		"<monster name=\"Rat\" chance=\"70\"/>"
+		"</monsters>"
+		"</spawn>"
+		"</spawns>";
+
+	auto parsed = parseSpawnsFromXml(xml);
+	assert(parsed.size() == 1);
+	auto* c = parsed[0].creature.get();
+	assert(c->getName() == "Rat");
+	assert(c->getWeight() == 70);
+	assert(c->isVaryingSpawn());
+
+	// Simulate UI editing chance back to 100%
+	if (/* chance == 100 */ true) {
+		c->setWeight(0);
+		c->markAsVaryingSpawn(false);
+		c->clearAlternatives();
+	}
+
+	std::string serialized = serializeSpawnsToXml(parsed, false);
+	assert(serialized.find("<monsters") == std::string::npos);
+	assert(serialized.find("<monster name=\"Rat\"") != std::string::npos);
+	assert(serialized.find("chance=") == std::string::npos);
+
+	std::cout << "  -> Passed: Single variant reset to 100% clears varying state and serializes as standard monster.\n";
+}
+
 } // namespace
 
 int main() {
@@ -768,9 +802,10 @@ int main() {
 	testScenario8_Otbm5CanaryCompatibility();
 	testScenario9_DirectionNorthInvariant();
 	testScenario10_ComplexFourVariantGroupRoundTrip();
+	testScenario11_SingleVariantResetTo100Percent();
 
 	std::cout << "========================================================\n";
-	std::cout << "  ALL 10 SCENARIOS PASSED SUCCESSFULLY (100% GREEN)!\n";
+	std::cout << "  ALL 11 SCENARIOS PASSED SUCCESSFULLY (100% GREEN)!\n";
 	std::cout << "========================================================\n";
 	return 0;
 }

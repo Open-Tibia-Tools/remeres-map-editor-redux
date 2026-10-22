@@ -4,7 +4,9 @@
 #include "util/image_manager.h"
 #include <wx/sizer.h>
 #include <wx/button.h>
+#include <wx/msgdlg.h>
 #include <algorithm>
+#include <format>
 
 MonsterSelectDialog::MonsterSelectDialog(wxWindow* parent, const std::string& current_selection) :
 	wxDialog(parent, wxID_ANY, "Select Monster", wxDefaultPosition, FROM_DIP(parent, wxSize(320, 420)), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER) {
@@ -114,6 +116,7 @@ void MonsterSelectDialog::OnOK(wxCommandEvent& WXUNUSED(event)) {
 			EndModal(wxID_OK);
 			return;
 		}
+		wxMessageBox(wxstr(std::format("'{}' is an NPC. NPCs cannot be added as spawn monster variants.", typed_name)), "Invalid Monster", wxOK | wxICON_WARNING, this);
 		return;
 	}
 

@@ -2,9 +2,9 @@
 #include "ui/properties/spawn_alternatives_editor.h"
 #include "ui/dialogs/monster_select_dialog.h"
 #include "game/creature.h"
+#include "ui/theme.h"
 #include "util/image_manager.h"
 #include <wx/sizer.h>
-#include <wx/settings.h>
 #include <algorithm>
 #include <format>
 
@@ -113,12 +113,12 @@ void SpawnAlternativesEditor::ApplyToCreature(Creature* creature) {
 
 	if (variants.size() == 1) {
 		creature->setTypeName(variants[0].name);
-		if (!creature->getAlternatives().empty()) {
-			creature->setWeight(0);
-			creature->markAsVaryingSpawn(false);
-		} else if (variants[0].chance < 100) {
+		if (variants[0].chance < 100) {
 			creature->setWeight(variants[0].chance);
 			creature->markAsVaryingSpawn(true);
+		} else {
+			creature->setWeight(0);
+			creature->markAsVaryingSpawn(false);
 		}
 		creature->clearAlternatives();
 	} else {
@@ -144,8 +144,8 @@ void SpawnAlternativesEditor::RefreshList() {
 	list_ctrl->DeleteAllItems();
 
 	for (size_t i = 0; i < variants.size(); ++i) {
-		long idx = list_ctrl->InsertItem(static_cast<long>(i), wxString(variants[i].name));
-		list_ctrl->SetItem(idx, 1, wxString::Format("%u%%", variants[i].chance));
+		long idx = list_ctrl->InsertItem(static_cast<long>(i), wxstr(variants[i].name));
+		list_ctrl->SetItem(idx, 1, wxstr(std::format("{}%", variants[i].chance)));
 	}
 	list_ctrl->Thaw();
 }
@@ -156,15 +156,12 @@ void SpawnAlternativesEditor::UpdateTotalChanceLabel() {
 		total += v.chance;
 	}
 
-	if (variants.size() <= 1) {
+	if (variants.size() <= 1 || total == 100) {
 		total_chance_label->SetLabelText("Total chance: 100%");
-		total_chance_label->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-	} else if (total == 100) {
-		total_chance_label->SetLabelText("Total chance: 100%");
-		total_chance_label->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+		total_chance_label->SetForegroundColour(Theme::Get(Theme::Role::Text));
 	} else {
-		total_chance_label->SetLabelText(wxString::Format("Total chance: %u%% (Warning: must equal 100%%)", total));
-		total_chance_label->SetForegroundColour(*wxRED);
+		total_chance_label->SetLabelText(wxstr(std::format("Total chance: {}% (Warning: must equal 100%)", total)));
+		total_chance_label->SetForegroundColour(Theme::Get(Theme::Role::Error));
 	}
 	total_chance_label->Refresh();
 }
@@ -196,7 +193,7 @@ void SpawnAlternativesEditor::OnChanceChanged(wxSpinEvent& WXUNUSED(event)) {
 	}
 
 	variants[selected_index].chance = static_cast<uint32_t>(chance_spin->GetValue());
-	list_ctrl->SetItem(selected_index, 1, wxString::Format("%u%%", variants[selected_index].chance));
+	list_ctrl->SetItem(selected_index, 1, wxstr(std::format("{}%", variants[selected_index].chance)));
 
 	UpdateTotalChanceLabel();
 

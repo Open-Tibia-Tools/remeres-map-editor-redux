@@ -48,7 +48,7 @@ CreaturePropertyPanel::CreaturePropertyPanel(wxWindow* parent) :
 		direction_choice->Enable(!hasAlternatives);
 		if (hasAlternatives) {
 			for (size_t i = 0; i < direction_choice->GetCount(); ++i) {
-				if ((int)(intptr_t)direction_choice->GetClientData(i) == (int)NORTH) {
+				if (static_cast<int>(reinterpret_cast<intptr_t>(direction_choice->GetClientData(i))) == static_cast<int>(NORTH)) {
 					direction_choice->SetSelection(i);
 					break;
 				}
@@ -119,7 +119,7 @@ void CreaturePropertyPanel::SetCreature(Creature* creature, Tile* tile, Map* map
 
 		Direction dir = creature->getDirection();
 		for (size_t i = 0; i < direction_choice->GetCount(); ++i) {
-			if ((int)(intptr_t)direction_choice->GetClientData(i) == (int)dir) {
+			if (static_cast<int>(reinterpret_cast<intptr_t>(direction_choice->GetClientData(i))) == static_cast<int>(dir)) {
 				direction_choice->SetSelection(i);
 				break;
 			}
@@ -131,7 +131,7 @@ void CreaturePropertyPanel::SetCreature(Creature* creature, Tile* tile, Map* map
 			direction_choice->Enable(creature->getAlternatives().empty());
 			if (!creature->getAlternatives().empty()) {
 				for (size_t i = 0; i < direction_choice->GetCount(); ++i) {
-					if ((int)(intptr_t)direction_choice->GetClientData(i) == (int)NORTH) {
+					if (static_cast<int>(reinterpret_cast<intptr_t>(direction_choice->GetClientData(i))) == static_cast<int>(NORTH)) {
 						direction_choice->SetSelection(i);
 						break;
 					}
@@ -168,6 +168,9 @@ void CreaturePropertyPanel::OnSpawnTimeChange(wxSpinEvent& event) {
 		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(live_tile, *current_map);
 		if (new_tile->creature) {
 			new_tile->creature->setSpawnTime(spawntime_spin->GetValue());
+			if (!new_tile->creature->getAlternatives().empty()) {
+				new_tile->creature->setDirection(NORTH);
+			}
 			for (auto& alt : new_tile->creature->getAlternatives()) {
 				alt.spawntime = spawntime_spin->GetValue();
 				alt.direction = NORTH;
@@ -186,6 +189,10 @@ void CreaturePropertyPanel::OnSpawnTimeChange(wxSpinEvent& event) {
 
 void CreaturePropertyPanel::OnDirectionChange(wxCommandEvent& event) {
 	if (current_creature && current_tile && current_map) {
+		if (!current_creature->getAlternatives().empty()) {
+			return;
+		}
+
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {
 			return;
@@ -199,9 +206,8 @@ void CreaturePropertyPanel::OnDirectionChange(wxCommandEvent& event) {
 
 		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(live_tile, *current_map);
 		if (new_tile->creature) {
-			int new_dir = (int)(intptr_t)direction_choice->GetClientData(direction_choice->GetSelection());
-			new_tile->creature->setDirection((Direction)new_dir);
-
+			int new_dir = static_cast<int>(reinterpret_cast<intptr_t>(direction_choice->GetClientData(direction_choice->GetSelection())));
+			new_tile->creature->setDirection(static_cast<Direction>(new_dir));
 			std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
 			action->addChange(std::make_unique<Change>(std::move(new_tile)));
 			editor->addAction(std::move(action));
