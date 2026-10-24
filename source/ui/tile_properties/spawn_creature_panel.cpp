@@ -12,6 +12,7 @@
 #include "ui/gui_ids.h"
 #include "ui/icons/sprite_icon_service.h"
 #include "ui/gui.h"
+#include <format>
 
 SpawnCreaturePanel::SpawnCreaturePanel(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY) {
@@ -60,7 +61,12 @@ void SpawnCreaturePanel::SetTile(Tile* tile) {
 	}
 
 	if (tile && tile->creature) {
-		creature_text->SetLabelText(wxString(tile->creature->getName()));
+		const size_t altsCount = tile->creature->getAlternatives().size();
+		if (altsCount > 0) {
+			creature_text->SetLabelText(wxstr(std::format("{} (+{} variant{})", tile->creature->getName(), altsCount, altsCount > 1 ? "s" : "")));
+		} else {
+			creature_text->SetLabelText(wxstr(tile->creature->getName()));
+		}
 		GameSprite* spr = g_gui.gfx.getCreatureSprite(tile->creature->getLookType().lookType);
 		if (spr) {
 			wxBitmap bmp = SpriteIconService::Generate(spr, SPRITE_SIZE_32x32, tile->creature->getLookType(), false, SOUTH);

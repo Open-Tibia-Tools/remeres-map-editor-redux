@@ -76,6 +76,7 @@ std::unique_ptr<Creature> Creature::deepCopy() const {
 	copy->weight = weight;
 	copy->alternatives = alternatives;
 	copy->npc_spawn = npc_spawn;
+	copy->varying_spawn = varying_spawn;
 	copy->selected = selected;
 	copy->saved = saved;
 	return copy;

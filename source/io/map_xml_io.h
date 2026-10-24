@@ -31,6 +31,7 @@ public:
 	static bool loadMonsterSpawns(Map& map, const wxFileName& dir);
 	static bool loadNpcSpawns(Map& map, const wxFileName& dir);
 	static bool loadSpawns(Map& map, pugi::xml_document& doc);
+	static bool saveSpawns(const Map& map, pugi::xml_document& doc);
 	// OTBM 5 maps get separate monster and NPC files.
 	// shouldCancel is polled while the document is built; returning true aborts.
 	// report follows the whole stage, so the monster pass covers its first half
