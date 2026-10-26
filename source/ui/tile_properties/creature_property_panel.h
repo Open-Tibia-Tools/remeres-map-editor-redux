@@ -10,6 +10,7 @@
 #include <wx/choice.h>
 
 class Creature;
+class SpawnAlternativesEditor;
 
 class CreaturePropertyPanel : public CustomPropertyPanel {
 public:
@@ -32,6 +33,8 @@ protected:
 
 	wxStaticBoxSizer* dir_sizer;
 	wxChoice* direction_choice;
+	SpawnAlternativesEditor* alternatives_editor;
+	bool updating_from_model = false;
 };
 
 #endif

@@ -4,6 +4,7 @@
 
 #include "app/main.h"
 #include "ui/properties/creature_properties_window.h"
+#include "ui/properties/spawn_alternatives_editor.h"
 
 #include "game/creature.h"
 #include "ui/gui.h"
@@ -12,7 +13,8 @@
 CreaturePropertiesWindow::CreaturePropertiesWindow(wxWindow* win_parent, const Map* map, const Tile* tile_parent, Creature* creature, wxPoint pos) :
 	ObjectPropertiesWindowBase(win_parent, "Creature Properties", map, tile_parent, creature, pos),
 	count_field(nullptr),
-	direction_field(nullptr) {
+	direction_field(nullptr),
+	alternatives_editor(nullptr) {
 	ASSERT(edit_creature);
 
 	Bind(wxEVT_BUTTON, &CreaturePropertiesWindow::OnClickOK, this, wxID_OK);
@@ -44,6 +46,24 @@ CreaturePropertiesWindow::CreaturePropertiesWindow(wxWindow* win_parent, const M
 
 	boxsizer->Add(subsizer, wxSizerFlags(1).Expand());
 
+	if (!edit_creature->isNpc()) {
+		alternatives_editor = newd SpawnAlternativesEditor(this);
+		alternatives_editor->SetCreature(edit_creature);
+		boxsizer->Add(alternatives_editor, wxSizerFlags(1).Expand().Border(wxTOP, 10));
+
+		alternatives_editor->SetOnAlternativesChanged([this](bool hasAlternatives) {
+			direction_field->Enable(!hasAlternatives);
+			if (hasAlternatives) {
+				direction_field->SetSelection(Creature::DirName2ID("north"));
+			}
+		});
+
+		if (alternatives_editor->HasAlternatives()) {
+			direction_field->Enable(false);
+			direction_field->SetSelection(Creature::DirName2ID("north"));
+		}
+	}
+
 	topsizer->Add(boxsizer, wxSizerFlags(3).Expand().Border(wxALL, 20));
 
 	wxSizer* std_sizer = newd wxBoxSizer(wxHORIZONTAL);
@@ -70,12 +90,23 @@ CreaturePropertiesWindow::~CreaturePropertiesWindow() {
 }
 
 void CreaturePropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
+	if (alternatives_editor) {
+		alternatives_editor->ApplyToCreature(edit_creature);
+	}
+
 	int new_spawntime = count_field->GetValue();
 	edit_creature->setSpawnTime(new_spawntime);
 
-	if (direction_field->GetSelection() != wxNOT_FOUND) {
+	for (auto& alt : edit_creature->getAlternatives()) {
+		alt.spawntime = new_spawntime;
+		alt.direction = NORTH;
+	}
+
+	if (edit_creature->getAlternatives().empty() && direction_field->GetSelection() != wxNOT_FOUND) {
 		int new_dir = static_cast<int>(reinterpret_cast<intptr_t>(direction_field->GetClientData(direction_field->GetSelection())));
 		edit_creature->setDirection(static_cast<Direction>(new_dir));
+	} else {
+		edit_creature->setDirection(NORTH);
 	}
 	EndModal(1);
 }

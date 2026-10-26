@@ -89,6 +89,13 @@ public:
 		this->direction = direction;
 	}
 
+	const std::string& getTypeName() const {
+		return type_name;
+	}
+	void setTypeName(std::string name) {
+		type_name = std::move(name);
+	}
+
 	// Weight and alternatives are preserved across load/save (UI editing to be added)
 	uint32_t getWeight() const {
 		return weight;
@@ -102,12 +109,25 @@ public:
 	std::vector<SpawnAlternative>& getAlternatives() {
 		return alternatives;
 	}
+	void setAlternatives(std::vector<SpawnAlternative> alts) {
+		alternatives = std::move(alts);
+	}
+	void clearAlternatives() {
+		alternatives.clear();
+	}
 	void addAlternative(SpawnAlternative alternative) {
 		alternatives.push_back(std::move(alternative));
 	}
 	// In partitioned spawn files (OTBM 5), NPC files can spawn NPCs that share their name with a monster type
 	void markAsNpcSpawn() {
 		npc_spawn = true;
+	}
+
+	bool isVaryingSpawn() const {
+		return varying_spawn || !alternatives.empty();
+	}
+	void markAsVaryingSpawn(bool varying = true) {
+		varying_spawn = varying;
 	}
 
 protected:
@@ -117,6 +137,7 @@ protected:
 	uint32_t weight = 0; // 0 when the spawn file has no weight attribute
 	std::vector<SpawnAlternative> alternatives;
 	bool npc_spawn = false;
+	bool varying_spawn = false;
 	bool saved;
 	bool selected;
 };

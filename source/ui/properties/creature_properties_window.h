@@ -8,6 +8,8 @@
 #include "app/main.h"
 #include "ui/properties/object_properties_base.h"
 
+class SpawnAlternativesEditor;
+
 class CreaturePropertiesWindow : public ObjectPropertiesWindowBase {
 public:
 	CreaturePropertiesWindow(wxWindow* parent, const Map* map, const Tile* tile, Creature* creature, wxPoint pos = wxDefaultPosition);
@@ -19,6 +21,7 @@ public:
 protected:
 	wxSpinCtrl* count_field;
 	wxChoice* direction_field;
+	SpawnAlternativesEditor* alternatives_editor;
 };
 
 #endif
