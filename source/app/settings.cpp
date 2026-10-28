@@ -26,6 +26,9 @@
 #include <spdlog/fmt/ostr.h>
 #include <toml++/toml.h>
 
+#include "util/file_system.h"
+#include <filesystem>
+
 #include <iostream>
 #include <fstream>
 #include <limits>
@@ -238,12 +241,17 @@ static void populateDefaultTechnicalItems(toml::table& table) {
 
 void Settings::IO(IOMode mode) {
 	if (mode == LOAD) {
+		const auto config_path = FileSystem::GetConfigFilePath();
 		try {
-			g_settings_table = toml::parse_file("config.toml");
+			std::ifstream config_file(config_path, std::ios::binary);
+			if (config_file.is_open()) {
+				g_settings_table = toml::parse(config_file, FileSystem::PathToUtf8(config_path));
+				spdlog::info("Loaded settings from {}", FileSystem::PathToUtf8(config_path));
+			}
 		} catch (const toml::parse_error& err) {
-			spdlog::error("Failed to parse config.toml: {}", err.description());
+			spdlog::error("Failed to parse {}: {}", FileSystem::PathToUtf8(config_path), err.description());
 		} catch (const std::exception& err) {
-			spdlog::error("Failed to load config.toml: {}", err.what());
+			spdlog::error("Failed to load {}: {}", FileSystem::PathToUtf8(config_path), err.what());
 		}
 		populateDefaultTechnicalItems(g_settings_table);
 		rme::rendering::TechnicalItemRegistry::Initialize(g_settings_table);
@@ -657,15 +665,16 @@ void Settings::IO(IOMode mode) {
 			setString(PALETTE_DYNAMIC_STYLE, std::to_string(tileSize) + "x" + std::to_string(tileSize) + " px");
 			cur_sec->insert_or_assign("palette_dynamic_style", getString(PALETTE_DYNAMIC_STYLE));
 		}
-		std::ofstream file("config.toml");
+		const auto config_path = FileSystem::GetConfigSavePath();
+		std::ofstream file(config_path, std::ios::binary);
 		if (file.is_open()) {
 			file << g_settings_table;
 			if (file.fail()) {
-				spdlog::error("Failed to write to config.toml");
+				spdlog::error("Failed to write to {}", FileSystem::PathToUtf8(config_path));
 			}
 			file.close();
 		} else {
-			spdlog::error("Failed to open config.toml for writing");
+			spdlog::error("Failed to open {} for writing", FileSystem::PathToUtf8(config_path));
 		}
 	}
 
