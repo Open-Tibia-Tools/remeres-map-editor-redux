@@ -29,7 +29,8 @@ layout (location = 8) in float aDepth;
 out vec2 vWorldPos;
 out vec2 vQuadCoord;
 out vec2 vQuadSize;
-out vec3 TexCoord;
+// centroid: keeps MSAA edge samples inside the sprite (see chunk_shader.h).
+centroid out vec3 TexCoord;
 out vec4 Tint;
 flat out float vHouseId;
 flat out uint vZoneFlags;
@@ -59,7 +60,7 @@ inline std::string GetSpriteBatchFragShader() {
 in vec2 vWorldPos;
 in vec2 vQuadCoord;
 in vec2 vQuadSize;
-in vec3 TexCoord;
+centroid in vec3 TexCoord;
 in vec4 Tint;
 flat in float vHouseId;
 flat in uint vZoneFlags;

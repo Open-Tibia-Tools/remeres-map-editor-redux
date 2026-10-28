@@ -23,6 +23,23 @@
 
 LayoutManager g_layout;
 
+namespace {
+	// Dragging a sidebar's edge resizes the wxAUI dock, not the pane, and
+	// SavePaneInfo() only writes the pane, so the width was lost on restart.
+	// wxAUI sizes a new dock from its panes' best sizes, so record each docked
+	// pane's current size as its best size before saving it.
+	wxString SavePaneInfoWithCurrentSize(wxAuiManager& manager, wxWindow* window) {
+		wxAuiPaneInfo& info = manager.GetPane(window);
+		if (info.IsOk() && info.IsDocked() && info.IsShown()) {
+			const wxSize size = window->GetSize();
+			if (size.x > 0 && size.y > 0) {
+				info.BestSize(size);
+			}
+		}
+		return manager.SavePaneInfo(info);
+	}
+} // namespace
+
 LayoutManager::LayoutManager() {
 }
 
@@ -195,24 +212,24 @@ void LayoutManager::SavePerspective() {
 	wxString pinfo;
 	for (auto& palette : g_palettes.palettes) {
 		if (g_gui.aui_manager->GetPane(palette).IsShown()) {
-			pinfo << g_gui.aui_manager->SavePaneInfo(g_gui.aui_manager->GetPane(palette)) << "|";
+			pinfo << SavePaneInfoWithCurrentSize(*g_gui.aui_manager, palette) << "|";
 		}
 	}
 	g_settings.setString(Config::PALETTE_LAYOUT, nstr(pinfo));
 
 	if (g_minimap.GetWindow()) {
-		wxString s = g_gui.aui_manager->SavePaneInfo(g_gui.aui_manager->GetPane(g_minimap.GetWindow()));
+		wxString s = SavePaneInfoWithCurrentSize(*g_gui.aui_manager, g_minimap.GetWindow());
 		g_settings.setString(Config::MINIMAP_LAYOUT, nstr(s));
 	}
 
 	if (g_gui.tool_options) {
-		wxString s = g_gui.aui_manager->SavePaneInfo(g_gui.aui_manager->GetPane(g_gui.tool_options));
+		wxString s = SavePaneInfoWithCurrentSize(*g_gui.aui_manager, g_gui.tool_options);
 		g_settings.setString(Config::TOOL_OPTIONS_LAYOUT, nstr(s));
 	}
 
 	g_settings.setInteger(Config::INGAME_PREVIEW_VISIBLE, g_preview.IsVisible() ? 1 : 0);
 	if (g_preview.GetWindow()) {
-		wxString s = g_gui.aui_manager->SavePaneInfo(g_gui.aui_manager->GetPane(g_preview.GetWindow()));
+		wxString s = SavePaneInfoWithCurrentSize(*g_gui.aui_manager, g_preview.GetWindow());
 		g_settings.setString(Config::INGAME_PREVIEW_LAYOUT, nstr(s));
 	}
 
