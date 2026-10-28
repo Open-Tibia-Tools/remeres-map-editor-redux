@@ -234,7 +234,9 @@ enum ToolBarID {
 
 // Script Menu actions
 enum ScriptMenuID {
-	SCRIPTS_FIRST = TOOLBAR_LIGHT + 100,
+	// Menu ids are MAIN_FRAME_MENU + these values, so they must stay above every MenuBar::ActionID
+	// and below MAP_WINDOW_HSCROLL (MAIN_FRAME_MENU + 1000).
+	SCRIPTS_FIRST = TOOLBAR_LIGHT + 500,
 	SCRIPTS_LAST = SCRIPTS_FIRST + 100,
 
 	SHOW_CUSTOM_FIRST,
