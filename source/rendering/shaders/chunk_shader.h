@@ -25,7 +25,10 @@ layout (location = 7) in float aDepth;
 
 out vec2 vWorldPos;
 out vec2 vQuadCoord;
-out vec3 vTexCoord;
+// centroid: with MSAA a partially covered edge pixel is shaded at its centre,
+// which can lie outside the quad; extrapolated UVs then sample the neighbouring
+// atlas sprite and show up as coloured lines along tile edges when zoomed out.
+centroid out vec3 vTexCoord;
 out vec4 vColor;
 flat out float vFlags;
 flat out float vHouseId;
@@ -68,7 +71,7 @@ flat in float vFlags;
 flat in float vHouseId;
 in vec2 vWorldPos;
 in vec2 vQuadCoord;
-in vec3 vTexCoord;
+centroid in vec3 vTexCoord;
 in vec4 vColor;
 out vec4 FragColor;
 
