@@ -37,8 +37,8 @@ EditorPage::EditorPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 	ghost_shade_panel->SetSizer(ghost_shade_sizer);
 	PreferencesLayout::AddControlRow(
 		modes_section,
-		"Ghost floor shading",
-		"Adjust shading darkness of higher floors rendered in Ghost mode (Ctrl+L).",
+		"Higher floor shading",
+		"Adjust shading darkness of higher floors (Ctrl+L).",
 		ghost_shade_panel,
 		true
 	);

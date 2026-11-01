@@ -39,7 +39,7 @@ void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, Sprit
 
 					if (tile->ground) {
 						BlitItemParams params(tile, tile->ground.get(), options);
-						params.alpha = options.transparent_floors_alpha;
+						params.alpha = 255;
 						params.ctx = ctx;
 						if (tile->isPZ()) {
 							params.red = options.transparent_floors_tint / 2;
@@ -55,7 +55,7 @@ void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, Sprit
 					if (view.zoom <= 10.0 || !options.hide_items_when_zoomed) {
 						for (const auto& item : tile->items) {
 							BlitItemParams params(tile, item.get(), options);
-							params.alpha = options.transparent_floors_alpha;
+							params.alpha = 255;
 							params.ctx = ctx;
 							params.red = options.transparent_floors_tint;
 							params.green = options.transparent_floors_tint;
