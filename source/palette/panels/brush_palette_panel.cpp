@@ -234,7 +234,7 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 
 	// Create the tileset panel
 	ts_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Tileset");
-	PaletteChoicebook* tmp_cb = new PaletteChoicebook(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(180, 250)));
+	PaletteChoicebook* tmp_cb = new PaletteChoicebook(ts_sizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, FromDIP(wxSize(180, 250)));
 	choicebook = tmp_cb;
 	ts_sizer->Add(tmp_cb, wxSizerFlags(1).Expand());
 	topsizer->Add(ts_sizer, wxSizerFlags(1).Expand());
@@ -365,6 +365,9 @@ void BrushPalettePanel::SetHorizontalLayout(bool horizontal) {
 			GetSizer()->Detach(ts_sizer);
 			ts_sizer->GetStaticBox()->Show(false);
 		}
+		if (choicebook && choicebook->GetParent() != this) {
+			choicebook->Reparent(this);
+		}
 		GetSizer()->Add(choicebook, wxSizerFlags(1).Expand());
 		const int leftWidth = FromDIP(PALETTE_HORIZONTAL_LEFT_WIDTH);
 		if (choice) {
@@ -389,6 +392,9 @@ void BrushPalettePanel::SetHorizontalLayout(bool horizontal) {
 	} else {
 		GetSizer()->Detach(choicebook);
 		if (ts_sizer) {
+			if (choicebook && choicebook->GetParent() != ts_sizer->GetStaticBox()) {
+				choicebook->Reparent(ts_sizer->GetStaticBox());
+			}
 			ts_sizer->GetStaticBox()->Show(true);
 			ts_sizer->Add(choicebook, wxSizerFlags(1).Expand());
 			GetSizer()->Add(ts_sizer, wxSizerFlags(1).Expand());
