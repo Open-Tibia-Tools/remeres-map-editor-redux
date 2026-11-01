@@ -15,6 +15,7 @@
 #include <map>
 
 class Editor;
+class wxInfoBar;
 
 class ReplaceToolWindow : public wxDialog, public LibraryPanel::Listener, public RuleListControl::Listener, public RuleBuilderPanel::Listener, public ItemGridPanel::Listener {
 public:

@@ -1,4 +1,4 @@
-#include <wx/infobar.h>
+
 #include <wx/activityindicator.h>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
@@ -88,8 +88,6 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
 	tool_bar = std::make_unique<MainToolBar>(this, g_gui.aui_manager);
 
-	m_info_bar = new wxInfoBar(this);
-	g_gui.aui_manager->AddPane(m_info_bar, wxAuiPaneInfo().Name("InfoBar").Top().ToolbarPane().Floatable(false).Gripper(false).PaneBorder(false));
 	g_gui.aui_manager->AddPane(g_gui.tabbook, wxAuiPaneInfo().CenterPane().Floatable(false).CloseButton(false).PaneBorder(false));
 
 	g_gui.tile_properties_panel = new TilePropertiesPanel(this);
@@ -428,19 +426,7 @@ void MainFrame::PrepareDC(wxDC& dc) {
 	dc.SetMapMode(wxMM_TEXT);
 }
 
-void MainFrame::ShowInfoBanner(const wxString& message, int flags) {
-	if (m_info_bar) {
-		m_info_bar->ShowMessage(message, flags);
-		g_gui.aui_manager->Update();
-	}
-}
 
-void MainFrame::DismissInfoBanner() {
-	if (m_info_bar) {
-		m_info_bar->Dismiss();
-		g_gui.aui_manager->Update();
-	}
-}
 
 void MainFrame::StartBusyAnimation() {
 	if (m_activity_indicator && GetStatusBar()) {

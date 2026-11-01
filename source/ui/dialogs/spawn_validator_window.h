@@ -15,6 +15,7 @@
 #include <optional>
 
 class Editor;
+class wxInfoBar;
 
 class SpawnValidatorWindow : public wxDialog {
 public:

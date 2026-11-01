@@ -752,15 +752,12 @@ void SetWindowToolTip(wxWindow* a, wxWindow* b, const wxString& tip) {
 }
 
 void GUI::ShowInfoBanner(const wxString& message, int flags) {
-	if (root) {
-		root->ShowInfoBanner(message, flags);
-	}
+	SetStatusText(message);
+	DialogUtil::ShowNotification("Remere's Map Editor", message, root, flags);
 }
 
 void GUI::DismissInfoBanner() {
-	if (root) {
-		root->DismissInfoBanner();
-	}
+	SetStatusText(wxEmptyString);
 }
 
 void GUI::StartBusyAnimation() {
