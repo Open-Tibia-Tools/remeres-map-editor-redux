@@ -48,7 +48,7 @@ LiveLogTab::LiveLogTab(MapTabbook* aui, LiveSocket* server) :
 	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
 
 	wxPanel* splitter = new wxPanel(this);
-	topsizer->Add(splitter, 1, wxEXPAND);
+	topsizer->Add(splitter, wxSizerFlags(1).Expand());
 
 	// Setup left panel
 	wxPanel* left_pane = new wxPanel(splitter);
@@ -79,10 +79,10 @@ LiveLogTab::LiveLogTab(MapTabbook* aui, LiveSocket* server) :
 
 	log->Bind(wxEVT_SIZE, &LiveLogTab::OnResizeChat, this);
 
-	left_sizer->Add(log, 1, wxEXPAND);
+	left_sizer->Add(log, wxSizerFlags(1).Expand());
 
 	input = new wxTextCtrl(left_pane, LIVE_CHAT_TEXTBOX, wxEmptyString, wxDefaultPosition, wxDefaultSize);
-	left_sizer->Add(input, 0, wxEXPAND);
+	left_sizer->Add(input, wxSizerFlags().Expand());
 
 	input->Bind(wxEVT_SET_FOCUS, &LiveLogTab::OnSelectChatbox, this);
 	input->Bind(wxEVT_KILL_FOCUS, &LiveLogTab::OnDeselectChatbox, this);

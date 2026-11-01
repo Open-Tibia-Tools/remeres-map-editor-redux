@@ -12,10 +12,10 @@ CardPanel::CardPanel(wxWindow* parent, wxWindowID id) : NanoVGCanvas(parent, id)
 	m_mainSizer->AddSpacer(HEADER_HEIGHT);
 
 	m_contentSizer = new wxBoxSizer(wxVERTICAL);
-	m_mainSizer->Add(m_contentSizer, 1, wxEXPAND);
+	m_mainSizer->Add(m_contentSizer, wxSizerFlags(1).Expand());
 
 	m_footerSizer = new wxBoxSizer(wxVERTICAL);
-	m_mainSizer->Add(m_footerSizer, 0, wxEXPAND);
+	m_mainSizer->Add(m_footerSizer, wxSizerFlags().Expand());
 
 	SetSizer(m_mainSizer);
 }

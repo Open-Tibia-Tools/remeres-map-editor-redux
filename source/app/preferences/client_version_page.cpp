@@ -145,7 +145,7 @@ ClientVersionPage::ClientVersionPage(wxWindow* parent) : PreferencesPage(parent)
 		"Verify DAT and SPR signatures so mismatched client folders are caught early.",
 		check_sigs_chkbox
 	);
-	left_sizer->Add(defaults_section, 0, wxEXPAND | wxALL, FromDIP(10));
+	left_sizer->Add(defaults_section, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
 
 	auto* library_section = new PreferencesSectionPanel(
 		left_panel,
@@ -156,27 +156,27 @@ ClientVersionPage::ClientVersionPage(wxWindow* parent) : PreferencesPage(parent)
 	client_search_ctrl->ShowSearchButton(true);
 	client_search_ctrl->ShowCancelButton(true);
 	client_search_ctrl->SetDescriptiveText("Search by name, version, or OTB id");
-	library_section->GetBodySizer()->Add(client_search_ctrl, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
+	library_section->GetBodySizer()->Add(client_search_ctrl, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(10)));
 	last_search_text = client_search_ctrl->GetValue();
 
 	client_tree_ctrl = new wxTreeCtrl(library_section, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTR_HIDE_ROOT | wxTR_HAS_BUTTONS | wxTR_SINGLE | wxTR_LINES_AT_ROOT);
 	client_tree_ctrl->SetBackgroundColour(Theme::Get(Theme::Role::Background));
 	client_tree_ctrl->SetForegroundColour(Theme::Get(Theme::Role::Text));
-	library_section->GetBodySizer()->Add(client_tree_ctrl, 1, wxEXPAND | wxBOTTOM, FromDIP(10));
+	library_section->GetBodySizer()->Add(client_tree_ctrl, wxSizerFlags(1).Expand().Border(wxBOTTOM, FromDIP(10)));
 
 	auto* action_sizer = new wxBoxSizer(wxHORIZONTAL);
 	add_client_btn = new wxButton(library_section, wxID_ANY, "Add");
 	add_client_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
-	action_sizer->Add(add_client_btn, 0, wxRIGHT, FromDIP(8));
+	action_sizer->Add(add_client_btn, wxSizerFlags().Border(wxRIGHT, FromDIP(8)));
 	duplicate_client_btn = new wxButton(library_section, wxID_ANY, "Duplicate");
 	duplicate_client_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_COPY));
-	action_sizer->Add(duplicate_client_btn, 0, wxRIGHT, FromDIP(8));
+	action_sizer->Add(duplicate_client_btn, wxSizerFlags().Border(wxRIGHT, FromDIP(8)));
 	delete_client_btn = new wxButton(library_section, wxID_ANY, "Remove");
 	delete_client_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	action_sizer->Add(delete_client_btn, 0);
 	action_sizer->AddStretchSpacer();
-	library_section->GetBodySizer()->Add(action_sizer, 0, wxEXPAND);
-	left_sizer->Add(library_section, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	library_section->GetBodySizer()->Add(action_sizer, wxSizerFlags().Expand());
+	left_sizer->Add(library_section, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 	left_panel->SetSizer(left_sizer);
 
 	auto* right_panel = new wxPanel(client_splitter, wxID_ANY);
@@ -194,13 +194,9 @@ ClientVersionPage::ClientVersionPage(wxWindow* parent) : PreferencesPage(parent)
 		"Choose a Client Version",
 		"Select a version from the list on the left to edit identity, files, compatibility, and feature flags."
 	);
-	empty_section->GetBodySizer()->Add(
-		PreferencesLayout::CreateBodyText(empty_section, "The selected client will appear here as one focused editing workspace.", false),
-		0,
-		wxEXPAND
-	);
+	empty_section->GetBodySizer()->Add(PreferencesLayout::CreateBodyText(empty_section, "The selected client will appear here as one focused editing workspace.", false), wxSizerFlags().Expand());
 	empty_sizer->AddStretchSpacer();
-	empty_sizer->Add(empty_section, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
+	empty_sizer->Add(empty_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT, FromDIP(10)));
 	empty_sizer->AddStretchSpacer();
 	empty_panel->SetSizer(empty_sizer);
 	detail_book->AddPage(empty_panel, "Empty");
@@ -217,14 +213,14 @@ ClientVersionPage::ClientVersionPage(wxWindow* parent) : PreferencesPage(parent)
 	auto* summary_row = new wxBoxSizer(wxHORIZONTAL);
 	summary_name_label = PreferencesLayout::CreateBodyText(details_section, "", true);
 	summary_name_label->SetFont(Theme::GetFont(14, true));
-	summary_row->Add(summary_name_label, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
+	summary_row->Add(summary_name_label, wxSizerFlags(1).CenterVertical().Border(wxRIGHT, FromDIP(10)));
 	summary_dirty_label = PreferencesLayout::CreateBodyText(details_section, "", true);
-	summary_row->Add(summary_dirty_label, 0, wxALIGN_CENTER_VERTICAL);
-	details_section->GetBodySizer()->Add(summary_row, 0, wxEXPAND | wxBOTTOM, FromDIP(12));
+	summary_row->Add(summary_dirty_label, wxSizerFlags().CenterVertical());
+	details_section->GetBodySizer()->Add(summary_row, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(12)));
 
 	auto* top_separator = new wxPanel(details_section, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(1)));
 	top_separator->SetBackgroundColour(Theme::Get(Theme::Role::Border));
-	details_section->GetBodySizer()->Add(top_separator, 0, wxEXPAND | wxBOTTOM, FromDIP(12));
+	details_section->GetBodySizer()->Add(top_separator, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(12)));
 
 	client_prop_grid = new wxPropertyGrid(
 		details_section,
@@ -244,19 +240,19 @@ ClientVersionPage::ClientVersionPage(wxWindow* parent) : PreferencesPage(parent)
 	client_prop_grid->SetSelectionBackgroundColour(Theme::Get(Theme::Role::Accent));
 	client_prop_grid->SetSelectionTextColour(*wxWHITE);
 	client_prop_grid->SetMinSize(wxSize(-1, FromDIP(420)));
-	details_section->GetBodySizer()->Add(client_prop_grid, 1, wxEXPAND);
+	details_section->GetBodySizer()->Add(client_prop_grid, wxSizerFlags(1).Expand());
 
-	editor_sizer->Add(details_section, 1, wxEXPAND | wxALL, FromDIP(10));
+	editor_sizer->Add(details_section, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(10)));
 	editor_panel->SetSizer(editor_sizer);
 	detail_book->AddPage(editor_panel, "Editor");
 
-	right_sizer->Add(detail_book, 1, wxEXPAND);
+	right_sizer->Add(detail_book, wxSizerFlags(1).Expand());
 	right_panel->SetSizer(right_sizer);
 
 	client_splitter->SplitVertically(left_panel, right_panel, FromDIP(350));
 	client_splitter->SetSashGravity(0.28);
 	client_splitter->SetMinimumPaneSize(FromDIP(240));
-	main_sizer->Add(client_splitter, 1, wxEXPAND | wxALL, FromDIP(5));
+	main_sizer->Add(client_splitter, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
 
 	SetSizer(main_sizer);
 

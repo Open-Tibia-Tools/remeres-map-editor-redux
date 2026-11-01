@@ -20,37 +20,37 @@ ItemPropertyPanel::ItemPropertyPanel(wxWindow* parent) :
 
 	item_info_label = new wxStaticText(this, wxID_ANY, "");
 	item_info_label->SetFont(item_info_label->GetFont().Bold());
-	main_sizer->Add(item_info_label, 0, wxEXPAND | wxALL, 5);
+	main_sizer->Add(item_info_label, wxSizerFlags().Expand().Border(wxALL, 5));
 
 	wxStaticBoxSizer* action_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Action");
 
 	wxFlexGridSizer* action_grid = new wxFlexGridSizer(2, 2, 5, 5);
 	action_grid->AddGrowableCol(1);
 
-	action_grid->Add(new wxStaticText(action_sizer->GetStaticBox(), wxID_ANY, "Action ID:"), 0, wxALIGN_CENTER_VERTICAL);
+	action_grid->Add(new wxStaticText(action_sizer->GetStaticBox(), wxID_ANY, "Action ID:"), wxSizerFlags().CenterVertical());
 	action_id_spin = new wxSpinCtrl(action_sizer->GetStaticBox(), wxID_ANY);
 	action_id_spin->SetRange(0, 65535);
-	action_grid->Add(action_id_spin, 1, wxEXPAND);
+	action_grid->Add(action_id_spin, wxSizerFlags(1).Expand());
 
-	action_grid->Add(new wxStaticText(action_sizer->GetStaticBox(), wxID_ANY, "Unique ID:"), 0, wxALIGN_CENTER_VERTICAL);
+	action_grid->Add(new wxStaticText(action_sizer->GetStaticBox(), wxID_ANY, "Unique ID:"), wxSizerFlags().CenterVertical());
 	unique_id_spin = new wxSpinCtrl(action_sizer->GetStaticBox(), wxID_ANY);
 	unique_id_spin->SetRange(0, 65535);
-	action_grid->Add(unique_id_spin, 1, wxEXPAND);
+	action_grid->Add(unique_id_spin, wxSizerFlags(1).Expand());
 
-	action_sizer->Add(action_grid, 1, wxEXPAND | wxALL, 5);
-	main_sizer->Add(action_sizer, 0, wxEXPAND | wxALL, 5);
+	action_sizer->Add(action_grid, wxSizerFlags(1).Expand().Border(wxALL, 5));
+	main_sizer->Add(action_sizer, wxSizerFlags().Expand().Border(wxALL, 5));
 
 	count_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Quantity");
 	count_spin = new wxSpinCtrl(count_sizer->GetStaticBox(), wxID_ANY);
-	count_sizer->Add(count_spin, 0, wxEXPAND | wxALL, 5);
+	count_sizer->Add(count_spin, wxSizerFlags().Expand().Border(wxALL, 5));
 	splash_type_choice = new wxChoice(count_sizer->GetStaticBox(), wxID_ANY);
-	count_sizer->Add(splash_type_choice, 0, wxEXPAND | wxALL, 5);
-	main_sizer->Add(count_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+	count_sizer->Add(splash_type_choice, wxSizerFlags().Expand().Border(wxALL, 5));
+	main_sizer->Add(count_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 
 	text_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Text Description");
 	text_ctrl = new wxTextCtrl(text_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(-1, 160)), wxTE_MULTILINE);
-	text_sizer->Add(text_ctrl, 1, wxEXPAND | wxALL, 5);
-	main_sizer->Add(text_sizer, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+	text_sizer->Add(text_ctrl, wxSizerFlags(1).Expand().Border(wxALL, 5));
+	main_sizer->Add(text_sizer, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 
 	SetSizer(main_sizer);
 

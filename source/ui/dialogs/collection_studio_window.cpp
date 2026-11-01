@@ -63,23 +63,23 @@ void CollectionStudioWindow::InitLayout() {
 		TilesetGridToolbar::Part_Standard & ~TilesetGridToolbar::Part_FilterAll
 	);
 	m_itemToolbar->SetState(false, 32, false, TilesetSortKey::Name, TilesetSortDirection::Ascending, false);
-	itemsBox->Add(m_itemToolbar, 0, wxEXPAND | wxBOTTOM, 4);
+	itemsBox->Add(m_itemToolbar, wxSizerFlags().Expand().Border(wxBOTTOM, 4));
 
 	m_itemGrid = new rme::ui::CollectionItemGrid(itemsBox->GetStaticBox());
 	m_itemGrid->SetDiscardCallback([this](uint16_t id) {
 		OnDiscardItem(id);
 	});
-	itemsBox->Add(m_itemGrid, 1, wxEXPAND);
+	itemsBox->Add(m_itemGrid, wxSizerFlags(1).Expand());
 
 	wxBoxSizer* itemsBottom = new wxBoxSizer(wxHORIZONTAL);
 	m_clearItemsBtn = new wxButton(itemsBox->GetStaticBox(), wxID_ANY, "Clear Items");
 	m_itemCountLabel = new wxStaticText(itemsBox->GetStaticBox(), wxID_ANY, "Items: 0");
-	itemsBottom->Add(m_clearItemsBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+	itemsBottom->Add(m_clearItemsBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, 6));
 	itemsBottom->AddStretchSpacer(1);
-	itemsBottom->Add(m_itemCountLabel, 0, wxALIGN_CENTER_VERTICAL);
-	itemsBox->Add(itemsBottom, 0, wxEXPAND | wxTOP, 6);
+	itemsBottom->Add(m_itemCountLabel, wxSizerFlags().CenterVertical());
+	itemsBox->Add(itemsBottom, wxSizerFlags().Expand().Border(wxTOP, 6));
 
-	rootSizer->Add(itemsBox, 1, wxEXPAND | wxALL, 6);
+	rootSizer->Add(itemsBox, wxSizerFlags(1).Expand().Border(wxALL, 6));
 
 	// ================= Column 2: Brushes =================
 	wxStaticBoxSizer* brushesBox = new wxStaticBoxSizer(wxVERTICAL, this, "Brushes");
@@ -110,23 +110,23 @@ void CollectionStudioWindow::InitLayout() {
 		TilesetGridToolbar::Part_Standard & ~TilesetGridToolbar::Part_FilterAll
 	);
 	m_brushToolbar->SetState(false, 32, false, TilesetSortKey::Name, TilesetSortDirection::Ascending, false);
-	brushesBox->Add(m_brushToolbar, 0, wxEXPAND | wxBOTTOM, 4);
+	brushesBox->Add(m_brushToolbar, wxSizerFlags().Expand().Border(wxBOTTOM, 4));
 
 	m_brushGrid = new rme::ui::CollectionBrushGrid(brushesBox->GetStaticBox());
 	m_brushGrid->SetDiscardCallback([this](Brush* b) {
 		OnDiscardBrush(b);
 	});
-	brushesBox->Add(m_brushGrid, 1, wxEXPAND);
+	brushesBox->Add(m_brushGrid, wxSizerFlags(1).Expand());
 
 	wxBoxSizer* brushesBottom = new wxBoxSizer(wxHORIZONTAL);
 	m_clearBrushesBtn = new wxButton(brushesBox->GetStaticBox(), wxID_ANY, "Clear Brushes");
 	m_brushCountLabel = new wxStaticText(brushesBox->GetStaticBox(), wxID_ANY, "Brushes: 0");
-	brushesBottom->Add(m_clearBrushesBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+	brushesBottom->Add(m_clearBrushesBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, 6));
 	brushesBottom->AddStretchSpacer(1);
-	brushesBottom->Add(m_brushCountLabel, 0, wxALIGN_CENTER_VERTICAL);
-	brushesBox->Add(brushesBottom, 0, wxEXPAND | wxTOP, 6);
+	brushesBottom->Add(m_brushCountLabel, wxSizerFlags().CenterVertical());
+	brushesBox->Add(brushesBottom, wxSizerFlags().Expand().Border(wxTOP, 6));
 
-	rootSizer->Add(brushesBox, 1, wxEXPAND | wxALL, 6);
+	rootSizer->Add(brushesBox, wxSizerFlags(1).Expand().Border(wxALL, 6));
 
 	// ================= Column 3: Options =================
 	rme::ui::CollectionOptionsPanel::Callbacks callbacks;
@@ -150,7 +150,7 @@ void CollectionStudioWindow::InitLayout() {
 
 	m_optionsPanel = new rme::ui::CollectionOptionsPanel(this, std::move(callbacks));
 	m_optionsPanel->SetMinSize(wxSize(260, -1));
-	rootSizer->Add(m_optionsPanel, 0, wxEXPAND | wxALL, 6);
+	rootSizer->Add(m_optionsPanel, wxSizerFlags().Expand().Border(wxALL, 6));
 
 	SetSizer(rootSizer);
 

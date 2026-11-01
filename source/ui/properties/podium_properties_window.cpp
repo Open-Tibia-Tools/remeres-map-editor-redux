@@ -68,19 +68,19 @@ PodiumPropertiesWindow::PodiumPropertiesWindow(wxWindow* win_parent, const Map* 
 	show_outfit = new wxCheckBox(this, wxID_ANY, "Show outfit");
 	show_outfit->SetValue(podium->hasShowOutfit());
 	show_outfit->SetToolTip("Display outfit on the podium.");
-	subsizer->Add(show_outfit, 0, wxLEFT | wxTOP, 5);
+	subsizer->Add(show_outfit, wxSizerFlags().Border(wxLEFT | wxTOP, 5));
 	subsizer->Add(new wxStaticText(this, wxID_ANY, ""));
 
 	show_mount = new wxCheckBox(this, wxID_ANY, "Show mount");
 	show_mount->SetValue(podium->hasShowMount());
 	show_mount->SetToolTip("Display mount on the podium.");
-	subsizer->Add(show_mount, 0, wxLEFT | wxTOP, 5);
+	subsizer->Add(show_mount, wxSizerFlags().Border(wxLEFT | wxTOP, 5));
 	subsizer->Add(new wxStaticText(this, wxID_ANY, ""));
 
 	show_platform = new wxCheckBox(this, wxID_ANY, "Show platform");
 	show_platform->SetValue(podium->hasShowPlatform());
 	show_platform->SetToolTip("Display the podium platform.");
-	subsizer->Add(show_platform, 0, wxLEFT | wxTOP, 5);
+	subsizer->Add(show_platform, wxSizerFlags().Border(wxLEFT | wxTOP, 5));
 	subsizer->Add(new wxStaticText(this, wxID_ANY, ""));
 
 	wxFlexGridSizer* outfitContainer = new wxFlexGridSizer(2, 10, 10);

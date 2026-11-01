@@ -21,9 +21,9 @@ SpawnPropertyPanel::SpawnPropertyPanel(wxWindow* parent) :
 	radius_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Spawn Radius");
 	radius_spin = new wxSpinCtrl(radius_sizer->GetStaticBox(), wxID_ANY);
 	radius_spin->SetRange(1, 99);
-	radius_sizer->Add(radius_spin, 1, wxEXPAND | wxALL, 5);
+	radius_sizer->Add(radius_spin, wxSizerFlags(1).Expand().Border(wxALL, 5));
 
-	main_sizer->Add(radius_sizer, 0, wxEXPAND | wxALL, 5);
+	main_sizer->Add(radius_sizer, wxSizerFlags().Expand().Border(wxALL, 5));
 	SetSizer(main_sizer);
 
 	radius_spin->Bind(wxEVT_SPINCTRL, &SpawnPropertyPanel::OnRadiusChange, this);

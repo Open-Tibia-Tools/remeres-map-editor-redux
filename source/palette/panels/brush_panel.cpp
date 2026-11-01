@@ -128,7 +128,7 @@ void BrushPanel::LoadContents() {
 	}
 
 	loaded = true;
-	sizer->Add(brushbox->GetSelfWindow(), 1, wxEXPAND);
+	sizer->Add(brushbox->GetSelfWindow(), wxSizerFlags(1).Expand());
 	Layout();
 	Fit();
 	if (const Brush* current = g_gui.GetCurrentBrush()) {

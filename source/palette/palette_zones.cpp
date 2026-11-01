@@ -34,7 +34,7 @@ ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 	search_ctrl = new PaletteSearchCtrl(this, PALETTE_ZONE_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 	search_ctrl->SetDescriptiveText("Search zones...");
 	search_ctrl->SetFont(Theme::GetFont(9, false));
-	sidesizer->Add(search_ctrl, 0, wxEXPAND | wxALL, 5);
+	sidesizer->Add(search_ctrl, wxSizerFlags().Expand().Border(wxALL, 5));
 
 	// NanoVG Table
 	zone_table = new NanoVGTableCtrl(this, PALETTE_ZONE_LISTBOX);
@@ -63,7 +63,7 @@ ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 		OnToggleGroup(idx, row);
 	});
 
-	sidesizer->Add(zone_table, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
+	sidesizer->Add(zone_table, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT, 5));
 
 	// Action buttons (Add, Rename, Remove)
 	wxBoxSizer* buttons = new wxBoxSizer(wxHORIZONTAL);
@@ -79,10 +79,10 @@ ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
 	remove_button->SetFont(Theme::GetFont(9, false));
 
-	buttons->Add(add_button, 1, wxEXPAND | wxRIGHT, 2);
-	buttons->Add(rename_button, 1, wxEXPAND | wxRIGHT, 2);
-	buttons->Add(remove_button, 1, wxEXPAND);
-	sidesizer->Add(buttons, 0, wxEXPAND | wxALL, 5);
+	buttons->Add(add_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
+	buttons->Add(rename_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
+	buttons->Add(remove_button, wxSizerFlags(1).Expand());
+	sidesizer->Add(buttons, wxSizerFlags().Expand().Border(wxALL, 5));
 
 	SetSizer(sidesizer);
 

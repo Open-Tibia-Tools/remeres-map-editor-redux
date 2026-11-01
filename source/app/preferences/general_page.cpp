@@ -63,7 +63,7 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Maps opened from Explorer or shell integrations are routed into the already running editor window.",
 		g_settings.getBoolean(Config::ONLY_ONE_INSTANCE)
 	);
-	page_sizer->Add(startup_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
+	page_sizer->Add(startup_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(10)));
 
 	auto* safety_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -82,7 +82,7 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Show palette editing tools for customizing tileset organization.",
 		g_settings.getBoolean(Config::SHOW_TILESET_EDITOR)
 	);
-	page_sizer->Add(safety_section, 0, wxEXPAND | wxALL, FromDIP(10));
+	page_sizer->Add(safety_section, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
 
 	auto* performance_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -117,7 +117,7 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Maximum number of items the Replace Item tool can affect in one operation.",
 		replace_size_spin
 	);
-	page_sizer->Add(performance_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(performance_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	auto* clipboard_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -141,7 +141,7 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Example output shown with representative map coordinates.",
 		BuildPositionPreview(position_format_choice->GetSelection())
 	);
-	page_sizer->Add(clipboard_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(clipboard_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	position_format_choice->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) {
 		UpdatePositionPreview();

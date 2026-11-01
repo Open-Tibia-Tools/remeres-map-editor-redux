@@ -48,7 +48,7 @@ FindDialog::FindDialog(wxWindow* parent, wxString title) :
 	search_field->SetHint("Type to search...");
 	search_field->SetToolTip("Type at least 2 characters to search for brushes or items.");
 	search_field->SetFocus();
-	sizer->Add(search_field, 0, wxEXPAND);
+	sizer->Add(search_field, wxSizerFlags().Expand());
 
 	item_list = new FindDialogListBox(this, JUMP_DIALOG_LIST);
 	item_list->SetMinSize(item_list->FromDIP(wxSize(470, 400)));

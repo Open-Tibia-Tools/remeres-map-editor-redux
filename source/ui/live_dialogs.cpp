@@ -41,29 +41,29 @@ void LiveDialogs::ShowHostDialog(wxWindow* parent, Editor* editor) {
 	wxCheckBox* allow_copy;
 
 	gsizer->Add(new wxStaticText(live_host_dlg, wxID_ANY, "Server Name:"));
-	gsizer->Add(hostname = new wxTextCtrl(live_host_dlg, wxID_ANY, "RME Live Server"), 0, wxEXPAND);
+	gsizer->Add(hostname = new wxTextCtrl(live_host_dlg, wxID_ANY, "RME Live Server"), wxSizerFlags().Expand());
 
 	gsizer->Add(new wxStaticText(live_host_dlg, wxID_ANY, "Port:"));
-	gsizer->Add(port = new wxSpinCtrl(live_host_dlg, wxID_ANY, "31313", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 65535, 31313), 0, wxEXPAND);
+	gsizer->Add(port = new wxSpinCtrl(live_host_dlg, wxID_ANY, "31313", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 65535, 31313), wxSizerFlags().Expand());
 
 	gsizer->Add(new wxStaticText(live_host_dlg, wxID_ANY, "Password:"));
-	gsizer->Add(password = new wxTextCtrl(live_host_dlg, wxID_ANY), 0, wxEXPAND);
+	gsizer->Add(password = new wxTextCtrl(live_host_dlg, wxID_ANY), wxSizerFlags().Expand());
 
-	top_sizer->Add(gsizer, 0, wxALL, 20);
+	top_sizer->Add(gsizer, wxSizerFlags().Border(wxALL, 20));
 
-	top_sizer->Add(allow_copy = new wxCheckBox(live_host_dlg, wxID_ANY, "Allow copy & paste between maps."), 0, wxRIGHT | wxLEFT, 20);
+	top_sizer->Add(allow_copy = new wxCheckBox(live_host_dlg, wxID_ANY, "Allow copy & paste between maps."), wxSizerFlags().Border(wxRIGHT | wxLEFT, 20));
 	allow_copy->SetToolTip("Allows remote clients to copy & paste from the hosted map to local maps.");
 
 	wxSizer* ok_sizer = new wxBoxSizer(wxHORIZONTAL);
 	auto okBtn = new wxButton(live_host_dlg, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Start server");
-	ok_sizer->Add(okBtn, 1, wxCENTER);
+	ok_sizer->Add(okBtn, wxSizerFlags(1).Center());
 	auto cancelBtn = new wxButton(live_host_dlg, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancelBtn->SetToolTip("Cancel");
-	ok_sizer->Add(cancelBtn, wxCENTER, 1);
-	top_sizer->Add(ok_sizer, 0, wxCENTER | wxALL, 20);
+	ok_sizer->Add(cancelBtn, wxSizerFlags(1).Center());
+	top_sizer->Add(ok_sizer, wxSizerFlags().Center().Border(wxALL, 20));
 
 	live_host_dlg->SetSizerAndFit(top_sizer);
 
@@ -113,29 +113,29 @@ void LiveDialogs::ShowJoinDialog(wxWindow* parent) {
 	wxTextCtrl* password;
 
 	gsizer->Add(new wxStaticText(live_join_dlg, wxID_ANY, "Name:"));
-	gsizer->Add(name = new wxTextCtrl(live_join_dlg, wxID_ANY, ""), 0, wxEXPAND);
+	gsizer->Add(name = new wxTextCtrl(live_join_dlg, wxID_ANY, ""), wxSizerFlags().Expand());
 
 	gsizer->Add(new wxStaticText(live_join_dlg, wxID_ANY, "IP:"));
-	gsizer->Add(ip = new wxTextCtrl(live_join_dlg, wxID_ANY, "localhost"), 0, wxEXPAND);
+	gsizer->Add(ip = new wxTextCtrl(live_join_dlg, wxID_ANY, "localhost"), wxSizerFlags().Expand());
 
 	gsizer->Add(new wxStaticText(live_join_dlg, wxID_ANY, "Port:"));
-	gsizer->Add(port = new wxSpinCtrl(live_join_dlg, wxID_ANY, "31313", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 65535, 31313), 0, wxEXPAND);
+	gsizer->Add(port = new wxSpinCtrl(live_join_dlg, wxID_ANY, "31313", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 65535, 31313), wxSizerFlags().Expand());
 
 	gsizer->Add(new wxStaticText(live_join_dlg, wxID_ANY, "Password:"));
-	gsizer->Add(password = new wxTextCtrl(live_join_dlg, wxID_ANY), 0, wxEXPAND);
+	gsizer->Add(password = new wxTextCtrl(live_join_dlg, wxID_ANY), wxSizerFlags().Expand());
 
-	top_sizer->Add(gsizer, 0, wxALL, 20);
+	top_sizer->Add(gsizer, wxSizerFlags().Border(wxALL, 20));
 
 	wxSizer* ok_sizer = new wxBoxSizer(wxHORIZONTAL);
 	auto okBtn = new wxButton(live_join_dlg, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Connect to server");
-	ok_sizer->Add(okBtn, 1, wxRIGHT);
+	ok_sizer->Add(okBtn, wxSizerFlags(1).Right());
 	auto cancelBtn = new wxButton(live_join_dlg, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancelBtn->SetToolTip("Cancel");
-	ok_sizer->Add(cancelBtn, 1, wxRIGHT);
-	top_sizer->Add(ok_sizer, 0, wxCENTER | wxALL, 20);
+	ok_sizer->Add(cancelBtn, wxSizerFlags(1).Right());
+	top_sizer->Add(ok_sizer, wxSizerFlags().Center().Border(wxALL, 20));
 
 	live_join_dlg->SetSizerAndFit(top_sizer);
 

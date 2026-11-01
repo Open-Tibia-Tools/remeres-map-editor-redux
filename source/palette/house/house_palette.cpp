@@ -37,14 +37,14 @@ HousePalette::HousePalette(wxWindow* parent) :
 
 	town_choice = new wxChoice(this, PALETTE_HOUSE_TOWN_CHOICE);
 	town_choice->SetFont(Theme::GetFont(9, false));
-	filter_sizer->Add(town_choice, 0, wxEXPAND | wxBOTTOM, 4);
+	filter_sizer->Add(town_choice, wxSizerFlags().Expand().Border(wxBOTTOM, 4));
 
 	search_ctrl = new PaletteSearchCtrl(this, PALETTE_HOUSE_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 	search_ctrl->SetDescriptiveText("Search houses...");
 	search_ctrl->SetFont(Theme::GetFont(9, false));
-	filter_sizer->Add(search_ctrl, 0, wxEXPAND);
+	filter_sizer->Add(search_ctrl, wxSizerFlags().Expand());
 
-	main_sizer->Add(filter_sizer, 0, wxEXPAND | wxALL, 5);
+	main_sizer->Add(filter_sizer, wxSizerFlags().Expand().Border(wxALL, 5));
 
 	// Table section (NanoVG Table)
 	house_table = new NanoVGTableCtrl(this, PALETTE_HOUSE_LISTBOX);
@@ -70,7 +70,7 @@ HousePalette::HousePalette(wxWindow* parent) :
 		OnHouseContextMenu(idx, row, pos);
 	});
 
-	main_sizer->Add(house_table, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
+	main_sizer->Add(house_table, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT, 5));
 
 	// Action buttons (Add, Edit, Remove)
 	wxBoxSizer* action_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -86,11 +86,11 @@ HousePalette::HousePalette(wxWindow* parent) :
 	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
 	remove_button->SetFont(Theme::GetFont(9, false));
 
-	action_sizer->Add(add_button, 1, wxEXPAND | wxRIGHT, 2);
-	action_sizer->Add(edit_button, 1, wxEXPAND | wxRIGHT, 2);
-	action_sizer->Add(remove_button, 1, wxEXPAND);
+	action_sizer->Add(add_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
+	action_sizer->Add(edit_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
+	action_sizer->Add(remove_button, wxSizerFlags(1).Expand());
 
-	main_sizer->Add(action_sizer, 0, wxEXPAND | wxALL, 5);
+	main_sizer->Add(action_sizer, wxSizerFlags().Expand().Border(wxALL, 5));
 
 	// Brush buttons (House tiles, Select Exit)
 	wxBoxSizer* brush_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -103,10 +103,10 @@ HousePalette::HousePalette(wxWindow* parent) :
 	select_exit_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_DOOR_OPEN, wxSize(16, 16)));
 	select_exit_button->SetFont(Theme::GetFont(9, false));
 
-	brush_sizer->Add(house_brush_button, 1, wxEXPAND | wxRIGHT, 2);
-	brush_sizer->Add(select_exit_button, 1, wxEXPAND);
+	brush_sizer->Add(house_brush_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
+	brush_sizer->Add(select_exit_button, wxSizerFlags(1).Expand());
 
-	main_sizer->Add(brush_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+	main_sizer->Add(brush_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 
 	SetSizer(main_sizer);
 

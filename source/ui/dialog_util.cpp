@@ -88,10 +88,10 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 	for (const wxString& line : lines) {
 		item_list->Append(line);
 	}
-	sizer->Add(item_list, 1, wxEXPAND);
+	sizer->Add(item_list, wxSizerFlags(1).Expand());
 
 	wxStaticText* feedback = new wxStaticText(dlg, wxID_ANY, "Ctrl+C copies the selection, or every line when nothing is selected.");
-	sizer->Add(feedback, 0, wxLEFT | wxRIGHT | wxTOP, dlg->FromDIP(4));
+	sizer->Add(feedback, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, dlg->FromDIP(4)));
 
 	// Copy helpers: Selected copies only what is selected (that is the button
 	// name), Ctrl+C falls back to every line when the selection is empty.
@@ -168,7 +168,7 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	action_sizer->Add(okBtn, wxSizerFlags(1).Expand());
 
-	sizer->Add(action_sizer, 0, wxEXPAND | wxALL, dlg->FromDIP(4));
+	sizer->Add(action_sizer, wxSizerFlags().Expand().Border(wxALL, dlg->FromDIP(4)));
 
 	dlg->Bind(wxEVT_CHAR_HOOK, [copy_lines, selected_lines, &lines](wxKeyEvent& event) {
 		if (event.GetKeyCode() == 'C' && event.ControlDown()) {

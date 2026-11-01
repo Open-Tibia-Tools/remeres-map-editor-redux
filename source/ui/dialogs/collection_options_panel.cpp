@@ -35,7 +35,7 @@ public:
 			paletteName
 		));
 		wxStaticText* text = new wxStaticText(this, wxID_ANY, msg);
-		mainSizer->Add(text, 0, wxALL, 16);
+		mainSizer->Add(text, wxSizerFlags().Border(wxALL, 16));
 
 		wxBoxSizer* btnSizer = new wxBoxSizer(wxHORIZONTAL);
 		wxButton* appendBtn = new wxButton(this, wxID_ANY, "&Append");
@@ -50,12 +50,12 @@ public:
 		renameBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EndModal(Rename); });
 		cancelBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EndModal(Cancel); });
 
-		btnSizer->Add(appendBtn, 0, wxRIGHT, 6);
-		btnSizer->Add(overwriteBtn, 0, wxRIGHT, 6);
-		btnSizer->Add(renameBtn, 0, wxRIGHT, 6);
+		btnSizer->Add(appendBtn, wxSizerFlags().Border(wxRIGHT, 6));
+		btnSizer->Add(overwriteBtn, wxSizerFlags().Border(wxRIGHT, 6));
+		btnSizer->Add(renameBtn, wxSizerFlags().Border(wxRIGHT, 6));
 		btnSizer->Add(cancelBtn, 0);
 
-		mainSizer->Add(btnSizer, 0, wxALIGN_RIGHT | wxBOTTOM | wxLEFT | wxRIGHT, 16);
+		mainSizer->Add(btnSizer, wxSizerFlags().Right().Border(wxBOTTOM | wxLEFT | wxRIGHT, 16));
 		SetSizerAndFit(mainSizer);
 		CenterOnParent();
 	}
@@ -76,46 +76,46 @@ void CollectionOptionsPanel::InitUI() {
 	wxStaticBoxSizer* targetBox = new wxStaticBoxSizer(wxVERTICAL, this, "Target Tileset");
 
 	wxStaticText* palLabel = new wxStaticText(targetBox->GetStaticBox(), wxID_ANY, "Target Palette:");
-	targetBox->Add(palLabel, 0, wxTOP | wxLEFT | wxRIGHT, 6);
+	targetBox->Add(palLabel, wxSizerFlags().Border(wxTOP | wxLEFT | wxRIGHT, 6));
 
 	m_paletteChoice = new wxChoice(targetBox->GetStaticBox(), wxID_ANY);
-	targetBox->Add(m_paletteChoice, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
+	targetBox->Add(m_paletteChoice, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
 	m_radioNew = new wxRadioButton(targetBox->GetStaticBox(), wxID_ANY, "Create New Tileset", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-	targetBox->Add(m_radioNew, 0, wxTOP | wxLEFT | wxRIGHT, 6);
+	targetBox->Add(m_radioNew, wxSizerFlags().Border(wxTOP | wxLEFT | wxRIGHT, 6));
 
 	m_nameInput = new wxTextCtrl(targetBox->GetStaticBox(), wxID_ANY, wxstr(GenerateDefaultTilesetName()));
-	targetBox->Add(m_nameInput, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
+	targetBox->Add(m_nameInput, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
 	m_radioExisting = new wxRadioButton(targetBox->GetStaticBox(), wxID_ANY, "Add to Existing Tileset");
-	targetBox->Add(m_radioExisting, 0, wxTOP | wxLEFT | wxRIGHT, 6);
+	targetBox->Add(m_radioExisting, wxSizerFlags().Border(wxTOP | wxLEFT | wxRIGHT, 6));
 
 	m_existingChoice = new wxChoice(targetBox->GetStaticBox(), wxID_ANY);
 	m_existingChoice->Enable(false);
-	targetBox->Add(m_existingChoice, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
+	targetBox->Add(m_existingChoice, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
-	rootSizer->Add(targetBox, 0, wxEXPAND | wxALL, 6);
+	rootSizer->Add(targetBox, wxSizerFlags().Expand().Border(wxALL, 6));
 
 	// Group: Inclusion Filters
 	wxStaticBoxSizer* includeBox = new wxStaticBoxSizer(wxVERTICAL, this, "Include in Tileset");
 	m_includeItemsCheck = new wxCheckBox(includeBox->GetStaticBox(), wxID_ANY, "Include Items (0)");
 	m_includeItemsCheck->SetValue(true);
-	includeBox->Add(m_includeItemsCheck, 0, wxALL, 6);
+	includeBox->Add(m_includeItemsCheck, wxSizerFlags().Border(wxALL, 6));
 
 	m_includeBrushesCheck = new wxCheckBox(includeBox->GetStaticBox(), wxID_ANY, "Include Brushes (0)");
 	m_includeBrushesCheck->SetValue(true);
-	includeBox->Add(m_includeBrushesCheck, 0, wxALL, 6);
+	includeBox->Add(m_includeBrushesCheck, wxSizerFlags().Border(wxALL, 6));
 
-	rootSizer->Add(includeBox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
+	rootSizer->Add(includeBox, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
 	// Target File Path preview
 	wxStaticBoxSizer* pathBox = new wxStaticBoxSizer(wxVERTICAL, this, "Target File");
 	m_filePathLabel = new wxStaticText(pathBox->GetStaticBox(), wxID_ANY, "Target: tilesets/collections/...");
 	m_filePathLabel->SetFont(m_filePathLabel->GetFont().Smaller());
 	m_filePathLabel->Wrap(240);
-	pathBox->Add(m_filePathLabel, 0, wxEXPAND | wxALL, 6);
+	pathBox->Add(m_filePathLabel, wxSizerFlags().Expand().Border(wxALL, 6));
 
-	rootSizer->Add(pathBox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
+	rootSizer->Add(pathBox, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
 	// Spacer to push action buttons to bottom
 	rootSizer->AddStretchSpacer(1);
@@ -123,11 +123,11 @@ void CollectionOptionsPanel::InitUI() {
 	// Action Buttons
 	m_accumulateBtn = new wxButton(this, wxID_ANY, "&Add Current Selection");
 	m_accumulateBtn->SetToolTip("Add items and brushes from the current map selection");
-	rootSizer->Add(m_accumulateBtn, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
+	rootSizer->Add(m_accumulateBtn, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
 	m_saveBtn = new wxButton(this, wxID_ANY, "&Add to Tileset");
 	m_saveBtn->SetDefault();
-	rootSizer->Add(m_saveBtn, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
+	rootSizer->Add(m_saveBtn, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
 	wxBoxSizer* undoRedoSizer = new wxBoxSizer(wxHORIZONTAL);
 	m_undoBtn = new wxButton(this, wxID_ANY, "&Undo");
@@ -136,12 +136,12 @@ void CollectionOptionsPanel::InitUI() {
 	m_redoBtn = new wxButton(this, wxID_ANY, "&Redo");
 	m_redoBtn->SetToolTip("Redo discard (Ctrl+Y)");
 	m_redoBtn->Enable(false);
-	undoRedoSizer->Add(m_undoBtn, 1, wxRIGHT, 4);
-	undoRedoSizer->Add(m_redoBtn, 1, wxLEFT, 4);
-	rootSizer->Add(undoRedoSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
+	undoRedoSizer->Add(m_undoBtn, wxSizerFlags(1).Border(wxRIGHT, 4));
+	undoRedoSizer->Add(m_redoBtn, wxSizerFlags(1).Border(wxLEFT, 4));
+	rootSizer->Add(undoRedoSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
 	m_clearBtn = new wxButton(this, wxID_ANY, "&Clear All");
-	rootSizer->Add(m_clearBtn, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
+	rootSizer->Add(m_clearBtn, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
 	SetSizer(rootSizer);
 

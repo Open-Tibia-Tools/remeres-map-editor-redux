@@ -44,20 +44,20 @@ PreferencesSectionPanel::PreferencesSectionPanel(wxWindow* parent, const wxStrin
 	title_label->SetFont(Theme::GetFont(10, true));
 	title_label->SetForegroundColour(Theme::Get(Theme::Role::Text));
 	title_label->SetBackgroundColour(GetBackgroundColour());
-	root_sizer->Add(title_label, 0, wxLEFT | wxRIGHT, padding);
+	root_sizer->Add(title_label, wxSizerFlags().Border(wxLEFT | wxRIGHT, padding));
 
 	if (!description.empty()) {
 		root_sizer->AddSpacer(wxWindow::FromDIP(4, this));
 		m_description_label = CreateDescriptionLabel(this, description);
-		root_sizer->Add(m_description_label, 0, wxLEFT | wxRIGHT, padding);
+		root_sizer->Add(m_description_label, wxSizerFlags().Border(wxLEFT | wxRIGHT, padding));
 	}
 
 	auto* separator = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, wxWindow::FromDIP(1, this)));
 	separator->SetBackgroundColour(Theme::Get(Theme::Role::Border));
-	root_sizer->Add(separator, 0, wxEXPAND | wxALL, padding);
+	root_sizer->Add(separator, wxSizerFlags().Expand().Border(wxALL, padding));
 
 	m_body_sizer = new wxBoxSizer(wxVERTICAL);
-	root_sizer->Add(m_body_sizer, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
+	root_sizer->Add(m_body_sizer, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
 
 	SetSizer(root_sizer);
 	Bind(wxEVT_PAINT, &PreferencesSectionPanel::OnPaint, this);
@@ -146,7 +146,7 @@ wxStaticText* PreferencesLayout::AddNotice(PreferencesSectionPanel* section, con
 	notice->SetForegroundColour(Theme::Get(role));
 	notice->SetBackgroundColour(section->GetBackgroundColour());
 	section->RegisterWrappedLabel(notice);
-	section->GetBodySizer()->Add(notice, 0, wxEXPAND | wxBOTTOM, wxWindow::FromDIP(10, section));
+	section->GetBodySizer()->Add(notice, wxSizerFlags().Expand().Border(wxBOTTOM, wxWindow::FromDIP(10, section)));
 	return notice;
 }
 
@@ -159,15 +159,15 @@ wxCheckBox* PreferencesLayout::AddCheckBoxRow(
 	auto* row_sizer = new wxBoxSizer(wxHORIZONTAL);
 	auto* text_sizer = new wxBoxSizer(wxVERTICAL);
 
-	text_sizer->Add(CreateTitleLabel(section, title), 0, wxBOTTOM, wxWindow::FromDIP(2, section));
-	text_sizer->Add(CreateDescriptionLabel(section, description), 0, wxEXPAND);
-	row_sizer->Add(text_sizer, 1, wxEXPAND | wxRIGHT, wxWindow::FromDIP(12, section));
+	text_sizer->Add(CreateTitleLabel(section, title), wxSizerFlags().Border(wxBOTTOM, wxWindow::FromDIP(2, section)));
+	text_sizer->Add(CreateDescriptionLabel(section, description), wxSizerFlags().Expand());
+	row_sizer->Add(text_sizer, wxSizerFlags(1).Expand().Border(wxRIGHT, wxWindow::FromDIP(12, section)));
 
 	auto* checkbox = new wxCheckBox(section, wxID_ANY, wxEmptyString);
 	checkbox->SetValue(value);
-	row_sizer->Add(checkbox, 0, wxALIGN_CENTER_VERTICAL | wxTOP, wxWindow::FromDIP(2, section));
+	row_sizer->Add(checkbox, wxSizerFlags().CenterVertical().Border(wxTOP, wxWindow::FromDIP(2, section)));
 
-	section->GetBodySizer()->Add(row_sizer, 0, wxEXPAND | wxBOTTOM, wxWindow::FromDIP(12, section));
+	section->GetBodySizer()->Add(row_sizer, wxSizerFlags().Expand().Border(wxBOTTOM, wxWindow::FromDIP(12, section)));
 	return checkbox;
 }
 
@@ -181,9 +181,9 @@ void PreferencesLayout::AddControlRow(
 	auto* row_sizer = new wxBoxSizer(wxHORIZONTAL);
 	auto* text_sizer = new wxBoxSizer(wxVERTICAL);
 
-	text_sizer->Add(CreateTitleLabel(section, title), 0, wxBOTTOM, wxWindow::FromDIP(2, section));
-	text_sizer->Add(CreateDescriptionLabel(section, description), 0, wxEXPAND);
-	row_sizer->Add(text_sizer, 1, wxEXPAND | wxRIGHT, wxWindow::FromDIP(12, section));
+	text_sizer->Add(CreateTitleLabel(section, title), wxSizerFlags().Border(wxBOTTOM, wxWindow::FromDIP(2, section)));
+	text_sizer->Add(CreateDescriptionLabel(section, description), wxSizerFlags().Expand());
+	row_sizer->Add(text_sizer, wxSizerFlags(1).Expand().Border(wxRIGHT, wxWindow::FromDIP(12, section)));
 
 	int flags = wxTOP;
 	if (expand_control) {
@@ -193,7 +193,7 @@ void PreferencesLayout::AddControlRow(
 	}
 	row_sizer->Add(control, expand_control ? 1 : 0, flags, wxWindow::FromDIP(2, section));
 
-	section->GetBodySizer()->Add(row_sizer, 0, wxEXPAND | wxBOTTOM, wxWindow::FromDIP(12, section));
+	section->GetBodySizer()->Add(row_sizer, wxSizerFlags().Expand().Border(wxBOTTOM, wxWindow::FromDIP(12, section)));
 }
 
 wxStaticText* PreferencesLayout::AddValuePreviewRow(

@@ -87,11 +87,11 @@ DatDebugView::DatDebugView(wxWindow* parent) :
 
 	search_field = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
 	search_field->SetFocus();
-	sizer->Add(search_field, 0, wxEXPAND, 2);
+	sizer->Add(search_field, wxSizerFlags().Expand());
 
 	item_list = new DatDebugViewListBox(this, wxID_ANY);
 	item_list->SetMinSize(wxSize(470, 400));
-	sizer->Add(item_list, 1, wxEXPAND | wxALL, 2);
+	sizer->Add(item_list, wxSizerFlags(1).Expand().Border(wxALL, 2));
 
 	SetSizerAndFit(sizer);
 	Centre(wxBOTH);

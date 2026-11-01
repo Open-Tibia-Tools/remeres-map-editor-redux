@@ -66,8 +66,8 @@ ExportMinimapWindow::ExportMinimapWindow(wxWindow* parent, Editor& editor) :
 	error_field_ = new wxStaticText(this, wxID_VIEW_DETAILS, "", wxDefaultPosition, wxDefaultSize);
 	error_field_->SetForegroundColour(*wxRED);
 	auto* errorSizer = new wxBoxSizer(wxHORIZONTAL);
-	errorSizer->Add(error_field_, 0, wxALL, 5);
-	sizer->Add(errorSizer, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 5);
+	errorSizer->Add(error_field_, wxSizerFlags().Border(wxALL, 5));
+	sizer->Add(errorSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 
 	auto* contentSizer = new wxBoxSizer(wxHORIZONTAL);
 	auto* leftSizer = new wxBoxSizer(wxVERTICAL);
@@ -76,18 +76,18 @@ ExportMinimapWindow::ExportMinimapWindow(wxWindow* parent, Editor& editor) :
 	wxWindow* folderParent = folderSizer->GetStaticBox();
 	directory_text_field_ = new wxTextCtrl(folderParent, wxID_ANY, wxString(g_settings.getString(Config::MINIMAP_EXPORT_DIR)), wxDefaultPosition, wxDefaultSize);
 	directory_text_field_->Bind(wxEVT_TEXT, &ExportMinimapWindow::OnTextChanged, this);
-	folderSizer->Add(directory_text_field_, 1, wxALL | wxEXPAND, 5);
+	folderSizer->Add(directory_text_field_, wxSizerFlags(1).Expand().Border(wxALL, 5));
 	auto* browseButton = new wxButton(folderParent, MAP_WINDOW_FILE_BUTTON, "Browse");
 	browseButton->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_FOLDER_OPEN));
-	folderSizer->Add(browseButton, 0, wxALL, 5);
-	leftSizer->Add(folderSizer, 0, wxBOTTOM | wxEXPAND, 5);
+	folderSizer->Add(browseButton, wxSizerFlags().Border(wxALL, 5));
+	leftSizer->Add(folderSizer, wxSizerFlags().Expand().Border(wxBOTTOM, 5));
 
 	auto* fileSizer = new wxStaticBoxSizer(wxHORIZONTAL, this, "File Name");
 	wxWindow* fileParent = fileSizer->GetStaticBox();
 	file_name_text_field_ = new wxTextCtrl(fileParent, wxID_ANY, defaultFileName(editor_), wxDefaultPosition, wxDefaultSize);
 	file_name_text_field_->Bind(wxEVT_TEXT, &ExportMinimapWindow::OnTextChanged, this);
-	fileSizer->Add(file_name_text_field_, 1, wxALL | wxEXPAND, 5);
-	leftSizer->Add(fileSizer, 0, wxBOTTOM | wxEXPAND, 5);
+	fileSizer->Add(file_name_text_field_, wxSizerFlags(1).Expand().Border(wxALL, 5));
+	leftSizer->Add(fileSizer, wxSizerFlags().Expand().Border(wxBOTTOM, 5));
 
 	notebook_ = new wxNotebook(this, wxID_ANY);
 	notebook_->AddPage(CreateFormatPage(notebook_, MinimapExportFormat::Jpg), "JPG", true);
@@ -98,11 +98,11 @@ ExportMinimapWindow::ExportMinimapWindow(wxWindow* parent, Editor& editor) :
 		CheckValues();
 		event.Skip();
 	});
-	leftSizer->Add(notebook_, 1, wxEXPAND);
+	leftSizer->Add(notebook_, wxSizerFlags(1).Expand());
 
-	contentSizer->Add(leftSizer, 1, wxALL | wxEXPAND, 5);
-	contentSizer->Add(CreateAreaSizer(), 0, wxTOP | wxRIGHT | wxBOTTOM | wxEXPAND, 5);
-	sizer->Add(contentSizer, 1, wxEXPAND);
+	contentSizer->Add(leftSizer, wxSizerFlags(1).Expand().Border(wxALL, 5));
+	contentSizer->Add(CreateAreaSizer(), wxSizerFlags().Expand().Border(wxTOP | wxRIGHT | wxBOTTOM, 5));
+	sizer->Add(contentSizer, wxSizerFlags(1).Expand());
 
 	auto* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
 	ok_button_ = new wxButton(this, wxID_OK, "OK");
@@ -111,7 +111,7 @@ ExportMinimapWindow::ExportMinimapWindow(wxWindow* parent, Editor& editor) :
 	auto* cancelButton = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancelButton->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	buttonSizer->Add(cancelButton, wxSizerFlags(1).Center());
-	sizer->Add(buttonSizer, 0, wxCENTER, 10);
+	sizer->Add(buttonSizer, wxSizerFlags().Center());
 
 	SetSizerAndFit(sizer);
 	SetMinSize(GetSize());
@@ -295,20 +295,20 @@ wxPanel* ExportMinimapWindow::CreateFormatPage(wxNotebook* notebook, MinimapExpo
 		}
 		controls.image_size_choice->SetSelection(1);
 		controls.image_size_choice->Bind(wxEVT_CHOICE, &ExportMinimapWindow::OnChoiceChanged, this);
-		imageSizeSizer->Add(controls.image_size_choice, 1, wxALL | wxEXPAND, 5);
-		sizer->Add(imageSizeSizer, 0, wxLEFT | wxRIGHT | wxTOP | wxEXPAND, 14);
+		imageSizeSizer->Add(controls.image_size_choice, wxSizerFlags(1).Expand().Border(wxALL, 5));
+		sizer->Add(imageSizeSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, 14));
 	}
 
 	if (format != MinimapExportFormat::Otmm) {
 		controls.show_all_floors_checkbox = new wxCheckBox(panel, wxID_ANY, "Enable show all floors during export");
 		controls.show_all_floors_checkbox->SetValue(false);
 		controls.show_all_floors_checkbox->Bind(wxEVT_CHECKBOX, &ExportMinimapWindow::OnChoiceChanged, this);
-		sizer->Add(controls.show_all_floors_checkbox, 0, wxLEFT | wxRIGHT | wxTOP, 20);
+		sizer->Add(controls.show_all_floors_checkbox, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 20));
 
 		controls.shade_adjacent_floors_checkbox = new wxCheckBox(panel, wxID_ANY, "Apply shade to adjacent floors");
 		controls.shade_adjacent_floors_checkbox->SetValue(false);
 		controls.shade_adjacent_floors_checkbox->Bind(wxEVT_CHECKBOX, &ExportMinimapWindow::OnChoiceChanged, this);
-		sizer->Add(controls.shade_adjacent_floors_checkbox, 0, wxLEFT | wxRIGHT | wxTOP, 20);
+		sizer->Add(controls.shade_adjacent_floors_checkbox, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 20));
 	}
 
 	sizer->AddStretchSpacer(1);
@@ -321,8 +321,8 @@ wxSizer* ExportMinimapWindow::CreateAreaSizer() {
 	wxWindow* areaParent = areaSizer->GetStaticBox();
 	auto* surfaceSizer = new wxBoxSizer(wxVERTICAL);
 	auto* undergroundSizer = new wxBoxSizer(wxVERTICAL);
-	surfaceSizer->Add(new wxStaticText(areaParent, wxID_ANY, "Surface floors"), 0, wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 4);
-	undergroundSizer->Add(new wxStaticText(areaParent, wxID_ANY, "Underground floors"), 0, wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 4);
+	surfaceSizer->Add(new wxStaticText(areaParent, wxID_ANY, "Surface floors"), wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 4));
+	undergroundSizer->Add(new wxStaticText(areaParent, wxID_ANY, "Underground floors"), wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 4));
 
 	for (int floor = 0; floor < MAP_LAYERS; ++floor) {
 		auto* checkbox = new wxCheckBox(areaParent, wxID_ANY, wxstr(std::format("Floor {}", floor)));
@@ -330,14 +330,14 @@ wxSizer* ExportMinimapWindow::CreateAreaSizer() {
 		checkbox->Bind(wxEVT_CHECKBOX, &ExportMinimapWindow::OnChoiceChanged, this);
 		floor_checkboxes_[static_cast<size_t>(floor)] = checkbox;
 		if (floor <= GROUND_LAYER) {
-			surfaceSizer->Add(checkbox, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
+			surfaceSizer->Add(checkbox, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 8));
 		} else {
-			undergroundSizer->Add(checkbox, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
+			undergroundSizer->Add(checkbox, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 8));
 		}
 	}
 
-	areaSizer->Add(surfaceSizer, 1, wxALL | wxEXPAND, 5);
-	areaSizer->Add(undergroundSizer, 1, wxALL | wxEXPAND, 5);
+	areaSizer->Add(surfaceSizer, wxSizerFlags(1).Expand().Border(wxALL, 5));
+	areaSizer->Add(undergroundSizer, wxSizerFlags(1).Expand().Border(wxALL, 5));
 	return areaSizer;
 }
 

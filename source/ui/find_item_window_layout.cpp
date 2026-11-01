@@ -46,7 +46,7 @@ namespace {
 			checkbox->SetFont(Theme::GetFont(9, false));
 			checkbox->SetForegroundColour(Theme::Get(Theme::Role::Text));
 			targets[findItemDialogIndex(filter)] = checkbox;
-			grid->Add(checkbox, 0, wxEXPAND);
+			grid->Add(checkbox, wxSizerFlags().Expand());
 		}
 		return grid;
 	}
@@ -96,12 +96,12 @@ void FindItemDialog::buildLayout() {
 	search_field_ = new ForwardingSearchCtrl(search_box->GetStaticBox(), wxID_ANY);
 	search_field_->SetDescriptiveText("Name, SID, or CID...");
 	search_field_->SetMinSize(FromDIP(wxSize(-1, 32)));
-	search_box_sizer->Add(search_field_, 1, wxEXPAND | wxALL, 8);
+	search_box_sizer->Add(search_field_, wxSizerFlags(1).Expand().Border(wxALL, 8));
 	reset_search_button_ = new wxBitmapButton(search_box->GetStaticBox(), wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
 	reset_search_button_->SetMinSize(FromDIP(wxSize(30, 30)));
-	search_box_sizer->Add(reset_search_button_, 0, wxTOP | wxRIGHT | wxBOTTOM, 8);
-	search_box->Add(search_box_sizer, 1, wxEXPAND);
-	left_sizer->Add(search_box, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 12);
+	search_box_sizer->Add(reset_search_button_, wxSizerFlags().Border(wxTOP | wxRIGHT | wxBOTTOM, 8));
+	search_box->Add(search_box_sizer, wxSizerFlags(1).Expand());
+	left_sizer->Add(search_box, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, 12));
 
 	auto* filter_scroll = new wxScrolledWindow(left_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxBORDER_NONE);
 	filter_scroll->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
@@ -109,8 +109,8 @@ void FindItemDialog::buildLayout() {
 
 	auto* filter_scroll_sizer = new wxBoxSizer(wxVERTICAL);
 	auto* or_box = createStaticBox(filter_scroll, "OR");
-	or_box->Add(addCheckboxGrid(or_box->GetStaticBox(), kTypeCheckboxes, type_checkboxes_), 0, wxEXPAND | wxALL, 8);
-	filter_scroll_sizer->Add(or_box, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 4);
+	or_box->Add(addCheckboxGrid(or_box->GetStaticBox(), kTypeCheckboxes, type_checkboxes_), wxSizerFlags().Expand().Border(wxALL, 8));
+	filter_scroll_sizer->Add(or_box, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, 4));
 
 	auto* and_box = createStaticBox(filter_scroll, "AND");
 	auto* and_grid = new wxGridSizer(0, 2, 6, 12);
@@ -119,39 +119,39 @@ void FindItemDialog::buildLayout() {
 		checkbox->SetFont(Theme::GetFont(9, false));
 		checkbox->SetForegroundColour(Theme::Get(Theme::Role::Text));
 		property_checkboxes_[findItemDialogIndex(property_filter)] = checkbox;
-		and_grid->Add(checkbox, 0, wxEXPAND);
+		and_grid->Add(checkbox, wxSizerFlags().Expand());
 	}
 	for (const auto& [interaction_filter, label] : kInteractionCheckboxes) {
 		auto* checkbox = new wxCheckBox(and_box->GetStaticBox(), wxID_ANY, wxString::FromUTF8(label.data(), label.size()));
 		checkbox->SetFont(Theme::GetFont(9, false));
 		checkbox->SetForegroundColour(Theme::Get(Theme::Role::Text));
 		interaction_checkboxes_[findItemDialogIndex(interaction_filter)] = checkbox;
-		and_grid->Add(checkbox, 0, wxEXPAND);
+		and_grid->Add(checkbox, wxSizerFlags().Expand());
 	}
 	for (const auto& [visual_filter, label] : kVisualCheckboxes) {
 		auto* checkbox = new wxCheckBox(and_box->GetStaticBox(), wxID_ANY, wxString::FromUTF8(label.data(), label.size()));
 		checkbox->SetFont(Theme::GetFont(9, false));
 		checkbox->SetForegroundColour(Theme::Get(Theme::Role::Text));
 		visual_checkboxes_[findItemDialogIndex(visual_filter)] = checkbox;
-		and_grid->Add(checkbox, 0, wxEXPAND);
+		and_grid->Add(checkbox, wxSizerFlags().Expand());
 	}
-	and_box->Add(and_grid, 0, wxEXPAND | wxALL, 8);
-	filter_scroll_sizer->Add(and_box, 0, wxEXPAND | wxALL, 4);
+	and_box->Add(and_grid, wxSizerFlags().Expand().Border(wxALL, 8));
+	filter_scroll_sizer->Add(and_box, wxSizerFlags().Expand().Border(wxALL, 4));
 
 	auto* hints_box = createStaticBox(filter_scroll, "Hints");
 	if (action_set_ == ActionSet::SearchAndSelect) {
-		hints_box->Add(createHintText(hints_box->GetStaticBox(), "Double left click item to search the item on the map"), 0, wxLEFT | wxRIGHT | wxTOP, 8);
-		hints_box->Add(createHintText(hints_box->GetStaticBox(), "Double right click to select item in the tileset"), 0, wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 8);
+		hints_box->Add(createHintText(hints_box->GetStaticBox(), "Double left click item to search the item on the map"), wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 8));
+		hints_box->Add(createHintText(hints_box->GetStaticBox(), "Double right click to select item in the tileset"), wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 8));
 	} else {
-		hints_box->Add(createHintText(hints_box->GetStaticBox(), "Double left click item to confirm selection"), 0, wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 8);
+		hints_box->Add(createHintText(hints_box->GetStaticBox(), "Double left click item to confirm selection"), wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 8));
 	}
-	filter_scroll_sizer->Add(hints_box, 0, wxEXPAND | wxALL, 4);
+	filter_scroll_sizer->Add(hints_box, wxSizerFlags().Expand().Border(wxALL, 4));
 
 	filter_scroll->SetSizer(filter_scroll_sizer);
 	filter_scroll->FitInside();
-	left_sizer->Add(filter_scroll, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 12);
+	left_sizer->Add(filter_scroll, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 12));
 	left_panel->SetSizer(left_sizer);
-	body_sizer->Add(left_panel, 0, wxEXPAND | wxLEFT | wxTOP | wxBOTTOM, 12);
+	body_sizer->Add(left_panel, wxSizerFlags().Expand().Border(wxLEFT | wxTOP | wxBOTTOM, 12));
 
 	auto* right_panel = new wxPanel(this, wxID_ANY);
 	right_panel->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
@@ -207,7 +207,7 @@ void FindItemDialog::buildLayout() {
 	);
 	grid_toolbar_->SetListMode(result_view_mode_ == AdvancedFinderResultViewMode::List);
 
-	results_box_sizer->Add(grid_toolbar_, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 4);
+	results_box_sizer->Add(grid_toolbar_, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, 4));
 
 	results_notebook_ = new wxNotebook(results_box->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNB_TOP);
 	results_notebook_->SetBackgroundColour(Theme::Get(Theme::Role::Surface));
@@ -222,40 +222,40 @@ void FindItemDialog::buildLayout() {
 	grid_results_view_->SetMinSize(FromDIP(wxSize(520, 520)));
 	results_notebook_->AddPage(grid_results_view_, "Grid", true);
 
-	results_box_sizer->Add(results_notebook_, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 8);
-	results_box->Add(results_box_sizer, 1, wxEXPAND);
-	right_sizer->Add(results_box, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 12);
+	results_box_sizer->Add(results_notebook_, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxTOP, 8));
+	results_box->Add(results_box_sizer, wxSizerFlags(1).Expand());
+	right_sizer->Add(results_box, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 12));
 	right_panel->SetSizer(right_sizer);
-	body_sizer->Add(right_panel, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 12);
-	root_sizer->Add(body_sizer, 1, wxEXPAND);
+	body_sizer->Add(right_panel, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 12));
+	root_sizer->Add(body_sizer, wxSizerFlags(1).Expand());
 
 	auto* footer_panel = new wxPanel(this, wxID_ANY);
 	footer_panel->SetBackgroundColour(Theme::Get(Theme::Role::RaisedSurface));
 	auto* footer_sizer = new wxBoxSizer(wxVERTICAL);
 	auto* footer_line = new wxStaticLine(footer_panel, wxID_ANY);
-	footer_sizer->Add(footer_line, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 0);
+	footer_sizer->Add(footer_line, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, 0));
 	auto* footer_buttons = new wxBoxSizer(wxHORIZONTAL);
 	footer_buttons->AddStretchSpacer(1);
 	result_count_label_ = new wxStaticText(footer_panel, wxID_ANY, "Results: 0 |");
 	result_count_label_->SetForegroundColour(Theme::Get(Theme::Role::TextSubtle));
 	result_count_label_->SetFont(Theme::GetFont(9, false));
-	footer_buttons->Add(result_count_label_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
+	footer_buttons->Add(result_count_label_, wxSizerFlags().CenterVertical().Border(wxRIGHT, 8));
 	if (action_set_ == ActionSet::SearchAndSelect) {
 		search_map_button_ = new wxButton(footer_panel, wxID_FIND, "Search Map");
-		footer_buttons->Add(search_map_button_, 0, wxRIGHT, 8);
+		footer_buttons->Add(search_map_button_, wxSizerFlags().Border(wxRIGHT, 8));
 
 		select_item_button_ = new wxButton(footer_panel, wxID_OK, "Select Item");
-		footer_buttons->Add(select_item_button_, 0, wxRIGHT, 8);
+		footer_buttons->Add(select_item_button_, wxSizerFlags().Border(wxRIGHT, 8));
 	} else {
 		ok_button_ = new wxButton(footer_panel, wxID_OK, "OK");
-		footer_buttons->Add(ok_button_, 0, wxRIGHT, 8);
+		footer_buttons->Add(ok_button_, wxSizerFlags().Border(wxRIGHT, 8));
 	}
 
 	cancel_button_ = new wxButton(footer_panel, wxID_CANCEL, "Cancel");
 	footer_buttons->Add(cancel_button_, 0);
-	footer_sizer->Add(footer_buttons, 0, wxEXPAND | wxALL, 10);
+	footer_sizer->Add(footer_buttons, wxSizerFlags().Expand().Border(wxALL, 10));
 	footer_panel->SetSizer(footer_sizer);
-	root_sizer->Add(footer_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 12);
+	root_sizer->Add(footer_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 12));
 
 	SetSizer(root_sizer);
 	root_sizer->SetSizeHints(this);

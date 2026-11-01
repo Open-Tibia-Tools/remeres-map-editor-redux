@@ -10,7 +10,7 @@ ToolOptionsWindow::ToolOptionsWindow(wxWindow* parent) :
 
 	// The new unified surface
 	surface = new ToolOptionsSurface(this);
-	main_sizer->Add(surface, 1, wxEXPAND | wxALL, 0);
+	main_sizer->Add(surface, wxSizerFlags(1).Expand().Border(wxALL, 0));
 
 	SetSizer(main_sizer);
 

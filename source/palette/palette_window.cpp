@@ -89,7 +89,7 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 	choicebook->SetMinSize(wxSize(225, 300));
-	sizer->Add(choicebook, 1, wxEXPAND);
+	sizer->Add(choicebook, wxSizerFlags(1).Expand());
 	SetSizer(sizer);
 
 	ReloadSettings(g_gui.IsEditorOpen() ? &g_gui.GetCurrentMap() : nullptr);

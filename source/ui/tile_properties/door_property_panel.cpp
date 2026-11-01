@@ -19,9 +19,9 @@ DoorPropertyPanel::DoorPropertyPanel(wxWindow* parent) :
 	door_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Door ID");
 	door_id_spin = new wxSpinCtrl(door_sizer->GetStaticBox(), wxID_ANY);
 	door_id_spin->SetRange(0, 255);
-	door_sizer->Add(door_id_spin, 1, wxEXPAND | wxALL, 5);
+	door_sizer->Add(door_id_spin, wxSizerFlags(1).Expand().Border(wxALL, 5));
 
-	GetSizer()->Add(door_sizer, 0, wxEXPAND | wxALL, 5);
+	GetSizer()->Add(door_sizer, wxSizerFlags().Expand().Border(wxALL, 5));
 
 	door_id_spin->Bind(wxEVT_SPINCTRL, &DoorPropertyPanel::OnDoorIdChange, this);
 }

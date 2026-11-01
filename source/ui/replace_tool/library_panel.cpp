@@ -117,9 +117,9 @@ void LibraryPanel::InitLayout() {
 
 	m_itemsToolbar = new TilesetGridToolbar(itemListPage, std::move(itemActions));
 	m_itemsToolbar->SetState(m_allItemsGrid->GetShowLabels(), m_allItemsGrid->GetIconSize(), m_allItemsGrid->HasSort(), m_allItemsGrid->GetSortKey(), m_allItemsGrid->GetSortDirection(), false);
-	itemListSizer->Add(m_itemsToolbar, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, padding);
+	itemListSizer->Add(m_itemsToolbar, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, padding));
 
-	itemListSizer->Add(m_allItemsGrid, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
+	itemListSizer->Add(m_allItemsGrid, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
 
 	itemListPage->SetSizer(itemListSizer);
 	m_notebook->AddPage(itemListPage, "Items");
@@ -176,8 +176,8 @@ void LibraryPanel::InitLayout() {
 
 	m_brushesToolbar = new TilesetGridToolbar(brushesPanel, std::move(brushActions));
 	m_brushesToolbar->SetState(m_brushGrid->GetShowLabels(), m_brushGrid->GetIconSize(), m_brushGrid->HasSort(), m_brushGrid->GetSortKey(), m_brushGrid->GetSortDirection(), false);
-	brushesSizer->Add(m_brushesToolbar, 0, wxEXPAND);
-	brushesSizer->Add(m_brushGrid, 1, wxEXPAND);
+	brushesSizer->Add(m_brushesToolbar, wxSizerFlags().Expand());
+	brushesSizer->Add(m_brushGrid, wxSizerFlags(1).Expand());
 	brushesPanel->SetSizer(brushesSizer);
 
 	// Bottom: Related Items
@@ -190,7 +190,7 @@ void LibraryPanel::InitLayout() {
 
 	wxBoxSizer* relatedHeaderSizer = new wxBoxSizer(wxHORIZONTAL);
 	auto* relatedLabel = new wxStaticText(relatedPanel, wxID_ANY, "Related Items");
-	relatedHeaderSizer->Add(relatedLabel, 1, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
+	relatedHeaderSizer->Add(relatedLabel, wxSizerFlags(1).CenterVertical().Border(wxLEFT, 2));
 
 	m_fillUnmatchedBtn = MakeIconButton(relatedPanel, ICON_WAND_MAGIC_SPARKLES, "Fill unmatched rules with items from this brush", iconBtnSize);
 	m_fillUnmatchedBtn->Enable(false);
@@ -199,15 +199,15 @@ void LibraryPanel::InitLayout() {
 			m_listener->OnAutoMatchRules(m_currentBrush);
 		}
 	});
-	relatedHeaderSizer->Add(m_fillUnmatchedBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 2);
+	relatedHeaderSizer->Add(m_fillUnmatchedBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, 2));
 
-	relatedSizer->Add(relatedHeaderSizer, 0, wxEXPAND | wxBOTTOM, 2);
-	relatedSizer->Add(m_relatedGrid, 1, wxEXPAND);
+	relatedSizer->Add(relatedHeaderSizer, wxSizerFlags().Expand().Border(wxBOTTOM, 2));
+	relatedSizer->Add(m_relatedGrid, wxSizerFlags(1).Expand());
 	relatedPanel->SetSizer(relatedSizer);
 
 	brushSplitter->SplitHorizontally(brushesPanel, relatedPanel);
 	brushSplitter->SetSashGravity(0.5);
-	brushListSizer->Add(brushSplitter, 1, wxEXPAND | wxALL, padding);
+	brushListSizer->Add(brushSplitter, wxSizerFlags(1).Expand().Border(wxALL, padding));
 
 	brushListPage->SetSizer(brushListSizer);
 	m_notebook->AddPage(brushListPage, "Brushes");
@@ -221,7 +221,7 @@ void LibraryPanel::InitLayout() {
 	m_refreshViewportBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
 		RefreshViewportItems();
 	});
-	viewportHeaderSizer->Add(m_refreshViewportBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, Theme::Grid(1));
+	viewportHeaderSizer->Add(m_refreshViewportBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
 
 	m_addViewportRulesBtn = MakeIconButton(viewportPage, ICON_PLUS_SQUARE, "Add every item visible in the viewport as a rule", iconBtnSize);
 	m_addViewportRulesBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
@@ -232,7 +232,7 @@ void LibraryPanel::InitLayout() {
 			m_listener->OnAddItemsAsRules(m_viewportGrid->GetItems());
 		}
 	});
-	viewportHeaderSizer->Add(m_addViewportRulesBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, Theme::Grid(1));
+	viewportHeaderSizer->Add(m_addViewportRulesBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
 
 	m_viewportGrid = new ItemGridPanel(viewportPage, this);
 	m_viewportGrid->SetDraggable(true);
@@ -266,10 +266,10 @@ void LibraryPanel::InitLayout() {
 
 	m_viewportToolbar = new TilesetGridToolbar(viewportPage, std::move(viewportActions));
 	m_viewportToolbar->SetState(m_viewportGrid->GetShowLabels(), m_viewportGrid->GetIconSize(), m_viewportGrid->HasSort(), m_viewportGrid->GetSortKey(), m_viewportGrid->GetSortDirection(), false);
-	viewportHeaderSizer->Add(m_viewportToolbar, 1, wxEXPAND);
+	viewportHeaderSizer->Add(m_viewportToolbar, wxSizerFlags(1).Expand());
 
-	viewportSizer->Add(viewportHeaderSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, padding);
-	viewportSizer->Add(m_viewportGrid, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
+	viewportSizer->Add(viewportHeaderSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, padding));
+	viewportSizer->Add(m_viewportGrid, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
 	viewportPage->SetSizer(viewportSizer);
 	m_notebook->AddPage(viewportPage, "Viewport");
 
@@ -285,7 +285,7 @@ void LibraryPanel::InitLayout() {
 			m_listener->OnAddItemsAsRules(m_selectionGrid->GetItems());
 		}
 	});
-	selectionHeaderSizer->Add(m_addSelectionRulesBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, Theme::Grid(1));
+	selectionHeaderSizer->Add(m_addSelectionRulesBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
 
 	m_selectionGrid = new ItemGridPanel(selectionPage, this);
 	m_selectionGrid->SetDraggable(true);
@@ -319,16 +319,16 @@ void LibraryPanel::InitLayout() {
 
 	m_selectionToolbar = new TilesetGridToolbar(selectionPage, std::move(selectionActions));
 	m_selectionToolbar->SetState(m_selectionGrid->GetShowLabels(), m_selectionGrid->GetIconSize(), m_selectionGrid->HasSort(), m_selectionGrid->GetSortKey(), m_selectionGrid->GetSortDirection(), false);
-	selectionHeaderSizer->Add(m_selectionToolbar, 1, wxEXPAND);
+	selectionHeaderSizer->Add(m_selectionToolbar, wxSizerFlags(1).Expand());
 
-	selectionSizer->Add(selectionHeaderSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, padding);
-	selectionSizer->Add(m_selectionGrid, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
+	selectionSizer->Add(selectionHeaderSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, padding));
+	selectionSizer->Add(m_selectionGrid, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
 	selectionPage->SetSizer(selectionSizer);
 	m_notebook->AddPage(selectionPage, "Selection");
 
 	m_notebook->Bind(wxEVT_NOTEBOOK_PAGE_CHANGED, &LibraryPanel::OnNotebookPageChanged, this);
 
-	mainSizer->Add(m_notebook, 1, wxEXPAND);
+	mainSizer->Add(m_notebook, wxSizerFlags(1).Expand());
 	SetSizer(mainSizer);
 }
 

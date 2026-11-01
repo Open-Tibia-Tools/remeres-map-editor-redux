@@ -120,8 +120,8 @@ void ToolOptionsSurface::BuildUi() {
 
 	main_tools_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Main tools");
 	main_tools_grid = new wxGridSizer(0, TOOL_COLUMNS, FromDIP(4), FromDIP(4));
-	main_tools_sizer->Add(main_tools_grid, 0, wxEXPAND | wxALL, FromDIP(4));
-	main_sizer->Add(main_tools_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(4));
+	main_tools_sizer->Add(main_tools_grid, wxSizerFlags().Expand().Border(wxALL, FromDIP(4)));
+	main_sizer->Add(main_tools_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(4)));
 
 	size_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Size");
 
@@ -130,41 +130,41 @@ void ToolOptionsSurface::BuildUi() {
 		const wxSize mode_button_size = FromDIP(wxSize(26, 26));
 		if (label == "X") {
 			exact_button = new wxBitmapToggleButton(size_sizer->GetStaticBox(), wxID_ANY, wxBitmap(), wxDefaultPosition, mode_button_size, wxBU_EXACTFIT | wxBORDER_NONE);
-			row->Add(exact_button, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(6));
+			row->Add(exact_button, wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(6)));
 		} else {
 			aspect_button = new wxBitmapToggleButton(size_sizer->GetStaticBox(), wxID_ANY, wxBitmap(), wxDefaultPosition, mode_button_size, wxBU_EXACTFIT | wxBORDER_NONE);
-			row->Add(aspect_button, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(6));
+			row->Add(aspect_button, wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(6)));
 		}
-		row->Add(new wxStaticText(size_sizer->GetStaticBox(), wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+		row->Add(new wxStaticText(size_sizer->GetStaticBox(), wxID_ANY, label), wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(8)));
 		slider = new wxSlider(size_sizer->GetStaticBox(), wxID_ANY, 0, MIN_AXIS_SIZE, MAX_AXIS_SIZE, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL);
-		row->Add(slider, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+		row->Add(slider, wxSizerFlags(1).CenterVertical().Border(wxRIGHT, FromDIP(8)));
 		value_label = new wxStaticText(size_sizer->GetStaticBox(), wxID_ANY, "1");
-		row->Add(value_label, 0, wxALIGN_CENTER_VERTICAL);
-		size_sizer->Add(row, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+		row->Add(value_label, wxSizerFlags().CenterVertical());
+		size_sizer->Add(row, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(6)));
 	};
 
 	create_axis_row("X", size_x_slider, size_x_value);
 	create_axis_row("Y", size_y_slider, size_y_value);
 
-	main_sizer->Add(size_sizer, 0, wxEXPAND | wxALL, FromDIP(4));
+	main_sizer->Add(size_sizer, wxSizerFlags().Expand().Border(wxALL, FromDIP(4)));
 
 	other_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Other");
 
 	thickness_panel = new wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
 	auto* thickness_row = new wxBoxSizer(wxHORIZONTAL);
 	thickness_label = new wxStaticText(thickness_panel, wxID_ANY, "Thickness");
-	thickness_row->Add(thickness_label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+	thickness_row->Add(thickness_label, wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(8)));
 	thickness_slider = new wxSlider(thickness_panel, wxID_ANY, MAX_THICKNESS, MIN_THICKNESS, MAX_THICKNESS, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL);
-	thickness_row->Add(thickness_slider, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+	thickness_row->Add(thickness_slider, wxSizerFlags(1).CenterVertical().Border(wxRIGHT, FromDIP(8)));
 	thickness_value = new wxStaticText(thickness_panel, wxID_ANY, "100%");
-	thickness_row->Add(thickness_value, 0, wxALIGN_CENTER_VERTICAL);
+	thickness_row->Add(thickness_value, wxSizerFlags().CenterVertical());
 	thickness_panel->SetSizer(thickness_row);
-	other_sizer->Add(thickness_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+	other_sizer->Add(thickness_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(6)));
 
 	spawn_time_panel = new wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
 	auto* spawn_time_row = new wxBoxSizer(wxHORIZONTAL);
 	spawn_time_label = new wxStaticText(spawn_time_panel, wxID_ANY, "Spawntime");
-	spawn_time_row->Add(spawn_time_label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+	spawn_time_row->Add(spawn_time_label, wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(8)));
 	spawn_time_spin = new wxSpinCtrl(
 		spawn_time_panel,
 		TOOL_OPTIONS_CREATURE_SPAWN_TIME,
@@ -176,17 +176,17 @@ void ToolOptionsSurface::BuildUi() {
 		MAX_SPAWN_TIME,
 		g_settings.getInteger(Config::DEFAULT_SPAWNTIME)
 	);
-	spawn_time_row->Add(spawn_time_spin, 0, wxALIGN_CENTER_VERTICAL);
+	spawn_time_row->Add(spawn_time_spin, wxSizerFlags().CenterVertical());
 	spawn_time_panel->SetSizer(spawn_time_row);
-	other_sizer->Add(spawn_time_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+	other_sizer->Add(spawn_time_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(6)));
 
 	place_spawn_with_creature_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Place spawn with creature");
-	other_sizer->Add(place_spawn_with_creature_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+	other_sizer->Add(place_spawn_with_creature_checkbox, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(6)));
 
 	spawn_size_panel = new wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
 	auto* spawn_size_row = new wxBoxSizer(wxHORIZONTAL);
 	spawn_size_label = new wxStaticText(spawn_size_panel, wxID_ANY, "Spawn Size");
-	spawn_size_row->Add(spawn_size_label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+	spawn_size_row->Add(spawn_size_label, wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(8)));
 	spawn_size_spin = new wxSpinCtrl(
 		spawn_size_panel,
 		TOOL_OPTIONS_CREATURE_SPAWN_SIZE,
@@ -198,14 +198,14 @@ void ToolOptionsSurface::BuildUi() {
 		g_settings.getInteger(Config::MAX_SPAWN_RADIUS),
 		g_settings.getInteger(Config::CURRENT_SPAWN_RADIUS)
 	);
-	spawn_size_row->Add(spawn_size_spin, 0, wxALIGN_CENTER_VERTICAL);
+	spawn_size_row->Add(spawn_size_spin, wxSizerFlags().CenterVertical());
 	spawn_size_panel->SetSizer(spawn_size_row);
-	other_sizer->Add(spawn_size_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+	other_sizer->Add(spawn_size_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(6)));
 
 	weight_panel = new wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
 	auto* weight_row = new wxBoxSizer(wxHORIZONTAL);
 	weight_label = new wxStaticText(weight_panel, wxID_ANY, "Weight");
-	weight_row->Add(weight_label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+	weight_row->Add(weight_label, wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(8)));
 	weight_spin = new wxSpinCtrl(
 		weight_panel,
 		wxID_ANY,
@@ -217,17 +217,17 @@ void ToolOptionsSurface::BuildUi() {
 		100000,
 		g_gui.GetDefaultCreatureWeight()
 	);
-	weight_row->Add(weight_spin, 0, wxALIGN_CENTER_VERTICAL);
+	weight_row->Add(weight_spin, wxSizerFlags().CenterVertical());
 	weight_panel->SetSizer(weight_row);
-	other_sizer->Add(weight_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+	other_sizer->Add(weight_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(6)));
 
 	preview_border_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Preview Border");
 	lock_doors_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Lock Doors (Shift)");
 	randomize_doodads_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Randomize Doodads");
 	randomize_doodads_checkbox->SetValue(g_settings.getBoolean(Config::RANDOMIZE_DOODADS));
-	other_sizer->Add(preview_border_checkbox, 0, wxEXPAND | wxALL, FromDIP(6));
-	other_sizer->Add(lock_doors_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6));
-	main_sizer->Add(other_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(4));
+	other_sizer->Add(preview_border_checkbox, wxSizerFlags().Expand().Border(wxALL, FromDIP(6)));
+	other_sizer->Add(lock_doors_checkbox, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6)));
+	main_sizer->Add(other_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(4)));
 
 	SetSizer(main_sizer);
 
@@ -349,7 +349,7 @@ void ToolOptionsSurface::RebuildToolButtons() {
 		button->SetMinSize(FromDIP(wxSize(TOOL_BUTTON_SIZE, TOOL_BUTTON_SIZE)));
 		button->SetMaxSize(FromDIP(wxSize(TOOL_BUTTON_SIZE, TOOL_BUTTON_SIZE)));
 		button->Bind(wxEVT_TOGGLEBUTTON, &ToolOptionsSurface::OnToolButton, this);
-		main_tools_grid->Add(button, 0, wxALIGN_CENTER);
+		main_tools_grid->Add(button, wxSizerFlags().Center());
 		entry.button = button;
 	}
 

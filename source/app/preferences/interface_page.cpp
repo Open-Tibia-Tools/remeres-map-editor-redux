@@ -36,7 +36,7 @@ InterfacePage::InterfacePage(wxWindow* parent) : ScrollablePreferencesPage(paren
 		"Apply the system theme or force the editor into a specific light or dark appearance.",
 		theme_choice
 	);
-	page_sizer->Add(theme_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
+	page_sizer->Add(theme_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(10)));
 
 	auto* palette_style_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -45,7 +45,7 @@ InterfacePage::InterfacePage(wxWindow* parent) : ScrollablePreferencesPage(paren
 	);
 	auto* palette_style_sizer = palette_style_section->GetBodySizer();
 	dynamic_palette_style_choice = AddPaletteStyleChoice(palette_style_section, palette_style_sizer, "Dynamic palette icon size", "Choose the icon size used by XML-defined dynamic palettes.", g_settings.getString(Config::PALETTE_DYNAMIC_STYLE));
-	page_sizer->Add(palette_style_section, 0, wxEXPAND | wxALL, FromDIP(10));
+	page_sizer->Add(palette_style_section, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
 
 	auto* density_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -60,7 +60,7 @@ InterfacePage::InterfacePage(wxWindow* parent) : ScrollablePreferencesPage(paren
 	large_raw_sizebar_chkbox = PreferencesLayout::AddCheckBoxRow(density_section, "Large RAW palette icons", "Use larger icon sizes inside RAW palette controls.", g_settings.getBoolean(Config::USE_LARGE_RAW_SIZEBAR));
 	large_container_icons_chkbox = PreferencesLayout::AddCheckBoxRow(density_section, "Large container view icons", "Increase icon size in container browsing windows.", g_settings.getBoolean(Config::USE_LARGE_CONTAINER_ICONS));
 	large_pick_item_icons_chkbox = PreferencesLayout::AddCheckBoxRow(density_section, "Large item picker icons", "Increase icon size in add-item and item-picker dialogs.", g_settings.getBoolean(Config::USE_LARGE_CHOOSE_ITEM_ICONS));
-	page_sizer->Add(density_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(density_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	auto* navigation_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -76,9 +76,9 @@ InterfacePage::InterfacePage(wxWindow* parent) : ScrollablePreferencesPage(paren
 	auto* scroll_panel_sizer = new wxBoxSizer(wxHORIZONTAL);
 	auto true_scrollspeed = static_cast<int>(std::abs(g_settings.getFloat(Config::SCROLL_SPEED)) * 10);
 	scroll_speed_slider = new wxSlider(scroll_panel, wxID_ANY, true_scrollspeed, 1, std::max(true_scrollspeed, 100));
-	scroll_panel_sizer->Add(scroll_speed_slider, 1, wxEXPAND | wxRIGHT, FromDIP(10));
+	scroll_panel_sizer->Add(scroll_speed_slider, wxSizerFlags(1).Expand().Border(wxRIGHT, FromDIP(10)));
 	scroll_speed_value_label = PreferencesLayout::CreateBodyText(scroll_panel, FormatSpeedLabel(true_scrollspeed), true);
-	scroll_panel_sizer->Add(scroll_speed_value_label, 0, wxALIGN_CENTER_VERTICAL);
+	scroll_panel_sizer->Add(scroll_speed_value_label, wxSizerFlags().CenterVertical());
 	scroll_panel->SetSizer(scroll_panel_sizer);
 	PreferencesLayout::AddControlRow(navigation_section, "Scroll speed", "How fast the map pans while dragging with the middle mouse button.", scroll_panel, true);
 
@@ -87,12 +87,12 @@ InterfacePage::InterfacePage(wxWindow* parent) : ScrollablePreferencesPage(paren
 	auto* zoom_panel_sizer = new wxBoxSizer(wxHORIZONTAL);
 	auto true_zoomspeed = static_cast<int>(g_settings.getFloat(Config::ZOOM_SPEED) * 10);
 	zoom_speed_slider = new wxSlider(zoom_panel, wxID_ANY, true_zoomspeed, 1, std::max(true_zoomspeed, 100));
-	zoom_panel_sizer->Add(zoom_speed_slider, 1, wxEXPAND | wxRIGHT, FromDIP(10));
+	zoom_panel_sizer->Add(zoom_speed_slider, wxSizerFlags(1).Expand().Border(wxRIGHT, FromDIP(10)));
 	zoom_speed_value_label = PreferencesLayout::CreateBodyText(zoom_panel, FormatSpeedLabel(true_zoomspeed), true);
-	zoom_panel_sizer->Add(zoom_speed_value_label, 0, wxALIGN_CENTER_VERTICAL);
+	zoom_panel_sizer->Add(zoom_speed_value_label, wxSizerFlags().CenterVertical());
 	zoom_panel->SetSizer(zoom_panel_sizer);
 	PreferencesLayout::AddControlRow(navigation_section, "Zoom speed", "How quickly the view zooms in and out when using the mouse wheel.", zoom_panel, true);
-	page_sizer->Add(navigation_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(navigation_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	scroll_speed_slider->Bind(wxEVT_SLIDER, [this](wxCommandEvent&) {
 		UpdateSpeedLabels();

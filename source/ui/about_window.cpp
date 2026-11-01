@@ -67,7 +67,7 @@ AboutWindow::AboutWindow(wxWindow* parent) :
 
 	topsizer = new wxBoxSizer(wxVERTICAL);
 
-	topsizer->Add(new wxStaticText(this, wxID_ANY, about), 1, wxALL, 20);
+	topsizer->Add(new wxStaticText(this, wxID_ANY, about), wxSizerFlags(1).Border(wxALL, 20));
 
 	wxSizer* choicesizer = new wxBoxSizer(wxHORIZONTAL);
 	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
@@ -94,7 +94,7 @@ AboutWindow::AboutWindow(wxWindow* parent) :
 	websiteBtn->SetToolTip("Open the official website in your browser");
 	choicesizer->Add(websiteBtn, wxSizerFlags(1).Center().Border(wxLEFT, 10));
 
-	topsizer->Add(choicesizer, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT | wxBOTTOM, 20);
+	topsizer->Add(choicesizer, wxSizerFlags().Center().Border(wxLEFT | wxRIGHT | wxBOTTOM, 20));
 
 	wxAcceleratorEntry entries[1];
 	entries[0].Set(wxACCEL_NORMAL, WXK_ESCAPE, wxID_CANCEL);

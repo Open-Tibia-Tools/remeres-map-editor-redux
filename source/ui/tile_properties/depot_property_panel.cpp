@@ -18,8 +18,8 @@ DepotPropertyPanel::DepotPropertyPanel(wxWindow* parent) :
 
 	depot_id_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Depot Town");
 	depot_id_field = new wxChoice(depot_id_sizer->GetStaticBox(), wxID_ANY);
-	depot_id_sizer->Add(depot_id_field, 0, wxEXPAND | wxALL, FromDIP(5));
-	GetSizer()->Add(depot_id_sizer, 0, wxEXPAND | wxALL, FromDIP(5));
+	depot_id_sizer->Add(depot_id_field, wxSizerFlags().Expand().Border(wxALL, FromDIP(5)));
+	GetSizer()->Add(depot_id_sizer, wxSizerFlags().Expand().Border(wxALL, FromDIP(5)));
 
 	depot_id_field->Bind(wxEVT_CHOICE, &DepotPropertyPanel::OnDepotIdChange, this);
 }

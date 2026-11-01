@@ -81,18 +81,18 @@ MinimapWindow::MinimapWindow(wxWindow* parent) :
 	zoom_label_ = new wxStaticText(this, wxID_ANY, "9");
 	floor_label_ = new wxStaticText(this, wxID_ANY, "F: 7");
 
-	header_sizer->Add(zoom_out_button_, 0, wxALL | wxALIGN_CENTER_VERTICAL, pad_2);
-	header_sizer->Add(zoom_label_, 0, wxLEFT | wxRIGHT | wxALIGN_CENTER_VERTICAL, pad_4);
-	header_sizer->Add(zoom_in_button_, 0, wxALL | wxALIGN_CENTER_VERTICAL, pad_2);
-	header_sizer->Add(createSeparator(this), 0, wxLEFT | wxRIGHT | wxALIGN_CENTER_VERTICAL, pad_6);
-	header_sizer->Add(floor_label_, 0, wxLEFT | wxRIGHT | wxALIGN_CENTER_VERTICAL, pad_4);
-	header_sizer->Add(floor_up_button_, 0, wxALL | wxALIGN_CENTER_VERTICAL, pad_2);
-	header_sizer->Add(floor_down_button_, 0, wxALL | wxALIGN_CENTER_VERTICAL, pad_2);
-	header_sizer->Add(createSeparator(this), 0, wxLEFT | wxRIGHT | wxALIGN_CENTER_VERTICAL, pad_6);
-	header_sizer->Add(show_all_floors_button_, 0, wxALL | wxALIGN_CENTER_VERTICAL, pad_2);
-	header_sizer->Add(createSeparator(this), 0, wxLEFT | wxRIGHT | wxALIGN_CENTER_VERTICAL, pad_6);
-	header_sizer->Add(screenshot_button_, 0, wxALL | wxALIGN_CENTER_VERTICAL, pad_2);
-	header_sizer->Add(help_button_, 0, wxALL | wxALIGN_CENTER_VERTICAL, pad_2);
+	header_sizer->Add(zoom_out_button_, wxSizerFlags().CenterVertical().Border(wxALL, pad_2));
+	header_sizer->Add(zoom_label_, wxSizerFlags().CenterVertical().Border(wxLEFT | wxRIGHT, pad_4));
+	header_sizer->Add(zoom_in_button_, wxSizerFlags().CenterVertical().Border(wxALL, pad_2));
+	header_sizer->Add(createSeparator(this), wxSizerFlags().CenterVertical().Border(wxLEFT | wxRIGHT, pad_6));
+	header_sizer->Add(floor_label_, wxSizerFlags().CenterVertical().Border(wxLEFT | wxRIGHT, pad_4));
+	header_sizer->Add(floor_up_button_, wxSizerFlags().CenterVertical().Border(wxALL, pad_2));
+	header_sizer->Add(floor_down_button_, wxSizerFlags().CenterVertical().Border(wxALL, pad_2));
+	header_sizer->Add(createSeparator(this), wxSizerFlags().CenterVertical().Border(wxLEFT | wxRIGHT, pad_6));
+	header_sizer->Add(show_all_floors_button_, wxSizerFlags().CenterVertical().Border(wxALL, pad_2));
+	header_sizer->Add(createSeparator(this), wxSizerFlags().CenterVertical().Border(wxLEFT | wxRIGHT, pad_6));
+	header_sizer->Add(screenshot_button_, wxSizerFlags().CenterVertical().Border(wxALL, pad_2));
+	header_sizer->Add(help_button_, wxSizerFlags().CenterVertical().Border(wxALL, pad_2));
 	header_sizer->AddStretchSpacer(1);
 
 	canvas_ = new MinimapCanvas(this);
@@ -105,12 +105,12 @@ MinimapWindow::MinimapWindow(wxWindow* parent) :
 		"Ctrl+Left Click: move camera\n"
 		"Wheel: zoom\n"
 		"Ctrl+Wheel: change floor");
-	help_sizer->Add(help_text_, 0, wxALL | wxEXPAND, pad_6);
+	help_sizer->Add(help_text_, wxSizerFlags().Expand().Border(wxALL, pad_6));
 	help_panel_->SetSizer(help_sizer);
 	help_panel_->Hide();
 
-	root_sizer->Add(header_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, pad_2);
-	root_sizer->Add(canvas_, 1, wxEXPAND | wxALL, pad_2);
+	root_sizer->Add(header_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, pad_2));
+	root_sizer->Add(canvas_, wxSizerFlags(1).Expand().Border(wxALL, pad_2));
 	SetSizer(root_sizer);
 
 	Bind(wxEVT_CLOSE_WINDOW, &MinimapWindow::OnClose, this);

@@ -74,7 +74,7 @@ TilesetGridToolbar::TilesetGridToolbar(wxWindow* parent, Actions actions, unsign
 	m_toolbar->Bind(wxEVT_TOOL, &TilesetGridToolbar::OnToolClick, this);
 
 	m_toolbarRow = new wxBoxSizer(wxHORIZONTAL);
-	m_toolbarRow->Add(m_toolbar, 0, wxALIGN_CENTER_VERTICAL);
+	m_toolbarRow->Add(m_toolbar, wxSizerFlags().CenterVertical());
 
 	m_searchRow = new wxBoxSizer(wxHORIZONTAL);
 	if (parts & Part_Search) {
@@ -99,7 +99,7 @@ TilesetGridToolbar::TilesetGridToolbar(wxWindow* parent, Actions actions, unsign
 			}
 			event.Skip();
 		});
-		m_searchRow->Add(m_searchCtrl, 1, wxALIGN_CENTER_VERTICAL);
+		m_searchRow->Add(m_searchCtrl, wxSizerFlags(1).CenterVertical());
 	}
 
 	SetStacked(false);
@@ -124,14 +124,14 @@ void TilesetGridToolbar::SetStacked(bool stacked) {
 	m_rootSizer->SetOrientation(stacked ? wxVERTICAL : wxHORIZONTAL);
 
 	if (stacked) {
-		m_rootSizer->Add(m_toolbarRow, 0, wxEXPAND);
+		m_rootSizer->Add(m_toolbarRow, wxSizerFlags().Expand());
 		if (m_searchCtrl) {
-			m_rootSizer->Add(m_searchRow, 0, wxEXPAND | wxTOP, FromDIP(2));
+			m_rootSizer->Add(m_searchRow, wxSizerFlags().Expand().Border(wxTOP, FromDIP(2)));
 		}
 	} else {
-		m_rootSizer->Add(m_toolbarRow, 0, wxALIGN_CENTER_VERTICAL);
+		m_rootSizer->Add(m_toolbarRow, wxSizerFlags().CenterVertical());
 		if (m_searchCtrl) {
-			m_rootSizer->Add(m_searchRow, 1, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(4));
+			m_rootSizer->Add(m_searchRow, wxSizerFlags(1).CenterVertical().Border(wxLEFT, FromDIP(4)));
 		}
 	}
 

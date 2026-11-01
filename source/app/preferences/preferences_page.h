@@ -31,7 +31,7 @@ public:
 		m_page_sizer = new wxBoxSizer(wxVERTICAL);
 		m_scrolled_window->SetSizer(m_page_sizer);
 
-		root_sizer->Add(m_scrolled_window, 1, wxEXPAND);
+		root_sizer->Add(m_scrolled_window, wxSizerFlags(1).Expand());
 		SetSizer(root_sizer);
 	}
 

@@ -535,7 +535,7 @@ void LuaDialog::createLayout() {
 void LuaDialog::ensureRowSizer() {
 	if (!currentRowSizer) {
 		currentRowSizer = new wxBoxSizer(wxHORIZONTAL);
-		getSizerForWidget()->Add(currentRowSizer, 0, wxEXPAND | wxALL, 5);
+		getSizerForWidget()->Add(currentRowSizer, wxSizerFlags().Expand().Border(wxALL, 5));
 	}
 }
 
@@ -573,7 +573,7 @@ LuaDialog* LuaDialog::wrap(sol::table options) {
 	currentRowSizer = nullptr;
 
 	wxBoxSizer* sizer = new wxBoxSizer(options.get_or(std::string("orient"), "horizontal"s) == "horizontal" ? wxHORIZONTAL : wxVERTICAL);
-	getSizerForWidget()->Add(sizer, 1, wxEXPAND | wxALL, 0);
+	getSizerForWidget()->Add(sizer, wxSizerFlags(1).Expand().Border(wxALL, 0));
 	sizerStack.push(sizer);
 
 	return this;
@@ -737,7 +737,7 @@ LuaDialog* LuaDialog::mapCanvas(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	// Create the canvas
@@ -773,7 +773,7 @@ LuaDialog* LuaDialog::input(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	wxTextCtrl* input = new wxTextCtrl(getParentForWidget(), wxID_ANY, wxString(text), wxDefaultPosition, wxSize(150, -1));
@@ -825,7 +825,7 @@ LuaDialog* LuaDialog::number(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	wxSpinCtrlDouble* spin = new wxSpinCtrlDouble(getParentForWidget(), wxID_ANY, "", wxDefaultPosition, wxSize(100, -1), wxSP_ARROW_KEYS, minVal, maxVal, value, decimals == 0 ? 1 : std::pow(0.1, decimals));
@@ -862,7 +862,7 @@ LuaDialog* LuaDialog::slider(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	wxSlider* slider = new wxSlider(getParentForWidget(), wxID_ANY, value, minVal, maxVal, wxDefaultPosition, wxSize(150, -1));
@@ -969,7 +969,7 @@ LuaDialog* LuaDialog::combobox(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	wxChoice* choice = new wxChoice(getParentForWidget(), wxID_ANY, wxDefaultPosition, wxSize(150, -1), choices);
@@ -1104,7 +1104,7 @@ LuaDialog* LuaDialog::color(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	wxColourPickerCtrl* picker = new wxColourPickerCtrl(getParentForWidget(), wxID_ANY, defaultColor);
@@ -1798,7 +1798,7 @@ LuaDialog* LuaDialog::tab(sol::table options) {
 	if (!currentNotebook) {
 		wxWindow* parent = dockPanel ? static_cast<wxWindow*>(dockPanel) : static_cast<wxWindow*>(this);
 		currentNotebook = new wxNotebook(parent, wxID_ANY);
-		mainSizer->Add(currentNotebook, 1, wxEXPAND | wxALL, 5);
+		mainSizer->Add(currentNotebook, wxSizerFlags(1).Expand().Border(wxALL, 5));
 		activeNotebook = currentNotebook;
 		tabInfos.clear();
 		notebookEventsBound = false;
@@ -2581,7 +2581,7 @@ LuaDialog* LuaDialog::grid(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	// Use LuaGridCtrl in Icon mode for grid view

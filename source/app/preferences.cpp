@@ -65,24 +65,24 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 		list_view->SetColumnWidth(0, FromDIP(150));
 	}
 
-	sizer->Add(book, 1, wxEXPAND | wxALL, FromDIP(10));
+	sizer->Add(book, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(10)));
 
 	auto* footer_sizer = new wxBoxSizer(wxHORIZONTAL);
 	footer_sizer->AddStretchSpacer();
 
 	auto* ok_button = new wxButton(this, wxID_OK, "OK");
 	ok_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
-	footer_sizer->Add(ok_button, 0, wxRIGHT, FromDIP(8));
+	footer_sizer->Add(ok_button, wxSizerFlags().Border(wxRIGHT, FromDIP(8)));
 
 	auto* cancel_button = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancel_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
-	footer_sizer->Add(cancel_button, 0, wxRIGHT, FromDIP(8));
+	footer_sizer->Add(cancel_button, wxSizerFlags().Border(wxRIGHT, FromDIP(8)));
 
 	auto* apply_button = new wxButton(this, wxID_APPLY, "Apply");
 	apply_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_SYNC, wxSize(16, 16)));
 	footer_sizer->Add(apply_button, 0);
 
-	sizer->Add(footer_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	sizer->Add(footer_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 	SetSizer(sizer);
 
 	const int width = g_settings.getInteger(Config::PREFERENCES_WINDOW_WIDTH);

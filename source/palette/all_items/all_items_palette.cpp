@@ -88,7 +88,7 @@ AllItemsPalette::AllItemsPalette(wxWindow* parent, wxWindowID id) :
 	toolbar->SetState(show_labels, tile_size, has_sort, sort_key, sort_dir, false, is_list_mode);
 	toolbar->SetIndicatorState(indicator_dogear);
 	toolbar->SetGridSpacing(grid_spacing);
-	main_sizer->Add(toolbar, 0, wxEXPAND | wxBOTTOM, 2);
+	main_sizer->Add(toolbar, wxSizerFlags().Expand().Border(wxBOTTOM, 2));
 
 	SetSizer(main_sizer);
 }
@@ -147,7 +147,7 @@ void AllItemsPalette::LoadCurrentContents() {
 		if (!filter_query.empty()) {
 			grid->SetFilterQuery(filter_query);
 		}
-		main_sizer->Add(grid, 1, wxEXPAND);
+		main_sizer->Add(grid, wxSizerFlags(1).Expand());
 		Layout();
 	}
 }

@@ -117,7 +117,7 @@ void LuaScriptsWindow::BuildUI() {
 	addTool(SCRIPT_MANAGER_REVEAL, ICON_SQUARE_ARROW_UP_RIGHT, "Reveal selected script", "Open the selected script folder");
 	addTool(SCRIPT_MANAGER_REMOVE, ICON_TRASH_CAN, "Remove selected script", "Delete the selected script from disk");
 	action_toolbar->Realize();
-	mainSizer->Add(action_toolbar, 0, wxEXPAND | wxALL, padding);
+	mainSizer->Add(action_toolbar, wxSizerFlags().Expand().Border(wxALL, padding));
 
 	main_splitter = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_LIVE_UPDATE | wxSP_BORDER);
 	main_splitter->SetMinimumPaneSize(Theme::Grid(20));
@@ -127,7 +127,7 @@ void LuaScriptsWindow::BuildUI() {
 	script_list = new wxDataViewListCtrl(listPanel, SCRIPT_MANAGER_LIST, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE);
 	script_list->AppendToggleColumn("On", wxDATAVIEW_CELL_ACTIVATABLE, Theme::Grid(10), wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
 	script_list->AppendIconTextColumn("Script", wxDATAVIEW_CELL_INERT, Theme::Grid(64), wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-	listSizer->Add(script_list, 1, wxEXPAND);
+	listSizer->Add(script_list, wxSizerFlags(1).Expand());
 	listPanel->SetSizer(listSizer);
 
 	auto* outputPanel = new wxPanel(main_splitter);
@@ -136,7 +136,7 @@ void LuaScriptsWindow::BuildUI() {
 
 	selection_summary = new wxStaticText(outputSizer->GetStaticBox(), wxID_ANY, "No script selected");
 	selection_summary->SetFont(Theme::GetFont(9, true));
-	outputHeaderSizer->Add(selection_summary, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, padding);
+	outputHeaderSizer->Add(selection_summary, wxSizerFlags(1).CenterVertical().Border(wxRIGHT, padding));
 
 	output_toolbar = new wxAuiToolBar(outputSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, toolbarStyle);
 	output_toolbar->SetToolBitmapSize(iconSize);
@@ -161,8 +161,8 @@ void LuaScriptsWindow::BuildUI() {
 		nullptr
 	);
 	output_toolbar->Realize();
-	outputHeaderSizer->Add(output_toolbar, 0, wxALIGN_CENTER_VERTICAL);
-	outputSizer->Add(outputHeaderSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, padding);
+	outputHeaderSizer->Add(output_toolbar, wxSizerFlags().CenterVertical());
+	outputSizer->Add(outputHeaderSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, padding));
 
 	console_output = new wxTextCtrl(
 		outputSizer->GetStaticBox(),
@@ -174,13 +174,13 @@ void LuaScriptsWindow::BuildUI() {
 	);
 	console_output->SetFont(wxFontInfo(9).Family(wxFONTFAMILY_TELETYPE));
 	console_output->SetMinSize(wxSize(-1, Theme::Grid(28)));
-	outputSizer->Add(console_output, 1, wxEXPAND | wxALL, padding);
+	outputSizer->Add(console_output, wxSizerFlags(1).Expand().Border(wxALL, padding));
 
 	outputPanel->SetSizer(outputSizer);
 
 	main_splitter->SplitHorizontally(listPanel, outputPanel, -Theme::Grid(36));
 	main_splitter->SetSashGravity(1.0);
-	mainSizer->Add(main_splitter, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
+	mainSizer->Add(main_splitter, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
 
 	SetSizer(mainSizer);
 

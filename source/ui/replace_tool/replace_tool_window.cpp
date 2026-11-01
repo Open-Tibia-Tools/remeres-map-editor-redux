@@ -206,7 +206,7 @@ void ReplaceToolWindow::InitLayout() {
 	};
 	m_ruleViewToolbar = new TilesetGridToolbar(ruleToolbar, std::move(ruleViewActions), TilesetGridToolbar::Part_Labels | TilesetGridToolbar::Part_Size);
 	m_ruleViewToolbar->SetState(ruleBuilder->GetShowLabels(), ruleBuilder->GetIconSize(), false, TilesetSortKey::Name, TilesetSortDirection::Ascending, false);
-	ruleToolbarSizer->Add(m_ruleViewToolbar, 1, wxALIGN_CENTER_VERTICAL);
+	ruleToolbarSizer->Add(m_ruleViewToolbar, wxSizerFlags(1).CenterVertical());
 
 	// Icon buttons for the table's own actions, with the label in the tooltip.
 	const wxSize iconButton = FromDIP(wxSize(34, 30));
@@ -214,16 +214,16 @@ void ReplaceToolWindow::InitLayout() {
 	m_ruleUndoBtn = MakeIconButton(ruleToolbar, ICON_UNDO, "Undo (Ctrl+Z)", iconButton);
 	m_ruleUndoBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ruleBuilder->Undo(); });
 	m_ruleUndoBtn->Enable(false);
-	ruleToolbarSizer->Add(m_ruleUndoBtn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, Theme::Grid(1));
+	ruleToolbarSizer->Add(m_ruleUndoBtn, wxSizerFlags().CenterVertical().Border(wxLEFT, Theme::Grid(1)));
 
 	m_ruleRedoBtn = MakeIconButton(ruleToolbar, ICON_REDO, "Redo (Ctrl+Y)", iconButton);
 	m_ruleRedoBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ruleBuilder->Redo(); });
 	m_ruleRedoBtn->Enable(false);
-	ruleToolbarSizer->Add(m_ruleRedoBtn, 0, wxALIGN_CENTER_VERTICAL);
+	ruleToolbarSizer->Add(m_ruleRedoBtn, wxSizerFlags().CenterVertical());
 
 	m_ruleSaveAsBtn = MakeIconButton(ruleToolbar, ICON_SAVE, "Save as new rule set (Ctrl+Shift+S)", iconButton);
 	m_ruleSaveAsBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnSaveAsNewRule(); });
-	ruleToolbarSizer->Add(m_ruleSaveAsBtn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, Theme::Grid(1));
+	ruleToolbarSizer->Add(m_ruleSaveAsBtn, wxSizerFlags().CenterVertical().Border(wxLEFT, Theme::Grid(1)));
 
 	m_ruleClearBtn = MakeIconButton(ruleToolbar, ICON_BROOM, "Clear every rule", iconButton);
 	m_ruleClearBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
@@ -234,7 +234,7 @@ void ReplaceToolWindow::InitLayout() {
 			ruleBuilder->Clear();
 		}
 	});
-	ruleToolbarSizer->Add(m_ruleClearBtn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, Theme::Grid(2));
+	ruleToolbarSizer->Add(m_ruleClearBtn, wxSizerFlags().CenterVertical().Border(wxLEFT, Theme::Grid(2)));
 
 	ruleToolbar->SetSizer(ruleToolbarSizer);
 	col2Card->GetContentSizer()->Add(ruleToolbar, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT | wxTOP, padding));
@@ -330,16 +330,16 @@ void ReplaceToolWindow::InitLayout() {
 
 	m_saveActiveRuleBtn = MakeIconButton(savedRulesToolbar, ICON_SAVE, "Save rule set (Ctrl+S)", savedIconButton);
 	m_saveActiveRuleBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { SaveActiveRuleSet(); });
-	savedRulesToolbarSizer->Add(m_saveActiveRuleBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, Theme::Grid(1));
+	savedRulesToolbarSizer->Add(m_saveActiveRuleBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
 
 	m_addRuleBtn = MakeIconButton(savedRulesToolbar, ICON_PLUS, "Save the current rules as a new rule set", savedIconButton);
-	savedRulesToolbarSizer->Add(m_addRuleBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, Theme::Grid(1));
+	savedRulesToolbarSizer->Add(m_addRuleBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
 
 	m_editRuleBtn = MakeIconButton(savedRulesToolbar, ICON_PEN_TO_SQUARE, "Rename the selected rule set", savedIconButton);
-	savedRulesToolbarSizer->Add(m_editRuleBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, Theme::Grid(1));
+	savedRulesToolbarSizer->Add(m_editRuleBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
 
 	m_deleteRuleBtn = MakeIconButton(savedRulesToolbar, ICON_TRASH_CAN, "Delete the selected rule set", savedIconButton);
-	savedRulesToolbarSizer->Add(m_deleteRuleBtn, 0, wxALIGN_CENTER_VERTICAL);
+	savedRulesToolbarSizer->Add(m_deleteRuleBtn, wxSizerFlags().CenterVertical());
 
 	savedRulesToolbar->SetSizer(savedRulesToolbarSizer);
 	savedRulesCard->GetContentSizer()->Add(savedRulesToolbar, wxSizerFlags(0).Border(wxLEFT | wxRIGHT | wxTOP, padding));

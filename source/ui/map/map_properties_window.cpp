@@ -95,7 +95,7 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 			height_spin = new wxSpinCtrl(this, wxID_ANY, wxstr(i2s(map.getHeight())), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 256, MAP_MAX_HEIGHT), wxSizerFlags(1).Expand()
 		);
 		height_spin->SetToolTip("Map height in tiles");
-		grid_sizer->Add(subsizer, 1, wxEXPAND);
+		grid_sizer->Add(subsizer, wxSizerFlags(1).Expand());
 	}
 
 	// External files
@@ -103,54 +103,42 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 		new wxStaticText(this, wxID_ANY, "External Housefile")
 	);
 
-	grid_sizer->Add(
-		house_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getHouseFilename())), 1, wxEXPAND
-	);
+	grid_sizer->Add(house_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getHouseFilename())), wxSizerFlags(1).Expand());
 	house_filename_ctrl->SetToolTip("External house XML file (leave empty for internal)");
 
 	grid_sizer->Add(
 		spawn_label = new wxStaticText(this, wxID_ANY, "External Spawnfile")
 	);
 
-	grid_sizer->Add(
-		spawn_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getSpawnFilename())), 1, wxEXPAND
-	);
+	grid_sizer->Add(spawn_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getSpawnFilename())), wxSizerFlags(1).Expand());
 	spawn_filename_ctrl->SetToolTip("External spawn XML file for all creatures (standard TFS / classic OTBM)");
 
 	grid_sizer->Add(
 		monster_label = new wxStaticText(this, wxID_ANY, "External Monster Spawnfile")
 	);
 
-	grid_sizer->Add(
-		monster_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getMonsterFilename())), 1, wxEXPAND
-	);
+	grid_sizer->Add(monster_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getMonsterFilename())), wxSizerFlags(1).Expand());
 	monster_filename_ctrl->SetToolTip("External monster spawn XML file (OTBM 5 / partitioned spawn format)");
 
 	grid_sizer->Add(
 		npc_label = new wxStaticText(this, wxID_ANY, "External NPC Spawnfile")
 	);
 
-	grid_sizer->Add(
-		npc_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getNpcFilename())), 1, wxEXPAND
-	);
+	grid_sizer->Add(npc_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getNpcFilename())), wxSizerFlags(1).Expand());
 	npc_filename_ctrl->SetToolTip("External NPC spawn XML file (OTBM 5 / partitioned spawn format)");
 
 	grid_sizer->Add(
 		new wxStaticText(this, wxID_ANY, "External Waypointfile")
 	);
 
-	grid_sizer->Add(
-		waypoint_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getWaypointFilename())), 1, wxEXPAND
-	);
+	grid_sizer->Add(waypoint_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getWaypointFilename())), wxSizerFlags(1).Expand());
 	waypoint_filename_ctrl->SetToolTip("External waypoint XML file (leave empty for internal)");
 
 	grid_sizer->Add(
 		zone_label = new wxStaticText(this, wxID_ANY, "External Zonefile")
 	);
 
-	grid_sizer->Add(
-		zone_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getZoneFilename())), 1, wxEXPAND
-	);
+	grid_sizer->Add(zone_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getZoneFilename())), wxSizerFlags(1).Expand());
 	zone_filename_ctrl->SetToolTip("External zone XML file, OTBM 5 maps (Canary / Crystal Server) only");
 
 	topsizer->Add(grid_sizer, wxSizerFlags(1).Expand().Border(wxALL, 20));

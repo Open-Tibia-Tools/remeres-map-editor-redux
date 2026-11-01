@@ -58,7 +58,7 @@ void MissingItemsDialog::BuildUI() {
 	}
 	auto* headerText = new wxStaticText(this, wxID_ANY, headerTextContent,
 		wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-	mainSizer->Add(headerText, 0, wxALL | wxEXPAND, FromDIP(10));
+	mainSizer->Add(headerText, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
 
 	// Create notebook for sections
 	auto* notebook = new wxNotebook(this, wxID_ANY);
@@ -67,14 +67,14 @@ void MissingItemsDialog::BuildUI() {
 	auto* page1 = new wxPanel(notebook, wxID_ANY);
 	auto* sizer1 = new wxBoxSizer(wxVERTICAL);
 	countMissingInDat = new wxStaticText(page1, wxID_ANY, "");
-	sizer1->Add(countMissingInDat, 0, wxALL, FromDIP(5));
+	sizer1->Add(countMissingInDat, wxSizerFlags().Border(wxALL, FromDIP(5)));
 
 	listMissingInDat = new wxDataViewListCtrl(page1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES);
 	listMissingInDat->AppendTextColumn("Server ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
 	listMissingInDat->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
 	listMissingInDat->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200));
 	listMissingInDat->AppendTextColumn("Description", wxDATAVIEW_CELL_INERT, FromDIP(250));
-	sizer1->Add(listMissingInDat, 1, wxALL | wxEXPAND, FromDIP(5));
+	sizer1->Add(listMissingInDat, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
 
 	for (const auto& entry : sorted_dat) {
 		listMissingInDat->AppendItem({
@@ -93,12 +93,12 @@ void MissingItemsDialog::BuildUI() {
 	auto* page2 = new wxPanel(notebook, wxID_ANY);
 	auto* sizer2 = new wxBoxSizer(wxVERTICAL);
 	countMissingInOtb = new wxStaticText(page2, wxID_ANY, "");
-	sizer2->Add(countMissingInOtb, 0, wxALL, FromDIP(5));
+	sizer2->Add(countMissingInOtb, wxSizerFlags().Border(wxALL, FromDIP(5)));
 
 	listMissingInOtb = new wxDataViewListCtrl(page2, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES);
 	listMissingInOtb->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(150));
 	listMissingInOtb->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200));
-	sizer2->Add(listMissingInOtb, 1, wxALL | wxEXPAND, FromDIP(5));
+	sizer2->Add(listMissingInOtb, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
 
 	for (const auto& entry : sorted_otb) {
 		listMissingInOtb->AppendItem({
@@ -116,14 +116,14 @@ void MissingItemsDialog::BuildUI() {
 		auto* page3 = new wxPanel(notebook, wxID_ANY);
 		auto* sizer3 = new wxBoxSizer(wxVERTICAL);
 		countXmlNoOtb = new wxStaticText(page3, wxID_ANY, "");
-		sizer3->Add(countXmlNoOtb, 0, wxALL, FromDIP(5));
+		sizer3->Add(countXmlNoOtb, wxSizerFlags().Border(wxALL, FromDIP(5)));
 
 		listXmlNoOtb = new wxDataViewListCtrl(page3, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES);
 		listXmlNoOtb->AppendTextColumn("Server ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
 		listXmlNoOtb->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
 		listXmlNoOtb->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200));
 		listXmlNoOtb->AppendTextColumn("Description", wxDATAVIEW_CELL_INERT, FromDIP(250));
-		sizer3->Add(listXmlNoOtb, 1, wxALL | wxEXPAND, FromDIP(5));
+		sizer3->Add(listXmlNoOtb, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
 
 		for (const auto& entry : sorted_xml_no_otb) {
 			listXmlNoOtb->AppendItem({
@@ -143,14 +143,14 @@ void MissingItemsDialog::BuildUI() {
 		auto* page4 = new wxPanel(notebook, wxID_ANY);
 		auto* sizer4 = new wxBoxSizer(wxVERTICAL);
 		countOtbNoXml = new wxStaticText(page4, wxID_ANY, "");
-		sizer4->Add(countOtbNoXml, 0, wxALL, FromDIP(5));
+		sizer4->Add(countOtbNoXml, wxSizerFlags().Border(wxALL, FromDIP(5)));
 
 		listOtbNoXml = new wxDataViewListCtrl(page4, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES);
 		listOtbNoXml->AppendTextColumn("Server ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
 		listOtbNoXml->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
 		listOtbNoXml->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200));
 		listOtbNoXml->AppendTextColumn("Description", wxDATAVIEW_CELL_INERT, FromDIP(250));
-		sizer4->Add(listOtbNoXml, 1, wxALL | wxEXPAND, FromDIP(5));
+		sizer4->Add(listOtbNoXml, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
 
 		for (const auto& entry : sorted_otb_no_xml) {
 			listOtbNoXml->AppendItem({
@@ -165,27 +165,27 @@ void MissingItemsDialog::BuildUI() {
 		notebook->AddPage(page4, wxString::FromUTF8(std::format("OTB no XML ({})", report.otb_no_xml.size())));
 	}
 
-	mainSizer->Add(notebook, 1, wxALL | wxEXPAND, FromDIP(5));
+	mainSizer->Add(notebook, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
 
 	// Buttons
 	auto* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
 
 	auto* copyButton = new wxButton(this, wxID_ANY, "Copy to Clipboard");
 	copyButton->Bind(wxEVT_BUTTON, &MissingItemsDialog::OnCopyToClipboard, this);
-	buttonSizer->Add(copyButton, 0, wxALL, FromDIP(5));
+	buttonSizer->Add(copyButton, wxSizerFlags().Border(wxALL, FromDIP(5)));
 
 	auto* saveButton = new wxButton(this, wxID_ANY, "Save Report...");
 	saveButton->Bind(wxEVT_BUTTON, &MissingItemsDialog::OnSaveReport, this);
-	buttonSizer->Add(saveButton, 0, wxALL, FromDIP(5));
+	buttonSizer->Add(saveButton, wxSizerFlags().Border(wxALL, FromDIP(5)));
 
 	buttonSizer->AddStretchSpacer();
 
 	auto* ignoreButton = new wxButton(this, wxID_ANY, "Close");
 	ignoreButton->SetDefault();
 	ignoreButton->Bind(wxEVT_BUTTON, &MissingItemsDialog::OnIgnore, this);
-	buttonSizer->Add(ignoreButton, 0, wxALL, FromDIP(5));
+	buttonSizer->Add(ignoreButton, wxSizerFlags().Border(wxALL, FromDIP(5)));
 
-	mainSizer->Add(buttonSizer, 0, wxEXPAND | wxTOP, FromDIP(5));
+	mainSizer->Add(buttonSizer, wxSizerFlags().Expand().Border(wxTOP, FromDIP(5)));
 
 	SetSizer(mainSizer);
 	mainSizer->Fit(this);

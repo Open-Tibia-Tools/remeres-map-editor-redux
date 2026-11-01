@@ -35,7 +35,7 @@ MapTabbook::MapTabbook(wxWindow* parent, wxWindowID id) :
 	wxPanel(parent, id, wxDefaultPosition, wxDefaultSize) {
 	wxSizer* wxz = new wxBoxSizer(wxHORIZONTAL);
 	notebook = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-	wxz->Add(notebook, 1, wxEXPAND);
+	wxz->Add(notebook, wxSizerFlags(1).Expand());
 	SetSizerAndFit(wxz);
 
 	notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CLOSE, &MapTabbook::OnNotebookPageClose, this);

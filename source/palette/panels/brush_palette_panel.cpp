@@ -180,8 +180,8 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	// Create the tileset panel
 	wxSizer* ts_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Tileset");
 	PaletteChoicebook* tmp_choicebook = new PaletteChoicebook(static_cast<wxStaticBoxSizer*>(ts_sizer)->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize(180, 250));
-	ts_sizer->Add(tmp_choicebook, 1, wxEXPAND);
-	topsizer->Add(ts_sizer, 1, wxEXPAND);
+	ts_sizer->Add(tmp_choicebook, wxSizerFlags(1).Expand());
+	topsizer->Add(ts_sizer, wxSizerFlags(1).Expand());
 
 	{
 		TilesetGridToolbar::Actions actions;
@@ -247,9 +247,9 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 		ctrlSizer->SetOrientation(wxVERTICAL);
 
 		wxBoxSizer* topRowSizer = new wxBoxSizer(wxHORIZONTAL);
-		topRowSizer->Add(choice, 1, wxALIGN_CENTER_VERTICAL);
-		ctrlSizer->Add(topRowSizer, 0, wxEXPAND | wxBOTTOM, 2);
-		ctrlSizer->Add(gridToolbar, 0, wxEXPAND | wxBOTTOM, 2);
+		topRowSizer->Add(choice, wxSizerFlags(1).CenterVertical());
+		ctrlSizer->Add(topRowSizer, wxSizerFlags().Expand().Border(wxBOTTOM, 2));
+		ctrlSizer->Add(gridToolbar, wxSizerFlags().Expand().Border(wxBOTTOM, 2));
 
 		if (m_filterAll && !m_filterQuery.empty()) {
 			choice->Enable(false);

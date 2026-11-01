@@ -134,14 +134,14 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	auto* header_sizer = new wxBoxSizer(wxHORIZONTAL);
 
 	auto* logo = new wxStaticBitmap(header_panel, wxID_ANY, rme_logo);
-	header_sizer->Add(logo, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(14));
+	header_sizer->Add(logo, wxSizerFlags().CenterVertical().Border(wxALL, FromDIP(14)));
 
 	auto* title_sizer = new wxBoxSizer(wxVERTICAL);
 	auto* title_label = new wxStaticText(header_panel, wxID_ANY, BuildHeaderTitle(title_text, version_text));
 	title_label->SetFont(Theme::GetFont(15, true));
 	title_label->SetForegroundColour(Theme::Get(Theme::Role::Text));
 	title_label->SetBackgroundColour(header_panel->GetBackgroundColour());
-	title_sizer->Add(title_label, 0, wxBOTTOM, FromDIP(2));
+	title_sizer->Add(title_label, wxSizerFlags().Border(wxBOTTOM, FromDIP(2)));
 
 	auto* subtitle_label = new wxStaticText(header_panel, wxID_ANY, "Welcome back. Pick a map, confirm the client, and load when you are ready.");
 	subtitle_label->SetFont(Theme::GetFont(9, false));
@@ -149,15 +149,15 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	subtitle_label->SetBackgroundColour(header_panel->GetBackgroundColour());
 	title_sizer->Add(subtitle_label, 0);
 
-	header_sizer->Add(title_sizer, 1, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM, FromDIP(16));
+	header_sizer->Add(title_sizer, wxSizerFlags(1).CenterVertical().Border(wxTOP | wxBOTTOM, FromDIP(16)));
 
 	auto* preferences_button = new StartupButton(header_panel, wxID_PREFERENCES, "Preferences", StartupButtonVariant::Secondary);
 	preferences_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, FromDIP(wxSize(18, 18))));
 	preferences_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnPreferences, this);
-	header_sizer->Add(preferences_button, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(14));
+	header_sizer->Add(preferences_button, wxSizerFlags().CenterVertical().Border(wxALL, FromDIP(14)));
 
 	header_panel->SetSizer(header_sizer);
-	root_sizer->Add(header_panel, 0, wxEXPAND | wxLEFT | wxTOP | wxRIGHT, FromDIP(10));
+	root_sizer->Add(header_panel, wxSizerFlags().Expand().Border(wxLEFT | wxTOP | wxRIGHT, FromDIP(10)));
 
 	auto* content_panel = new wxPanel(this, wxID_ANY);
 	content_panel->SetBackgroundColour(Theme::Get(Theme::Role::PanelBackground));
@@ -168,39 +168,39 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	auto* new_map_button = new StartupButton(actions_card, wxID_NEW, "New Map", StartupButtonVariant::Primary);
 	new_map_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_NEW, FromDIP(wxSize(18, 18))));
 	new_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnNewMap, this);
-	actions_card->GetBodySizer()->Add(new_map_button, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
+	actions_card->GetBodySizer()->Add(new_map_button, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(10)));
 
 	auto* browse_map_button = new StartupButton(actions_card, wxID_OPEN, "Browse Map", StartupButtonVariant::Secondary);
 	browse_map_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_OPEN, FromDIP(wxSize(18, 18))));
 	browse_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnBrowseMap, this);
-	actions_card->GetBodySizer()->Add(browse_map_button, 0, wxEXPAND);
-	content_sizer->Add(actions_card, 0, wxEXPAND | wxALL, FromDIP(10));
+	actions_card->GetBodySizer()->Add(browse_map_button, wxSizerFlags().Expand());
+	content_sizer->Add(actions_card, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
 
 	auto* recent_card = new StartupCardPanel(content_panel, "Recent Maps");
 	m_recent_list = new StartupListBox(recent_card, ID_RECENT_LIST);
 	m_recent_list->Bind(wxEVT_LISTBOX, &WelcomeDialog::OnRecentMapSelected, this);
 	m_recent_list->Bind(wxEVT_LISTBOX_DCLICK, &WelcomeDialog::OnRecentMapActivated, this);
-	recent_card->GetBodySizer()->Add(m_recent_list, 1, wxEXPAND);
-	content_sizer->Add(recent_card, 22, wxEXPAND | wxTOP | wxBOTTOM | wxRIGHT, FromDIP(10));
+	recent_card->GetBodySizer()->Add(m_recent_list, wxSizerFlags(1).Expand());
+	content_sizer->Add(recent_card, wxSizerFlags(22).Expand().Border(wxTOP | wxBOTTOM | wxRIGHT, FromDIP(10)));
 
 	auto* map_card = new StartupCardPanel(content_panel, "Selected Map Info");
 	m_map_info_panel = new StartupInfoPanel(map_card);
-	map_card->GetBodySizer()->Add(m_map_info_panel, 1, wxEXPAND);
-	content_sizer->Add(map_card, 20, wxEXPAND | wxTOP | wxBOTTOM | wxRIGHT, FromDIP(10));
+	map_card->GetBodySizer()->Add(m_map_info_panel, wxSizerFlags(1).Expand());
+	content_sizer->Add(map_card, wxSizerFlags(20).Expand().Border(wxTOP | wxBOTTOM | wxRIGHT, FromDIP(10)));
 
 	auto* client_card = new StartupCardPanel(content_panel, "Client Information");
 	m_client_info_panel = new StartupInfoPanel(client_card);
-	client_card->GetBodySizer()->Add(m_client_info_panel, 1, wxEXPAND);
-	content_sizer->Add(client_card, 20, wxEXPAND | wxTOP | wxBOTTOM | wxRIGHT, FromDIP(10));
+	client_card->GetBodySizer()->Add(m_client_info_panel, wxSizerFlags(1).Expand());
+	content_sizer->Add(client_card, wxSizerFlags(20).Expand().Border(wxTOP | wxBOTTOM | wxRIGHT, FromDIP(10)));
 
 	auto* available_clients_card = new StartupCardPanel(content_panel, "Available Clients");
 	m_client_list = new StartupListBox(available_clients_card, ID_CLIENT_LIST);
 	m_client_list->Bind(wxEVT_LISTBOX, &WelcomeDialog::OnClientSelected, this);
-	available_clients_card->GetBodySizer()->Add(m_client_list, 1, wxEXPAND);
-	content_sizer->Add(available_clients_card, 18, wxEXPAND | wxTOP | wxBOTTOM | wxRIGHT, FromDIP(10));
+	available_clients_card->GetBodySizer()->Add(m_client_list, wxSizerFlags(1).Expand());
+	content_sizer->Add(available_clients_card, wxSizerFlags(18).Expand().Border(wxTOP | wxBOTTOM | wxRIGHT, FromDIP(10)));
 
 	content_panel->SetSizer(content_sizer);
-	root_sizer->Add(content_panel, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
+	root_sizer->Add(content_panel, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT, FromDIP(10)));
 
 	auto* footer_panel = new wxPanel(this, wxID_ANY);
 	footer_panel->SetBackgroundColour(Theme::Get(Theme::Role::FooterSurface));
@@ -211,8 +211,8 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	auto* exit_button = new StartupButton(footer_panel, wxID_EXIT, "Exit", StartupButtonVariant::Secondary);
 	exit_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_POWER_OFF, FromDIP(wxSize(18, 18))));
 	exit_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnExit, this);
-	footer_left->Add(exit_button, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(10));
-	footer_actions->Add(footer_left, 1, wxALIGN_CENTER_VERTICAL);
+	footer_left->Add(exit_button, wxSizerFlags().CenterVertical().Border(wxALL, FromDIP(10)));
+	footer_actions->Add(footer_left, wxSizerFlags(1).CenterVertical());
 
 	m_status_card = new StartupCardPanel(footer_panel, "", true);
 	m_status_card->SetMinSize(wxSize(FromDIP(420), -1));
@@ -220,8 +220,8 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	m_status_text->SetFont(Theme::GetFont(9, false));
 	m_status_text->SetForegroundColour(Theme::Get(Theme::Role::TextSubtle));
 	m_status_text->SetBackgroundColour(m_status_card->GetBackgroundColour());
-	m_status_card->GetBodySizer()->Add(m_status_text, 1, wxEXPAND);
-	footer_actions->Add(m_status_card, 2, wxEXPAND | wxTOP | wxBOTTOM, FromDIP(10));
+	m_status_card->GetBodySizer()->Add(m_status_text, wxSizerFlags(1).Expand());
+	footer_actions->Add(m_status_card, wxSizerFlags(2).Expand().Border(wxTOP | wxBOTTOM, FromDIP(10)));
 
 	auto* footer_right = new wxBoxSizer(wxHORIZONTAL);
 	footer_right->AddStretchSpacer();
@@ -230,17 +230,17 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	m_force_load_checkbox->SetForegroundColour(Theme::Get(Theme::Role::Text));
 	m_force_load_checkbox->SetBackgroundColour(footer_panel->GetBackgroundColour());
 	m_force_load_checkbox->Bind(wxEVT_CHECKBOX, &WelcomeDialog::OnForceLoadChanged, this);
-	footer_right->Add(m_force_load_checkbox, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(12));
+	footer_right->Add(m_force_load_checkbox, wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(12)));
 
 	m_load_button = new StartupButton(footer_panel, ID_LOAD_BUTTON, "Load Map", StartupButtonVariant::Primary);
 	m_load_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_OPEN, FromDIP(wxSize(18, 18))));
 	m_load_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnLoadRequested, this);
-	footer_right->Add(m_load_button, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(10));
-	footer_actions->Add(footer_right, 1, wxEXPAND);
+	footer_right->Add(m_load_button, wxSizerFlags().CenterVertical().Border(wxALL, FromDIP(10)));
+	footer_actions->Add(footer_right, wxSizerFlags(1).Expand());
 
-	footer_root_sizer->Add(footer_actions, 0, wxEXPAND);
+	footer_root_sizer->Add(footer_actions, wxSizerFlags().Expand());
 	footer_panel->SetSizer(footer_root_sizer);
-	root_sizer->Add(footer_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	root_sizer->Add(footer_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	SetSizer(root_sizer);
 

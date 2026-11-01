@@ -23,7 +23,7 @@ GotoPositionDialog::GotoPositionDialog(wxWindow* parent, Editor& editor) :
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 
 	posctrl = new PositionCtrl(this, "Destination", map.getWidth() / 2, map.getHeight() / 2, GROUND_LAYER, map.getWidth(), map.getHeight());
-	sizer->Add(posctrl, 0, wxTOP | wxLEFT | wxRIGHT, 20);
+	sizer->Add(posctrl, wxSizerFlags().Border(wxTOP | wxLEFT | wxRIGHT, 20));
 
 	// OK/Cancel buttons
 	wxSizer* tmpsizer = new wxBoxSizer(wxHORIZONTAL);
@@ -35,7 +35,7 @@ GotoPositionDialog::GotoPositionDialog(wxWindow* parent, Editor& editor) :
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
 	cancelBtn->SetToolTip("Close this window");
 	tmpsizer->Add(cancelBtn, wxSizerFlags(1).Center());
-	sizer->Add(tmpsizer, 0, wxALL | wxCENTER, 20); // Border to top too
+	sizer->Add(tmpsizer, wxSizerFlags().Center().Border(wxALL, 20)); // Border to top too
 
 	SetSizerAndFit(sizer);
 	Centre(wxBOTH);

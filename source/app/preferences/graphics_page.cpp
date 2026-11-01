@@ -31,7 +31,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		"Smooth map rendering using linear interpolation so scaled views appear less jagged.",
 		g_settings.getBoolean(Config::ANTI_ALIASING)
 	);
-	page_sizer->Add(rendering_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
+	page_sizer->Add(rendering_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(10)));
 
 	auto* palette_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -61,7 +61,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		"Choose a neutral icon backdrop that makes palette assets easier to scan across dialogs and browsers.",
 		icon_background_choice
 	);
-	page_sizer->Add(palette_section, 0, wxEXPAND | wxALL, FromDIP(10));
+	page_sizer->Add(palette_section, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
 
 	auto create_color_opacity_control = [&](
 		wxWindow* parent_win,
@@ -95,12 +95,12 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		out_choice = new wxChoice(container, wxID_ANY, wxDefaultPosition, wxDefaultSize, blend_modes);
 		out_choice->SetSelection(std::clamp(g_settings.getInteger(mode_key), 0, 1));
 
-		sizer->Add(out_picker, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
-		sizer->Add(new wxStaticText(container, wxID_ANY, "Opacity:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
-		sizer->Add(out_spin, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
-		sizer->Add(new wxStaticText(container, wxID_ANY, "%"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
-		sizer->Add(new wxStaticText(container, wxID_ANY, "Mode:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
-		sizer->Add(out_choice, 0, wxALIGN_CENTER_VERTICAL);
+		sizer->Add(out_picker, wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(8)));
+		sizer->Add(new wxStaticText(container, wxID_ANY, "Opacity:"), wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(4)));
+		sizer->Add(out_spin, wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(4)));
+		sizer->Add(new wxStaticText(container, wxID_ANY, "%"), wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(10)));
+		sizer->Add(new wxStaticText(container, wxID_ANY, "Mode:"), wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(4)));
+		sizer->Add(out_choice, wxSizerFlags().CenterVertical());
 
 		container->SetSizerAndFit(sizer);
 		return container;
@@ -131,7 +131,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		"Draw a crisp 1-pixel boundary around tiles hovered by brush placement previews.",
 		g_settings.getBoolean(Config::CURSOR_SHOW_OUTLINE)
 	);
-	page_sizer->Add(cursor_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(cursor_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	auto* zone_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -264,7 +264,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		reset_zone_defaults_btn
 	);
 
-	page_sizer->Add(zone_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(zone_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	auto* screenshot_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -300,7 +300,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		"File type used when you capture the map view with F11.",
 		screenshot_format_choice
 	);
-	page_sizer->Add(screenshot_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(screenshot_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	auto* performance_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -335,7 +335,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		"Display the current frame rate in the editor status area while you work.",
 		g_settings.getBoolean(Config::SHOW_FPS_COUNTER)
 	);
-	page_sizer->Add(performance_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(performance_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	auto* hardware_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -375,7 +375,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		"Select 'Low-End' to simulate 2 GB VRAM ceilings (~180 MB chunk VBOs, 2 threads). Takes effect immediately, trimming GPU memory live.",
 		hardware_profile_choice
 	);
-	page_sizer->Add(hardware_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(hardware_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	FinishLayout();
 }

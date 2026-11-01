@@ -146,21 +146,21 @@ LightColorPickerDialog::LightColorPickerDialog(wxWindow* parent, int current_col
 	auto* main_sizer = new wxBoxSizer(wxVERTICAL);
 
 	auto* title = new wxStaticText(this, wxID_ANY, "Choose the server light palette index used by OTClient.");
-	main_sizer->Add(title, 0, wxALL, 10);
+	main_sizer->Add(title, wxSizerFlags().Border(wxALL, 10));
 
 	palette_ = new LightColorPalette(this);
 	palette_->SetSelectedColor(selected_color_);
 	palette_->Bind(wxEVT_BUTTON, &LightColorPickerDialog::OnPaletteSelection, this);
-	main_sizer->Add(palette_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 10);
+	main_sizer->Add(palette_, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
 
 	auto* preview_sizer = new wxBoxSizer(wxHORIZONTAL);
 	preview_bitmap_ = new wxStaticBitmap(this, wxID_ANY, CreateLightColorSwatchBitmap(this, selected_color_, wxSize(48, 48)));
 	selection_label_ = new wxStaticText(this, wxID_ANY, wxEmptyString);
-	preview_sizer->Add(preview_bitmap_, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 10);
-	preview_sizer->Add(selection_label_, 0, wxALIGN_CENTER_VERTICAL);
-	main_sizer->Add(preview_sizer, 0, wxLEFT | wxRIGHT | wxBOTTOM, 10);
+	preview_sizer->Add(preview_bitmap_, wxSizerFlags().CenterVertical().Border(wxRIGHT, 10));
+	preview_sizer->Add(selection_label_, wxSizerFlags().CenterVertical());
+	main_sizer->Add(preview_sizer, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
 
-	main_sizer->Add(CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
+	main_sizer->Add(CreateSeparatedButtonSizer(wxOK | wxCANCEL), wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
 
 	SetSizerAndFit(main_sizer);
 	UpdateSelection(selected_color_);
