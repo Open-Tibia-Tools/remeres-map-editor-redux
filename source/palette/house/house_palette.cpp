@@ -30,16 +30,16 @@ HousePalette::HousePalette(wxWindow* parent) :
 	PalettePanel(parent, wxID_ANY),
 	map(nullptr) {
 
-	wxBoxSizer* main_sizer = newd wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
 
 	// Header section (Town & Search)
-	wxBoxSizer* filter_sizer = newd wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* filter_sizer = new wxBoxSizer(wxVERTICAL);
 
-	town_choice = newd wxChoice(this, PALETTE_HOUSE_TOWN_CHOICE);
+	town_choice = new wxChoice(this, PALETTE_HOUSE_TOWN_CHOICE);
 	town_choice->SetFont(Theme::GetFont(9, false));
 	filter_sizer->Add(town_choice, 0, wxEXPAND | wxBOTTOM, 4);
 
-	search_ctrl = newd PaletteSearchCtrl(this, PALETTE_HOUSE_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+	search_ctrl = new PaletteSearchCtrl(this, PALETTE_HOUSE_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 	search_ctrl->SetDescriptiveText("Search houses...");
 	search_ctrl->SetFont(Theme::GetFont(9, false));
 	filter_sizer->Add(search_ctrl, 0, wxEXPAND);
@@ -47,7 +47,7 @@ HousePalette::HousePalette(wxWindow* parent) :
 	main_sizer->Add(filter_sizer, 0, wxEXPAND | wxALL, 5);
 
 	// Table section (NanoVG Table)
-	house_table = newd NanoVGTableCtrl(this, PALETTE_HOUSE_LISTBOX);
+	house_table = new NanoVGTableCtrl(this, PALETTE_HOUSE_LISTBOX);
 	std::vector<TableColumn> cols = {
 		{ "guild", "Guild", 40, NVG_ALIGN_CENTER, true },
 		{ "id", "ID", 45, NVG_ALIGN_LEFT, true },
@@ -73,16 +73,16 @@ HousePalette::HousePalette(wxWindow* parent) :
 	main_sizer->Add(house_table, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
 
 	// Action buttons (Add, Edit, Remove)
-	wxBoxSizer* action_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	add_button = newd wxButton(this, PALETTE_HOUSE_ADD_HOUSE, "Add", wxDefaultPosition, wxSize(50, -1));
+	wxBoxSizer* action_sizer = new wxBoxSizer(wxHORIZONTAL);
+	add_button = new wxButton(this, PALETTE_HOUSE_ADD_HOUSE, "Add", wxDefaultPosition, wxSize(50, -1));
 	add_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
 	add_button->SetFont(Theme::GetFont(9, false));
 
-	edit_button = newd wxButton(this, PALETTE_HOUSE_EDIT_HOUSE, "Edit", wxDefaultPosition, wxSize(50, -1));
+	edit_button = new wxButton(this, PALETTE_HOUSE_EDIT_HOUSE, "Edit", wxDefaultPosition, wxSize(50, -1));
 	edit_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
 	edit_button->SetFont(Theme::GetFont(9, false));
 
-	remove_button = newd wxButton(this, PALETTE_HOUSE_REMOVE_HOUSE, "Remove", wxDefaultPosition, wxSize(60, -1));
+	remove_button = new wxButton(this, PALETTE_HOUSE_REMOVE_HOUSE, "Remove", wxDefaultPosition, wxSize(60, -1));
 	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
 	remove_button->SetFont(Theme::GetFont(9, false));
 
@@ -93,13 +93,13 @@ HousePalette::HousePalette(wxWindow* parent) :
 	main_sizer->Add(action_sizer, 0, wxEXPAND | wxALL, 5);
 
 	// Brush buttons (House tiles, Select Exit)
-	wxBoxSizer* brush_sizer = newd wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* brush_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-	house_brush_button = newd wxToggleButton(this, PALETTE_HOUSE_BRUSH_BUTTON, "House tiles");
+	house_brush_button = new wxToggleButton(this, PALETTE_HOUSE_BRUSH_BUTTON, "House tiles");
 	house_brush_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PAINTBRUSH, wxSize(16, 16)));
 	house_brush_button->SetFont(Theme::GetFont(9, false));
 
-	select_exit_button = newd wxToggleButton(this, PALETTE_HOUSE_SELECT_EXIT_BUTTON, "Select Exit");
+	select_exit_button = new wxToggleButton(this, PALETTE_HOUSE_SELECT_EXIT_BUTTON, "Select Exit");
 	select_exit_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_DOOR_OPEN, wxSize(16, 16)));
 	select_exit_button->SetFont(Theme::GetFont(9, false));
 
@@ -470,7 +470,7 @@ void HousePalette::OnEditHouse(wxCommandEvent& /*event*/) {
 	House* house = GetSelectedHouse();
 	if (house && map) {
 		selected_house_id_ = house->getID();
-		auto* d = newd EditHouseDialog(g_gui.root, map, house);
+		auto* d = new EditHouseDialog(g_gui.root, map, house);
 		if (d->ShowModal() == 1) {
 			FilterHouses();
 			g_gui.SelectBrush();

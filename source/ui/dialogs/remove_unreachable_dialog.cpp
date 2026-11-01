@@ -14,43 +14,43 @@
 
 RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	wxDialog(parent, wxID_ANY, "Remove Unreachable Tiles", wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE) {
-	wxBoxSizer* top_sizer = newd wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* top_sizer = new wxBoxSizer(wxVERTICAL);
 
 	// 1. Viewport Dimensions Group
-	wxStaticBoxSizer* viewport_box = newd wxStaticBoxSizer(wxVERTICAL, this, "Viewport Dimensions");
+	wxStaticBoxSizer* viewport_box = new wxStaticBoxSizer(wxVERTICAL, this, "Viewport Dimensions");
 
-	radio_standard = newd wxRadioButton(viewport_box->GetStaticBox(), wxID_ANY, "Standard Client (15 x 11)", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-	radio_custom = newd wxRadioButton(viewport_box->GetStaticBox(), wxID_ANY, "Custom Viewport");
+	radio_standard = new wxRadioButton(viewport_box->GetStaticBox(), wxID_ANY, "Standard Client (15 x 11)", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+	radio_custom = new wxRadioButton(viewport_box->GetStaticBox(), wxID_ANY, "Custom Viewport");
 
 	viewport_box->Add(radio_standard, 0, wxALL, 5);
 
-	wxBoxSizer* custom_sizer = newd wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* custom_sizer = new wxBoxSizer(wxHORIZONTAL);
 	custom_sizer->Add(radio_custom, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 15);
 
-	custom_sizer->Add(newd wxStaticText(viewport_box->GetStaticBox(), wxID_ANY, "Width:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-	custom_width_spin = newd wxSpinCtrl(viewport_box->GetStaticBox(), wxID_ANY, "26", wxDefaultPosition, FromDIP(wxSize(70, -1)), wxSP_ARROW_KEYS, 5, 100, 26);
+	custom_sizer->Add(new wxStaticText(viewport_box->GetStaticBox(), wxID_ANY, "Width:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+	custom_width_spin = new wxSpinCtrl(viewport_box->GetStaticBox(), wxID_ANY, "26", wxDefaultPosition, FromDIP(wxSize(70, -1)), wxSP_ARROW_KEYS, 5, 100, 26);
 	custom_sizer->Add(custom_width_spin, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 15);
 
-	custom_sizer->Add(newd wxStaticText(viewport_box->GetStaticBox(), wxID_ANY, "Height:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-	custom_height_spin = newd wxSpinCtrl(viewport_box->GetStaticBox(), wxID_ANY, "11", wxDefaultPosition, FromDIP(wxSize(70, -1)), wxSP_ARROW_KEYS, 5, 100, 11);
+	custom_sizer->Add(new wxStaticText(viewport_box->GetStaticBox(), wxID_ANY, "Height:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+	custom_height_spin = new wxSpinCtrl(viewport_box->GetStaticBox(), wxID_ANY, "11", wxDefaultPosition, FromDIP(wxSize(70, -1)), wxSP_ARROW_KEYS, 5, 100, 11);
 	custom_sizer->Add(custom_height_spin, 0, wxALIGN_CENTER_VERTICAL);
 
 	viewport_box->Add(custom_sizer, 0, wxLEFT | wxRIGHT | wxBOTTOM, 5);
 	top_sizer->Add(viewport_box, 0, wxEXPAND | wxALL, 10);
 
 	// 2. Multi-Floor Visibility Group
-	wxStaticBoxSizer* floor_box = newd wxStaticBoxSizer(wxVERTICAL, this, "Multi-Floor Visibility");
+	wxStaticBoxSizer* floor_box = new wxStaticBoxSizer(wxVERTICAL, this, "Multi-Floor Visibility");
 
-	multi_floor_checkbox = newd wxCheckBox(floor_box->GetStaticBox(), wxID_ANY, "Consider multi-floor visibility (Z-axis)");
+	multi_floor_checkbox = new wxCheckBox(floor_box->GetStaticBox(), wxID_ANY, "Consider multi-floor visibility (Z-axis)");
 	multi_floor_checkbox->SetValue(true);
 	multi_floor_checkbox->SetToolTip("Checks viewports across visible adjacent floors with isometric floor offset projection.");
 	floor_box->Add(multi_floor_checkbox, 0, wxALL, 5);
 
-	wxBoxSizer* scope_sizer = newd wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* scope_sizer = new wxBoxSizer(wxVERTICAL);
 
-	radio_scope_all = newd wxRadioButton(floor_box->GetStaticBox(), wxID_ANY, "All Floors (0 - 15)", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-	radio_scope_surface = newd wxRadioButton(floor_box->GetStaticBox(), wxID_ANY, "Surface Only (0 - 7)");
-	radio_scope_underground = newd wxRadioButton(floor_box->GetStaticBox(), wxID_ANY, "Underground Only (8 - 15)");
+	radio_scope_all = new wxRadioButton(floor_box->GetStaticBox(), wxID_ANY, "All Floors (0 - 15)", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+	radio_scope_surface = new wxRadioButton(floor_box->GetStaticBox(), wxID_ANY, "Surface Only (0 - 7)");
+	radio_scope_underground = new wxRadioButton(floor_box->GetStaticBox(), wxID_ANY, "Underground Only (8 - 15)");
 
 	radio_scope_all->SetValue(true);
 	radio_scope_all->SetToolTip("Scan and remove unreachable tiles across both surface and underground layers.");
@@ -65,16 +65,16 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	top_sizer->Add(floor_box, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
 
 	// 3. Cleanup Options Group
-	wxStaticBoxSizer* options_box = newd wxStaticBoxSizer(wxVERTICAL, this, "Cleanup Options");
+	wxStaticBoxSizer* options_box = new wxStaticBoxSizer(wxVERTICAL, this, "Cleanup Options");
 
-	wxBoxSizer* margin_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	margin_sizer->Add(newd wxStaticText(options_box->GetStaticBox(), wxID_ANY, "Safety Margin (tiles):"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 10);
-	safety_margin_spin = newd wxSpinCtrl(options_box->GetStaticBox(), wxID_ANY, "2", wxDefaultPosition, FromDIP(wxSize(65, -1)), wxSP_ARROW_KEYS, 0, 10, 2);
+	wxBoxSizer* margin_sizer = new wxBoxSizer(wxHORIZONTAL);
+	margin_sizer->Add(new wxStaticText(options_box->GetStaticBox(), wxID_ANY, "Safety Margin (tiles):"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 10);
+	safety_margin_spin = new wxSpinCtrl(options_box->GetStaticBox(), wxID_ANY, "2", wxDefaultPosition, FromDIP(wxSize(65, -1)), wxSP_ARROW_KEYS, 0, 10, 2);
 	safety_margin_spin->SetToolTip("Additional border margin added around viewports to prevent clipping tall sprites.");
 	margin_sizer->Add(safety_margin_spin, 0, wxALIGN_CENTER_VERTICAL);
 	options_box->Add(margin_sizer, 0, wxALL, 5);
 
-	backup_checkbox = newd wxCheckBox(options_box->GetStaticBox(), wxID_ANY, "Create map backup before modifying");
+	backup_checkbox = new wxCheckBox(options_box->GetStaticBox(), wxID_ANY, "Create map backup before modifying");
 	backup_checkbox->SetValue(true);
 	backup_checkbox->SetToolTip("Saves a timestamped .otbm copy before removing any tiles.");
 	options_box->Add(backup_checkbox, 0, wxALL, 5);
@@ -82,14 +82,14 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	top_sizer->Add(options_box, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
 
 	// 4. OK / Cancel Buttons
-	wxBoxSizer* button_sizer = newd wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* button_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-	wxButton* ok_button = newd wxButton(this, wxID_OK, "Remove Tiles");
+	wxButton* ok_button = new wxButton(this, wxID_OK, "Remove Tiles");
 	ok_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
 	ok_button->SetDefault();
 	button_sizer->Add(ok_button, 0, wxRIGHT, 10);
 
-	wxButton* cancel_button = newd wxButton(this, wxID_CANCEL, "Cancel");
+	wxButton* cancel_button = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancel_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
 	button_sizer->Add(cancel_button, 0);
 

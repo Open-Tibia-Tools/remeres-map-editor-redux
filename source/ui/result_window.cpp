@@ -299,31 +299,31 @@ private:
 
 SearchResultWindow::SearchResultWindow(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY) {
-	auto* root_sizer = newd wxBoxSizer(wxVERTICAL);
+	auto* root_sizer = new wxBoxSizer(wxVERTICAL);
 
-	result_list = newd ResultCanvas(this);
+	result_list = new ResultCanvas(this);
 	root_sizer->Add(result_list, wxSizerFlags(1).Expand());
 
-	auto* footer_sizer = newd wxBoxSizer(wxVERTICAL);
-	summary_label = newd wxStaticText(this, wxID_ANY, "Results: 0");
+	auto* footer_sizer = new wxBoxSizer(wxVERTICAL);
+	summary_label = new wxStaticText(this, wxID_ANY, "Results: 0");
 	footer_sizer->Add(summary_label, wxSizerFlags(0).Expand());
 
-	auto* action_sizer = newd wxBoxSizer(wxHORIZONTAL);
+	auto* action_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-	previous_page_button_ = newd wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	previous_page_button_ = new wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 	previous_page_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_ARROW_LEFT));
 	action_sizer->Add(previous_page_button_, wxSizerFlags(0).CenterVertical().Border(wxRIGHT, FromDIP(6)));
 
-	next_page_button_ = newd wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	next_page_button_ = new wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 	next_page_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_ARROW_RIGHT));
 	action_sizer->Add(next_page_button_, wxSizerFlags(0).CenterVertical().Border(wxRIGHT, FromDIP(12)));
 
-	export_button_ = newd wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	export_button_ = new wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 	export_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_FILE_EXPORT));
 	export_button_->SetToolTip("Export current page");
 	action_sizer->Add(export_button_, wxSizerFlags(0).CenterVertical().Border(wxRIGHT, FromDIP(6)));
 
-	clear_button_ = newd wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	clear_button_ = new wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 	clear_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_TRASH_CAN));
 	clear_button_->SetToolTip("Clear results");
 	action_sizer->Add(clear_button_, wxSizerFlags(0).CenterVertical());

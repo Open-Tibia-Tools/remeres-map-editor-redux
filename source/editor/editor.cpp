@@ -46,7 +46,7 @@
 
 Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version) :
 	live_manager(*this),
-	actionQueue(newd ActionQueue(*this)),
+	actionQueue(new ActionQueue(*this)),
 	selection(*this),
 	copybuffer(copybuffer),
 	replace_brush(nullptr) {
@@ -57,7 +57,7 @@ Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version) :
 
 Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, const FileName& fn, const MapLoadOptions& load_options) :
 	live_manager(*this),
-	actionQueue(newd ActionQueue(*this)),
+	actionQueue(new ActionQueue(*this)),
 	selection(*this),
 	copybuffer(copybuffer),
 	replace_brush(nullptr) {
@@ -67,7 +67,7 @@ Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, const FileName
 
 Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, std::unique_ptr<LiveClient> client) :
 	live_manager(*this, std::move(client)),
-	actionQueue(newd NetworkedActionQueue(*this)),
+	actionQueue(new NetworkedActionQueue(*this)),
 	selection(*this),
 	copybuffer(copybuffer),
 	replace_brush(nullptr) {

@@ -57,7 +57,7 @@ void UpdateChecker::connect(wxEvtHandler* receiver) {
 	#ifdef __EXPERIMENTAL__
 	address << "&beta";
 	#endif
-	wxURL* url = newd wxURL(address);
+	wxURL* url = new wxURL(address);
 
 	m_thread = std::jthread([receiver, url, alive = m_alive](std::stop_token stop_token) {
 		wxInputStream* input = url->GetInputStream();

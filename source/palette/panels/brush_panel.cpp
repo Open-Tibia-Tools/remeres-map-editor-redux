@@ -20,7 +20,7 @@ BrushPanel::BrushPanel(wxWindow* parent) :
 	grid_spacing((g_settings.getInteger(Config::PALETTE_GRID_SPACING) == 2 || g_settings.getInteger(Config::PALETTE_GRID_SPACING) == 6) ? g_settings.getInteger(Config::PALETTE_GRID_SPACING) : 4),
 	loaded(false),
 	list_type(BRUSHLIST_ICONS_32) {
-	sizer = newd wxBoxSizer(wxVERTICAL);
+	sizer = new wxBoxSizer(wxVERTICAL);
 	SetSizerAndFit(sizer);
 }
 
@@ -97,11 +97,11 @@ void BrushPanel::LoadContents() {
 		case BRUSHLIST_ICONS_32:
 		case BRUSHLIST_ICONS_64:
 		case BRUSHLIST_ICONS_128:
-			brushbox = newd VirtualBrushGrid(this, tileset, tile_size_px);
+			brushbox = new VirtualBrushGrid(this, tileset, tile_size_px);
 			break;
 		case BRUSHLIST_LISTBOX:
 		case BRUSHLIST_TEXT_LISTBOX: {
-			auto vbg = newd VirtualBrushGrid(this, tileset, tile_size_px);
+			auto vbg = new VirtualBrushGrid(this, tileset, tile_size_px);
 			vbg->SetDisplayMode(VirtualBrushGrid::DisplayMode::List);
 			brushbox = vbg;
 			break;

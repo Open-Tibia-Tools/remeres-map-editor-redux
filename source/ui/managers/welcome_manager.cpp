@@ -16,7 +16,7 @@ WelcomeManager::~WelcomeManager() {
 
 void WelcomeManager::ShowWelcomeDialog(const wxBitmap& icon) {
 	std::vector<wxString> recent_files = g_gui.root->GetRecentFiles();
-	welcomeDialog = newd WelcomeDialog(__W_RME_APPLICATION_NAME__, "Version " + __W_RME_VERSION__, g_gui.root->FromDIP(wxSize(1320, 820)), icon, recent_files);
+	welcomeDialog = new WelcomeDialog(__W_RME_APPLICATION_NAME__, "Version " + __W_RME_VERSION__, g_gui.root->FromDIP(wxSize(1320, 820)), icon, recent_files);
 	welcomeDialog->Bind(wxEVT_CLOSE_WINDOW, &WelcomeManager::OnWelcomeDialogClosed, this);
 	welcomeDialog->Bind(WELCOME_DIALOG_ACTION, &WelcomeManager::OnWelcomeDialogAction, this);
 	welcomeDialog->Show();

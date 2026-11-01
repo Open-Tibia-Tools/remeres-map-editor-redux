@@ -407,7 +407,7 @@ void Selection::commit() {
 		// Do the action
 		tmp->addAndCommitAction(std::move(subsession));
 
-		// Create a newd action for subsequent selects
+		// Create a new action for subsequent selects
 		subsession = editor.actionQueue->createAction(ACTION_SELECT);
 		session = std::move(tmp);
 	}

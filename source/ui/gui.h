@@ -344,7 +344,7 @@ protected:
 	// Palette Interface
 	//=========================================================================
 public:
-	// Spawn a newd palette
+	// Spawn a new palette
 	PaletteWindow* NewPalette();
 	// Bring this palette to the front (as the 'active' palette)
 	void ActivatePalette(PaletteWindow* p);

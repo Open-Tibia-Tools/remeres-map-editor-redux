@@ -31,36 +31,36 @@ ContainerPropertiesWindow::ContainerPropertiesWindow(wxWindow* win_parent, const
 	Bind(wxEVT_MENU, &ContainerPropertiesWindow::OnEditItem, this, CONTAINER_POPUP_MENU_EDIT);
 	Bind(wxEVT_MENU, &ContainerPropertiesWindow::OnRemoveItem, this, CONTAINER_POPUP_MENU_REMOVE);
 
-	wxSizer* topsizer = newd wxBoxSizer(wxVERTICAL);
-	wxStaticBoxSizer* boxsizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Container Properties");
+	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
+	wxStaticBoxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Container Properties");
 
-	wxFlexGridSizer* subsizer = newd wxFlexGridSizer(2, 10, 10);
+	wxFlexGridSizer* subsizer = new wxFlexGridSizer(2, 10, 10);
 	subsizer->AddGrowableCol(1);
 
 	if (item->getClientID() != 0 && item->getClientID() != item->getID()) {
-		subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
+		subsizer->Add(new wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
 	} else {
-		subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, std::format("ID: {}", item->getID())));
+		subsizer->Add(new wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, std::format("ID: {}", item->getID())));
 	}
-	subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
+	subsizer->Add(new wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
 
 
-	subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Action ID"));
-	action_id_field = newd wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, std::to_string(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
+	subsizer->Add(new wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Action ID"));
+	action_id_field = new wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, std::to_string(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
 	action_id_field->SetToolTip("Action ID (0-65535). Used for scripting.");
 	subsizer->Add(action_id_field, wxSizerFlags(1).Expand());
 
-	subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Unique ID"));
-	unique_id_field = newd wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, std::to_string(edit_item->getUniqueID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
+	subsizer->Add(new wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Unique ID"));
+	unique_id_field = new wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, std::to_string(edit_item->getUniqueID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
 	unique_id_field->SetToolTip("Unique ID (0-65535). Must be unique on the map.");
 	subsizer->Add(unique_id_field, wxSizerFlags(1).Expand());
 
 	boxsizer->Add(subsizer, wxSizerFlags(0).Expand());
 
 	// Now we add the subitems!
-	wxStaticBoxSizer* contents_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Contents");
+	wxStaticBoxSizer* contents_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Contents");
 
-	grid_canvas = newd ContainerGridCanvas(contents_sizer->GetStaticBox(), g_settings.getBoolean(Config::USE_LARGE_CONTAINER_ICONS));
+	grid_canvas = new ContainerGridCanvas(contents_sizer->GetStaticBox(), g_settings.getBoolean(Config::USE_LARGE_CONTAINER_ICONS));
 	grid_canvas->Bind(wxEVT_BUTTON, &ContainerPropertiesWindow::OnContainerItemClick, this);
 	grid_canvas->Bind(wxEVT_CONTEXT_MENU, &ContainerPropertiesWindow::OnContainerItemRightClick, this);
 	grid_canvas->SetContainer(edit_item);
@@ -70,11 +70,11 @@ ContainerPropertiesWindow::ContainerPropertiesWindow(wxWindow* win_parent, const
 	topsizer->Add(boxsizer, wxSizerFlags(0).Expand().Border(wxALL, 20));
 	topsizer->Add(contents_sizer, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 20));
 
-	wxSizer* std_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(this, wxID_OK, "OK");
+	wxSizer* std_sizer = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
 	std_sizer->Add(okBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
-	wxButton* cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
+	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
 	std_sizer->Add(cancelBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
 	topsizer->Add(std_sizer, wxSizerFlags(0).Center().Border(wxLEFT | wxRIGHT, 20));
@@ -213,7 +213,7 @@ void ContainerPropertiesWindow::OnEditItem(wxCommandEvent& WXUNUSED(event)) {
 	Item* sub_item = container->getItem(sub_item_index);
 	wxPoint newDialogAt = GetPosition() + FromDIP(wxPoint(20, 20));
 
-	wxDialog* d = newd ItemPropertiesWindow(this, edit_map, nullptr, sub_item, newDialogAt);
+	wxDialog* d = new ItemPropertiesWindow(this, edit_map, nullptr, sub_item, newDialogAt);
 
 	d->ShowModal();
 	d->Destroy();

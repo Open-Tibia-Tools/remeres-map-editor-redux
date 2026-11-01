@@ -352,11 +352,11 @@ void ReplaceToolWindow::InitLayout() {
 	// ---------------------------------------------------------
 	// FOOTER: scope and execution, flush right
 	// ---------------------------------------------------------
-	wxBoxSizer* footerSizer = newd wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* footerSizer = new wxBoxSizer(wxHORIZONTAL);
 
 	footerSizer->AddStretchSpacer(1);
 
-	wxStaticText* scopeLabel = newd wxStaticText(this, wxID_ANY, "SCOPE:");
+	wxStaticText* scopeLabel = new wxStaticText(this, wxID_ANY, "SCOPE:");
 	scopeLabel->SetForegroundColour(Theme::Get(Theme::Role::TextSubtle));
 	scopeLabel->SetFont(Theme::GetFont(9, true));
 	footerSizer->Add(scopeLabel, wxSizerFlags(0).Center().Border(wxRIGHT, 5));
@@ -365,14 +365,14 @@ void ReplaceToolWindow::InitLayout() {
 	scopes.Add("SELECTION");
 	scopes.Add("VIEWPORT");
 	scopes.Add("ALL MAP");
-	m_scopeChoice = newd wxChoice(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(140, 24)), scopes);
+	m_scopeChoice = new wxChoice(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(140, 24)), scopes);
 	m_scopeChoice->SetSelection(0);
 	if (editor && editor->selection.empty()) {
 		m_scopeChoice->SetSelection(1); // Default to Viewport if no selection
 	}
 	footerSizer->Add(m_scopeChoice, wxSizerFlags(0).Center().Border(wxRIGHT, padding));
 
-	m_executeBtn = newd wxButton(this, wxID_ANY, "EXECUTE REPLACE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
+	m_executeBtn = new wxButton(this, wxID_ANY, "EXECUTE REPLACE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
 	m_executeBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLAY, wxSize(16, 16)));
 	m_executeBtn->SetDefault();
 	m_executeBtn->SetBackgroundColour(Theme::Get(Theme::Role::Accent)); // Blue
@@ -380,7 +380,7 @@ void ReplaceToolWindow::InitLayout() {
 	m_executeBtn->SetFont(Theme::GetFont(10, true));
 	footerSizer->Add(m_executeBtn, wxSizerFlags(0).Center().Border(wxLEFT, padding));
 
-	wxButton* closeBtn = newd wxButton(this, wxID_ANY, "CLOSE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
+	wxButton* closeBtn = new wxButton(this, wxID_ANY, "CLOSE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
 	closeBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
 	closeBtn->SetBackgroundColour(wxColour(120, 120, 120)); // Gray
 	closeBtn->SetForegroundColour(*wxWHITE);

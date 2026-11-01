@@ -75,9 +75,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
 	g_gui.aui_manager->AddPane(g_gui.tabbook, wxAuiPaneInfo().CenterPane().Floatable(false).CloseButton(false).PaneBorder(false));
 
-	g_gui.tile_properties_panel = newd TilePropertiesPanel(this);
+	g_gui.tile_properties_panel = new TilePropertiesPanel(this);
 	g_gui.aui_manager->AddPane(g_gui.tile_properties_panel, wxAuiPaneInfo().Name("TileProperties").Caption("Tile Properties").Right().Layer(1).Position(1).CloseButton(true).MaximizeButton(true).Hide());
-	g_gui.brush_items_window = newd BrushItemsWindow(this);
+	g_gui.brush_items_window = new BrushItemsWindow(this);
 	g_gui.aui_manager->AddPane(g_gui.brush_items_window,
 		wxAuiPaneInfo()
 			.Name("BrushItems")
@@ -94,7 +94,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	);
 
 	// Create Script Manager panel (dockable)
-	LuaScriptsWindow* scriptsWindow = newd LuaScriptsWindow(this);
+	LuaScriptsWindow* scriptsWindow = new LuaScriptsWindow(this);
 	LuaScriptsWindow::SetInstance(scriptsWindow);
 	g_gui.aui_manager->AddPane(scriptsWindow,
 		wxAuiPaneInfo()
@@ -171,7 +171,7 @@ void MainFrame::OnUpdateReceived(wxCommandEvent& event) {
 	if (update == "yes") {
 		int ret = DialogUtil::PopupDialog(
 			"Update Notice",
-			wxString("There is a newd update available (") << wxstr(verstr) << "). Do you want to go to the website and download it?",
+			wxString("There is a new update available (") << wxstr(verstr) << "). Do you want to go to the website and download it?",
 			wxYES | wxNO,
 			"I don't want any update notices",
 			Config::AUTOCHECK_FOR_UPDATES

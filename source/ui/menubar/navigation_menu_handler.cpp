@@ -53,7 +53,7 @@ void NavigationMenuHandler::OnJumpToBrush(wxCommandEvent& WXUNUSED(event)) {
 	}
 
 	// Create the jump to dialog
-	FindDialog* dlg = newd FindBrushDialog(frame);
+	FindDialog* dlg = new FindBrushDialog(frame);
 
 	// Display dialog to user
 	dlg->ShowModal();

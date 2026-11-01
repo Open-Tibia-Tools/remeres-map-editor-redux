@@ -141,19 +141,19 @@ Item* TilePropertiesListBox::GetItem(size_t index) const {
 BrowseFieldList::BrowseFieldList(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY), current_tile(nullptr), current_map(nullptr) {
 
-	wxStaticBoxSizer* main_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Items");
+	wxStaticBoxSizer* main_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Items");
 
 	// Toolbar
-	wxBoxSizer* toolbar_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	btn_up = newd wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	wxBoxSizer* toolbar_sizer = new wxBoxSizer(wxHORIZONTAL);
+	btn_up = new wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 	btn_up->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_ARROW_UP, wxSize(16, 16)));
 	btn_up->SetToolTip("Move item up in stack");
 
-	btn_down = newd wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	btn_down = new wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 	btn_down->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_ARROW_DOWN, wxSize(16, 16)));
 	btn_down->SetToolTip("Move item down in stack");
 
-	btn_delete = newd wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	btn_delete = new wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 	btn_delete->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_TRASH_CAN, wxSize(16, 16)));
 	btn_delete->SetToolTip("Delete item");
 
@@ -165,7 +165,7 @@ BrowseFieldList::BrowseFieldList(wxWindow* parent) :
 	main_sizer->Add(toolbar_sizer, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
 	// Listbox
-	item_list = newd TilePropertiesListBox(main_sizer->GetStaticBox(), wxID_ANY);
+	item_list = new TilePropertiesListBox(main_sizer->GetStaticBox(), wxID_ANY);
 	main_sizer->Add(item_list, wxSizerFlags(1).Expand());
 
 	SetSizer(main_sizer);

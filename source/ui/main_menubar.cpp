@@ -71,13 +71,13 @@ MainMenuBar::MainMenuBar(MainFrame* frame) :
 	fileMenuHandler = new FileMenuHandler(frame, this);
 	navigationMenuHandler = new NavigationMenuHandler(frame, this);
 	paletteMenuHandler = new PaletteMenuHandler(frame, this);
-	scriptMenuHandler = newd ScriptMenuHandler(frame);
+	scriptMenuHandler = new ScriptMenuHandler(frame);
 
 	MenuBarActionManager::RegisterActions(this, actions);
 
 	// Don't use a custom deleter that deletes us back!
 	// MainFrame owns MainMenuBar via std::unique_ptr.
-	menubar = newd wxMenuBar();
+	menubar = new wxMenuBar();
 	frame->SetMenuBar(menubar);
 
 	// Tie all events to this handler!
@@ -462,7 +462,7 @@ void MainMenuBar::OnMapCleanInvalidZones(wxCommandEvent& event) {
 }
 
 void MainMenuBar::OnMapProperties(wxCommandEvent& WXUNUSED(event)) {
-	wxDialog* properties = newd MapPropertiesWindow(
+	wxDialog* properties = new MapPropertiesWindow(
 		frame,
 		static_cast<MapTab*>(g_gui.GetCurrentTab()),
 		*g_gui.GetCurrentEditor()

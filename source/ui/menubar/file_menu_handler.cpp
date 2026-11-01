@@ -60,7 +60,7 @@ void FileMenuHandler::OnGenerateMap(wxCommandEvent& WXUNUSED(event)) {
 
 void FileMenuHandler::OnImportMap(wxCommandEvent& WXUNUSED(event)) {
 	ASSERT(g_gui.GetCurrentEditor());
-	wxDialog* importmap = newd ImportMapWindow(frame, *g_gui.GetCurrentEditor());
+	wxDialog* importmap = new ImportMapWindow(frame, *g_gui.GetCurrentEditor());
 	importmap->ShowModal();
 	importmap->Destroy();
 }

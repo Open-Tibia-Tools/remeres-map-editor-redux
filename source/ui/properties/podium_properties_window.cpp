@@ -23,41 +23,41 @@ PodiumPropertiesWindow::PodiumPropertiesWindow(wxWindow* win_parent, const Map* 
 	Bind(wxEVT_BUTTON, &PodiumPropertiesWindow::OnClickOK, this, wxID_OK);
 	Bind(wxEVT_BUTTON, &PodiumPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
 
-	wxSizer* topsizer = newd wxBoxSizer(wxVERTICAL);
-	wxSizer* boxsizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Podium Properties");
+	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
+	wxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Podium Properties");
 
-	wxFlexGridSizer* subsizer = newd wxFlexGridSizer(2, 10, 10);
+	wxFlexGridSizer* subsizer = new wxFlexGridSizer(2, 10, 10);
 	subsizer->AddGrowableCol(1);
 
 	if (item->getClientID() != 0 && item->getClientID() != item->getID()) {
-		subsizer->Add(newd wxStaticText(this, wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
+		subsizer->Add(new wxStaticText(this, wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
 	} else {
-		subsizer->Add(newd wxStaticText(this, wxID_ANY, std::format("ID: {}", item->getID())));
+		subsizer->Add(new wxStaticText(this, wxID_ANY, std::format("ID: {}", item->getID())));
 	}
-	subsizer->Add(newd wxStaticText(this, wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
+	subsizer->Add(new wxStaticText(this, wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
 
 
-	subsizer->Add(newd wxStaticText(this, wxID_ANY, "Action ID"));
-	action_id_field = newd wxSpinCtrl(this, wxID_ANY, std::to_string(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
+	subsizer->Add(new wxStaticText(this, wxID_ANY, "Action ID"));
+	action_id_field = new wxSpinCtrl(this, wxID_ANY, std::to_string(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
 	subsizer->Add(action_id_field, wxSizerFlags(1).Expand());
 
-	subsizer->Add(newd wxStaticText(this, wxID_ANY, "Unique ID"));
-	unique_id_field = newd wxSpinCtrl(this, wxID_ANY, std::to_string(edit_item->getUniqueID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
+	subsizer->Add(new wxStaticText(this, wxID_ANY, "Unique ID"));
+	unique_id_field = new wxSpinCtrl(this, wxID_ANY, std::to_string(edit_item->getUniqueID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
 	subsizer->Add(unique_id_field, wxSizerFlags(1).Expand());
 
 	if (supportsClassificationTiers() && (edit_item->getClassification() > 0 || edit_item->isWeapon() || edit_item->isWearableEquipment())) {
-		subsizer->Add(newd wxStaticText(this, wxID_ANY, "Classification"));
-		subsizer->Add(newd wxStaticText(this, wxID_ANY, std::to_string(item->getClassification())));
+		subsizer->Add(new wxStaticText(this, wxID_ANY, "Classification"));
+		subsizer->Add(new wxStaticText(this, wxID_ANY, std::to_string(item->getClassification())));
 
-		subsizer->Add(newd wxStaticText(this, wxID_ANY, "Tier"));
-		tier_field = newd wxSpinCtrl(this, wxID_ANY, std::to_string(edit_item->getTier()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFF, edit_item->getTier());
+		subsizer->Add(new wxStaticText(this, wxID_ANY, "Tier"));
+		tier_field = new wxSpinCtrl(this, wxID_ANY, std::to_string(edit_item->getTier()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFF, edit_item->getTier());
 		subsizer->Add(tier_field, wxSizerFlags(1).Expand());
 	} else {
 		tier_field = nullptr;
 	}
 
-	subsizer->Add(newd wxStaticText(this, wxID_ANY, "Direction"));
-	direction_field = newd wxChoice(this, wxID_ANY);
+	subsizer->Add(new wxStaticText(this, wxID_ANY, "Direction"));
+	direction_field = new wxChoice(this, wxID_ANY);
 
 	for (Direction dir = DIRECTION_FIRST; dir <= DIRECTION_LAST; ++dir) {
 		direction_field->Append(wxstr(Creature::DirID2Name(dir)), (void*)(intptr_t)(dir));
@@ -65,79 +65,79 @@ PodiumPropertiesWindow::PodiumPropertiesWindow(wxWindow* win_parent, const Map* 
 	direction_field->SetSelection(static_cast<Direction>(podium->getDirection()));
 	subsizer->Add(direction_field, wxSizerFlags(1).Expand());
 
-	show_outfit = newd wxCheckBox(this, wxID_ANY, "Show outfit");
+	show_outfit = new wxCheckBox(this, wxID_ANY, "Show outfit");
 	show_outfit->SetValue(podium->hasShowOutfit());
 	show_outfit->SetToolTip("Display outfit on the podium.");
 	subsizer->Add(show_outfit, 0, wxLEFT | wxTOP, 5);
-	subsizer->Add(newd wxStaticText(this, wxID_ANY, ""));
+	subsizer->Add(new wxStaticText(this, wxID_ANY, ""));
 
-	show_mount = newd wxCheckBox(this, wxID_ANY, "Show mount");
+	show_mount = new wxCheckBox(this, wxID_ANY, "Show mount");
 	show_mount->SetValue(podium->hasShowMount());
 	show_mount->SetToolTip("Display mount on the podium.");
 	subsizer->Add(show_mount, 0, wxLEFT | wxTOP, 5);
-	subsizer->Add(newd wxStaticText(this, wxID_ANY, ""));
+	subsizer->Add(new wxStaticText(this, wxID_ANY, ""));
 
-	show_platform = newd wxCheckBox(this, wxID_ANY, "Show platform");
+	show_platform = new wxCheckBox(this, wxID_ANY, "Show platform");
 	show_platform->SetValue(podium->hasShowPlatform());
 	show_platform->SetToolTip("Display the podium platform.");
 	subsizer->Add(show_platform, 0, wxLEFT | wxTOP, 5);
-	subsizer->Add(newd wxStaticText(this, wxID_ANY, ""));
+	subsizer->Add(new wxStaticText(this, wxID_ANY, ""));
 
-	wxFlexGridSizer* outfitContainer = newd wxFlexGridSizer(2, 10, 10);
+	wxFlexGridSizer* outfitContainer = new wxFlexGridSizer(2, 10, 10);
 	const Outfit& outfit = podium->getOutfit();
 
-	outfitContainer->Add(newd wxStaticText(this, wxID_ANY, "Outfit"));
-	outfitContainer->Add(newd wxStaticText(this, wxID_ANY, ""));
+	outfitContainer->Add(new wxStaticText(this, wxID_ANY, "Outfit"));
+	outfitContainer->Add(new wxStaticText(this, wxID_ANY, ""));
 
-	outfitContainer->Add(newd wxStaticText(this, wxID_ANY, "LookType"));
-	look_type = newd wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookType), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, std::numeric_limits<uint16_t>::max(), outfit.lookType);
+	outfitContainer->Add(new wxStaticText(this, wxID_ANY, "LookType"));
+	look_type = new wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookType), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, std::numeric_limits<uint16_t>::max(), outfit.lookType);
 	outfitContainer->Add(look_type, wxSizerFlags(3).Expand());
 
-	outfitContainer->Add(newd wxStaticText(this, wxID_ANY, "Head"));
-	look_head = newd wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookHead), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookHead);
+	outfitContainer->Add(new wxStaticText(this, wxID_ANY, "Head"));
+	look_head = new wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookHead), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookHead);
 	outfitContainer->Add(look_head, wxSizerFlags(3).Expand());
 
-	outfitContainer->Add(newd wxStaticText(this, wxID_ANY, "Body"));
-	look_body = newd wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookBody), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookBody);
+	outfitContainer->Add(new wxStaticText(this, wxID_ANY, "Body"));
+	look_body = new wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookBody), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookBody);
 	outfitContainer->Add(look_body, wxSizerFlags(3).Expand());
 
-	outfitContainer->Add(newd wxStaticText(this, wxID_ANY, "Legs"));
-	look_legs = newd wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookLegs), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookLegs);
+	outfitContainer->Add(new wxStaticText(this, wxID_ANY, "Legs"));
+	look_legs = new wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookLegs), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookLegs);
 	outfitContainer->Add(look_legs, wxSizerFlags(3).Expand());
 
-	outfitContainer->Add(newd wxStaticText(this, wxID_ANY, "Feet"));
-	look_feet = newd wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookFeet), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookFeet);
+	outfitContainer->Add(new wxStaticText(this, wxID_ANY, "Feet"));
+	look_feet = new wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookFeet), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookFeet);
 	outfitContainer->Add(look_feet, wxSizerFlags(3).Expand());
 
-	outfitContainer->Add(newd wxStaticText(this, wxID_ANY, "Addons"));
-	look_addon = newd wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookAddon), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 3, outfit.lookAddon);
+	outfitContainer->Add(new wxStaticText(this, wxID_ANY, "Addons"));
+	look_addon = new wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookAddon), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 3, outfit.lookAddon);
 	outfitContainer->Add(look_addon, wxSizerFlags(3).Expand());
 
-	wxFlexGridSizer* mountContainer = newd wxFlexGridSizer(2, 10, 10);
-	mountContainer->Add(newd wxStaticText(this, wxID_ANY, "Mount"));
-	mountContainer->Add(newd wxStaticText(this, wxID_ANY, ""));
+	wxFlexGridSizer* mountContainer = new wxFlexGridSizer(2, 10, 10);
+	mountContainer->Add(new wxStaticText(this, wxID_ANY, "Mount"));
+	mountContainer->Add(new wxStaticText(this, wxID_ANY, ""));
 
-	mountContainer->Add(newd wxStaticText(this, wxID_ANY, "LookMount"));
-	look_mount = newd wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookMount), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, std::numeric_limits<uint16_t>::max(), outfit.lookMount);
+	mountContainer->Add(new wxStaticText(this, wxID_ANY, "LookMount"));
+	look_mount = new wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookMount), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, std::numeric_limits<uint16_t>::max(), outfit.lookMount);
 	mountContainer->Add(look_mount, wxSizerFlags(3).Expand());
 
-	mountContainer->Add(newd wxStaticText(this, wxID_ANY, "Head"));
-	look_mounthead = newd wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookMountHead), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookMountHead);
+	mountContainer->Add(new wxStaticText(this, wxID_ANY, "Head"));
+	look_mounthead = new wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookMountHead), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookMountHead);
 	mountContainer->Add(look_mounthead, wxSizerFlags(3).Expand());
 
-	mountContainer->Add(newd wxStaticText(this, wxID_ANY, "Body"));
-	look_mountbody = newd wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookMountBody), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookMountBody);
+	mountContainer->Add(new wxStaticText(this, wxID_ANY, "Body"));
+	look_mountbody = new wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookMountBody), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookMountBody);
 	mountContainer->Add(look_mountbody, wxSizerFlags(3).Expand());
 
-	mountContainer->Add(newd wxStaticText(this, wxID_ANY, "Legs"));
-	look_mountlegs = newd wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookMountLegs), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookMountLegs);
+	mountContainer->Add(new wxStaticText(this, wxID_ANY, "Legs"));
+	look_mountlegs = new wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookMountLegs), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookMountLegs);
 	mountContainer->Add(look_mountlegs, wxSizerFlags(3).Expand());
 
-	mountContainer->Add(newd wxStaticText(this, wxID_ANY, "Feet"));
-	look_mountfeet = newd wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookMountFeet), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookMountFeet);
+	mountContainer->Add(new wxStaticText(this, wxID_ANY, "Feet"));
+	look_mountfeet = new wxSpinCtrl(this, wxID_ANY, std::to_string(outfit.lookMountFeet), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, PropertyValidator::OUTFIT_COLOR_MAX, outfit.lookMountFeet);
 	mountContainer->Add(look_mountfeet, wxSizerFlags(3).Expand());
 
-	wxFlexGridSizer* propertiesContainer = newd wxFlexGridSizer(3, 10, 10);
+	wxFlexGridSizer* propertiesContainer = new wxFlexGridSizer(3, 10, 10);
 	propertiesContainer->Add(subsizer, wxSizerFlags(1).Expand());
 	propertiesContainer->Add(outfitContainer, wxSizerFlags(1).Expand());
 	propertiesContainer->Add(mountContainer, wxSizerFlags(1).Expand());
@@ -145,11 +145,11 @@ PodiumPropertiesWindow::PodiumPropertiesWindow(wxWindow* win_parent, const Map* 
 
 	topsizer->Add(boxsizer, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT, 20));
 
-	wxSizer* std_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(this, wxID_OK, "OK");
+	wxSizer* std_sizer = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
 	std_sizer->Add(okBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
-	wxButton* cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
+	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
 	std_sizer->Add(cancelBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
 	topsizer->Add(std_sizer, wxSizerFlags(0).Center().Border(wxLEFT | wxRIGHT, 20));

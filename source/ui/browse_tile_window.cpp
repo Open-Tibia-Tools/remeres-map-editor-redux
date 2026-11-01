@@ -187,45 +187,45 @@ void BrowseTileListBox::UpdateItems() {
 
 BrowseTileWindow::BrowseTileWindow(wxWindow* parent, Tile* tile, wxPoint position /* = wxDefaultPosition */) :
 	wxDialog(parent, wxID_ANY, "Browse Field", position, parent->FromDIP(wxSize(600, 400)), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER) {
-	wxSizer* sizer = newd wxBoxSizer(wxVERTICAL);
-	item_list = newd BrowseTileListBox(this, wxID_ANY, tile);
+	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+	item_list = new BrowseTileListBox(this, wxID_ANY, tile);
 	sizer->Add(item_list, wxSizerFlags(1).Expand());
 
 	wxString pos;
 	pos << "x=" << tile->getX() << ",  y=" << tile->getY() << ",  z=" << tile->getZ();
 
-	wxSizer* infoSizer = newd wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* buttons = newd wxBoxSizer(wxHORIZONTAL);
-	delete_button = newd wxButton(this, wxID_REMOVE, "Delete");
+	wxSizer* infoSizer = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* buttons = new wxBoxSizer(wxHORIZONTAL);
+	delete_button = new wxButton(this, wxID_REMOVE, "Delete");
 	delete_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_TRASH_CAN));
 	delete_button->SetToolTip("Delete selected item");
 	delete_button->Enable(false);
 	buttons->Add(delete_button);
 	buttons->AddSpacer(5);
-	select_raw_button = newd wxButton(this, wxID_FIND, "Select RAW");
+	select_raw_button = new wxButton(this, wxID_FIND, "Select RAW");
 	select_raw_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_SEARCH));
 	select_raw_button->SetToolTip("Select this item in RAW palette");
 	select_raw_button->Enable(false);
 	buttons->Add(select_raw_button);
 	infoSizer->Add(buttons);
 	infoSizer->AddSpacer(5);
-	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "Position:  " + pos), wxSizerFlags(0).Left());
-	infoSizer->Add(item_count_txt = newd wxStaticText(this, wxID_ANY, "Item count:  " + std::to_string(item_list->GetItemCount())), wxSizerFlags(0).Left());
-	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "Protection zone:  " + b2yn(tile->isPZ())), wxSizerFlags(0).Left());
-	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "No PvP:  " + b2yn(tile->getMapFlags() & TILESTATE_NOPVP)), wxSizerFlags(0).Left());
-	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "No logout:  " + b2yn(tile->getMapFlags() & TILESTATE_NOLOGOUT)), wxSizerFlags(0).Left());
-	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "PvP zone:  " + b2yn(tile->getMapFlags() & TILESTATE_PVPZONE)), wxSizerFlags(0).Left());
-	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "House:  " + b2yn(tile->isHouseTile())), wxSizerFlags(0).Left());
+	infoSizer->Add(new wxStaticText(this, wxID_ANY, "Position:  " + pos), wxSizerFlags(0).Left());
+	infoSizer->Add(item_count_txt = new wxStaticText(this, wxID_ANY, "Item count:  " + std::to_string(item_list->GetItemCount())), wxSizerFlags(0).Left());
+	infoSizer->Add(new wxStaticText(this, wxID_ANY, "Protection zone:  " + b2yn(tile->isPZ())), wxSizerFlags(0).Left());
+	infoSizer->Add(new wxStaticText(this, wxID_ANY, "No PvP:  " + b2yn(tile->getMapFlags() & TILESTATE_NOPVP)), wxSizerFlags(0).Left());
+	infoSizer->Add(new wxStaticText(this, wxID_ANY, "No logout:  " + b2yn(tile->getMapFlags() & TILESTATE_NOLOGOUT)), wxSizerFlags(0).Left());
+	infoSizer->Add(new wxStaticText(this, wxID_ANY, "PvP zone:  " + b2yn(tile->getMapFlags() & TILESTATE_PVPZONE)), wxSizerFlags(0).Left());
+	infoSizer->Add(new wxStaticText(this, wxID_ANY, "House:  " + b2yn(tile->isHouseTile())), wxSizerFlags(0).Left());
 
 	sizer->Add(infoSizer, wxSizerFlags(0).Left().DoubleBorder());
 
 	// OK/Cancel buttons
-	wxSizer* btnSizer = newd wxBoxSizer(wxHORIZONTAL);
-	auto okBtn = newd wxButton(this, wxID_OK, "OK");
+	wxSizer* btnSizer = new wxBoxSizer(wxHORIZONTAL);
+	auto okBtn = new wxButton(this, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Confirm selection");
 	btnSizer->Add(okBtn, wxSizerFlags(0).Center());
-	auto cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
+	auto cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancelBtn->SetToolTip("Cancel");
 	btnSizer->Add(cancelBtn, wxSizerFlags(0).Center());

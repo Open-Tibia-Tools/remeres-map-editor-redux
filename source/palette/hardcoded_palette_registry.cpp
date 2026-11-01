@@ -10,11 +10,11 @@
 namespace {
 
 PalettePanel* createHousePanel(wxWindow* parent) {
-	return newd HousePalette(parent);
+	return new HousePalette(parent);
 }
 
 PalettePanel* createWaypointPanel(wxWindow* parent) {
-	return newd WaypointPalettePanel(parent);
+	return new WaypointPalettePanel(parent);
 }
 
 void updateHouseMap(PalettePanel* panel, Map* map) {
@@ -30,7 +30,7 @@ void updateWaypointMap(PalettePanel* panel, Map* map) {
 }
 
 PalettePanel* createZonePanel(wxWindow* parent) {
-	return newd ZonePalettePanel(parent);
+	return new ZonePalettePanel(parent);
 }
 
 void updateZoneMap(PalettePanel* panel, Map* map) {
@@ -40,7 +40,7 @@ void updateZoneMap(PalettePanel* panel, Map* map) {
 }
 
 PalettePanel* createTownPanel(wxWindow* parent) {
-	return newd TownPalettePanel(parent);
+	return new TownPalettePanel(parent);
 }
 
 void updateTownMap(PalettePanel* panel, Map* map) {
@@ -50,7 +50,7 @@ void updateTownMap(PalettePanel* panel, Map* map) {
 }
 
 PalettePanel* createAllItemsPanel(wxWindow* parent) {
-	return newd AllItemsPalette(parent);
+	return new AllItemsPalette(parent);
 }
 
 void updateAllItemsMap(PalettePanel* /*panel*/, Map* /*map*/) {

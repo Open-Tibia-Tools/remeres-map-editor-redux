@@ -24,45 +24,45 @@ WritablePropertiesWindow::WritablePropertiesWindow(wxWindow* parent, const Map* 
 	Bind(wxEVT_BUTTON, &WritablePropertiesWindow::OnClickOK, this, wxID_OK);
 	Bind(wxEVT_BUTTON, &WritablePropertiesWindow::OnClickCancel, this, wxID_CANCEL);
 
-	wxSizer* topsizer = newd wxBoxSizer(wxVERTICAL);
-	wxStaticBoxSizer* boxsizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Writeable Properties");
+	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
+	wxStaticBoxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Writeable Properties");
 
-	wxFlexGridSizer* subsizer = newd wxFlexGridSizer(2, 10, 10);
+	wxFlexGridSizer* subsizer = new wxFlexGridSizer(2, 10, 10);
 	subsizer->AddGrowableCol(1);
 
 	if (item->getClientID() != 0 && item->getClientID() != item->getID()) {
-		subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
+		subsizer->Add(new wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
 	} else {
-		subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, std::format("ID: {}", item->getID())));
+		subsizer->Add(new wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, std::format("ID: {}", item->getID())));
 	}
-	subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
+	subsizer->Add(new wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
 
 
-	subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Action ID"));
-	action_id_field = newd wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, std::to_string(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
+	subsizer->Add(new wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Action ID"));
+	action_id_field = new wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, std::to_string(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
 	action_id_field->SetSelection(-1, -1);
 	subsizer->Add(action_id_field, wxSizerFlags(1).Expand());
 
-	subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Unique ID"));
-	unique_id_field = newd wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, std::to_string(edit_item->getUniqueID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
+	subsizer->Add(new wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Unique ID"));
+	unique_id_field = new wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, std::to_string(edit_item->getUniqueID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
 	subsizer->Add(unique_id_field, wxSizerFlags(1).Expand());
 
 	boxsizer->Add(subsizer, wxSizerFlags(1).Expand());
 
-	wxSizer* textsizer = newd wxBoxSizer(wxVERTICAL);
-	textsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Text"), wxSizerFlags(0).Center());
-	text_field = newd wxTextCtrl(boxsizer->GetStaticBox(), wxID_ANY, wxstr(item->getText()), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
+	wxSizer* textsizer = new wxBoxSizer(wxVERTICAL);
+	textsizer->Add(new wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Text"), wxSizerFlags(0).Center());
+	text_field = new wxTextCtrl(boxsizer->GetStaticBox(), wxID_ANY, wxstr(item->getText()), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
 	textsizer->Add(text_field, wxSizerFlags(1).Expand());
 
 	boxsizer->Add(textsizer, wxSizerFlags(2).Expand());
 
 	topsizer->Add(boxsizer, wxSizerFlags(0).Expand().Border(wxALL, 20));
 
-	wxSizer* buttonsizer = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(this, wxID_OK, "OK");
+	wxSizer* buttonsizer = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
 	buttonsizer->Add(okBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
-	wxButton* cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
+	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
 	buttonsizer->Add(cancelBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
 	topsizer->Add(buttonsizer, wxSizerFlags(0).Center().Border(wxLEFT | wxRIGHT, 20));

@@ -16,10 +16,10 @@
 SpawnPropertyPanel::SpawnPropertyPanel(wxWindow* parent) :
 	CustomPropertyPanel(parent), current_spawn(nullptr), current_tile(nullptr), current_map(nullptr) {
 
-	wxBoxSizer* main_sizer = newd wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
 
-	radius_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Spawn Radius");
-	radius_spin = newd wxSpinCtrl(radius_sizer->GetStaticBox(), wxID_ANY);
+	radius_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Spawn Radius");
+	radius_spin = new wxSpinCtrl(radius_sizer->GetStaticBox(), wxID_ANY);
 	radius_spin->SetRange(1, 99);
 	radius_sizer->Add(radius_spin, 1, wxEXPAND | wxALL, 5);
 

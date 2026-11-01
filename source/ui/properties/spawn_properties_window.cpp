@@ -17,14 +17,14 @@ SpawnPropertiesWindow::SpawnPropertiesWindow(wxWindow* win_parent, const Map* ma
 	Bind(wxEVT_BUTTON, &SpawnPropertiesWindow::OnClickOK, this, wxID_OK);
 	Bind(wxEVT_BUTTON, &SpawnPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
 
-	wxSizer* topsizer = newd wxBoxSizer(wxVERTICAL);
-	wxSizer* boxsizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Spawn Properties");
+	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
+	wxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Spawn Properties");
 
-	wxFlexGridSizer* subsizer = newd wxFlexGridSizer(2, 10, 10);
+	wxFlexGridSizer* subsizer = new wxFlexGridSizer(2, 10, 10);
 	subsizer->AddGrowableCol(1);
 
-	subsizer->Add(newd wxStaticText(this, wxID_ANY, "Spawn size"));
-	count_field = newd wxSpinCtrl(this, wxID_ANY, std::to_string(edit_spawn->getSize()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, g_settings.getInteger(Config::MAX_SPAWN_RADIUS), edit_spawn->getSize());
+	subsizer->Add(new wxStaticText(this, wxID_ANY, "Spawn size"));
+	count_field = new wxSpinCtrl(this, wxID_ANY, std::to_string(edit_spawn->getSize()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, g_settings.getInteger(Config::MAX_SPAWN_RADIUS), edit_spawn->getSize());
 	count_field->SetToolTip("Radius of the spawn area");
 	subsizer->Add(count_field, wxSizerFlags(1).Expand());
 
@@ -32,11 +32,11 @@ SpawnPropertiesWindow::SpawnPropertiesWindow(wxWindow* win_parent, const Map* ma
 
 	topsizer->Add(boxsizer, wxSizerFlags(3).Expand().Border(wxALL, 20));
 
-	wxSizer* std_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(this, wxID_OK, "OK");
+	wxSizer* std_sizer = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
 	std_sizer->Add(okBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
-	wxButton* cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
+	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
 	std_sizer->Add(cancelBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
 	topsizer->Add(std_sizer, wxSizerFlags(0).Center().Border(wxLEFT | wxRIGHT, 20));

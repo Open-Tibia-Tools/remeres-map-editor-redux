@@ -120,7 +120,7 @@ public:
 
 protected:
 	// For internal use, call to resize the scrollbars with
-	// the newd dimensions of *this* window
+	// the new dimensions of *this* window
 	void UpdateScrollbars(int nx, int ny);
 	void UpdateDialogs(bool show);
 

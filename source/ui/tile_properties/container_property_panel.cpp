@@ -23,7 +23,7 @@
 ContainerPropertyPanel::ContainerPropertyPanel(wxWindow* parent) :
 	ItemPropertyPanel(parent), grid_canvas(nullptr) {
 
-	grid_canvas = newd ContainerGridCanvas(this, g_settings.getBoolean(Config::USE_LARGE_CONTAINER_ICONS));
+	grid_canvas = new ContainerGridCanvas(this, g_settings.getBoolean(Config::USE_LARGE_CONTAINER_ICONS));
 	grid_canvas->Bind(wxEVT_BUTTON, &ContainerPropertyPanel::OnContainerItemClick, this);
 	grid_canvas->Bind(wxEVT_CONTEXT_MENU, &ContainerPropertyPanel::OnContainerItemRightClick, this);
 
@@ -176,7 +176,7 @@ void ContainerPropertyPanel::OnEditItem(wxCommandEvent& WXUNUSED(event)) {
 	Item* new_sub_item = new_container->getItem(sub_item_index);
 	wxPoint newDialogAt = GetPosition() + FromDIP(wxPoint(20, 20));
 
-	wxDialog* d = newd ItemPropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
+	wxDialog* d = new ItemPropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
 
 	const int result = d->ShowModal();
 	if (result == 1 || result == wxID_OK) {

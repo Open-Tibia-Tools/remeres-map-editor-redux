@@ -68,7 +68,7 @@ void MinimapManager::Create() {
 		NormalizePaneInfo(info);
 		info.Show(true);
 	} else {
-		minimap = newd MinimapWindow(g_gui.root);
+		minimap = new MinimapWindow(g_gui.root);
 		minimap->Show(true);
 		g_gui.aui_manager->AddPane(minimap, DefaultPaneInfo());
 	}

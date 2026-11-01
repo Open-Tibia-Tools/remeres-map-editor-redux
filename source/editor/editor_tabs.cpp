@@ -33,8 +33,8 @@ EditorTab::~EditorTab() {
 
 MapTabbook::MapTabbook(wxWindow* parent, wxWindowID id) :
 	wxPanel(parent, id, wxDefaultPosition, wxDefaultSize) {
-	wxSizer* wxz = newd wxBoxSizer(wxHORIZONTAL);
-	notebook = newd wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+	wxSizer* wxz = new wxBoxSizer(wxHORIZONTAL);
+	notebook = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
 	wxz->Add(notebook, 1, wxEXPAND);
 	SetSizerAndFit(wxz);
 

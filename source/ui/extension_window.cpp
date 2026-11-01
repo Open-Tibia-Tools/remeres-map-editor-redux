@@ -34,12 +34,12 @@ ExtensionsDialog::ExtensionsDialog(wxWindow* parent) :
 	htmlWindow->SetPage(HTML());
 	topSizer->Add(htmlWindow, wxSizerFlags(1).DoubleBorder().Expand());
 
-	wxSizer* buttonSizer = newd wxBoxSizer(wxHORIZONTAL);
-	auto okBtn = newd wxButton(this, wxID_OK, "OK");
+	wxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
+	auto okBtn = new wxButton(this, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
 	okBtn->SetToolTip("Close window");
 	buttonSizer->Add(okBtn, wxSizerFlags(1).Center());
-	auto openBtn = newd wxButton(this, EXTENSIONS_OPEN_FOLDER_BUTTON, "Open Extensions Folder");
+	auto openBtn = new wxButton(this, EXTENSIONS_OPEN_FOLDER_BUTTON, "Open Extensions Folder");
 	openBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_FOLDER_OPEN, wxSize(16, 16)));
 	openBtn->SetToolTip("Open the extensions directory in file explorer");
 	buttonSizer->Add(openBtn, wxSizerFlags(1).Center());

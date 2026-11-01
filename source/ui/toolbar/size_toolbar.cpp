@@ -25,7 +25,7 @@ SizeToolBar::SizeToolBar(wxWindow* parent) {
 	wxBitmapBundle size6_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_RECTANGULAR_6_SMALL);
 	wxBitmapBundle size7_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_RECTANGULAR_7_SMALL);
 
-	toolbar = newd wxAuiToolBar(parent, TOOLBAR_SIZES, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE);
+	toolbar = new wxAuiToolBar(parent, TOOLBAR_SIZES, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE);
 	toolbar->SetToolBitmapSize(icon_size);
 	toolbar->AddTool(TOOLBAR_SIZES_RECTANGULAR, wxEmptyString, rectangular_bitmap, wxNullBitmap, wxITEM_CHECK, "Rectangular Brush", wxEmptyString, nullptr);
 	toolbar->AddTool(TOOLBAR_SIZES_CIRCULAR, wxEmptyString, circular_bitmap, wxNullBitmap, wxITEM_CHECK, "Circular Brush", wxEmptyString, nullptr);

@@ -37,10 +37,10 @@
 // ============================================================================
 TownIdWarningDialog::TownIdWarningDialog(wxWindow* parent, uint32_t old_id, uint32_t new_id, size_t house_count) :
 	wxDialog(parent, wxID_ANY, "Warning: Town ID Changed", wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE) {
-	auto* topsizer = newd wxBoxSizer(wxVERTICAL);
+	auto* topsizer = new wxBoxSizer(wxVERTICAL);
 
-	auto* content_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	auto* icon = newd wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, wxSize(32, 32)));
+	auto* content_sizer = new wxBoxSizer(wxHORIZONTAL);
+	auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, wxSize(32, 32)));
 	content_sizer->Add(icon, 0, wxALL | wxALIGN_TOP, 15);
 
 	wxString msg = wxstr(std::format(
@@ -50,24 +50,24 @@ TownIdWarningDialog::TownIdWarningDialog(wxWindow* parent, uint32_t old_id, uint
 		"Do you want to update all {} associated houses to use the new Town ID {}?",
 		old_id, new_id, house_count, house_count, new_id
 	));
-	auto* text = newd wxStaticText(this, wxID_ANY, msg);
+	auto* text = new wxStaticText(this, wxID_ANY, msg);
 	text->Wrap(FromDIP(450));
 	content_sizer->Add(text, 1, wxTOP | wxBOTTOM | wxRIGHT | wxEXPAND, 15);
 	topsizer->Add(content_sizer, 1, wxEXPAND);
 
-	auto* btn_sizer = newd wxBoxSizer(wxHORIZONTAL);
+	auto* btn_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-	auto* update_btn = newd wxButton(this, wxID_YES, "Update Houses");
+	auto* update_btn = new wxButton(this, wxID_YES, "Update Houses");
 	update_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
 	update_btn->SetToolTip("Update town ID and automatically update all linked houses");
 	btn_sizer->Add(update_btn, 0, wxRIGHT, 8);
 
-	auto* keep_btn = newd wxButton(this, wxID_NO, "Keep Old IDs");
+	auto* keep_btn = new wxButton(this, wxID_NO, "Keep Old IDs");
 	keep_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, wxSize(16, 16)));
 	keep_btn->SetToolTip("Update town ID only (houses will remain linked to the old town ID)");
 	btn_sizer->Add(keep_btn, 0, wxRIGHT, 8);
 
-	auto* cancel_btn = newd wxButton(this, wxID_CANCEL, "Cancel");
+	auto* cancel_btn = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancel_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
 	cancel_btn->SetToolTip("Abort changes");
 	btn_sizer->Add(cancel_btn, 0);
@@ -89,10 +89,10 @@ TownIdWarningDialog::TownIdWarningDialog(wxWindow* parent, uint32_t old_id, uint
 // ============================================================================
 TownDeleteDialog::TownDeleteDialog(wxWindow* parent, const std::string& name, uint32_t town_id, size_t house_count) :
 	wxDialog(parent, wxID_ANY, "Delete Town & Associated Houses", wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE) {
-	auto* topsizer = newd wxBoxSizer(wxVERTICAL);
+	auto* topsizer = new wxBoxSizer(wxVERTICAL);
 
-	auto* content_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	auto* icon = newd wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, wxSize(32, 32)));
+	auto* content_sizer = new wxBoxSizer(wxHORIZONTAL);
+	auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, wxSize(32, 32)));
 	content_sizer->Add(icon, 0, wxALL | wxALIGN_TOP, 15);
 
 	wxString msg = wxstr(std::format(
@@ -101,19 +101,19 @@ TownDeleteDialog::TownDeleteDialog(wxWindow* parent, const std::string& name, ui
 		"Are you sure you want to delete town '{}' and wipe all of its houses?",
 		name, town_id, house_count, house_count, name
 	));
-	auto* text = newd wxStaticText(this, wxID_ANY, msg);
+	auto* text = new wxStaticText(this, wxID_ANY, msg);
 	text->Wrap(FromDIP(450));
 	content_sizer->Add(text, 1, wxTOP | wxBOTTOM | wxRIGHT | wxEXPAND, 15);
 	topsizer->Add(content_sizer, 1, wxEXPAND);
 
-	auto* btn_sizer = newd wxBoxSizer(wxHORIZONTAL);
+	auto* btn_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-	auto* delete_btn = newd wxButton(this, wxID_YES, "Delete Town and Houses");
+	auto* delete_btn = new wxButton(this, wxID_YES, "Delete Town and Houses");
 	delete_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
 	delete_btn->SetToolTip("Delete the town and permanently remove all associated houses");
 	btn_sizer->Add(delete_btn, 0, wxRIGHT, 8);
 
-	auto* cancel_btn = newd wxButton(this, wxID_CANCEL, "Cancel");
+	auto* cancel_btn = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancel_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
 	cancel_btn->SetToolTip("Cancel and keep town");
 	btn_sizer->Add(cancel_btn, 0);
@@ -146,23 +146,23 @@ EditTownDialog::EditTownDialog(wxWindow* parent, Map* map, Town* town, bool is_n
 		SetTitle(wxstr(std::format("Edit Town: {} (ID: {})", town->getName(), town->getID())));
 	}
 
-	auto* topsizer = newd wxBoxSizer(wxVERTICAL);
+	auto* topsizer = new wxBoxSizer(wxVERTICAL);
 
 	// Town Details static box
-	auto* detailsBox = newd wxStaticBoxSizer(wxVERTICAL, this, "Town Details");
-	auto* detailsGrid = newd wxFlexGridSizer(2, 5, 10);
+	auto* detailsBox = new wxStaticBoxSizer(wxVERTICAL, this, "Town Details");
+	auto* detailsGrid = new wxFlexGridSizer(2, 5, 10);
 	detailsGrid->AddGrowableCol(1);
 
 	// Name
 	town_name = wxstr(town->getName());
-	detailsGrid->Add(newd wxStaticText(detailsBox->GetStaticBox(), wxID_ANY, "Name:"), wxSizerFlags(0).CenterVertical().Border(wxLEFT, 5));
-	name_field = newd wxTextCtrl(detailsBox->GetStaticBox(), wxID_ANY, town_name, wxDefaultPosition, wxDefaultSize, 0, wxTextValidator(wxFILTER_ASCII));
+	detailsGrid->Add(new wxStaticText(detailsBox->GetStaticBox(), wxID_ANY, "Name:"), wxSizerFlags(0).CenterVertical().Border(wxLEFT, 5));
+	name_field = new wxTextCtrl(detailsBox->GetStaticBox(), wxID_ANY, town_name, wxDefaultPosition, wxDefaultSize, 0, wxTextValidator(wxFILTER_ASCII));
 	name_field->SetToolTip("Town display name");
 	detailsGrid->Add(name_field, wxSizerFlags(1).Expand());
 
 	// ID
-	detailsGrid->Add(newd wxStaticText(detailsBox->GetStaticBox(), wxID_ANY, "ID:"), wxSizerFlags(0).CenterVertical().Border(wxLEFT, 5));
-	id_field = newd wxSpinCtrl(detailsBox->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 0xFFFF, static_cast<int>(town->getID()));
+	detailsGrid->Add(new wxStaticText(detailsBox->GetStaticBox(), wxID_ANY, "ID:"), wxSizerFlags(0).CenterVertical().Border(wxLEFT, 5));
+	id_field = new wxSpinCtrl(detailsBox->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 0xFFFF, static_cast<int>(town->getID()));
 	id_field->SetToolTip("Town ID (1-65535). Warning: changing existing ID affects linked houses and server player spawn data.");
 	detailsGrid->Add(id_field, wxSizerFlags(1).Expand());
 
@@ -170,23 +170,23 @@ EditTownDialog::EditTownDialog(wxWindow* parent, Map* map, Town* town, bool is_n
 	topsizer->Add(detailsBox, 0, wxEXPAND | wxALL, 10);
 
 	// Temple Position
-	temple_position = newd PositionCtrl(this, "Temple Position", 0, 0, 0, map->getWidth(), map->getHeight());
+	temple_position = new PositionCtrl(this, "Temple Position", 0, 0, 0, map->getWidth(), map->getHeight());
 	temple_position->SetPosition(town->getTemplePosition());
 
-	pick_map_button = newd wxButton(temple_position->GetStaticBox(), wxID_ANY, "Pick from Map");
+	pick_map_button = new wxButton(temple_position->GetStaticBox(), wxID_ANY, "Pick from Map");
 	pick_map_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CROSSHAIRS));
 	pick_map_button->SetToolTip("Click to pick temple position directly on the map");
 	temple_position->Add(pick_map_button, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
 	topsizer->Add(temple_position, 0, wxEXPAND | wxLEFT | wxRIGHT, 10);
 
 	// OK / Cancel buttons
-	auto* btnSizer = newd wxBoxSizer(wxHORIZONTAL);
-	auto* okBtn = newd wxButton(this, wxID_OK, is_new_ ? "Create Town" : "OK");
+	auto* btnSizer = new wxBoxSizer(wxHORIZONTAL);
+	auto* okBtn = new wxButton(this, wxID_OK, is_new_ ? "Create Town" : "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip(is_new_ ? "Create town" : "Save changes");
 	btnSizer->Add(okBtn, wxSizerFlags(1).Center());
 
-	auto* cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
+	auto* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancelBtn->SetToolTip("Cancel");
 	btnSizer->Add(cancelBtn, wxSizerFlags(1).Center().Border(wxLEFT, 10));

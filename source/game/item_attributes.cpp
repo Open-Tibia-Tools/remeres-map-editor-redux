@@ -30,7 +30,7 @@ ItemAttributes::ItemAttributes() :
 
 ItemAttributes::ItemAttributes(const ItemAttributes& o) {
 	if (o.attributes) {
-		attributes = newd ItemAttributeMap(*o.attributes);
+		attributes = new ItemAttributeMap(*o.attributes);
 	}
 }
 
@@ -40,7 +40,7 @@ ItemAttributes::~ItemAttributes() {
 
 void ItemAttributes::createAttributes() {
 	if (!attributes) {
-		attributes = newd ItemAttributeMap;
+		attributes = new ItemAttributeMap;
 	}
 }
 
@@ -161,7 +161,7 @@ bool ItemAttributes::hasBooleanAttribute(const std::string& key) const {
 
 // Attribute type
 // Can hold either int, bool or std::string
-// Without using newd to allocate them
+// Without using new to allocate them
 
 ItemAttribute::ItemAttribute() :
 	type(ItemAttribute::NONE) {

@@ -147,7 +147,7 @@ bool EditorManager::CloseAllEditors() {
 void EditorManager::NewMapView() {
 	MapTab* mapTab = GetCurrentMapTab();
 	if (mapTab) {
-		auto* newMapTab = newd MapTab(mapTab);
+		auto* newMapTab = new MapTab(mapTab);
 		newMapTab->OnSwitchEditorMode(mapTab->GetMode());
 
 		g_status.SetStatusText("Created new view");
@@ -253,7 +253,7 @@ bool EditorManager::NewMap() {
 		return false;
 	}
 
-	auto* mapTab = newd MapTab(g_gui.tabbook, editor.release());
+	auto* mapTab = new MapTab(g_gui.tabbook, editor.release());
 	mapTab->OnSwitchEditorMode(SELECTION_MODE);
 	mapTab->GetMap()->clearChanges();
 	mapTab->GetView()->ResetMinimapViewportToCurrentView();
@@ -407,7 +407,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 		return false;
 	}
 
-	auto* mapTab = newd MapTab(g_gui.tabbook, editor.release());
+	auto* mapTab = new MapTab(g_gui.tabbook, editor.release());
 	mapTab->OnSwitchEditorMode(SELECTION_MODE);
 
 	g_gui.root->AddRecentFile(fileName);

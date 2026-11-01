@@ -40,20 +40,20 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	// Setup data variabels
 	Map& map = editor.map;
 
-	wxSizer* topsizer = newd wxBoxSizer(wxVERTICAL);
+	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
 
-	wxFlexGridSizer* grid_sizer = newd wxFlexGridSizer(2, 10, 10);
+	wxFlexGridSizer* grid_sizer = new wxFlexGridSizer(2, 10, 10);
 	grid_sizer->AddGrowableCol(1);
 
 	// Description
-	grid_sizer->Add(newd wxStaticText(this, wxID_ANY, "Map Description"));
-	description_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getMapDescription()), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
+	grid_sizer->Add(new wxStaticText(this, wxID_ANY, "Map Description"));
+	description_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getMapDescription()), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
 	description_ctrl->SetToolTip("Enter a description for the map");
 	grid_sizer->Add(description_ctrl, wxSizerFlags(1).Expand());
 
 	// Map version
-	grid_sizer->Add(newd wxStaticText(this, wxID_ANY, "Map Version"));
-	version_choice = newd wxChoice(this, MAP_PROPERTIES_VERSION);
+	grid_sizer->Add(new wxStaticText(this, wxID_ANY, "Map Version"));
+	version_choice = new wxChoice(this, MAP_PROPERTIES_VERSION);
 	version_choice->SetToolTip("Select the OTBM version (Determines feature support)");
 	version_choice->Append("OTBM 1");
 	version_choice->Append("OTBM 2");
@@ -66,8 +66,8 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	grid_sizer->Add(version_choice, wxSizerFlags(1).Expand());
 
 	// Version
-	grid_sizer->Add(newd wxStaticText(this, wxID_ANY, "Client Version"));
-	protocol_choice = newd wxChoice(this, wxID_ANY);
+	grid_sizer->Add(new wxStaticText(this, wxID_ANY, "Client Version"));
+	protocol_choice = new wxChoice(this, wxID_ANY);
 	protocol_choice->SetToolTip("Select the target client version");
 
 	protocol_choice->SetStringSelection(wxstr(g_version.GetCurrentVersion().getName()));
@@ -75,8 +75,8 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	grid_sizer->Add(protocol_choice, wxSizerFlags(1).Expand());
 
 	// Compression
-	grid_sizer->Add(newd wxStaticText(this, wxID_ANY, "Map Compression"));
-	compression_choice = newd wxChoice(this, wxID_ANY);
+	grid_sizer->Add(new wxStaticText(this, wxID_ANY, "Map Compression"));
+	compression_choice = new wxChoice(this, wxID_ANY);
 	compression_choice->SetToolTip("Select the map storage compression format");
 	compression_choice->Append("None (Standard / The Forgotten Server)");
 	compression_choice->Append("GZIP (Crystal Server)");
@@ -84,15 +84,15 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 	grid_sizer->Add(compression_choice, wxSizerFlags(1).Expand());
 
 	// Dimensions
-	grid_sizer->Add(newd wxStaticText(this, wxID_ANY, "Map Dimensions"));
+	grid_sizer->Add(new wxStaticText(this, wxID_ANY, "Map Dimensions"));
 	{
-		wxSizer* subsizer = newd wxBoxSizer(wxHORIZONTAL);
+		wxSizer* subsizer = new wxBoxSizer(wxHORIZONTAL);
 		subsizer->Add(
-			width_spin = newd wxSpinCtrl(this, wxID_ANY, wxstr(i2s(map.getWidth())), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 256, MAP_MAX_WIDTH), wxSizerFlags(1).Expand()
+			width_spin = new wxSpinCtrl(this, wxID_ANY, wxstr(i2s(map.getWidth())), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 256, MAP_MAX_WIDTH), wxSizerFlags(1).Expand()
 		);
 		width_spin->SetToolTip("Map width in tiles");
 		subsizer->Add(
-			height_spin = newd wxSpinCtrl(this, wxID_ANY, wxstr(i2s(map.getHeight())), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 256, MAP_MAX_HEIGHT), wxSizerFlags(1).Expand()
+			height_spin = new wxSpinCtrl(this, wxID_ANY, wxstr(i2s(map.getHeight())), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 256, MAP_MAX_HEIGHT), wxSizerFlags(1).Expand()
 		);
 		height_spin->SetToolTip("Map height in tiles");
 		grid_sizer->Add(subsizer, 1, wxEXPAND);
@@ -100,68 +100,68 @@ MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor&
 
 	// External files
 	grid_sizer->Add(
-		newd wxStaticText(this, wxID_ANY, "External Housefile")
+		new wxStaticText(this, wxID_ANY, "External Housefile")
 	);
 
 	grid_sizer->Add(
-		house_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getHouseFilename())), 1, wxEXPAND
+		house_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getHouseFilename())), 1, wxEXPAND
 	);
 	house_filename_ctrl->SetToolTip("External house XML file (leave empty for internal)");
 
 	grid_sizer->Add(
-		spawn_label = newd wxStaticText(this, wxID_ANY, "External Spawnfile")
+		spawn_label = new wxStaticText(this, wxID_ANY, "External Spawnfile")
 	);
 
 	grid_sizer->Add(
-		spawn_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getSpawnFilename())), 1, wxEXPAND
+		spawn_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getSpawnFilename())), 1, wxEXPAND
 	);
 	spawn_filename_ctrl->SetToolTip("External spawn XML file for all creatures (standard TFS / classic OTBM)");
 
 	grid_sizer->Add(
-		monster_label = newd wxStaticText(this, wxID_ANY, "External Monster Spawnfile")
+		monster_label = new wxStaticText(this, wxID_ANY, "External Monster Spawnfile")
 	);
 
 	grid_sizer->Add(
-		monster_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getMonsterFilename())), 1, wxEXPAND
+		monster_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getMonsterFilename())), 1, wxEXPAND
 	);
 	monster_filename_ctrl->SetToolTip("External monster spawn XML file (OTBM 5 / partitioned spawn format)");
 
 	grid_sizer->Add(
-		npc_label = newd wxStaticText(this, wxID_ANY, "External NPC Spawnfile")
+		npc_label = new wxStaticText(this, wxID_ANY, "External NPC Spawnfile")
 	);
 
 	grid_sizer->Add(
-		npc_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getNpcFilename())), 1, wxEXPAND
+		npc_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getNpcFilename())), 1, wxEXPAND
 	);
 	npc_filename_ctrl->SetToolTip("External NPC spawn XML file (OTBM 5 / partitioned spawn format)");
 
 	grid_sizer->Add(
-		newd wxStaticText(this, wxID_ANY, "External Waypointfile")
+		new wxStaticText(this, wxID_ANY, "External Waypointfile")
 	);
 
 	grid_sizer->Add(
-		waypoint_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getWaypointFilename())), 1, wxEXPAND
+		waypoint_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getWaypointFilename())), 1, wxEXPAND
 	);
 	waypoint_filename_ctrl->SetToolTip("External waypoint XML file (leave empty for internal)");
 
 	grid_sizer->Add(
-		zone_label = newd wxStaticText(this, wxID_ANY, "External Zonefile")
+		zone_label = new wxStaticText(this, wxID_ANY, "External Zonefile")
 	);
 
 	grid_sizer->Add(
-		zone_filename_ctrl = newd wxTextCtrl(this, wxID_ANY, wxstr(map.getZoneFilename())), 1, wxEXPAND
+		zone_filename_ctrl = new wxTextCtrl(this, wxID_ANY, wxstr(map.getZoneFilename())), 1, wxEXPAND
 	);
 	zone_filename_ctrl->SetToolTip("External zone XML file, OTBM 5 maps (Canary / Crystal Server) only");
 
 	topsizer->Add(grid_sizer, wxSizerFlags(1).Expand().Border(wxALL, 20));
 
-	wxSizer* subsizer = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(this, wxID_OK, "OK");
+	wxSizer* subsizer = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Confirm changes");
 	subsizer->Add(okBtn, wxSizerFlags(1).Center());
 
-	wxButton* cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
+	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancelBtn->SetToolTip("Discard changes");
 	subsizer->Add(cancelBtn, wxSizerFlags(1).Center());

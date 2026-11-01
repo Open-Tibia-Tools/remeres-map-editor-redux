@@ -79,10 +79,10 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 	}
 
 	// Create the window
-	wxDialog* dlg = newd wxDialog(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxRESIZE_BORDER | wxCAPTION | wxCLOSE_BOX);
+	wxDialog* dlg = new wxDialog(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxRESIZE_BORDER | wxCAPTION | wxCLOSE_BOX);
 
-	wxSizer* sizer = newd wxBoxSizer(wxVERTICAL);
-	wxListBox* item_list = newd wxListBox(dlg, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxLB_EXTENDED);
+	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+	wxListBox* item_list = new wxListBox(dlg, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxLB_EXTENDED);
 	item_list->SetMinSize(dlg->FromDIP(wxSize(500, 300)));
 
 	for (const wxString& line : lines) {
@@ -90,7 +90,7 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 	}
 	sizer->Add(item_list, 1, wxEXPAND);
 
-	wxStaticText* feedback = newd wxStaticText(dlg, wxID_ANY, "Ctrl+C copies the selection, or every line when nothing is selected.");
+	wxStaticText* feedback = new wxStaticText(dlg, wxID_ANY, "Ctrl+C copies the selection, or every line when nothing is selected.");
 	sizer->Add(feedback, 0, wxLEFT | wxRIGHT | wxTOP, dlg->FromDIP(4));
 
 	// Copy helpers: Selected copies only what is selected (that is the button
@@ -123,23 +123,23 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 		feedback->SetLabelText(wxstr(std::format("Copied {} line(s) to the clipboard.", picked.size())));
 	};
 
-	wxSizer* action_sizer = newd wxBoxSizer(wxHORIZONTAL);
+	wxSizer* action_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-	wxButton* copy_selected = newd wxButton(dlg, wxID_ANY, "Copy selected");
+	wxButton* copy_selected = new wxButton(dlg, wxID_ANY, "Copy selected");
 	copy_selected->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_COPY));
 	copy_selected->Bind(wxEVT_BUTTON, [copy_lines, selected_lines](wxCommandEvent&) {
 		copy_lines(selected_lines());
 	});
 	action_sizer->Add(copy_selected, wxSizerFlags(1).Expand().Border(wxRIGHT, 4));
 
-	wxButton* copy_all = newd wxButton(dlg, wxID_ANY, "Copy all");
+	wxButton* copy_all = new wxButton(dlg, wxID_ANY, "Copy all");
 	copy_all->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_COPY));
 	copy_all->Bind(wxEVT_BUTTON, [copy_lines, &lines](wxCommandEvent&) {
 		copy_lines(lines);
 	});
 	action_sizer->Add(copy_all, wxSizerFlags(1).Expand().Border(wxRIGHT, 4));
 
-	wxButton* export_button = newd wxButton(dlg, wxID_ANY, "Export...");
+	wxButton* export_button = new wxButton(dlg, wxID_ANY, "Export...");
 	export_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_SAVE));
 	export_button->Bind(wxEVT_BUTTON, [dlg, &lines, title, feedback](wxCommandEvent&) {
 		wxFileDialog save_dlg(dlg, "Export list", wxEmptyString, title + ".txt", "Text file (*.txt)|*.txt|All files (*.*)|*.*", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
@@ -164,7 +164,7 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 	});
 	action_sizer->Add(export_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 4));
 
-	wxButton* okBtn = newd wxButton(dlg, wxID_OK, "OK");
+	wxButton* okBtn = new wxButton(dlg, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	action_sizer->Add(okBtn, wxSizerFlags(1).Expand());
 
@@ -190,14 +190,14 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 }
 
 void DialogUtil::ShowTextBox(wxWindow* parent, wxString title, wxString content) {
-	wxDialog* dlg = newd wxDialog(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxRESIZE_BORDER | wxCAPTION | wxCLOSE_BOX);
-	wxSizer* topsizer = newd wxBoxSizer(wxVERTICAL);
-	wxTextCtrl* text_field = newd wxTextCtrl(dlg, wxID_ANY, content, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
+	wxDialog* dlg = new wxDialog(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxRESIZE_BORDER | wxCAPTION | wxCLOSE_BOX);
+	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
+	wxTextCtrl* text_field = new wxTextCtrl(dlg, wxID_ANY, content, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
 	text_field->SetMinSize(dlg->FromDIP(wxSize(400, 550)));
 	topsizer->Add(text_field, wxSizerFlags(5).Expand());
 
-	wxSizer* choicesizer = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(dlg, wxID_CANCEL, "OK");
+	wxSizer* choicesizer = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(dlg, wxID_CANCEL, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	choicesizer->Add(okBtn, wxSizerFlags(1).Center());
 	topsizer->Add(choicesizer, wxSizerFlags(0).Center());

@@ -65,17 +65,17 @@ AboutWindow::AboutWindow(wxWindow* parent) :
 	about << "Compiled on: " << __TDATE__ << " : " << __TTIME__ << "\n";
 	about << "Compiled with: " << BOOST_COMPILER << "\n";
 
-	topsizer = newd wxBoxSizer(wxVERTICAL);
+	topsizer = new wxBoxSizer(wxVERTICAL);
 
-	topsizer->Add(newd wxStaticText(this, wxID_ANY, about), 1, wxALL, 20);
+	topsizer->Add(new wxStaticText(this, wxID_ANY, about), 1, wxALL, 20);
 
-	wxSizer* choicesizer = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(this, wxID_OK, "OK");
+	wxSizer* choicesizer = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Close this window");
 	choicesizer->Add(okBtn, wxSizerFlags(1).Center());
 
-	wxButton* copyBtn = newd wxButton(this, wxID_COPY, "Copy Version Info");
+	wxButton* copyBtn = new wxButton(this, wxID_COPY, "Copy Version Info");
 	copyBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_COPY));
 	copyBtn->Bind(wxEVT_BUTTON, [about](wxCommandEvent&) {
 		if (wxTheClipboard->Open()) {
@@ -86,7 +86,7 @@ AboutWindow::AboutWindow(wxWindow* parent) :
 	copyBtn->SetToolTip("Copy version information to clipboard");
 	choicesizer->Add(copyBtn, wxSizerFlags(1).Center().Border(wxLEFT, 10));
 
-	wxButton* websiteBtn = newd wxButton(this, wxID_ANY, "Visit Website");
+	wxButton* websiteBtn = new wxButton(this, wxID_ANY, "Visit Website");
 	websiteBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_GLOBE));
 	websiteBtn->Bind(wxEVT_BUTTON, [](wxCommandEvent&) {
 		::wxLaunchDefaultBrowser(__SITE_URL__, wxBROWSER_NEW_WINDOW);

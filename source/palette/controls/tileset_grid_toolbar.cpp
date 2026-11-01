@@ -43,7 +43,7 @@ TilesetGridToolbar::TilesetGridToolbar(wxWindow* parent, Actions actions, unsign
 	const long toolbarStyle = (wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_PLAIN_BACKGROUND) & ~wxAUI_TB_GRIPPER;
 	const wxColour iconColor = Theme::Get(Theme::Role::Text);
 
-	m_toolbar = newd wxAuiToolBar(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, toolbarStyle);
+	m_toolbar = new wxAuiToolBar(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, toolbarStyle);
 	m_toolbar->SetToolBitmapSize(iconSize);
 	m_toolbar->SetMargins(1, 1, 1, 1);
 	m_toolbar->SetToolBorderPadding(2);
@@ -73,12 +73,12 @@ TilesetGridToolbar::TilesetGridToolbar(wxWindow* parent, Actions actions, unsign
 	m_toolbar->Realize();
 	m_toolbar->Bind(wxEVT_TOOL, &TilesetGridToolbar::OnToolClick, this);
 
-	m_toolbarRow = newd wxBoxSizer(wxHORIZONTAL);
+	m_toolbarRow = new wxBoxSizer(wxHORIZONTAL);
 	m_toolbarRow->Add(m_toolbar, 0, wxALIGN_CENTER_VERTICAL);
 
-	m_searchRow = newd wxBoxSizer(wxHORIZONTAL);
+	m_searchRow = new wxBoxSizer(wxHORIZONTAL);
 	if (parts & Part_Search) {
-		m_searchCtrl = newd PaletteSearchCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+		m_searchCtrl = new PaletteSearchCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 		m_searchCtrl->SetDescriptiveText("Search...");
 		m_searchCtrl->ShowCancelButton(true);
 		m_searchCtrl->SetMinSize(FromDIP(wxSize(60, -1)));
@@ -112,7 +112,7 @@ void TilesetGridToolbar::SetStacked(bool stacked) {
 	}
 
 	if (!m_rootSizer) {
-		m_rootSizer = newd wxBoxSizer(stacked ? wxVERTICAL : wxHORIZONTAL);
+		m_rootSizer = new wxBoxSizer(stacked ? wxVERTICAL : wxHORIZONTAL);
 		SetSizer(m_rootSizer, false);
 	}
 

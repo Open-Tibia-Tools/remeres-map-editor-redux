@@ -183,7 +183,7 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 	bool doborders = false;
 	TileSet tmp_storage;
 
-	// Update the tiles with the newd positions
+	// Update the tiles with the new positions
 	for (Tile* tile : editor.selection) {
 		// First we get the old tile and it's position
 
@@ -196,7 +196,7 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 		// This transfers ownership to the temporary tile
 		auto tile_selection = TileOperations::popSelectedItems(new_src_tile.get());
 		for (auto& item : tile_selection) {
-			// Add the copied item to the newd destination tile,
+			// Add the copied item to the new destination tile,
 			tmp_storage_tile->addItem(std::move(item));
 		}
 		// Move spawns
@@ -226,7 +226,7 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 	// Commit changes to map
 	batchAction->addAndCommitAction(std::move(action));
 
-	// Remove old borders (and create some newd?)
+	// Remove old borders (and create some new?)
 	if (g_settings.getInteger(Config::USE_AUTOMAGIC) && g_settings.getInteger(Config::BORDERIZE_DRAG) && editor.selection.size() < size_t(g_settings.getInteger(Config::BORDERIZE_DRAG_THRESHOLD))) {
 		action = editor.actionQueue->createAction(batchAction.get());
 		TileList borderize_tiles;

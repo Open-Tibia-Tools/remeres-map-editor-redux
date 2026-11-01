@@ -15,12 +15,12 @@
 MapFlagsPanel::MapFlagsPanel(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY), current_tile(nullptr), current_map(nullptr) {
 
-	wxStaticBoxSizer* sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Map Flags");
+	wxStaticBoxSizer* sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Map Flags");
 
-	chk_pz = newd wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "Protection Zone");
-	chk_nopvp = newd wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "No PvP");
-	chk_nologout = newd wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "No Logout");
-	chk_pvpzone = newd wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "PvP Zone");
+	chk_pz = new wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "Protection Zone");
+	chk_nopvp = new wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "No PvP");
+	chk_nologout = new wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "No Logout");
+	chk_pvpzone = new wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "PvP Zone");
 
 	sizer->Add(chk_pz, wxSizerFlags(0).Left().Border(wxALL, 2));
 	sizer->Add(chk_nopvp, wxSizerFlags(0).Left().Border(wxALL, 2));

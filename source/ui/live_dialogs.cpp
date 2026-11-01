@@ -27,10 +27,10 @@ void LiveDialogs::ShowHostDialog(wxWindow* parent, Editor* editor) {
 		return;
 	}
 
-	wxDialog* live_host_dlg = newd wxDialog(parent, wxID_ANY, "Host Live Server", wxDefaultPosition, wxDefaultSize);
+	wxDialog* live_host_dlg = new wxDialog(parent, wxID_ANY, "Host Live Server", wxDefaultPosition, wxDefaultSize);
 
-	wxSizer* top_sizer = newd wxBoxSizer(wxVERTICAL);
-	wxFlexGridSizer* gsizer = newd wxFlexGridSizer(2, 10, 10);
+	wxSizer* top_sizer = new wxBoxSizer(wxVERTICAL);
+	wxFlexGridSizer* gsizer = new wxFlexGridSizer(2, 10, 10);
 	gsizer->AddGrowableCol(0, 2);
 	gsizer->AddGrowableCol(1, 3);
 
@@ -40,26 +40,26 @@ void LiveDialogs::ShowHostDialog(wxWindow* parent, Editor* editor) {
 	wxTextCtrl* password;
 	wxCheckBox* allow_copy;
 
-	gsizer->Add(newd wxStaticText(live_host_dlg, wxID_ANY, "Server Name:"));
-	gsizer->Add(hostname = newd wxTextCtrl(live_host_dlg, wxID_ANY, "RME Live Server"), 0, wxEXPAND);
+	gsizer->Add(new wxStaticText(live_host_dlg, wxID_ANY, "Server Name:"));
+	gsizer->Add(hostname = new wxTextCtrl(live_host_dlg, wxID_ANY, "RME Live Server"), 0, wxEXPAND);
 
-	gsizer->Add(newd wxStaticText(live_host_dlg, wxID_ANY, "Port:"));
-	gsizer->Add(port = newd wxSpinCtrl(live_host_dlg, wxID_ANY, "31313", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 65535, 31313), 0, wxEXPAND);
+	gsizer->Add(new wxStaticText(live_host_dlg, wxID_ANY, "Port:"));
+	gsizer->Add(port = new wxSpinCtrl(live_host_dlg, wxID_ANY, "31313", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 65535, 31313), 0, wxEXPAND);
 
-	gsizer->Add(newd wxStaticText(live_host_dlg, wxID_ANY, "Password:"));
-	gsizer->Add(password = newd wxTextCtrl(live_host_dlg, wxID_ANY), 0, wxEXPAND);
+	gsizer->Add(new wxStaticText(live_host_dlg, wxID_ANY, "Password:"));
+	gsizer->Add(password = new wxTextCtrl(live_host_dlg, wxID_ANY), 0, wxEXPAND);
 
 	top_sizer->Add(gsizer, 0, wxALL, 20);
 
-	top_sizer->Add(allow_copy = newd wxCheckBox(live_host_dlg, wxID_ANY, "Allow copy & paste between maps."), 0, wxRIGHT | wxLEFT, 20);
+	top_sizer->Add(allow_copy = new wxCheckBox(live_host_dlg, wxID_ANY, "Allow copy & paste between maps."), 0, wxRIGHT | wxLEFT, 20);
 	allow_copy->SetToolTip("Allows remote clients to copy & paste from the hosted map to local maps.");
 
-	wxSizer* ok_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	auto okBtn = newd wxButton(live_host_dlg, wxID_OK, "OK");
+	wxSizer* ok_sizer = new wxBoxSizer(wxHORIZONTAL);
+	auto okBtn = new wxButton(live_host_dlg, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Start server");
 	ok_sizer->Add(okBtn, 1, wxCENTER);
-	auto cancelBtn = newd wxButton(live_host_dlg, wxID_CANCEL, "Cancel");
+	auto cancelBtn = new wxButton(live_host_dlg, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancelBtn->SetToolTip("Cancel");
 	ok_sizer->Add(cancelBtn, wxCENTER, 1);
@@ -99,10 +99,10 @@ void LiveDialogs::ShowHostDialog(wxWindow* parent, Editor* editor) {
 }
 
 void LiveDialogs::ShowJoinDialog(wxWindow* parent) {
-	wxDialog* live_join_dlg = newd wxDialog(parent, wxID_ANY, "Join Live Server", wxDefaultPosition, wxDefaultSize);
+	wxDialog* live_join_dlg = new wxDialog(parent, wxID_ANY, "Join Live Server", wxDefaultPosition, wxDefaultSize);
 
-	wxSizer* top_sizer = newd wxBoxSizer(wxVERTICAL);
-	wxFlexGridSizer* gsizer = newd wxFlexGridSizer(2, 10, 10);
+	wxSizer* top_sizer = new wxBoxSizer(wxVERTICAL);
+	wxFlexGridSizer* gsizer = new wxFlexGridSizer(2, 10, 10);
 	gsizer->AddGrowableCol(0, 2);
 	gsizer->AddGrowableCol(1, 3);
 
@@ -112,26 +112,26 @@ void LiveDialogs::ShowJoinDialog(wxWindow* parent) {
 	wxSpinCtrl* port;
 	wxTextCtrl* password;
 
-	gsizer->Add(newd wxStaticText(live_join_dlg, wxID_ANY, "Name:"));
-	gsizer->Add(name = newd wxTextCtrl(live_join_dlg, wxID_ANY, ""), 0, wxEXPAND);
+	gsizer->Add(new wxStaticText(live_join_dlg, wxID_ANY, "Name:"));
+	gsizer->Add(name = new wxTextCtrl(live_join_dlg, wxID_ANY, ""), 0, wxEXPAND);
 
-	gsizer->Add(newd wxStaticText(live_join_dlg, wxID_ANY, "IP:"));
-	gsizer->Add(ip = newd wxTextCtrl(live_join_dlg, wxID_ANY, "localhost"), 0, wxEXPAND);
+	gsizer->Add(new wxStaticText(live_join_dlg, wxID_ANY, "IP:"));
+	gsizer->Add(ip = new wxTextCtrl(live_join_dlg, wxID_ANY, "localhost"), 0, wxEXPAND);
 
-	gsizer->Add(newd wxStaticText(live_join_dlg, wxID_ANY, "Port:"));
-	gsizer->Add(port = newd wxSpinCtrl(live_join_dlg, wxID_ANY, "31313", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 65535, 31313), 0, wxEXPAND);
+	gsizer->Add(new wxStaticText(live_join_dlg, wxID_ANY, "Port:"));
+	gsizer->Add(port = new wxSpinCtrl(live_join_dlg, wxID_ANY, "31313", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 65535, 31313), 0, wxEXPAND);
 
-	gsizer->Add(newd wxStaticText(live_join_dlg, wxID_ANY, "Password:"));
-	gsizer->Add(password = newd wxTextCtrl(live_join_dlg, wxID_ANY), 0, wxEXPAND);
+	gsizer->Add(new wxStaticText(live_join_dlg, wxID_ANY, "Password:"));
+	gsizer->Add(password = new wxTextCtrl(live_join_dlg, wxID_ANY), 0, wxEXPAND);
 
 	top_sizer->Add(gsizer, 0, wxALL, 20);
 
-	wxSizer* ok_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	auto okBtn = newd wxButton(live_join_dlg, wxID_OK, "OK");
+	wxSizer* ok_sizer = new wxBoxSizer(wxHORIZONTAL);
+	auto okBtn = new wxButton(live_join_dlg, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Connect to server");
 	ok_sizer->Add(okBtn, 1, wxRIGHT);
-	auto cancelBtn = newd wxButton(live_join_dlg, wxID_CANCEL, "Cancel");
+	auto cancelBtn = new wxButton(live_join_dlg, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancelBtn->SetToolTip("Cancel");
 	ok_sizer->Add(cancelBtn, 1, wxRIGHT);

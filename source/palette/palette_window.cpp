@@ -51,7 +51,7 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 	waypoint_palette(nullptr) {
 	SetMinSize(wxSize(225, 250));
 
-	choicebook = newd wxChoicebook(this, PALETTE_CHOICEBOOK, wxDefaultPosition, wxSize(230, 250));
+	choicebook = new wxChoicebook(this, PALETTE_CHOICEBOOK, wxDefaultPosition, wxSize(230, 250));
 
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGING, &PaletteWindow::OnSwitchingPage, this, PALETTE_CHOICEBOOK);
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGED, &PaletteWindow::OnPageChanged, this, PALETTE_CHOICEBOOK);
@@ -59,7 +59,7 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 	Bind(wxEVT_KEY_DOWN, &PaletteWindow::OnKey, this);
 
 	for (const auto& palette : catalog.dynamicPalettes()) {
-		auto* panel = newd BrushPalettePanel(choicebook, palette);
+		auto* panel = new BrushPalettePanel(choicebook, palette);
 		panel->SetListType(dynamicBrushListType());
 		palette_pages.push_back(panel);
 		choicebook->AddPage(panel, panel->GetName());
@@ -87,7 +87,7 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 		choicebook->AddPage(panel, wxstr(provider.name));
 	}
 
-	wxSizer* sizer = newd wxBoxSizer(wxVERTICAL);
+	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 	choicebook->SetMinSize(wxSize(225, 300));
 	sizer->Add(choicebook, 1, wxEXPAND);
 	SetSizer(sizer);
@@ -200,7 +200,7 @@ void PaletteWindow::ReloadDynamicPages() {
 			}
 		}
 		if (!found) {
-			auto* panel = newd BrushPalettePanel(choicebook, palette);
+			auto* panel = new BrushPalettePanel(choicebook, palette);
 			panel->SetListType(dynamicBrushListType());
 			palette_pages.push_back(panel);
 			choicebook->AddPage(panel, panel->GetName());

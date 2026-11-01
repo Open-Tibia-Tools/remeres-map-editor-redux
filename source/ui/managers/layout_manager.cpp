@@ -121,7 +121,7 @@ void LayoutManager::LoadPerspective() {
 				}
 				MinimapManager::NormalizePaneInfo(info);
 
-				g_minimap.SetWindow(newd MinimapWindow(g_gui.root));
+				g_minimap.SetWindow(new MinimapWindow(g_gui.root));
 				g_gui.aui_manager->AddPane(g_minimap.GetWindow(), info);
 			} else {
 				wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_minimap.GetWindow());
@@ -158,7 +158,7 @@ void LayoutManager::LoadPerspective() {
 
 	// Initialize ToolOptionsWindow
 	if (!g_gui.tool_options) {
-		g_gui.tool_options = newd ToolOptionsWindow(g_gui.root);
+		g_gui.tool_options = new ToolOptionsWindow(g_gui.root);
 
 		wxAuiPaneInfo info;
 		wxString layout = wxstr(g_settings.getString(Config::TOOL_OPTIONS_LAYOUT));

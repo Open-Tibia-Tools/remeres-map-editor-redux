@@ -100,7 +100,7 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 		return nullptr;
 	}
 
-	CreatureType* ct = newd CreatureType();
+	CreatureType* ct = new CreatureType();
 	ct->name = nameAttr.as_string();
 	ct->isNpc = (tmpType == "npc");
 
@@ -238,7 +238,7 @@ CreatureType* CreatureType::loadFromOTXML(const FileName& filename, pugi::xml_do
 		return nullptr;
 	}
 
-	CreatureType* ct = newd CreatureType();
+	CreatureType* ct = new CreatureType();
 	if (isNpc) {
 		ct->name = nstr(filename.GetName());
 	} else {
@@ -355,7 +355,7 @@ CreatureType* CreatureDatabase::operator[](const std::string& name) {
 CreatureType* CreatureDatabase::addMissingCreatureType(const std::string& name, bool isNpc) {
 	assert((*this)[name] == nullptr);
 
-	CreatureType* ct = newd CreatureType();
+	CreatureType* ct = new CreatureType();
 	ct->name = name;
 	ct->isNpc = isNpc;
 	ct->missing = true;
@@ -368,7 +368,7 @@ CreatureType* CreatureDatabase::addMissingCreatureType(const std::string& name, 
 CreatureType* CreatureDatabase::addCreatureType(const std::string& name, bool isNpc, const Outfit& outfit) {
 	assert((*this)[name] == nullptr);
 
-	CreatureType* ct = newd CreatureType();
+	CreatureType* ct = new CreatureType();
 	ct->name = name;
 	ct->isNpc = isNpc;
 	ct->missing = false;

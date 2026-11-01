@@ -83,13 +83,13 @@ wxCoord DatDebugViewListBox::OnMeasureItem(size_t n) const {
 
 DatDebugView::DatDebugView(wxWindow* parent) :
 	wxPanel(parent) {
-	wxSizer* sizer = newd wxBoxSizer(wxVERTICAL);
+	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 
-	search_field = newd wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
+	search_field = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
 	search_field->SetFocus();
 	sizer->Add(search_field, 0, wxEXPAND, 2);
 
-	item_list = newd DatDebugViewListBox(this, wxID_ANY);
+	item_list = new DatDebugViewListBox(this, wxID_ANY);
 	item_list->SetMinSize(wxSize(470, 400));
 	sizer->Add(item_list, 1, wxEXPAND | wxALL, 2);
 

@@ -28,16 +28,16 @@
 
 ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 	PalettePanel(parent, id) {
-	wxBoxSizer* sidesizer = newd wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* sidesizer = new wxBoxSizer(wxVERTICAL);
 
 	// Search control
-	search_ctrl = newd PaletteSearchCtrl(this, PALETTE_ZONE_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+	search_ctrl = new PaletteSearchCtrl(this, PALETTE_ZONE_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 	search_ctrl->SetDescriptiveText("Search zones...");
 	search_ctrl->SetFont(Theme::GetFont(9, false));
 	sidesizer->Add(search_ctrl, 0, wxEXPAND | wxALL, 5);
 
 	// NanoVG Table
-	zone_table = newd NanoVGTableCtrl(this, PALETTE_ZONE_LISTBOX);
+	zone_table = new NanoVGTableCtrl(this, PALETTE_ZONE_LISTBOX);
 	std::vector<TableColumn> cols = {
 		{ "swatch", "#", 30, NVG_ALIGN_CENTER, false },
 		{ "id", "ID", 38, NVG_ALIGN_CENTER, true },
@@ -66,16 +66,16 @@ ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 	sidesizer->Add(zone_table, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
 
 	// Action buttons (Add, Rename, Remove)
-	wxBoxSizer* buttons = newd wxBoxSizer(wxHORIZONTAL);
-	add_button = newd wxButton(this, PALETTE_ZONE_ADD, "Add", wxDefaultPosition, wxSize(50, -1));
+	wxBoxSizer* buttons = new wxBoxSizer(wxHORIZONTAL);
+	add_button = new wxButton(this, PALETTE_ZONE_ADD, "Add", wxDefaultPosition, wxSize(50, -1));
 	add_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
 	add_button->SetFont(Theme::GetFont(9, false));
 
-	rename_button = newd wxButton(this, PALETTE_ZONE_RENAME, "Rename", wxDefaultPosition, wxSize(60, -1));
+	rename_button = new wxButton(this, PALETTE_ZONE_RENAME, "Rename", wxDefaultPosition, wxSize(60, -1));
 	rename_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
 	rename_button->SetFont(Theme::GetFont(9, false));
 
-	remove_button = newd wxButton(this, PALETTE_ZONE_REMOVE, "Remove", wxDefaultPosition, wxSize(60, -1));
+	remove_button = new wxButton(this, PALETTE_ZONE_REMOVE, "Remove", wxDefaultPosition, wxSize(60, -1));
 	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
 	remove_button->SetFont(Theme::GetFont(9, false));
 

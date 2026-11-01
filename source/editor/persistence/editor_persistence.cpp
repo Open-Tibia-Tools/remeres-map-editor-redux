@@ -458,7 +458,7 @@ void EditorPersistence::importHouses(Editor& editor, Map& imported_map, const Po
 							current_house->setExit(&editor.map, newexit);
 						}
 					} else {
-						// Conflict! Find a newd id and replace old
+						// Conflict! Find a new id and replace old
 						uint32_t new_id = editor.map.houses.getEmptyID();
 						house_id_map[imported_house->getID()] = new_id;
 						imported_house->setID(new_id);
@@ -468,7 +468,7 @@ void EditorPersistence::importHouses(Editor& editor, Map& imported_map, const Po
 				break;
 			}
 			case IMPORT_INSERT: {
-				// Find a newd id and replace old
+				// Find a new id and replace old
 				uint32_t new_id = editor.map.houses.getEmptyID();
 				house_id_map[imported_house->getID()] = new_id;
 				imported_house->setID(new_id);

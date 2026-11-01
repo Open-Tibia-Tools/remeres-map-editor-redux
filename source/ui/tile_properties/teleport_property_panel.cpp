@@ -16,22 +16,22 @@
 TeleportPropertyPanel::TeleportPropertyPanel(wxWindow* parent) :
 	ItemPropertyPanel(parent) {
 
-	dest_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Destination");
-	wxFlexGridSizer* dest_grid = newd wxFlexGridSizer(3, 2, FromDIP(5), FromDIP(5));
+	dest_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Destination");
+	wxFlexGridSizer* dest_grid = new wxFlexGridSizer(3, 2, FromDIP(5), FromDIP(5));
 	dest_grid->AddGrowableCol(1);
 
-	dest_grid->Add(newd wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "X:"), 0, wxALIGN_CENTER_VERTICAL);
-	x_spin = newd wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
+	dest_grid->Add(new wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "X:"), 0, wxALIGN_CENTER_VERTICAL);
+	x_spin = new wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
 	x_spin->SetRange(0, 65535);
 	dest_grid->Add(x_spin, 1, wxEXPAND);
 
-	dest_grid->Add(newd wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "Y:"), 0, wxALIGN_CENTER_VERTICAL);
-	y_spin = newd wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
+	dest_grid->Add(new wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "Y:"), 0, wxALIGN_CENTER_VERTICAL);
+	y_spin = new wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
 	y_spin->SetRange(0, 65535);
 	dest_grid->Add(y_spin, 1, wxEXPAND);
 
-	dest_grid->Add(newd wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "Z:"), 0, wxALIGN_CENTER_VERTICAL);
-	z_spin = newd wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
+	dest_grid->Add(new wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "Z:"), 0, wxALIGN_CENTER_VERTICAL);
+	z_spin = new wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
 	z_spin->SetRange(0, 15);
 	dest_grid->Add(z_spin, 1, wxEXPAND);
 

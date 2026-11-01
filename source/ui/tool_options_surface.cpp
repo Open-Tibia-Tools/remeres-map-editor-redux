@@ -116,29 +116,29 @@ void ToolOptionsSurface::BuildUi() {
 		event.Skip();
 	});
 
-	main_sizer = newd wxBoxSizer(wxVERTICAL);
+	main_sizer = new wxBoxSizer(wxVERTICAL);
 
-	main_tools_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Main tools");
-	main_tools_grid = newd wxGridSizer(0, TOOL_COLUMNS, FromDIP(4), FromDIP(4));
+	main_tools_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Main tools");
+	main_tools_grid = new wxGridSizer(0, TOOL_COLUMNS, FromDIP(4), FromDIP(4));
 	main_tools_sizer->Add(main_tools_grid, 0, wxEXPAND | wxALL, FromDIP(4));
 	main_sizer->Add(main_tools_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(4));
 
-	size_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Size");
+	size_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Size");
 
 	const auto create_axis_row = [&](const wxString& label, wxSlider*& slider, wxStaticText*& value_label) {
-		auto* row = newd wxBoxSizer(wxHORIZONTAL);
+		auto* row = new wxBoxSizer(wxHORIZONTAL);
 		const wxSize mode_button_size = FromDIP(wxSize(26, 26));
 		if (label == "X") {
-			exact_button = newd wxBitmapToggleButton(size_sizer->GetStaticBox(), wxID_ANY, wxBitmap(), wxDefaultPosition, mode_button_size, wxBU_EXACTFIT | wxBORDER_NONE);
+			exact_button = new wxBitmapToggleButton(size_sizer->GetStaticBox(), wxID_ANY, wxBitmap(), wxDefaultPosition, mode_button_size, wxBU_EXACTFIT | wxBORDER_NONE);
 			row->Add(exact_button, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(6));
 		} else {
-			aspect_button = newd wxBitmapToggleButton(size_sizer->GetStaticBox(), wxID_ANY, wxBitmap(), wxDefaultPosition, mode_button_size, wxBU_EXACTFIT | wxBORDER_NONE);
+			aspect_button = new wxBitmapToggleButton(size_sizer->GetStaticBox(), wxID_ANY, wxBitmap(), wxDefaultPosition, mode_button_size, wxBU_EXACTFIT | wxBORDER_NONE);
 			row->Add(aspect_button, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(6));
 		}
-		row->Add(newd wxStaticText(size_sizer->GetStaticBox(), wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
-		slider = newd wxSlider(size_sizer->GetStaticBox(), wxID_ANY, 0, MIN_AXIS_SIZE, MAX_AXIS_SIZE, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL);
+		row->Add(new wxStaticText(size_sizer->GetStaticBox(), wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+		slider = new wxSlider(size_sizer->GetStaticBox(), wxID_ANY, 0, MIN_AXIS_SIZE, MAX_AXIS_SIZE, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL);
 		row->Add(slider, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
-		value_label = newd wxStaticText(size_sizer->GetStaticBox(), wxID_ANY, "1");
+		value_label = new wxStaticText(size_sizer->GetStaticBox(), wxID_ANY, "1");
 		row->Add(value_label, 0, wxALIGN_CENTER_VERTICAL);
 		size_sizer->Add(row, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 	};
@@ -148,24 +148,24 @@ void ToolOptionsSurface::BuildUi() {
 
 	main_sizer->Add(size_sizer, 0, wxEXPAND | wxALL, FromDIP(4));
 
-	other_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Other");
+	other_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Other");
 
-	thickness_panel = newd wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
-	auto* thickness_row = newd wxBoxSizer(wxHORIZONTAL);
-	thickness_label = newd wxStaticText(thickness_panel, wxID_ANY, "Thickness");
+	thickness_panel = new wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
+	auto* thickness_row = new wxBoxSizer(wxHORIZONTAL);
+	thickness_label = new wxStaticText(thickness_panel, wxID_ANY, "Thickness");
 	thickness_row->Add(thickness_label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
-	thickness_slider = newd wxSlider(thickness_panel, wxID_ANY, MAX_THICKNESS, MIN_THICKNESS, MAX_THICKNESS, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL);
+	thickness_slider = new wxSlider(thickness_panel, wxID_ANY, MAX_THICKNESS, MIN_THICKNESS, MAX_THICKNESS, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL);
 	thickness_row->Add(thickness_slider, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
-	thickness_value = newd wxStaticText(thickness_panel, wxID_ANY, "100%");
+	thickness_value = new wxStaticText(thickness_panel, wxID_ANY, "100%");
 	thickness_row->Add(thickness_value, 0, wxALIGN_CENTER_VERTICAL);
 	thickness_panel->SetSizer(thickness_row);
 	other_sizer->Add(thickness_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 
-	spawn_time_panel = newd wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
-	auto* spawn_time_row = newd wxBoxSizer(wxHORIZONTAL);
-	spawn_time_label = newd wxStaticText(spawn_time_panel, wxID_ANY, "Spawntime");
+	spawn_time_panel = new wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
+	auto* spawn_time_row = new wxBoxSizer(wxHORIZONTAL);
+	spawn_time_label = new wxStaticText(spawn_time_panel, wxID_ANY, "Spawntime");
 	spawn_time_row->Add(spawn_time_label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
-	spawn_time_spin = newd wxSpinCtrl(
+	spawn_time_spin = new wxSpinCtrl(
 		spawn_time_panel,
 		TOOL_OPTIONS_CREATURE_SPAWN_TIME,
 		wxEmptyString,
@@ -180,14 +180,14 @@ void ToolOptionsSurface::BuildUi() {
 	spawn_time_panel->SetSizer(spawn_time_row);
 	other_sizer->Add(spawn_time_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 
-	place_spawn_with_creature_checkbox = newd wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Place spawn with creature");
+	place_spawn_with_creature_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Place spawn with creature");
 	other_sizer->Add(place_spawn_with_creature_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 
-	spawn_size_panel = newd wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
-	auto* spawn_size_row = newd wxBoxSizer(wxHORIZONTAL);
-	spawn_size_label = newd wxStaticText(spawn_size_panel, wxID_ANY, "Spawn Size");
+	spawn_size_panel = new wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
+	auto* spawn_size_row = new wxBoxSizer(wxHORIZONTAL);
+	spawn_size_label = new wxStaticText(spawn_size_panel, wxID_ANY, "Spawn Size");
 	spawn_size_row->Add(spawn_size_label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
-	spawn_size_spin = newd wxSpinCtrl(
+	spawn_size_spin = new wxSpinCtrl(
 		spawn_size_panel,
 		TOOL_OPTIONS_CREATURE_SPAWN_SIZE,
 		wxEmptyString,
@@ -202,11 +202,11 @@ void ToolOptionsSurface::BuildUi() {
 	spawn_size_panel->SetSizer(spawn_size_row);
 	other_sizer->Add(spawn_size_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 
-	weight_panel = newd wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
-	auto* weight_row = newd wxBoxSizer(wxHORIZONTAL);
-	weight_label = newd wxStaticText(weight_panel, wxID_ANY, "Weight");
+	weight_panel = new wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
+	auto* weight_row = new wxBoxSizer(wxHORIZONTAL);
+	weight_label = new wxStaticText(weight_panel, wxID_ANY, "Weight");
 	weight_row->Add(weight_label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
-	weight_spin = newd wxSpinCtrl(
+	weight_spin = new wxSpinCtrl(
 		weight_panel,
 		wxID_ANY,
 		wxEmptyString,
@@ -221,9 +221,9 @@ void ToolOptionsSurface::BuildUi() {
 	weight_panel->SetSizer(weight_row);
 	other_sizer->Add(weight_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 
-	preview_border_checkbox = newd wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Preview Border");
-	lock_doors_checkbox = newd wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Lock Doors (Shift)");
-	randomize_doodads_checkbox = newd wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Randomize Doodads");
+	preview_border_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Preview Border");
+	lock_doors_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Lock Doors (Shift)");
+	randomize_doodads_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Randomize Doodads");
 	randomize_doodads_checkbox->SetValue(g_settings.getBoolean(Config::RANDOMIZE_DOODADS));
 	other_sizer->Add(preview_border_checkbox, 0, wxEXPAND | wxALL, FromDIP(6));
 	other_sizer->Add(lock_doors_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6));
@@ -338,7 +338,7 @@ void ToolOptionsSurface::RebuildToolButtons() {
 		const wxWindowID button_id = entry.action == ToolButtonAction::SelectCreature ? TOOL_OPTIONS_PLACE_CREATURE_BUTTON :
 			entry.action == ToolButtonAction::SelectSpawn ? TOOL_OPTIONS_PLACE_SPAWN_BUTTON :
 			wxID_ANY;
-		auto* button = newd wxBitmapToggleButton(
+		auto* button = new wxBitmapToggleButton(
 			main_tools_sizer->GetStaticBox(),
 			button_id,
 			CreateToolBitmap(entry),

@@ -67,7 +67,7 @@ wxObject* MenuBarLoader::LoadItem(pugi::xml_node node, wxMenu* parent, MainMenuB
 		std::string name = attribute.as_string();
 		std::replace(name.begin(), name.end(), '$', '&');
 
-		wxMenu* menu = newd wxMenu;
+		wxMenu* menu = new wxMenu;
 		if ((attribute = node.attribute("special")) && std::string(attribute.as_string()) == "RECENT_FILES") {
 			recentFilesManager.UseMenu(menu);
 		} else if ((attribute = node.attribute("special")) && std::string(attribute.as_string()) == "PALETTE") {
