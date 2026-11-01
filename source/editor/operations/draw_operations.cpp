@@ -687,9 +687,8 @@ void DrawOperations::punchGroundToFloorBelow(Editor& editor, const PositionVecto
 	}
 	GroundBrush* ground_brush = brush->as<GroundBrush>();
 
-	const bool use_offset = g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW_OFFSET);
-	const int offset_x = use_offset ? 1 : 0;
-	const int offset_y = use_offset ? 1 : 0;
+	const int offset_x = std::clamp(g_settings.getInteger(Config::DRAW_ON_FLOOR_BELOW_OFFSET_X), -1, 1);
+	const int offset_y = std::clamp(g_settings.getInteger(Config::DRAW_ON_FLOOR_BELOW_OFFSET_Y), -1, 1);
 
 	PositionVector below_draw;
 	below_draw.reserve(tilestodraw.size());

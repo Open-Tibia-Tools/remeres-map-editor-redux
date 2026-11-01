@@ -1,4 +1,5 @@
 #include "ui/tool_options_surface.h"
+#include "ui/dialogs/floor_below_offset_dialog.h"
 
 #include "app/settings.h"
 #include "brushes/brush.h"
@@ -228,10 +229,10 @@ void ToolOptionsSurface::BuildUi() {
 	auto* draw_below_row = new wxBoxSizer(wxHORIZONTAL);
 	draw_on_floor_below_checkbox = new wxCheckBox(draw_below_panel, wxID_ANY, "Draw on floor below");
 	draw_on_floor_below_checkbox->SetToolTip("When enabled, painting with this ground brush places the ground on the floor\nbelow (z+1) and punches a bordered hole on the current floor.");
-	draw_on_floor_below_offset_button = new wxToggleButton(draw_below_panel, wxID_ANY, "+1 offset", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	draw_on_floor_below_offset_button->SetToolTip("Apply isometric perspective offset (+1, +1) so drawing on the floor below aligns with your cursor position.");
+	draw_on_floor_below_config_button = new wxBitmapButton(draw_below_panel, wxID_ANY, IMAGE_MANAGER.GetBitmapBundle(ICON_ARROWS_UP_DOWN_LEFT_RIGHT), wxDefaultPosition, FromDIP(wxSize(24, 20)), wxBU_EXACTFIT);
+	draw_on_floor_below_config_button->SetToolTip("Configure floor below offset (X, Y)...");
 	draw_below_row->Add(draw_on_floor_below_checkbox, wxSizerFlags(1).CenterVertical());
-	draw_below_row->Add(draw_on_floor_below_offset_button, wxSizerFlags().CenterVertical().Border(wxLEFT, FromDIP(4)));
+	draw_below_row->Add(draw_on_floor_below_config_button, wxSizerFlags().CenterVertical().Border(wxLEFT, FromDIP(4)));
 	draw_below_panel->SetSizer(draw_below_row);
 
 	lock_doors_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Lock Doors (Shift)");
@@ -250,7 +251,7 @@ void ToolOptionsSurface::BuildUi() {
 	aspect_button->Bind(wxEVT_TOGGLEBUTTON, &ToolOptionsSurface::OnAspectToggled, this);
 	preview_border_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnPreviewBorderToggled, this);
 	draw_on_floor_below_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnDrawOnFloorBelowToggled, this);
-	draw_on_floor_below_offset_button->Bind(wxEVT_TOGGLEBUTTON, &ToolOptionsSurface::OnDrawOnFloorBelowOffsetToggled, this);
+	draw_on_floor_below_config_button->Bind(wxEVT_BUTTON, &ToolOptionsSurface::OnDrawOnFloorBelowConfigClicked, this);
 	lock_doors_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnLockDoorsToggled, this);
 	randomize_doodads_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnRandomizeDoodadsToggled, this);
 	thickness_slider->Bind(wxEVT_SLIDER, &ToolOptionsSurface::OnThicknessChanged, this);
@@ -389,8 +390,7 @@ void ToolOptionsSurface::RefreshFromState() {
 	aspect_button->SetValue(state.aspect_locked);
 	preview_border_checkbox->SetValue(g_settings.getInteger(Config::SHOW_AUTOBORDER_PREVIEW));
 	draw_on_floor_below_checkbox->SetValue(g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW));
-	draw_on_floor_below_offset_button->SetValue(g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW_OFFSET));
-	draw_on_floor_below_offset_button->Enable(g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW));
+	draw_on_floor_below_config_button->Enable(g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW));
 	lock_doors_checkbox->SetValue(g_settings.getInteger(Config::DRAW_LOCKED_DOOR));
 	const int thickness_percent = g_brush_manager.UseCustomThickness() ? std::clamp(static_cast<int>(g_brush_manager.GetCustomThicknessMod() * 100.0f), MIN_THICKNESS, MAX_THICKNESS) : MAX_THICKNESS;
 	thickness_slider->SetValue(thickness_percent);
@@ -556,14 +556,15 @@ bool ToolOptionsSurface::HasDrawOnFloorBelowControl() const {
 
 void ToolOptionsSurface::OnDrawOnFloorBelowToggled(wxCommandEvent& event) {
 	g_settings.setInteger(Config::DRAW_ON_FLOOR_BELOW, event.IsChecked() ? 1 : 0);
-	if (draw_on_floor_below_offset_button) {
-		draw_on_floor_below_offset_button->Enable(event.IsChecked());
+	if (draw_on_floor_below_config_button) {
+		draw_on_floor_below_config_button->Enable(event.IsChecked());
 	}
 	g_gui.FocusCurrentMapCanvas();
 }
 
-void ToolOptionsSurface::OnDrawOnFloorBelowOffsetToggled(wxCommandEvent& event) {
-	g_settings.setInteger(Config::DRAW_ON_FLOOR_BELOW_OFFSET, event.IsChecked() ? 1 : 0);
+void ToolOptionsSurface::OnDrawOnFloorBelowConfigClicked(wxCommandEvent& WXUNUSED(event)) {
+	FloorBelowOffsetDialog dlg(this);
+	dlg.ShowModal();
 	g_gui.FocusCurrentMapCanvas();
 }
 

@@ -10,6 +10,7 @@
 
 class Brush;
 class wxBitmapToggleButton;
+class wxBitmapButton;
 class wxSlider;
 class wxGridSizer;
 class wxSpinCtrl;
@@ -70,7 +71,7 @@ private:
 	void OnAspectToggled(wxCommandEvent& event);
 	void OnPreviewBorderToggled(wxCommandEvent& event);
 	void OnDrawOnFloorBelowToggled(wxCommandEvent& event);
-	void OnDrawOnFloorBelowOffsetToggled(wxCommandEvent& event);
+	void OnDrawOnFloorBelowConfigClicked(wxCommandEvent& event);
 	void OnLockDoorsToggled(wxCommandEvent& event);
 	void OnThicknessChanged(wxCommandEvent& event);
 	void OnRandomizeDoodadsToggled(wxCommandEvent& event);
@@ -102,7 +103,7 @@ private:
 	wxCheckBox* preview_border_checkbox = nullptr;
 	wxPanel* draw_below_panel = nullptr;
 	wxCheckBox* draw_on_floor_below_checkbox = nullptr;
-	wxToggleButton* draw_on_floor_below_offset_button = nullptr;
+	wxBitmapButton* draw_on_floor_below_config_button = nullptr;
 	wxCheckBox* lock_doors_checkbox = nullptr;
 	wxCheckBox* randomize_doodads_checkbox = nullptr;
 	wxStaticText* thickness_label = nullptr;
