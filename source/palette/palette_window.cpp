@@ -1,3 +1,4 @@
+#include <wx/aui/framemanager.h>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -443,18 +444,24 @@ void PaletteWindow::OnSize(wxSizeEvent& event) {
 		return;
 	}
 
-	const bool shouldBeHorizontal = (sz.x > sz.y * 1.15f && sz.x > FromDIP(320));
-	const bool shouldBeVertical = (sz.x < sz.y * 0.95f || sz.x <= FromDIP(280));
-
-	bool newHorizontal = m_isHorizontal;
-	if (shouldBeHorizontal && !m_isHorizontal) {
-		newHorizontal = true;
-	} else if (shouldBeVertical && m_isHorizontal) {
-		newHorizontal = false;
+	bool shouldBeHorizontal = false;
+	if (g_gui.aui_manager) {
+		const wxAuiPaneInfo& pane = g_gui.aui_manager->GetPane(this);
+		if (pane.IsOk() && pane.IsDocked()) {
+			if (pane.dock_direction == wxAUI_DOCK_LEFT || pane.dock_direction == wxAUI_DOCK_RIGHT) {
+				shouldBeHorizontal = false;
+			} else if (pane.dock_direction == wxAUI_DOCK_BOTTOM || pane.dock_direction == wxAUI_DOCK_TOP) {
+				shouldBeHorizontal = (sz.x > FromDIP(450));
+			}
+		} else {
+			shouldBeHorizontal = (sz.x > sz.y * 1.25f && sz.x > FromDIP(500));
+		}
+	} else {
+		shouldBeHorizontal = (sz.x > sz.y * 1.25f && sz.x > FromDIP(500));
 	}
 
-	if (newHorizontal != m_isHorizontal) {
-		SetHorizontalLayout(newHorizontal);
+	if (shouldBeHorizontal != m_isHorizontal) {
+		SetHorizontalLayout(shouldBeHorizontal);
 	}
 }
 
