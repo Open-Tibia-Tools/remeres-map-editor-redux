@@ -18,11 +18,11 @@ wxAuiPaneInfo MinimapManager::DefaultPaneInfo() {
 		.Name("Minimap")
 		.Caption("Minimap")
 		.Right()
-		.Layer(0)
-		.Position(0)
+		.Layer(1)
+		.Position(1)
 		.CloseButton(true)
 		.MaximizeButton(true)
-		.BestSize(260, 220)
+		.BestSize(358, 240)
 		.MinSize(220, 140);
 }
 

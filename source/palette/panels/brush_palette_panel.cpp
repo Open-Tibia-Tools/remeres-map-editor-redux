@@ -152,7 +152,7 @@ void BrushPalettePanel::EnsureDefaultsLoaded() {
 	s_defaultFilterAll = g_settings.getBoolean(Config::PALETTE_FILTER_ALL);
 		s_defaultIndicatorDogEar = g_settings.getBoolean(Config::PALETTE_INDICATOR_DOGEAR);
 	int loadedSpacing = g_settings.getInteger(Config::PALETTE_GRID_SPACING);
-	s_defaultGridSpacing = (loadedSpacing == 2 || loadedSpacing == 6) ? loadedSpacing : 4;
+	s_defaultGridSpacing = (loadedSpacing == 2 || loadedSpacing == 6) ? loadedSpacing : 2;
 }
 
 void BrushPalettePanel::LoadPaletteFilters() {

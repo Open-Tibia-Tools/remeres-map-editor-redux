@@ -95,6 +95,10 @@ void LayoutManager::LoadPerspective() {
 			palette_list.push_back(tmp);
 		}
 
+		if (palette_list.empty() && g_palettes.palettes.empty()) {
+			g_gui.CreatePalette();
+		}
+
 		// Restoring the perspective runs twice on a normal start (application
 		// init and, later, when the client version is loaded), so the palettes
 		// already registered for these saved panes are reused instead of
@@ -178,7 +182,7 @@ void LayoutManager::LoadPerspective() {
 		if (!layout.empty()) {
 			g_gui.aui_manager->LoadPaneInfo(layout, info);
 		} else {
-			info.Name("ToolOptions").Caption("Brush Options").Right().Layer(0).Position(0).CloseButton(true).MaximizeButton(true).BestSize(230, 300).MinSize(220, 180);
+			info.Name("ToolOptions").Caption("Brush Options").Left().Layer(0).Position(0).CloseButton(true).MaximizeButton(true).BestSize(220, 330).MinSize(220, 180);
 		}
 		if (info.name.empty()) {
 			info.Name("ToolOptions");
@@ -222,9 +226,9 @@ void LayoutManager::LoadPerspective() {
 		if (!layout.empty()) {
 			g_gui.aui_manager->LoadPaneInfo(layout, info);
 			EnsurePaneOnScreen(info);
-			if (info.IsShown()) {
-				g_gui.brush_items_window->SetActiveBrush(g_gui.GetCurrentBrush());
-			}
+		}
+		if (info.IsShown()) {
+			g_gui.brush_items_window->SetActiveBrush(g_gui.GetCurrentBrush());
 		}
 	}
 
