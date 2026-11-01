@@ -4,6 +4,7 @@
 #include "app/preferences/preferences_layout.h"
 #include "app/settings.h"
 #include "rendering/core/floor_visibility_mode.h"
+#include <format>
 #include "ui/gui.h"
 
 EditorPage::EditorPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
@@ -24,6 +25,30 @@ EditorPage::EditorPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Choose whether Show all floors uses Tibia client visibility constraints or renders every floor below the active floor.",
 		floor_visibility_mode_choice
 	);
+
+	auto* ghost_alpha_panel = new wxPanel(modes_section, wxID_ANY);
+	ghost_alpha_panel->SetBackgroundColour(modes_section->GetBackgroundColour());
+	auto* ghost_alpha_sizer = new wxBoxSizer(wxHORIZONTAL);
+	const int initial_alpha_pct = std::clamp(g_settings.getInteger(Config::TRANSPARENT_FLOORS_ALPHA), 0, 100);
+	ghost_alpha_slider = new wxSlider(ghost_alpha_panel, wxID_ANY, initial_alpha_pct, 0, 100);
+	ghost_alpha_sizer->Add(ghost_alpha_slider, wxSizerFlags(1).Expand().Border(wxRIGHT, FromDIP(10)));
+	ghost_alpha_value_label = PreferencesLayout::CreateBodyText(ghost_alpha_panel, std::format("{}%", initial_alpha_pct), true);
+	ghost_alpha_sizer->Add(ghost_alpha_value_label, wxSizerFlags().CenterVertical());
+	ghost_alpha_panel->SetSizer(ghost_alpha_sizer);
+	PreferencesLayout::AddControlRow(
+		modes_section,
+		"Ghost floor transparency",
+		"Adjust opacity of higher floors rendered in Ghost mode (Ctrl+L).",
+		ghost_alpha_panel,
+		true
+	);
+
+	ghost_alpha_slider->Bind(wxEVT_SLIDER, [this](wxCommandEvent& event) {
+		if (ghost_alpha_value_label) {
+			ghost_alpha_value_label->SetLabel(std::format("{}%", event.GetInt()));
+		}
+	});
+
 	page_sizer->Add(modes_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(10)));
 
 	auto* history_section = new PreferencesSectionPanel(
@@ -125,8 +150,12 @@ EditorPage::EditorPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 
 void EditorPage::Apply() {
 	const int previous_floor_visibility_mode = g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE);
+	const int previous_ghost_alpha = g_settings.getInteger(Config::TRANSPARENT_FLOORS_ALPHA);
 	const int selected_floor_visibility_mode = floor_visibility_mode_choice ? floor_visibility_mode_choice->GetSelection() : 0;
 	g_settings.setInteger(Config::FLOOR_VISIBILITY_MODE, static_cast<int>(SanitizeFloorVisibilityMode(selected_floor_visibility_mode)));
+	if (ghost_alpha_slider) {
+		g_settings.setInteger(Config::TRANSPARENT_FLOORS_ALPHA, ghost_alpha_slider->GetValue());
+	}
 	g_settings.setInteger(Config::GROUP_ACTIONS, group_actions_chkbox->GetValue());
 	g_settings.setInteger(Config::WARN_FOR_DUPLICATE_ID, duplicate_id_warn_chkbox->GetValue());
 	g_settings.setInteger(Config::SHOW_MISSING_ITEMS_WARNING, missing_items_warn_chkbox->GetValue());
@@ -139,8 +168,10 @@ void EditorPage::Apply() {
 	g_settings.setInteger(Config::MERGE_MOVE, merge_move_chkbox->GetValue());
 	g_settings.setInteger(Config::MERGE_PASTE, merge_paste_chkbox->GetValue());
 
-	if (previous_floor_visibility_mode != g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE)) {
+	if (previous_floor_visibility_mode != g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE) ||
+		previous_ghost_alpha != g_settings.getInteger(Config::TRANSPARENT_FLOORS_ALPHA)) {
 		g_gui.RefreshView();
 		g_gui.UpdateMinimap(true);
+		g_gui.UpdateMenubar();
 	}
 }

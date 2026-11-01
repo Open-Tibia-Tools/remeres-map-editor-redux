@@ -3,6 +3,8 @@
 
 #include <wx/checkbox.h>
 #include <wx/choice.h>
+#include <wx/slider.h>
+#include <wx/stattext.h>
 
 #include "preferences_page.h"
 
@@ -13,6 +15,8 @@ public:
 
 private:
 	wxChoice* floor_visibility_mode_choice = nullptr;
+	wxSlider* ghost_alpha_slider = nullptr;
+	wxStaticText* ghost_alpha_value_label = nullptr;
 	wxCheckBox* group_actions_chkbox = nullptr;
 	wxCheckBox* duplicate_id_warn_chkbox = nullptr;
 	wxCheckBox* missing_items_warn_chkbox = nullptr;
