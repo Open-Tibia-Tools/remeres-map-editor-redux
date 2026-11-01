@@ -106,6 +106,11 @@ public:
 	CustomButton(wxWindow* parent, wxWindowID id, const wxString& label, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0) :
 		wxControl(parent, id, pos, size, style | wxBORDER_NONE), m_label(label) {
 		SetBackgroundStyle(wxBG_STYLE_PAINT);
+		Bind(wxEVT_PAINT, &CustomButton::OnPaint, this);
+		Bind(wxEVT_ENTER_WINDOW, &CustomButton::OnEnter, this);
+		Bind(wxEVT_LEAVE_WINDOW, &CustomButton::OnLeave, this);
+		Bind(wxEVT_LEFT_DOWN, &CustomButton::OnDown, this);
+		Bind(wxEVT_LEFT_UP, &CustomButton::OnUp, this);
 	}
 
 	void SetHoverColors(const wxColour& bg, const wxColour& fg) {
@@ -221,16 +226,7 @@ private:
 		}
 	}
 
-	DECLARE_EVENT_TABLE()
 };
-
-BEGIN_EVENT_TABLE(CustomButton, wxControl)
-EVT_PAINT(CustomButton::OnPaint)
-EVT_ENTER_WINDOW(CustomButton::OnEnter)
-EVT_LEAVE_WINDOW(CustomButton::OnLeave)
-EVT_LEFT_DOWN(CustomButton::OnDown)
-EVT_LEFT_UP(CustomButton::OnUp)
-END_EVENT_TABLE()
 
 // Specialized Canvas for Lua Dialogs
 // Specialized Canvas for Lua Dialogs
@@ -438,32 +434,14 @@ private:
 	int client_w = ClientMapWidth;
 	int client_h = ClientMapHeight;
 
-	DECLARE_EVENT_TABLE()
 };
-
-BEGIN_EVENT_TABLE(MapPreviewCanvas, MapCanvas)
-EVT_MOTION(MapPreviewCanvas::OnMouseMove)
-EVT_MOUSEWHEEL(MapPreviewCanvas::OnWheel)
-EVT_ENTER_WINDOW(MapPreviewCanvas::OnGainMouse)
-EVT_LEAVE_WINDOW(MapPreviewCanvas::OnLoseMouse)
-EVT_LEFT_DOWN(MapPreviewCanvas::OnMouseLeftClick)
-EVT_LEFT_UP(MapPreviewCanvas::OnMouseLeftRelease)
-EVT_RIGHT_DOWN(MapPreviewCanvas::OnMouseRightClick)
-EVT_RIGHT_UP(MapPreviewCanvas::OnMouseRightRelease)
-EVT_MIDDLE_DOWN(MapPreviewCanvas::OnMouseCenterClick)
-EVT_MIDDLE_UP(MapPreviewCanvas::OnMouseCenterRelease)
-EVT_PAINT(MapCanvas::OnPaint)
-END_EVENT_TABLE()
-
-BEGIN_EVENT_TABLE(LuaDialog, wxDialog)
-EVT_CLOSE(LuaDialog::OnClose)
-END_EVENT_TABLE()
 
 LuaDialog::LuaDialog(const std::string& title, sol::this_state ts) :
 	wxDialog(g_gui.root, wxID_ANY, wxString(title), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
 	lua(ts) {
 	SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 	SetForegroundColour(Theme::Get(Theme::Role::Text));
+	Bind(wxEVT_CLOSE_WINDOW, &LuaDialog::OnClose, this);
 	createLayout();
 }
 
@@ -474,6 +452,7 @@ LuaDialog::LuaDialog(sol::table options, sol::this_state ts) :
 
 	SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 	SetForegroundColour(Theme::Get(Theme::Role::Text));
+	Bind(wxEVT_CLOSE_WINDOW, &LuaDialog::OnClose, this);
 
 	reqWidth = options.get_or(std::string("width"), -1);
 	reqHeight = options.get_or(std::string("height"), -1);
