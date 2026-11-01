@@ -70,6 +70,7 @@ private:
 	void OnAspectToggled(wxCommandEvent& event);
 	void OnPreviewBorderToggled(wxCommandEvent& event);
 	void OnDrawOnFloorBelowToggled(wxCommandEvent& event);
+	void OnDrawOnFloorBelowOffsetToggled(wxCommandEvent& event);
 	void OnLockDoorsToggled(wxCommandEvent& event);
 	void OnThicknessChanged(wxCommandEvent& event);
 	void OnRandomizeDoodadsToggled(wxCommandEvent& event);
@@ -99,7 +100,9 @@ private:
 	wxBitmapToggleButton* exact_button = nullptr;
 	wxBitmapToggleButton* aspect_button = nullptr;
 	wxCheckBox* preview_border_checkbox = nullptr;
+	wxPanel* draw_below_panel = nullptr;
 	wxCheckBox* draw_on_floor_below_checkbox = nullptr;
+	wxToggleButton* draw_on_floor_below_offset_button = nullptr;
 	wxCheckBox* lock_doors_checkbox = nullptr;
 	wxCheckBox* randomize_doodads_checkbox = nullptr;
 	wxStaticText* thickness_label = nullptr;

@@ -389,6 +389,7 @@ void Settings::IO(IOMode mode) {
 	Bool(SHOW_PREVIEW, true);
 	Bool(SHOW_AUTOBORDER_PREVIEW, false);
 	Bool(DRAW_ON_FLOOR_BELOW, false);
+	Bool(DRAW_ON_FLOOR_BELOW_OFFSET, false);
 	Bool(SHOW_WALL_HOOKS, false);
 	Bool(SHOW_TOWNS, false);
 	Bool(ALWAYS_SHOW_ZONES, true);

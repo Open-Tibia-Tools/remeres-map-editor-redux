@@ -687,19 +687,15 @@ void DrawOperations::punchGroundToFloorBelow(Editor& editor, const PositionVecto
 	}
 	GroundBrush* ground_brush = brush->as<GroundBrush>();
 
-	// 1) Paint ground on current floor in replace mode
-	PositionVector border_here = tilestoborder;
-	draw(editor, tilestodraw, border_here, true, true);
+	const bool use_offset = g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW_OFFSET);
+	const int offset_x = use_offset ? 1 : 0;
+	const int offset_y = use_offset ? 1 : 0;
 
-	// 2) Mirror the drawn footprint to the floor below (z + 1)
 	PositionVector below_draw;
+	below_draw.reserve(tilestodraw.size());
 	for (const auto& pos : tilestodraw) {
-		if (pos.z >= MAP_MAX_LAYER) {
-			continue;
-		}
-		Tile* tile = editor.map.getTile(pos);
-		if (tile && tile->getGroundBrush() == ground_brush) {
-			below_draw.emplace_back(pos.x, pos.y, pos.z + 1);
+		if (pos.z < MAP_MAX_LAYER) {
+			below_draw.emplace_back(pos.x + offset_x, pos.y + offset_y, pos.z + 1);
 		}
 	}
 	if (below_draw.empty()) {
@@ -710,16 +706,130 @@ void DrawOperations::punchGroundToFloorBelow(Editor& editor, const PositionVecto
 	below_border.reserve(tilestoborder.size());
 	for (const auto& pos : tilestoborder) {
 		if (pos.z < MAP_MAX_LAYER) {
-			below_border.emplace_back(pos.x, pos.y, pos.z + 1);
+			below_border.emplace_back(pos.x + offset_x, pos.y + offset_y, pos.z + 1);
 		}
 	}
-	draw(editor, below_draw, below_border, false, true);
 
-	// 3) Punch the hole on the current floor (z)
-	PositionVector hole;
-	hole.reserve(below_draw.size());
-	for (const auto& pos : below_draw) {
-		hole.emplace_back(pos.x, pos.y, pos.z - 1);
+	std::unique_ptr<BatchAction> batch = editor.actionQueue->createBatch(ACTION_DRAW);
+	std::unique_ptr<Action> action = editor.actionQueue->createAction(batch.get());
+
+	// 1. Draw ground brush on floor below (z + 1)
+	for (const auto& drawPos : below_draw) {
+		auto* location = editor.map.createTileL(drawPos);
+		auto* tile = location->get();
+		if (tile) {
+			std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
+			if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
+				TileOperations::cleanBorders(new_tile.get());
+			}
+			ground_brush->draw(&editor.map, new_tile.get(), nullptr);
+			action->addChange(std::make_unique<Change>(std::move(new_tile)));
+		} else {
+			std::unique_ptr<Tile> new_tile(editor.map.allocator(location));
+			ground_brush->draw(&editor.map, new_tile.get(), nullptr);
+			action->addChange(std::make_unique<Change>(std::move(new_tile)));
+		}
 	}
-	eraseGroundWithBorders(editor, hole);
+
+	// 2. Erase ground on current floor (z)
+	PositionVector erased_on_current_floor;
+	for (const auto& pos : tilestodraw) {
+		Tile* tile = editor.map.getTile(pos);
+		if (!tile || !tile->hasGround()) {
+			continue;
+		}
+		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
+		TileOperations::cleanBorders(new_tile.get());
+		new_tile->ground = nullptr;
+		action->addChange(std::make_unique<Change>(std::move(new_tile)));
+		erased_on_current_floor.push_back(pos);
+	}
+
+	// Commit draw/erase changes so borderizing queries updated map state
+	batch->addAndCommitAction(std::move(action));
+
+	// 3. Borderize both floors
+	if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
+		action = editor.actionQueue->createAction(batch.get());
+
+		// Borders on floor below (z + 1)
+		for (const auto& borderPos : below_border) {
+			auto* location = editor.map.createTileL(borderPos);
+			auto* tile = location->get();
+			if (tile) {
+				std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
+				TileOperations::borderize(new_tile.get(), &editor.map);
+				action->addChange(std::make_unique<Change>(std::move(new_tile)));
+			} else {
+				std::unique_ptr<Tile> new_tile(editor.map.allocator(location));
+				TileOperations::borderize(new_tile.get(), &editor.map);
+				if (!new_tile->empty()) {
+					action->addChange(std::make_unique<Change>(std::move(new_tile)));
+				}
+			}
+		}
+
+		// Borders around hole on current floor (z)
+		std::unordered_set<int64_t> border_seen;
+		const auto borderKey = [](int x, int y, int z) -> int64_t {
+			return (static_cast<int64_t>(z & 0xFF) << 48)
+				| (static_cast<int64_t>(x & 0xFFFFFF) << 24)
+				| (static_cast<int64_t>(y & 0xFFFFFF));
+		};
+
+		static constexpr std::array<std::pair<int, int>, 9> offsets = {{
+			{ -1, -1 }, { 0, -1 }, { 1, -1 },
+			{ -1,  0 }, { 0,  0 }, { 1,  0 },
+			{ -1,  1 }, { 0,  1 }, { 1,  1 }
+		}};
+
+		for (const auto& pos : erased_on_current_floor) {
+			for (const auto& [dx, dy] : offsets) {
+				const int nx = pos.x + dx;
+				const int ny = pos.y + dy;
+				const int nz = pos.z;
+				const int64_t key = borderKey(nx, ny, nz);
+				if (!border_seen.insert(key).second) {
+					continue;
+				}
+				auto* location = editor.map.createTileL(Position(nx, ny, nz));
+				auto* t = location->get();
+				if (t) {
+					std::unique_ptr<Tile> new_t = TileOperations::deepCopy(t, editor.map);
+					TileOperations::borderize(new_t.get(), &editor.map);
+					action->addChange(std::make_unique<Change>(std::move(new_t)));
+				} else {
+					std::unique_ptr<Tile> new_t(editor.map.allocator(location));
+					TileOperations::borderize(new_t.get(), &editor.map);
+					if (!new_t->empty()) {
+						action->addChange(std::make_unique<Change>(std::move(new_t)));
+					}
+				}
+			}
+		}
+
+		for (const auto& pos : tilestoborder) {
+			const int64_t key = borderKey(pos.x, pos.y, pos.z);
+			if (!border_seen.insert(key).second) {
+				continue;
+			}
+			auto* location = editor.map.createTileL(Position(pos.x, pos.y, pos.z));
+			auto* t = location->get();
+			if (t) {
+				std::unique_ptr<Tile> new_t = TileOperations::deepCopy(t, editor.map);
+				TileOperations::borderize(new_t.get(), &editor.map);
+				action->addChange(std::make_unique<Change>(std::move(new_t)));
+			} else {
+				std::unique_ptr<Tile> new_t(editor.map.allocator(location));
+				TileOperations::borderize(new_t.get(), &editor.map);
+				if (!new_t->empty()) {
+					action->addChange(std::make_unique<Change>(std::move(new_t)));
+				}
+			}
+		}
+
+		batch->addAndCommitAction(std::move(action));
+	}
+
+	editor.addBatch(std::move(batch), 2);
 }

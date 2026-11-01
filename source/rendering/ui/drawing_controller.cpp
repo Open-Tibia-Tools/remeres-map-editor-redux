@@ -101,11 +101,8 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 				tilestoborder.push_back(Position(mouse_map_pos.x, mouse_map_pos.y + 1, mouse_map_pos.z));
 				tilestoborder.push_back(Position(mouse_map_pos.x + 1, mouse_map_pos.y, mouse_map_pos.z));
 
-				const bool draw_below = !ctrl_down && brush->is<GroundBrush>() && g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW);
 				if (ctrl_down) {
 					editor.undraw(tilestodraw, tilestoborder, alt_down);
-				} else if (draw_below) {
-					editor.drawGroundHoleToFloorBelow(tilestodraw, tilestoborder);
 				} else {
 					editor.draw(tilestodraw, tilestoborder, alt_down);
 				}
@@ -140,7 +137,7 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 					}
 				}
 			} else {
-				if (brush->is<GroundBrush>() && (alt_down || draw_below)) {
+				if (brush->is<GroundBrush>() && alt_down) {
 					replace_dragging = true;
 					Tile* draw_tile = editor.map.getTile(mouse_map_pos);
 					if (draw_tile) {
