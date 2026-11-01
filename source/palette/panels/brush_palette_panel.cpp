@@ -39,7 +39,7 @@ public:
 	wxRect GetPageRect() const override {
 		wxRect rectPage(wxPoint(0, 0), GetClientSize());
 		if (m_horizontal) {
-			const int leftWidth = FromDIP(240);
+			const int leftWidth = FromDIP(220);
 			rectPage.x = leftWidth + static_cast<int>(GetInternalBorder());
 			rectPage.y = 0;
 			rectPage.width = std::max(0, rectPage.width - rectPage.x);
@@ -62,7 +62,7 @@ public:
 	wxSize CalcSizeFromPage(const wxSize& sizePage) const override {
 		if (m_horizontal) {
 			wxSize size = sizePage;
-			size.x += FromDIP(240) + static_cast<int>(GetInternalBorder());
+			size.x += FromDIP(220) + static_cast<int>(GetInternalBorder());
 			return size;
 		}
 		if (!GetChoiceCtrl() || !GetChoiceCtrl()->IsShown()) {
@@ -79,12 +79,20 @@ public:
 		return size;
 	}
 
-	void OnSize(wxSizeEvent& event) {
+	bool Layout() override {
 		if (m_horizontal) {
+			const int leftWidth = FromDIP(220);
 			if (auto* ctrlSizer = GetControlSizer()) {
-				const int leftWidth = FromDIP(240);
 				ctrlSizer->SetDimension(0, 0, leftWidth, GetClientSize().y);
 				ctrlSizer->Layout();
+			}
+			if (auto* choice = GetChoiceCtrl()) {
+				choice->SetMaxSize(wxSize(leftWidth, -1));
+#ifdef __WXMSW__
+				if (choice->GetHWND()) {
+					::SendMessage(choice->GetHWND(), CB_SETDROPPEDWIDTH, leftWidth, 0);
+				}
+#endif
 			}
 			const int sel = GetSelection();
 			if (sel != wxNOT_FOUND && static_cast<size_t>(sel) < GetPageCount()) {
@@ -93,6 +101,14 @@ public:
 					page->Layout();
 				}
 			}
+			return true;
+		}
+		return wxChoicebook::Layout();
+	}
+
+	void OnSize(wxSizeEvent& event) {
+		if (m_horizontal) {
+			Layout();
 			return;
 		}
 		event.Skip();
@@ -341,6 +357,8 @@ void BrushPalettePanel::SetHorizontalLayout(bool horizontal) {
 		}
 	}
 
+	wxChoice* choice = choicebook ? choicebook->GetChoiceCtrl() : nullptr;
+
 	if (horizontal) {
 		if (ts_sizer) {
 			ts_sizer->Detach(choicebook);
@@ -348,12 +366,51 @@ void BrushPalettePanel::SetHorizontalLayout(bool horizontal) {
 			ts_sizer->GetStaticBox()->Show(false);
 		}
 		GetSizer()->Add(choicebook, wxSizerFlags(1).Expand());
+		const int leftWidth = FromDIP(220);
+		if (choice) {
+			choice->SetMaxSize(wxSize(leftWidth, -1));
+#ifdef __WXMSW__
+			if (choice->GetHWND()) {
+				::SendMessage(choice->GetHWND(), CB_SETDROPPEDWIDTH, leftWidth, 0);
+			}
+#endif
+		}
+		if (m_attachedPaletteChoice) {
+			m_attachedPaletteChoice->SetMaxSize(wxSize(leftWidth, -1));
+#ifdef __WXMSW__
+			if (m_attachedPaletteChoice->GetHWND()) {
+				::SendMessage(m_attachedPaletteChoice->GetHWND(), CB_SETDROPPEDWIDTH, leftWidth, 0);
+			}
+#endif
+		}
+		if (gridToolbar) {
+			gridToolbar->SetMaxSize(wxSize(leftWidth, -1));
+		}
 	} else {
 		GetSizer()->Detach(choicebook);
 		if (ts_sizer) {
 			ts_sizer->GetStaticBox()->Show(true);
 			ts_sizer->Add(choicebook, wxSizerFlags(1).Expand());
 			GetSizer()->Add(ts_sizer, wxSizerFlags(1).Expand());
+		}
+		if (choice) {
+			choice->SetMaxSize(wxDefaultSize);
+#ifdef __WXMSW__
+			if (choice->GetHWND()) {
+				::SendMessage(choice->GetHWND(), CB_SETDROPPEDWIDTH, 0, 0);
+			}
+#endif
+		}
+		if (m_attachedPaletteChoice) {
+			m_attachedPaletteChoice->SetMaxSize(wxDefaultSize);
+#ifdef __WXMSW__
+			if (m_attachedPaletteChoice->GetHWND()) {
+				::SendMessage(m_attachedPaletteChoice->GetHWND(), CB_SETDROPPEDWIDTH, 0, 0);
+			}
+#endif
+		}
+		if (gridToolbar) {
+			gridToolbar->SetMaxSize(wxDefaultSize);
 		}
 	}
 
@@ -372,6 +429,15 @@ void BrushPalettePanel::AttachPaletteChoice(wxChoice* paletteChoice) {
 		ctrlSizer->Insert(0, m_attachedPaletteChoice, wxSizerFlags().Expand().Border(wxBOTTOM, 2));
 		ctrlSizer->Layout();
 	}
+	if (m_isHorizontal) {
+		const int leftWidth = FromDIP(220);
+		m_attachedPaletteChoice->SetMaxSize(wxSize(leftWidth, -1));
+#ifdef __WXMSW__
+		if (m_attachedPaletteChoice->GetHWND()) {
+			::SendMessage(m_attachedPaletteChoice->GetHWND(), CB_SETDROPPEDWIDTH, leftWidth, 0);
+		}
+#endif
+	}
 	choicebook->Layout();
 }
 
@@ -379,6 +445,12 @@ void BrushPalettePanel::DetachPaletteChoice() {
 	if (!m_attachedPaletteChoice || !choicebook) {
 		return;
 	}
+	m_attachedPaletteChoice->SetMaxSize(wxDefaultSize);
+#ifdef __WXMSW__
+	if (m_attachedPaletteChoice->GetHWND()) {
+		::SendMessage(m_attachedPaletteChoice->GetHWND(), CB_SETDROPPEDWIDTH, 0, 0);
+	}
+#endif
 	if (auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(choicebook->GetControlSizer())) {
 		ctrlSizer->Detach(m_attachedPaletteChoice);
 		ctrlSizer->Layout();

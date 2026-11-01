@@ -60,7 +60,7 @@ protected:
 
 BrowseTileListBox::BrowseTileListBox(wxWindow* parent, wxWindowID id, Tile* tile) :
 	NanoVGListBox(parent, id, wxLB_SINGLE), edit_tile(tile) {
-	SetMinSize(FromDIP(wxSize(200, 180)));
+	SetMinSize(FromDIP(wxSize(220, 180)));
 	UpdateItems();
 }
 

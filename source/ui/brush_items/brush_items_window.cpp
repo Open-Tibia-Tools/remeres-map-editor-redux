@@ -152,7 +152,7 @@ void BrushItemsGrid::ApplyFilterAndSort() {
 
 BrushBottomCardWidget::BrushBottomCardWidget(wxWindow* parent) :
 	NanoVGCanvas(parent, wxID_ANY, wxBORDER_NONE) {
-	SetMinSize(FromDIP(wxSize(-1, 42)));
+	SetMinSize(FromDIP(wxSize(220, 42)));
 	Bind(wxEVT_LEFT_DOWN, &BrushBottomCardWidget::OnMouseDown, this);
 	Bind(wxEVT_ENTER_WINDOW, &BrushBottomCardWidget::OnMouseEnter, this);
 	Bind(wxEVT_LEAVE_WINDOW, &BrushBottomCardWidget::OnMouseLeave, this);

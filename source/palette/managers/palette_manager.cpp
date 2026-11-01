@@ -186,7 +186,7 @@ PaletteWindow* PaletteManager::CreatePalette() {
 		name = wxstr(std::format("Palette_{}", ++palette_creation_counter));
 	} while (g_gui.aui_manager->GetPane(name).IsOk());
 
-	g_gui.aui_manager->AddPane(palette, wxAuiPaneInfo().Name(name).Caption("Palette").TopDockable(true).BottomDockable(true));
+	g_gui.aui_manager->AddPane(palette, wxAuiPaneInfo().Name(name).Caption("Palette").TopDockable(true).BottomDockable(true).MinSize(220, 100));
 	g_gui.aui_manager->Update();
 
 	palettes.push_front(palette);

@@ -140,6 +140,7 @@ namespace IngamePreview {
 		canvas->SetSpeed(current_speed);
 
 		SetSizer(main_sizer);
+		SetMinSize(FromDIP(wxSize(220, 150)));
 
 		update_timer.Start(50);
 	}

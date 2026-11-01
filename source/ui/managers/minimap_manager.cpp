@@ -22,14 +22,16 @@ wxAuiPaneInfo MinimapManager::DefaultPaneInfo() {
 		.Position(0)
 		.CloseButton(true)
 		.MaximizeButton(true)
-		.BestSize(260, 220);
+		.BestSize(260, 220)
+		.MinSize(220, 140);
 }
 
 void MinimapManager::NormalizePaneInfo(wxAuiPaneInfo& info) {
 	info.Name("Minimap")
 		.Caption("Minimap")
 		.CloseButton(true)
-		.MaximizeButton(true);
+		.MaximizeButton(true)
+		.MinSize(220, 140);
 }
 
 MinimapManager::MinimapManager() :

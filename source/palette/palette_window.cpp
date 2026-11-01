@@ -61,7 +61,7 @@ public:
 		return wxChoicebook::GetPageRect();
 	}
 
-	void OnSize(wxSizeEvent& event) {
+	bool Layout() override {
 		if (m_horizontal) {
 			const int sel = GetSelection();
 			if (sel != wxNOT_FOUND && static_cast<size_t>(sel) < GetPageCount()) {
@@ -70,6 +70,14 @@ public:
 					page->Layout();
 				}
 			}
+			return true;
+		}
+		return wxChoicebook::Layout();
+	}
+
+	void OnSize(wxSizeEvent& event) {
+		if (m_horizontal) {
+			Layout();
 			return;
 		}
 		event.Skip();
@@ -85,7 +93,7 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 	choicebook(nullptr),
 	house_palette(nullptr),
 	waypoint_palette(nullptr) {
-	SetMinSize(FromDIP(wxSize(200, 100)));
+	SetMinSize(FromDIP(wxSize(220, 100)));
 
 	choicebook = new MainPaletteChoicebook(this, PALETTE_CHOICEBOOK, wxDefaultPosition, FromDIP(wxSize(230, 250)));
 	m_paletteChoice = choicebook->GetChoiceCtrl();
@@ -491,6 +499,15 @@ void PaletteWindow::SetHorizontalLayout(bool horizontal) {
 		if (auto* currentBrushPanel = dynamic_cast<BrushPalettePanel*>(choicebook->GetCurrentPage())) {
 			currentBrushPanel->AttachPaletteChoice(m_paletteChoice);
 		}
+		if (m_paletteChoice) {
+			const int leftWidth = FromDIP(220);
+			m_paletteChoice->SetMaxSize(wxSize(leftWidth, -1));
+#ifdef __WXMSW__
+			if (m_paletteChoice->GetHWND()) {
+				::SendMessage(m_paletteChoice->GetHWND(), CB_SETDROPPEDWIDTH, leftWidth, 0);
+			}
+#endif
+		}
 	} else {
 		for (auto* page : palette_pages) {
 			if (auto* brushPalette = dynamic_cast<BrushPalettePanel*>(page)) {
@@ -499,6 +516,12 @@ void PaletteWindow::SetHorizontalLayout(bool horizontal) {
 		}
 		if (m_paletteChoice) {
 			m_paletteChoice->Reparent(choicebook);
+			m_paletteChoice->SetMaxSize(wxDefaultSize);
+#ifdef __WXMSW__
+			if (m_paletteChoice->GetHWND()) {
+				::SendMessage(m_paletteChoice->GetHWND(), CB_SETDROPPEDWIDTH, 0, 0);
+			}
+#endif
 		}
 		if (auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(choicebook->GetControlSizer())) {
 			ctrlSizer->Add(m_paletteChoice, wxSizerFlags(1).Expand());

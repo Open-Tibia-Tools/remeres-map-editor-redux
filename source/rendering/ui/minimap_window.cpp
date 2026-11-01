@@ -112,6 +112,7 @@ MinimapWindow::MinimapWindow(wxWindow* parent) :
 	root_sizer->Add(header_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, pad_2));
 	root_sizer->Add(canvas_, wxSizerFlags(1).Expand().Border(wxALL, pad_2));
 	SetSizer(root_sizer);
+	SetMinSize(FromDIP(wxSize(220, 140)));
 
 	Bind(wxEVT_CLOSE_WINDOW, &MinimapWindow::OnClose, this);
 	Bind(wxEVT_SIZE, &MinimapWindow::OnSize, this);

@@ -34,7 +34,7 @@ namespace IngamePreview {
 			.Position(1)
 			.Dockable(true)
 			.FloatingSize(g_gui.root->FromDIP(400), g_gui.root->FromDIP(300))
-			.MinSize(g_gui.root->FromDIP(200), g_gui.root->FromDIP(150))
+			.MinSize(g_gui.root->FromDIP(220), g_gui.root->FromDIP(150))
 			.CloseButton(true)
 			.MaximizeButton(true);
 	}
@@ -44,7 +44,8 @@ namespace IngamePreview {
 			.Caption("In-game Preview")
 			.Dockable(true)
 			.CloseButton(true)
-			.MaximizeButton(true);
+			.MaximizeButton(true)
+			.MinSize(g_gui.root->FromDIP(220), g_gui.root->FromDIP(150));
 	}
 
 	void IngamePreviewManager::Create(bool updateManager) {
