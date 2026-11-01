@@ -46,7 +46,7 @@ WelcomeDialog::WelcomeDialog(const wxString& title_text, const wxString& version
 	wxDialog(nullptr, wxID_ANY, title_text, wxDefaultPosition, size, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER) {
 	SetBackgroundColour(Theme::Get(Theme::Role::PanelBackground));
 	SetForegroundColour(Theme::Get(Theme::Role::Text));
-	SetMinSize(FROM_DIP(this, wxSize(1180, 720)));
+	SetMinSize(FromDIP(wxSize(1180, 720)));
 
 	for (const auto& recent_file : recent_files) {
 		m_recent_maps.push_back({ recent_file, FormatModifiedLabel(recent_file), false });

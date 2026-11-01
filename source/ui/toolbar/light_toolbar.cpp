@@ -16,7 +16,7 @@
 const wxString LightToolBar::PANE_NAME = "light_toolbar";
 
 LightToolBar::LightToolBar(wxWindow* parent) {
-	wxSize icon_size = FROM_DIP(parent, wxSize(16, 16));
+	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
 
 	toolbar = newd wxAuiToolBar(parent, TOOLBAR_LIGHT, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_HORZ_TEXT);
 	toolbar->SetToolBitmapSize(icon_size);

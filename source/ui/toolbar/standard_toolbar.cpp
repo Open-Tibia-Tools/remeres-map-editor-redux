@@ -15,7 +15,7 @@
 const wxString StandardToolBar::PANE_NAME = "standard_toolbar";
 
 StandardToolBar::StandardToolBar(wxWindow* parent) {
-	wxSize icon_size = FROM_DIP(parent, wxSize(16, 16));
+	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
 	wxBitmap new_bitmap = IMAGE_MANAGER.GetBitmap(ICON_NEW, icon_size);
 	wxBitmap open_bitmap = IMAGE_MANAGER.GetBitmap(ICON_OPEN, icon_size);
 	wxBitmap save_bitmap = IMAGE_MANAGER.GetBitmap(ICON_SAVE, icon_size);

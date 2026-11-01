@@ -174,7 +174,7 @@ void ContainerPropertyPanel::OnEditItem(wxCommandEvent& WXUNUSED(event)) {
 	}
 
 	Item* new_sub_item = new_container->getItem(sub_item_index);
-	wxPoint newDialogAt = GetPosition() + FROM_DIP(this, wxPoint(20, 20));
+	wxPoint newDialogAt = GetPosition() + FromDIP(wxPoint(20, 20));
 
 	wxDialog* d = newd ItemPropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
 

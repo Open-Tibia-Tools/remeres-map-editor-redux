@@ -13,19 +13,19 @@
 const wxString PositionToolBar::PANE_NAME = "position_toolbar";
 
 PositionToolBar::PositionToolBar(wxWindow* parent) {
-	wxSize icon_size = FROM_DIP(parent, wxSize(16, 16));
+	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
 	wxBitmap go_bitmap = IMAGE_MANAGER.GetBitmap(ICON_LOCATION_ARROW, icon_size);
 
 	toolbar = newd wxAuiToolBar(parent, TOOLBAR_POSITION, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_HORZ_TEXT);
 	toolbar->SetToolBitmapSize(icon_size);
 
-	x_control = newd NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_WIDTH, wxTE_PROCESS_ENTER, "X", wxDefaultPosition, FROM_DIP(parent, wxSize(60, 20)));
+	x_control = newd NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_WIDTH, wxTE_PROCESS_ENTER, "X", wxDefaultPosition, parent->FromDIP(wxSize(60, 20)));
 	x_control->SetToolTip("X Coordinate");
 
-	y_control = newd NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_HEIGHT, wxTE_PROCESS_ENTER, "Y", wxDefaultPosition, FROM_DIP(parent, wxSize(60, 20)));
+	y_control = newd NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_HEIGHT, wxTE_PROCESS_ENTER, "Y", wxDefaultPosition, parent->FromDIP(wxSize(60, 20)));
 	y_control->SetToolTip("Y Coordinate");
 
-	z_control = newd NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_LAYER, wxTE_PROCESS_ENTER, "Z", wxDefaultPosition, FROM_DIP(parent, wxSize(35, 20)));
+	z_control = newd NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_LAYER, wxTE_PROCESS_ENTER, "Z", wxDefaultPosition, parent->FromDIP(wxSize(35, 20)));
 	z_control->SetToolTip("Z Coordinate");
 
 	go_button = newd wxButton(toolbar, TOOLBAR_POSITION_GO, wxEmptyString, wxDefaultPosition, parent->FromDIP(wxSize(22, 20)));

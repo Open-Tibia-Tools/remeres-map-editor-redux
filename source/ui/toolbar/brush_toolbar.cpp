@@ -16,7 +16,7 @@
 const wxString BrushToolBar::PANE_NAME = "brush_toolbar";
 
 BrushToolBar::BrushToolBar(wxWindow* parent) {
-	wxSize icon_size = FROM_DIP(parent, wxSize(16, 16));
+	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
 
 	wxBitmap border_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_OPTIONAL_BORDER_SMALL, icon_size);
 	wxBitmap eraser_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_ERASER_SMALL, icon_size);

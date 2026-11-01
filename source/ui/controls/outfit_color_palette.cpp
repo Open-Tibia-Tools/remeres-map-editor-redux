@@ -36,8 +36,8 @@ void OutfitColorPalette::SetSelectedColor(int index) {
 }
 
 void OutfitColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
-	int cellSize = FROM_DIP(this, CELL_SIZE);
-	int padding = FROM_DIP(this, PADDING);
+	int cellSize = FromDIP(CELL_SIZE);
+	int padding = FromDIP(PADDING);
 
 	for (int i = 0; i < static_cast<int>(TemplateOutfitLookupTableSize); ++i) {
 		int row = i / COLS;
@@ -56,7 +56,7 @@ void OutfitColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 
 		// Highlight
 		if (i == m_selectedIndex) {
-			float strokeWidth = std::max(1.0f, static_cast<float>(FROM_DIP(this, 2)));
+			float strokeWidth = std::max(1.0f, static_cast<float>(FromDIP(2)));
 			float offset = strokeWidth / 2.0f + 0.5f; // Push out slightly
 
 			nvgBeginPath(vg);
@@ -65,7 +65,7 @@ void OutfitColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 			nvgStrokeWidth(vg, strokeWidth);
 			nvgStroke(vg);
 		} else if (i == m_hoverIndex) {
-			float strokeWidth = std::max(1.0f, static_cast<float>(FROM_DIP(this, 1)));
+			float strokeWidth = std::max(1.0f, static_cast<float>(FromDIP(1)));
 			float offset = strokeWidth / 2.0f;
 
 			nvgBeginPath(vg);
@@ -78,14 +78,14 @@ void OutfitColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 }
 
 wxSize OutfitColorPalette::DoGetBestClientSize() const {
-	int cellSize = FROM_DIP(this, CELL_SIZE);
-	int padding = FROM_DIP(this, PADDING);
+	int cellSize = FromDIP(CELL_SIZE);
+	int padding = FromDIP(PADDING);
 	return wxSize(COLS * (cellSize + padding) + padding, ROWS * (cellSize + padding) + padding);
 }
 
 int OutfitColorPalette::HitTest(int x, int y) const {
-	int cellSize = FROM_DIP(this, CELL_SIZE);
-	int padding = FROM_DIP(this, PADDING);
+	int cellSize = FromDIP(CELL_SIZE);
+	int padding = FromDIP(PADDING);
 
 	if (x < padding || y < padding) {
 		return -1;
@@ -216,8 +216,8 @@ void LightColorPalette::SetSelectedColor(int index) {
 }
 
 void LightColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
-	const float cell_size = static_cast<float>(FROM_DIP(this, CELL_SIZE));
-	const float padding = static_cast<float>(FROM_DIP(this, PADDING));
+	const float cell_size = static_cast<float>(FromDIP(CELL_SIZE));
+	const float padding = static_cast<float>(FromDIP(PADDING));
 
 	nvgBeginPath(vg);
 	nvgRect(vg, 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
@@ -244,7 +244,7 @@ void LightColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 		nvgStroke(vg);
 
 		if (index == selected_index_) {
-			const float stroke_width = std::max(1.0f, static_cast<float>(FROM_DIP(this, 2)));
+			const float stroke_width = std::max(1.0f, static_cast<float>(FromDIP(2)));
 			const float offset = stroke_width / 2.0f + 0.5f;
 
 			nvgBeginPath(vg);
@@ -253,7 +253,7 @@ void LightColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 			nvgStrokeWidth(vg, stroke_width);
 			nvgStroke(vg);
 		} else if (index == hover_index_) {
-			const float stroke_width = std::max(1.0f, static_cast<float>(FROM_DIP(this, 1)));
+			const float stroke_width = std::max(1.0f, static_cast<float>(FromDIP(1)));
 			const float offset = stroke_width / 2.0f;
 
 			nvgBeginPath(vg);
@@ -266,8 +266,8 @@ void LightColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 }
 
 wxSize LightColorPalette::DoGetBestClientSize() const {
-	const int cell_size = FROM_DIP(this, CELL_SIZE);
-	const int padding = FROM_DIP(this, PADDING);
+	const int cell_size = FromDIP(CELL_SIZE);
+	const int padding = FromDIP(PADDING);
 	return {
 		COLS * (cell_size + padding) + padding,
 		ROWS * (cell_size + padding) + padding
@@ -275,8 +275,8 @@ wxSize LightColorPalette::DoGetBestClientSize() const {
 }
 
 int LightColorPalette::HitTest(int x, int y) const {
-	const int cell_size = FROM_DIP(this, CELL_SIZE);
-	const int padding = FROM_DIP(this, PADDING);
+	const int cell_size = FromDIP(CELL_SIZE);
+	const int padding = FromDIP(PADDING);
 	if (x < padding || y < padding) {
 		return -1;
 	}

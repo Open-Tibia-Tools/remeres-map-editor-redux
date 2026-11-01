@@ -13,7 +13,7 @@
 const wxString SizeToolBar::PANE_NAME = "sizes_toolbar";
 
 SizeToolBar::SizeToolBar(wxWindow* parent) {
-	wxSize icon_size = FROM_DIP(parent, wxSize(16, 16));
+	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
 
 	wxBitmap circular_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_CIRCULAR_4_SMALL, icon_size);
 	wxBitmap rectangular_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_RECTANGULAR_4_SMALL, icon_size);

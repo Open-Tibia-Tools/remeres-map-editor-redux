@@ -28,11 +28,11 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	custom_sizer->Add(radio_custom, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 15);
 
 	custom_sizer->Add(newd wxStaticText(viewport_box->GetStaticBox(), wxID_ANY, "Width:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-	custom_width_spin = newd wxSpinCtrl(viewport_box->GetStaticBox(), wxID_ANY, "26", wxDefaultPosition, FROM_DIP(this, wxSize(70, -1)), wxSP_ARROW_KEYS, 5, 100, 26);
+	custom_width_spin = newd wxSpinCtrl(viewport_box->GetStaticBox(), wxID_ANY, "26", wxDefaultPosition, FromDIP(wxSize(70, -1)), wxSP_ARROW_KEYS, 5, 100, 26);
 	custom_sizer->Add(custom_width_spin, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 15);
 
 	custom_sizer->Add(newd wxStaticText(viewport_box->GetStaticBox(), wxID_ANY, "Height:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-	custom_height_spin = newd wxSpinCtrl(viewport_box->GetStaticBox(), wxID_ANY, "11", wxDefaultPosition, FROM_DIP(this, wxSize(70, -1)), wxSP_ARROW_KEYS, 5, 100, 11);
+	custom_height_spin = newd wxSpinCtrl(viewport_box->GetStaticBox(), wxID_ANY, "11", wxDefaultPosition, FromDIP(wxSize(70, -1)), wxSP_ARROW_KEYS, 5, 100, 11);
 	custom_sizer->Add(custom_height_spin, 0, wxALIGN_CENTER_VERTICAL);
 
 	viewport_box->Add(custom_sizer, 0, wxLEFT | wxRIGHT | wxBOTTOM, 5);
@@ -69,7 +69,7 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 
 	wxBoxSizer* margin_sizer = newd wxBoxSizer(wxHORIZONTAL);
 	margin_sizer->Add(newd wxStaticText(options_box->GetStaticBox(), wxID_ANY, "Safety Margin (tiles):"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 10);
-	safety_margin_spin = newd wxSpinCtrl(options_box->GetStaticBox(), wxID_ANY, "2", wxDefaultPosition, FROM_DIP(this, wxSize(65, -1)), wxSP_ARROW_KEYS, 0, 10, 2);
+	safety_margin_spin = newd wxSpinCtrl(options_box->GetStaticBox(), wxID_ANY, "2", wxDefaultPosition, FromDIP(wxSize(65, -1)), wxSP_ARROW_KEYS, 0, 10, 2);
 	safety_margin_spin->SetToolTip("Additional border margin added around viewports to prevent clipping tall sprites.");
 	margin_sizer->Add(safety_margin_spin, 0, wxALIGN_CENTER_VERTICAL);
 	options_box->Add(margin_sizer, 0, wxALL, 5);

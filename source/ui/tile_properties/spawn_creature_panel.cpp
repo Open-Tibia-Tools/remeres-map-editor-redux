@@ -20,7 +20,7 @@ SpawnCreaturePanel::SpawnCreaturePanel(wxWindow* parent) :
 
 	// Spawn Node
 	wxBoxSizer* spawn_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	spawn_bitmap = newd wxStaticBitmap(main_sizer->GetStaticBox(), wxID_ANY, wxNullBitmap, wxDefaultPosition, FROM_DIP(this, wxSize(32, 32)), wxBORDER_SIMPLE);
+	spawn_bitmap = newd wxStaticBitmap(main_sizer->GetStaticBox(), wxID_ANY, wxNullBitmap, wxDefaultPosition, FromDIP(wxSize(32, 32)), wxBORDER_SIMPLE);
 	spawn_bitmap->Hide();
 	spawn_text = newd wxStaticText(main_sizer->GetStaticBox(), wxID_ANY, "No Spawn");
 	spawn_sizer->Add(spawn_bitmap, wxSizerFlags(0).Center().Border(wxALL, 2));
@@ -28,7 +28,7 @@ SpawnCreaturePanel::SpawnCreaturePanel(wxWindow* parent) :
 
 	// Creature Node
 	wxBoxSizer* creature_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	creature_bitmap = newd wxStaticBitmap(main_sizer->GetStaticBox(), wxID_ANY, wxNullBitmap, wxDefaultPosition, FROM_DIP(this, wxSize(32, 32)), wxBORDER_SIMPLE);
+	creature_bitmap = newd wxStaticBitmap(main_sizer->GetStaticBox(), wxID_ANY, wxNullBitmap, wxDefaultPosition, FromDIP(wxSize(32, 32)), wxBORDER_SIMPLE);
 	creature_bitmap->Hide();
 	creature_text = newd wxStaticText(main_sizer->GetStaticBox(), wxID_ANY, "No Creature");
 	creature_sizer->Add(creature_bitmap, wxSizerFlags(0).Center().Border(wxALL, 2));
@@ -52,7 +52,7 @@ SpawnCreaturePanel::~SpawnCreaturePanel() {
 void SpawnCreaturePanel::SetTile(Tile* tile) {
 	if (tile && tile->spawn) {
 		spawn_text->SetLabelText(wxString::Format("Spawn\nR=%d", tile->spawn->getSize()));
-		spawn_bitmap->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_FIRE, FROM_DIP(this, wxSize(32, 32))));
+		spawn_bitmap->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_FIRE, FromDIP(wxSize(32, 32))));
 		spawn_bitmap->Show();
 	} else {
 		spawn_text->SetLabelText("No Spawn");
@@ -66,7 +66,7 @@ void SpawnCreaturePanel::SetTile(Tile* tile) {
 			wxBitmap bmp = SpriteIconService::Generate(spr, SPRITE_SIZE_32x32, tile->creature->getLookType(), false, SOUTH);
 			creature_bitmap->SetBitmap(bmp);
 		} else {
-			creature_bitmap->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_DRAGON, FROM_DIP(this, wxSize(32, 32))));
+			creature_bitmap->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_DRAGON, FromDIP(wxSize(32, 32))));
 		}
 		creature_bitmap->Show();
 	} else {

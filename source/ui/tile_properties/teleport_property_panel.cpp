@@ -17,7 +17,7 @@ TeleportPropertyPanel::TeleportPropertyPanel(wxWindow* parent) :
 	ItemPropertyPanel(parent) {
 
 	dest_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Destination");
-	wxFlexGridSizer* dest_grid = newd wxFlexGridSizer(3, 2, FROM_DIP(this, 5), FROM_DIP(this, 5));
+	wxFlexGridSizer* dest_grid = newd wxFlexGridSizer(3, 2, FromDIP(5), FromDIP(5));
 	dest_grid->AddGrowableCol(1);
 
 	dest_grid->Add(newd wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "X:"), 0, wxALIGN_CENTER_VERTICAL);
@@ -35,8 +35,8 @@ TeleportPropertyPanel::TeleportPropertyPanel(wxWindow* parent) :
 	z_spin->SetRange(0, 15);
 	dest_grid->Add(z_spin, 1, wxEXPAND);
 
-	dest_sizer->Add(dest_grid, 1, wxEXPAND | wxALL, FROM_DIP(this, 5));
-	GetSizer()->Add(dest_sizer, 0, wxEXPAND | wxALL, FROM_DIP(this, 5));
+	dest_sizer->Add(dest_grid, 1, wxEXPAND | wxALL, FromDIP(5));
+	GetSizer()->Add(dest_sizer, 0, wxEXPAND | wxALL, FromDIP(5));
 
 	x_spin->Bind(wxEVT_SPINCTRL, &TeleportPropertyPanel::OnDestChange, this);
 	y_spin->Bind(wxEVT_SPINCTRL, &TeleportPropertyPanel::OnDestChange, this);

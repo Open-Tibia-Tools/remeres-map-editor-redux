@@ -34,7 +34,7 @@ namespace {
 }
 
 MapPropertiesWindow::MapPropertiesWindow(wxWindow* parent, MapTab* view, Editor& editor) :
-	wxDialog(parent, wxID_ANY, "Map Properties", wxDefaultPosition, FROM_DIP(parent, wxSize(300, 200)), wxRESIZE_BORDER | wxCAPTION),
+	wxDialog(parent, wxID_ANY, "Map Properties", wxDefaultPosition, parent->FromDIP(wxSize(300, 200)), wxRESIZE_BORDER | wxCAPTION),
 	view(view),
 	editor(editor) {
 	// Setup data variabels

@@ -80,8 +80,8 @@ TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	right_sizer->Add(placeholder_text, wxSizerFlags(1).Center().Border(wxALL, 10));
 	right_panel->SetSizer(right_sizer);
 
-	splitter->SplitVertically(left_panel, right_panel, FROM_DIP(this, 250));
-	splitter->SetMinimumPaneSize(FROM_DIP(this, 150));
+	splitter->SplitVertically(left_panel, right_panel, FromDIP(250));
+	splitter->SetMinimumPaneSize(FromDIP(150));
 
 	HideAllPropertyPanels();
 	placeholder_text->Show();

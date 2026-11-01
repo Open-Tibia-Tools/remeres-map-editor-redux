@@ -133,7 +133,7 @@ TownDeleteDialog::TownDeleteDialog(wxWindow* parent, const std::string& name, ui
 // EditTownDialog
 // ============================================================================
 EditTownDialog::EditTownDialog(wxWindow* parent, Map* map, Town* town, bool is_new) :
-	wxDialog(parent, wxID_ANY, is_new ? "Add Town" : "Edit Town", wxDefaultPosition, FROM_DIP(parent, wxSize(320, 290))),
+	wxDialog(parent, wxID_ANY, is_new ? "Add Town" : "Edit Town", wxDefaultPosition, parent->FromDIP(wxSize(320, 290))),
 	map(map),
 	town(town),
 	is_new_(is_new) {
