@@ -214,6 +214,7 @@ void InterfacePage::Apply() {
 	if (selected_theme != wxNOT_FOUND && g_settings.getInteger(Config::THEME) != selected_theme) {
 		g_settings.setInteger(Config::THEME, selected_theme);
 		Theme::setType(static_cast<Theme::Type>(selected_theme));
-		DialogUtil::PopupDialog(wxString("Theme Changed"), wxString("Theme changed. Please restart the application for all changes to take effect."), wxOK);
+		g_gui.RebuildPalettes();
+		g_gui.RefreshView();
 	}
 }
