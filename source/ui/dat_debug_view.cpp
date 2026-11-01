@@ -1,3 +1,4 @@
+#include "palette/controls/palette_search_ctrl.h"
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -85,7 +86,8 @@ DatDebugView::DatDebugView(wxWindow* parent) :
 	wxPanel(parent) {
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 
-	search_field = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
+	search_field = new PaletteSearchCtrl(this, wxID_ANY);
+	search_field->SetDescriptiveText("Filter sprites by ID...");
 	search_field->SetFocus();
 	sizer->Add(search_field, wxSizerFlags().Expand());
 
