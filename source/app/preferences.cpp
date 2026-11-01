@@ -65,24 +65,24 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 		list_view->SetColumnWidth(0, FromDIP(150));
 	}
 
-	sizer->Add(book, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(10)));
+	sizer->Add(book, wxSizerFlags(1).Expand().DoubleBorder(wxALL));
 
 	auto* footer_sizer = new wxBoxSizer(wxHORIZONTAL);
 	footer_sizer->AddStretchSpacer();
 
 	auto* ok_button = new wxButton(this, wxID_OK, "OK");
 	ok_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
-	footer_sizer->Add(ok_button, wxSizerFlags().Border(wxRIGHT, FromDIP(8)));
+	footer_sizer->Add(ok_button, wxSizerFlags().DoubleBorder(wxRIGHT));
 
 	auto* cancel_button = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancel_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
-	footer_sizer->Add(cancel_button, wxSizerFlags().Border(wxRIGHT, FromDIP(8)));
+	footer_sizer->Add(cancel_button, wxSizerFlags().DoubleBorder(wxRIGHT));
 
 	auto* apply_button = new wxButton(this, wxID_APPLY, "Apply");
 	apply_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_SYNC));
 	footer_sizer->Add(apply_button, 0);
 
-	sizer->Add(footer_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
+	sizer->Add(footer_sizer, wxSizerFlags().Expand().DoubleBorder(wxLEFT | wxRIGHT | wxBOTTOM));
 	SetSizer(sizer);
 
 	const int width = g_settings.getInteger(Config::PREFERENCES_WINDOW_WIDTH);
@@ -156,5 +156,66 @@ void PreferencesWindow::OnClose(wxCloseEvent& event) {
 		EndModal(wxID_CANCEL);
 	} else {
 		Destroy();
+	}
+}
+
+
+// ============================================================================
+// Modern wxPreferencesEditor Implementation
+// ============================================================================
+
+namespace {
+	class GeneralPrefPage : public PreferencesPageAdapter {
+	public:
+		GeneralPrefPage() : PreferencesPageAdapter("General", IMAGE_MANAGER.GetBitmapBundle(ICON_GEAR)) {}
+		wxWindow* CreateWindow(wxWindow* parent) override {
+			return new GeneralPage(parent);
+		}
+	};
+
+	class EditorPrefPage : public PreferencesPageAdapter {
+	public:
+		EditorPrefPage() : PreferencesPageAdapter("Editor", IMAGE_MANAGER.GetBitmapBundle(ICON_PEN_TO_SQUARE)) {}
+		wxWindow* CreateWindow(wxWindow* parent) override {
+			return new EditorPage(parent);
+		}
+	};
+
+	class GraphicsPrefPage : public PreferencesPageAdapter {
+	public:
+		GraphicsPrefPage() : PreferencesPageAdapter("Graphics", IMAGE_MANAGER.GetBitmapBundle(ICON_IMAGE)) {}
+		wxWindow* CreateWindow(wxWindow* parent) override {
+			return new GraphicsPage(parent);
+		}
+	};
+
+	class InterfacePrefPage : public PreferencesPageAdapter {
+	public:
+		InterfacePrefPage() : PreferencesPageAdapter("Interface", IMAGE_MANAGER.GetBitmapBundle(ICON_WINDOW_MAXIMIZE)) {}
+		wxWindow* CreateWindow(wxWindow* parent) override {
+			return new InterfacePage(parent);
+		}
+	};
+}
+
+RMEPreferencesEditor::RMEPreferencesEditor(const wxString& title)
+	: m_editor(std::make_unique<wxPreferencesEditor>(title)) {
+	m_editor->AddPage(new GeneralPrefPage());
+	m_editor->AddPage(new EditorPrefPage());
+	m_editor->AddPage(new GraphicsPrefPage());
+	m_editor->AddPage(new InterfacePrefPage());
+}
+
+RMEPreferencesEditor::~RMEPreferencesEditor() = default;
+
+void RMEPreferencesEditor::Show(wxWindow* parent) {
+	if (m_editor) {
+		m_editor->Show(parent);
+	}
+}
+
+void RMEPreferencesEditor::Dismiss() {
+	if (m_editor) {
+		m_editor->Dismiss();
 	}
 }
