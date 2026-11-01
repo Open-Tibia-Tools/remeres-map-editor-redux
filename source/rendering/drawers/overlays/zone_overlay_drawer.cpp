@@ -88,10 +88,10 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		const int row_width = max_x - min_x + 1;
 		const size_t visible_tiles_estimate = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
 
-		visible_zone_tiles_.reserve(visible_tiles_estimate / 4);
-		alpha_zone_quads_.reserve(visible_tiles_estimate / 4);
-		mult_zone_quads_.reserve(visible_tiles_estimate / 8);
-		border_zone_quads_.reserve(visible_tiles_estimate / 4);
+		visible_zone_tiles_.reserve(visible_tiles_estimate);
+		alpha_zone_quads_.reserve(visible_tiles_estimate);
+		mult_zone_quads_.reserve(visible_tiles_estimate);
+		border_zone_quads_.reserve(visible_tiles_estimate);
 
 		// Caller-owned cell cursors: consecutive x in a row share the containing
 		// 64x64 cell and 4x4 Floor, so empty cells/floors skip 64 or 4 tiles at once.
@@ -238,11 +238,16 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		const int coarse_min_y = bounds.start_y - max_coarse_radius;
 		const int coarse_max_y = bounds.end_y + max_coarse_radius;
 
-		// Spawns are stored in std::set<Position> sorted by (z, y, x).
-		// By querying lower_bound for (INT_MIN, coarse_min_y, z), we jump directly to the
-		// first candidate spawn on floor z within the visible Y range in O(log N) time.
+		// Estimate candidate spawn capacity on floor z to prevent reallocations
 		const Position floor_start_pos(std::numeric_limits<int>::min(), coarse_min_y, z);
 		auto it = map.spawns.lower_bound(floor_start_pos);
+
+		// Pre-reserve spawn buffers based on available spawns
+		const size_t spawn_estimate = std::min<size_t>(map.spawns.size(), 256);
+		alpha_spawn_quads_.reserve(spawn_estimate);
+		mult_spawn_quads_.reserve(spawn_estimate);
+		spawn_borders_.reserve(spawn_estimate);
+		spawn_badges_.reserve(spawn_estimate);
 
 		for (; it != map.spawns.end() && it->z == z; ++it) {
 			// Because y is strictly non-decreasing across floor z in the sorted set,
@@ -374,7 +379,7 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	const size_t visible_tiles_estimate = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
 
 	blocking_border_quads_.clear();
-	blocking_border_quads_.reserve(visible_tiles_estimate / 4);
+	blocking_border_quads_.reserve(visible_tiles_estimate);
 
 	SpatialHashGrid::CellCursor secondary_cursor;
 	SpatialHashGrid::CellCursor primary_cursor;
@@ -499,7 +504,7 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
 	const size_t visible_tiles_estimate = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
 
 	house_border_quads_.clear();
-	house_border_quads_.reserve(visible_tiles_estimate / 4);
+	house_border_quads_.reserve(visible_tiles_estimate);
 
 	SpatialHashGrid::CellCursor secondary_cursor;
 	SpatialHashGrid::CellCursor primary_cursor;
@@ -721,7 +726,7 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 	const size_t visible_tiles_estimate = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
 
 	highlight_quads_.clear();
-	highlight_quads_.reserve(visible_tiles_estimate / 4);
+	highlight_quads_.reserve(visible_tiles_estimate);
 
 	const int offset = (z <= GROUND_LAYER)
 		? (GROUND_LAYER - z) * TILE_SIZE
