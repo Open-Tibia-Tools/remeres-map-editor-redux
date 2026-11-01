@@ -750,3 +750,27 @@ void SetWindowToolTip(wxWindow* a, wxWindow* b, const wxString& tip) {
 	a->SetToolTip(tip);
 	b->SetToolTip(tip);
 }
+
+void GUI::ShowInfoBanner(const wxString& message, int flags) {
+	if (root) {
+		root->ShowInfoBanner(message, flags);
+	}
+}
+
+void GUI::DismissInfoBanner() {
+	if (root) {
+		root->DismissInfoBanner();
+	}
+}
+
+void GUI::StartBusyAnimation() {
+	if (root) {
+		root->StartBusyAnimation();
+	}
+}
+
+void GUI::StopBusyAnimation() {
+	if (root) {
+		root->StopBusyAnimation();
+	}
+}

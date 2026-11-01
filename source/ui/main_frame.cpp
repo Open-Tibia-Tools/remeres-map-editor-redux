@@ -1,4 +1,5 @@
 #include <wx/infobar.h>
+#include <wx/activityindicator.h>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -66,6 +67,19 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	// FPS | tile description (stretch) | coordinates | floor/zoom
 	const int status_widths[4] = { FromDIP(80), -1, FromDIP(150), FromDIP(160) };
 	statusbar->SetStatusWidths(4, status_widths);
+
+	m_activity_indicator = new wxActivityIndicator(statusbar, wxID_ANY);
+	m_activity_indicator->Hide();
+
+	statusbar->Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
+		if (m_activity_indicator && m_activity_indicator->IsShown()) {
+			wxRect r;
+			if (GetStatusBar() && GetStatusBar()->GetFieldRect(3, r)) {
+				m_activity_indicator->SetSize(r);
+			}
+		}
+		event.Skip();
+	});
 	SetStatusText(wxString("Welcome to ") << __W_RME_APPLICATION_NAME__ << " " << __W_RME_VERSION__);
 
 	// Le sizer
@@ -423,5 +437,22 @@ void MainFrame::DismissInfoBanner() {
 	if (m_info_bar) {
 		m_info_bar->Dismiss();
 		g_gui.aui_manager->Update();
+	}
+}
+
+void MainFrame::StartBusyAnimation() {
+	if (m_activity_indicator && GetStatusBar()) {
+		wxRect r;
+		GetStatusBar()->GetFieldRect(3, r);
+		m_activity_indicator->SetSize(r);
+		m_activity_indicator->Show();
+		m_activity_indicator->Start();
+	}
+}
+
+void MainFrame::StopBusyAnimation() {
+	if (m_activity_indicator) {
+		m_activity_indicator->Stop();
+		m_activity_indicator->Hide();
 	}
 }

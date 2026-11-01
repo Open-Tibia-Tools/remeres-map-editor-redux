@@ -18,6 +18,7 @@ LoadingManager::LoadingManager() :
 	progressBar(nullptr),
 	infoDialog(nullptr),
 	infoText(nullptr),
+	infoSpinner(nullptr),
 	infoDisabler(nullptr),
 	cancelled(false),
 	cancellable(false),
@@ -48,6 +49,10 @@ void LoadingManager::CreateInfoBar(wxString message, const wxString& title) {
 	infoDialog->SetCursor(*wxHOURGLASS_CURSOR);
 
 	wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+	infoSpinner = new wxActivityIndicator(infoDialog, wxID_ANY);
+	sizer->Add(infoSpinner, wxSizerFlags().Center().Border(wxTOP, 15));
+	infoSpinner->Start();
+
 	infoText = new wxStaticText(infoDialog, wxID_ANY, message, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
 	infoText->SetMinSize(infoDialog->FromDIP(wxSize(320, -1)));
 	sizer->Add(infoText, wxSizerFlags(1).Expand().DoubleBorder());

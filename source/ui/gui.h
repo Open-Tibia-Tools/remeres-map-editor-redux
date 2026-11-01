@@ -144,6 +144,11 @@ public:
 		return g_loading.IsLoading();
 	}
 
+	void ShowInfoBanner(const wxString& message, int flags = wxICON_INFORMATION);
+	void DismissInfoBanner();
+	void StartBusyAnimation();
+	void StopBusyAnimation();
+
 	void UpdateMenubar();
 
 	bool IsRenderingEnabled() const {
