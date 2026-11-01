@@ -27,7 +27,7 @@ StandardToolBar::StandardToolBar(wxWindow* parent) {
 	wxBitmapBundle paste_bitmap = IMAGE_MANAGER.GetBitmapBundle(ICON_PASTE);
 	wxBitmapBundle find_bitmap = IMAGE_MANAGER.GetBitmapBundle(ICON_FIND);
 
-	toolbar = new wxAuiToolBar(parent, TOOLBAR_STANDARD, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE);
+	toolbar = new wxAuiToolBar(parent, TOOLBAR_STANDARD, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_OVERFLOW | wxAUI_TB_GRIPPER);
 	toolbar->SetToolBitmapSize(icon_size);
 	toolbar->AddTool(wxID_NEW, wxEmptyString, new_bitmap, wxNullBitmap, wxITEM_NORMAL, "New Map (Ctrl+N) - Create a new empty map", "Create a new empty map", nullptr);
 	toolbar->AddTool(wxID_OPEN, wxEmptyString, open_bitmap, wxNullBitmap, wxITEM_NORMAL, "Open Map (Ctrl+O) - Open an existing map", "Open an existing map", nullptr);
@@ -44,11 +44,11 @@ StandardToolBar::StandardToolBar(wxWindow* parent) {
 	toolbar->AddTool(MAIN_FRAME_MENU + MenuBar::JUMP_TO_BRUSH, wxEmptyString, find_bitmap, wxNullBitmap, wxITEM_NORMAL, "Jump to Brush (J)", "Find brush or item", nullptr);
 	toolbar->Realize();
 
-	toolbar->Bind(wxEVT_COMMAND_MENU_SELECTED, &StandardToolBar::OnButtonClick, this);
+	toolbar->Bind(wxEVT_TOOL, &StandardToolBar::OnButtonClick, this);
 }
 
 StandardToolBar::~StandardToolBar() {
-	toolbar->Unbind(wxEVT_COMMAND_MENU_SELECTED, &StandardToolBar::OnButtonClick, this);
+	toolbar->Unbind(wxEVT_TOOL, &StandardToolBar::OnButtonClick, this);
 }
 
 void StandardToolBar::Update() {

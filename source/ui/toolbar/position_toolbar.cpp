@@ -16,7 +16,7 @@ const wxString PositionToolBar::PANE_NAME = "position_toolbar";
 PositionToolBar::PositionToolBar(wxWindow* parent) {
 	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
 
-	toolbar = new wxAuiToolBar(parent, TOOLBAR_POSITION, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_HORZ_TEXT);
+	toolbar = new wxAuiToolBar(parent, TOOLBAR_POSITION, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_HORZ_TEXT | wxAUI_TB_OVERFLOW | wxAUI_TB_GRIPPER);
 	toolbar->SetToolBitmapSize(icon_size);
 
 	x_control = new NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_WIDTH, wxTE_PROCESS_ENTER, "X", wxDefaultPosition, parent->FromDIP(wxSize(60, 20)));

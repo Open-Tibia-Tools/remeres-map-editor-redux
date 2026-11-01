@@ -34,7 +34,7 @@ BrushToolBar::BrushToolBar(wxWindow* parent) {
 	wxBitmapBundle hatch_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_WINDOW_HATCH_SMALL);
 	wxBitmapBundle window_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_WINDOW_NORMAL_SMALL);
 
-	toolbar = new wxAuiToolBar(parent, TOOLBAR_BRUSHES, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE);
+	toolbar = new wxAuiToolBar(parent, TOOLBAR_BRUSHES, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_OVERFLOW | wxAUI_TB_GRIPPER);
 	toolbar->SetToolBitmapSize(icon_size);
 	toolbar->AddTool(PALETTE_TERRAIN_OPTIONAL_BORDER_TOOL, wxEmptyString, border_bitmap, wxNullBitmap, wxITEM_CHECK, "Border (Add borders to ground)", "Add automatic borders to ground tiles", nullptr);
 	toolbar->AddTool(PALETTE_TERRAIN_ERASER, wxEmptyString, eraser_bitmap, wxNullBitmap, wxITEM_CHECK, "Eraser (Clear tile content)", "Clear content from tiles", nullptr);
@@ -56,11 +56,11 @@ BrushToolBar::BrushToolBar(wxWindow* parent) {
 	toolbar->AddTool(PALETTE_TERRAIN_WINDOW_DOOR, wxEmptyString, window_bitmap, wxNullBitmap, wxITEM_CHECK, "Window", "Place window", nullptr);
 	toolbar->Realize();
 
-	toolbar->Bind(wxEVT_COMMAND_MENU_SELECTED, &BrushToolBar::OnToolbarClick, this);
+	toolbar->Bind(wxEVT_TOOL, &BrushToolBar::OnToolbarClick, this);
 }
 
 BrushToolBar::~BrushToolBar() {
-	toolbar->Unbind(wxEVT_COMMAND_MENU_SELECTED, &BrushToolBar::OnToolbarClick, this);
+	toolbar->Unbind(wxEVT_TOOL, &BrushToolBar::OnToolbarClick, this);
 }
 
 void BrushToolBar::Update() {
