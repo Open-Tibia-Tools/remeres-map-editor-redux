@@ -1,3 +1,4 @@
+#include <wx/secretstore.h>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -47,7 +48,21 @@ void LiveDialogs::ShowHostDialog(wxWindow* parent, Editor* editor) {
 	gsizer->Add(port = new wxSpinCtrl(live_host_dlg, wxID_ANY, "31313", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 65535, 31313), wxSizerFlags().Expand());
 
 	gsizer->Add(new wxStaticText(live_host_dlg, wxID_ANY, "Password:"));
-	gsizer->Add(password = new wxTextCtrl(live_host_dlg, wxID_ANY), wxSizerFlags().Expand());
+	gsizer->Add(password = new wxTextCtrl(live_host_dlg, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PASSWORD), wxSizerFlags().Expand());
+
+#if wxUSE_SECRETSTORE
+	wxSecretStore store = wxSecretStore::GetDefault();
+	if (store.IsOk()) {
+		wxString savedHost;
+		wxSecretValue savedPass;
+		if (store.Load("RMELiveHost", savedHost, savedPass)) {
+			if (!savedHost.empty()) {
+				hostname->SetValue(savedHost);
+			}
+			password->SetValue(savedPass.GetAsString());
+		}
+	}
+#endif
 
 	top_sizer->Add(gsizer, wxSizerFlags().Border(wxALL, 20));
 
@@ -75,6 +90,11 @@ void LiveDialogs::ShowHostDialog(wxWindow* parent, Editor* editor) {
 			LiveServer* liveServer = editor->live_manager.StartServer();
 			liveServer->setName(hostname->GetValue());
 			liveServer->setPassword(password->GetValue());
+#if wxUSE_SECRETSTORE
+			if (store.IsOk() && !password->GetValue().empty()) {
+				store.Save("RMELiveHost", hostname->GetValue(), wxSecretValue(password->GetValue()));
+			}
+#endif
 			liveServer->setPort(port->GetValue());
 
 			const wxString& error = liveServer->getLastError();
@@ -122,7 +142,21 @@ void LiveDialogs::ShowJoinDialog(wxWindow* parent) {
 	gsizer->Add(port = new wxSpinCtrl(live_join_dlg, wxID_ANY, "31313", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 65535, 31313), wxSizerFlags().Expand());
 
 	gsizer->Add(new wxStaticText(live_join_dlg, wxID_ANY, "Password:"));
-	gsizer->Add(password = new wxTextCtrl(live_join_dlg, wxID_ANY), wxSizerFlags().Expand());
+	gsizer->Add(password = new wxTextCtrl(live_join_dlg, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PASSWORD), wxSizerFlags().Expand());
+
+#if wxUSE_SECRETSTORE
+	wxSecretStore joinStore = wxSecretStore::GetDefault();
+	if (joinStore.IsOk()) {
+		wxString savedUser;
+		wxSecretValue savedPass;
+		if (joinStore.Load("RMELiveServer", savedUser, savedPass)) {
+			if (!savedUser.empty() && name->GetValue().empty()) {
+				name->SetValue(savedUser);
+			}
+			password->SetValue(savedPass.GetAsString());
+		}
+	}
+#endif
 
 	top_sizer->Add(gsizer, wxSizerFlags().Border(wxALL, 20));
 
@@ -146,6 +180,11 @@ void LiveDialogs::ShowJoinDialog(wxWindow* parent) {
 		if (ret == wxID_OK) {
 			auto liveClient = std::make_unique<LiveClient>();
 			liveClient->setPassword(password->GetValue());
+#if wxUSE_SECRETSTORE
+			if (joinStore.IsOk() && !password->GetValue().empty()) {
+				joinStore.Save("RMELiveServer", name->GetValue(), wxSecretValue(password->GetValue()));
+			}
+#endif
 
 			wxString tmp = name->GetValue();
 			if (tmp.empty()) {
