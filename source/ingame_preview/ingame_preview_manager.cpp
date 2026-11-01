@@ -1,3 +1,4 @@
+#include "app/settings.h"
 #include <iostream>
 #include "ingame_preview/ingame_preview_manager.h"
 #include "ingame_preview/ingame_preview_window.h"
@@ -24,8 +25,29 @@ namespace IngamePreview {
 		}
 	}
 
-	void IngamePreviewManager::Create() {
+	wxAuiPaneInfo IngamePreviewManager::DefaultPaneInfo() {
+		return wxAuiPaneInfo()
+			.Name("IngamePreview")
+			.Caption("In-game Preview")
+			.Right()
+			.Layer(0)
+			.Position(1)
+			.Dockable(true)
+			.FloatingSize(g_gui.root->FromDIP(400), g_gui.root->FromDIP(300))
+			.MinSize(g_gui.root->FromDIP(200), g_gui.root->FromDIP(150))
+			.CloseButton(true)
+			.MaximizeButton(true);
+	}
 
+	void IngamePreviewManager::NormalizePaneInfo(wxAuiPaneInfo& info) {
+		info.Name("IngamePreview")
+			.Caption("In-game Preview")
+			.Dockable(true)
+			.CloseButton(true)
+			.MaximizeButton(true);
+	}
+
+	void IngamePreviewManager::Create(bool updateManager) {
 		if (!g_gui.aui_manager) {
 			return;
 		}
@@ -34,15 +56,22 @@ namespace IngamePreview {
 			g_gui.aui_manager->GetPane(window).Show(true);
 		} else {
 			window = new IngamePreviewWindow(g_gui.root);
-
-			// Safety: Listen for window destruction (e.g. if parent is destroyed)
 			window->Bind(wxEVT_DESTROY, &IngamePreviewManager::OnWindowDestroy, this);
 
-			g_gui.aui_manager->AddPane(window, wxAuiPaneInfo().Name("IngamePreview").Caption("In-game Preview").Right().Dockable(true).FloatingSize(g_gui.root->FromDIP(400), g_gui.root->FromDIP(300)).MinSize(g_gui.root->FromDIP(200), g_gui.root->FromDIP(150)).Hide());
+			wxAuiPaneInfo info = DefaultPaneInfo();
+			const wxString layout = wxstr(g_settings.getString(Config::INGAME_PREVIEW_LAYOUT));
+			if (!layout.empty()) {
+				g_gui.aui_manager->LoadPaneInfo(layout, info);
+			}
+			NormalizePaneInfo(info);
+			info.Show(true);
 
-			g_gui.aui_manager->GetPane(window).Show(true);
+			g_gui.aui_manager->AddPane(window, info);
 		}
-		g_gui.aui_manager->Update();
+
+		if (updateManager) {
+			g_gui.aui_manager->Update();
+		}
 	}
 
 	void IngamePreviewManager::Hide() {

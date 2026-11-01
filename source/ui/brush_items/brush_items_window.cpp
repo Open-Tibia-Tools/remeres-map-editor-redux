@@ -30,7 +30,8 @@
 BrushItemsGrid::BrushItemsGrid(wxWindow* parent) :
 	VirtualItemGrid(parent, wxID_ANY) {
 	SetIconSize(32);
-	SetShowLabels(true);
+	SetShowLabels(g_settings.getBoolean(Config::BRUSH_ITEMS_SHOW_LABELS));
+	SetBrushIndicators(g_settings.getBoolean(Config::BRUSH_ITEMS_INDICATOR_DOGEAR));
 }
 
 void BrushItemsGrid::SetItems(std::vector<uint16_t> items) {
@@ -307,6 +308,7 @@ void BrushItemsWindow::BuildUI() {
 		if (m_grid) {
 			m_grid->SetShowLabels(show);
 		}
+		g_settings.setInteger(Config::BRUSH_ITEMS_SHOW_LABELS, show ? 1 : 0);
 	};
 	actions.icon_size = [this](int size) {
 		if (m_grid) {
@@ -323,6 +325,7 @@ void BrushItemsWindow::BuildUI() {
 		if (m_toolbar) {
 			m_toolbar->SetIndicatorState(dogEar);
 		}
+		g_settings.setInteger(Config::BRUSH_ITEMS_INDICATOR_DOGEAR, dogEar ? 1 : 0);
 	};
 	actions.grid_spacing = [this](int spacingPx) {
 		if (m_grid) {
@@ -338,8 +341,14 @@ void BrushItemsWindow::BuildUI() {
 	                       TilesetGridToolbar::Part_Size |
 	                       TilesetGridToolbar::Part_Indicators |
 	                       TilesetGridToolbar::Part_Spacing;
+	const bool initShowLabels = g_settings.getBoolean(Config::BRUSH_ITEMS_SHOW_LABELS);
+	const bool initDogEar = g_settings.getBoolean(Config::BRUSH_ITEMS_INDICATOR_DOGEAR);
+	m_grid->SetShowLabels(initShowLabels);
+	m_grid->SetBrushIndicators(initDogEar);
+
 	m_toolbar = new TilesetGridToolbar(this, std::move(actions), parts);
-	m_toolbar->SetState(m_grid->GetShowLabels(), m_grid->GetIconSize(), m_grid->HasSort(), m_grid->GetSortKey(), m_grid->GetSortDirection(), false);
+	m_toolbar->SetState(initShowLabels, m_grid->GetIconSize(), m_grid->HasSort(), m_grid->GetSortKey(), m_grid->GetSortDirection(), false);
+	m_toolbar->SetIndicatorState(initDogEar);
 	mainSizer->Add(m_toolbar, wxSizerFlags().Expand());
 
 	// Empty state banner

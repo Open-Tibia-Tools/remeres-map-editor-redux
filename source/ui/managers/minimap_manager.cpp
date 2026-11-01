@@ -19,7 +19,7 @@ wxAuiPaneInfo MinimapManager::DefaultPaneInfo() {
 		.Caption("Minimap")
 		.Right()
 		.Layer(0)
-		.Position(2)
+		.Position(0)
 		.CloseButton(true)
 		.MaximizeButton(true)
 		.BestSize(260, 220);

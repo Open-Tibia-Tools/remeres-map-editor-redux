@@ -547,7 +547,11 @@ void MainMenuBar::OnToolOptionsWindow(wxCommandEvent& event) {
 }
 
 void MainMenuBar::OnIngamePreviewWindow(wxCommandEvent& event) {
-	g_preview.Create();
+	if (g_preview.IsVisible()) {
+		g_preview.Hide();
+	} else {
+		g_preview.Create();
+	}
 }
 
 void MainMenuBar::OnBrushItemsWindow(wxCommandEvent& event) {

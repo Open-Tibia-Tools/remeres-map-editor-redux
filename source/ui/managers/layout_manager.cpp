@@ -155,26 +155,18 @@ void LayoutManager::LoadPerspective() {
 			}
 
 			wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_minimap.GetWindow());
-			if (info.IsFloatable()) {
-				bool offscreen = true;
-				for (uint32_t index = 0; index < wxDisplay::GetCount(); ++index) {
-					wxDisplay display(index);
-					wxRect rect = display.GetClientArea();
-					if (rect.Contains(info.floating_pos)) {
-						offscreen = false;
-						break;
-					}
-				}
-
-				if (offscreen) {
-					info.Dock();
-				}
-			}
+			EnsurePaneOnScreen(info);
 		}
-
-		g_gui.aui_manager->Update();
 		g_status.UpdateTitle();
 		g_gui.root->UpdateMenubar();
+	}
+
+	if (g_settings.getInteger(Config::INGAME_PREVIEW_VISIBLE)) {
+		g_preview.Create(false);
+		if (g_preview.GetWindow()) {
+			wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_preview.GetWindow());
+			EnsurePaneOnScreen(info);
+		}
 	}
 
 	// Initialize ToolOptionsWindow
@@ -245,16 +237,6 @@ void LayoutManager::LoadPerspective() {
 		}
 	}
 
-	if (g_settings.getInteger(Config::INGAME_PREVIEW_VISIBLE)) {
-		g_preview.Create();
-		if (g_preview.GetWindow()) {
-			wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_preview.GetWindow());
-			wxString layout = wxstr(g_settings.getString(Config::INGAME_PREVIEW_LAYOUT));
-			if (!layout.empty()) {
-				g_gui.aui_manager->LoadPaneInfo(layout, info);
-			}
-		}
-	}
 
 	g_gui.aui_manager->Update();
 	g_gui.root->GetAuiToolBar()->LoadPerspective();
