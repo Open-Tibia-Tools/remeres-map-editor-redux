@@ -159,7 +159,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	const bool is_simple_sprite = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
 
-	if (options.transparent_items && !ephemeral && (!it.isGroundTile() || spr->width > 1 || spr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || spr->width > 1 || spr->height > 1)) {
+	if (options.transparent_items && !ephemeral && (!it.isGroundTile() || spr->width > 1 || spr->height > 1) && !it.isSplash() && (!(it.hasFlag(ItemFlag::IsBorder) || (it.hasFlag(ItemFlag::AlwaysOnBottom) && it.attribute(ItemAttributeKey::AlwaysOnTopOrder) == 1)) || spr->width > 1 || spr->height > 1)) {
 		alpha >>= 1;
 	}
 
