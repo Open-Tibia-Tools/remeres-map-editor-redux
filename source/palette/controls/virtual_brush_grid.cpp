@@ -67,6 +67,7 @@ VirtualBrushGrid::VirtualBrushGrid(wxWindow* parent, const DynamicTilesetDefinit
 	Bind(wxEVT_LEFT_DOWN, &VirtualBrushGrid::OnMouseDown, this);
 	Bind(wxEVT_MOTION, &VirtualBrushGrid::OnMotion, this);
 	Bind(wxEVT_SIZE, &VirtualBrushGrid::OnSize, this);
+	Bind(wxEVT_SHOW, &VirtualBrushGrid::OnShow, this);
 	Bind(wxEVT_TIMER, &VirtualBrushGrid::OnTimer, this);
 
 	RefreshBrushList();
@@ -245,6 +246,15 @@ wxSize VirtualBrushGrid::DoGetBestClientSize() const {
 }
 
 void VirtualBrushGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
+	if (m_pendingScrollToSelected) {
+		// First paint after the page became visible: finish the deferred scroll
+		// outside of painting and draw again.
+		CallAfter([this]() {
+			UpdateLayout();
+			EnsureSelectedVisible(); // repaints itself if it scrolls
+		});
+	}
+
 	if (!m_hasOverrideBrushes && observed_tileset_size != (tileset ? tileset->size() : 0)) {
 		observed_tileset_size = tileset ? tileset->size() : 0;
 		RefreshBrushList();
@@ -492,8 +502,44 @@ void VirtualBrushGrid::OnTimer(wxTimerEvent& event) {
 
 void VirtualBrushGrid::OnSize(wxSizeEvent& event) {
 	UpdateLayout();
+	if (m_pendingScrollToSelected) {
+		EnsureSelectedVisible();
+	}
 	Refresh();
 	event.Skip();
+}
+
+void VirtualBrushGrid::OnShow(wxShowEvent& event) {
+	if (event.IsShown() && m_pendingScrollToSelected) {
+		// Sizers lay the page out after it is shown; scroll once that is done.
+		CallAfter([this]() {
+			UpdateLayout();
+			EnsureSelectedVisible();
+		});
+	}
+	event.Skip();
+}
+
+void VirtualBrushGrid::EnsureSelectedVisible() {
+	if (selected_index < 0 || selected_index >= static_cast<int>(m_display_brushes.size())) {
+		m_pendingScrollToSelected = false;
+		return;
+	}
+
+	const int clientHeight = GetClientSize().y;
+	if (!IsShownOnScreen() || clientHeight <= 0) {
+		m_pendingScrollToSelected = true;
+		return;
+	}
+	m_pendingScrollToSelected = false;
+
+	const wxRect rect = GetItemRect(selected_index);
+	const int scrollPos = GetScrollPosition();
+	if (rect.y < scrollPos) {
+		SetScrollPosition(rect.y - rme::ui::grid::kPadding);
+	} else if (rect.y + rect.height > scrollPos + clientHeight) {
+		SetScrollPosition(rect.y + rect.height - clientHeight + rme::ui::grid::kPadding);
+	}
 }
 
 void VirtualBrushGrid::SelectFirstBrush() {
@@ -515,15 +561,17 @@ bool VirtualBrushGrid::SelectBrush(const Brush* brush) {
 		if (m_display_brushes[i] == brush) {
 			selected_index = static_cast<int>(i);
 
-			// Ensure visible
-			wxRect rect = GetItemRect(selected_index);
-			int scrollPos = GetScrollPosition();
-			int clientHeight = GetClientSize().y;
-
-			if (rect.y < scrollPos) {
-				SetScrollPosition(rect.y - rme::ui::grid::kPadding);
-			} else if (rect.y + rect.height > scrollPos + clientHeight) {
-				SetScrollPosition(rect.y + rect.height - clientHeight + rme::ui::grid::kPadding);
+			// The palette page holding this grid may be hidden right now (it is
+			// switched to after the brush is found), so its layout can be stale.
+			UpdateLayout();
+			EnsureSelectedVisible();
+			if (!m_pendingScrollToSelected) {
+				// Re-check once the page switch and its layout have settled.
+				m_pendingScrollToSelected = true;
+				CallAfter([this]() {
+					UpdateLayout();
+					EnsureSelectedVisible();
+				});
 			}
 
 			Refresh();
