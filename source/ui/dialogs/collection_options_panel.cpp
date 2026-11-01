@@ -38,9 +38,13 @@ public:
 
 		wxBoxSizer* btnSizer = new wxBoxSizer(wxHORIZONTAL);
 		wxButton* appendBtn = new wxButton(this, wxID_ANY, "&Append");
+		appendBtn->SetToolTip("Add conflicting items alongside existing ones");
 		wxButton* overwriteBtn = new wxButton(this, wxID_ANY, "&Overwrite");
+		overwriteBtn->SetToolTip("Replace existing items with the new items");
 		wxButton* renameBtn = new wxButton(this, wxID_ANY, "&Rename");
+		renameBtn->SetToolTip("Save conflicting items under a different name");
 		wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "&Cancel");
+		cancelBtn->SetToolTip("Cancel the operation");
 
 		appendBtn->SetDefault();
 
@@ -125,6 +129,7 @@ void CollectionOptionsPanel::InitUI() {
 	rootSizer->Add(m_accumulateBtn, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
 
 	m_saveBtn = new wxButton(this, wxID_ANY, "&Add to Tileset");
+	m_saveBtn->SetToolTip("Add all collected items to the selected tileset");
 	m_saveBtn->SetDefault();
 	rootSizer->Add(m_saveBtn, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
 
@@ -140,6 +145,7 @@ void CollectionOptionsPanel::InitUI() {
 	rootSizer->Add(undoRedoSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
 
 	m_clearBtn = new wxButton(this, wxID_ANY, "&Clear All");
+	m_clearBtn->SetToolTip("Clear all buffered items and brushes");
 	rootSizer->Add(m_clearBtn, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 6);
 
 	SetSizer(rootSizer);

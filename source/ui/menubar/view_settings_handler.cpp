@@ -15,6 +15,7 @@ void ViewSettingsHandler::LoadValues() {
 	g_settings.setInteger(Config::SHOW_AS_MINIMAP, 0);
 
 	menuBar->CheckItem(VIEW_TOOLBARS_BRUSHES, g_settings.getBoolean(Config::SHOW_TOOLBAR_BRUSHES));
+	menuBar->CheckItem(VIEW_TOOLBARS_LIGHT, g_settings.getBoolean(Config::SHOW_TOOLBAR_LIGHT));
 	menuBar->CheckItem(VIEW_TOOLBARS_POSITION, g_settings.getBoolean(Config::SHOW_TOOLBAR_POSITION));
 	menuBar->CheckItem(VIEW_TOOLBARS_SIZES, g_settings.getBoolean(Config::SHOW_TOOLBAR_SIZES));
 	menuBar->CheckItem(VIEW_TOOLBARS_STANDARD, g_settings.getBoolean(Config::SHOW_TOOLBAR_STANDARD));
@@ -159,6 +160,10 @@ void ViewSettingsHandler::OnToolbars(wxCommandEvent& event) {
 		case VIEW_TOOLBARS_BRUSHES:
 			g_gui.ShowToolbar(TOOLBAR_BRUSHES, event.IsChecked());
 			g_settings.setInteger(Config::SHOW_TOOLBAR_BRUSHES, event.IsChecked());
+			break;
+		case VIEW_TOOLBARS_LIGHT:
+			g_gui.ShowToolbar(TOOLBAR_LIGHT, event.IsChecked());
+			g_settings.setInteger(Config::SHOW_TOOLBAR_LIGHT, event.IsChecked());
 			break;
 		case VIEW_TOOLBARS_POSITION:
 			g_gui.ShowToolbar(TOOLBAR_POSITION, event.IsChecked());

@@ -166,11 +166,13 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	actions_card->SetMinSize(wxSize(FromDIP(170), -1));
 	auto* new_map_button = new StartupButton(actions_card, wxID_NEW, "New Map", StartupButtonVariant::Primary);
 	new_map_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_NEW, FromDIP(wxSize(18, 18))));
+	new_map_button->SetToolTip("Create a new empty map (Ctrl+N)");
 	new_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnNewMap, this);
 	actions_card->GetBodySizer()->Add(new_map_button, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
 
 	auto* browse_map_button = new StartupButton(actions_card, wxID_OPEN, "Browse Map", StartupButtonVariant::Secondary);
 	browse_map_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_OPEN, FromDIP(wxSize(18, 18))));
+	browse_map_button->SetToolTip("Browse and open an existing map file (Ctrl+O)");
 	browse_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnBrowseMap, this);
 	actions_card->GetBodySizer()->Add(browse_map_button, 0, wxEXPAND);
 	content_sizer->Add(actions_card, 0, wxEXPAND | wxALL, FromDIP(10));
@@ -209,6 +211,7 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	auto* footer_left = new wxBoxSizer(wxHORIZONTAL);
 	auto* exit_button = new StartupButton(footer_panel, wxID_EXIT, "Exit", StartupButtonVariant::Secondary);
 	exit_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_POWER_OFF, FromDIP(wxSize(18, 18))));
+	exit_button->SetToolTip("Exit application");
 	exit_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnExit, this);
 	footer_left->Add(exit_button, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(10));
 	footer_actions->Add(footer_left, 1, wxALIGN_CENTER_VERTICAL);
@@ -228,11 +231,13 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	m_force_load_checkbox = new wxCheckBox(footer_panel, ID_FORCE_LOAD, "Force Load");
 	m_force_load_checkbox->SetForegroundColour(Theme::Get(Theme::Role::Text));
 	m_force_load_checkbox->SetBackgroundColour(footer_panel->GetBackgroundColour());
+	m_force_load_checkbox->SetToolTip("Force loading even if client version mismatches");
 	m_force_load_checkbox->Bind(wxEVT_CHECKBOX, &WelcomeDialog::OnForceLoadChanged, this);
 	footer_right->Add(m_force_load_checkbox, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(12));
 
 	m_load_button = new StartupButton(footer_panel, ID_LOAD_BUTTON, "Load Map", StartupButtonVariant::Primary);
 	m_load_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_OPEN, FromDIP(wxSize(18, 18))));
+	m_load_button->SetToolTip("Load the selected map");
 	m_load_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnLoadRequested, this);
 	footer_right->Add(m_load_button, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(10));
 	footer_actions->Add(footer_right, 1, wxEXPAND);

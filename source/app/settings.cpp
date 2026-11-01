@@ -608,6 +608,7 @@ void Settings::IO(IOMode mode) {
 	section("Toolbars");
 	Bool(SHOW_TOOLBAR_STANDARD, true);
 	Bool(SHOW_TOOLBAR_BRUSHES, false);
+	Bool(SHOW_TOOLBAR_LIGHT, true);
 	Bool(SHOW_TOOLBAR_POSITION, false);
 	Bool(SHOW_TOOLBAR_SIZES, false);
 	String(TOOLBAR_STANDARD_LAYOUT, "");

@@ -109,12 +109,16 @@ OutfitChooserDialog::OutfitChooserDialog(wxWindow* parent, const Outfit& current
 	wxBoxSizer* part_sizer = new wxBoxSizer(wxHORIZONTAL);
 	head_btn = new wxButton(this, ID_COLOR_HEAD, "Head", wxDefaultPosition, wxSize(50, -1));
 	head_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_USER_SOLID, wxSize(16, 16)));
+	head_btn->SetToolTip("Select head color");
 	body_btn = new wxButton(this, ID_COLOR_BODY, "Primary", wxDefaultPosition, wxSize(50, -1));
 	body_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_SHIRT, wxSize(16, 16)));
+	body_btn->SetToolTip("Select primary body color");
 	legs_btn = new wxButton(this, ID_COLOR_LEGS, "Secondary", wxDefaultPosition, wxSize(50, -1));
 	legs_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_SOCKS, wxSize(16, 16)));
+	legs_btn->SetToolTip("Select secondary legs color");
 	feet_btn = new wxButton(this, ID_COLOR_FEET, "Detail", wxDefaultPosition, wxSize(50, -1));
 	feet_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_SHOE_PRINTS, wxSize(16, 16)));
+	feet_btn->SetToolTip("Select detail feet color");
 
 	part_sizer->Add(head_btn, 1, wxEXPAND | wxRIGHT, 2);
 	part_sizer->Add(body_btn, 1, wxEXPAND | wxRIGHT, 2);
@@ -186,6 +190,7 @@ OutfitChooserDialog::OutfitChooserDialog(wxWindow* parent, const Outfit& current
 
 	wxButton* fav_btn = new wxButton(this, ID_ADD_FAVORITE, "Save Current Outfit as Favorite", wxDefaultPosition, wxSize(-1, 28));
 	fav_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_STAR, wxSize(16, 16)));
+	fav_btn->SetToolTip("Save current outfit and colors as favorite");
 	favs_sizer->Add(fav_btn, 0, wxEXPAND | wxTOP, 8);
 
 	main_sizer->Add(favs_sizer, 0, wxEXPAND | wxLEFT, 5);

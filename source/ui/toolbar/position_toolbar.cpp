@@ -8,7 +8,6 @@
 #include "ui/gui_ids.h"
 #include "editor/editor.h"
 #include "util/image_manager.h"
-#include <wx/artprov.h>
 
 const wxString PositionToolBar::PANE_NAME = "position_toolbar";
 
@@ -30,7 +29,7 @@ PositionToolBar::PositionToolBar(wxWindow* parent) {
 
 	go_button = newd wxButton(toolbar, TOOLBAR_POSITION_GO, wxEmptyString, wxDefaultPosition, parent->FromDIP(wxSize(22, 20)));
 	go_button->SetBitmap(go_bitmap);
-	go_button->SetToolTip("Go To Position");
+	go_button->SetToolTip("Go To Position (Enter)");
 
 	toolbar->AddControl(x_control);
 	toolbar->AddControl(y_control);

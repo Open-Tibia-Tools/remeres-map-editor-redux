@@ -242,16 +242,20 @@ void FindItemDialog::buildLayout() {
 	footer_buttons->Add(result_count_label_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
 	if (action_set_ == ActionSet::SearchAndSelect) {
 		search_map_button_ = newd wxButton(footer_panel, wxID_FIND, "Search Map");
+		search_map_button_->SetToolTip("Search and locate items on the open map");
 		footer_buttons->Add(search_map_button_, 0, wxRIGHT, 8);
 
 		select_item_button_ = newd wxButton(footer_panel, wxID_OK, "Select Item");
+		select_item_button_->SetToolTip("Select item and set active brush");
 		footer_buttons->Add(select_item_button_, 0, wxRIGHT, 8);
 	} else {
 		ok_button_ = newd wxButton(footer_panel, wxID_OK, "OK");
+		ok_button_->SetToolTip("Confirm selection");
 		footer_buttons->Add(ok_button_, 0, wxRIGHT, 8);
 	}
 
 	cancel_button_ = newd wxButton(footer_panel, wxID_CANCEL, "Cancel");
+	cancel_button_->SetToolTip("Close dialog");
 	footer_buttons->Add(cancel_button_, 0);
 	footer_sizer->Add(footer_buttons, 0, wxEXPAND | wxALL, 10);
 	footer_panel->SetSizer(footer_sizer);

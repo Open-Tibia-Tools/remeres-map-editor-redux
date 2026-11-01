@@ -10,7 +10,6 @@
 #include "editor/editor.h"
 #include "editor/action_queue.h"
 #include "util/image_manager.h"
-#include <wx/artprov.h>
 
 const wxString StandardToolBar::PANE_NAME = "standard_toolbar";
 

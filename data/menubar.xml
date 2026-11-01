@@ -216,6 +216,7 @@
 		<menu name="Palette" special="PALETTE"/>
 		<menu name="Toolbars">
 			<item name="Brushes" action="VIEW_TOOLBARS_BRUSHES" help="Show or hide the Brushes toolbar."/>
+			<item name="Lighting" action="VIEW_TOOLBARS_LIGHT" help="Show or hide the Lighting toolbar."/>
 			<item name="Position" action="VIEW_TOOLBARS_POSITION" help="Show or hide the Position toolbar."/>
 			<item name="Sizes" action="VIEW_TOOLBARS_SIZES" help="Show or hide the Sizes toolbar."/>
 			<item name="Standard" action="VIEW_TOOLBARS_STANDARD" help="Show or hide the Standard toolbar."/>

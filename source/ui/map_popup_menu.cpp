@@ -134,7 +134,7 @@ void MapPopupMenu::Update() {
 				if (topSelectedItem && (topSelectedItem->isBrushDoor() || topSelectedItem->isRoteable() || teleport)) {
 
 					if (topSelectedItem->isRoteable()) {
-						Append(MAP_POPUP_MENU_ROTATE, "&Rotate item", "Rotate this item")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_ROTATE, wxSize(16, 16)));
+						Append(MAP_POPUP_MENU_ROTATE, "&Rotate item\tZ", "Rotate this item")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_ROTATE, wxSize(16, 16)));
 					}
 
 					if (teleport && teleport->hasDestination()) {
@@ -194,7 +194,7 @@ void MapPopupMenu::Update() {
 				}
 
 				AppendSeparator();
-				Append(MAP_POPUP_MENU_PROPERTIES, "&Properties", "Properties for the current object")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, wxSize(16, 16)));
+				Append(MAP_POPUP_MENU_PROPERTIES, "&Properties\tAlt+Enter", "Properties for the current object")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, wxSize(16, 16)));
 			} else {
 
 				if (topCreature) {
@@ -223,7 +223,7 @@ void MapPopupMenu::Update() {
 
 				if (tile->hasGround() || topCreature || topSpawn) {
 					AppendSeparator();
-					Append(MAP_POPUP_MENU_PROPERTIES, "&Properties", "Properties for the current object")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, wxSize(16, 16)));
+					Append(MAP_POPUP_MENU_PROPERTIES, "&Properties\tAlt+Enter", "Properties for the current object")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, wxSize(16, 16)));
 				}
 			}
 

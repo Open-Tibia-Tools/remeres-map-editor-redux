@@ -71,6 +71,7 @@ void CollectionStudioWindow::InitLayout() {
 
 	wxBoxSizer* itemsBottom = new wxBoxSizer(wxHORIZONTAL);
 	m_clearItemsBtn = new wxButton(itemsBox->GetStaticBox(), wxID_ANY, "Clear Items");
+	m_clearItemsBtn->SetToolTip("Clear all accumulated items");
 	m_itemCountLabel = new wxStaticText(itemsBox->GetStaticBox(), wxID_ANY, "Items: 0");
 	itemsBottom->Add(m_clearItemsBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
 	itemsBottom->AddStretchSpacer(1);
@@ -118,6 +119,7 @@ void CollectionStudioWindow::InitLayout() {
 
 	wxBoxSizer* brushesBottom = new wxBoxSizer(wxHORIZONTAL);
 	m_clearBrushesBtn = new wxButton(brushesBox->GetStaticBox(), wxID_ANY, "Clear Brushes");
+	m_clearBrushesBtn->SetToolTip("Clear all accumulated brushes");
 	m_brushCountLabel = new wxStaticText(brushesBox->GetStaticBox(), wxID_ANY, "Brushes: 0");
 	brushesBottom->Add(m_clearBrushesBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
 	brushesBottom->AddStretchSpacer(1);
