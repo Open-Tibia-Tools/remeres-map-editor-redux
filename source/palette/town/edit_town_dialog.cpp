@@ -40,7 +40,7 @@ TownIdWarningDialog::TownIdWarningDialog(wxWindow* parent, uint32_t old_id, uint
 	auto* topsizer = new wxBoxSizer(wxVERTICAL);
 
 	auto* content_sizer = new wxBoxSizer(wxHORIZONTAL);
-	auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, FromDIP(wxSize(32, 32))));
+	auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmapBundle(ICON_TRIANGLE_EXCLAMATION));
 	content_sizer->Add(icon, wxSizerFlags().Top().Border(wxALL, 15));
 
 	wxString msg = wxstr(std::format(
@@ -92,7 +92,7 @@ TownDeleteDialog::TownDeleteDialog(wxWindow* parent, const std::string& name, ui
 	auto* topsizer = new wxBoxSizer(wxVERTICAL);
 
 	auto* content_sizer = new wxBoxSizer(wxHORIZONTAL);
-	auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, FromDIP(wxSize(32, 32))));
+	auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmapBundle(ICON_TRIANGLE_EXCLAMATION));
 	content_sizer->Add(icon, wxSizerFlags().Top().Border(wxALL, 15));
 
 	wxString msg = wxstr(std::format(

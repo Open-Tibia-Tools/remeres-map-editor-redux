@@ -25,7 +25,7 @@ void StartupInfoPanel::SetFields(const std::vector<StartupInfoField>& fields) {
 		auto* field_sizer = new wxBoxSizer(wxVERTICAL);
 		auto* label_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-		auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(field.icon_art_id, FromDIP(wxSize(14, 14))));
+		auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmapBundle(field.icon_art_id));
 		label_sizer->Add(icon, wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(4)));
 
 		auto* label = new wxStaticText(this, wxID_ANY, field.label);

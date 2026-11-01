@@ -53,7 +53,7 @@ SpawnCreaturePanel::~SpawnCreaturePanel() {
 void SpawnCreaturePanel::SetTile(Tile* tile) {
 	if (tile && tile->spawn) {
 		spawn_text->SetLabelText(wxstr(std::format("Spawn\nR={}", tile->spawn->getSize())));
-		spawn_bitmap->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_FIRE, FromDIP(wxSize(32, 32))));
+		spawn_bitmap->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_FIRE));
 		spawn_bitmap->Show();
 	} else {
 		spawn_text->SetLabelText("No Spawn");
@@ -67,7 +67,7 @@ void SpawnCreaturePanel::SetTile(Tile* tile) {
 			wxBitmap bmp = SpriteIconService::Generate(spr, SPRITE_SIZE_32x32, tile->creature->getLookType(), false, SOUTH);
 			creature_bitmap->SetBitmap(bmp);
 		} else {
-			creature_bitmap->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_DRAGON, FromDIP(wxSize(32, 32))));
+			creature_bitmap->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_DRAGON));
 		}
 		creature_bitmap->Show();
 	} else {

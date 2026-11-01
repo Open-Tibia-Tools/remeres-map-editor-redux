@@ -152,7 +152,7 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	header_sizer->Add(title_sizer, wxSizerFlags(1).CenterVertical().Border(wxTOP | wxBOTTOM, FromDIP(16)));
 
 	auto* preferences_button = new StartupButton(header_panel, wxID_PREFERENCES, "Preferences", StartupButtonVariant::Secondary);
-	preferences_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, FromDIP(wxSize(18, 18))));
+	preferences_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_GEAR));
 	preferences_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnPreferences, this);
 	header_sizer->Add(preferences_button, wxSizerFlags().CenterVertical().Border(wxALL, FromDIP(14)));
 
@@ -166,12 +166,12 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	auto* actions_card = new StartupCardPanel(content_panel, "Quick Actions");
 	actions_card->SetMinSize(wxSize(FromDIP(170), -1));
 	auto* new_map_button = new StartupButton(actions_card, wxID_NEW, "New Map", StartupButtonVariant::Primary);
-	new_map_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_NEW, FromDIP(wxSize(18, 18))));
+	new_map_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_NEW));
 	new_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnNewMap, this);
 	actions_card->GetBodySizer()->Add(new_map_button, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(10)));
 
 	auto* browse_map_button = new StartupButton(actions_card, wxID_OPEN, "Browse Map", StartupButtonVariant::Secondary);
-	browse_map_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_OPEN, FromDIP(wxSize(18, 18))));
+	browse_map_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_OPEN));
 	browse_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnBrowseMap, this);
 	actions_card->GetBodySizer()->Add(browse_map_button, wxSizerFlags().Expand());
 	content_sizer->Add(actions_card, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
@@ -209,7 +209,7 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	auto* footer_actions = new wxBoxSizer(wxHORIZONTAL);
 	auto* footer_left = new wxBoxSizer(wxHORIZONTAL);
 	auto* exit_button = new StartupButton(footer_panel, wxID_EXIT, "Exit", StartupButtonVariant::Secondary);
-	exit_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_POWER_OFF, FromDIP(wxSize(18, 18))));
+	exit_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_POWER_OFF));
 	exit_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnExit, this);
 	footer_left->Add(exit_button, wxSizerFlags().CenterVertical().Border(wxALL, FromDIP(10)));
 	footer_actions->Add(footer_left, wxSizerFlags(1).CenterVertical());
@@ -233,7 +233,7 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	footer_right->Add(m_force_load_checkbox, wxSizerFlags().CenterVertical().Border(wxRIGHT, FromDIP(12)));
 
 	m_load_button = new StartupButton(footer_panel, ID_LOAD_BUTTON, "Load Map", StartupButtonVariant::Primary);
-	m_load_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_OPEN, FromDIP(wxSize(18, 18))));
+	m_load_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_OPEN));
 	m_load_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnLoadRequested, this);
 	footer_right->Add(m_load_button, wxSizerFlags().CenterVertical().Border(wxALL, FromDIP(10)));
 	footer_actions->Add(footer_right, wxSizerFlags(1).Expand());

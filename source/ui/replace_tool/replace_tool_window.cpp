@@ -46,7 +46,7 @@ namespace {
 // A compact icon-only button; the meaning lives in its tooltip.
 wxButton* MakeIconButton(wxWindow* parent, std::string_view icon, const wxString& tooltip, const wxSize& size) {
 	auto* button = new wxButton(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, size, wxBU_NOTEXT | wxBU_EXACTFIT);
-	button->SetBitmap(IMAGE_MANAGER.GetBitmap(icon, wxWindow::FromDIP(wxSize(16, 16), parent), Theme::Get(Theme::Role::Text)));
+	button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(icon, Theme::Get(Theme::Role::Text)));
 	button->SetToolTip(tooltip);
 	return button;
 }

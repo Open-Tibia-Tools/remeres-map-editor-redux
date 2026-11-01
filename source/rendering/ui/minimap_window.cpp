@@ -35,7 +35,7 @@ int dip(wxWindow* window, int value) {
 	return window->FromDIP(value);
 }
 
-wxButton* createHeaderButton(wxWindow* parent, const wxBitmap& bitmap, const wxString& label = wxString()) {
+wxButton* createHeaderButton(wxWindow* parent, const wxBitmapBundle& bitmap, const wxString& label = wxString()) {
 	const wxSize button_size = dipSize(parent, wxSize(24, 22));
 	auto* button = new wxButton(parent, wxID_ANY, label, wxDefaultPosition, button_size, wxBU_EXACTFIT);
 	if (bitmap.IsOk()) {
@@ -71,13 +71,13 @@ MinimapWindow::MinimapWindow(wxWindow* parent) :
 	const int pad_6 = dip(this, 6);
 
 	const wxSize icon_size = dipSize(this, wxSize(14, 14));
-	zoom_out_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmap(ICON_MINUS, icon_size));
-	zoom_in_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmap(ICON_PLUS, icon_size));
-	floor_up_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmap(ICON_ARROW_UP, icon_size));
-	floor_down_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmap(ICON_ARROW_DOWN, icon_size));
+	zoom_out_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
+	zoom_in_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
+	floor_up_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmapBundle(ICON_ARROW_UP));
+	floor_down_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmapBundle(ICON_ARROW_DOWN));
 	show_all_floors_button_ = createHeaderToggleButton(this, "All");
-	screenshot_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmap(ICON_CAMERA, icon_size));
-	help_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmap(ICON_QUESTION_CIRCLE, icon_size));
+	screenshot_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmapBundle(ICON_CAMERA));
+	help_button_ = createHeaderButton(this, IMAGE_MANAGER.GetBitmapBundle(ICON_QUESTION_CIRCLE));
 	zoom_label_ = new wxStaticText(this, wxID_ANY, "9");
 	floor_label_ = new wxStaticText(this, wxID_ANY, "F: 7");
 
