@@ -70,9 +70,9 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 
 	if (item) {
 		if (item->getClientID() != 0 && item->getClientID() != item->getID()) {
-			item_info_label->SetLabel(wxstr(std::format("SID: {}   CID: {} - {}", item->getID(), item->getClientID(), item->getName())));
+			item_info_label->SetLabelText(wxstr(std::format("SID: {}   CID: {} - {}", item->getID(), item->getClientID(), item->getName())));
 		} else {
-			item_info_label->SetLabel(wxstr(std::format("{} - {}", item->getID(), item->getName())));
+			item_info_label->SetLabelText(wxstr(std::format("{} - {}", item->getID(), item->getName())));
 		}
 		action_id_spin->SetValue(item->getActionID());
 		unique_id_spin->SetValue(item->getUniqueID());
@@ -83,7 +83,7 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 			GetSizer()->Show(count_sizer, true);
 
 			if (item->isSplash() || item->isFluidContainer()) {
-				count_sizer->GetStaticBox()->SetLabel("Fluid Type");
+				count_sizer->GetStaticBox()->SetLabelText("Fluid Type");
 				count_spin->Show(false);
 				splash_type_choice->Show(true);
 
@@ -103,9 +103,9 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 				}
 			} else {
 				if (item->isCharged()) {
-					count_sizer->GetStaticBox()->SetLabel("Charges");
+					count_sizer->GetStaticBox()->SetLabelText("Charges");
 				} else {
-					count_sizer->GetStaticBox()->SetLabel("Count");
+					count_sizer->GetStaticBox()->SetLabelText("Count");
 				}
 				count_spin->Show(true);
 				splash_type_choice->Show(false);
@@ -137,7 +137,7 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 			text_ctrl->Enable(false);
 		}
 	} else {
-		item_info_label->SetLabel("");
+		item_info_label->SetLabelText("");
 		action_id_spin->SetValue(0);
 		unique_id_spin->SetValue(0);
 		action_id_spin->Enable(false);

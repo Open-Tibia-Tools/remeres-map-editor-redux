@@ -152,8 +152,8 @@ void MinimapWindow::RefreshMinimap(bool immediate) {
 
 void MinimapWindow::SyncHeaderState() {
 	if (g_gui.IsLoading()) {
-		zoom_label_->SetLabel("9");
-		floor_label_->SetLabel("F: -");
+		zoom_label_->SetLabelText("9");
+		floor_label_->SetLabelText("F: -");
 		zoom_out_button_->Enable(false);
 		zoom_in_button_->Enable(false);
 		floor_up_button_->Enable(false);
@@ -162,9 +162,9 @@ void MinimapWindow::SyncHeaderState() {
 		show_all_floors_button_->Enable(false);
 		screenshot_button_->Enable(false);
 	} else if (auto* state = GetActiveViewportState()) {
-		zoom_label_->SetLabel(wxString::FromUTF8(MinimapViewport::GetZoomLabel(state->zoom_step).data()));
+		zoom_label_->SetLabelText(wxString::FromUTF8(MinimapViewport::GetZoomLabel(state->zoom_step).data()));
 		const std::string floor_label = std::format("F: {}", state->floor);
-		floor_label_->SetLabel(wxString::FromUTF8(floor_label.c_str()));
+		floor_label_->SetLabelText(wxString::FromUTF8(floor_label.c_str()));
 		zoom_out_button_->Enable(state->zoom_step > 0);
 		zoom_in_button_->Enable(state->zoom_step < static_cast<int>(MinimapViewport::ZoomFactors.size()) - 1);
 		floor_up_button_->Enable(state->floor > 0);
@@ -173,8 +173,8 @@ void MinimapWindow::SyncHeaderState() {
 		show_all_floors_button_->Enable(true);
 		screenshot_button_->Enable(canvas_ != nullptr);
 	} else {
-		zoom_label_->SetLabel("9");
-		floor_label_->SetLabel("F: -");
+		zoom_label_->SetLabelText("9");
+		floor_label_->SetLabelText("F: -");
 		zoom_out_button_->Enable(false);
 		zoom_in_button_->Enable(false);
 		floor_up_button_->Enable(false);

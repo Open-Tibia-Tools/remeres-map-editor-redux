@@ -107,20 +107,20 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 
 	auto copy_lines = [feedback](const std::vector<wxString>& picked) {
 		if (picked.empty()) {
-			feedback->SetLabel("Nothing to copy.");
+			feedback->SetLabelText("Nothing to copy.");
 			return;
 		}
 		if (!wxTheClipboard->Open()) {
-			feedback->SetLabel("Could not open the clipboard.");
+			feedback->SetLabelText("Could not open the clipboard.");
 			return;
 		}
 		const bool stored = wxTheClipboard->SetData(new wxTextDataObject(JoinDialogItems(picked)));
 		wxTheClipboard->Close();
 		if (!stored) {
-			feedback->SetLabel("Could not put the text in the clipboard.");
+			feedback->SetLabelText("Could not put the text in the clipboard.");
 			return;
 		}
-		feedback->SetLabel(wxstr(std::format("Copied {} line(s) to the clipboard.", picked.size())));
+		feedback->SetLabelText(wxstr(std::format("Copied {} line(s) to the clipboard.", picked.size())));
 	};
 
 	wxSizer* action_sizer = newd wxBoxSizer(wxHORIZONTAL);
@@ -151,16 +151,16 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 		// cannot truncate the file the user chose to overwrite.
 		wxTempFile file(save_dlg.GetPath());
 		if (!file.IsOpened()) {
-			feedback->SetLabel("Could not open the file for writing.");
+			feedback->SetLabelText("Could not open the file for writing.");
 			return;
 		}
 
 		const wxScopedCharBuffer utf8 = JoinDialogItems(lines).utf8_str();
 		if (!file.Write(utf8.data(), utf8.length()) || !file.Commit()) {
-			feedback->SetLabel("The file could not be written; the previous file is untouched.");
+			feedback->SetLabelText("The file could not be written; the previous file is untouched.");
 			return;
 		}
-		feedback->SetLabel(wxstr(std::format("Exported {} line(s).", lines.size())));
+		feedback->SetLabelText(wxstr(std::format("Exported {} line(s).", lines.size())));
 	});
 	action_sizer->Add(export_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 4));
 

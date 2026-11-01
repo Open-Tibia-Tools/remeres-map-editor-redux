@@ -210,7 +210,7 @@ namespace IngamePreview {
 
 	void IngamePreviewWindow::UpdateServerColorButton() {
 		server_color_button->SetBitmap(CreateLightColorSwatchBitmap(this, server_light_color, wxSize(20, 16)));
-		server_color_button->SetLabel(wxEmptyString);
+		server_color_button->SetLabelText(wxEmptyString);
 	}
 
 	void IngamePreviewWindow::OnClientBrightnessSlider(wxCommandEvent& event) {

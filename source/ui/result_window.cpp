@@ -438,11 +438,11 @@ void SearchResultWindow::updateSummary() {
 	}
 
 	if (rows_.empty() || total_count_ == 0) {
-		summary_label->SetLabel("Results: 0");
+		summary_label->SetLabelText("Results: 0");
 	} else {
 		const uint32_t first_visible = std::min(total_count_, page_offset_ + 1);
 		const uint32_t last_visible = std::min(total_count_, page_offset_ + static_cast<uint32_t>(rows_.size()));
-		summary_label->SetLabel(wxstr(std::format("Results: {} | {}-{}", total_count_, first_visible, last_visible)));
+		summary_label->SetLabelText(wxstr(std::format("Results: {} | {}-{}", total_count_, first_visible, last_visible)));
 	}
 
 	if (previous_page_button_ != nullptr) {

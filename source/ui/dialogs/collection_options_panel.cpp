@@ -271,8 +271,8 @@ void CollectionOptionsPanel::UpdateCounts(size_t itemCount, size_t brushCount) {
 	m_itemCount = itemCount;
 	m_brushCount = brushCount;
 
-	m_includeItemsCheck->SetLabel(wxstr(std::format("Include Items ({})", m_itemCount)));
-	m_includeBrushesCheck->SetLabel(wxstr(std::format("Include Brushes ({})", m_brushCount)));
+	m_includeItemsCheck->SetLabelText(wxstr(std::format("Include Items ({})", m_itemCount)));
+	m_includeBrushesCheck->SetLabelText(wxstr(std::format("Include Brushes ({})", m_brushCount)));
 }
 
 void CollectionOptionsPanel::OnModeChanged(wxCommandEvent&) {
@@ -298,7 +298,7 @@ void CollectionOptionsPanel::UpdateFilePreview() {
 	std::error_code ec;
 	auto rel = std::filesystem::relative(filePath, palettesPath.parent_path(), ec);
 	std::string displayRel = ec ? filePath.string() : rel.generic_string();
-	m_filePathLabel->SetLabel(wxstr(std::format("Target ({}):\n{}", pal, displayRel)));
+	m_filePathLabel->SetLabelText(wxstr(std::format("Target ({}):\n{}", pal, displayRel)));
 	m_filePathLabel->Wrap(240);
 	Layout();
 }

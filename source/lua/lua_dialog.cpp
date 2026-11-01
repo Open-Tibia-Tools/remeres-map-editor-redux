@@ -2273,7 +2273,7 @@ LuaDialog* LuaDialog::modify(sol::table options) {
 				} else if (widget.type == "label") {
 					wxStaticText* ctrl = static_cast<wxStaticText*>(widget.widget);
 					if (props["text"].valid()) {
-						ctrl->SetLabel(wxString(props.get_or(std::string("text"), ""s)));
+						ctrl->SetLabelText(wxString(props.get_or(std::string("text"), ""s)));
 					}
 				} else if (widget.type == "combobox") {
 					wxChoice* ctrl = static_cast<wxChoice*>(widget.widget);

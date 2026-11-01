@@ -338,7 +338,7 @@ void WelcomeDialog::RefreshClientInfoPanel() {
 
 void WelcomeDialog::RefreshFooterState() {
 	const StartupCompatibilityStatus status = GetCompatibilityStatus();
-	m_status_text->SetLabel(BuildCompatibilityMessage());
+	m_status_text->SetLabelText(BuildCompatibilityMessage());
 	m_status_text->SetForegroundColour(StartupStatusColour(status));
 
 	const bool mismatch = status == StartupCompatibilityStatus::ForceRequired || status == StartupCompatibilityStatus::Forced;

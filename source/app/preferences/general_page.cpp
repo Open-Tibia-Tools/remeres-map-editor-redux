@@ -152,7 +152,7 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 
 void GeneralPage::UpdatePositionPreview() {
 	if (position_preview_label && position_format_choice) {
-		position_preview_label->SetLabel(BuildPositionPreview(position_format_choice->GetSelection()));
+		position_preview_label->SetLabelText(BuildPositionPreview(position_format_choice->GetSelection()));
 		position_preview_label->GetParent()->Layout();
 	}
 }

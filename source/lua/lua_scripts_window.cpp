@@ -305,13 +305,13 @@ void LuaScriptsWindow::RefreshSelectionSummary() {
 	const auto& scripts = g_luaScripts.getScripts();
 	if (!selected || *selected >= scripts.size()) {
 		selected_script_id.clear();
-		selection_summary->SetLabel("No script selected");
+		selection_summary->SetLabelText("No script selected");
 		return;
 	}
 
 	const auto& script = scripts[*selected];
 	selected_script_id = script->getUniqueId();
-	selection_summary->SetLabel(BuildScriptLabel(*script));
+	selection_summary->SetLabelText(BuildScriptLabel(*script));
 }
 
 void LuaScriptsWindow::UpdateActionState() {

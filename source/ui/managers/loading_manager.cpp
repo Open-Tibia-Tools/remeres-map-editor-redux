@@ -147,7 +147,7 @@ void LoadingManager::SetLoadText(const wxString& message) {
 
 	if (infoDialog) {
 		// Informational mode has no gauge: just repaint the new text.
-		infoText->SetLabel(message);
+		infoText->SetLabelText(message);
 		infoDialog->Layout();
 		infoDialog->Update();
 		return;

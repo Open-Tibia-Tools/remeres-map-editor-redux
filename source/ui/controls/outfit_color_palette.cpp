@@ -177,7 +177,7 @@ void LightColorPickerDialog::UpdateSelection(int color_index) {
 	}
 	if (selection_label_) {
 		const wxColor color = colorFromEightBit(selected_color_);
-		selection_label_->SetLabel(wxstr(std::format("Index {} | RGB({}, {}, {})", selected_color_, color.Red(), color.Green(), color.Blue())));
+		selection_label_->SetLabelText(wxstr(std::format("Index {} | RGB({}, {}, {})", selected_color_, color.Red(), color.Green(), color.Blue())));
 	}
 }
 

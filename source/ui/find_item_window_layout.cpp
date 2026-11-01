@@ -478,7 +478,7 @@ void FindItemDialog::readQueryFromControls() {
 
 void FindItemDialog::updateResultTitle(size_t count) {
 	if (result_count_label_ != nullptr) {
-		result_count_label_->SetLabel(wxString::FromUTF8(std::format("Results: {} |", count)));
+		result_count_label_->SetLabelText(wxString::FromUTF8(std::format("Results: {} |", count)));
 		result_count_label_->SetMinSize(result_count_label_->GetBestSize());
 		if (wxWindow* parent = result_count_label_->GetParent(); parent != nullptr) {
 			parent->Layout();

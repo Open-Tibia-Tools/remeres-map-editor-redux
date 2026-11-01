@@ -347,11 +347,11 @@ void SpawnValidatorWindow::RefreshTable() {
 
 	if (status_label) {
 		if (!has_scanned) {
-			status_label->SetLabel("Ready. Configure rules and click 'Scan Map'.");
+			status_label->SetLabelText("Ready. Configure rules and click 'Scan Map'.");
 		} else if (current_issues.empty()) {
-			status_label->SetLabel("Scan complete: No issues found.");
+			status_label->SetLabelText("Scan complete: No issues found.");
 		} else {
-			status_label->SetLabel(wxstr(std::format("Found {} issues ({} shown).", current_issues.size(), filtered.size())));
+			status_label->SetLabelText(wxstr(std::format("Found {} issues ({} shown).", current_issues.size(), filtered.size())));
 		}
 	}
 

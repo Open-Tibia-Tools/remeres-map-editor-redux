@@ -425,17 +425,17 @@ ClientVersion* ClientVersionPage::GetSelectedClient() {
 
 void ClientVersionPage::RefreshSummary() {
 	if (!active_client) {
-		summary_name_label->SetLabel("");
-		summary_dirty_label->SetLabel("");
+		summary_name_label->SetLabelText("");
+		summary_dirty_label->SetLabelText("");
 		return;
 	}
 
-	summary_name_label->SetLabel(wxstr(active_client->getName()));
+	summary_name_label->SetLabelText(wxstr(active_client->getName()));
 	if (active_client->isDirty()) {
-		summary_dirty_label->SetLabel("Unsaved changes");
+		summary_dirty_label->SetLabelText("Unsaved changes");
 		summary_dirty_label->SetForegroundColour(Theme::Get(Theme::Role::Warning));
 	} else {
-		summary_dirty_label->SetLabel("Saved");
+		summary_dirty_label->SetLabelText("Saved");
 		summary_dirty_label->SetForegroundColour(Theme::Get(Theme::Role::Success));
 	}
 	summary_name_label->GetParent()->Layout();

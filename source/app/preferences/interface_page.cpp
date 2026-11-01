@@ -107,10 +107,10 @@ InterfacePage::InterfacePage(wxWindow* parent) : ScrollablePreferencesPage(paren
 
 void InterfacePage::UpdateSpeedLabels() {
 	if (scroll_speed_value_label) {
-		scroll_speed_value_label->SetLabel(FormatSpeedLabel(scroll_speed_slider->GetValue()));
+		scroll_speed_value_label->SetLabelText(FormatSpeedLabel(scroll_speed_slider->GetValue()));
 	}
 	if (zoom_speed_value_label) {
-		zoom_speed_value_label->SetLabel(FormatSpeedLabel(zoom_speed_slider->GetValue()));
+		zoom_speed_value_label->SetLabelText(FormatSpeedLabel(zoom_speed_slider->GetValue()));
 	}
 }
 

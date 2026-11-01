@@ -372,7 +372,7 @@ void BrushItemsWindow::SetActiveBrush(const Brush* brush) {
 			m_bottomCard->Show(false);
 		}
 		if (m_emptyLabel) {
-			m_emptyLabel->SetLabel("Select a brush to view its items.");
+			m_emptyLabel->SetLabelText("Select a brush to view its items.");
 			m_emptyLabel->Show(true);
 		}
 		if (m_grid) m_grid->Show(false);
@@ -438,7 +438,7 @@ void BrushItemsWindow::SetActiveBrush(const Brush* brush) {
 	}
 
 	if (m_emptyLabel) {
-		m_emptyLabel->SetLabel("No items associated with this brush.");
+		m_emptyLabel->SetLabelText("No items associated with this brush.");
 		m_emptyLabel->Show(count == 0);
 	}
 	if (m_grid) {

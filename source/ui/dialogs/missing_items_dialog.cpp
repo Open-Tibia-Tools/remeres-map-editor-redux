@@ -83,7 +83,7 @@ void MissingItemsDialog::BuildUI() {
 			wxString::FromUTF8(entry.description)
 		});
 	}
-	countMissingInDat->SetLabel(wxString::FromUTF8(std::format("Items in {} missing from tibia.dat: {}",
+	countMissingInDat->SetLabelText(wxString::FromUTF8(std::format("Items in {} missing from tibia.dat: {}",
 		hasOtb ? "items.otb" : "items.xml", report.missing_in_dat.size())));
 	page1->SetSizer(sizer1);
 	notebook->AddPage(page1, wxString::FromUTF8(std::format("Missing in DAT ({})", report.missing_in_dat.size())));
@@ -105,7 +105,7 @@ void MissingItemsDialog::BuildUI() {
 			wxString::FromUTF8(entry.name.empty() ? "(no name)" : entry.name)
 		});
 	}
-	countMissingInOtb->SetLabel(wxString::FromUTF8(std::format("Items in tibia.dat not referenced by {}: {}",
+	countMissingInOtb->SetLabelText(wxString::FromUTF8(std::format("Items in tibia.dat not referenced by {}: {}",
 		hasOtb ? "items.otb" : "items.xml", report.missing_in_otb.size())));
 	page2->SetSizer(sizer2);
 	notebook->AddPage(page2, wxString::FromUTF8(std::format("DAT not in {} ({})", hasOtb ? "OTB" : "XML", report.missing_in_otb.size())));
@@ -132,7 +132,7 @@ void MissingItemsDialog::BuildUI() {
 				wxString::FromUTF8(entry.description)
 			});
 		}
-		countXmlNoOtb->SetLabel(wxString::FromUTF8(std::format("Items in items.xml missing from items.otb: {}", report.xml_no_otb.size())));
+		countXmlNoOtb->SetLabelText(wxString::FromUTF8(std::format("Items in items.xml missing from items.otb: {}", report.xml_no_otb.size())));
 		page3->SetSizer(sizer3);
 		notebook->AddPage(page3, wxString::FromUTF8(std::format("XML no OTB ({})", report.xml_no_otb.size())));
 	}
@@ -159,7 +159,7 @@ void MissingItemsDialog::BuildUI() {
 				wxString::FromUTF8(entry.description)
 			});
 		}
-		countOtbNoXml->SetLabel(wxString::FromUTF8(std::format("Items in items.otb missing from items.xml: {}", report.otb_no_xml.size())));
+		countOtbNoXml->SetLabelText(wxString::FromUTF8(std::format("Items in items.otb missing from items.xml: {}", report.otb_no_xml.size())));
 		page4->SetSizer(sizer4);
 		notebook->AddPage(page4, wxString::FromUTF8(std::format("OTB no XML ({})", report.otb_no_xml.size())));
 	}

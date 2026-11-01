@@ -360,10 +360,10 @@ void CollectionStudioWindow::UpdateUI() {
 		m_brushGrid->SetBrushes(m_staging.brushes);
 	}
 	if (m_itemCountLabel) {
-		m_itemCountLabel->SetLabel(wxstr(std::format("Items: {}", m_staging.itemIds.size())));
+		m_itemCountLabel->SetLabelText(wxstr(std::format("Items: {}", m_staging.itemIds.size())));
 	}
 	if (m_brushCountLabel) {
-		m_brushCountLabel->SetLabel(wxstr(std::format("Brushes: {}", m_staging.brushes.size())));
+		m_brushCountLabel->SetLabelText(wxstr(std::format("Brushes: {}", m_staging.brushes.size())));
 	}
 	if (m_optionsPanel) {
 		m_optionsPanel->UpdateCounts(m_staging.itemIds.size(), m_staging.brushes.size());

@@ -385,7 +385,7 @@ void ToolOptionsSurface::RefreshFromState() {
 	}
 	UpdateSizeLabels();
 	UpdateModeButtons();
-	thickness_value->SetLabel(std::format("{}%", thickness_slider->GetValue()));
+	thickness_value->SetLabelText(std::format("{}%", thickness_slider->GetValue()));
 	SyncToolSelection();
 	SetMutatingUi(false);
 
@@ -445,8 +445,8 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 
 void ToolOptionsSurface::UpdateSizeLabels() {
 	const bool exact = g_gui.IsExactBrushSize();
-	size_x_value->SetLabel(std::format("{}", effectiveAxisSpan(g_gui.GetBrushSizeX(), exact)));
-	size_y_value->SetLabel(std::format("{}", effectiveAxisSpan(g_gui.GetBrushSizeY(), exact)));
+	size_x_value->SetLabelText(std::format("{}", effectiveAxisSpan(g_gui.GetBrushSizeX(), exact)));
+	size_y_value->SetLabelText(std::format("{}", effectiveAxisSpan(g_gui.GetBrushSizeY(), exact)));
 }
 
 void ToolOptionsSurface::UpdateModeButtons() {
@@ -786,7 +786,7 @@ void ToolOptionsSurface::OnThicknessChanged(wxCommandEvent& event) {
 		return;
 	}
 
-	thickness_value->SetLabel(std::format("{}%", event.GetInt()));
+	thickness_value->SetLabelText(std::format("{}%", event.GetInt()));
 	g_brush_manager.SetBrushThickness(true, event.GetInt(), 100);
 	g_gui.FocusCurrentMapCanvas();
 }

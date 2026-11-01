@@ -187,39 +187,39 @@ void ExportMinimapWindow::OnClickCancel(wxCommandEvent& WXUNUSED(event)) {
 
 void ExportMinimapWindow::CheckValues() {
 	if (directory_text_field_->IsEmpty()) {
-		error_field_->SetLabel("Type or select an output folder.");
+		error_field_->SetLabelText("Type or select an output folder.");
 		ok_button_->Enable(false);
 		return;
 	}
 	if (file_name_text_field_->IsEmpty()) {
-		error_field_->SetLabel("Type a name for the file.");
+		error_field_->SetLabelText("Type a name for the file.");
 		ok_button_->Enable(false);
 		return;
 	}
 	if (hasInvalidFileNameChars(file_name_text_field_->GetValue())) {
-		error_field_->SetLabel("File name contains invalid characters.");
+		error_field_->SetLabelText("File name contains invalid characters.");
 		ok_button_->Enable(false);
 		return;
 	}
 
 	const wxFileName directory = wxFileName::DirName(directory_text_field_->GetValue());
 	if (!directory.DirExists()) {
-		error_field_->SetLabel("Output folder not found.");
+		error_field_->SetLabelText("Output folder not found.");
 		ok_button_->Enable(false);
 		return;
 	}
 	if (!directory.IsDirWritable()) {
-		error_field_->SetLabel("Output folder is not writable.");
+		error_field_->SetLabelText("Output folder is not writable.");
 		ok_button_->Enable(false);
 		return;
 	}
 	if (std::ranges::none_of(SelectedFloors(), [](bool selected) { return selected; })) {
-		error_field_->SetLabel("Select at least one floor.");
+		error_field_->SetLabelText("Select at least one floor.");
 		ok_button_->Enable(false);
 		return;
 	}
 
-	error_field_->SetLabel(wxEmptyString);
+	error_field_->SetLabelText(wxEmptyString);
 	ok_button_->Enable(true);
 }
 
