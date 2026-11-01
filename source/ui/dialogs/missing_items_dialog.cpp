@@ -69,11 +69,14 @@ void MissingItemsDialog::BuildUI() {
 	countMissingInDat = new wxStaticText(page1, wxID_ANY, "");
 	sizer1->Add(countMissingInDat, wxSizerFlags().Border(wxALL, FromDIP(5)));
 
-	listMissingInDat = new wxDataViewListCtrl(page1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES);
-	listMissingInDat->AppendTextColumn("Server ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
-	listMissingInDat->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
-	listMissingInDat->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200));
-	listMissingInDat->AppendTextColumn("Description", wxDATAVIEW_CELL_INERT, FromDIP(250));
+	constexpr int colFlags = wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE;
+	constexpr long listStyle = wxDV_ROW_LINES | wxDV_HORIZ_RULES | wxDV_VERT_RULES;
+
+	listMissingInDat = new wxDataViewListCtrl(page1, wxID_ANY, wxDefaultPosition, wxDefaultSize, listStyle);
+	listMissingInDat->AppendTextColumn("Server ID", wxDATAVIEW_CELL_INERT, FromDIP(100), wxALIGN_LEFT, colFlags);
+	listMissingInDat->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(100), wxALIGN_LEFT, colFlags);
+	listMissingInDat->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200), wxALIGN_LEFT, colFlags);
+	listMissingInDat->AppendTextColumn("Description", wxDATAVIEW_CELL_INERT, FromDIP(250), wxALIGN_LEFT, colFlags);
 	sizer1->Add(listMissingInDat, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
 
 	for (const auto& entry : sorted_dat) {
@@ -95,9 +98,9 @@ void MissingItemsDialog::BuildUI() {
 	countMissingInOtb = new wxStaticText(page2, wxID_ANY, "");
 	sizer2->Add(countMissingInOtb, wxSizerFlags().Border(wxALL, FromDIP(5)));
 
-	listMissingInOtb = new wxDataViewListCtrl(page2, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES);
-	listMissingInOtb->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(150));
-	listMissingInOtb->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200));
+	listMissingInOtb = new wxDataViewListCtrl(page2, wxID_ANY, wxDefaultPosition, wxDefaultSize, listStyle);
+	listMissingInOtb->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(150), wxALIGN_LEFT, colFlags);
+	listMissingInOtb->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200), wxALIGN_LEFT, colFlags);
 	sizer2->Add(listMissingInOtb, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
 
 	for (const auto& entry : sorted_otb) {
@@ -118,11 +121,11 @@ void MissingItemsDialog::BuildUI() {
 		countXmlNoOtb = new wxStaticText(page3, wxID_ANY, "");
 		sizer3->Add(countXmlNoOtb, wxSizerFlags().Border(wxALL, FromDIP(5)));
 
-		listXmlNoOtb = new wxDataViewListCtrl(page3, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES);
-		listXmlNoOtb->AppendTextColumn("Server ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
-		listXmlNoOtb->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
-		listXmlNoOtb->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200));
-		listXmlNoOtb->AppendTextColumn("Description", wxDATAVIEW_CELL_INERT, FromDIP(250));
+		listXmlNoOtb = new wxDataViewListCtrl(page3, wxID_ANY, wxDefaultPosition, wxDefaultSize, listStyle);
+		listXmlNoOtb->AppendTextColumn("Server ID", wxDATAVIEW_CELL_INERT, FromDIP(100), wxALIGN_LEFT, colFlags);
+		listXmlNoOtb->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(100), wxALIGN_LEFT, colFlags);
+		listXmlNoOtb->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200), wxALIGN_LEFT, colFlags);
+		listXmlNoOtb->AppendTextColumn("Description", wxDATAVIEW_CELL_INERT, FromDIP(250), wxALIGN_LEFT, colFlags);
 		sizer3->Add(listXmlNoOtb, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
 
 		for (const auto& entry : sorted_xml_no_otb) {
@@ -145,10 +148,10 @@ void MissingItemsDialog::BuildUI() {
 		countOtbNoXml = new wxStaticText(page4, wxID_ANY, "");
 		sizer4->Add(countOtbNoXml, wxSizerFlags().Border(wxALL, FromDIP(5)));
 
-		listOtbNoXml = new wxDataViewListCtrl(page4, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES);
-		listOtbNoXml->AppendTextColumn("Server ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
-		listOtbNoXml->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(100));
-		listOtbNoXml->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200));
+		listOtbNoXml = new wxDataViewListCtrl(page4, wxID_ANY, wxDefaultPosition, wxDefaultSize, listStyle);
+		listOtbNoXml->AppendTextColumn("Server ID", wxDATAVIEW_CELL_INERT, FromDIP(100), wxALIGN_LEFT, colFlags);
+		listOtbNoXml->AppendTextColumn("Client ID", wxDATAVIEW_CELL_INERT, FromDIP(100), wxALIGN_LEFT, colFlags);
+		listOtbNoXml->AppendTextColumn("Name", wxDATAVIEW_CELL_INERT, FromDIP(200), wxALIGN_LEFT, colFlags);
 		listOtbNoXml->AppendTextColumn("Description", wxDATAVIEW_CELL_INERT, FromDIP(250));
 		sizer4->Add(listOtbNoXml, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
 
