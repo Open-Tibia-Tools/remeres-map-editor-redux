@@ -30,7 +30,7 @@ namespace {
 	// pane's current size as its best size before saving it.
 	wxString SavePaneInfoWithCurrentSize(wxAuiManager& manager, wxWindow* window) {
 		wxAuiPaneInfo& info = manager.GetPane(window);
-		if (info.IsOk() && info.IsDocked() && info.IsShown()) {
+		if (info.IsOk() && info.IsDocked() && info.IsShown() && !info.IsMaximized()) {
 			const wxSize size = window->GetSize();
 			if (size.x > 0 && size.y > 0) {
 				info.BestSize(size);

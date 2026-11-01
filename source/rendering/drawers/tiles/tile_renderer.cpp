@@ -533,6 +533,9 @@ void TileRenderer::RenderLightStrength(SpriteBatch& sprite_batch, const Tile& ti
 		item_drawer->DrawLightStrength(sprite_batch, sprite_drawer, *tile.ground, draw_x, draw_y, &ctx.atlas, depth);
 	}
 	for (const auto& item : tile.items) {
+		if (!ctx.options.show_items && item && item->isPickupable()) {
+			continue;
+		}
 		item_drawer->DrawLightStrength(sprite_batch, sprite_drawer, *item, draw_x, draw_y, &ctx.atlas, depth);
 	}
 }

@@ -1476,6 +1476,9 @@ void ChunkCacheManager::renderDynamicOverlays(
 					if (!tile) {
 						continue;
 					}
+					if (ctx.options.show_only_modified && !tile->isModified()) {
+						continue;
+					}
 					const int draw_x = (chunk.coord.cx * CHUNK_SIZE + tx) * TILE_SIZE + base_draw_x;
 					const int draw_y = (chunk.coord.cy * CHUNK_SIZE + ty) * TILE_SIZE + base_draw_y;
 					if (ctx.view.IsPixelVisible(draw_x, draw_y)) {

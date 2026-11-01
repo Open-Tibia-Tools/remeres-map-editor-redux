@@ -136,7 +136,11 @@ wxString FileSystem::GetFoundDataDirectory() {
 }
 
 std::filesystem::path FileSystem::GetConfigSavePath() {
+#ifdef _WIN32
 	return std::filesystem::path(GetExecDirectory().ToStdWstring()) / "config.toml";
+#else
+	return std::filesystem::path(std::string(GetExecDirectory().ToUTF8())) / "config.toml";
+#endif
 }
 
 std::filesystem::path FileSystem::GetConfigFilePath() {

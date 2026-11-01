@@ -27,7 +27,6 @@
 #include <toml++/toml.h>
 
 #include "util/file_system.h"
-#include <filesystem>
 
 #include <iostream>
 #include <fstream>
