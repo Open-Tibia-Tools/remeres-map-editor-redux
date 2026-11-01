@@ -7,7 +7,9 @@
 
 #include <glad/glad.h>
 #include <cstdint>
+#include <memory>
 #include <vector>
+#include "rendering/core/gl_resources.h"
 
 struct AtlasRegion;
 
@@ -102,15 +104,15 @@ public:
 	}
 
 	GLuint getBufferID() const noexcept {
-		return buffer_;
+		return buffer_ ? buffer_->GetID() : 0;
 	}
 
 	GLuint getTextureID() const noexcept {
-		return texture_;
+		return texture_ ? texture_->GetID() : 0;
 	}
 
 	bool isValid() const noexcept {
-		return texture_ != 0 && buffer_ != 0;
+		return texture_ != nullptr && buffer_ != nullptr;
 	}
 
 	void release();
@@ -118,8 +120,8 @@ public:
 private:
 	void ensureCapacity(size_t required_capacity);
 
-	GLuint buffer_ = 0;
-	GLuint texture_ = 0;
+	std::unique_ptr<GLBuffer> buffer_;
+	std::unique_ptr<GLTextureResource> texture_;
 	std::vector<SpriteLUTEntry> cpu_entries_;
 	size_t gpu_capacity_ = 0;
 	size_t max_supported_entries_ = MAX_SUPPORTED_SPRITES;

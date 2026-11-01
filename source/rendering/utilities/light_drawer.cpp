@@ -85,10 +85,30 @@ void LightDrawer::updateViewportTexture(
 	const rme::lighting::LightConfig& config,
 	int min_cx, int min_cy, int max_cx, int max_cy
 ) {
+	GLint max_tex_size = 0;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex_size);
+	if (max_tex_size <= 0) {
+		max_tex_size = 8192;
+	}
+
 	const int chunks_w = max_cx - min_cx + 1;
 	const int chunks_h = max_cy - min_cy + 1;
-	const int tex_w = chunks_w * rme::lighting::CHUNK_SIZE;
-	const int tex_h = chunks_h * rme::lighting::CHUNK_SIZE;
+	int tex_w = chunks_w * rme::lighting::CHUNK_SIZE;
+	int tex_h = chunks_h * rme::lighting::CHUNK_SIZE;
+
+	if (tex_w > max_tex_size || tex_h > max_tex_size) {
+		spdlog::warn("[LightDrawer] Requested texture size {}x{} exceeds GL_MAX_TEXTURE_SIZE ({}); clamping chunk bounds",
+			tex_w, tex_h, max_tex_size);
+		const int max_chunks = max_tex_size / rme::lighting::CHUNK_SIZE;
+		if (chunks_w > max_chunks) {
+			max_cx = min_cx + max_chunks - 1;
+			tex_w = max_chunks * rme::lighting::CHUNK_SIZE;
+		}
+		if (chunks_h > max_chunks) {
+			max_cy = min_cy + max_chunks - 1;
+			tex_h = max_chunks * rme::lighting::CHUNK_SIZE;
+		}
+	}
 
 	if (tex_w <= 0 || tex_h <= 0) {
 		return;
@@ -132,8 +152,8 @@ void LightDrawer::updateViewportTexture(
 	if (tex_w > gpu_tex_width_ || tex_h > gpu_tex_height_) {
 		const int old_w = gpu_tex_width_;
 		const int old_h = gpu_tex_height_;
-		gpu_tex_width_ = std::max(tex_w, std::max(gpu_tex_width_ * 2, 512));
-		gpu_tex_height_ = std::max(tex_h, std::max(gpu_tex_height_ * 2, 512));
+		gpu_tex_width_ = std::min(max_tex_size, std::max(tex_w, std::max(gpu_tex_width_ * 2, 512)));
+		gpu_tex_height_ = std::min(max_tex_size, std::max(tex_h, std::max(gpu_tex_height_ * 2, 512)));
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, gpu_tex_width_, gpu_tex_height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 		spdlog::info("[LightDrawer] GPU texture storage allocated/resized: {}x{} -> {}x{} (~{:.2f} MB VRAM) | ID: {}",
 			old_w, old_h, gpu_tex_width_, gpu_tex_height_,
@@ -406,10 +426,16 @@ void LightDrawer::draw(const RenderView& view, const LightBuffer& light_buffer, 
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
+	GLint max_tex_size = 0;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex_size);
+	if (max_tex_size <= 0) {
+		max_tex_size = 8192;
+	}
+
 	glBindTexture(GL_TEXTURE_2D, texture_->GetID());
 	if (light_buffer.width > gpu_tex_width_ || light_buffer.height > gpu_tex_height_) {
-		gpu_tex_width_ = std::max(light_buffer.width, std::max(gpu_tex_width_ * 2, 512));
-		gpu_tex_height_ = std::max(light_buffer.height, std::max(gpu_tex_height_ * 2, 512));
+		gpu_tex_width_ = std::min(max_tex_size, std::max(light_buffer.width, std::max(gpu_tex_width_ * 2, 512)));
+		gpu_tex_height_ = std::min(max_tex_size, std::max(light_buffer.height, std::max(gpu_tex_height_ * 2, 512)));
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, gpu_tex_width_, gpu_tex_height_, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	}
 

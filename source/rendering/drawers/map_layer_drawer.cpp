@@ -18,6 +18,7 @@
 #include "rendering/drawers/map_layer_drawer.h"
 #include <glad/glad.h>
 #include "rendering/core/chunk_cache_manager.h"
+#include "rendering/core/gl_scoped_state.h"
 #include "app/definitions.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
 #include "rendering/drawers/overlays/grid_drawer.h"
@@ -178,15 +179,15 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		sprite_batch.flush(ctx.atlas);
 
 		// 2. Chunk Cache static terrain pass (instanced per-chunk VBOs: ground & borders)
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-		glDepthMask(GL_TRUE);
-		chunk_cache->renderFloorTerrain(map_z, map, ctx, view.projectionMatrix, ctx.atlas);
+		{
+			ScopedGLCapability depth_cap(GL_DEPTH_TEST, true);
+			ScopedGLDepthMask depth_mask(GL_TRUE);
+			glDepthFunc(GL_LEQUAL);
+			chunk_cache->renderFloorTerrain(map_z, map, ctx, view.projectionMatrix, ctx.atlas);
+		}
 
 		// 3. Ground-level highlight items overlay pass (underneath items, directly on terrain)
 		// Overlays are 2D editor surfaces: depth test is disabled so multi-tile overlays are never clipped by terrain depth
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
 		if (zone_overlay_drawer && options.highlight_items && !options.ingame) {
 			zone_overlay_drawer->drawFloorHighlightItems(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
@@ -203,22 +204,22 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 
 		// 5. Chunk Cache static items pass (instanced per-chunk VBOs: walls, tables, stairs, items)
 		// Depth test re-enabled: items test against terrain depth buffer (resolving Mountain 919 vs north railings)
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-		glDepthMask(GL_TRUE);
-		// The zoomed-out item handling happens per chunk inside renderFloorItems: chunks re-baked
-		// without items keep the town/waypoint/house-exit indicators and creatures visible, and
-		// only chunks still carrying baked items are suppressed (the dynamic overlay pass already
-		// skips animated items at this zoom, so this makes static and animated items consistent).
-		chunk_cache->renderFloorItems(map_z, ctx, view.projectionMatrix, ctx.atlas);
+		{
+			ScopedGLCapability depth_cap(GL_DEPTH_TEST, true);
+			ScopedGLDepthMask depth_mask(GL_TRUE);
+			glDepthFunc(GL_LEQUAL);
+			// The zoomed-out item handling happens per chunk inside renderFloorItems: chunks re-baked
+			// without items keep the town/waypoint/house-exit indicators and creatures visible, and
+			// only chunks still carrying baked items are suppressed (the dynamic overlay pass already
+			// skips animated items at this zoom, so this makes static and animated items consistent).
+			chunk_cache->renderFloorItems(map_z, ctx, view.projectionMatrix, ctx.atlas);
+		}
 
 		// 6. Dynamic overlay pass: ONLY tiles recorded with dynamic elements!
 		chunk_cache->renderDynamicOverlays(map_z, map, ctx, sprite_batch, *tile_renderer);
 		sprite_batch.flush(ctx.atlas);
 
 		// 7. Badges pass: cluster zone badges and waypoint indicators (floating on top of all items and terrain)
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
 		if (zone_overlay_drawer && !options.ingame) {
 			zone_overlay_drawer->drawFloorWaypoints(sprite_batch, map_z, view, map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
@@ -227,17 +228,17 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 	} else {
 		// Classic full-tile traversal fallback:
 		// 1. Static terrain pass (ground & borders)
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-		glDepthMask(GL_TRUE);
-		visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
-			tile_renderer->RenderStaticTerrain(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
-		});
-		sprite_batch.flush(ctx.atlas);
+		{
+			ScopedGLCapability depth_cap(GL_DEPTH_TEST, true);
+			ScopedGLDepthMask depth_mask(GL_TRUE);
+			glDepthFunc(GL_LEQUAL);
+			visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
+				tile_renderer->RenderStaticTerrain(sprite_batch, location, ctx, draw_x, draw_y, tile_above);
+			});
+			sprite_batch.flush(ctx.atlas);
+		}
 
 		// 2. Ground-level highlight items overlay pass
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
 		if (zone_overlay_drawer && options.highlight_items && !options.ingame) {
 			zone_overlay_drawer->drawFloorHighlightItems(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
@@ -253,30 +254,27 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		}
 
 		// 4. Static items, animated items, dynamic entities pass
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-		glDepthMask(GL_TRUE);
-		visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
-			TileElevationState static_elevation { draw_x, draw_y };
-			tile_renderer->RenderStaticItems(sprite_batch, location, ctx, static_elevation);
+		{
+			ScopedGLCapability depth_cap(GL_DEPTH_TEST, true);
+			ScopedGLDepthMask depth_mask(GL_TRUE);
+			glDepthFunc(GL_LEQUAL);
+			visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
+				TileElevationState static_elevation { draw_x, draw_y };
+				tile_renderer->RenderStaticItems(sprite_batch, location, ctx, static_elevation);
 
-			TileElevationState animated_elevation { draw_x, draw_y };
-			tile_renderer->RenderAnimatedItems(sprite_batch, location, ctx, animated_elevation);
+				TileElevationState animated_elevation { draw_x, draw_y };
+				tile_renderer->RenderAnimatedItems(sprite_batch, location, ctx, animated_elevation);
 
-			tile_renderer->RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, true, true);
-		});
-		sprite_batch.flush(ctx.atlas);
+				tile_renderer->RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, true, true);
+			});
+			sprite_batch.flush(ctx.atlas);
+		}
 
 		// 5. Badges pass: cluster zone badges and waypoint indicators (floating on top of all items and terrain)
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
 		if (zone_overlay_drawer && !options.ingame) {
 			zone_overlay_drawer->drawFloorWaypoints(sprite_batch, map_z, view, map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
 		}
 	}
-
-	glDisable(GL_DEPTH_TEST);
-	glDepthMask(GL_TRUE);
 }

@@ -15,16 +15,14 @@ SpriteAtlasLUT::~SpriteAtlasLUT() {
 }
 
 SpriteAtlasLUT::SpriteAtlasLUT(SpriteAtlasLUT&& other) noexcept :
-	buffer_(other.buffer_),
-	texture_(other.texture_),
+	buffer_(std::move(other.buffer_)),
+	texture_(std::move(other.texture_)),
 	cpu_entries_(std::move(other.cpu_entries_)),
 	gpu_capacity_(other.gpu_capacity_),
 	max_supported_entries_(other.max_supported_entries_),
 	dirty_min_id_(other.dirty_min_id_),
 	dirty_max_id_(other.dirty_max_id_),
 	has_dirty_entries_(other.has_dirty_entries_) {
-	other.buffer_ = 0;
-	other.texture_ = 0;
 	other.gpu_capacity_ = 0;
 	other.max_supported_entries_ = MAX_SUPPORTED_SPRITES;
 	other.dirty_min_id_ = UINT32_MAX;
@@ -35,8 +33,8 @@ SpriteAtlasLUT::SpriteAtlasLUT(SpriteAtlasLUT&& other) noexcept :
 SpriteAtlasLUT& SpriteAtlasLUT::operator=(SpriteAtlasLUT&& other) noexcept {
 	if (this != &other) {
 		release();
-		buffer_ = other.buffer_;
-		texture_ = other.texture_;
+		buffer_ = std::move(other.buffer_);
+		texture_ = std::move(other.texture_);
 		cpu_entries_ = std::move(other.cpu_entries_);
 		gpu_capacity_ = other.gpu_capacity_;
 		max_supported_entries_ = other.max_supported_entries_;
@@ -44,8 +42,6 @@ SpriteAtlasLUT& SpriteAtlasLUT::operator=(SpriteAtlasLUT&& other) noexcept {
 		dirty_max_id_ = other.dirty_max_id_;
 		has_dirty_entries_ = other.has_dirty_entries_;
 
-		other.buffer_ = 0;
-		other.texture_ = 0;
 		other.gpu_capacity_ = 0;
 		other.max_supported_entries_ = MAX_SUPPORTED_SPRITES;
 		other.dirty_min_id_ = UINT32_MAX;
@@ -75,25 +71,26 @@ bool SpriteAtlasLUT::initialize(size_t initial_capacity) {
 	const size_t clamped_capacity = std::min(std::max(initial_capacity, DEFAULT_INITIAL_CAPACITY), max_supported_entries_);
 	cpu_entries_.resize(clamped_capacity);
 
-	glCreateBuffers(1, &buffer_);
-	if (buffer_ == 0) {
+	buffer_ = std::make_unique<GLBuffer>();
+	if (!buffer_ || buffer_->GetID() == 0) {
 		spdlog::error("[SpriteAtlasLUT] Failed to create buffer");
+		buffer_.reset();
 		return false;
 	}
 
-	glGenTextures(1, &texture_);
-	if (texture_ == 0) {
+	texture_ = std::make_unique<GLTextureResource>(GL_TEXTURE_BUFFER);
+	if (!texture_ || texture_->GetID() == 0) {
 		spdlog::error("[SpriteAtlasLUT] Failed to create texture buffer");
-		glDeleteBuffers(1, &buffer_);
-		buffer_ = 0;
+		texture_.reset();
+		buffer_.reset();
 		return false;
 	}
 
-	glNamedBufferData(buffer_, static_cast<GLsizeiptr>(cpu_entries_.size() * sizeof(SpriteLUTEntry)), cpu_entries_.data(), GL_DYNAMIC_DRAW);
+	glNamedBufferData(buffer_->GetID(), static_cast<GLsizeiptr>(cpu_entries_.size() * sizeof(SpriteLUTEntry)), cpu_entries_.data(), GL_DYNAMIC_DRAW);
 
 	// Explicit target binding for texture buffers ensures robust association on Intel Windows drivers
-	glBindTexture(GL_TEXTURE_BUFFER, texture_);
-	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, buffer_);
+	glBindTexture(GL_TEXTURE_BUFFER, texture_->GetID());
+	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, buffer_->GetID());
 	const GLenum err = glGetError();
 	glBindTexture(GL_TEXTURE_BUFFER, 0);
 
@@ -109,20 +106,18 @@ bool SpriteAtlasLUT::initialize(size_t initial_capacity) {
 	dirty_max_id_ = 0;
 
 	spdlog::info("[SpriteAtlasLUT] Initialized Texture Buffer with capacity {} entries (hardware limit: {} entries, {} texels) | Buffer ID: {}, Texture ID: {}",
-		cpu_entries_.size(), max_supported_entries_, max_tbo_texels, buffer_, texture_);
+		cpu_entries_.size(), max_supported_entries_, max_tbo_texels, buffer_->GetID(), texture_->GetID());
 	return true;
 }
 
 void SpriteAtlasLUT::release() {
-	if (texture_ != 0) {
-		spdlog::info("[SpriteAtlasLUT] Released Texture ID {} (capacity was {} entries)", texture_, gpu_capacity_);
-		glDeleteTextures(1, &texture_);
-		texture_ = 0;
+	if (texture_) {
+		spdlog::info("[SpriteAtlasLUT] Released Texture ID {} (capacity was {} entries)", texture_->GetID(), gpu_capacity_);
+		texture_.reset();
 	}
-	if (buffer_ != 0) {
-		spdlog::info("[SpriteAtlasLUT] Released Buffer ID {}", buffer_);
-		glDeleteBuffers(1, &buffer_);
-		buffer_ = 0;
+	if (buffer_) {
+		spdlog::info("[SpriteAtlasLUT] Released Buffer ID {}", buffer_->GetID());
+		buffer_.reset();
 	}
 	cpu_entries_.clear();
 	gpu_capacity_ = 0;
@@ -154,11 +149,11 @@ void SpriteAtlasLUT::ensureCapacity(size_t required_capacity) {
 
 	cpu_entries_.resize(new_capacity);
 
-	if (buffer_ != 0) {
-		glNamedBufferData(buffer_, static_cast<GLsizeiptr>(cpu_entries_.size() * sizeof(SpriteLUTEntry)), cpu_entries_.data(), GL_DYNAMIC_DRAW);
-		if (texture_ != 0) {
-			glBindTexture(GL_TEXTURE_BUFFER, texture_);
-			glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, buffer_);
+	if (buffer_) {
+		glNamedBufferData(buffer_->GetID(), static_cast<GLsizeiptr>(cpu_entries_.size() * sizeof(SpriteLUTEntry)), cpu_entries_.data(), GL_DYNAMIC_DRAW);
+		if (texture_) {
+			glBindTexture(GL_TEXTURE_BUFFER, texture_->GetID());
+			glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, buffer_->GetID());
 			const GLenum err = glGetError();
 			glBindTexture(GL_TEXTURE_BUFFER, 0);
 			if (err != GL_NO_ERROR) {
@@ -171,7 +166,7 @@ void SpriteAtlasLUT::ensureCapacity(size_t required_capacity) {
 		dirty_max_id_ = 0;
 
 		spdlog::info("[SpriteAtlasLUT] Capacity expanded: {} -> {} entries ({} KB GPU buffer) | Buffer ID: {}, Texture ID: {}",
-			old_capacity, new_capacity, (new_capacity * sizeof(SpriteLUTEntry)) / 1024, buffer_, texture_);
+			old_capacity, new_capacity, (new_capacity * sizeof(SpriteLUTEntry)) / 1024, buffer_->GetID(), texture_->GetID());
 	}
 }
 
@@ -218,14 +213,14 @@ void SpriteAtlasLUT::invalidateSprite(uint32_t sprite_id) {
 }
 
 void SpriteAtlasLUT::flush() {
-	if (!has_dirty_entries_ || buffer_ == 0 || dirty_min_id_ > dirty_max_id_) {
+	if (!has_dirty_entries_ || !buffer_ || dirty_min_id_ > dirty_max_id_) {
 		return;
 	}
 
 	const size_t offset = dirty_min_id_ * sizeof(SpriteLUTEntry);
 	const size_t size = (dirty_max_id_ - dirty_min_id_ + 1) * sizeof(SpriteLUTEntry);
 
-	glNamedBufferSubData(buffer_, static_cast<GLintptr>(offset), static_cast<GLsizeiptr>(size), cpu_entries_.data() + dirty_min_id_);
+	glNamedBufferSubData(buffer_->GetID(), static_cast<GLintptr>(offset), static_cast<GLsizeiptr>(size), cpu_entries_.data() + dirty_min_id_);
 	glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 
 	has_dirty_entries_ = false;
@@ -234,20 +229,16 @@ void SpriteAtlasLUT::flush() {
 }
 
 void SpriteAtlasLUT::bind(GLuint texture_unit) {
-	if (texture_ != 0) {
+	if (texture_) {
 		if (has_dirty_entries_) {
 			flush();
 		}
-		glActiveTexture(GL_TEXTURE0 + texture_unit);
-		glBindTexture(GL_TEXTURE_BUFFER, texture_);
-		glActiveTexture(GL_TEXTURE0);
+		glBindTextureUnit(texture_unit, texture_->GetID());
 	}
 }
 
 void SpriteAtlasLUT::unbind(GLuint texture_unit) const {
-	glActiveTexture(GL_TEXTURE0 + texture_unit);
-	glBindTexture(GL_TEXTURE_BUFFER, 0);
-	glActiveTexture(GL_TEXTURE0);
+	glBindTextureUnit(texture_unit, 0);
 }
 
 const SpriteLUTEntry* SpriteAtlasLUT::getEntry(uint32_t sprite_id) const {

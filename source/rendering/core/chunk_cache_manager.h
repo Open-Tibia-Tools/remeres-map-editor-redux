@@ -7,9 +7,11 @@
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include "rendering/core/gl_resources.h"
 #include "rendering/core/shader_program.h"
 #include "rendering/core/tile_instance.h"
 #include "map/spatial_change_tracker.h"
+#include <memory>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -50,7 +52,7 @@ struct AnimatedSpriteRun {
 
 struct CachedChunk {
 	ChunkCoord coord;
-	GLuint vbo = 0;
+	std::unique_ptr<GLBuffer> vbo;
 	size_t vbo_capacity = 0; // in bytes
 	uint32_t instance_count = 0;
 	uint32_t terrain_instance_count = 0;
@@ -98,77 +100,15 @@ struct CachedChunk {
 		dynamic_tile_mask[idx >> 6] |= (uint64_t{1} << (idx & 63));
 	}
 
+	[[nodiscard]] GLuint getVboId() const noexcept {
+		return vbo ? vbo->GetID() : 0;
+	}
+
 	CachedChunk() = default;
-	~CachedChunk() {
-		if (vbo != 0) {
-			glDeleteBuffers(1, &vbo);
-			vbo = 0;
-		}
-	}
+	~CachedChunk() = default;
 
-	CachedChunk(CachedChunk&& other) noexcept :
-		coord(other.coord),
-		vbo(other.vbo),
-		vbo_capacity(other.vbo_capacity),
-		instance_count(other.instance_count),
-		terrain_instance_count(other.terrain_instance_count),
-		item_instance_count(other.item_instance_count),
-		last_accessed_frame(other.last_accessed_frame),
-		is_dirty(other.is_dirty),
-		is_empty(other.is_empty),
-		baked_with_items(other.baked_with_items),
-		is_complete(other.is_complete),
-		rebake_attempts(other.rebake_attempts),
-		rebake_at_ms(other.rebake_at_ms),
-		force_load(other.force_load),
-		creature_animation_step_ms(other.creature_animation_step_ms),
-		animated_step_ms(other.animated_step_ms),
-		animated_sprites(std::move(other.animated_sprites)),
-		animated_runs(std::move(other.animated_runs)),
-		animated_shadow(std::move(other.animated_shadow)),
-		dynamic_tile_mask(other.dynamic_tile_mask) {
-		other.vbo = 0;
-		other.vbo_capacity = 0;
-		other.instance_count = 0;
-		other.terrain_instance_count = 0;
-		other.item_instance_count = 0;
-		other.dynamic_tile_mask.fill(0);
-	}
-
-	CachedChunk& operator=(CachedChunk&& other) noexcept {
-		if (this != &other) {
-			if (vbo != 0) {
-				glDeleteBuffers(1, &vbo);
-			}
-			coord = other.coord;
-			vbo = other.vbo;
-			vbo_capacity = other.vbo_capacity;
-			instance_count = other.instance_count;
-			terrain_instance_count = other.terrain_instance_count;
-			item_instance_count = other.item_instance_count;
-			last_accessed_frame = other.last_accessed_frame;
-			is_dirty = other.is_dirty;
-			is_empty = other.is_empty;
-			baked_with_items = other.baked_with_items;
-			is_complete = other.is_complete;
-			rebake_attempts = other.rebake_attempts;
-			rebake_at_ms = other.rebake_at_ms;
-			force_load = other.force_load;
-			creature_animation_step_ms = other.creature_animation_step_ms;
-			animated_step_ms = other.animated_step_ms;
-			animated_sprites = std::move(other.animated_sprites);
-			animated_runs = std::move(other.animated_runs);
-			animated_shadow = std::move(other.animated_shadow);
-			dynamic_tile_mask = other.dynamic_tile_mask;
-			other.vbo = 0;
-			other.vbo_capacity = 0;
-			other.instance_count = 0;
-			other.terrain_instance_count = 0;
-			other.item_instance_count = 0;
-			other.dynamic_tile_mask.fill(0);
-		}
-		return *this;
-	}
+	CachedChunk(CachedChunk&&) noexcept = default;
+	CachedChunk& operator=(CachedChunk&&) noexcept = default;
 
 	CachedChunk(const CachedChunk&) = delete;
 	CachedChunk& operator=(const CachedChunk&) = delete;
@@ -311,7 +251,7 @@ public:
 		return cached_chunks_.size();
 	}
 	[[nodiscard]] bool isValid() const noexcept {
-		return vao_ != 0 && shader_initialized_;
+		return vao_ != nullptr && shader_initialized_;
 	}
 
 	// True when the last rendered frame drew something that animates with time (sprite frame
@@ -356,7 +296,7 @@ private:
 	void evictOldest(size_t count_to_remove);
 	void recordFrameStats();
 
-	GLuint vao_ = 0;
+	std::unique_ptr<GLVertexArray> vao_;
 	ShaderProgram shader_;
 	bool shader_initialized_ = false;
 

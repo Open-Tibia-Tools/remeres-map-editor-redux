@@ -146,64 +146,64 @@ bool ChunkCacheManager::initialize() {
 	}
 	shader_initialized_ = true;
 
-	glCreateVertexArrays(1, &vao_);
-	if (vao_ == 0) {
+	vao_ = std::make_unique<GLVertexArray>();
+	if (!vao_ || vao_->GetID() == 0) {
 		spdlog::error("ChunkCacheManager: Failed to create VAO");
 		release();
 		return false;
 	}
 
 	// Binding 0: Static unit quad geometry
-	glVertexArrayVertexBuffer(vao_, 0, SharedGeometry::Instance().getQuadVBO(), 0, 4 * sizeof(float));
-	glVertexArrayElementBuffer(vao_, SharedGeometry::Instance().getQuadEBO());
+	glVertexArrayVertexBuffer(vao_->GetID(), 0, SharedGeometry::Instance().getQuadVBO(), 0, 4 * sizeof(float));
+	glVertexArrayElementBuffer(vao_->GetID(), SharedGeometry::Instance().getQuadEBO());
 
 	// Loc 0: Quad pos (vec2)
-	glEnableVertexArrayAttrib(vao_, 0);
-	glVertexArrayAttribFormat(vao_, 0, 2, GL_FLOAT, GL_FALSE, 0);
-	glVertexArrayAttribBinding(vao_, 0, 0);
+	glEnableVertexArrayAttrib(vao_->GetID(), 0);
+	glVertexArrayAttribFormat(vao_->GetID(), 0, 2, GL_FLOAT, GL_FALSE, 0);
+	glVertexArrayAttribBinding(vao_->GetID(), 0, 0);
 
 	// Loc 1: Quad texcoord (vec2)
-	glEnableVertexArrayAttrib(vao_, 1);
-	glVertexArrayAttribFormat(vao_, 1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float));
-	glVertexArrayAttribBinding(vao_, 1, 0);
+	glEnableVertexArrayAttrib(vao_->GetID(), 1);
+	glVertexArrayAttribFormat(vao_->GetID(), 1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float));
+	glVertexArrayAttribBinding(vao_->GetID(), 1, 0);
 
 	// Binding 1: Instance data from chunk VBO
-	glVertexArrayBindingDivisor(vao_, 1, 1);
+	glVertexArrayBindingDivisor(vao_->GetID(), 1, 1);
 
 	// Loc 2: aRect (vec4: x, y, w, h)
-	glEnableVertexArrayAttrib(vao_, 2);
-	glVertexArrayAttribFormat(vao_, 2, 4, GL_FLOAT, GL_FALSE, offsetof(TileInstance, x));
-	glVertexArrayAttribBinding(vao_, 2, 1);
+	glEnableVertexArrayAttrib(vao_->GetID(), 2);
+	glVertexArrayAttribFormat(vao_->GetID(), 2, 4, GL_FLOAT, GL_FALSE, offsetof(TileInstance, x));
+	glVertexArrayAttribBinding(vao_->GetID(), 2, 1);
 
 	// Loc 3: aSpriteId (float)
-	glEnableVertexArrayAttrib(vao_, 3);
-	glVertexArrayAttribFormat(vao_, 3, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, sprite_id));
-	glVertexArrayAttribBinding(vao_, 3, 1);
+	glEnableVertexArrayAttrib(vao_->GetID(), 3);
+	glVertexArrayAttribFormat(vao_->GetID(), 3, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, sprite_id));
+	glVertexArrayAttribBinding(vao_->GetID(), 3, 1);
 
 	// Loc 4: aFlags (float)
-	glEnableVertexArrayAttrib(vao_, 4);
-	glVertexArrayAttribFormat(vao_, 4, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, flags));
-	glVertexArrayAttribBinding(vao_, 4, 1);
+	glEnableVertexArrayAttrib(vao_->GetID(), 4);
+	glVertexArrayAttribFormat(vao_->GetID(), 4, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, flags));
+	glVertexArrayAttribBinding(vao_->GetID(), 4, 1);
 
 	// Loc 5: aTint (vec4: r, g, b, a)
-	glEnableVertexArrayAttrib(vao_, 5);
-	glVertexArrayAttribFormat(vao_, 5, 4, GL_FLOAT, GL_FALSE, offsetof(TileInstance, r));
-	glVertexArrayAttribBinding(vao_, 5, 1);
+	glEnableVertexArrayAttrib(vao_->GetID(), 5);
+	glVertexArrayAttribFormat(vao_->GetID(), 5, 4, GL_FLOAT, GL_FALSE, offsetof(TileInstance, r));
+	glVertexArrayAttribBinding(vao_->GetID(), 5, 1);
 
 	// Loc 6: aHouseId (float)
-	glEnableVertexArrayAttrib(vao_, 6);
-	glVertexArrayAttribFormat(vao_, 6, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, house_id));
-	glVertexArrayAttribBinding(vao_, 6, 1);
+	glEnableVertexArrayAttrib(vao_->GetID(), 6);
+	glVertexArrayAttribFormat(vao_->GetID(), 6, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, house_id));
+	glVertexArrayAttribBinding(vao_->GetID(), 6, 1);
 
 	// Loc 7: aDepth (float)
-	glEnableVertexArrayAttrib(vao_, 7);
-	glVertexArrayAttribFormat(vao_, 7, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, depth));
-	glVertexArrayAttribBinding(vao_, 7, 1);
+	glEnableVertexArrayAttrib(vao_->GetID(), 7);
+	glVertexArrayAttribFormat(vao_->GetID(), 7, 1, GL_FLOAT, GL_FALSE, offsetof(TileInstance, depth));
+	glVertexArrayAttribBinding(vao_->GetID(), 7, 1);
 
 	applyBudget(HardwareProfileManager::get().getActiveBudget());
 
 	spdlog::info("[ChunkCache] Initialized successfully (VAO: {}, Max capacity: {} chunks, Target: {} chunks)",
-		vao_, max_cached_chunks_, target_cached_chunks_);
+		vao_->GetID(), max_cached_chunks_, target_cached_chunks_);
 	return true;
 }
 
@@ -224,19 +224,16 @@ void ChunkCacheManager::applyBudget(const HardwareBudget& budget) {
 }
 
 void ChunkCacheManager::release() {
-	if (vao_ != 0 || !cached_chunks_.empty()) {
+	if (vao_ || !cached_chunks_.empty()) {
 		spdlog::info("[ChunkCache] Released (cleared {} cached chunk VBOs, destroyed VAO: {})",
-			cached_chunks_.size(), vao_);
-	}
-	if (vao_ != 0) {
-		glDeleteVertexArrays(1, &vao_);
-		vao_ = 0;
+			cached_chunks_.size(), vao_ ? vao_->GetID() : 0);
 	}
 	cached_chunks_.clear();
 	active_visible_chunks_.clear();
 	active_floor_ = -1;
 	shader_initialized_ = false;
 	current_frame_ = 0;
+	vao_.reset();
 }
 
 void ChunkCacheManager::updateDirtyState(SpatialChangeTracker& change_tracker) {
@@ -298,17 +295,17 @@ void ChunkCacheManager::uploadChunk(CachedChunk& chunk, const std::vector<TileIn
 	chunk.is_empty = false;
 	chunk.instance_count = static_cast<uint32_t>(instances.size());
 
-	if (chunk.vbo == 0) {
-		glCreateBuffers(1, &chunk.vbo);
+	if (!chunk.vbo) {
+		chunk.vbo = std::make_unique<GLBuffer>();
 		chunk.vbo_capacity = 0;
 	}
 
 	const size_t required_bytes = instances.size() * sizeof(TileInstance);
 	if (required_bytes > chunk.vbo_capacity) {
-		glNamedBufferData(chunk.vbo, static_cast<GLsizeiptr>(required_bytes), instances.data(), GL_STATIC_DRAW);
+		glNamedBufferData(chunk.vbo->GetID(), static_cast<GLsizeiptr>(required_bytes), instances.data(), GL_STATIC_DRAW);
 		chunk.vbo_capacity = required_bytes;
 	} else {
-		glNamedBufferSubData(chunk.vbo, 0, static_cast<GLsizeiptr>(required_bytes), instances.data());
+		glNamedBufferSubData(chunk.vbo->GetID(), 0, static_cast<GLsizeiptr>(required_bytes), instances.data());
 	}
 }
 
@@ -957,7 +954,7 @@ bool ChunkCacheManager::refreshAnimatedFrames(CachedChunk& chunk, long elapsed_t
 	}
 
 	if (patch_begin < patch_end) {
-		glNamedBufferSubData(chunk.vbo, static_cast<GLintptr>(patch_begin * sizeof(TileInstance)), static_cast<GLsizeiptr>((patch_end - patch_begin) * sizeof(TileInstance)), chunk.animated_shadow.data() + patch_begin);
+		glNamedBufferSubData(chunk.vbo->GetID(), static_cast<GLintptr>(patch_begin * sizeof(TileInstance)), static_cast<GLsizeiptr>((patch_end - patch_begin) * sizeof(TileInstance)), chunk.animated_shadow.data() + patch_begin);
 	}
 	++stats_.anim_patches;
 	return true;
@@ -1047,7 +1044,7 @@ void ChunkCacheManager::renderFloorTerrain(
 	atlas.bind(0);
 	atlas.bindLUT(SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 
-	glBindVertexArray(vao_);
+	glBindVertexArray(vao_->GetID());
 
 	// Reset active visible chunk list for this floor
 	active_visible_chunks_.clear();
@@ -1061,11 +1058,11 @@ void ChunkCacheManager::renderFloorTerrain(
 	const bool profile_enabled = rme::prof::enabled();
 	incomplete_visible_.clear();
 	auto drawChunk = [&](CachedChunk& chunk) {
-		if (chunk.is_empty || chunk.terrain_instance_count == 0 || chunk.vbo == 0) {
+		if (chunk.is_empty || chunk.terrain_instance_count == 0 || !chunk.vbo) {
 			return;
 		}
 		rme::prof::Scope draw_scope(rme::prof::Phase::TerrainDraw);
-		glVertexArrayVertexBuffer(vao_, 1, chunk.vbo, 0, sizeof(TileInstance));
+		glVertexArrayVertexBuffer(vao_->GetID(), 1, chunk.vbo->GetID(), 0, sizeof(TileInstance));
 		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk.terrain_instance_count));
 		++rendered_chunk_count;
 		rendered_instance_count += chunk.terrain_instance_count;
@@ -1260,7 +1257,7 @@ void ChunkCacheManager::renderFloorItems(
 	atlas.bind(0);
 	atlas.bindLUT(SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 
-	glBindVertexArray(vao_);
+	glBindVertexArray(vao_->GetID());
 
 	{
 		rme::prof::Scope items_scope(rme::prof::Phase::ItemDraw);
@@ -1270,13 +1267,13 @@ void ChunkCacheManager::renderFloorItems(
 		// zoom is pending) keeps the range suppressed so stale subpixel items never appear.
 		const bool item_range_visible = !(ctx.view.zoom > 10.0f && ctx.options.hide_items_when_zoomed);
 		for (const CachedChunk* chunk_ptr : active_visible_chunks_) {
-			if (!chunk_ptr || chunk_ptr->is_empty || chunk_ptr->item_instance_count == 0 || chunk_ptr->vbo == 0
+			if (!chunk_ptr || chunk_ptr->is_empty || chunk_ptr->item_instance_count == 0 || !chunk_ptr->vbo
 				|| (!item_range_visible && chunk_ptr->baked_with_items)) {
 				continue;
 			}
 
 			const GLintptr byte_offset = static_cast<GLintptr>(chunk_ptr->terrain_instance_count * sizeof(TileInstance));
-			glVertexArrayVertexBuffer(vao_, 1, chunk_ptr->vbo, byte_offset, sizeof(TileInstance));
+			glVertexArrayVertexBuffer(vao_->GetID(), 1, chunk_ptr->vbo->GetID(), byte_offset, sizeof(TileInstance));
 			glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(chunk_ptr->item_instance_count));
 			++stats_.draws;
 			stats_.instances += chunk_ptr->item_instance_count;

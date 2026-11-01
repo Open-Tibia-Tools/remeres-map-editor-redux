@@ -10,6 +10,49 @@
  *
  * Intended for short-lived scope-based state changes, not for persistent state modifications.
  */
+/**
+ * @brief RAII wrapper for glDepthMask
+ */
+class ScopedGLDepthMask {
+public:
+	[[nodiscard]] explicit ScopedGLDepthMask(GLboolean write_enable) {
+		glGetBooleanv(GL_DEPTH_WRITEMASK, &was_write_enabled_);
+		glDepthMask(write_enable);
+	}
+
+	~ScopedGLDepthMask() {
+		restore();
+	}
+
+	ScopedGLDepthMask(const ScopedGLDepthMask&) = delete;
+	ScopedGLDepthMask& operator=(const ScopedGLDepthMask&) = delete;
+
+	ScopedGLDepthMask(ScopedGLDepthMask&& other) noexcept :
+		was_write_enabled_(other.was_write_enabled_),
+		active_(std::exchange(other.active_, false)) {
+	}
+
+	ScopedGLDepthMask& operator=(ScopedGLDepthMask&& other) noexcept {
+		if (this != &other) {
+			restore();
+			was_write_enabled_ = other.was_write_enabled_;
+			active_ = std::exchange(other.active_, false);
+		}
+		return *this;
+	}
+
+private:
+	void restore() const {
+		if (active_) {
+			glDepthMask(was_write_enabled_);
+		}
+	}
+
+private:
+	GLboolean was_write_enabled_ = GL_TRUE;
+	bool active_ = true;
+};
+
 class ScopedGLCapability {
 public:
 	[[nodiscard]] explicit ScopedGLCapability(GLenum capability, bool enable = true) :
