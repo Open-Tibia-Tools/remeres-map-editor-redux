@@ -1,6 +1,5 @@
 #include "ui/theme.h"
 #include <wx/richtooltip.h>
-#include <wx/notifmsg.h>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -220,20 +219,4 @@ void DialogUtil::ShowRichToolTip(const wxString& title, const wxString& message,
 	tip.SetTipKind(wxTipKind_Auto);
 	tip.SetBackgroundColour(Theme::Get(Theme::Role::Surface), Theme::Get(Theme::Role::RaisedSurface));
 	tip.ShowFor(win, rect);
-}
-
-void DialogUtil::ShowNotification(const wxString& title, const wxString& message, wxWindow* parent, int flags) {
-#if wxUSE_NOTIFICATION_MESSAGE
-	auto* notif = new wxNotificationMessage(title, message, parent, flags);
-	notif->Bind(wxEVT_NOTIFICATION_MESSAGE_DISMISSED, [notif](wxCommandEvent&) {
-		if (wxTheApp) {
-			wxTheApp->CallAfter([notif]() {
-				delete notif;
-			});
-		} else {
-			delete notif;
-		}
-	});
-	notif->Show(wxNotificationMessage::Timeout_Auto);
-#endif
 }

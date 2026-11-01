@@ -15,7 +15,6 @@
 #include <map>
 
 class Editor;
-class wxInfoBar;
 
 class ReplaceToolWindow : public wxDialog, public LibraryPanel::Listener, public RuleListControl::Listener, public RuleBuilderPanel::Listener, public ItemGridPanel::Listener {
 public:
@@ -70,7 +69,6 @@ private:
 
 	Editor* editor;
 
-	wxInfoBar* m_infoBar = nullptr;
 	LibraryPanel* libraryPanel;
 	wxNotebook* m_suggestionsNotebook = nullptr;
 	ItemGridPanel* m_noFilterGrid = nullptr;

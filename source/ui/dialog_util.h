@@ -23,7 +23,6 @@ public:
 	}
 
 	static void ShowRichToolTip(const wxString& title, const wxString& message, wxWindow* win, const wxRect* rect = nullptr, int icon = wxICON_INFORMATION);
-	static void ShowNotification(const wxString& title, const wxString& message, wxWindow* parent = nullptr, int flags = wxICON_INFORMATION);
 };
 
 #endif

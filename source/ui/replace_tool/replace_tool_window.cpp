@@ -1,4 +1,4 @@
-#include <wx/infobar.h>
+
 #include "app/main.h"
 #include "replace_tool_window.h"
 #include "ui/dialog_util.h"
@@ -165,8 +165,6 @@ void ReplaceToolWindow::InitializeWithIDs(const std::vector<uint16_t>& ids) {
 
 void ReplaceToolWindow::InitLayout() {
 	wxBoxSizer* rootSizer = new wxBoxSizer(wxVERTICAL);
-	m_infoBar = new wxInfoBar(this);
-	rootSizer->Add(m_infoBar, wxSizerFlags().Expand());
 	int padding = Theme::Grid(2);
 
 	// ---------------------------------------------------------
@@ -671,14 +669,14 @@ void ReplaceToolWindow::OnCharHook(wxKeyEvent& event) {
 void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	const std::vector<RuleGroup> groups = ruleBuilder->GetRules();
 	if (groups.empty()) {
-		if (m_infoBar) m_infoBar->ShowMessage("No rules defined. Add some rules first.", wxICON_INFORMATION);
+		DialogUtil::PopupDialog("Replace", "No rules defined. Add some rules first.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 
 	std::vector<size_t> ruleRows;
 	const std::vector<ReplacementRule> rules = ExpandRuleGroups(groups, ruleRows);
 	if (rules.empty()) {
-		if (m_infoBar) m_infoBar->ShowMessage("No rule is complete yet. A rule needs at least one source, and either a target or delete mode.", wxICON_INFORMATION);
+		DialogUtil::PopupDialog("Replace", "No rule is complete yet.\n\nA rule needs at least one source, and either a target or the delete mode.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 
@@ -691,7 +689,7 @@ void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	}
 
 	if (scope == ReplaceScope::Selection && editor->selection.empty()) {
-		if (m_infoBar) m_infoBar->ShowMessage("No selection active. Please select an area first or change scope.", wxICON_WARNING);
+		DialogUtil::PopupDialog("Replace", "No selection active. Please select an area first or change scope.", wxOK | wxICON_WARNING);
 		return;
 	}
 
@@ -714,7 +712,7 @@ void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	}
 
 	if (totalMatches == 0) {
-		if (m_infoBar) m_infoBar->ShowMessage("No items matching the rules were found in the selected scope.", wxICON_INFORMATION);
+		DialogUtil::PopupDialog("Replace", "No items matching the rules were found in the selected scope.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 
@@ -733,7 +731,6 @@ void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	}
 
 	engine.ExecuteReplacement(editor, rules, scope, scope == ReplaceScope::Viewport ? &viewportPos : nullptr);
-	DialogUtil::ShowNotification("Replacement Complete", "Tile replacement finished successfully.", this);
 }
 
 void ReplaceToolWindow::OnAddItemsAsRules(const std::vector<uint16_t>& itemIds) {

@@ -176,7 +176,6 @@ void ExportMinimapWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	if (result.filesWritten == 0) {
 		DialogUtil::PopupDialog(this, "Export Minimap", "No minimap tiles found to export.", wxOK);
 	} else {
-		DialogUtil::ShowNotification("Minimap Export Complete", wxstr(std::format("Exported {} minimap file(s).", result.filesWritten)), this);
 		DialogUtil::PopupDialog(this, "Export Minimap", wxstr(std::format("Exported {} minimap file(s).", result.filesWritten)), wxOK);
 	}
 	EndModal(wxID_OK);
