@@ -133,7 +133,6 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
 	Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnExit, this);
 #ifdef _USE_UPDATER_
-	Bind(EVT_UPDATE_CHECK_FINISHED, &MainFrame::OnUpdateReceived, this);
 #endif
 	Bind(EVT_UPDATE_MENUS, &MainFrame::OnUpdateMenus, this);
 	Bind(wxEVT_IDLE, &MainFrame::OnIdle, this);
@@ -166,14 +165,7 @@ void MainFrame::OnIdle(wxIdleEvent& event) {
 }
 
 #ifdef _USE_UPDATER_
-void MainFrame::OnUpdateReceived(wxCommandEvent& event) {
-	void* clientData = event.GetClientData();
-	if (!clientData) {
-		return;
-	}
-	std::string data = *static_cast<std::string*>(clientData);
-	delete static_cast<std::string*>(clientData);
-
+void MainFrame::OnUpdateDataReceived(const std::string& data) {
 	size_t first_colon = data.find(':');
 	size_t second_colon = data.find(':', first_colon + 1);
 

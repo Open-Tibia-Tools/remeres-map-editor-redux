@@ -25,11 +25,12 @@
 	#include "util/json.h"
 
 	#include "app/updater.h"
+	#include "ui/main_frame.h"
 	#include <thread>
 	#include <atomic>
 	#include <memory>
 
-wxDEFINE_EVENT(EVT_UPDATE_CHECK_FINISHED, wxCommandEvent);
+
 
 UpdateChecker::UpdateChecker() :
 	m_alive(std::make_shared<std::atomic<bool>>(true)) {
@@ -42,7 +43,7 @@ UpdateChecker::~UpdateChecker() {
 	}
 }
 
-void UpdateChecker::connect(wxEvtHandler* receiver) {
+void UpdateChecker::connect(MainFrame* receiver) {
 	wxString address = "http://www.remeresmapeditor.com/update.php";
 	address << "?os="
 			<<
@@ -79,14 +80,10 @@ void UpdateChecker::connect(wxEvtHandler* receiver) {
 		delete input;
 		delete url;
 
-		// We use raw pointer 'receiver' because Application manages lifetime of UpdateChecker
-		// and ensures thread is joined before receiver (MainFrame) is destroyed.
-		// However, we still check 'alive' flag to be safe.
-		wxGetApp().CallAfter([receiver, data, alive]() {
+		// Direct safe thread dispatch via wxTheApp->CallAfter with value semantics
+		wxTheApp->CallAfter([receiver, data = std::move(data), alive]() {
 			if (*alive && receiver) {
-				auto* event = new wxCommandEvent(EVT_UPDATE_CHECK_FINISHED);
-				event->SetClientData(new std::string(data));
-				receiver->QueueEvent(event);
+				receiver->OnUpdateDataReceived(data);
 			}
 		});
 	});

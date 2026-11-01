@@ -22,23 +22,15 @@
 
 		#include <thread>
 
-wxDECLARE_EVENT(EVT_UPDATE_CHECK_FINISHED, wxCommandEvent);
-
-		#define EVT_ON_UPDATE_CHECK_FINISHED(id, fn)                                                    \
-			DECLARE_EVENT_TABLE_ENTRY(                                                                  \
-				EVT_UPDATE_CHECK_FINISHED, id, wxID_ANY,                                                \
-				(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(wxCommandEventFunction, &fn), \
-				(wxObject*)nullptr                                                                      \
-			),
-
 class wxURL;
+class MainFrame;
 
 class UpdateChecker {
 public:
 	UpdateChecker();
 	~UpdateChecker();
 
-	void connect(wxEvtHandler* receiver);
+	void connect(MainFrame* receiver);
 
 private:
 	std::jthread m_thread;

@@ -49,7 +49,7 @@ public:
 	void OnExit(wxCloseEvent& event);
 
 #ifdef _USE_UPDATER_
-	void OnUpdateReceived(wxCommandEvent& event);
+	void OnUpdateDataReceived(const std::string& data);
 #endif
 
 #ifdef __WINDOWS__
