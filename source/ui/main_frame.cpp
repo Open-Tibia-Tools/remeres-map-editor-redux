@@ -130,6 +130,36 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	UpdateMenubar();
 
 	Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnExit, this);
+	Bind(wxEVT_AUI_PANE_CLOSE, [this](wxAuiManagerEvent& event) {
+		wxAuiPaneInfo* pane = event.GetPane();
+		if (!pane) {
+			event.Skip();
+			return;
+		}
+		if (pane->name == StandardToolBar::PANE_NAME) {
+			g_settings.setInteger(Config::SHOW_TOOLBAR_STANDARD, 0);
+			if (menu_bar) {
+				menu_bar->CheckItem(MenuBar::VIEW_TOOLBARS_STANDARD, false);
+			}
+		} else if (pane->name == BrushToolBar::PANE_NAME) {
+			g_settings.setInteger(Config::SHOW_TOOLBAR_BRUSHES, 0);
+			if (menu_bar) {
+				menu_bar->CheckItem(MenuBar::VIEW_TOOLBARS_BRUSHES, false);
+			}
+		} else if (pane->name == PositionToolBar::PANE_NAME) {
+			g_settings.setInteger(Config::SHOW_TOOLBAR_POSITION, 0);
+			if (menu_bar) {
+				menu_bar->CheckItem(MenuBar::VIEW_TOOLBARS_POSITION, false);
+			}
+		} else if (pane->name == SizeToolBar::PANE_NAME) {
+			g_settings.setInteger(Config::SHOW_TOOLBAR_SIZES, 0);
+			if (menu_bar) {
+				menu_bar->CheckItem(MenuBar::VIEW_TOOLBARS_SIZES, false);
+			}
+		}
+		event.Skip();
+	});
+
 #ifdef _USE_UPDATER_
 #endif
 	Bind(EVT_UPDATE_MENUS, &MainFrame::OnUpdateMenus, this);
