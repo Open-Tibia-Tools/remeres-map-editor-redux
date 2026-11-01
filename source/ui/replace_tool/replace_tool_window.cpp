@@ -733,6 +733,7 @@ void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	}
 
 	engine.ExecuteReplacement(editor, rules, scope, scope == ReplaceScope::Viewport ? &viewportPos : nullptr);
+	DialogUtil::ShowNotification("Replacement Complete", "Tile replacement finished successfully.", this);
 }
 
 void ReplaceToolWindow::OnAddItemsAsRules(const std::vector<uint16_t>& itemIds) {

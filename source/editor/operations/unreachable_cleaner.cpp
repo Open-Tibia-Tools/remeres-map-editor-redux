@@ -566,6 +566,7 @@ UnreachableCleanerResult UnreachableCleaner::Clean(Editor& editor, const Unreach
 	if (result.backup_created) {
 		complete_msg << "\n\nBackup saved to:\n" << wxstr(result.backup_path);
 	}
+	DialogUtil::ShowNotification("Unreachable Cleaning Complete", complete_msg);
 	DialogUtil::PopupDialog("Removal Complete", complete_msg, wxOK);
 
 	return result;
