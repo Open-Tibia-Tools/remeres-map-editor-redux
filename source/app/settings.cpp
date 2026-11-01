@@ -362,7 +362,7 @@ void Settings::IO(IOMode mode) {
 
 	section("View");
 	Bool(TRANSPARENT_FLOORS, false);
-	Int(TRANSPARENT_FLOORS_ALPHA, 38);
+	Int(TRANSPARENT_FLOORS_SHADE, 50);
 	Bool(TRANSPARENT_ITEMS, false);
 	Bool(SHOW_ALL_FLOORS, true);
 	Bool(SHOW_INGAME_BOX, false);

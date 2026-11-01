@@ -15,8 +15,8 @@ public:
 
 private:
 	wxChoice* floor_visibility_mode_choice = nullptr;
-	wxSlider* ghost_alpha_slider = nullptr;
-	wxStaticText* ghost_alpha_value_label = nullptr;
+	wxSlider* ghost_shade_slider = nullptr;
+	wxStaticText* ghost_shade_value_label = nullptr;
 	wxCheckBox* group_actions_chkbox = nullptr;
 	wxCheckBox* duplicate_id_warn_chkbox = nullptr;
 	wxCheckBox* missing_items_warn_chkbox = nullptr;

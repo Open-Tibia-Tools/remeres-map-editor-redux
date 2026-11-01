@@ -95,6 +95,7 @@ void ViewSettingsHandler::OnChangeViewSettings(wxCommandEvent& event) {
 
 	bool old_grid = g_settings.getBoolean(Config::SHOW_GRID);
 	bool old_ghost = g_settings.getBoolean(Config::TRANSPARENT_ITEMS);
+	bool old_ghost_floors = g_settings.getBoolean(Config::TRANSPARENT_FLOORS);
 
 	const bool supports_zones = g_gui.IsEditorOpen() && g_gui.GetCurrentMap().supportsZones();
 
@@ -176,6 +177,11 @@ void ViewSettingsHandler::OnChangeViewSettings(wxCommandEvent& event) {
 	bool new_ghost = g_settings.getBoolean(Config::TRANSPARENT_ITEMS);
 	if (old_ghost != new_ghost) {
 		g_gui.SetStatusText(std::format("Ghost Mode: {}", new_ghost ? "On" : "Off"));
+	}
+
+	bool new_ghost_floors = g_settings.getBoolean(Config::TRANSPARENT_FLOORS);
+	if (old_ghost_floors != new_ghost_floors) {
+		g_gui.SetStatusText(std::format("Higher Floors: {}", new_ghost_floors ? "On" : "Off"));
 	}
 
 	menuBar->UpdateFloorMenu();

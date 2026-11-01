@@ -161,7 +161,7 @@
 		<item name="Show client box" hotkey="Shift+I" action="SHOW_INGAME_BOX" help="Shadows out areas not visible ingame (from the center of the screen)."/>
 		<separator/>
 		<item name="Ghost loose items" hotkey="G" action="GHOST_ITEMS" help="Ghost items (except ground)."/>
-		<item name="Ghost higher floors" hotkey="Ctrl+L" action="GHOST_HIGHER_FLOORS" help="Ghost floors."/>
+		<item name="Ghost higher floors" hotkey="Ctrl+L" action="GHOST_HIGHER_FLOORS" help="Show higher floors with shading."/>
 		<item name="Show shade" hotkey="Q" action="SHOW_SHADE" help="Shade lower floors."/>
 	</menu>
 	<menu name="Show">

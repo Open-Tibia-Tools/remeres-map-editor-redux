@@ -42,13 +42,13 @@ void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, Sprit
 						params.alpha = options.transparent_floors_alpha;
 						params.ctx = ctx;
 						if (tile->isPZ()) {
-							params.red = 128;
-							params.green = 255;
-							params.blue = 128;
+							params.red = options.transparent_floors_tint / 2;
+							params.green = options.transparent_floors_tint;
+							params.blue = options.transparent_floors_tint / 2;
 						} else {
-							params.red = 255;
-							params.green = 255;
-							params.blue = 255;
+							params.red = options.transparent_floors_tint;
+							params.green = options.transparent_floors_tint;
+							params.blue = options.transparent_floors_tint;
 						}
 						item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 					}
@@ -57,6 +57,9 @@ void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, Sprit
 							BlitItemParams params(tile, item.get(), options);
 							params.alpha = options.transparent_floors_alpha;
 							params.ctx = ctx;
+							params.red = options.transparent_floors_tint;
+							params.green = options.transparent_floors_tint;
+							params.blue = options.transparent_floors_tint;
 							item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 						}
 					}
