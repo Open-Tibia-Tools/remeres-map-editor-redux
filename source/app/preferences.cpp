@@ -33,14 +33,15 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 	book = new wxListbook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBK_LEFT);
 	book->SetBackgroundColour(Theme::Get(Theme::Role::PanelBackground));
 
-	auto* image_list = new wxImageList(18, 18);
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_GEAR, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_PEN_TO_SQUARE, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_IMAGE, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_WINDOW_MAXIMIZE, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_GAMEPAD, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_SERVER, wxSize(18, 18)));
-	book->AssignImageList(image_list);
+	const wxVector<wxBitmapBundle> images = {
+		IMAGE_MANAGER.GetBitmapBundle(ICON_GEAR),
+		IMAGE_MANAGER.GetBitmapBundle(ICON_PEN_TO_SQUARE),
+		IMAGE_MANAGER.GetBitmapBundle(ICON_IMAGE),
+		IMAGE_MANAGER.GetBitmapBundle(ICON_WINDOW_MAXIMIZE),
+		IMAGE_MANAGER.GetBitmapBundle(ICON_GAMEPAD),
+		IMAGE_MANAGER.GetBitmapBundle(ICON_SERVER)
+	};
+	book->SetImages(images);
 
 	general_page = new GeneralPage(book);
 	editor_page = new EditorPage(book);
