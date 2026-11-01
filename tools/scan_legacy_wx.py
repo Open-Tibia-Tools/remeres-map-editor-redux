@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-scan_legacy_wx.py - Scan RME codebase for legacy wxWidgets patterns,
+scan_legacy_wx.py - Scan RME codebase for all legacy wxWidgets patterns,
 deprecated APIs (from wx 2.8 / 3.0 / 3.2), and modernization opportunities
 for wxWidgets 3.3.x.
 
@@ -42,8 +42,6 @@ class Rule(NamedTuple):
     pattern: re.Pattern
     description: str
     suggestion: str
-    # Optional filter to avoid false positives in comments/strings
-    require_word: Optional[str] = None
 
 RULES: List[Rule] = [
     # -------------------------------------------------------------------------
@@ -106,14 +104,6 @@ RULES: List[Rule] = [
         suggestion="Call Layout() instead."
     ),
     Rule(
-        rule_id="WX_DEP_TEXTCTRL_SETLABEL",
-        category="deprecated_api",
-        severity="ERROR",
-        pattern=re.compile(r'\b(?:m_\w+|\w+_txt|\w+_field|\w+_control|text_ctrl|ctrl)->SetLabel\s*\('),
-        description="Calling SetLabel() on wxTextCtrl asserts in wx 3.3.",
-        suggestion="Use SetValue() or ChangeValue() instead."
-    ),
-    Rule(
         rule_id="WX_DEP_MACRO_NEWD",
         category="deprecated_api",
         severity="WARNING",
@@ -128,6 +118,14 @@ RULES: List[Rule] = [
         pattern=re.compile(r'\b(wxT|_T)\s*\('),
         description="wxT() and _T() are obsolete since wx 3.0 Unicode unified build.",
         suggestion="Remove wxT()/_T() and use normal UTF-8 string literals or wxstr()."
+    ),
+    Rule(
+        rule_id="WX_DEP_FROM_DIP_MACRO",
+        category="deprecated_api",
+        severity="WARNING",
+        pattern=re.compile(r'\bFROM_DIP\s*\('),
+        description="Legacy FROM_DIP(widget, size) uppercase compatibility macro from main.h.",
+        suggestion="Use native widget->FromDIP(size) or FromDIP(size) method."
     ),
 
     # -------------------------------------------------------------------------
@@ -160,6 +158,22 @@ RULES: List[Rule] = [
         pattern=re.compile(r'\bwxString::Format\s*\('),
         description="Legacy wxString::Format printf-style formatting.",
         suggestion="Use std::format(...) with wxstr(...) per project modern C++ guidelines."
+    ),
+    Rule(
+        rule_id="WX_LEGACY_STRING_STREAM",
+        category="modernization",
+        severity="WARNING",
+        pattern=re.compile(r'wxString\(\)\s*<<'),
+        description="Legacy (wxString() << a << b) streaming concatenation.",
+        suggestion="Use std::format(\"{}{}\", a, b) and convert via wxstr()."
+    ),
+    Rule(
+        rule_id="WX_LEGACY_I2WS",
+        category="modernization",
+        severity="WARNING",
+        pattern=re.compile(r'\bi2ws\s*\('),
+        description="Legacy i2ws(...) int-to-wxString wrapper.",
+        suggestion="Use std::to_string or std::format with wxstr(), or pass numeric value directly."
     ),
     Rule(
         rule_id="WX_CSTRDATA_CAST",
@@ -202,10 +216,18 @@ RULES: List[Rule] = [
     # 5. AWESOME 3.2 / 3.3 MODERN FEATURES OPPORTUNITIES
     # -------------------------------------------------------------------------
     Rule(
+        rule_id="WX_TEXT_VALIDATOR_RAW_PTR",
+        category="modern_features",
+        severity="WARNING",
+        pattern=re.compile(r'wxTextValidator\s*\([^,]+,\s*&\w+\)'),
+        description="wxTextValidator initialized with raw string pointer for direct mutation.",
+        suggestion="Use modern validator with transfer callbacks or validate in OnValidate event."
+    ),
+    Rule(
         rule_id="WX_OPP_INFOBAR",
         category="modern_features",
         severity="OPPORTUNITY",
-        pattern=re.compile(r'wxMessageBox\s*\(.*?(?:warn|info|hint|notice)', re.I),
+        pattern=re.compile(r'wxMessageBox\s*\('),
         description="Modal wxMessageBox used for notifications/hints.",
         suggestion="Consider modern wxInfoBar for non-modal, non-intrusive contextual inline alerts."
     ),
@@ -232,6 +254,14 @@ RULES: List[Rule] = [
         pattern=re.compile(r'\b(wxPostEvent|AddPendingEvent)\s*\('),
         description="Legacy manual event posting for deferred execution or thread marshaling.",
         suggestion="Use modern wxEvtHandler::CallAfter([=]() { ... }) with lambdas."
+    ),
+    Rule(
+        rule_id="WX_OPP_SET_LABEL_TEXT",
+        category="modern_features",
+        severity="OPPORTUNITY",
+        pattern=re.compile(r'->SetLabel\s*\('),
+        description="SetLabel() interprets '&' as mnemonic accelerator.",
+        suggestion="Use SetLabelText() for text that may contain '&' (e.g. file paths, town/player names)."
     ),
 ]
 
@@ -269,7 +299,7 @@ def scan_directory(root_dir: Path) -> List[Finding]:
     cpp_extensions = {".cpp", ".h", ".hpp", ".cxx"}
     
     # Exclude vendor directory
-    exclude_dirs = {"ext", "build", "build-ninja", ".git", ".gemini", "vcpkg_installed"}
+    exclude_dirs = {"ext", "build", "build-ninja", ".git", ".gemini", "vcpkg_installed", ".wx_docs"}
 
     for dirpath, dirnames, filenames in os.walk(root_dir):
         # Filter out directories
@@ -282,10 +312,9 @@ def scan_directory(root_dir: Path) -> List[Finding]:
 
 def print_text_report(findings: List[Finding], summary_only: bool = False):
     print("=" * 80)
-    print("  RME Redux - wxWidgets 3.3 Legacy & Modernization Scanner")
+    print("  RME Redux - wxWidgets 3.3 Complete Legacy & Modernization Scanner")
     print("=" * 80)
 
-    # Category counts
     cat_counts: Dict[str, int] = {}
     sev_counts: Dict[str, int] = {}
     rule_counts: Dict[str, int] = {}
@@ -325,8 +354,8 @@ def print_text_report(findings: List[Finding], summary_only: bool = False):
 
 def generate_markdown_report(findings: List[Finding]) -> str:
     md = []
-    md.append("# wxWidgets 3.3 Modernization Audit Report\n")
-    md.append("Automated scan of RME Redux codebase for legacy wxWidgets patterns, deprecated APIs, and 3.2/3.3 modern upgrade opportunities.\n")
+    md.append("# wxWidgets 3.3 Complete Modernization Audit Report\n")
+    md.append("Automated comprehensive scan of RME Redux codebase for all legacy wxWidgets patterns, deprecated APIs, and 3.2/3.3 modern upgrade opportunities.\n")
 
     sev_counts: Dict[str, int] = {}
     cat_counts: Dict[str, int] = {}
@@ -357,17 +386,17 @@ def generate_markdown_report(findings: List[Finding]) -> str:
             md.append(f"| `{rule.category}` | `{rule.rule_id}` | {count} | {rule.description} |")
     md.append("\n")
 
-    md.append("### Top Files with Legacy Patterns\n")
+    md.append("### All Affected Files Breakdown\n")
     md.append("| File | Findings Count |")
     md.append("| :--- | :--- |")
-    for fp, count in sorted(file_counts.items(), key=lambda x: x[1], reverse=True)[:15]:
+    for fp, count in sorted(file_counts.items(), key=lambda x: x[1], reverse=True):
         md.append(f"| [{Path(fp).name}]({fp}) | {count} |")
     md.append("\n")
 
     return "\n".join(md)
 
 def main():
-    parser = argparse.ArgumentParser(description="Scan codebase for legacy wxWidgets patterns.")
+    parser = argparse.ArgumentParser(description="Scan codebase for all legacy wxWidgets patterns.")
     parser.add_argument("--dir", default="source", help="Directory to scan (default: source)")
     parser.add_argument("--format", choices=["text", "md", "json"], default="text", help="Output format")
     parser.add_argument("--category", help="Filter by specific category")
@@ -391,9 +420,7 @@ def main():
     elif args.format == "md":
         out_str = generate_markdown_report(findings)
     else:
-        # text format handled via custom print
         if args.output:
-            # redirect stdout to file
             import io
             old_stdout = sys.stdout
             buf = io.StringIO()
