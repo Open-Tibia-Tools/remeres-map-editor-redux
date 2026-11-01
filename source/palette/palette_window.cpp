@@ -420,7 +420,7 @@ void PaletteWindow::OnUpdate(Map* map) {
 
 void PaletteWindow::OnKey(wxKeyEvent& event) {
 	if (g_gui.GetCurrentTab() != nullptr) {
-		g_gui.GetCurrentMapTab()->GetEventHandler()->AddPendingEvent(event);
+		g_gui.GetCurrentMapTab()->GetEventHandler()->QueueEvent(event.Clone());
 	}
 }
 

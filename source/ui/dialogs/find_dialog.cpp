@@ -28,7 +28,7 @@ static bool caseInsensitiveContains(std::string_view haystack, std::string_view 
 
 void KeyForwardingTextCtrl::OnKeyDown(wxKeyEvent& event) {
 	if (event.GetKeyCode() == WXK_UP || event.GetKeyCode() == WXK_DOWN || event.GetKeyCode() == WXK_PAGEDOWN || event.GetKeyCode() == WXK_PAGEUP) {
-		GetParent()->GetEventHandler()->AddPendingEvent(event);
+		GetParent()->GetEventHandler()->QueueEvent(event.Clone());
 	} else {
 		event.Skip();
 	}

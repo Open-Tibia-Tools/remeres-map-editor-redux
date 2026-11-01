@@ -679,7 +679,7 @@ void MinimapCanvas::OnMouseLeave(wxMouseEvent& event) {
 
 void MinimapCanvas::OnKey(wxKeyEvent& event) {
 	if (MapTab* map_tab = g_gui.GetCurrentMapTab()) {
-		map_tab->GetEventHandler()->AddPendingEvent(event);
+		map_tab->GetEventHandler()->QueueEvent(event.Clone());
 	} else {
 		event.Skip();
 	}

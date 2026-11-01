@@ -84,9 +84,9 @@ void UpdateChecker::connect(wxEvtHandler* receiver) {
 		// However, we still check 'alive' flag to be safe.
 		wxGetApp().CallAfter([receiver, data, alive]() {
 			if (*alive && receiver) {
-				wxCommandEvent event(EVT_UPDATE_CHECK_FINISHED);
-				event.SetClientData(newd std::string(data));
-				receiver->AddPendingEvent(event);
+				auto* event = new wxCommandEvent(EVT_UPDATE_CHECK_FINISHED);
+				event->SetClientData(new std::string(data));
+				receiver->QueueEvent(event);
 			}
 		});
 	});

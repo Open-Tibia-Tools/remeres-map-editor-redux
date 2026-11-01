@@ -158,10 +158,10 @@ public:
 	~MapScrollBar() override { }
 
 	void OnKey(wxKeyEvent& event) {
-		canvas->GetEventHandler()->AddPendingEvent(event);
+		canvas->GetEventHandler()->QueueEvent(event.Clone());
 	}
 	void OnWheel(wxMouseEvent& event) {
-		canvas->GetEventHandler()->AddPendingEvent(event);
+		canvas->GetEventHandler()->QueueEvent(event.Clone());
 	}
 	void OnFocus(wxFocusEvent& event) {
 		canvas->SetFocus();
