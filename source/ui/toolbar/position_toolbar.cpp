@@ -14,7 +14,6 @@ const wxString PositionToolBar::PANE_NAME = "position_toolbar";
 
 PositionToolBar::PositionToolBar(wxWindow* parent) {
 	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
-	wxBitmap go_bitmap = IMAGE_MANAGER.GetBitmap(ICON_LOCATION_ARROW, icon_size);
 
 	toolbar = newd wxAuiToolBar(parent, TOOLBAR_POSITION, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_HORZ_TEXT);
 	toolbar->SetToolBitmapSize(icon_size);
@@ -29,7 +28,7 @@ PositionToolBar::PositionToolBar(wxWindow* parent) {
 	z_control->SetToolTip("Z Coordinate");
 
 	go_button = newd wxButton(toolbar, TOOLBAR_POSITION_GO, wxEmptyString, wxDefaultPosition, parent->FromDIP(wxSize(22, 20)));
-	go_button->SetBitmap(go_bitmap);
+	go_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_LOCATION_ARROW));
 	go_button->SetToolTip("Go To Position");
 
 	toolbar->AddControl(x_control);

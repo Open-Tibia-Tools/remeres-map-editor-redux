@@ -18,21 +18,21 @@ const wxString BrushToolBar::PANE_NAME = "brush_toolbar";
 BrushToolBar::BrushToolBar(wxWindow* parent) {
 	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
 
-	wxBitmap border_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_OPTIONAL_BORDER_SMALL, icon_size);
-	wxBitmap eraser_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_ERASER_SMALL, icon_size);
-	wxBitmap pz_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_PROTECTION_ZONE_SMALL, icon_size);
-	wxBitmap nopvp_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_NO_PVP_ZONE_SMALL, icon_size);
-	wxBitmap nologout_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_NO_LOGOUT_ZONE_SMALL, icon_size);
-	wxBitmap pvp_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_PVP_ZONE_SMALL, icon_size);
-	wxBitmap normal_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_DOOR_NORMAL_SMALL, icon_size);
-	wxBitmap locked_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_DOOR_LOCKED_SMALL, icon_size);
-	wxBitmap magic_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_DOOR_MAGIC_SMALL, icon_size);
-	wxBitmap quest_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_DOOR_QUEST_SMALL, icon_size);
-	wxBitmap normal_alt_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_DOOR_NORMAL_ALT_SMALL, icon_size);
-	wxBitmap archway_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_DOOR_ARCHWAY_SMALL, icon_size);
+	wxBitmapBundle border_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_OPTIONAL_BORDER_SMALL);
+	wxBitmapBundle eraser_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_ERASER_SMALL);
+	wxBitmapBundle pz_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_PROTECTION_ZONE_SMALL);
+	wxBitmapBundle nopvp_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_NO_PVP_ZONE_SMALL);
+	wxBitmapBundle nologout_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_NO_LOGOUT_ZONE_SMALL);
+	wxBitmapBundle pvp_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_PVP_ZONE_SMALL);
+	wxBitmapBundle normal_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_DOOR_NORMAL_SMALL);
+	wxBitmapBundle locked_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_DOOR_LOCKED_SMALL);
+	wxBitmapBundle magic_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_DOOR_MAGIC_SMALL);
+	wxBitmapBundle quest_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_DOOR_QUEST_SMALL);
+	wxBitmapBundle normal_alt_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_DOOR_NORMAL_ALT_SMALL);
+	wxBitmapBundle archway_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_DOOR_ARCHWAY_SMALL);
 
-	wxBitmap hatch_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_WINDOW_HATCH_SMALL, icon_size);
-	wxBitmap window_bitmap = IMAGE_MANAGER.GetBitmap(IMAGE_WINDOW_NORMAL_SMALL, icon_size);
+	wxBitmapBundle hatch_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_WINDOW_HATCH_SMALL);
+	wxBitmapBundle window_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_WINDOW_NORMAL_SMALL);
 
 	toolbar = newd wxAuiToolBar(parent, TOOLBAR_BRUSHES, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE);
 	toolbar->SetToolBitmapSize(icon_size);
