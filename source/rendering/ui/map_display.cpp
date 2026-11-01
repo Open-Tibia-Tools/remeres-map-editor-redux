@@ -149,6 +149,10 @@ MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
 	Bind(wxEVT_PAINT, &MapCanvas::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, &MapCanvas::OnEraseBackground, this);
 	Bind(wxEVT_IDLE, &MapCanvas::OnIdle, this);
+	Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+		Refresh(false);
+		event.Skip();
+	});
 }
 
 MapCanvas::~MapCanvas() {

@@ -57,6 +57,11 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGED, &PaletteWindow::OnPageChanged, this, PALETTE_CHOICEBOOK);
 	Bind(wxEVT_CLOSE_WINDOW, &PaletteWindow::OnClose, this);
 	Bind(wxEVT_KEY_DOWN, &PaletteWindow::OnKey, this);
+	Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+		Refresh();
+		Update();
+		event.Skip();
+	});
 
 	for (const auto& palette : catalog.dynamicPalettes()) {
 		auto* panel = new BrushPalettePanel(choicebook, palette);

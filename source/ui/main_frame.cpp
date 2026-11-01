@@ -136,6 +136,16 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 #endif
 	Bind(EVT_UPDATE_MENUS, &MainFrame::OnUpdateMenus, this);
 	Bind(wxEVT_IDLE, &MainFrame::OnIdle, this);
+	Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+		spdlog::info("MainFrame: DPI changed from ({}, {}) to ({}, {})",
+			event.GetOldDPI().x, event.GetOldDPI().y,
+			event.GetNewDPI().x, event.GetNewDPI().y);
+		if (g_gui.aui_manager) {
+			g_gui.aui_manager->Update();
+		}
+		g_gui.RefreshView(true);
+		event.Skip();
+	});
 }
 
 MainFrame::~MainFrame() {
