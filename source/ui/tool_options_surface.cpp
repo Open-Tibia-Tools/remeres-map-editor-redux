@@ -3,6 +3,7 @@
 #include "app/settings.h"
 #include "brushes/brush.h"
 #include "brushes/managers/brush_manager.h"
+#include "brushes/ground/ground_brush.h"
 #include "brushes/border/optional_border_brush.h"
 #include "brushes/creature/creature_brush.h"
 #include "brushes/creature/monster_brush.h"
@@ -222,10 +223,13 @@ void ToolOptionsSurface::BuildUi() {
 	other_sizer->Add(weight_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(6)));
 
 	preview_border_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Preview Border");
+	draw_on_floor_below_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Draw on floor below");
+	draw_on_floor_below_checkbox->SetToolTip("When enabled, painting with this ground brush places the ground on the floor\nbelow (z+1) and punches a bordered hole on the current floor.");
 	lock_doors_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Lock Doors (Shift)");
 	randomize_doodads_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Randomize Doodads");
 	randomize_doodads_checkbox->SetValue(g_settings.getBoolean(Config::RANDOMIZE_DOODADS));
 	other_sizer->Add(preview_border_checkbox, wxSizerFlags().Expand().Border(wxALL, FromDIP(6)));
+	other_sizer->Add(draw_on_floor_below_checkbox, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6)));
 	other_sizer->Add(lock_doors_checkbox, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6)));
 	main_sizer->Add(other_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(4)));
 
@@ -236,6 +240,7 @@ void ToolOptionsSurface::BuildUi() {
 	exact_button->Bind(wxEVT_TOGGLEBUTTON, &ToolOptionsSurface::OnExactToggled, this);
 	aspect_button->Bind(wxEVT_TOGGLEBUTTON, &ToolOptionsSurface::OnAspectToggled, this);
 	preview_border_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnPreviewBorderToggled, this);
+	draw_on_floor_below_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnDrawOnFloorBelowToggled, this);
 	lock_doors_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnLockDoorsToggled, this);
 	randomize_doodads_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnRandomizeDoodadsToggled, this);
 	thickness_slider->Bind(wxEVT_SLIDER, &ToolOptionsSurface::OnThicknessChanged, this);
@@ -373,6 +378,7 @@ void ToolOptionsSurface::RefreshFromState() {
 	exact_button->SetValue(state.exact);
 	aspect_button->SetValue(state.aspect_locked);
 	preview_border_checkbox->SetValue(g_settings.getInteger(Config::SHOW_AUTOBORDER_PREVIEW));
+	draw_on_floor_below_checkbox->SetValue(g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW));
 	lock_doors_checkbox->SetValue(g_settings.getInteger(Config::DRAW_LOCKED_DOOR));
 	const int thickness_percent = g_brush_manager.UseCustomThickness() ? std::clamp(static_cast<int>(g_brush_manager.GetCustomThicknessMod() * 100.0f), MIN_THICKNESS, MAX_THICKNESS) : MAX_THICKNESS;
 	thickness_slider->SetValue(thickness_percent);
@@ -398,11 +404,12 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 	const bool show_size = HasBrushSizeControls();
 	const bool show_thickness = HasThicknessControl();
 	const bool show_preview_border = HasPreviewBorderControl();
+	const bool show_draw_on_floor_below = HasDrawOnFloorBelowControl();
 	const bool show_lock_doors = HasLockDoorsControl();
 	const bool show_spawn_controls = HasSpawnControls();
 	const bool show_weight = HasWeightControl();
 	const bool show_randomize_doodads = HasRandomizeDoodadsControl();
-	const bool show_other = show_thickness || show_preview_border || show_lock_doors || show_spawn_controls || show_weight || show_randomize_doodads;
+	const bool show_other = show_thickness || show_preview_border || show_draw_on_floor_below || show_lock_doors || show_spawn_controls || show_weight || show_randomize_doodads;
 
 	main_sizer->Show(main_tools_sizer, show_tools, true);
 	main_sizer->Show(size_sizer, show_size, true);
@@ -414,6 +421,7 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 	DetachWindowIfPresent(other_sizer, spawn_size_panel);
 	DetachWindowIfPresent(other_sizer, weight_panel);
 	DetachWindowIfPresent(other_sizer, preview_border_checkbox);
+	DetachWindowIfPresent(other_sizer, draw_on_floor_below_checkbox);
 	DetachWindowIfPresent(other_sizer, lock_doors_checkbox);
 	DetachWindowIfPresent(other_sizer, randomize_doodads_checkbox);
 
@@ -430,6 +438,9 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 	}
 	if (show_preview_border) {
 		AddWindowToSizer(other_sizer, preview_border_checkbox, 0, wxEXPAND | wxALL, FromDIP(6));
+	}
+	if (show_draw_on_floor_below) {
+		AddWindowToSizer(other_sizer, draw_on_floor_below_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6));
 	}
 	if (show_lock_doors) {
 		AddWindowToSizer(other_sizer, lock_doors_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6));
@@ -525,6 +536,15 @@ void ToolOptionsSurface::OnRandomizeDoodadsToggled(wxCommandEvent& WXUNUSED(even
 
 bool ToolOptionsSurface::HasPreviewBorderControl() const {
 	return active_brush && active_brush->needBorders();
+}
+
+bool ToolOptionsSurface::HasDrawOnFloorBelowControl() const {
+	return active_brush && active_brush->is<GroundBrush>();
+}
+
+void ToolOptionsSurface::OnDrawOnFloorBelowToggled(wxCommandEvent& event) {
+	g_settings.setInteger(Config::DRAW_ON_FLOOR_BELOW, event.IsChecked() ? 1 : 0);
+	g_gui.FocusCurrentMapCanvas();
 }
 
 bool ToolOptionsSurface::HasLockDoorsControl() const {

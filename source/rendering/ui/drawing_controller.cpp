@@ -47,7 +47,8 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 	Brush* brush = g_gui.GetCurrentBrush();
 	if (brush) {
 		const BrushFootprint footprint = g_gui.GetBrushFootprint();
-		if (shift_down && brush->canDrag()) {
+		const bool draw_below = !ctrl_down && brush->is<GroundBrush>() && g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW);
+		if (shift_down && brush->canDrag() && !draw_below) {
 			dragging_draw = true;
 		} else {
 			if (footprint.isSingleTile() && !brush->oneSizeFitsAll()) {
@@ -100,8 +101,11 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 				tilestoborder.push_back(Position(mouse_map_pos.x, mouse_map_pos.y + 1, mouse_map_pos.z));
 				tilestoborder.push_back(Position(mouse_map_pos.x + 1, mouse_map_pos.y, mouse_map_pos.z));
 
+				const bool draw_below = !ctrl_down && brush->is<GroundBrush>() && g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW);
 				if (ctrl_down) {
 					editor.undraw(tilestodraw, tilestoborder, alt_down);
+				} else if (draw_below) {
+					editor.drawGroundHoleToFloorBelow(tilestodraw, tilestoborder);
 				} else {
 					editor.draw(tilestodraw, tilestoborder, alt_down);
 				}
@@ -136,7 +140,7 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 					}
 				}
 			} else {
-				if (brush->is<GroundBrush>() && alt_down) {
+				if (brush->is<GroundBrush>() && (alt_down || draw_below)) {
 					replace_dragging = true;
 					Tile* draw_tile = editor.map.getTile(mouse_map_pos);
 					if (draw_tile) {
@@ -156,6 +160,8 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 
 					if (!fill && ctrl_down) {
 						editor.undraw(tilestodraw, tilestoborder, alt_down);
+					} else if (draw_below) {
+						editor.drawGroundHoleToFloorBelow(tilestodraw, tilestoborder);
 					} else {
 						editor.draw(tilestodraw, tilestoborder, alt_down);
 					}
@@ -232,8 +238,11 @@ void DrawingController::HandleDrag(const Position& mouse_map_pos, bool shift_dow
 
 			BrushUtility::GetTilesToDraw(mouse_map_pos.x, mouse_map_pos.y, mouse_map_pos.z, &tilestodraw, &tilestoborder);
 
+			const bool draw_below = !ctrl_down && brush->is<GroundBrush>() && g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW);
 			if (ctrl_down) {
 				editor.undraw(tilestodraw, tilestoborder, alt_down);
+			} else if (draw_below) {
+				editor.drawGroundHoleToFloorBelow(tilestodraw, tilestoborder);
 			} else {
 				editor.draw(tilestodraw, tilestoborder, alt_down);
 			}

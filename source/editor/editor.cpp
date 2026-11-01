@@ -148,5 +148,9 @@ void Editor::drawInternal(const PositionVector& tilestodraw, PositionVector& til
 	DrawOperations::draw(*this, tilestodraw, tilestoborder, alt, dodraw);
 }
 
+void Editor::drawGroundHoleToFloorBelow(const PositionVector& tilestodraw, const PositionVector& tilestoborder) {
+	DrawOperations::punchGroundToFloorBelow(*this, tilestodraw, tilestoborder);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Live!

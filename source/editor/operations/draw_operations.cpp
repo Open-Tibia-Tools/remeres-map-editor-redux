@@ -5,6 +5,8 @@
 #include "app/main.h"
 #include <format>
 #include "editor/operations/draw_operations.h"
+#include <unordered_set>
+#include <array>
 #include "editor/editor.h"
 #include "editor/action_queue.h"
 #include "ui/gui.h"
@@ -620,4 +622,104 @@ void DrawOperations::draw(Editor& editor, const PositionVector& tilestodraw, Pos
 		}
 		editor.addAction(std::move(action), 2);
 	}
+}
+
+void DrawOperations::eraseGroundWithBorders(Editor& editor, const PositionVector& positions) {
+	std::unique_ptr<BatchAction> batch = editor.actionQueue->createBatch(ACTION_DRAW);
+	std::unique_ptr<Action> action = editor.actionQueue->createAction(batch.get());
+
+	PositionVector erased;
+	for (const auto& pos : positions) {
+		Tile* tile = editor.map.getTile(pos);
+		if (!tile || !tile->hasGround()) {
+			continue;
+		}
+		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
+		TileOperations::cleanBorders(new_tile.get());
+		new_tile->ground = nullptr;
+		action->addChange(std::make_unique<Change>(std::move(new_tile)));
+		erased.push_back(pos);
+	}
+	if (erased.empty()) {
+		return;
+	}
+	batch->addAndCommitAction(std::move(action));
+
+	action = editor.actionQueue->createAction(batch.get());
+	std::unordered_set<int64_t> border_seen;
+	const auto borderKey = [](int x, int y, int z) -> int64_t {
+		return (static_cast<int64_t>(z & 0xFF) << 48)
+			| (static_cast<int64_t>(x & 0xFFFFFF) << 24)
+			| (static_cast<int64_t>(y & 0xFFFFFF));
+	};
+
+	static constexpr std::array<std::pair<int, int>, 9> offsets = {{
+		{ -1, -1 }, { 0, -1 }, { 1, -1 },
+		{ -1,  0 }, { 0,  0 }, { 1,  0 },
+		{ -1,  1 }, { 0,  1 }, { 1,  1 }
+	}};
+
+	for (const auto& pos : erased) {
+		for (const auto& [dx, dy] : offsets) {
+			const int nx = pos.x + dx;
+			const int ny = pos.y + dy;
+			const int nz = pos.z;
+			const int64_t key = borderKey(nx, ny, nz);
+			if (!border_seen.insert(key).second) {
+				continue;
+			}
+			Tile* t = editor.map.getTile(nx, ny, nz);
+			if (t) {
+				std::unique_ptr<Tile> new_t = TileOperations::deepCopy(t, editor.map);
+				TileOperations::borderize(new_t.get(), &editor.map);
+				action->addChange(std::make_unique<Change>(std::move(new_t)));
+			}
+		}
+	}
+	batch->addAndCommitAction(std::move(action));
+	editor.addBatch(std::move(batch), 2);
+}
+
+void DrawOperations::punchGroundToFloorBelow(Editor& editor, const PositionVector& tilestodraw, const PositionVector& tilestoborder) {
+	Brush* brush = g_gui.GetCurrentBrush();
+	if (!brush || !brush->is<GroundBrush>() || tilestodraw.empty()) {
+		return;
+	}
+	GroundBrush* ground_brush = brush->as<GroundBrush>();
+
+	// 1) Paint ground on current floor in replace mode
+	PositionVector border_here = tilestoborder;
+	draw(editor, tilestodraw, border_here, true, true);
+
+	// 2) Mirror the drawn footprint to the floor below (z + 1)
+	PositionVector below_draw;
+	for (const auto& pos : tilestodraw) {
+		if (pos.z >= MAP_MAX_LAYER) {
+			continue;
+		}
+		Tile* tile = editor.map.getTile(pos);
+		if (tile && tile->getGroundBrush() == ground_brush) {
+			below_draw.emplace_back(pos.x, pos.y, pos.z + 1);
+		}
+	}
+	if (below_draw.empty()) {
+		return;
+	}
+
+	PositionVector below_border;
+	below_border.reserve(tilestoborder.size());
+	for (const auto& pos : tilestoborder) {
+		if (pos.z < MAP_MAX_LAYER) {
+			below_border.emplace_back(pos.x, pos.y, pos.z + 1);
+		}
+	}
+	draw(editor, below_draw, below_border, false, true);
+
+	// 3) Punch the hole on the current floor (z)
+	PositionVector hole;
+	hole.reserve(below_draw.size());
+	for (const auto& pos : below_draw) {
+		hole.emplace_back(pos.x, pos.y, pos.z - 1);
+	}
+	eraseGroundWithBorders(editor, hole);
 }
