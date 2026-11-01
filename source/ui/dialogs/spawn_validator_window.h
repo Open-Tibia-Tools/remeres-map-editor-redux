@@ -49,6 +49,7 @@ private:
 	std::optional<EditorOperations::SpawnValidationSettings> last_settings;
 
 	// UI Controls - Left Panel
+	wxInfoBar* m_info_bar = nullptr;
 	wxCheckBox* chk_invalid_time = nullptr;
 	wxCheckBox* chk_unknown_creature = nullptr;
 	wxCheckBox* chk_blocked_tile = nullptr;

@@ -69,6 +69,7 @@ private:
 
 	Editor* editor;
 
+	wxInfoBar* m_infoBar = nullptr;
 	LibraryPanel* libraryPanel;
 	wxNotebook* m_suggestionsNotebook = nullptr;
 	ItemGridPanel* m_noFilterGrid = nullptr;

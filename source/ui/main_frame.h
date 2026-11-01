@@ -11,6 +11,7 @@
 
 class MainMenuBar;
 class MainToolBar;
+class wxInfoBar;
 
 class MainFrame : public wxFrame {
 public:
@@ -39,6 +40,8 @@ public:
 
 	void OnUpdateMenus(wxCommandEvent& event);
 	void UpdateFloorMenu();
+	void ShowInfoBanner(const wxString& message, int flags = wxICON_INFORMATION);
+	void DismissInfoBanner();
 	void OnIdle(wxIdleEvent& event);
 	void OnExit(wxCloseEvent& event);
 
@@ -55,6 +58,7 @@ public:
 protected:
 	std::unique_ptr<MainMenuBar> menu_bar;
 	std::unique_ptr<MainToolBar> tool_bar;
+	wxInfoBar* m_info_bar = nullptr;
 	// Throttles the idle pass that re-evaluates the menu bar and toolbar.
 	std::chrono::steady_clock::time_point last_ui_update_ {};
 

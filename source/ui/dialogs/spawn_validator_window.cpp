@@ -1,3 +1,4 @@
+#include <wx/infobar.h>
 #include "ui/dialogs/spawn_validator_window.h"
 #include "ui/dialog_util.h"
 #include "editor/editor.h"
@@ -84,6 +85,10 @@ void SpawnValidatorWindow::OnCharHook(wxKeyEvent& event) {
 }
 
 void SpawnValidatorWindow::InitLayout() {
+	auto* mainSizer = new wxBoxSizer(wxVERTICAL);
+	m_info_bar = new wxInfoBar(this);
+	mainSizer->Add(m_info_bar, wxSizerFlags().Expand());
+
 	auto* rootSizer = new wxBoxSizer(wxHORIZONTAL);
 
 	// =========================================================================
@@ -252,7 +257,8 @@ void SpawnValidatorWindow::InitLayout() {
 
 	rootSizer->Add(rightPanel, wxSizerFlags(1).Expand().Border(wxTOP | wxBOTTOM | wxRIGHT, 10));
 
-	SetSizer(rootSizer);
+	mainSizer->Add(rootSizer, wxSizerFlags(1).Expand());
+	SetSizer(mainSizer);
 	Layout();
 
 	UpdateButtonStates();
@@ -512,5 +518,8 @@ void SpawnValidatorWindow::OnRemoveAll() {
 		g_gui.RefreshView();
 		RescanMap();
 		g_gui.SetStatusText(wxstr(std::format("Removed {} broken spawn entries.", removedCount)));
+		if (m_info_bar) {
+			m_info_bar->ShowMessage(wxstr(std::format("Removed {} broken spawn entries. Action can be undone with Ctrl+Z.", removedCount)), wxICON_INFORMATION);
+		}
 	}
 }
