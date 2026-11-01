@@ -602,6 +602,9 @@ void Settings::IO(IOMode mode) {
 	Int(ADVANCED_ITEM_FINDER_WINDOW_Y, -1);
 	Int(ADVANCED_ITEM_FINDER_WINDOW_WIDTH, 1480);
 	Int(ADVANCED_ITEM_FINDER_WINDOW_HEIGHT, 860);
+	String(BRUSH_ITEMS_LAYOUT, "");
+	String(TILE_PROPERTIES_LAYOUT, "");
+	String(SCRIPTS_MANAGER_LAYOUT, "");
 
 	section("Hotkeys");
 	String(NUMERICAL_HOTKEYS, "");
@@ -643,6 +646,7 @@ void Settings::IO(IOMode mode) {
 	Int(PALETTE_GRID_SPACING, 4);
 	Bool(PALETTE_FILTER_ALL, false);
 	String(PALETTE_FILTER_QUERY, "");
+	String(PALETTE_ACTIVE_PAGE, "Terrain");
 
 	if (mode == LOAD) {
 		const bool hasExplicitTileSize = cur_sec && cur_sec->contains("palette_tile_size");

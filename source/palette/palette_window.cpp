@@ -268,6 +268,20 @@ void PaletteWindow::SelectPage(std::string_view paletteName) {
 	}
 }
 
+std::string PaletteWindow::GetSelectedPageName() const {
+	if (!choicebook) {
+		return "";
+	}
+	if (auto* panel = dynamic_cast<PalettePanel*>(choicebook->GetCurrentPage())) {
+		return nstr(panel->GetName());
+	}
+	const int sel = choicebook->GetSelection();
+	if (sel != wxNOT_FOUND) {
+		return nstr(choicebook->GetPageText(static_cast<size_t>(sel)));
+	}
+	return "";
+}
+
 Brush* PaletteWindow::GetSelectedBrush() const {
 	if (!choicebook) {
 		return nullptr;
@@ -402,6 +416,10 @@ void PaletteWindow::OnPageChanged(wxChoicebookEvent&) {
 	}
 	g_gui.ActivatePalette(this);
 	g_gui.SelectBrush();
+	const std::string page_name = GetSelectedPageName();
+	if (!page_name.empty()) {
+		g_settings.setString(Config::PALETTE_ACTIVE_PAGE, page_name);
+	}
 }
 
 void PaletteWindow::OnUpdateBrushSize(BrushShape shape, int size) {

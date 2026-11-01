@@ -20,6 +20,9 @@
 #include "ingame_preview/ingame_preview_window.h"
 #include "ui/managers/status_manager.h"
 #include "ui/tool_options_window.h"
+#include "ui/brush_items/brush_items_window.h"
+#include "ui/tile_properties/tile_properties_panel.h"
+#include "lua/lua_scripts_window.h"
 
 LayoutManager g_layout;
 
@@ -37,6 +40,24 @@ namespace {
 			}
 		}
 		return manager.SavePaneInfo(info);
+	}
+
+	void EnsurePaneOnScreen(wxAuiPaneInfo& info) {
+		if (info.IsFloatable()) {
+			bool offscreen = true;
+			for (uint32_t index = 0; index < wxDisplay::GetCount(); ++index) {
+				wxDisplay display(index);
+				wxRect rect = display.GetClientArea();
+				if (rect.Contains(info.floating_pos)) {
+					offscreen = false;
+					break;
+				}
+			}
+
+			if (offscreen) {
+				info.Dock();
+			}
+		}
 	}
 } // namespace
 
@@ -187,6 +208,43 @@ void LayoutManager::LoadPerspective() {
 		}
 	}
 
+	const std::string active_page = g_settings.getString(Config::PALETTE_ACTIVE_PAGE);
+	if (!active_page.empty()) {
+		if (PaletteWindow* palette = g_gui.GetPalette()) {
+			palette->SelectPage(active_page);
+		}
+	}
+
+	if (g_gui.tile_properties_panel) {
+		wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.tile_properties_panel);
+		const wxString layout = wxstr(g_settings.getString(Config::TILE_PROPERTIES_LAYOUT));
+		if (!layout.empty()) {
+			g_gui.aui_manager->LoadPaneInfo(layout, info);
+			EnsurePaneOnScreen(info);
+		}
+	}
+
+	if (g_gui.brush_items_window) {
+		wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.brush_items_window);
+		const wxString layout = wxstr(g_settings.getString(Config::BRUSH_ITEMS_LAYOUT));
+		if (!layout.empty()) {
+			g_gui.aui_manager->LoadPaneInfo(layout, info);
+			EnsurePaneOnScreen(info);
+			if (info.IsShown()) {
+				g_gui.brush_items_window->SetActiveBrush(g_gui.GetCurrentBrush());
+			}
+		}
+	}
+
+	if (LuaScriptsWindow* scripts = LuaScriptsWindow::Get()) {
+		wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(scripts);
+		const wxString layout = wxstr(g_settings.getString(Config::SCRIPTS_MANAGER_LAYOUT));
+		if (!layout.empty()) {
+			g_gui.aui_manager->LoadPaneInfo(layout, info);
+			EnsurePaneOnScreen(info);
+		}
+	}
+
 	if (g_settings.getInteger(Config::INGAME_PREVIEW_VISIBLE)) {
 		g_preview.Create();
 		if (g_preview.GetWindow()) {
@@ -222,9 +280,31 @@ void LayoutManager::SavePerspective() {
 		g_settings.setString(Config::MINIMAP_LAYOUT, nstr(s));
 	}
 
+	if (PaletteWindow* palette = g_gui.GetPalette()) {
+		const std::string page_name = palette->GetSelectedPageName();
+		if (!page_name.empty()) {
+			g_settings.setString(Config::PALETTE_ACTIVE_PAGE, page_name);
+		}
+	}
+
 	if (g_gui.tool_options) {
 		wxString s = SavePaneInfoWithCurrentSize(*g_gui.aui_manager, g_gui.tool_options);
 		g_settings.setString(Config::TOOL_OPTIONS_LAYOUT, nstr(s));
+	}
+
+	if (g_gui.tile_properties_panel) {
+		wxString s = SavePaneInfoWithCurrentSize(*g_gui.aui_manager, g_gui.tile_properties_panel);
+		g_settings.setString(Config::TILE_PROPERTIES_LAYOUT, nstr(s));
+	}
+
+	if (g_gui.brush_items_window) {
+		wxString s = SavePaneInfoWithCurrentSize(*g_gui.aui_manager, g_gui.brush_items_window);
+		g_settings.setString(Config::BRUSH_ITEMS_LAYOUT, nstr(s));
+	}
+
+	if (LuaScriptsWindow* scripts = LuaScriptsWindow::Get()) {
+		wxString s = SavePaneInfoWithCurrentSize(*g_gui.aui_manager, scripts);
+		g_settings.setString(Config::SCRIPTS_MANAGER_LAYOUT, nstr(s));
 	}
 
 	g_settings.setInteger(Config::INGAME_PREVIEW_VISIBLE, g_preview.IsVisible() ? 1 : 0);

@@ -49,6 +49,7 @@ public:
 	bool SelectTilesetInCurrentPalette(std::string_view tilesetName);
 	// Goes to the selected page and selects any brush there
 	void SelectPage(std::string_view paletteName);
+	std::string GetSelectedPageName() const;
 	// The currently selected brush in this palette
 	Brush* GetSelectedBrush() const;
 	Brush* GetSelectedCreatureBrush() const;
