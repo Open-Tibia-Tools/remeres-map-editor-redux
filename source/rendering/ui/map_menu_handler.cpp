@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "rendering/ui/map_menu_handler.h"
+#include "ui/dialog_util.h"
 #include "rendering/ui/map_display.h"
 #include "rendering/ui/clipboard_handler.h"
 #include "rendering/ui/popup_action_handler.h"
@@ -125,7 +126,7 @@ void MapMenuHandler::OnScriptMenu(wxCommandEvent& event) {
 				}
 			}
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script execution error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script execution error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 	}
 }

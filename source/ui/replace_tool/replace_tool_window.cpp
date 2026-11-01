@@ -1,5 +1,6 @@
 #include "app/main.h"
 #include "replace_tool_window.h"
+#include "ui/dialog_util.h"
 #include <format>
 #include "visual_similarity_service.h"
 #include "ui/theme.h"
@@ -112,7 +113,7 @@ void ReplaceToolWindow::OnClose(wxCloseEvent& event) {
 			? wxString("The rules in the table were never saved to a rule set.\n\nSave them now?")
 			: wxstr(std::format("Rule set \"{}\" has unsaved changes.\n\nSave before closing?", m_activeRuleSetName));
 
-		const int answer = wxMessageBox(question, "Unsaved rules", wxYES_NO | wxCANCEL | wxICON_WARNING, this);
+		const int answer = DialogUtil::PopupDialog(this, "Unsaved rules", question, wxYES_NO | wxCANCEL | wxICON_WARNING);
 		if (answer == wxCANCEL) {
 			event.Veto();
 			return;
@@ -229,7 +230,7 @@ void ReplaceToolWindow::InitLayout() {
 		if (ruleBuilder->GetRules().empty()) {
 			return;
 		}
-		if (wxMessageBox("Clear every rule in the table?", "Clear rules", wxYES_NO | wxNO_DEFAULT | wxICON_WARNING, this) == wxYES) {
+		if (DialogUtil::PopupDialog(this, "Clear rules", "Clear every rule in the table?", wxYES_NO | wxNO_DEFAULT | wxICON_WARNING) == wxID_YES) {
 			ruleBuilder->Clear();
 		}
 	});
@@ -518,7 +519,7 @@ void ReplaceToolWindow::OnRuleDeleted(const std::string& name) {
 void ReplaceToolWindow::OnRuleRenamed(const std::string& oldName, const std::string& newName) {
 	std::vector<std::string> existing = RuleManager::Get().GetAvailableRuleSets();
 	if (std::find(existing.begin(), existing.end(), newName) != existing.end()) {
-		wxMessageBox("A rule set with this name already exists.", "Rename Error", wxOK | wxICON_ERROR);
+		DialogUtil::PopupDialog("Rename Error", "A rule set with this name already exists.", wxOK | wxICON_ERROR);
 		return;
 	}
 
@@ -533,7 +534,7 @@ void ReplaceToolWindow::OnRuleRenamed(const std::string& oldName, const std::str
 			}
 			UpdateSavedRulesList();
 		} else {
-			wxMessageBox("Failed to save the renamed rule set.", "Rename Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Rename Error", "Failed to save the renamed rule set.", wxOK | wxICON_ERROR);
 		}
 	}
 }
@@ -565,7 +566,7 @@ void ReplaceToolWindow::UpdateSavedRulesList() {
 void ReplaceToolWindow::SaveActiveRuleSet() {
 	const std::vector<RuleGroup> rules = ruleBuilder->GetRules();
 	if (rules.empty()) {
-		wxMessageBox("There is nothing to save yet - build a rule first.", "Save rule set", wxOK | wxICON_INFORMATION, this);
+		DialogUtil::PopupDialog(this, "Save rule set", "There is nothing to save yet - build a rule first.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 
@@ -580,7 +581,7 @@ void ReplaceToolWindow::SaveActiveRuleSet() {
 	ruleSet.name = m_activeRuleSetName;
 	ruleSet.rules = rules;
 	if (!RuleManager::Get().SaveRuleSet(ruleSet)) {
-		wxMessageBox("Could not write the rule set to disk.", "Save rule set", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Save rule set", "Could not write the rule set to disk.", wxOK | wxICON_ERROR);
 		return;
 	}
 
@@ -596,13 +597,13 @@ bool ReplaceToolWindow::SaveRulesAsNewRuleSet(const wxString& name) {
 	}
 
 	if (name.ToStdString().size() > 64) {
-		wxMessageBox("That name is too long. Use up to 64 letters, digits, spaces, '-' or '_'.", "Save rule set", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Save rule set", "That name is too long. Use up to 64 letters, digits, spaces, '-' or '_'.", wxOK | wxICON_ERROR);
 		return false;
 	}
 
 	const std::vector<std::string> existing = RuleManager::Get().GetAvailableRuleSets();
 	if (std::find(existing.begin(), existing.end(), name.ToStdString()) != existing.end()) {
-		wxMessageBox("A rule set with this name already exists. Please choose a different name.", "Name Collision", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Name Collision", "A rule set with this name already exists. Please choose a different name.", wxOK | wxICON_ERROR);
 		return false;
 	}
 
@@ -611,7 +612,7 @@ bool ReplaceToolWindow::SaveRulesAsNewRuleSet(const wxString& name) {
 	ruleSet.rules = rules;
 
 	if (!RuleManager::Get().SaveRuleSet(ruleSet)) {
-		wxMessageBox("Could not save the rule set. Use letters, digits, spaces, '-' or '_'.", "Save rule set", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Save rule set", "Could not save the rule set. Use letters, digits, spaces, '-' or '_'.", wxOK | wxICON_ERROR);
 		return false;
 	}
 
@@ -667,14 +668,14 @@ void ReplaceToolWindow::OnCharHook(wxKeyEvent& event) {
 void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	const std::vector<RuleGroup> groups = ruleBuilder->GetRules();
 	if (groups.empty()) {
-		wxMessageBox("No rules defined. Add some rules first.", "Replace", wxOK | wxICON_INFORMATION);
+		DialogUtil::PopupDialog("Replace", "No rules defined. Add some rules first.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 
 	std::vector<size_t> ruleRows;
 	const std::vector<ReplacementRule> rules = ExpandRuleGroups(groups, ruleRows);
 	if (rules.empty()) {
-		wxMessageBox("No rule is complete yet.\n\nA rule needs at least one source, and either a target or the delete mode.", "Replace", wxOK | wxICON_INFORMATION);
+		DialogUtil::PopupDialog("Replace", "No rule is complete yet.\n\nA rule needs at least one source, and either a target or the delete mode.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 
@@ -687,7 +688,7 @@ void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	}
 
 	if (scope == ReplaceScope::Selection && editor->selection.empty()) {
-		wxMessageBox("No selection active. Please select an area first or change scope.", "Replace", wxOK | wxICON_WARNING);
+		DialogUtil::PopupDialog("Replace", "No selection active. Please select an area first or change scope.", wxOK | wxICON_WARNING);
 		return;
 	}
 
@@ -710,7 +711,7 @@ void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	}
 
 	if (totalMatches == 0) {
-		wxMessageBox("No items matching the rules were found in the selected scope.", "Replace", wxOK | wxICON_INFORMATION);
+		DialogUtil::PopupDialog("Replace", "No items matching the rules were found in the selected scope.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 
@@ -724,7 +725,7 @@ void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	}
 	preview += "\nChances add up: a rule changes that share of its matches and leaves the rest untouched.\nExecute the replacements?";
 
-	if (wxMessageBox(preview, "Confirm Bulk Replacement", wxYES_NO | wxNO_DEFAULT | wxICON_WARNING) != wxYES) {
+	if (DialogUtil::PopupDialog(this, "Confirm Bulk Replacement", preview, wxYES_NO | wxNO_DEFAULT | wxICON_WARNING) != wxID_YES) {
 		return;
 	}
 
@@ -750,7 +751,7 @@ void ReplaceToolWindow::OnSaveRule() {
 
 void ReplaceToolWindow::OnSaveAsNewRule() {
 	if (ruleBuilder->GetRules().empty()) {
-		wxMessageBox("There is nothing to save yet - build a rule first.", "Save as new rule set", wxOK | wxICON_INFORMATION, this);
+		DialogUtil::PopupDialog(this, "Save as new rule set", "There is nothing to save yet - build a rule first.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 	const wxString name = wxGetTextFromUser("Name for the new rule set:", "Save as new rule set", "", this);
@@ -763,9 +764,9 @@ void ReplaceToolWindow::OnAutoMatchRules(Brush* brush) {
 	}
 	const size_t matchedCount = ruleBuilder->AutoMatchUnmatchedRules(brush);
 	if (matchedCount > 0) {
-		wxMessageBox(wxstr(std::format("Successfully matched and filled {} rule(s) from brush '{}'.", matchedCount, brush->getName())), "Auto Match Rules", wxOK | wxICON_INFORMATION, this);
+		DialogUtil::PopupDialog(this, "Auto Match Rules", wxstr(std::format("Successfully matched and filled {} rule(s) from brush '{}'.", matchedCount, brush->getName())), wxOK | wxICON_INFORMATION);
 	} else {
-		wxMessageBox(wxstr(std::format("No unmatched rules were compatible with brush '{}'.", brush->getName())), "Auto Match Rules", wxOK | wxICON_INFORMATION, this);
+		DialogUtil::PopupDialog(this, "Auto Match Rules", wxstr(std::format("No unmatched rules were compatible with brush '{}'.", brush->getName())), wxOK | wxICON_INFORMATION);
 	}
 }
 

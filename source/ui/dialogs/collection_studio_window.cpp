@@ -1,4 +1,5 @@
 #include "ui/dialogs/collection_studio_window.h"
+#include "ui/dialog_util.h"
 #include <format>
 
 #include "ui/controls/collection_item_grid.h"
@@ -381,12 +382,12 @@ void CollectionStudioWindow::OnSave(const std::string& paletteName, const std::s
 
 	std::string error;
 	if (!rme::collection::CollectionXmlService::SaveTilesetXml(tilesetFilePath, name, itemsToSave, brushesToSave, append, error)) {
-		wxMessageBox(wxstr(std::format("Error saving tileset:\n{}", error)), "Add to Tileset", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Add to Tileset", wxstr(std::format("Error saving tileset:\n{}", error)), wxOK | wxICON_ERROR);
 		return;
 	}
 
 	if (!rme::collection::CollectionXmlService::EnsurePaletteInclude(paletteName, name, error)) {
-		wxMessageBox(wxstr(std::format("Error updating palettes.xml:\n{}", error)), "Add to Tileset", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Add to Tileset", wxstr(std::format("Error updating palettes.xml:\n{}", error)), wxOK | wxICON_ERROR);
 		return;
 	}
 
@@ -394,7 +395,7 @@ void CollectionStudioWindow::OnSave(const std::string& paletteName, const std::s
 
 	m_isDirty = false;
 	m_optionsPanel->RefreshExistingTilesets();
-	wxMessageBox(wxstr(std::format("Successfully saved tileset to {} palette!", paletteName)), "Add to Tileset", wxOK | wxICON_INFORMATION, this);
+	DialogUtil::PopupDialog(this, "Add to Tileset", wxstr(std::format("Successfully saved tileset to {} palette!", paletteName)), wxOK | wxICON_INFORMATION);
 	Close();
 }
 
@@ -428,13 +429,13 @@ void CollectionStudioWindow::OnCharHook(wxKeyEvent& event) {
 
 void CollectionStudioWindow::OnClose(wxCloseEvent& event) {
 	if (m_isDirty && !m_staging.Empty() && event.CanVeto()) {
-		const int answer = wxMessageBox(
-			"You have unsaved elements in Add to Tileset.\n\nWould you like to save them before closing?",
+		const int answer = DialogUtil::PopupDialog(
+			this,
 			"Unsaved Changes",
-			wxYES_NO | wxCANCEL | wxICON_WARNING,
-			this
+			"You have unsaved elements in Add to Tileset.\n\nWould you like to save them before closing?",
+			wxYES_NO | wxCANCEL | wxICON_WARNING
 		);
-		if (answer == wxCANCEL) {
+		if (answer == wxID_CANCEL) {
 			event.Veto();
 			return;
 		}

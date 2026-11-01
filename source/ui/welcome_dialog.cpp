@@ -1,4 +1,5 @@
 #include "ui/welcome_dialog.h"
+#include "ui/dialog_util.h"
 
 #include <algorithm>
 #include <format>
@@ -430,7 +431,7 @@ void WelcomeDialog::AutoSelectMatchingClient() {
 bool WelcomeDialog::AttemptLoad(bool show_message) {
 	if (m_selected_map_index == wxNOT_FOUND) {
 		if (show_message) {
-			wxMessageBox("Select a map before loading.", "Load Map", wxOK | wxICON_INFORMATION, this);
+			DialogUtil::PopupDialog(this, "Load Map", "Select a map before loading.", wxOK | wxICON_INFORMATION);
 		}
 		return false;
 	}
@@ -438,7 +439,7 @@ bool WelcomeDialog::AttemptLoad(bool show_message) {
 	ClientVersion* selected_client = GetSelectedClient();
 	if (!selected_client) {
 		if (show_message) {
-			wxMessageBox("Select a configured client before loading.", "Load Map", wxOK | wxICON_INFORMATION, this);
+			DialogUtil::PopupDialog(this, "Load Map", "Select a configured client before loading.", wxOK | wxICON_INFORMATION);
 		}
 		return false;
 	}
@@ -447,7 +448,7 @@ bool WelcomeDialog::AttemptLoad(bool show_message) {
 	if (!map_info || map_info->has_error) {
 		if (show_message) {
 			const wxString error_message = (map_info != nullptr && !map_info->error_message.empty()) ? map_info->error_message : wxString("The selected map could not be read.");
-			wxMessageBox(error_message, "Load Map", wxOK | wxICON_WARNING, this);
+			DialogUtil::PopupDialog(this, "Load Map", error_message, wxOK | wxICON_WARNING);
 		}
 		return false;
 	}
@@ -455,7 +456,7 @@ bool WelcomeDialog::AttemptLoad(bool show_message) {
 	const StartupCompatibilityStatus status = GetCompatibilityStatus();
 	if (status == StartupCompatibilityStatus::ForceRequired) {
 		if (show_message) {
-			wxMessageBox("The selected client does not match the map items version. Enable Force Load to continue.", "Client Mismatch", wxOK | wxICON_WARNING, this);
+			DialogUtil::PopupDialog(this, "Client Mismatch", "The selected client does not match the map items version. Enable Force Load to continue.", wxOK | wxICON_WARNING);
 		}
 		return false;
 	}

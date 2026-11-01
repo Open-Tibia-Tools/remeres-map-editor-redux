@@ -1,4 +1,5 @@
 #include "ui/dialogs/collection_options_panel.h"
+#include "ui/dialog_util.h"
 
 #include "io/collection_xml_service.h"
 #include "util/common.h"
@@ -319,11 +320,11 @@ void CollectionOptionsPanel::PerformSave() {
 	const bool incBrushes = IsIncludeBrushes();
 
 	if (!incItems && !incBrushes) {
-		wxMessageBox(
-			"No elements selected to be saved.\nPlease enable 'Include Items' and/or 'Include Brushes'.",
+		DialogUtil::PopupDialog(
+			this,
 			"Add to Tileset",
-			wxOK | wxICON_INFORMATION,
-			this
+			"No elements selected to be saved.\nPlease enable 'Include Items' and/or 'Include Brushes'.",
+			wxOK | wxICON_INFORMATION
 		);
 		return;
 	}
@@ -332,11 +333,11 @@ void CollectionOptionsPanel::PerformSave() {
 	const size_t effectiveBrushes = incBrushes ? m_brushCount : 0;
 
 	if (effectiveItems == 0 && effectiveBrushes == 0) {
-		wxMessageBox(
-			"No items or brushes are selected to be added to the tileset.\nPlease keep at least one element.",
+		DialogUtil::PopupDialog(
+			this,
 			"Add to Tileset",
-			wxOK | wxICON_INFORMATION,
-			this
+			"No items or brushes are selected to be added to the tileset.\nPlease keep at least one element.",
+			wxOK | wxICON_INFORMATION
 		);
 		return;
 	}
@@ -351,7 +352,7 @@ void CollectionOptionsPanel::PerformSave() {
 		// Trim whitespace
 		size_t first = targetName.find_first_not_of(" \t\r\n");
 		if (first == std::string::npos) {
-			wxMessageBox("Please enter a valid tileset name.", "Add to Tileset", wxOK | wxICON_WARNING, this);
+			DialogUtil::PopupDialog(this, "Add to Tileset", "Please enter a valid tileset name.", wxOK | wxICON_WARNING);
 			m_nameInput->SetFocus();
 			return;
 		}
@@ -402,7 +403,7 @@ void CollectionOptionsPanel::PerformSave() {
 		}
 	} else {
 		if (m_existingChoice->GetCount() == 0 || m_existingChoice->GetSelection() == wxNOT_FOUND) {
-			wxMessageBox("Please select an existing tileset, or create a new one.", "Add to Tileset", wxOK | wxICON_WARNING, this);
+			DialogUtil::PopupDialog(this, "Add to Tileset", "Please select an existing tileset, or create a new one.", wxOK | wxICON_WARNING);
 			return;
 		}
 		targetName = m_existingChoice->GetStringSelection().ToStdString();

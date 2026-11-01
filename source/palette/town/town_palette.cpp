@@ -503,13 +503,13 @@ void TownPalettePanel::OnClickRemoveTown(wxCommandEvent& /*event*/) {
 			map->houses.removeHouse(h);
 		}
 	} else {
-		const int ret = wxMessageBox(
-			wxstr(std::format("Are you sure you want to remove town '{}' (ID: {})?", town->getName(), town->getID())),
+		const int ret = DialogUtil::PopupDialog(
+			this,
 			"Confirm Removal",
-			wxYES_NO | wxICON_QUESTION | wxCENTER,
-			this
+			wxstr(std::format("Are you sure you want to remove town '{}' (ID: {})?", town->getName(), town->getID())),
+			wxYES_NO | wxICON_QUESTION | wxCENTER
 		);
-		if (ret != wxYES) {
+		if (ret != wxID_YES) {
 			return;
 		}
 	}

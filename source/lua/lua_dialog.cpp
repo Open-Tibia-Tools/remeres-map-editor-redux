@@ -17,6 +17,7 @@
 
 #include "app/main.h"
 #include "lua_dialog.h"
+#include "ui/dialog_util.h"
 #include "lua_api_image.h"
 #include "ui/gui.h"
 #include "game/items.h"
@@ -727,7 +728,7 @@ LuaDialog* LuaDialog::mapCanvas(sol::table options) {
 
 	Editor* editor = g_gui.GetCurrentEditor();
 	if (!editor) {
-		wxMessageBox("You must have a map open to use the Map Canvas widget.", "Error", wxOK | wxICON_ERROR);
+		DialogUtil::PopupDialog("Error", "You must have a map open to use the Map Canvas widget.", wxOK | wxICON_ERROR);
 		return this;
 	}
 
@@ -1500,7 +1501,7 @@ LuaDialog* LuaDialog::list(sol::table options) {
 		try {
 			listLeftClick(this, info);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 		event.Skip();
 	});
@@ -1535,7 +1536,7 @@ LuaDialog* LuaDialog::list(sol::table options) {
 		try {
 			listRightClick(this, info);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 		event.Skip();
 	});
@@ -1963,7 +1964,7 @@ void LuaDialog::handleTabButtonClick(int index) {
 	try {
 		onclick(this, info);
 	} catch (const sol::error& e) {
-		wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+		DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 	}
 }
 
@@ -1999,7 +2000,7 @@ void LuaDialog::popupContextMenu(const sol::function& callback, sol::table info,
 	try {
 		result = callback(this, info);
 	} catch (const sol::error& e) {
-		wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+		DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		return;
 	}
 
@@ -2059,7 +2060,7 @@ void LuaDialog::popupContextMenu(const sol::function& callback, sol::table info,
 		try {
 			it->second(this, info);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 	});
 
@@ -2171,7 +2172,7 @@ void LuaDialog::close() {
 			try {
 				oncloseCallback();
 			} catch (const sol::error& e) {
-				wxMessageBox(wxString("Script error in onclose: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+				DialogUtil::PopupDialog("Lua Error", wxString("Script error in onclose: ") + e.what(), wxOK | wxICON_ERROR);
 			}
 		}
 		return;
@@ -2187,7 +2188,7 @@ void LuaDialog::close() {
 		try {
 			oncloseCallback();
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error in onclose: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error in onclose: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 	}
 }
@@ -2207,7 +2208,7 @@ void LuaDialog::OnClose(wxCloseEvent& event) {
 		try {
 			oncloseCallback();
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error in onclose: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error in onclose: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 	}
 
@@ -2720,7 +2721,7 @@ LuaDialog* LuaDialog::grid(sol::table options) {
 		try {
 			gridLeftClick(this, info);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 		event.Skip();
 	});
@@ -2752,7 +2753,7 @@ LuaDialog* LuaDialog::grid(sol::table options) {
 		try {
 			gridRightClick(this, info);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 		event.Skip();
 	});
@@ -3121,7 +3122,7 @@ void LuaDialog::onWidgetChange(const std::string& id) {
 		try {
 			onchange(this);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 	}
 }
@@ -3143,7 +3144,7 @@ void LuaDialog::onButtonClick(const std::string& id) {
 		try {
 			onclick(this);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 		return; // onclick handles closing if needed
 	}
@@ -3171,7 +3172,7 @@ void LuaDialog::onWidgetDoubleClick(const std::string& id) {
 		try {
 			ondoubleclick(this);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 	}
 }

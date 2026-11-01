@@ -5,6 +5,7 @@
 #include "app/main.h"
 
 #include "palette/palette_zones.h"
+#include "ui/dialog_util.h"
 
 #include "brushes/managers/brush_manager.h"
 #include "brushes/zone/zone_brush.h"
@@ -479,7 +480,7 @@ void ZonePalettePanel::OnClickRemove(wxCommandEvent& /*event*/) {
 		return;
 	}
 	const wxString question = wxstr(std::format("Remove zone \"{}\" (id {}) and clear it from every tile?\nThis cannot be undone.", zone->name, id));
-	if (wxMessageBox(question, "Remove Zone", wxYES_NO | wxICON_WARNING, this) != wxYES) {
+	if (DialogUtil::PopupDialog(this, "Remove Zone", question, wxYES_NO | wxICON_WARNING) != wxID_YES) {
 		return;
 	}
 	if (Editor* editor = g_gui.GetCurrentEditor()) {

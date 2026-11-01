@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "ui/dialogs/missing_items_dialog.h"
+#include "ui/dialog_util.h"
 
 #include <format>
 #include <algorithm>
@@ -237,14 +238,14 @@ wxString MissingItemsDialog::GenerateReportText() const {
 
 void MissingItemsDialog::OnCopyToClipboard(wxCommandEvent& WXUNUSED(evt)) {
 	if (!wxTheClipboard->Open()) {
-		wxMessageBox("Failed to open clipboard. Another application may be using it.",
-		             "Clipboard Error", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Clipboard Error",
+		             "Failed to open clipboard. Another application may be using it.", wxOK | wxICON_ERROR);
 		return;
 	}
 
 	wxTheClipboard->SetData(newd wxTextDataObject(GenerateReportText()));
 	wxTheClipboard->Close();
-	wxMessageBox("Report copied to clipboard.", "Clipboard", wxOK | wxICON_INFORMATION, this);
+	DialogUtil::PopupDialog(this, "Clipboard", "Report copied to clipboard.", wxOK | wxICON_INFORMATION);
 }
 
 void MissingItemsDialog::OnSaveReport(wxCommandEvent& WXUNUSED(evt)) {
@@ -257,9 +258,9 @@ void MissingItemsDialog::OnSaveReport(wxCommandEvent& WXUNUSED(evt)) {
 		if (stream.IsOk()) {
 			wxTextOutputStream txt(stream);
 			txt << GenerateReportText();
-			wxMessageBox("Report saved successfully.", "Save Report", wxOK | wxICON_INFORMATION, this);
+			DialogUtil::PopupDialog(this, "Save Report", "Report saved successfully.", wxOK | wxICON_INFORMATION);
 		} else {
-			wxMessageBox("Failed to create report file.", "Save Report Error", wxOK | wxICON_ERROR, this);
+			DialogUtil::PopupDialog(this, "Save Report Error", "Failed to create report file.", wxOK | wxICON_ERROR);
 		}
 	}
 }

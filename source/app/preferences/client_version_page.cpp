@@ -1,4 +1,5 @@
 #include "app/preferences/client_version_page.h"
+#include "ui/dialog_util.h"
 #include <format>
 
 #include <algorithm>
@@ -520,13 +521,13 @@ bool ClientVersionPage::ResolvePendingChanges(ClientVersion* client) {
 		return true;
 	}
 
-	const int result = wxMessageBox(
-		"Save changes to " + wxstr(client->getName()) + "?",
+	const int result = DialogUtil::PopupDialog(
+		this,
 		"Unsaved Changes",
-		wxYES_NO | wxCANCEL | wxICON_QUESTION,
-		this
+		"Save changes to " + wxstr(client->getName()) + "?",
+		wxYES_NO | wxCANCEL | wxICON_QUESTION
 	);
-	if (result == wxYES) {
+	if (result == wxID_YES) {
 		return true;
 	}
 	if (result == wxNO) {
@@ -1032,7 +1033,7 @@ void ClientVersionPage::OnDeleteClient(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 
-	if (wxMessageBox("Are you sure you want to delete " + wxstr(client->getName()) + "?", "Confirm Delete", wxYES_NO | wxICON_WARNING, this) != wxYES) {
+	if (DialogUtil::PopupDialog(this, "Confirm Delete", "Are you sure you want to delete " + wxstr(client->getName()) + "?", wxYES_NO | wxICON_WARNING) != wxID_YES) {
 		return;
 	}
 
@@ -1056,7 +1057,7 @@ bool ClientVersionPage::ValidateData() {
 			continue;
 		}
 		if (!client->isValid()) {
-			wxMessageBox("Client '" + wxstr(client->getName()) + "' has invalid data. The name cannot be empty.", "Invalid Client Data", wxOK | wxICON_ERROR, this);
+			DialogUtil::PopupDialog(this, "Invalid Client Data", "Client '" + wxstr(client->getName()) + "' has invalid data. The name cannot be empty.", wxOK | wxICON_ERROR);
 			SelectClient(client);
 			active_client = client;
 			RefreshClientEditor();
@@ -1064,7 +1065,7 @@ bool ClientVersionPage::ValidateData() {
 		}
 
 		if (const auto [_, inserted] = names.insert(client->getName()); !inserted) {
-			wxMessageBox("Client '" + wxstr(client->getName()) + "' has a duplicate name. Rename one of them before saving.", "Duplicate Client Name", wxOK | wxICON_ERROR, this);
+			DialogUtil::PopupDialog(this, "Duplicate Client Name", "Client '" + wxstr(client->getName()) + "' has a duplicate name. Rename one of them before saving.", wxOK | wxICON_ERROR);
 			SelectClient(client);
 			active_client = client;
 			RefreshClientEditor();
@@ -1141,7 +1142,7 @@ void ClientVersionPage::Apply() {
 		PopulateClientTree();
 		active_client = GetSelectedClient();
 		RefreshClientEditor();
-		wxMessageBox("Failed to save client versions. Check the log for details.", "Save Error", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Save Error", "Failed to save client versions. Check the log for details.", wxOK | wxICON_ERROR);
 	}
 }
 

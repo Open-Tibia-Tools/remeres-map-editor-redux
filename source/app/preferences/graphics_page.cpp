@@ -1,4 +1,5 @@
 #include "app/preferences/graphics_page.h"
+#include "ui/dialog_util.h"
 #include "rendering/core/hardware_profile.h"
 #include <algorithm>
 #include <cmath>
@@ -479,21 +480,21 @@ void GraphicsPage::Apply() {
 	if (requested_vsync_mode != previous_vsync_mode) {
 		const auto vsync_summary = g_gl_context.ReapplyVSyncToRegisteredCanvases();
 		if (vsync_summary.adaptive_fallback) {
-			wxMessageBox(
-				"Adaptive VSync is not supported by the active OpenGL driver. Standard VSync has been enabled for this session instead.",
+			DialogUtil::PopupDialog(
 				"Adaptive VSync Unavailable",
+				"Adaptive VSync is not supported by the active OpenGL driver. Standard VSync has been enabled for this session instead.",
 				wxOK | wxICON_WARNING
 			);
 		} else if (vsync_summary.apply_failed) {
-			wxMessageBox(
-				"The selected VSync mode could not be applied on the active OpenGL canvases. Rendering will continue using the driver default.",
+			DialogUtil::PopupDialog(
 				"VSync Apply Failed",
+				"The selected VSync mode could not be applied on the active OpenGL canvases. Rendering will continue using the driver default.",
 				wxOK | wxICON_WARNING
 			);
 		}
 	}
 
 	if (must_restart) {
-		wxMessageBox("Some changes require a restart of the application to take effect.", "Restart Required", wxOK | wxICON_INFORMATION);
+		DialogUtil::PopupDialog("Restart Required", "Some changes require a restart of the application to take effect.", wxOK | wxICON_INFORMATION);
 	}
 }

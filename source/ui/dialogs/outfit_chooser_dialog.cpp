@@ -1,4 +1,5 @@
 #include "ui/dialogs/outfit_chooser_dialog.h"
+#include "ui/dialog_util.h"
 #include <wx/statline.h>
 #include <wx/sizer.h>
 #include <wx/wrapsizer.h>
@@ -398,7 +399,7 @@ void OutfitChooserDialog::OnFavoriteEdit(wxCommandEvent& event) {
 		return;
 	}
 
-	if (wxMessageBox("Update this favorite with current preview settings?", "Edit Favorite", wxYES_NO | wxICON_QUESTION) == wxYES) {
+	if (DialogUtil::PopupDialog(this, "Edit Favorite", "Update this favorite with current preview settings?", wxYES_NO | wxICON_QUESTION) == wxID_YES) {
 		favorites[idx].outfit = current_outfit;
 		favorites[idx].speed = speed_ctrl->GetValue();
 		favorites[idx].name = name_ctrl->GetValue().ToUTF8().data();
@@ -415,7 +416,7 @@ void OutfitChooserDialog::OnFavoriteDelete(wxCommandEvent& event) {
 		return;
 	}
 
-	if (wxMessageBox("Are you sure you want to delete this favorite?", "Delete Favorite", wxYES_NO | wxICON_WARNING) == wxYES) {
+	if (DialogUtil::PopupDialog(this, "Delete Favorite", "Are you sure you want to delete this favorite?", wxYES_NO | wxICON_WARNING) == wxID_YES) {
 		favorites.erase(favorites.begin() + idx);
 		favorites_panel->favorite_items = favorites;
 		favorites_panel->selected_index = -1;

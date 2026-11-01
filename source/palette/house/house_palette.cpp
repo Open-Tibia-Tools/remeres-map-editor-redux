@@ -482,7 +482,7 @@ void HousePalette::OnEditHouse(wxCommandEvent& /*event*/) {
 void HousePalette::OnRemoveHouse(wxCommandEvent& /*event*/) {
 	House* house = GetSelectedHouse();
 	if (house && map) {
-		const int ret = wxMessageBox("Are you sure you want to remove this house? This cannot be undone.", "Remove House", wxYES_NO | wxICON_WARNING | wxCENTER, this);
+		const int ret = DialogUtil::PopupDialog(this, "Remove House", "Are you sure you want to remove this house? This cannot be undone.", wxYES_NO | wxICON_WARNING | wxCENTER);
 		if (ret == wxYES) {
 			if (selected_house_id_ == house->getID()) {
 				selected_house_id_ = 0;

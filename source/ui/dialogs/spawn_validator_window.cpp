@@ -1,4 +1,5 @@
 #include "ui/dialogs/spawn_validator_window.h"
+#include "ui/dialog_util.h"
 #include "editor/editor.h"
 #include "editor/action_queue.h"
 #include "editor/action.h"
@@ -489,13 +490,13 @@ void SpawnValidatorWindow::OnRemoveAll() {
 		return;
 	}
 
-	const int answer = wxMessageBox(
-		wxstr(std::format("Are you sure you want to remove all {} listed broken spawn entries?\n\nThis action can be undone with Ctrl+Z.", filtered.size())),
+	const int answer = DialogUtil::PopupDialog(
+		this,
 		"Confirm Remove All",
-		wxYES_NO | wxICON_WARNING,
-		this
+		wxstr(std::format("Are you sure you want to remove all {} listed broken spawn entries?\n\nThis action can be undone with Ctrl+Z.", filtered.size())),
+		wxYES_NO | wxICON_WARNING
 	);
-	if (answer != wxYES) {
+	if (answer != wxID_YES) {
 		return;
 	}
 

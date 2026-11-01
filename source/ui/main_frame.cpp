@@ -322,7 +322,7 @@ bool MainFrame::DoQueryImportCreatures() {
 						if (ok) {
 							DialogUtil::ListDialog("Monster loader errors", warnings);
 						} else {
-							wxMessageBox("Error OT data file \"" + paths[i] + "\".\n" + error, "Error", wxOK | wxICON_INFORMATION, g_gui.root);
+							DialogUtil::PopupDialog(g_gui.root, "Error", "Error OT data file \"" + paths[i] + "\".\n" + error, wxOK | wxICON_INFORMATION);
 						}
 					}
 				} else {
