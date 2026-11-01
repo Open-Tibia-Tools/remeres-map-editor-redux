@@ -1455,4 +1455,37 @@ void ChunkCacheManager::renderDynamicOverlays(
 			}
 		}
 	}
+
+	// Show > Show Light Strength (Shift+K). Light sources are usually static
+	// items, which only exist in the baked chunks, so draw the indicators for
+	// every visible tile while the option is on.
+	if (ctx.options.show_light_str && !ctx.options.ingame) {
+		for (const CachedChunk* chunk_ptr : active_visible_chunks_) {
+			if (!chunk_ptr) {
+				continue;
+			}
+			const auto& chunk = *chunk_ptr;
+			ChunkFloors floors;
+			if (!gatherChunkFloors(map, chunk.coord.cx, chunk.coord.cy, map_z, floors)) {
+				continue;
+			}
+			for (int ty = 0; ty < CHUNK_SIZE; ++ty) {
+				for (int tx = 0; tx < CHUNK_SIZE; ++tx) {
+					const TileLocation* loc = chunkTileLocation(floors, tx, ty);
+					const Tile* tile = loc ? loc->get() : nullptr;
+					if (!tile) {
+						continue;
+					}
+					if (ctx.options.show_only_modified && !tile->isModified()) {
+						continue;
+					}
+					const int draw_x = (chunk.coord.cx * CHUNK_SIZE + tx) * TILE_SIZE + base_draw_x;
+					const int draw_y = (chunk.coord.cy * CHUNK_SIZE + ty) * TILE_SIZE + base_draw_y;
+					if (ctx.view.IsPixelVisible(draw_x, draw_y)) {
+						tile_renderer.RenderLightStrength(sprite_batch, *tile, ctx, draw_x, draw_y);
+					}
+				}
+			}
+		}
+	}
 }

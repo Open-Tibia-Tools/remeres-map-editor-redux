@@ -240,20 +240,20 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	// draw light color indicator
 	if (!options.ingame && options.show_light_str) {
-		const SpriteLight& light = item->getLight();
-		if (light.intensity > 0) {
-			const DrawColor lightColor = toDrawColorFrom8Bit(light.color);
-			const int startOffset = std::max<int>(16, 32 - light.intensity);
-			const int sqSize = TILE_SIZE - startOffset;
-
-			// We need to disable texture 2d for BlitSquare. SpriteDrawer::glBlitSquare does NOT disable texture 2d automatically?
-			// SpriteDrawer::glBlitSquare internally uses BatchRenderer::DrawQuad which sets blank texture if needed.
-			// So we don't need manual enable/disable here anymore.
-
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 2, draw_y + startOffset - 2, DrawColor(0, 0, 0, 255), sqSize + 2, atlas, params.depth);
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 1, draw_y + startOffset - 1, lightColor, sqSize, atlas, params.depth);
-		}
+		DrawLightStrength(sprite_batch, sprite_drawer, *item, draw_x, draw_y, atlas, params.depth);
 	}
+}
+
+void ItemDrawer::DrawLightStrength(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, const Item& item, int draw_x, int draw_y, const AtlasManager* atlas, float depth) const {
+	const SpriteLight light = item.getLight();
+	if (light.intensity <= 0) {
+		return;
+	}
+	const DrawColor lightColor = toDrawColorFrom8Bit(light.color);
+	const int startOffset = std::max<int>(16, 32 - light.intensity);
+	const int sqSize = TILE_SIZE - startOffset;
+	sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 2, draw_y + startOffset - 2, DrawColor(0, 0, 0, 255), sqSize + 2, atlas, depth);
+	sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 1, draw_y + startOffset - 1, lightColor, sqSize, atlas, depth);
 }
 
 void ItemDrawer::DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, int screenx, int screeny, ServerItemId item_id, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha, const RenderFrameContext* ctx, const Tile* tile, const Position& pos) {

@@ -29,7 +29,9 @@ layout (location = 8) in float aDepth;
 out vec2 vWorldPos;
 out vec2 vQuadCoord;
 out vec2 vQuadSize;
-out vec3 TexCoord;
+// centroid: keeps MSAA edge samples inside the sprite (see chunk_shader.h).
+centroid out vec3 TexCoord;
+flat out vec4 vUVBounds;
 out vec4 Tint;
 flat out float vHouseId;
 flat out uint vZoneFlags;
@@ -44,6 +46,7 @@ void main() {
     vQuadCoord = aPos;
     vQuadSize = aRect.zw;
     TexCoord = vec3(mix(aUV.xy, aUV.zw, aTexCoord), aLayer);
+    vUVBounds = aUV;
     Tint = aTint;
     vHouseId = aHouseId;
     vZoneFlags = aZoneFlags;
@@ -59,7 +62,8 @@ inline std::string GetSpriteBatchFragShader() {
 in vec2 vWorldPos;
 in vec2 vQuadCoord;
 in vec2 vQuadSize;
-in vec3 TexCoord;
+centroid in vec3 TexCoord;
+flat in vec4 vUVBounds;
 in vec4 Tint;
 flat in float vHouseId;
 flat in uint vZoneFlags;
@@ -79,6 +83,16 @@ uniform int uShowInvalidTiles;
 uniform int uShowInvalidZones;
 uniform int uExtendedPathingShader;
 uniform int uBlockingBlendMode;
+
+// Keep filtered lookups inside the sprite's own atlas rect: with smooth
+// (linear) filtering a sample at the sprite edge would otherwise blend in
+// texels of the neighbouring atlas slot.
+vec3 clampToSprite(vec3 uv, vec4 bounds) {
+	vec2 halfTexel = 0.5 / vec2(textureSize(uAtlas, 0).xy);
+	vec2 lo = min(bounds.xy, bounds.zw) + halfTexel;
+	vec2 hi = max(bounds.xy, bounds.zw) - halfTexel;
+	return vec3(clamp(uv.xy, min(lo, hi), max(lo, hi)), uv.z);
+}
 
 )") + std::string(HIGHLIGHT_ITEMS_SHADER_GLSL) + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + std::string(ZONE_SHADER_GLSL) + R"(
 
@@ -118,7 +132,7 @@ void main() {
         return;
     }
 
-    vec4 texColor = texture(uAtlas, TexCoord);
+    vec4 texColor = texture(uAtlas, clampToSprite(TexCoord, vUVBounds));
     FragColor = texColor * Tint * uGlobalTint;
     if (FragColor.a < 0.01) {
         discard;

@@ -23,7 +23,9 @@ void RenderView::Setup(const ViewportParameters& params, const DrawingOptions& o
 	camera_pos.z = floor;
 	draw_all_visited_floors = false;
 
-	if (options.show_lights) {
+	if (options.show_lights && options.show_all_floors) {
+		// With "Show all Floors" off (Ctrl+W) only the current floor is drawn,
+		// lights or not; BuildFloorVisibilityRange below handles that case.
 		IngamePreview::FloorVisibilityCalculator floor_visibility;
 		start_z = floor_visibility.CalcLastVisibleFloor(floor);
 		const Position light_origin = params.light_origin.value_or(camera_pos);

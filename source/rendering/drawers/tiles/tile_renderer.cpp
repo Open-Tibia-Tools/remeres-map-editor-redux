@@ -526,4 +526,16 @@ void TileRenderer::RenderDynamicPasses(SpriteBatch& sprite_batch, const TileLoca
 	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, /*render_creature_sprites=*/false, /*render_markers=*/false);
 }
 
-
+void TileRenderer::RenderLightStrength(SpriteBatch& sprite_batch, const Tile& tile, const RenderFrameContext& ctx, int draw_x, int draw_y) const {
+	const Position pos = tile.getPosition();
+	const float depth = rme::rendering::calculateTileDepth(pos.x, pos.y, rme::rendering::RenderSublayer::Overlay);
+	if (tile.ground) {
+		item_drawer->DrawLightStrength(sprite_batch, sprite_drawer, *tile.ground, draw_x, draw_y, &ctx.atlas, depth);
+	}
+	for (const auto& item : tile.items) {
+		if (!ctx.options.show_items && item && item->isPickupable()) {
+			continue;
+		}
+		item_drawer->DrawLightStrength(sprite_batch, sprite_drawer, *item, draw_x, draw_y, &ctx.atlas, depth);
+	}
+}

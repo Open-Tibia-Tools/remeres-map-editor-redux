@@ -541,7 +541,21 @@ void BrushOverlayDrawer::draw(
 							drawTileEdges(static_cast<float>(cx), static_cast<float>(cy), north, south, west, east);
 						}
 						continue;
-					} else if (brush->is<SpawnBrush>()) {
+					}
+
+					// The loop scans one extra ring around the footprint so ground
+					// brushes can preview their borders; other previews must stay
+					// inside the tiles the brush actually paints. The spawn preview
+					// is left as is: it shows the spawn radius, max(1, size), which
+					// is not the brush footprint.
+					if (!brush->is<SpawnBrush>()) {
+						const bool is_single_tile_brush = brush->is<WaypointBrush>() || brush->is<HouseExitBrush>() || brush->is<TownTempleBrush>();
+						if (is_single_tile_brush ? (x != 0 || y != 0) : !footprint.containsOffset(x, y)) {
+							continue;
+						}
+					}
+
+					if (brush->is<SpawnBrush>()) {
 						const AtlasRegion* white_pixel = atlas.getWhitePixel();
 						if (white_pixel) {
 							if (x == 0 && y == 0) {
@@ -576,22 +590,20 @@ void BrushOverlayDrawer::draw(
 							const uint32_t zf = getZoneFlagForBrush(brush->as<FlagBrush>());
 							if (zf != 0u) {
 								uint32_t border_flags = 0u;
-								if (y == footprint.min_offset_y) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
-								if (y == footprint.max_offset_y) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_S;
-								if (x == footprint.min_offset_x) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
-								if (x == footprint.max_offset_x) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
+								if (!footprint.containsOffset(x, y - 1)) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_N;
+								if (!footprint.containsOffset(x, y + 1)) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_S;
+								if (!footprint.containsOffset(x - 1, y)) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_W;
+								if (!footprint.containsOffset(x + 1, y)) border_flags |= rme::rendering::ZONE_FLAG_ZONE_BORDER_E;
 
 								sprite_batch.draw(static_cast<float>(cx), static_cast<float>(cy), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 0.85f, 0.0f, zf | border_flags | zf_mult);
 							}
 						}
 					} else {
-						if (footprint.containsOffset(x, y)) {
-							glm::vec4 c = brushColor;
-							if (brush->is<OptionalBorderBrush>()) {
-								c = get_check_color(brush, editor, Position(view.mouse_map_x + x, view.mouse_map_y + y, view.floor), cfg);
-							}
-							drawBrushRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), c);
+						glm::vec4 c = brushColor;
+						if (brush->is<OptionalBorderBrush>()) {
+							c = get_check_color(brush, editor, Position(view.mouse_map_x + x, view.mouse_map_y + y, view.floor), cfg);
 						}
+						drawBrushRect(static_cast<float>(cx), static_cast<float>(cy), static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE), c);
 					}
 				}
 			}
