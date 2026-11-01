@@ -18,6 +18,7 @@
 #include "app/main.h"
 
 #include "ui/dat_debug_view.h"
+#include <format>
 
 #include "rendering/core/graphics.h"
 #include "ui/icons/sprite_icon_service.h"
@@ -70,7 +71,7 @@ void DatDebugViewListBox::OnDrawItem(wxDC& dc, const wxRect& rect, size_t n) con
 		dc.SetTextForeground(wxColor(0x00, 0x00, 0x00));
 	}
 
-	dc.DrawText(wxString() << n, rect.GetX() + 40, rect.GetY() + 6);
+	dc.DrawText(wxstr(std::format("{}", n)), rect.GetX() + 40, rect.GetY() + 6);
 }
 
 wxCoord DatDebugViewListBox::OnMeasureItem(size_t n) const {
