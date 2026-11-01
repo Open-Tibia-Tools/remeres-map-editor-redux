@@ -153,7 +153,7 @@ bool Application::OnInit() {
 
 
 #ifdef _USE_PROCESS_COM
-	m_single_instance_checker = newd wxSingleInstanceChecker; // Instance checker has to stay alive throughout the applications lifetime
+	m_single_instance_checker = new wxSingleInstanceChecker; // Instance checker has to stay alive throughout the applications lifetime
 	if (g_settings.getInteger(Config::ONLY_ONE_INSTANCE) && m_single_instance_checker->IsAnotherRunning()) {
 		RMEProcessClient client;
 		wxLogNull nolog; // Prevent wxWidgets popup dialog on connection failure
@@ -180,11 +180,11 @@ bool Application::OnInit() {
 			// Recreate the instance checker so this instance holds exclusive ownership.
 			spdlog::warn("Another instance was reported running but IPC connection failed. Reacquiring instance checker.");
 			wxDELETE(m_single_instance_checker);
-			m_single_instance_checker = newd wxSingleInstanceChecker;
+			m_single_instance_checker = new wxSingleInstanceChecker;
 		}
 	}
 	// We act as server then
-	m_proc_server = newd RMEProcessServer();
+	m_proc_server = new RMEProcessServer();
 	if (!m_proc_server->Create("rme_host")) {
 		wxLogWarning("Could not register IPC service!");
 	}
@@ -209,7 +209,7 @@ bool Application::OnInit() {
 	m_file_to_open = wxEmptyString;
 	ParseCommandLineMap(m_file_to_open);
 
-	g_gui.root = newd MainFrame(__W_RME_APPLICATION_NAME__, wxDefaultPosition, wxSize(700, 500));
+	g_gui.root = new MainFrame(__W_RME_APPLICATION_NAME__, wxDefaultPosition, wxWindow::FromDIP(wxSize(700, 500), nullptr));
 	SetTopWindow(g_gui.root);
 	g_gui.SetTitle("");
 

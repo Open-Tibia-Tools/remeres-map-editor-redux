@@ -45,18 +45,18 @@ LiveLogTab::LiveLogTab(MapTabbook* aui, LiveSocket* server) :
 	wxPanel(aui),
 	aui(aui),
 	socket(server) {
-	wxSizer* topsizer = newd wxBoxSizer(wxVERTICAL);
+	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
 
-	wxPanel* splitter = newd wxPanel(this);
-	topsizer->Add(splitter, 1, wxEXPAND);
+	wxPanel* splitter = new wxPanel(this);
+	topsizer->Add(splitter, wxSizerFlags(1).Expand());
 
 	// Setup left panel
-	wxPanel* left_pane = newd wxPanel(splitter);
-	wxSizer* left_sizer = newd wxBoxSizer(wxVERTICAL);
+	wxPanel* left_pane = new wxPanel(splitter);
+	wxSizer* left_sizer = new wxBoxSizer(wxVERTICAL);
 
 	wxFont time_font(*wxSWISS_FONT);
 
-	log = newd myGrid(left_pane, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+	log = new myGrid(left_pane, wxID_ANY, wxDefaultPosition, wxDefaultSize);
 	log->SetDefaultCellFont(time_font);
 	log->CreateGrid(0, 3);
 	log->DisableDragRowSize();
@@ -79,10 +79,10 @@ LiveLogTab::LiveLogTab(MapTabbook* aui, LiveSocket* server) :
 
 	log->Bind(wxEVT_SIZE, &LiveLogTab::OnResizeChat, this);
 
-	left_sizer->Add(log, 1, wxEXPAND);
+	left_sizer->Add(log, wxSizerFlags(1).Expand());
 
-	input = newd wxTextCtrl(left_pane, LIVE_CHAT_TEXTBOX, wxEmptyString, wxDefaultPosition, wxDefaultSize);
-	left_sizer->Add(input, 0, wxEXPAND);
+	input = new wxTextCtrl(left_pane, LIVE_CHAT_TEXTBOX, wxEmptyString, wxDefaultPosition, wxDefaultSize);
+	left_sizer->Add(input, wxSizerFlags().Expand());
 
 	input->Bind(wxEVT_SET_FOCUS, &LiveLogTab::OnSelectChatbox, this);
 	input->Bind(wxEVT_KILL_FOCUS, &LiveLogTab::OnDeselectChatbox, this);
@@ -91,7 +91,7 @@ LiveLogTab::LiveLogTab(MapTabbook* aui, LiveSocket* server) :
 	left_pane->SetSizerAndFit(left_sizer);
 
 	// Setup right panel
-	user_list = newd myGrid(splitter, wxID_ANY, wxDefaultPosition, wxSize(280, 100));
+	user_list = new myGrid(splitter, wxID_ANY, wxDefaultPosition, splitter ? splitter->FromDIP(wxSize(280, 100)) : wxSize(280, 100));
 	user_list->CreateGrid(5, 3);
 	user_list->DisableDragRowSize();
 	user_list->DisableDragColSize();
@@ -110,7 +110,7 @@ LiveLogTab::LiveLogTab(MapTabbook* aui, LiveSocket* server) :
 	// Finalize
 	SetSizerAndFit(topsizer);
 
-	wxSizer* split_sizer = newd wxBoxSizer(wxHORIZONTAL);
+	wxSizer* split_sizer = new wxBoxSizer(wxHORIZONTAL);
 	split_sizer->Add(left_pane, wxSizerFlags(1).Expand());
 	split_sizer->Add(user_list, wxSizerFlags(0).Expand());
 	splitter->SetSizerAndFit(split_sizer);
@@ -211,7 +211,7 @@ void LiveLogTab::UpdateClientList(const std::unordered_map<uint32_t, std::unique
 	for (const auto& clientEntry : updatedClients) {
 		LivePeer* peer = clientEntry.second.get();
 		user_list->SetCellBackgroundColour(i, 0, peer->getUsedColor());
-		user_list->SetCellValue(i, 1, i2ws((peer->getClientId() >> 1) + 1));
+		user_list->SetCellValue(i, 1, std::to_string((peer->getClientId() >> 1) + 1));
 		user_list->SetCellValue(i, 2, peer->getName());
 		++i;
 	}

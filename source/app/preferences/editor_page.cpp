@@ -24,7 +24,7 @@ EditorPage::EditorPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Choose whether Show all floors uses Tibia client visibility constraints or renders every floor below the active floor.",
 		floor_visibility_mode_choice
 	);
-	page_sizer->Add(modes_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
+	page_sizer->Add(modes_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(10)));
 
 	auto* history_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -37,7 +37,7 @@ EditorPage::EditorPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Combine consecutive drawing or selection edits into larger undo steps when they happen back to back.",
 		g_settings.getBoolean(Config::GROUP_ACTIONS)
 	);
-	page_sizer->Add(history_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
+	page_sizer->Add(history_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(10)));
 
 	auto* brush_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -74,7 +74,7 @@ EditorPage::EditorPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Place the required spawn automatically so creature placement works without a separate prep step.",
 		g_settings.getBoolean(Config::AUTO_CREATE_SPAWN)
 	);
-	page_sizer->Add(brush_section, 0, wxEXPAND | wxALL, FromDIP(10));
+	page_sizer->Add(brush_section, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
 
 	auto* safety_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -99,7 +99,7 @@ EditorPage::EditorPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Block placing multiple RAW items that would occupy the same toporder slot on one tile.",
 		g_settings.getBoolean(Config::RAW_LIKE_SIMONE)
 	);
-	page_sizer->Add(safety_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(safety_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	auto* merge_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -118,7 +118,7 @@ EditorPage::EditorPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Pasted tiles do not replace already occupied destination tiles.",
 		g_settings.getBoolean(Config::MERGE_PASTE)
 	);
-	page_sizer->Add(merge_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(merge_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	FinishLayout();
 }

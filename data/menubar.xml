@@ -219,6 +219,7 @@
 			<item name="Position" action="VIEW_TOOLBARS_POSITION" help="Show or hide the Position toolbar."/>
 			<item name="Sizes" action="VIEW_TOOLBARS_SIZES" help="Show or hide the Sizes toolbar."/>
 			<item name="Standard" action="VIEW_TOOLBARS_STANDARD" help="Show or hide the Standard toolbar."/>
+			<item name="Lighting" action="VIEW_TOOLBARS_LIGHT" help="Show or hide the Lighting toolbar."/>
 		</menu>
 	</menu>
 	<!--

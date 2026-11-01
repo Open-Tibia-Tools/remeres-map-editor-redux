@@ -38,8 +38,8 @@ std::pair<std::string, std::string> MapXMLIO::normalizeMapFilePaths(const wxFile
 		resolved = wxFileName(base_dir, resolved.GetFullName());
 	}
 
-	std::string utf8_path = (const char*)(resolved.GetFullPath().mb_str(wxConvUTF8));
-	std::string encoded_path = (const char*)(resolved.GetFullPath().mb_str(wxConvLocal));
+	std::string utf8_path = resolved.GetFullPath().ToStdString();
+	std::string encoded_path = resolved.GetFullPath().ToStdString();
 
 	return { utf8_path, encoded_path };
 }

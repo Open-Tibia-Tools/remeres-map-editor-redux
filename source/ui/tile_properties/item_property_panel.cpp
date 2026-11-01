@@ -16,41 +16,41 @@
 ItemPropertyPanel::ItemPropertyPanel(wxWindow* parent) :
 	CustomPropertyPanel(parent), current_item(nullptr), current_tile(nullptr), current_map(nullptr) {
 
-	wxBoxSizer* main_sizer = newd wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
 
-	item_info_label = newd wxStaticText(this, wxID_ANY, "");
+	item_info_label = new wxStaticText(this, wxID_ANY, "");
 	item_info_label->SetFont(item_info_label->GetFont().Bold());
-	main_sizer->Add(item_info_label, 0, wxEXPAND | wxALL, 5);
+	main_sizer->Add(item_info_label, wxSizerFlags().Expand().Border(wxALL, 5));
 
-	wxStaticBoxSizer* action_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Action");
+	wxStaticBoxSizer* action_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Action");
 
-	wxFlexGridSizer* action_grid = newd wxFlexGridSizer(2, 2, 5, 5);
+	wxFlexGridSizer* action_grid = new wxFlexGridSizer(2, 2, 5, 5);
 	action_grid->AddGrowableCol(1);
 
-	action_grid->Add(newd wxStaticText(action_sizer->GetStaticBox(), wxID_ANY, "Action ID:"), 0, wxALIGN_CENTER_VERTICAL);
-	action_id_spin = newd wxSpinCtrl(action_sizer->GetStaticBox(), wxID_ANY);
+	action_grid->Add(new wxStaticText(action_sizer->GetStaticBox(), wxID_ANY, "Action ID:"), wxSizerFlags().CenterVertical());
+	action_id_spin = new wxSpinCtrl(action_sizer->GetStaticBox(), wxID_ANY);
 	action_id_spin->SetRange(0, 65535);
-	action_grid->Add(action_id_spin, 1, wxEXPAND);
+	action_grid->Add(action_id_spin, wxSizerFlags(1).Expand());
 
-	action_grid->Add(newd wxStaticText(action_sizer->GetStaticBox(), wxID_ANY, "Unique ID:"), 0, wxALIGN_CENTER_VERTICAL);
-	unique_id_spin = newd wxSpinCtrl(action_sizer->GetStaticBox(), wxID_ANY);
+	action_grid->Add(new wxStaticText(action_sizer->GetStaticBox(), wxID_ANY, "Unique ID:"), wxSizerFlags().CenterVertical());
+	unique_id_spin = new wxSpinCtrl(action_sizer->GetStaticBox(), wxID_ANY);
 	unique_id_spin->SetRange(0, 65535);
-	action_grid->Add(unique_id_spin, 1, wxEXPAND);
+	action_grid->Add(unique_id_spin, wxSizerFlags(1).Expand());
 
-	action_sizer->Add(action_grid, 1, wxEXPAND | wxALL, 5);
-	main_sizer->Add(action_sizer, 0, wxEXPAND | wxALL, 5);
+	action_sizer->Add(action_grid, wxSizerFlags(1).Expand().Border(wxALL, 5));
+	main_sizer->Add(action_sizer, wxSizerFlags().Expand().Border(wxALL, 5));
 
-	count_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Quantity");
-	count_spin = newd wxSpinCtrl(count_sizer->GetStaticBox(), wxID_ANY);
-	count_sizer->Add(count_spin, 0, wxEXPAND | wxALL, 5);
-	splash_type_choice = newd wxChoice(count_sizer->GetStaticBox(), wxID_ANY);
-	count_sizer->Add(splash_type_choice, 0, wxEXPAND | wxALL, 5);
-	main_sizer->Add(count_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+	count_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Quantity");
+	count_spin = new wxSpinCtrl(count_sizer->GetStaticBox(), wxID_ANY);
+	count_sizer->Add(count_spin, wxSizerFlags().Expand().Border(wxALL, 5));
+	splash_type_choice = new wxChoice(count_sizer->GetStaticBox(), wxID_ANY);
+	count_sizer->Add(splash_type_choice, wxSizerFlags().Expand().Border(wxALL, 5));
+	main_sizer->Add(count_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 
-	text_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Text Description");
-	text_ctrl = newd wxTextCtrl(text_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(-1, 160)), wxTE_MULTILINE);
-	text_sizer->Add(text_ctrl, 1, wxEXPAND | wxALL, 5);
-	main_sizer->Add(text_sizer, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+	text_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Text Description");
+	text_ctrl = new wxTextCtrl(text_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(-1, 160)), wxTE_MULTILINE);
+	text_sizer->Add(text_ctrl, wxSizerFlags(1).Expand().Border(wxALL, 5));
+	main_sizer->Add(text_sizer, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 
 	SetSizer(main_sizer);
 
@@ -70,9 +70,9 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 
 	if (item) {
 		if (item->getClientID() != 0 && item->getClientID() != item->getID()) {
-			item_info_label->SetLabel(wxstr(std::format("SID: {}   CID: {} - {}", item->getID(), item->getClientID(), item->getName())));
+			item_info_label->SetLabelText(wxstr(std::format("SID: {}   CID: {} - {}", item->getID(), item->getClientID(), item->getName())));
 		} else {
-			item_info_label->SetLabel(wxstr(std::format("{} - {}", item->getID(), item->getName())));
+			item_info_label->SetLabelText(wxstr(std::format("{} - {}", item->getID(), item->getName())));
 		}
 		action_id_spin->SetValue(item->getActionID());
 		unique_id_spin->SetValue(item->getUniqueID());
@@ -83,7 +83,7 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 			GetSizer()->Show(count_sizer, true);
 
 			if (item->isSplash() || item->isFluidContainer()) {
-				count_sizer->GetStaticBox()->SetLabel("Fluid Type");
+				count_sizer->GetStaticBox()->SetLabelText("Fluid Type");
 				count_spin->Show(false);
 				splash_type_choice->Show(true);
 
@@ -103,9 +103,9 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 				}
 			} else {
 				if (item->isCharged()) {
-					count_sizer->GetStaticBox()->SetLabel("Charges");
+					count_sizer->GetStaticBox()->SetLabelText("Charges");
 				} else {
-					count_sizer->GetStaticBox()->SetLabel("Count");
+					count_sizer->GetStaticBox()->SetLabelText("Count");
 				}
 				count_spin->Show(true);
 				splash_type_choice->Show(false);
@@ -137,7 +137,7 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 			text_ctrl->Enable(false);
 		}
 	} else {
-		item_info_label->SetLabel("");
+		item_info_label->SetLabelText("");
 		action_id_spin->SetValue(0);
 		unique_id_spin->SetValue(0);
 		action_id_spin->Enable(false);

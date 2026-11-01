@@ -18,6 +18,7 @@ LoadingManager::LoadingManager() :
 	progressBar(nullptr),
 	infoDialog(nullptr),
 	infoText(nullptr),
+	infoSpinner(nullptr),
 	infoDisabler(nullptr),
 	cancelled(false),
 	cancellable(false),
@@ -44,11 +45,15 @@ void LoadingManager::CreateInfoBar(wxString message, const wxString& title) {
 	// it, and app-modal so the editor cannot be used (or dragged around) while
 	// the operation runs. No gauge and no cancel button, since there is nothing
 	// to measure and nothing to abort.
-	infoDialog = newd wxDialog(g_gui.root, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxCAPTION);
+	infoDialog = new wxDialog(g_gui.root, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxCAPTION);
 	infoDialog->SetCursor(*wxHOURGLASS_CURSOR);
 
-	wxBoxSizer* sizer = newd wxBoxSizer(wxVERTICAL);
-	infoText = newd wxStaticText(infoDialog, wxID_ANY, message, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+	wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+	infoSpinner = new wxActivityIndicator(infoDialog, wxID_ANY);
+	sizer->Add(infoSpinner, wxSizerFlags().Center().Border(wxTOP, 15));
+	infoSpinner->Start();
+
+	infoText = new wxStaticText(infoDialog, wxID_ANY, message, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
 	infoText->SetMinSize(infoDialog->FromDIP(wxSize(320, -1)));
 	sizer->Add(infoText, wxSizerFlags(1).Expand().DoubleBorder());
 	infoDialog->SetSizerAndFit(sizer);
@@ -70,7 +75,7 @@ void LoadingManager::CreateLoadBar(wxString message, bool canCancel, const wxStr
 	cancelled = false;
 	cancellable = canCancel;
 
-	progressBar = newd wxGenericProgressDialog(title, progressText + " (0%)", 100, g_gui.root, wxPD_APP_MODAL | wxPD_SMOOTH | (canCancel ? wxPD_CAN_ABORT : 0));
+	progressBar = new wxGenericProgressDialog(title, progressText + " (0%)", 100, g_gui.root, wxPD_APP_MODAL | wxPD_SMOOTH | (canCancel ? wxPD_CAN_ABORT : 0));
 	progressBar->Show(true);
 
 	if (g_gui.tabbook) {
@@ -147,7 +152,7 @@ void LoadingManager::SetLoadText(const wxString& message) {
 
 	if (infoDialog) {
 		// Informational mode has no gauge: just repaint the new text.
-		infoText->SetLabel(message);
+		infoText->SetLabelText(message);
 		infoDialog->Layout();
 		infoDialog->Update();
 		return;

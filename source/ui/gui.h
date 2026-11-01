@@ -144,6 +144,9 @@ public:
 		return g_loading.IsLoading();
 	}
 
+	void StartBusyAnimation();
+	void StopBusyAnimation();
+
 	void UpdateMenubar();
 
 	bool IsRenderingEnabled() const {
@@ -344,7 +347,7 @@ protected:
 	// Palette Interface
 	//=========================================================================
 public:
-	// Spawn a newd palette
+	// Spawn a new palette
 	PaletteWindow* NewPalette();
 	// Bring this palette to the front (as the 'active' palette)
 	void ActivatePalette(PaletteWindow* p);

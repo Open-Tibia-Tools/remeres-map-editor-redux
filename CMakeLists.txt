@@ -41,7 +41,7 @@ if(WIN32)
 endif()
 find_package(Boost 1.34.0 COMPONENTS thread system REQUIRED)
 
-find_package(wxWidgets 3.3 COMPONENTS html aui gl adv core net base propgrid REQUIRED)
+find_package(wxWidgets 3.3 COMPONENTS html aui gl adv core net base propgrid stc REQUIRED)
 
 
 find_package(ZLIB REQUIRED)
@@ -80,13 +80,27 @@ set(RME_APPEARANCES_PROTO "${CMAKE_CURRENT_SOURCE_DIR}/source/protobuf/appearanc
 protobuf_generate_cpp(RME_PROTO_SRCS RME_PROTO_HDRS "${RME_APPEARANCES_PROTO}")
 
 # Removed WIN32 to enable Console subsystem for persistent debugging logs
-add_executable(rme ${rme_H} ${rme_SRC} ${RME_PROTO_SRCS} ${RME_PROTO_HDRS})
+add_library(rme_proto STATIC ${RME_PROTO_SRCS} ${RME_PROTO_HDRS})
+set_target_properties(rme_proto PROPERTIES CXX_STANDARD 17)
+set_target_properties(rme_proto PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_include_directories(rme_proto PUBLIC
+	${Protobuf_INCLUDE_DIRS}
+	${CMAKE_CURRENT_BINARY_DIR}
+)
+if(TARGET protobuf::libprotobuf)
+	target_link_libraries(rme_proto PUBLIC protobuf::libprotobuf)
+else()
+	target_link_libraries(rme_proto PUBLIC ${Protobuf_LIBRARIES})
+endif()
+
+# Removed WIN32 to enable Console subsystem for persistent debugging logs
+add_executable(rme ${rme_H} ${rme_SRC})
 
 set_target_properties(rme PROPERTIES CXX_STANDARD 23)
 set_target_properties(rme PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_compile_definitions(rme PRIVATE WXWIN_COMPATIBILITY_3_3 NANOVG_GL3)
 target_precompile_headers(rme PRIVATE source/app/main.h)
-set_source_files_properties(${RME_PROTO_SRCS} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+target_link_libraries(rme PRIVATE rme_proto)
 # Defines NANOVG_GL3_IMPLEMENTATION, which must not leak into a unity batch
 set_source_files_properties(source/util/nanovg_canvas.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 if(MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")
@@ -172,7 +186,8 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT "
 set(TEST_ROTATOR_SRC ${rme_SRC})
 list(REMOVE_ITEM TEST_ROTATOR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/source/app/application.cpp")
 
-add_executable(test_universal_rotator ${rme_H} ${TEST_ROTATOR_SRC} ${RME_PROTO_SRCS} ${RME_PROTO_HDRS} tests/test_universal_rotator.cpp)
+add_executable(test_universal_rotator ${rme_H} ${TEST_ROTATOR_SRC} tests/test_universal_rotator.cpp)
+target_link_libraries(test_universal_rotator PRIVATE rme_proto)
 set_target_properties(test_universal_rotator PROPERTIES CXX_STANDARD 23)
 set_target_properties(test_universal_rotator PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_compile_definitions(test_universal_rotator PRIVATE WXWIN_COMPATIBILITY_3_3 NANOVG_GL3)

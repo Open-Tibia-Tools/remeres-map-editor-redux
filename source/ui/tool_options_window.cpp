@@ -6,11 +6,11 @@
 ToolOptionsWindow::ToolOptionsWindow(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize) {
 
-	main_sizer = newd wxBoxSizer(wxVERTICAL);
+	main_sizer = new wxBoxSizer(wxVERTICAL);
 
 	// The new unified surface
-	surface = newd ToolOptionsSurface(this);
-	main_sizer->Add(surface, 1, wxEXPAND | wxALL, 0);
+	surface = new ToolOptionsSurface(this);
+	main_sizer->Add(surface, wxSizerFlags(1).Expand().Border(wxALL, 0));
 
 	SetSizer(main_sizer);
 

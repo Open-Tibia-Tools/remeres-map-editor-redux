@@ -1,4 +1,5 @@
 #include "script_menu_handler.h"
+#include <format>
 #include "lua/lua_script_manager.h"
 #include "lua/lua_scripts_window.h"
 #include "ui/main_frame.h"
@@ -167,7 +168,7 @@ void ScriptMenuHandler::RebuildShowMenu() {
 			const int menuId = MAIN_FRAME_MENU + SHOW_CUSTOM_FIRST + static_cast<int>(showIndex);
 			wxMenuItem* item = m_showMenu->AppendCheckItem(
 				menuId,
-				wxString::Format("Overlay: %s", wxString::FromUTF8(show.label)),
+				wxstr(std::format("Overlay: {}", show.label)),
 				wxString()
 			);
 			if (item) {

@@ -128,13 +128,20 @@ GUI::~GUI() {
 void GUI::AddPendingCanvasEvent(wxEvent& event) {
 	MapTab* mapTab = GetCurrentMapTab();
 	if (mapTab) {
-		mapTab->GetCanvas()->GetEventHandler()->AddPendingEvent(event);
+		mapTab->GetCanvas()->GetEventHandler()->QueueEvent(event.Clone());
 	}
 }
 
 void GUI::UpdateMenus() {
-	wxCommandEvent evt(EVT_UPDATE_MENUS);
-	g_gui.root->AddPendingEvent(evt);
+	if (root) {
+		root->CallAfter([]() {
+			if (g_gui.root) {
+				g_gui.root->UpdateMenubar();
+				g_gui.UpdateMinimap(true);
+				g_gui.UpdateTitle();
+			}
+		});
+	}
 }
 
 void GUI::ShowToolbar(ToolBarID id, bool show) {
@@ -742,4 +749,16 @@ void SetWindowToolTip(wxWindow* a, const wxString& tip) {
 void SetWindowToolTip(wxWindow* a, wxWindow* b, const wxString& tip) {
 	a->SetToolTip(tip);
 	b->SetToolTip(tip);
+}
+
+void GUI::StartBusyAnimation() {
+	if (root) {
+		root->StartBusyAnimation();
+	}
+}
+
+void GUI::StopBusyAnimation() {
+	if (root) {
+		root->StopBusyAnimation();
+	}
 }

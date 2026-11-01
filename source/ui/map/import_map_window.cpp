@@ -17,30 +17,30 @@
 // Map Import Window
 
 ImportMapWindow::ImportMapWindow(wxWindow* parent, Editor& editor) :
-	wxDialog(parent, wxID_ANY, "Import Map", wxDefaultPosition, FROM_DIP(parent, wxSize(350, 315))),
+	wxDialog(parent, wxID_ANY, "Import Map", wxDefaultPosition, parent->FromDIP(wxSize(350, 315))),
 	editor(editor) {
-	wxBoxSizer* sizer = newd wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 	wxStaticBoxSizer* tmpsizer;
 
 	// File
-	tmpsizer = newd wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, "Map File"), wxHORIZONTAL);
-	file_text_field = newd wxTextCtrl(tmpsizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, FROM_DIP(this, wxSize(230, 23)));
-	tmpsizer->Add(file_text_field, 0, wxALL, 5);
-	wxButton* browse_button = newd wxButton(tmpsizer->GetStaticBox(), MAP_WINDOW_FILE_BUTTON, "Browse...", wxDefaultPosition, FROM_DIP(this, wxSize(80, 23)));
+	tmpsizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, "Map File"), wxHORIZONTAL);
+	file_text_field = new wxTextCtrl(tmpsizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(230, 23)));
+	tmpsizer->Add(file_text_field, wxSizerFlags().Border(wxALL));
+	wxButton* browse_button = new wxButton(tmpsizer->GetStaticBox(), MAP_WINDOW_FILE_BUTTON, "Browse...", wxDefaultPosition, FromDIP(wxSize(80, 23)));
 	browse_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_FOLDER_OPEN));
 	browse_button->SetToolTip("Browse for map file");
-	tmpsizer->Add(browse_button, 0, wxALL, 5);
-	sizer->Add(tmpsizer, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 5);
+	tmpsizer->Add(browse_button, wxSizerFlags().Border(wxALL));
+	sizer->Add(tmpsizer, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxTOP, 5));
 
 	// Import offset
-	tmpsizer = newd wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, "Import Offset"), wxHORIZONTAL);
-	tmpsizer->Add(newd wxStaticText(tmpsizer->GetStaticBox(), wxID_ANY, "Offset X:"), 0, wxALL | wxEXPAND, 5);
-	x_offset_ctrl = newd wxSpinCtrl(tmpsizer->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, FROM_DIP(this, wxSize(100, 23)), wxSP_ARROW_KEYS, -MAP_MAX_HEIGHT, MAP_MAX_HEIGHT);
-	tmpsizer->Add(x_offset_ctrl, 0, wxALL, 5);
-	tmpsizer->Add(newd wxStaticText(tmpsizer->GetStaticBox(), wxID_ANY, "Offset Y:"), 0, wxALL, 5);
-	y_offset_ctrl = newd wxSpinCtrl(tmpsizer->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, FROM_DIP(this, wxSize(100, 23)), wxSP_ARROW_KEYS, -MAP_MAX_HEIGHT, MAP_MAX_HEIGHT);
-	tmpsizer->Add(y_offset_ctrl, 0, wxALL, 5);
-	sizer->Add(tmpsizer, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
+	tmpsizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, "Import Offset"), wxHORIZONTAL);
+	tmpsizer->Add(new wxStaticText(tmpsizer->GetStaticBox(), wxID_ANY, "Offset X:"), wxSizerFlags().Expand().Border(wxALL));
+	x_offset_ctrl = new wxSpinCtrl(tmpsizer->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(100, 23)), wxSP_ARROW_KEYS, -MAP_MAX_HEIGHT, MAP_MAX_HEIGHT);
+	tmpsizer->Add(x_offset_ctrl, wxSizerFlags().Border(wxALL));
+	tmpsizer->Add(new wxStaticText(tmpsizer->GetStaticBox(), wxID_ANY, "Offset Y:"), wxSizerFlags().Border(wxALL));
+	y_offset_ctrl = new wxSpinCtrl(tmpsizer->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(100, 23)), wxSP_ARROW_KEYS, -MAP_MAX_HEIGHT, MAP_MAX_HEIGHT);
+	tmpsizer->Add(y_offset_ctrl, wxSizerFlags().Border(wxALL));
+	sizer->Add(tmpsizer, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT, 5));
 
 	// Import options
 	std::vector<std::string> house_choices;
@@ -50,14 +50,14 @@ ImportMapWindow::ImportMapWindow(wxWindow* parent, Editor& editor) :
 	house_choices.push_back("Don't Import");
 
 	// House options
-	tmpsizer = newd wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, "House Import Behaviour"), wxVERTICAL);
-	house_options = newd wxChoice(tmpsizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize);
+	tmpsizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, "House Import Behaviour"), wxVERTICAL);
+	house_options = new wxChoice(tmpsizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize);
 	for (const auto& choice : house_choices) {
 		house_options->Append(choice);
 	}
 	house_options->SetSelection(0);
-	tmpsizer->Add(house_options, 0, wxALL | wxEXPAND, 5);
-	sizer->Add(tmpsizer, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
+	tmpsizer->Add(house_options, wxSizerFlags().Expand().Border(wxALL));
+	sizer->Add(tmpsizer, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT, 5));
 
 	// Import options
 	std::vector<std::string> spawn_choices;
@@ -65,25 +65,25 @@ ImportMapWindow::ImportMapWindow(wxWindow* parent, Editor& editor) :
 	spawn_choices.push_back("Don't Import");
 
 	// Spawn options
-	tmpsizer = newd wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, "Spawn Import Behaviour"), wxVERTICAL);
-	spawn_options = newd wxChoice(tmpsizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize);
+	tmpsizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, "Spawn Import Behaviour"), wxVERTICAL);
+	spawn_options = new wxChoice(tmpsizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize);
 	for (const auto& choice : spawn_choices) {
 		spawn_options->Append(choice);
 	}
 	spawn_options->SetSelection(0);
-	tmpsizer->Add(spawn_options, 0, wxALL | wxEXPAND, 5);
-	sizer->Add(tmpsizer, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
+	tmpsizer->Add(spawn_options, wxSizerFlags().Expand().Border(wxALL));
+	sizer->Add(tmpsizer, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT, 5));
 
 	// OK/Cancel buttons
-	wxBoxSizer* buttons = newd wxBoxSizer(wxHORIZONTAL);
-	auto okBtn = newd wxButton(this, wxID_OK, "Ok");
+	wxBoxSizer* buttons = new wxBoxSizer(wxHORIZONTAL);
+	auto okBtn = new wxButton(this, wxID_OK, "Ok");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Start import");
-	buttons->Add(okBtn, 0, wxALL, 5);
-	auto cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
+	buttons->Add(okBtn, wxSizerFlags().Border(wxALL));
+	auto cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
 	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancelBtn->SetToolTip("Cancel");
-	buttons->Add(cancelBtn, 0, wxALL, 5);
+	buttons->Add(cancelBtn, wxSizerFlags().Border(wxALL));
 	sizer->Add(buttons, wxSizerFlags(1).Center());
 
 	SetSizer(sizer);

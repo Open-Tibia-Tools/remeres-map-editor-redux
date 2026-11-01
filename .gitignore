@@ -1,7 +1,9 @@
 # ============================================================
 #  Build outputs
 # ============================================================
-/build*/
+/build*
+.wx_docs/
+tools/.wx_docs/
 build.log
 build_script.log
 build_output*.txt

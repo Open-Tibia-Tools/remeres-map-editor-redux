@@ -45,21 +45,26 @@ namespace {
 } // namespace
 
 PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
-	wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(230, 250)),
+	wxPanel(parent, wxID_ANY, wxDefaultPosition, parent ? parent->FromDIP(wxSize(230, 250)) : wxSize(230, 250)),
 	choicebook(nullptr),
 	house_palette(nullptr),
 	waypoint_palette(nullptr) {
-	SetMinSize(wxSize(225, 250));
+	SetMinSize(FromDIP(wxSize(225, 250)));
 
-	choicebook = newd wxChoicebook(this, PALETTE_CHOICEBOOK, wxDefaultPosition, wxSize(230, 250));
+	choicebook = new wxChoicebook(this, PALETTE_CHOICEBOOK, wxDefaultPosition, FromDIP(wxSize(230, 250)));
 
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGING, &PaletteWindow::OnSwitchingPage, this, PALETTE_CHOICEBOOK);
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGED, &PaletteWindow::OnPageChanged, this, PALETTE_CHOICEBOOK);
 	Bind(wxEVT_CLOSE_WINDOW, &PaletteWindow::OnClose, this);
 	Bind(wxEVT_KEY_DOWN, &PaletteWindow::OnKey, this);
+	Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+		Refresh();
+		Update();
+		event.Skip();
+	});
 
 	for (const auto& palette : catalog.dynamicPalettes()) {
-		auto* panel = newd BrushPalettePanel(choicebook, palette);
+		auto* panel = new BrushPalettePanel(choicebook, palette);
 		panel->SetListType(dynamicBrushListType());
 		palette_pages.push_back(panel);
 		choicebook->AddPage(panel, panel->GetName());
@@ -87,9 +92,9 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 		choicebook->AddPage(panel, wxstr(provider.name));
 	}
 
-	wxSizer* sizer = newd wxBoxSizer(wxVERTICAL);
-	choicebook->SetMinSize(wxSize(225, 300));
-	sizer->Add(choicebook, 1, wxEXPAND);
+	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+	choicebook->SetMinSize(FromDIP(wxSize(225, 300)));
+	sizer->Add(choicebook, wxSizerFlags(1).Expand());
 	SetSizer(sizer);
 
 	ReloadSettings(g_gui.IsEditorOpen() ? &g_gui.GetCurrentMap() : nullptr);
@@ -200,7 +205,7 @@ void PaletteWindow::ReloadDynamicPages() {
 			}
 		}
 		if (!found) {
-			auto* panel = newd BrushPalettePanel(choicebook, palette);
+			auto* panel = new BrushPalettePanel(choicebook, palette);
 			panel->SetListType(dynamicBrushListType());
 			palette_pages.push_back(panel);
 			choicebook->AddPage(panel, panel->GetName());
@@ -420,7 +425,7 @@ void PaletteWindow::OnUpdate(Map* map) {
 
 void PaletteWindow::OnKey(wxKeyEvent& event) {
 	if (g_gui.GetCurrentTab() != nullptr) {
-		g_gui.GetCurrentMapTab()->GetEventHandler()->AddPendingEvent(event);
+		g_gui.GetCurrentMapTab()->GetEventHandler()->QueueEvent(event.Clone());
 	}
 }
 

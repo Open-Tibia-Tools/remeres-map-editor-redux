@@ -457,7 +457,7 @@ void RuleBuilderPanel::OnMotion(wxMouseEvent& event) {
 	if (m_pressCell.row >= 0 && !m_internalDrag && event.Dragging()) {
 		if (std::abs(event.GetX() - m_pressPoint.x) > 6 || std::abs(event.GetY() - m_pressPoint.y) > 6) {
 			m_internalDrag = true;
-			const wxString payload = wxString::Format("%s%d:%c:%d", kRuleCellPrefix, m_pressCell.row, m_pressCell.source ? 's' : 't', m_pressCell.index);
+			const wxString payload = wxstr(std::format("{}{}:{}:{}", kRuleCellPrefix, m_pressCell.row, m_pressCell.source ? 's' : 't', m_pressCell.index));
 			wxTextDataObject data(payload);
 			wxDropSource dragSource(this);
 			dragSource.SetData(data);

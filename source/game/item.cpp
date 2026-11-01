@@ -95,7 +95,7 @@ std::unique_ptr<Item> Item::deepCopy() const {
 			copy->invalidOtbmData = std::make_unique<InvalidOTBMItemData>(*invalidOtbmData);
 		}
 		if (attributes) {
-			copy->attributes = newd ItemAttributeMap(*attributes);
+			copy->attributes = new ItemAttributeMap(*attributes);
 		}
 	}
 	return copy;

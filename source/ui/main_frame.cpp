@@ -1,3 +1,5 @@
+
+#include <wx/activityindicator.h>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -65,6 +67,19 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	// FPS | tile description (stretch) | coordinates | floor/zoom
 	const int status_widths[4] = { FromDIP(80), -1, FromDIP(150), FromDIP(160) };
 	statusbar->SetStatusWidths(4, status_widths);
+
+	m_activity_indicator = new wxActivityIndicator(statusbar, wxID_ANY);
+	m_activity_indicator->Hide();
+
+	statusbar->Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
+		if (m_activity_indicator && m_activity_indicator->IsShown()) {
+			wxRect r;
+			if (GetStatusBar() && GetStatusBar()->GetFieldRect(3, r)) {
+				m_activity_indicator->SetSize(r);
+			}
+		}
+		event.Skip();
+	});
 	SetStatusText(wxString("Welcome to ") << __W_RME_APPLICATION_NAME__ << " " << __W_RME_VERSION__);
 
 	// Le sizer
@@ -75,9 +90,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
 	g_gui.aui_manager->AddPane(g_gui.tabbook, wxAuiPaneInfo().CenterPane().Floatable(false).CloseButton(false).PaneBorder(false));
 
-	g_gui.tile_properties_panel = newd TilePropertiesPanel(this);
+	g_gui.tile_properties_panel = new TilePropertiesPanel(this);
 	g_gui.aui_manager->AddPane(g_gui.tile_properties_panel, wxAuiPaneInfo().Name("TileProperties").Caption("Tile Properties").Right().Layer(1).Position(1).CloseButton(true).MaximizeButton(true).Hide());
-	g_gui.brush_items_window = newd BrushItemsWindow(this);
+	g_gui.brush_items_window = new BrushItemsWindow(this);
 	g_gui.aui_manager->AddPane(g_gui.brush_items_window,
 		wxAuiPaneInfo()
 			.Name("BrushItems")
@@ -94,7 +109,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	);
 
 	// Create Script Manager panel (dockable)
-	LuaScriptsWindow* scriptsWindow = newd LuaScriptsWindow(this);
+	LuaScriptsWindow* scriptsWindow = new LuaScriptsWindow(this);
 	LuaScriptsWindow::SetInstance(scriptsWindow);
 	g_gui.aui_manager->AddPane(scriptsWindow,
 		wxAuiPaneInfo()
@@ -115,11 +130,55 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	UpdateMenubar();
 
 	Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnExit, this);
+	Bind(wxEVT_AUI_PANE_CLOSE, [this](wxAuiManagerEvent& event) {
+		wxAuiPaneInfo* pane = event.GetPane();
+		if (!pane) {
+			event.Skip();
+			return;
+		}
+		if (pane->name == StandardToolBar::PANE_NAME) {
+			g_settings.setInteger(Config::SHOW_TOOLBAR_STANDARD, 0);
+			if (menu_bar) {
+				menu_bar->CheckItem(MenuBar::VIEW_TOOLBARS_STANDARD, false);
+			}
+		} else if (pane->name == BrushToolBar::PANE_NAME) {
+			g_settings.setInteger(Config::SHOW_TOOLBAR_BRUSHES, 0);
+			if (menu_bar) {
+				menu_bar->CheckItem(MenuBar::VIEW_TOOLBARS_BRUSHES, false);
+			}
+		} else if (pane->name == PositionToolBar::PANE_NAME) {
+			g_settings.setInteger(Config::SHOW_TOOLBAR_POSITION, 0);
+			if (menu_bar) {
+				menu_bar->CheckItem(MenuBar::VIEW_TOOLBARS_POSITION, false);
+			}
+		} else if (pane->name == SizeToolBar::PANE_NAME) {
+			g_settings.setInteger(Config::SHOW_TOOLBAR_SIZES, 0);
+			if (menu_bar) {
+				menu_bar->CheckItem(MenuBar::VIEW_TOOLBARS_SIZES, false);
+			}
+		} else if (pane->name == LightToolBar::PANE_NAME) {
+			g_settings.setInteger(Config::SHOW_TOOLBAR_LIGHT, 0);
+			if (menu_bar) {
+				menu_bar->CheckItem(MenuBar::VIEW_TOOLBARS_LIGHT, false);
+			}
+		}
+		event.Skip();
+	});
+
 #ifdef _USE_UPDATER_
-	Bind(EVT_UPDATE_CHECK_FINISHED, &MainFrame::OnUpdateReceived, this);
 #endif
 	Bind(EVT_UPDATE_MENUS, &MainFrame::OnUpdateMenus, this);
 	Bind(wxEVT_IDLE, &MainFrame::OnIdle, this);
+	Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+		spdlog::info("MainFrame: DPI changed from ({}, {}) to ({}, {})",
+			event.GetOldDPI().x, event.GetOldDPI().y,
+			event.GetNewDPI().x, event.GetNewDPI().y);
+		if (g_gui.aui_manager) {
+			g_gui.aui_manager->Update();
+		}
+		g_gui.RefreshView(true);
+		event.Skip();
+	});
 }
 
 MainFrame::~MainFrame() {
@@ -149,14 +208,7 @@ void MainFrame::OnIdle(wxIdleEvent& event) {
 }
 
 #ifdef _USE_UPDATER_
-void MainFrame::OnUpdateReceived(wxCommandEvent& event) {
-	void* clientData = event.GetClientData();
-	if (!clientData) {
-		return;
-	}
-	std::string data = *static_cast<std::string*>(clientData);
-	delete static_cast<std::string*>(clientData);
-
+void MainFrame::OnUpdateDataReceived(const std::string& data) {
 	size_t first_colon = data.find(':');
 	size_t second_colon = data.find(':', first_colon + 1);
 
@@ -171,7 +223,7 @@ void MainFrame::OnUpdateReceived(wxCommandEvent& event) {
 	if (update == "yes") {
 		int ret = DialogUtil::PopupDialog(
 			"Update Notice",
-			wxString("There is a newd update available (") << wxstr(verstr) << "). Do you want to go to the website and download it?",
+			wxString("There is a new update available (") << wxstr(verstr) << "). Do you want to go to the website and download it?",
 			wxYES | wxNO,
 			"I don't want any update notices",
 			Config::AUTOCHECK_FOR_UPDATES
@@ -322,7 +374,7 @@ bool MainFrame::DoQueryImportCreatures() {
 						if (ok) {
 							DialogUtil::ListDialog("Monster loader errors", warnings);
 						} else {
-							wxMessageBox("Error OT data file \"" + paths[i] + "\".\n" + error, "Error", wxOK | wxICON_INFORMATION, g_gui.root);
+							DialogUtil::PopupDialog(g_gui.root, "Error", "Error OT data file \"" + paths[i] + "\".\n" + error, wxOK | wxICON_INFORMATION);
 						}
 					}
 				} else {
@@ -407,4 +459,23 @@ void MainFrame::PrepareDC(wxDC& dc) {
 	dc.SetAxisOrientation(1, 0);
 	dc.SetUserScale(1.0, 1.0);
 	dc.SetMapMode(wxMM_TEXT);
+}
+
+
+
+void MainFrame::StartBusyAnimation() {
+	if (m_activity_indicator && GetStatusBar()) {
+		wxRect r;
+		GetStatusBar()->GetFieldRect(3, r);
+		m_activity_indicator->SetSize(r);
+		m_activity_indicator->Show();
+		m_activity_indicator->Start();
+	}
+}
+
+void MainFrame::StopBusyAnimation() {
+	if (m_activity_indicator) {
+		m_activity_indicator->Stop();
+		m_activity_indicator->Hide();
+	}
 }

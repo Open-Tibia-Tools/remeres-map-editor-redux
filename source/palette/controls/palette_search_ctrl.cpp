@@ -8,7 +8,9 @@ PaletteSearchCtrl::PaletteSearchCtrl(wxWindow* parent, wxWindowID id,
 	long style) :
 	wxSearchCtrl(parent, id, value, pos, size, style) {
 
+	ShowSearchButton(true);
 	ShowCancelButton(true);
+	SetDescriptiveText("Search...");
 	SetFont(Theme::GetFont(9, false));
 
 	// Dismiss/clear on Escape
@@ -27,11 +29,19 @@ PaletteSearchCtrl::PaletteSearchCtrl(wxWindow* parent, wxWindowID id,
 	});
 
 	// Clear on cancel button click
-	Bind(wxEVT_SEARCHCTRL_CANCEL_BTN, [this](wxCommandEvent& /*event*/) {
+	Bind(wxEVT_SEARCH_CANCEL, [this](wxCommandEvent& /*event*/) {
 		ChangeValue(wxEmptyString);
 		wxCommandEvent evt(wxEVT_TEXT, GetId());
 		evt.SetEventObject(this);
 		evt.SetString(wxEmptyString);
+		ProcessWindowEvent(evt);
+	});
+
+	// Trigger on search button click
+	Bind(wxEVT_SEARCH, [this](wxCommandEvent& /*event*/) {
+		wxCommandEvent evt(wxEVT_TEXT, GetId());
+		evt.SetEventObject(this);
+		evt.SetString(GetValue());
 		ProcessWindowEvent(evt);
 	});
 

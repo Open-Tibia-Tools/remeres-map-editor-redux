@@ -29,13 +29,13 @@ void StatusManager::SetTitle(const wxString& title) {
 
 #ifdef NIGHTLY_BUILD
 	#ifdef SVN_BUILD
-		#define TITLE_APPEND (wxString(" (Nightly Build #") << i2ws(SVN_BUILD) << ")")
+		#define TITLE_APPEND (wxString(" (Nightly Build #") << std::to_string(SVN_BUILD) << ")")
 	#else
 		#define TITLE_APPEND (wxString(" (Nightly Build)"))
 	#endif
 #else
 	#ifdef SVN_BUILD
-		#define TITLE_APPEND (wxString(" (Build #") << i2ws(SVN_BUILD) << ")")
+		#define TITLE_APPEND (wxString(" (Build #") << std::to_string(SVN_BUILD) << ")")
 	#else
 		#define TITLE_APPEND (wxString(""))
 	#endif

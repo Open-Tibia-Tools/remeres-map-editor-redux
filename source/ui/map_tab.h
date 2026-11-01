@@ -26,7 +26,7 @@
 class MapTab : public EditorTab, public MapWindow {
 public:
 	MapTab(MapTabbook* aui, Editor* editor);
-	// Constructs a newd window, but it uses the same internal editor as 'other'
+	// Constructs a new window, but it uses the same internal editor as 'other'
 	// AND the same parent, aui_notebook etc.
 	MapTab(const MapTab* other);
 	~MapTab();

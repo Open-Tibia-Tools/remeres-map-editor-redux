@@ -26,27 +26,7 @@
 	#define _WIN32_WINNT 0x0501
 #endif
 
-#ifdef DEBUG_MEM
 
-	#define _CRTDBG_MAP_ALLOC
-
-	#include <stdlib.h>
-	#include <crtdbg.h>
-
-	#pragma warning(disable : 4291)
-_Ret_bytecap_(_Size) inline void* __CRTDECL operator new(size_t _Size, const char* file, int line) {
-	return ::operator new(_Size, _NORMAL_BLOCK, file, line);
-}
-_Ret_bytecap_(_Size) inline void* __CRTDECL operator new[](size_t _Size, const char* file, int line) {
-	return ::operator new[](_Size, _NORMAL_BLOCK, file, line);
-}
-	#define newd new (__FILE__, __LINE__)
-
-#else
-
-	#define newd new
-
-#endif
 
 // Boost libraries
 #include <boost/utility.hpp>
@@ -132,10 +112,6 @@ using FileName = wxFileName;
 
 #include "app/rme_forward_declarations.h"
 
-#if wxCHECK_VERSION(3, 1, 0)
-	#define FROM_DIP(widget, size) widget->FromDIP(size)
-#else
-	#define FROM_DIP(widget, size) size
-#endif
+
 
 #endif

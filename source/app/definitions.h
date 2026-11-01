@@ -45,18 +45,22 @@
 
 // #define __PRERELEASE__ 1
 
+#define __RME_STR(x) #x
+#define __RME_XSTR(x) __RME_STR(x)
+#define __RME_VERSION_STRING__ __RME_XSTR(__RME_VERSION_MAJOR__) "." __RME_XSTR(__RME_VERSION_MINOR__) "." __RME_XSTR(__RME_SUBVERSION__)
+
 #ifdef __EXPERIMENTAL__
-	#define __RME_VERSION__ std::string(i2s(__RME_VERSION_MAJOR__) + "." + i2s(__RME_VERSION_MINOR__) + "." + i2s(__RME_SUBVERSION__) + " BETA")
-	#define __W_RME_VERSION__ (wxString() << __RME_VERSION_MAJOR__ << "." << __RME_VERSION_MINOR__ << "." << __RME_SUBVERSION__ << " BETA")
+	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__ " BETA")
+	#define __W_RME_VERSION__ wxString(__RME_VERSION_STRING__ " BETA")
 #elif __SNAPSHOT__
-	#define __RME_VERSION__ std::string(i2s(__RME_VERSION_MAJOR__) + "." + i2s(__RME_VERSION_MINOR__) + "." + i2s(__RME_SUBVERSION__) + " - SNAPSHOT")
-	#define __W_RME_VERSION__ (wxString() << __RME_VERSION_MAJOR__ << "." << __RME_VERSION_MINOR__ << "." << __RME_SUBVERSION__ << " - SNAPSHOT")
+	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__ " - SNAPSHOT")
+	#define __W_RME_VERSION__ wxString(__RME_VERSION_STRING__ " - SNAPSHOT")
 #elif __PRERELEASE__
-	#define __RME_VERSION__ std::string(i2s(__RME_VERSION_MAJOR__) + "." + i2s(__RME_VERSION_MINOR__) + "." + i2s(__RME_SUBVERSION__) + " (Pre-release)")
-	#define __W_RME_VERSION__ (wxString() << __RME_VERSION_MAJOR__ << "." << __RME_VERSION_MINOR__ << "." << __RME_SUBVERSION__ << " (Pre-release)")
+	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__ " (Pre-release)")
+	#define __W_RME_VERSION__ wxString(__RME_VERSION_STRING__ " (Pre-release)")
 #else
-	#define __RME_VERSION__ std::string(i2s(__RME_VERSION_MAJOR__) + "." + i2s(__RME_VERSION_MINOR__) + "." + i2s(__RME_SUBVERSION__))
-	#define __W_RME_VERSION__ (wxString() << __RME_VERSION_MAJOR__ << "." << __RME_VERSION_MINOR__ << "." << __RME_SUBVERSION__)
+	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__)
+	#define __W_RME_VERSION__ wxString(__RME_VERSION_STRING__)
 #endif
 // OS
 

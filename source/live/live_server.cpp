@@ -290,7 +290,7 @@ LiveLogTab* LiveServer::createLogWindow(wxWindow* parent) {
 	MapTabbook* mapTabBook = dynamic_cast<MapTabbook*>(parent);
 	ASSERT(mapTabBook);
 
-	log = newd LiveLogTab(mapTabBook, this);
+	log = new LiveLogTab(mapTabBook, this);
 	log->Message("New Live mapping session started.");
 	log->Message("Hosted on server " + getHostName() + ".");
 

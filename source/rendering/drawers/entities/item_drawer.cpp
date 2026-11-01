@@ -139,7 +139,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	int screenx = draw_x - draw_offset_x;
 	int screeny = draw_y - draw_offset_y;
 
-	// Set the newd drawing height accordingly
+	// Set the new drawing height accordingly
 	draw_x -= spr->draw_height;
 	draw_y -= spr->draw_height;
 

@@ -458,7 +458,7 @@ void EditorPersistence::importHouses(Editor& editor, Map& imported_map, const Po
 							current_house->setExit(&editor.map, newexit);
 						}
 					} else {
-						// Conflict! Find a newd id and replace old
+						// Conflict! Find a new id and replace old
 						uint32_t new_id = editor.map.houses.getEmptyID();
 						house_id_map[imported_house->getID()] = new_id;
 						imported_house->setID(new_id);
@@ -468,7 +468,7 @@ void EditorPersistence::importHouses(Editor& editor, Map& imported_map, const Po
 				break;
 			}
 			case IMPORT_INSERT: {
-				// Find a newd id and replace old
+				// Find a new id and replace old
 				uint32_t new_id = editor.map.houses.getEmptyID();
 				house_id_map[imported_house->getID()] = new_id;
 				imported_house->setID(new_id);
@@ -705,7 +705,7 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 
 	editor.map.setWidth(newsize_x);
 	editor.map.setHeight(newsize_y);
-	DialogUtil::PopupDialog("Success", "Map imported successfully, " + i2ws(discarded_tiles) + " tiles were discarded as invalid.", wxOK);
+	DialogUtil::PopupDialog("Success", "Map imported successfully, " + std::to_string(discarded_tiles) + " tiles were discarded as invalid.", wxOK);
 
 	g_gui.RefreshPalettes();
 	g_gui.FitViewToMap();

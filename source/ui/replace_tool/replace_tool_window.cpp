@@ -1,5 +1,8 @@
+
 #include "app/main.h"
 #include "replace_tool_window.h"
+#include "ui/dialog_util.h"
+#include <format>
 #include "visual_similarity_service.h"
 #include "ui/theme.h"
 
@@ -44,7 +47,7 @@ namespace {
 // A compact icon-only button; the meaning lives in its tooltip.
 wxButton* MakeIconButton(wxWindow* parent, std::string_view icon, const wxString& tooltip, const wxSize& size) {
 	auto* button = new wxButton(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, size, wxBU_NOTEXT | wxBU_EXACTFIT);
-	button->SetBitmap(IMAGE_MANAGER.GetBitmap(icon, wxWindow::FromDIP(wxSize(16, 16), parent), Theme::Get(Theme::Role::Text)));
+	button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(icon, Theme::Get(Theme::Role::Text)));
 	button->SetToolTip(tooltip);
 	return button;
 }
@@ -109,9 +112,9 @@ void ReplaceToolWindow::OnClose(wxCloseEvent& event) {
 	if (m_rulesDirty && event.CanVeto()) {
 		wxString question = m_activeRuleSetName.empty()
 			? wxString("The rules in the table were never saved to a rule set.\n\nSave them now?")
-			: wxString::Format("Rule set \"%s\" has unsaved changes.\n\nSave before closing?", wxstr(m_activeRuleSetName));
+			: wxstr(std::format("Rule set \"{}\" has unsaved changes.\n\nSave before closing?", m_activeRuleSetName));
 
-		const int answer = wxMessageBox(question, "Unsaved rules", wxYES_NO | wxCANCEL | wxICON_WARNING, this);
+		const int answer = DialogUtil::PopupDialog(this, "Unsaved rules", question, wxYES_NO | wxCANCEL | wxICON_WARNING);
 		if (answer == wxCANCEL) {
 			event.Veto();
 			return;
@@ -204,7 +207,7 @@ void ReplaceToolWindow::InitLayout() {
 	};
 	m_ruleViewToolbar = new TilesetGridToolbar(ruleToolbar, std::move(ruleViewActions), TilesetGridToolbar::Part_Labels | TilesetGridToolbar::Part_Size);
 	m_ruleViewToolbar->SetState(ruleBuilder->GetShowLabels(), ruleBuilder->GetIconSize(), false, TilesetSortKey::Name, TilesetSortDirection::Ascending, false);
-	ruleToolbarSizer->Add(m_ruleViewToolbar, 1, wxALIGN_CENTER_VERTICAL);
+	ruleToolbarSizer->Add(m_ruleViewToolbar, wxSizerFlags(1).CenterVertical());
 
 	// Icon buttons for the table's own actions, with the label in the tooltip.
 	const wxSize iconButton = FromDIP(wxSize(34, 30));
@@ -212,27 +215,27 @@ void ReplaceToolWindow::InitLayout() {
 	m_ruleUndoBtn = MakeIconButton(ruleToolbar, ICON_UNDO, "Undo (Ctrl+Z)", iconButton);
 	m_ruleUndoBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ruleBuilder->Undo(); });
 	m_ruleUndoBtn->Enable(false);
-	ruleToolbarSizer->Add(m_ruleUndoBtn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, Theme::Grid(1));
+	ruleToolbarSizer->Add(m_ruleUndoBtn, wxSizerFlags().CenterVertical().Border(wxLEFT, Theme::Grid(1)));
 
 	m_ruleRedoBtn = MakeIconButton(ruleToolbar, ICON_REDO, "Redo (Ctrl+Y)", iconButton);
 	m_ruleRedoBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ruleBuilder->Redo(); });
 	m_ruleRedoBtn->Enable(false);
-	ruleToolbarSizer->Add(m_ruleRedoBtn, 0, wxALIGN_CENTER_VERTICAL);
+	ruleToolbarSizer->Add(m_ruleRedoBtn, wxSizerFlags().CenterVertical());
 
 	m_ruleSaveAsBtn = MakeIconButton(ruleToolbar, ICON_SAVE, "Save as new rule set (Ctrl+Shift+S)", iconButton);
 	m_ruleSaveAsBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnSaveAsNewRule(); });
-	ruleToolbarSizer->Add(m_ruleSaveAsBtn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, Theme::Grid(1));
+	ruleToolbarSizer->Add(m_ruleSaveAsBtn, wxSizerFlags().CenterVertical().Border(wxLEFT, Theme::Grid(1)));
 
 	m_ruleClearBtn = MakeIconButton(ruleToolbar, ICON_BROOM, "Clear every rule", iconButton);
 	m_ruleClearBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
 		if (ruleBuilder->GetRules().empty()) {
 			return;
 		}
-		if (wxMessageBox("Clear every rule in the table?", "Clear rules", wxYES_NO | wxNO_DEFAULT | wxICON_WARNING, this) == wxYES) {
+		if (DialogUtil::PopupDialog(this, "Clear rules", "Clear every rule in the table?", wxYES_NO | wxNO_DEFAULT | wxICON_WARNING) == wxID_YES) {
 			ruleBuilder->Clear();
 		}
 	});
-	ruleToolbarSizer->Add(m_ruleClearBtn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, Theme::Grid(2));
+	ruleToolbarSizer->Add(m_ruleClearBtn, wxSizerFlags().CenterVertical().Border(wxLEFT, Theme::Grid(2)));
 
 	ruleToolbar->SetSizer(ruleToolbarSizer);
 	col2Card->GetContentSizer()->Add(ruleToolbar, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT | wxTOP, padding));
@@ -328,16 +331,16 @@ void ReplaceToolWindow::InitLayout() {
 
 	m_saveActiveRuleBtn = MakeIconButton(savedRulesToolbar, ICON_SAVE, "Save rule set (Ctrl+S)", savedIconButton);
 	m_saveActiveRuleBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { SaveActiveRuleSet(); });
-	savedRulesToolbarSizer->Add(m_saveActiveRuleBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, Theme::Grid(1));
+	savedRulesToolbarSizer->Add(m_saveActiveRuleBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
 
 	m_addRuleBtn = MakeIconButton(savedRulesToolbar, ICON_PLUS, "Save the current rules as a new rule set", savedIconButton);
-	savedRulesToolbarSizer->Add(m_addRuleBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, Theme::Grid(1));
+	savedRulesToolbarSizer->Add(m_addRuleBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
 
 	m_editRuleBtn = MakeIconButton(savedRulesToolbar, ICON_PEN_TO_SQUARE, "Rename the selected rule set", savedIconButton);
-	savedRulesToolbarSizer->Add(m_editRuleBtn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, Theme::Grid(1));
+	savedRulesToolbarSizer->Add(m_editRuleBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
 
 	m_deleteRuleBtn = MakeIconButton(savedRulesToolbar, ICON_TRASH_CAN, "Delete the selected rule set", savedIconButton);
-	savedRulesToolbarSizer->Add(m_deleteRuleBtn, 0, wxALIGN_CENTER_VERTICAL);
+	savedRulesToolbarSizer->Add(m_deleteRuleBtn, wxSizerFlags().CenterVertical());
 
 	savedRulesToolbar->SetSizer(savedRulesToolbarSizer);
 	savedRulesCard->GetContentSizer()->Add(savedRulesToolbar, wxSizerFlags(0).Border(wxLEFT | wxRIGHT | wxTOP, padding));
@@ -350,11 +353,11 @@ void ReplaceToolWindow::InitLayout() {
 	// ---------------------------------------------------------
 	// FOOTER: scope and execution, flush right
 	// ---------------------------------------------------------
-	wxBoxSizer* footerSizer = newd wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* footerSizer = new wxBoxSizer(wxHORIZONTAL);
 
 	footerSizer->AddStretchSpacer(1);
 
-	wxStaticText* scopeLabel = newd wxStaticText(this, wxID_ANY, "SCOPE:");
+	wxStaticText* scopeLabel = new wxStaticText(this, wxID_ANY, "SCOPE:");
 	scopeLabel->SetForegroundColour(Theme::Get(Theme::Role::TextSubtle));
 	scopeLabel->SetFont(Theme::GetFont(9, true));
 	footerSizer->Add(scopeLabel, wxSizerFlags(0).Center().Border(wxRIGHT, 5));
@@ -363,23 +366,23 @@ void ReplaceToolWindow::InitLayout() {
 	scopes.Add("SELECTION");
 	scopes.Add("VIEWPORT");
 	scopes.Add("ALL MAP");
-	m_scopeChoice = newd wxChoice(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(140, 24)), scopes);
+	m_scopeChoice = new wxChoice(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(140, 24)), scopes);
 	m_scopeChoice->SetSelection(0);
 	if (editor && editor->selection.empty()) {
 		m_scopeChoice->SetSelection(1); // Default to Viewport if no selection
 	}
 	footerSizer->Add(m_scopeChoice, wxSizerFlags(0).Center().Border(wxRIGHT, padding));
 
-	m_executeBtn = newd wxButton(this, wxID_ANY, "EXECUTE REPLACE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
-	m_executeBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLAY, wxSize(16, 16)));
+	m_executeBtn = new wxButton(this, wxID_ANY, "EXECUTE REPLACE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
+	m_executeBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLAY));
 	m_executeBtn->SetDefault();
 	m_executeBtn->SetBackgroundColour(Theme::Get(Theme::Role::Accent)); // Blue
 	m_executeBtn->SetForegroundColour(*wxWHITE);
 	m_executeBtn->SetFont(Theme::GetFont(10, true));
 	footerSizer->Add(m_executeBtn, wxSizerFlags(0).Center().Border(wxLEFT, padding));
 
-	wxButton* closeBtn = newd wxButton(this, wxID_ANY, "CLOSE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
-	closeBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	wxButton* closeBtn = new wxButton(this, wxID_ANY, "CLOSE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
+	closeBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	closeBtn->SetBackgroundColour(wxColour(120, 120, 120)); // Gray
 	closeBtn->SetForegroundColour(*wxWHITE);
 	closeBtn->SetFont(Theme::GetFont(10, true));
@@ -517,7 +520,7 @@ void ReplaceToolWindow::OnRuleDeleted(const std::string& name) {
 void ReplaceToolWindow::OnRuleRenamed(const std::string& oldName, const std::string& newName) {
 	std::vector<std::string> existing = RuleManager::Get().GetAvailableRuleSets();
 	if (std::find(existing.begin(), existing.end(), newName) != existing.end()) {
-		wxMessageBox("A rule set with this name already exists.", "Rename Error", wxOK | wxICON_ERROR);
+		DialogUtil::PopupDialog("Rename Error", "A rule set with this name already exists.", wxOK | wxICON_ERROR);
 		return;
 	}
 
@@ -532,7 +535,7 @@ void ReplaceToolWindow::OnRuleRenamed(const std::string& oldName, const std::str
 			}
 			UpdateSavedRulesList();
 		} else {
-			wxMessageBox("Failed to save the renamed rule set.", "Rename Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Rename Error", "Failed to save the renamed rule set.", wxOK | wxICON_ERROR);
 		}
 	}
 }
@@ -564,7 +567,7 @@ void ReplaceToolWindow::UpdateSavedRulesList() {
 void ReplaceToolWindow::SaveActiveRuleSet() {
 	const std::vector<RuleGroup> rules = ruleBuilder->GetRules();
 	if (rules.empty()) {
-		wxMessageBox("There is nothing to save yet - build a rule first.", "Save rule set", wxOK | wxICON_INFORMATION, this);
+		DialogUtil::PopupDialog(this, "Save rule set", "There is nothing to save yet - build a rule first.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 
@@ -579,7 +582,7 @@ void ReplaceToolWindow::SaveActiveRuleSet() {
 	ruleSet.name = m_activeRuleSetName;
 	ruleSet.rules = rules;
 	if (!RuleManager::Get().SaveRuleSet(ruleSet)) {
-		wxMessageBox("Could not write the rule set to disk.", "Save rule set", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Save rule set", "Could not write the rule set to disk.", wxOK | wxICON_ERROR);
 		return;
 	}
 
@@ -595,13 +598,13 @@ bool ReplaceToolWindow::SaveRulesAsNewRuleSet(const wxString& name) {
 	}
 
 	if (name.ToStdString().size() > 64) {
-		wxMessageBox("That name is too long. Use up to 64 letters, digits, spaces, '-' or '_'.", "Save rule set", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Save rule set", "That name is too long. Use up to 64 letters, digits, spaces, '-' or '_'.", wxOK | wxICON_ERROR);
 		return false;
 	}
 
 	const std::vector<std::string> existing = RuleManager::Get().GetAvailableRuleSets();
 	if (std::find(existing.begin(), existing.end(), name.ToStdString()) != existing.end()) {
-		wxMessageBox("A rule set with this name already exists. Please choose a different name.", "Name Collision", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Name Collision", "A rule set with this name already exists. Please choose a different name.", wxOK | wxICON_ERROR);
 		return false;
 	}
 
@@ -610,7 +613,7 @@ bool ReplaceToolWindow::SaveRulesAsNewRuleSet(const wxString& name) {
 	ruleSet.rules = rules;
 
 	if (!RuleManager::Get().SaveRuleSet(ruleSet)) {
-		wxMessageBox("Could not save the rule set. Use letters, digits, spaces, '-' or '_'.", "Save rule set", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Save rule set", "Could not save the rule set. Use letters, digits, spaces, '-' or '_'.", wxOK | wxICON_ERROR);
 		return false;
 	}
 
@@ -666,14 +669,14 @@ void ReplaceToolWindow::OnCharHook(wxKeyEvent& event) {
 void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	const std::vector<RuleGroup> groups = ruleBuilder->GetRules();
 	if (groups.empty()) {
-		wxMessageBox("No rules defined. Add some rules first.", "Replace", wxOK | wxICON_INFORMATION);
+		DialogUtil::PopupDialog("Replace", "No rules defined. Add some rules first.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 
 	std::vector<size_t> ruleRows;
 	const std::vector<ReplacementRule> rules = ExpandRuleGroups(groups, ruleRows);
 	if (rules.empty()) {
-		wxMessageBox("No rule is complete yet.\n\nA rule needs at least one source, and either a target or the delete mode.", "Replace", wxOK | wxICON_INFORMATION);
+		DialogUtil::PopupDialog("Replace", "No rule is complete yet.\n\nA rule needs at least one source, and either a target or the delete mode.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 
@@ -686,7 +689,7 @@ void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	}
 
 	if (scope == ReplaceScope::Selection && editor->selection.empty()) {
-		wxMessageBox("No selection active. Please select an area first or change scope.", "Replace", wxOK | wxICON_WARNING);
+		DialogUtil::PopupDialog("Replace", "No selection active. Please select an area first or change scope.", wxOK | wxICON_WARNING);
 		return;
 	}
 
@@ -709,21 +712,21 @@ void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 	}
 
 	if (totalMatches == 0) {
-		wxMessageBox("No items matching the rules were found in the selected scope.", "Replace", wxOK | wxICON_INFORMATION);
+		DialogUtil::PopupDialog("Replace", "No items matching the rules were found in the selected scope.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 
-	wxString preview = wxString::Format("Up to %u item(s) can be replaced:\n\n", totalMatches);
+	wxString preview = wxstr(std::format("Up to {} item(s) can be replaced:\n\n", totalMatches));
 	for (size_t row = 0; row < groups.size() && row < perRow.size(); ++row) {
 		if (perRow[row] == 0) {
 			continue;
 		}
 		const size_t sourceCount = groups[row].sources.size();
-		preview += wxString::Format("Rule %u (%u source%s): %u hit(s)\n", static_cast<unsigned>(row + 1), static_cast<unsigned>(sourceCount), sourceCount == 1 ? "" : "s", perRow[row]);
+		preview += wxstr(std::format("Rule {} ({} source{}): {} hit(s)\n", row + 1, sourceCount, sourceCount == 1 ? "" : "s", perRow[row]));
 	}
 	preview += "\nChances add up: a rule changes that share of its matches and leaves the rest untouched.\nExecute the replacements?";
 
-	if (wxMessageBox(preview, "Confirm Bulk Replacement", wxYES_NO | wxNO_DEFAULT | wxICON_WARNING) != wxYES) {
+	if (DialogUtil::PopupDialog(this, "Confirm Bulk Replacement", preview, wxYES_NO | wxNO_DEFAULT | wxICON_WARNING) != wxID_YES) {
 		return;
 	}
 
@@ -749,7 +752,7 @@ void ReplaceToolWindow::OnSaveRule() {
 
 void ReplaceToolWindow::OnSaveAsNewRule() {
 	if (ruleBuilder->GetRules().empty()) {
-		wxMessageBox("There is nothing to save yet - build a rule first.", "Save as new rule set", wxOK | wxICON_INFORMATION, this);
+		DialogUtil::PopupDialog(this, "Save as new rule set", "There is nothing to save yet - build a rule first.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 	const wxString name = wxGetTextFromUser("Name for the new rule set:", "Save as new rule set", "", this);
@@ -762,9 +765,9 @@ void ReplaceToolWindow::OnAutoMatchRules(Brush* brush) {
 	}
 	const size_t matchedCount = ruleBuilder->AutoMatchUnmatchedRules(brush);
 	if (matchedCount > 0) {
-		wxMessageBox(wxString::Format("Successfully matched and filled %zu rule(s) from brush '%s'.", matchedCount, wxstr(brush->getName())), "Auto Match Rules", wxOK | wxICON_INFORMATION, this);
+		DialogUtil::PopupDialog(this, "Auto Match Rules", wxstr(std::format("Successfully matched and filled {} rule(s) from brush '{}'.", matchedCount, brush->getName())), wxOK | wxICON_INFORMATION);
 	} else {
-		wxMessageBox(wxString::Format("No unmatched rules were compatible with brush '%s'.", wxstr(brush->getName())), "Auto Match Rules", wxOK | wxICON_INFORMATION, this);
+		DialogUtil::PopupDialog(this, "Auto Match Rules", wxstr(std::format("No unmatched rules were compatible with brush '{}'.", brush->getName())), wxOK | wxICON_INFORMATION);
 	}
 }
 

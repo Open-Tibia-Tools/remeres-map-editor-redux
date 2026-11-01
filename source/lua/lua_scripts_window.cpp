@@ -18,6 +18,7 @@
 #include "app/main.h"
 #include "lua_script_manager.h"
 #include "lua_scripts_window.h"
+#include <format>
 #include "ui/gui.h"
 #include "ui/gui_ids.h"
 #include "ui/theme.h"
@@ -116,7 +117,7 @@ void LuaScriptsWindow::BuildUI() {
 	addTool(SCRIPT_MANAGER_REVEAL, ICON_SQUARE_ARROW_UP_RIGHT, "Reveal selected script", "Open the selected script folder");
 	addTool(SCRIPT_MANAGER_REMOVE, ICON_TRASH_CAN, "Remove selected script", "Delete the selected script from disk");
 	action_toolbar->Realize();
-	mainSizer->Add(action_toolbar, 0, wxEXPAND | wxALL, padding);
+	mainSizer->Add(action_toolbar, wxSizerFlags().Expand().Border(wxALL, padding));
 
 	main_splitter = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_LIVE_UPDATE | wxSP_BORDER);
 	main_splitter->SetMinimumPaneSize(Theme::Grid(20));
@@ -126,7 +127,7 @@ void LuaScriptsWindow::BuildUI() {
 	script_list = new wxDataViewListCtrl(listPanel, SCRIPT_MANAGER_LIST, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE);
 	script_list->AppendToggleColumn("On", wxDATAVIEW_CELL_ACTIVATABLE, Theme::Grid(10), wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
 	script_list->AppendIconTextColumn("Script", wxDATAVIEW_CELL_INERT, Theme::Grid(64), wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-	listSizer->Add(script_list, 1, wxEXPAND);
+	listSizer->Add(script_list, wxSizerFlags(1).Expand());
 	listPanel->SetSizer(listSizer);
 
 	auto* outputPanel = new wxPanel(main_splitter);
@@ -135,7 +136,7 @@ void LuaScriptsWindow::BuildUI() {
 
 	selection_summary = new wxStaticText(outputSizer->GetStaticBox(), wxID_ANY, "No script selected");
 	selection_summary->SetFont(Theme::GetFont(9, true));
-	outputHeaderSizer->Add(selection_summary, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, padding);
+	outputHeaderSizer->Add(selection_summary, wxSizerFlags(1).CenterVertical().Border(wxRIGHT, padding));
 
 	output_toolbar = new wxAuiToolBar(outputSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, toolbarStyle);
 	output_toolbar->SetToolBitmapSize(iconSize);
@@ -160,26 +161,54 @@ void LuaScriptsWindow::BuildUI() {
 		nullptr
 	);
 	output_toolbar->Realize();
-	outputHeaderSizer->Add(output_toolbar, 0, wxALIGN_CENTER_VERTICAL);
-	outputSizer->Add(outputHeaderSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, padding);
+	outputHeaderSizer->Add(output_toolbar, wxSizerFlags().CenterVertical());
+	outputSizer->Add(outputHeaderSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, padding));
 
-	console_output = new wxTextCtrl(
+	console_output = new wxStyledTextCtrl(
 		outputSizer->GetStaticBox(),
 		wxID_ANY,
-		wxEmptyString,
 		wxDefaultPosition,
 		wxDefaultSize,
-		wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2 | wxHSCROLL
+		wxBORDER_NONE
 	);
-	console_output->SetFont(wxFontInfo(9).Family(wxFONTFAMILY_TELETYPE));
+
+	// Modern Scintilla multi-selection and editing capabilities
+	console_output->SetMultipleSelection(true);
+	console_output->SetAdditionalSelectionTyping(true);
+	console_output->SetAdditionalCaretsBlink(true);
+	console_output->SetAdditionalCaretsVisible(true);
+	console_output->SetVirtualSpaceOptions(wxSTC_VS_RECTANGULARSELECTION);
+
+	// Line number margin
+	console_output->SetMarginType(0, wxSTC_MARGIN_NUMBER);
+	console_output->SetMarginWidth(0, 36);
+
+	// Modern folding overview margin
+	console_output->SetProperty("fold", "1");
+	console_output->SetMarginType(1, wxSTC_MARGIN_SYMBOL);
+	console_output->SetMarginMask(1, wxSTC_MASK_FOLDERS);
+	console_output->SetMarginWidth(1, 16);
+	console_output->SetMarginSensitive(1, true);
+
+	// Folding markers styling
+	console_output->MarkerDefine(wxSTC_MARKNUM_FOLDEROPEN, wxSTC_MARK_ARROWDOWN);
+	console_output->MarkerDefine(wxSTC_MARKNUM_FOLDER, wxSTC_MARK_ARROW);
+	console_output->MarkerDefine(wxSTC_MARKNUM_FOLDERSUB, wxSTC_MARK_EMPTY);
+	console_output->MarkerDefine(wxSTC_MARKNUM_FOLDERTAIL, wxSTC_MARK_EMPTY);
+	console_output->MarkerDefine(wxSTC_MARKNUM_FOLDEREND, wxSTC_MARK_EMPTY);
+	console_output->MarkerDefine(wxSTC_MARKNUM_FOLDEROPENMID, wxSTC_MARK_ARROWDOWN);
+	console_output->MarkerDefine(wxSTC_MARKNUM_FOLDERMIDTAIL, wxSTC_MARK_EMPTY);
+
+	console_output->SetWrapMode(wxSTC_WRAP_WORD);
+	console_output->SetReadOnly(true);
 	console_output->SetMinSize(wxSize(-1, Theme::Grid(28)));
-	outputSizer->Add(console_output, 1, wxEXPAND | wxALL, padding);
+	outputSizer->Add(console_output, wxSizerFlags(1).Expand().Border(wxALL, padding));
 
 	outputPanel->SetSizer(outputSizer);
 
 	main_splitter->SplitHorizontally(listPanel, outputPanel, -Theme::Grid(36));
 	main_splitter->SetSashGravity(1.0);
-	mainSizer->Add(main_splitter, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
+	mainSizer->Add(main_splitter, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
 
 	SetSizer(mainSizer);
 
@@ -221,8 +250,23 @@ void LuaScriptsWindow::ApplyTheme() {
 		selection_summary->SetForegroundColour(Theme::Get(Theme::Role::TextSubtle));
 	}
 	if (console_output) {
-		console_output->SetBackgroundColour(Theme::Get(Theme::Role::Background));
-		console_output->SetForegroundColour(Theme::Get(Theme::Role::Text));
+		console_output->StyleClearAll();
+		console_output->StyleSetFont(wxSTC_STYLE_DEFAULT, wxFontInfo(9).Family(wxFONTFAMILY_TELETYPE));
+		console_output->StyleSetBackground(wxSTC_STYLE_DEFAULT, Theme::Get(Theme::Role::Background));
+		console_output->StyleSetForeground(wxSTC_STYLE_DEFAULT, Theme::Get(Theme::Role::Text));
+
+		console_output->StyleSetBackground(wxSTC_STYLE_LINENUMBER, Theme::Get(Theme::Role::Surface));
+		console_output->StyleSetForeground(wxSTC_STYLE_LINENUMBER, Theme::Get(Theme::Role::TextSubtle));
+
+		console_output->SetFoldMarginColour(true, Theme::Get(Theme::Role::Surface));
+		console_output->SetFoldMarginHiColour(true, Theme::Get(Theme::Role::Surface));
+
+		console_output->StyleSetForeground(0, Theme::Get(Theme::Role::Text));
+		console_output->StyleSetBackground(0, Theme::Get(Theme::Role::Background));
+		console_output->StyleSetForeground(1, Theme::Get(Theme::Role::Error));
+		console_output->StyleSetBackground(1, Theme::Get(Theme::Role::Background));
+
+		console_output->SetCaretForeground(Theme::Get(Theme::Role::Text));
 	}
 }
 
@@ -304,13 +348,13 @@ void LuaScriptsWindow::RefreshSelectionSummary() {
 	const auto& scripts = g_luaScripts.getScripts();
 	if (!selected || *selected >= scripts.size()) {
 		selected_script_id.clear();
-		selection_summary->SetLabel("No script selected");
+		selection_summary->SetLabelText("No script selected");
 		return;
 	}
 
 	const auto& script = scripts[*selected];
 	selected_script_id = script->getUniqueId();
-	selection_summary->SetLabel(BuildScriptLabel(*script));
+	selection_summary->SetLabelText(BuildScriptLabel(*script));
 }
 
 void LuaScriptsWindow::UpdateActionState() {
@@ -319,7 +363,7 @@ void LuaScriptsWindow::UpdateActionState() {
 	const bool hasSelection = selected && *selected < scripts.size();
 	const bool canRun = hasSelection && scripts[*selected]->isEnabled();
 	const bool canDisable = hasSelection && scripts[*selected]->isEnabled();
-	const bool hasOutput = console_output && console_output->GetLastPosition() > 0;
+	const bool hasOutput = console_output && console_output->GetLength() > 0;
 
 	if (action_toolbar) {
 		action_toolbar->EnableTool(SCRIPT_MANAGER_RUN_SCRIPT, canRun);
@@ -341,22 +385,27 @@ void LuaScriptsWindow::LogMessage(const wxString& message, bool isError) {
 		return;
 	}
 
-	wxTextAttr attr;
-	attr.SetTextColour(isError ? Theme::Get(Theme::Role::Error) : Theme::Get(Theme::Role::Text));
-	console_output->SetDefaultStyle(attr);
-
 	const wxString timestamp = wxDateTime::Now().Format("[%H:%M:%S] ");
-	console_output->AppendText(timestamp + message);
-	if (!message.EndsWith("\n")) {
-		console_output->AppendText("\n");
+	const wxString fullMsg = timestamp + message + (message.EndsWith("\n") ? "" : "\n");
+
+	console_output->SetReadOnly(false);
+	const int startPos = console_output->GetLength();
+	console_output->AppendText(fullMsg);
+	const int length = console_output->GetLength() - startPos;
+	if (isError) {
+		console_output->StartStyling(startPos);
+		console_output->SetStyling(length, 1);
 	}
-	console_output->ShowPosition(console_output->GetLastPosition());
+	console_output->SetReadOnly(true);
+	console_output->ScrollToEnd();
 	UpdateActionState();
 }
 
 void LuaScriptsWindow::ClearConsole() {
 	if (console_output) {
-		console_output->Clear();
+		console_output->SetReadOnly(false);
+		console_output->ClearAll();
+		console_output->SetReadOnly(true);
 	}
 	UpdateActionState();
 }
@@ -408,8 +457,8 @@ void LuaScriptsWindow::RemoveSelectedScript() {
 	const wxString scriptName = wxString::FromUTF8(script->getDisplayName());
 	const wxString targetKind = script->isPackage() ? "script package" : "script file";
 	const wxString message = script->isPackage()
-		? wxString::Format("Delete \"%s\" and its entire script folder?", scriptName)
-		: wxString::Format("Delete \"%s\" from the scripts folder?", scriptName);
+		? wxstr(std::format("Delete \"{}\" and its entire script folder?", script->getDisplayName()))
+		: wxstr(std::format("Delete \"{}\" from the scripts folder?", script->getDisplayName()));
 
 	wxMessageDialog confirm(this, message, "Remove Script", wxYES_NO | wxNO_DEFAULT | wxICON_WARNING);
 	if (confirm.ShowModal() != wxID_YES) {
@@ -431,18 +480,18 @@ void LuaScriptsWindow::RemoveSelectedScript() {
 
 	if (errorCode || !removed) {
 		LogMessage(
-			wxString::Format(
-				"Failed to remove %s: %s",
-				targetKind,
-				wxString::FromUTF8(errorCode ? errorCode.message() : "no filesystem changes were made")
-			),
+			wxstr(std::format(
+				"Failed to remove {}: {}",
+				targetKind.ToStdString(),
+				errorCode ? errorCode.message() : "no filesystem changes were made"
+			)),
 			true
 		);
 		return;
 	}
 
 	selected_script_id.clear();
-	LogMessage(wxString::Format("Removed %s: %s", targetKind, scriptName));
+	LogMessage(wxstr(std::format("Removed {}: {}", targetKind.ToStdString(), script->getDisplayName())));
 	g_luaScripts.reloadScripts();
 	g_gui.UpdateMenubar();
 	RefreshScriptList();
@@ -546,7 +595,7 @@ void LuaScriptsWindow::OnReloadScripts(wxCommandEvent&) {
 	g_luaScripts.reloadScripts();
 	g_gui.UpdateMenubar();
 	RefreshScriptList();
-	LogMessage("Scripts reloaded. Found " + wxString::Format("%zu", g_luaScripts.getScripts().size()) + " scripts.");
+	LogMessage(wxstr(std::format("Scripts reloaded. Found {} scripts.", g_luaScripts.getScripts().size())));
 }
 
 void LuaScriptsWindow::OnOpenFolder(wxCommandEvent&) {
@@ -563,7 +612,7 @@ void LuaScriptsWindow::OnClearConsole(wxCommandEvent&) {
 }
 
 void LuaScriptsWindow::OnCopyConsole(wxCommandEvent&) {
-	if (!console_output || console_output->IsEmpty()) {
+	if (!console_output || console_output->GetLength() == 0) {
 		return;
 	}
 
@@ -573,7 +622,7 @@ void LuaScriptsWindow::OnCopyConsole(wxCommandEvent&) {
 		return;
 	}
 
-	wxTheClipboard->SetData(new wxTextDataObject(console_output->GetValue()));
+	wxTheClipboard->SetData(new wxTextDataObject(console_output->GetText()));
 }
 
 void LuaScriptsWindow::OnRunScript(wxCommandEvent&) {

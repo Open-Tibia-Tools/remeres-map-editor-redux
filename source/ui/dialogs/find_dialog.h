@@ -4,17 +4,26 @@
 #include "app/main.h"
 #include "util/nanovg_listbox.h"
 #include <wx/wx.h>
+#include <wx/srchctrl.h>
 #include <vector>
 
 class Brush;
 
-class KeyForwardingTextCtrl : public wxTextCtrl {
+class KeyForwardingTextCtrl : public wxSearchCtrl {
 public:
-	KeyForwardingTextCtrl(wxWindow* parent, wxWindowID id, const wxString& value = "", const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0, const wxValidator& validator = wxDefaultValidator, const wxString& name = wxTextCtrlNameStr) :
-		wxTextCtrl(parent, id, value, pos, size, style, validator, name) {
+	KeyForwardingTextCtrl(wxWindow* parent, wxWindowID id, const wxString& value = "", const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0, const wxValidator& validator = wxDefaultValidator, const wxString& name = wxSearchCtrlNameStr) :
+		wxSearchCtrl(parent, id, value, pos, size, style, validator, name) {
+		ShowSearchButton(true);
+		ShowCancelButton(true);
+		SetDescriptiveText("Search brushes...");
 		Bind(wxEVT_KEY_DOWN, &KeyForwardingTextCtrl::OnKeyDown, this);
+		Bind(wxEVT_SEARCHCTRL_CANCEL_BTN, [this](wxCommandEvent&) {
+			ChangeValue("");
+			wxCommandEvent evt(wxEVT_TEXT, GetId());
+			ProcessWindowEvent(evt);
+		});
 	}
-	~KeyForwardingTextCtrl() { }
+	~KeyForwardingTextCtrl() override = default;
 
 	void OnKeyDown(wxKeyEvent&);
 };

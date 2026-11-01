@@ -579,7 +579,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 			break;
 		}
 		int pct = 20 + static_cast<int>(70.0 * done / (total_buckets > 0 ? total_buckets : 1));
-		g_gui.SetLoadDone(pct, wxString::Format("Loading map tiles (%zu/%zu blocks)...", done, total_buckets));
+		g_gui.SetLoadDone(pct, wxstr(std::format("Loading map tiles ({}/{} blocks)...", done, total_buckets)));
 		std::this_thread::sleep_for(std::chrono::milliseconds(25));
 	}
 

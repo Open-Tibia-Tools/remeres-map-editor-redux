@@ -5,6 +5,7 @@
 #include "app/main.h"
 
 #include "palette/palette_zones.h"
+#include "ui/dialog_util.h"
 
 #include "brushes/managers/brush_manager.h"
 #include "brushes/zone/zone_brush.h"
@@ -27,16 +28,16 @@
 
 ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 	PalettePanel(parent, id) {
-	wxBoxSizer* sidesizer = newd wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* sidesizer = new wxBoxSizer(wxVERTICAL);
 
 	// Search control
-	search_ctrl = newd PaletteSearchCtrl(this, PALETTE_ZONE_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+	search_ctrl = new PaletteSearchCtrl(this, PALETTE_ZONE_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 	search_ctrl->SetDescriptiveText("Search zones...");
 	search_ctrl->SetFont(Theme::GetFont(9, false));
-	sidesizer->Add(search_ctrl, 0, wxEXPAND | wxALL, 5);
+	sidesizer->Add(search_ctrl, wxSizerFlags().Expand().Border(wxALL, 5));
 
 	// NanoVG Table
-	zone_table = newd NanoVGTableCtrl(this, PALETTE_ZONE_LISTBOX);
+	zone_table = new NanoVGTableCtrl(this, PALETTE_ZONE_LISTBOX);
 	std::vector<TableColumn> cols = {
 		{ "swatch", "#", 30, NVG_ALIGN_CENTER, false },
 		{ "id", "ID", 38, NVG_ALIGN_CENTER, true },
@@ -62,26 +63,26 @@ ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 		OnToggleGroup(idx, row);
 	});
 
-	sidesizer->Add(zone_table, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
+	sidesizer->Add(zone_table, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT, 5));
 
 	// Action buttons (Add, Rename, Remove)
-	wxBoxSizer* buttons = newd wxBoxSizer(wxHORIZONTAL);
-	add_button = newd wxButton(this, PALETTE_ZONE_ADD, "Add", wxDefaultPosition, wxSize(50, -1));
-	add_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	wxBoxSizer* buttons = new wxBoxSizer(wxHORIZONTAL);
+	add_button = new wxButton(this, PALETTE_ZONE_ADD, "Add", wxDefaultPosition, wxSize(50, -1));
+	add_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	add_button->SetFont(Theme::GetFont(9, false));
 
-	rename_button = newd wxButton(this, PALETTE_ZONE_RENAME, "Rename", wxDefaultPosition, wxSize(60, -1));
-	rename_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
+	rename_button = new wxButton(this, PALETTE_ZONE_RENAME, "Rename", wxDefaultPosition, wxSize(60, -1));
+	rename_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 	rename_button->SetFont(Theme::GetFont(9, false));
 
-	remove_button = newd wxButton(this, PALETTE_ZONE_REMOVE, "Remove", wxDefaultPosition, wxSize(60, -1));
-	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+	remove_button = new wxButton(this, PALETTE_ZONE_REMOVE, "Remove", wxDefaultPosition, wxSize(60, -1));
+	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	remove_button->SetFont(Theme::GetFont(9, false));
 
-	buttons->Add(add_button, 1, wxEXPAND | wxRIGHT, 2);
-	buttons->Add(rename_button, 1, wxEXPAND | wxRIGHT, 2);
-	buttons->Add(remove_button, 1, wxEXPAND);
-	sidesizer->Add(buttons, 0, wxEXPAND | wxALL, 5);
+	buttons->Add(add_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
+	buttons->Add(rename_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
+	buttons->Add(remove_button, wxSizerFlags(1).Expand());
+	sidesizer->Add(buttons, wxSizerFlags().Expand().Border(wxALL, 5));
 
 	SetSizer(sidesizer);
 
@@ -395,15 +396,15 @@ void ZonePalettePanel::OnZoneContextMenu(int /*index*/, const TableRow* row, con
 	if (row && !row->key.empty()) {
 		const auto ref = selectedRow();
 		if (ref.zone != 0) {
-			menu.Append(PALETTE_ZONE_GOTO, "Go to area (double-click)")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MAP_PIN, wxSize(16, 16)));
+			menu.Append(PALETTE_ZONE_GOTO, "Go to area (double-click)")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MAP_PIN));
 			menu.AppendSeparator();
-			menu.Append(PALETTE_ZONE_RENAME, "Rename...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
-			menu.Append(PALETTE_ZONE_REMOVE, "Remove...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+			menu.Append(PALETTE_ZONE_RENAME, "Rename...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
+			menu.Append(PALETTE_ZONE_REMOVE, "Remove...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 			menu.AppendSeparator();
 		}
 	}
 
-	menu.Append(PALETTE_ZONE_ADD, "Add zone...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	menu.Append(PALETTE_ZONE_ADD, "Add zone...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	PopupMenu(&menu);
 }
 
@@ -479,7 +480,7 @@ void ZonePalettePanel::OnClickRemove(wxCommandEvent& /*event*/) {
 		return;
 	}
 	const wxString question = wxstr(std::format("Remove zone \"{}\" (id {}) and clear it from every tile?\nThis cannot be undone.", zone->name, id));
-	if (wxMessageBox(question, "Remove Zone", wxYES_NO | wxICON_WARNING, this) != wxYES) {
+	if (DialogUtil::PopupDialog(this, "Remove Zone", question, wxYES_NO | wxICON_WARNING) != wxID_YES) {
 		return;
 	}
 	if (Editor* editor = g_gui.GetCurrentEditor()) {

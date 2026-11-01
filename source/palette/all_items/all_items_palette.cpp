@@ -33,7 +33,7 @@ AllItemsPalette::AllItemsPalette(wxWindow* parent, wxWindowID id) :
 	const int loadedSpacing = g_settings.getInteger(Config::PALETTE_GRID_SPACING);
 	grid_spacing = (loadedSpacing == 2 || loadedSpacing == 6) ? loadedSpacing : 4;
 
-	main_sizer = newd wxBoxSizer(wxVERTICAL);
+	main_sizer = new wxBoxSizer(wxVERTICAL);
 
 	TilesetGridToolbar::Actions actions;
 	actions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
@@ -84,11 +84,11 @@ AllItemsPalette::AllItemsPalette(wxWindow* parent, wxWindowID id) :
 	};
 	actions.filter_focus_lost = []() {};
 
-	toolbar = newd TilesetGridToolbar(this, std::move(actions), TilesetGridToolbar::Part_Standard);
+	toolbar = new TilesetGridToolbar(this, std::move(actions), TilesetGridToolbar::Part_Standard);
 	toolbar->SetState(show_labels, tile_size, has_sort, sort_key, sort_dir, false, is_list_mode);
 	toolbar->SetIndicatorState(indicator_dogear);
 	toolbar->SetGridSpacing(grid_spacing);
-	main_sizer->Add(toolbar, 0, wxEXPAND | wxBOTTOM, 2);
+	main_sizer->Add(toolbar, wxSizerFlags().Expand().Border(wxBOTTOM, 2));
 
 	SetSizer(main_sizer);
 }
@@ -134,7 +134,7 @@ void AllItemsPalette::InvalidateContents() {
 void AllItemsPalette::LoadCurrentContents() {
 	EnsureBrushesLoaded();
 	if (!grid) {
-		grid = newd VirtualBrushGrid(this, &tileset_def, tile_size);
+		grid = new VirtualBrushGrid(this, &tileset_def, tile_size);
 		if (is_list_mode) {
 			grid->SetDisplayMode(TilesetDisplayMode::List);
 		}
@@ -147,7 +147,7 @@ void AllItemsPalette::LoadCurrentContents() {
 		if (!filter_query.empty()) {
 			grid->SetFilterQuery(filter_query);
 		}
-		main_sizer->Add(grid, 1, wxEXPAND);
+		main_sizer->Add(grid, wxSizerFlags(1).Expand());
 		Layout();
 	}
 }

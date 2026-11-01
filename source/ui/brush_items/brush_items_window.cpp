@@ -340,14 +340,14 @@ void BrushItemsWindow::BuildUI() {
 	                       TilesetGridToolbar::Part_Spacing;
 	m_toolbar = new TilesetGridToolbar(this, std::move(actions), parts);
 	m_toolbar->SetState(m_grid->GetShowLabels(), m_grid->GetIconSize(), m_grid->HasSort(), m_grid->GetSortKey(), m_grid->GetSortDirection(), false);
-	mainSizer->Add(m_toolbar, 0, wxEXPAND);
+	mainSizer->Add(m_toolbar, wxSizerFlags().Expand());
 
 	// Empty state banner
 	m_emptyLabel = new wxStaticText(this, wxID_ANY, "Select a brush to view its items.", wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL);
 	m_emptyLabel->SetForegroundColour(Theme::Get(Theme::Role::TextSubtle));
-	mainSizer->Add(m_emptyLabel, 0, wxEXPAND | wxTOP | wxBOTTOM, 24);
+	mainSizer->Add(m_emptyLabel, wxSizerFlags().Expand().Border(wxTOP | wxBOTTOM, 24));
 
-	mainSizer->Add(m_grid, 1, wxEXPAND);
+	mainSizer->Add(m_grid, wxSizerFlags(1).Expand());
 
 	// Bottom tile square with brush name
 	m_bottomCard = new BrushBottomCardWidget(this);
@@ -355,7 +355,7 @@ void BrushItemsWindow::BuildUI() {
 		m_bottomCard->SetIndicatorDogEar(m_grid->GetBrushIndicators());
 	}
 	m_bottomCard->Show(false);
-	mainSizer->Add(m_bottomCard, 0, wxEXPAND);
+	mainSizer->Add(m_bottomCard, wxSizerFlags().Expand());
 
 	SetSizer(mainSizer);
 }
@@ -372,7 +372,7 @@ void BrushItemsWindow::SetActiveBrush(const Brush* brush) {
 			m_bottomCard->Show(false);
 		}
 		if (m_emptyLabel) {
-			m_emptyLabel->SetLabel("Select a brush to view its items.");
+			m_emptyLabel->SetLabelText("Select a brush to view its items.");
 			m_emptyLabel->Show(true);
 		}
 		if (m_grid) m_grid->Show(false);
@@ -438,7 +438,7 @@ void BrushItemsWindow::SetActiveBrush(const Brush* brush) {
 	}
 
 	if (m_emptyLabel) {
-		m_emptyLabel->SetLabel("No items associated with this brush.");
+		m_emptyLabel->SetLabelText("No items associated with this brush.");
 		m_emptyLabel->Show(count == 0);
 	}
 	if (m_grid) {

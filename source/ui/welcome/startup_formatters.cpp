@@ -1,4 +1,5 @@
 #include "ui/welcome/startup_formatters.h"
+#include <format>
 
 #include <filesystem>
 
@@ -12,7 +13,7 @@ wxString fallbackValue(const wxString& value) {
 }
 
 wxString formatUnsigned(uint32_t value) {
-	return value == 0 ? wxString("-") : wxString::Format("%u", value);
+	return value == 0 ? wxString("-") : wxstr(std::format("{}", value));
 }
 
 wxString formatMapDescription(const OTBMStartupPeekResult* info) {
@@ -40,7 +41,7 @@ wxString formatMapClientVersion(const OTBMStartupPeekResult* info) {
 		return client_name;
 	}
 
-	return matched_client->getVersion() > 0 ? wxString::Format("%u", matched_client->getVersion()) : wxString("-");
+	return matched_client->getVersion() > 0 ? wxstr(std::format("{}", matched_client->getVersion())) : wxString("-");
 }
 
 wxString formatMapDimensions(const OTBMStartupPeekResult* info) {
@@ -48,7 +49,7 @@ wxString formatMapDimensions(const OTBMStartupPeekResult* info) {
 		return "-";
 	}
 
-	return wxString::Format("%u x %u tiles", static_cast<unsigned>(info->width), static_cast<unsigned>(info->height));
+	return wxstr(std::format("{} x {} tiles", info->width, info->height));
 }
 
 wxString formatOtbmVersions(ClientVersion* client) {
@@ -61,7 +62,7 @@ wxString formatOtbmVersions(ClientVersion* client) {
 		if (!value.empty()) {
 			value += ", ";
 		}
-		value += wxString::Format("%d", static_cast<int>(map_version) + 1);
+		value += wxstr(std::format("{}", static_cast<int>(map_version) + 1));
 	}
 	return value.empty() ? wxString("-") : value;
 }
@@ -122,7 +123,7 @@ std::vector<StartupInfoField> BuildStartupMapFields(const OTBMStartupPeekResult*
 		{ "Map Name", fallbackValue(info->map_name), std::string(ICON_FILE), wxNullColour, false },
 		{ "Client Version", formatMapClientVersion(info), std::string(ICON_CIRCLE_INFO), wxNullColour, false },
 		{ "Dimensions", formatMapDimensions(info), std::string(ICON_LIST), wxNullColour, true },
-		{ "OTBM Version", info->otbm_version > 0 ? wxString::Format("%d", info->otbm_version) : wxString("-"), std::string(ICON_LIST), wxNullColour, false },
+		{ "OTBM Version", info->otbm_version > 0 ? wxstr(std::format("{}", info->otbm_version)) : wxString("-"), std::string(ICON_LIST), wxNullColour, false },
 		{ "Items Major Version", formatUnsigned(info->items_major_version), std::string(ICON_LIST), wxNullColour, false },
 		{ "Items Minor Version", formatUnsigned(info->items_minor_version), std::string(ICON_LIST), wxNullColour, true },
 		{ "House File", fallbackValue(info->house_xml_file), std::string(ICON_FILE), wxNullColour, false },
@@ -161,13 +162,13 @@ std::vector<StartupInfoField> BuildStartupClientFields(ClientVersion* client) {
 
 	return {
 		{ "Client Name", wxstr(client->getName()), std::string(ICON_HARD_DRIVE), wxNullColour, false },
-		{ "Client Version", wxString::Format("%u", client->getVersion()), std::string(ICON_CIRCLE_INFO), wxNullColour, false },
+		{ "Client Version", wxstr(std::format("{}", client->getVersion())), std::string(ICON_CIRCLE_INFO), wxNullColour, false },
 		{ "Data Directory", wxstr(client->getDataDirectory()), std::string(ICON_FOLDER), wxNullColour, true },
 		{ "OTBM Version", formatOtbmVersions(client), std::string(ICON_LIST), wxNullColour, false },
-		{ "Items Major Version", wxString::Format("%u", client->getOtbMajor()), std::string(ICON_LIST), wxNullColour, false },
-		{ "Items Minor Version", wxString::Format("%u", client->getOtbId()), std::string(ICON_LIST), wxNullColour, true },
-		{ "DAT Signature", wxString::Format("%X", client->getDatSignature()), std::string(ICON_FILE), wxNullColour, false },
-		{ "SPR Signature", wxString::Format("%X", client->getSprSignature()), std::string(ICON_FILE), wxNullColour, false },
+		{ "Items Major Version", wxstr(std::format("{}", client->getOtbMajor())), std::string(ICON_LIST), wxNullColour, false },
+		{ "Items Minor Version", wxstr(std::format("{}", client->getOtbId())), std::string(ICON_LIST), wxNullColour, true },
+		{ "DAT Signature", wxstr(std::format("{:X}", client->getDatSignature())), std::string(ICON_FILE), wxNullColour, false },
+		{ "SPR Signature", wxstr(std::format("{:X}", client->getSprSignature())), std::string(ICON_FILE), wxNullColour, false },
 		{ "Description", formatClientDescription(client), std::string(ICON_FILE_LINES), wxNullColour, true },
 		{ "Configuration Type", formatClientConfigType(client), std::string(ICON_GEAR), wxNullColour, false },
 	};

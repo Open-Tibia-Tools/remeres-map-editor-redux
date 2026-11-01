@@ -175,7 +175,7 @@ PaletteWindow* PaletteManager::CreatePalette() {
 		return nullptr;
 	}
 
-	auto* palette = newd PaletteWindow(g_gui.root, g_materials.paletteCatalog());
+	auto* palette = new PaletteWindow(g_gui.root, g_materials.paletteCatalog());
 
 	// The counter alone is not enough: a restored perspective can already own a
 	// pane with the generated name (LoadPaneInfo renames panes to the saved

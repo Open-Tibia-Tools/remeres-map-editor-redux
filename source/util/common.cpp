@@ -73,11 +73,7 @@ double s2f(const std::string& s) {
 	}
 }
 
-wxString i2ws(const int _i) {
-	wxString str;
-	str << _i;
-	return str;
-}
+
 
 wxString f2ws(const double _d) {
 	wxString str;
@@ -160,13 +156,11 @@ int random(int high) {
 }
 
 std::wstring string2wstring(const std::string& utf8string) {
-	wxString s(utf8string.c_str(), wxConvUTF8);
-	return s.ToStdWstring();
+	return wxstr(utf8string).ToStdWstring();
 }
 
 std::string wstring2string(const std::wstring& widestring) {
-	wxString s(widestring.c_str());
-	return std::string(s.ToUTF8());
+	return wxString(widestring).ToStdString();
 }
 
 bool posFromClipboard(Position& position, const int mapWidth /* = MAP_MAX_WIDTH */, const int mapHeight /* = MAP_MAX_HEIGHT */) {

@@ -11,7 +11,7 @@
 #include "live/live_client.h"
 #include "live/live_action.h"
 #include "net/net_connection.h"
-#include "app/definitions.h" // For ASSERT/newd
+#include "app/definitions.h" // For ASSERT/new
 
 LiveManager::LiveManager(Editor& editor) :
 	editor(editor),

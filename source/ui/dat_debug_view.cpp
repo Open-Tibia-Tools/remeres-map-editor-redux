@@ -1,3 +1,4 @@
+#include "palette/controls/palette_search_ctrl.h"
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -18,6 +19,7 @@
 #include "app/main.h"
 
 #include "ui/dat_debug_view.h"
+#include <format>
 
 #include "rendering/core/graphics.h"
 #include "ui/icons/sprite_icon_service.h"
@@ -70,7 +72,7 @@ void DatDebugViewListBox::OnDrawItem(wxDC& dc, const wxRect& rect, size_t n) con
 		dc.SetTextForeground(wxColor(0x00, 0x00, 0x00));
 	}
 
-	dc.DrawText(wxString() << n, rect.GetX() + 40, rect.GetY() + 6);
+	dc.DrawText(wxstr(std::format("{}", n)), rect.GetX() + 40, rect.GetY() + 6);
 }
 
 wxCoord DatDebugViewListBox::OnMeasureItem(size_t n) const {
@@ -82,15 +84,16 @@ wxCoord DatDebugViewListBox::OnMeasureItem(size_t n) const {
 
 DatDebugView::DatDebugView(wxWindow* parent) :
 	wxPanel(parent) {
-	wxSizer* sizer = newd wxBoxSizer(wxVERTICAL);
+	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 
-	search_field = newd wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
+	search_field = new PaletteSearchCtrl(this, wxID_ANY);
+	search_field->SetDescriptiveText("Filter sprites by ID...");
 	search_field->SetFocus();
-	sizer->Add(search_field, 0, wxEXPAND, 2);
+	sizer->Add(search_field, wxSizerFlags().Expand());
 
-	item_list = newd DatDebugViewListBox(this, wxID_ANY);
-	item_list->SetMinSize(wxSize(470, 400));
-	sizer->Add(item_list, 1, wxEXPAND | wxALL, 2);
+	item_list = new DatDebugViewListBox(this, wxID_ANY);
+	item_list->SetMinSize(FromDIP(wxSize(470, 400)));
+	sizer->Add(item_list, wxSizerFlags(1).Expand().Border(wxALL, 2));
 
 	SetSizerAndFit(sizer);
 	Centre(wxBOTH);

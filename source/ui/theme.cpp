@@ -12,6 +12,32 @@ Theme::Type Theme::current_type = Theme::Type::System;
 
 void Theme::setType(Theme::Type type) {
 	current_type = type;
+
+	if (wxTheApp) {
+#if wxCHECK_VERSION(3, 3, 0)
+		switch (type) {
+			case Type::Dark:
+				wxTheApp->SetAppearance(wxApp::Appearance::Dark);
+#ifdef __WXMSW__
+				wxTheApp->MSWEnableDarkMode(wxApp::DarkMode_Always);
+#endif
+				break;
+			case Type::Light:
+				wxTheApp->SetAppearance(wxApp::Appearance::Light);
+				break;
+			case Type::System:
+			default:
+				wxTheApp->SetAppearance(wxApp::Appearance::System);
+#ifdef __WXMSW__
+				wxTheApp->MSWEnableDarkMode(wxApp::DarkMode_Auto);
+#endif
+				break;
+		}
+#endif
+		if (wxWindow* top = wxTheApp->GetTopWindow()) {
+			top->Refresh();
+		}
+	}
 }
 
 Theme::Type Theme::getType() {

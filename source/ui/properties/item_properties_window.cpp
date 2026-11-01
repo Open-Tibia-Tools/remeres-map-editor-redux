@@ -39,7 +39,7 @@ ItemPropertiesWindow::ItemPropertiesWindow(wxWindow* win_parent, const Map* map,
 	Bind(wxEVT_BUTTON, &ItemPropertiesWindow::OnClickOK, this, wxID_OK);
 	Bind(wxEVT_BUTTON, &ItemPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
 
-	wxSizer* topsizer = newd wxBoxSizer(wxVERTICAL);
+	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
 
 	wxString description;
 	if (dynamic_cast<Door*>(edit_item)) {
@@ -51,8 +51,8 @@ ItemPropertiesWindow::ItemPropertiesWindow(wxWindow* win_parent, const Map* map,
 		description = "Item Properties";
 	}
 
-	wxStaticBoxSizer* boxsizer = newd wxStaticBoxSizer(wxVERTICAL, this, description);
-	wxFlexGridSizer* subsizer = newd wxFlexGridSizer(2, 10, 10);
+	wxStaticBoxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, description);
+	wxFlexGridSizer* subsizer = new wxFlexGridSizer(2, 10, 10);
 	subsizer->AddGrowableCol(1);
 
 	wxWindow* static_box = boxsizer->GetStaticBox();
@@ -65,12 +65,12 @@ ItemPropertiesWindow::ItemPropertiesWindow(wxWindow* win_parent, const Map* map,
 	boxsizer->Add(subsizer, wxSizerFlags(1).Expand());
 	topsizer->Add(boxsizer, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT, 20));
 
-	wxSizer* subsizer_btn = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(this, wxID_OK, "OK");
-	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	wxSizer* subsizer_btn = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
+	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	subsizer_btn->Add(okBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
-	wxButton* cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
-	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
+	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	subsizer_btn->Add(cancelBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
 	topsizer->Add(subsizer_btn, wxSizerFlags(0).Center().Border(wxLEFT | wxRIGHT, 20));
 
@@ -78,22 +78,22 @@ ItemPropertiesWindow::ItemPropertiesWindow(wxWindow* win_parent, const Map* map,
 	Centre(wxBOTH);
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 
 void ItemPropertiesWindow::createHeaderFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
 	if (edit_item->getClientID() != 0 && edit_item->getClientID() != edit_item->getID()) {
-		subsizer->Add(newd wxStaticText(parent, wxID_ANY, std::format("SID: {}   CID: {}", edit_item->getID(), edit_item->getClientID())));
+		subsizer->Add(new wxStaticText(parent, wxID_ANY, std::format("SID: {}   CID: {}", edit_item->getID(), edit_item->getClientID())));
 	} else {
-		subsizer->Add(newd wxStaticText(parent, wxID_ANY, std::format("ID: {}", edit_item->getID())));
+		subsizer->Add(new wxStaticText(parent, wxID_ANY, std::format("ID: {}", edit_item->getID())));
 	}
-	subsizer->Add(newd wxStaticText(parent, wxID_ANY, "\"" + wxstr(edit_item->getName()) + "\""));
+	subsizer->Add(new wxStaticText(parent, wxID_ANY, "\"" + wxstr(edit_item->getName()) + "\""));
 }
 
 
 void ItemPropertiesWindow::createGenericFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
-	subsizer->Add(newd wxStaticText(parent, wxID_ANY, (edit_item->isCharged() ? "Charges" : "Count")));
+	subsizer->Add(new wxStaticText(parent, wxID_ANY, (edit_item->isCharged() ? "Charges" : "Count")));
 	int max_count = 100;
 	if (edit_item->isClientCharged()) {
 		max_count = 250;
@@ -101,38 +101,38 @@ void ItemPropertiesWindow::createGenericFields(wxFlexGridSizer* subsizer, wxWind
 	if (edit_item->isExtraCharged()) {
 		max_count = 65500;
 	}
-	count_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(edit_item->getCount()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, max_count, edit_item->getCount());
+	count_field = new wxSpinCtrl(parent, wxID_ANY, std::to_string(edit_item->getCount()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, max_count, edit_item->getCount());
 	if (!edit_item->isStackable() && !edit_item->isCharged()) {
 		count_field->Enable(false);
 	}
 	subsizer->Add(count_field, wxSizerFlags(1).Expand());
 
-	subsizer->Add(newd wxStaticText(parent, wxID_ANY, "Action ID"));
-	action_id_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
+	subsizer->Add(new wxStaticText(parent, wxID_ANY, "Action ID"));
+	action_id_field = new wxSpinCtrl(parent, wxID_ANY, std::to_string(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
 	subsizer->Add(action_id_field, wxSizerFlags(1).Expand());
 
-	subsizer->Add(newd wxStaticText(parent, wxID_ANY, "Unique ID"));
-	unique_id_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(edit_item->getUniqueID()), wxDefaultPosition, FROM_DIP(this, wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
+	subsizer->Add(new wxStaticText(parent, wxID_ANY, "Unique ID"));
+	unique_id_field = new wxSpinCtrl(parent, wxID_ANY, std::to_string(edit_item->getUniqueID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
 	subsizer->Add(unique_id_field, wxSizerFlags(1).Expand());
 }
 
 void ItemPropertiesWindow::createClassificationFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
 	// item classification (12.81+)
 	if (supportsClassificationTiers() && (edit_item->getClassification() > 0 || edit_item->isWeapon() || edit_item->isWearableEquipment())) {
-		subsizer->Add(newd wxStaticText(parent, wxID_ANY, "Classification"));
-		subsizer->Add(newd wxStaticText(parent, wxID_ANY, i2ws(edit_item->getClassification())));
+		subsizer->Add(new wxStaticText(parent, wxID_ANY, "Classification"));
+		subsizer->Add(new wxStaticText(parent, wxID_ANY, std::to_string(edit_item->getClassification())));
 
 		// item iter
-		subsizer->Add(newd wxStaticText(parent, wxID_ANY, "Tier"));
-		tier_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(edit_item->getTier()), wxDefaultPosition, FROM_DIP(this, wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFF, edit_item->getTier());
+		subsizer->Add(new wxStaticText(parent, wxID_ANY, "Tier"));
+		tier_field = new wxSpinCtrl(parent, wxID_ANY, std::to_string(edit_item->getTier()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFF, edit_item->getTier());
 		subsizer->Add(tier_field, wxSizerFlags(1).Expand());
 	}
 }
 
 void ItemPropertiesWindow::createDoorFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
 	if (Door* door = dynamic_cast<Door*>(edit_item)) {
-		subsizer->Add(newd wxStaticText(parent, wxID_ANY, "Door ID"));
-		door_id_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(door->getDoorID()), wxDefaultPosition, FROM_DIP(this, wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFF, door->getDoorID());
+		subsizer->Add(new wxStaticText(parent, wxID_ANY, "Door ID"));
+		door_id_field = new wxSpinCtrl(parent, wxID_ANY, std::to_string(door->getDoorID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFF, door->getDoorID());
 		if (!edit_tile || !edit_tile->isHouseTile() || !door->isRealDoor()) {
 			door_id_field->Disable();
 		}
@@ -142,16 +142,16 @@ void ItemPropertiesWindow::createDoorFields(wxFlexGridSizer* subsizer, wxWindow*
 
 void ItemPropertiesWindow::createTeleportFields(wxFlexGridSizer* subsizer, wxWindow* parent) {
 	if (Teleport* teleport = dynamic_cast<Teleport*>(edit_item)) {
-		subsizer->Add(newd wxStaticText(parent, wxID_ANY, "Destination"));
+		subsizer->Add(new wxStaticText(parent, wxID_ANY, "Destination"));
 
-		wxSizer* possizer = newd wxBoxSizer(wxHORIZONTAL);
-		x_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(teleport->getX()), wxDefaultPosition, FROM_DIP(this, wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, edit_map->getWidth(), teleport->getX());
+		wxSizer* possizer = new wxBoxSizer(wxHORIZONTAL);
+		x_field = new wxSpinCtrl(parent, wxID_ANY, std::to_string(teleport->getX()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, edit_map->getWidth(), teleport->getX());
 		x_field->Bind(wxEVT_CHAR, &ItemPropertiesWindow::OnChar, this);
 		possizer->Add(x_field, wxSizerFlags(3).Expand());
-		y_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(teleport->getY()), wxDefaultPosition, FROM_DIP(this, wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, edit_map->getHeight(), teleport->getY());
+		y_field = new wxSpinCtrl(parent, wxID_ANY, std::to_string(teleport->getY()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, edit_map->getHeight(), teleport->getY());
 		y_field->Bind(wxEVT_CHAR, &ItemPropertiesWindow::OnChar, this);
 		possizer->Add(y_field, wxSizerFlags(3).Expand());
-		z_field = newd wxSpinCtrl(parent, wxID_ANY, i2ws(teleport->getZ()), wxDefaultPosition, FROM_DIP(this, wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, MAP_MAX_LAYER, teleport->getZ());
+		z_field = new wxSpinCtrl(parent, wxID_ANY, std::to_string(teleport->getZ()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, MAP_MAX_LAYER, teleport->getZ());
 		z_field->Bind(wxEVT_CHAR, &ItemPropertiesWindow::OnChar, this);
 		possizer->Add(z_field, wxSizerFlags(2).Expand());
 

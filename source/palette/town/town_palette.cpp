@@ -43,16 +43,16 @@
 TownPalettePanel::TownPalettePanel(wxWindow* parent, wxWindowID id) :
 	PalettePanel(parent, id),
 	map(nullptr) {
-	auto* sidesizer = newd wxBoxSizer(wxVERTICAL);
+	auto* sidesizer = new wxBoxSizer(wxVERTICAL);
 
 	// Search control
-	search_ctrl = newd PaletteSearchCtrl(this, PALETTE_TOWN_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+	search_ctrl = new PaletteSearchCtrl(this, PALETTE_TOWN_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 	search_ctrl->SetDescriptiveText("Search towns...");
 	search_ctrl->SetFont(Theme::GetFont(9, false));
-	sidesizer->Add(search_ctrl, 0, wxEXPAND | wxALL, 5);
+	sidesizer->Add(search_ctrl, wxSizerFlags().Expand().Border(wxALL, 5));
 
 	// Table control (ID, Town, Houses)
-	town_table = newd NanoVGTableCtrl(this, PALETTE_TOWN_LISTBOX);
+	town_table = new NanoVGTableCtrl(this, PALETTE_TOWN_LISTBOX);
 	town_table->SetRowHeight(36);
 	std::vector<TableColumn> cols = {
 		{ "id", "ID", 35, NVG_ALIGN_RIGHT, true },
@@ -74,33 +74,33 @@ TownPalettePanel::TownPalettePanel(wxWindow* parent, wxWindowID id) :
 		OnTownContextMenu(idx, row, pos);
 	});
 
-	sidesizer->Add(town_table, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
+	sidesizer->Add(town_table, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT, 5));
 
 	// Buttons (2x2 grid)
-	auto* button_grid = newd wxGridSizer(2, 2, 4, 4);
+	auto* button_grid = new wxGridSizer(2, 2, 4, 4);
 
-	add_town_button = newd wxButton(this, PALETTE_TOWN_ADD, "Add", wxDefaultPosition, wxDefaultSize);
-	add_town_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	add_town_button = new wxButton(this, PALETTE_TOWN_ADD, "Add", wxDefaultPosition, wxDefaultSize);
+	add_town_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	add_town_button->SetFont(Theme::GetFont(9, false));
-	button_grid->Add(add_town_button, 1, wxEXPAND);
+	button_grid->Add(add_town_button, wxSizerFlags(1).Expand());
 
-	edit_town_button = newd wxButton(this, PALETTE_TOWN_EDIT, "Edit", wxDefaultPosition, wxDefaultSize);
-	edit_town_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
+	edit_town_button = new wxButton(this, PALETTE_TOWN_EDIT, "Edit", wxDefaultPosition, wxDefaultSize);
+	edit_town_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 	edit_town_button->SetFont(Theme::GetFont(9, false));
-	button_grid->Add(edit_town_button, 1, wxEXPAND);
+	button_grid->Add(edit_town_button, wxSizerFlags(1).Expand());
 
-	remove_town_button = newd wxButton(this, PALETTE_TOWN_REMOVE, "Remove", wxDefaultPosition, wxDefaultSize);
-	remove_town_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+	remove_town_button = new wxButton(this, PALETTE_TOWN_REMOVE, "Remove", wxDefaultPosition, wxDefaultSize);
+	remove_town_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	remove_town_button->SetFont(Theme::GetFont(9, false));
-	button_grid->Add(remove_town_button, 1, wxEXPAND);
+	button_grid->Add(remove_town_button, wxSizerFlags(1).Expand());
 
-	change_temple_button = newd wxButton(this, PALETTE_TOWN_CHANGE_TEMPLE, "Set Temple", wxDefaultPosition, wxDefaultSize);
-	change_temple_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CROSSHAIRS, wxSize(16, 16)));
+	change_temple_button = new wxButton(this, PALETTE_TOWN_CHANGE_TEMPLE, "Set Temple", wxDefaultPosition, wxDefaultSize);
+	change_temple_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CROSSHAIRS));
 	change_temple_button->SetFont(Theme::GetFont(9, false));
 	change_temple_button->SetToolTip("Click to place temple position on the map");
-	button_grid->Add(change_temple_button, 1, wxEXPAND);
+	button_grid->Add(change_temple_button, wxSizerFlags(1).Expand());
 
-	sidesizer->Add(button_grid, 0, wxEXPAND | wxALL, 5);
+	sidesizer->Add(button_grid, wxSizerFlags().Expand().Border(wxALL, 5));
 	SetSizer(sidesizer);
 
 	Bind(wxEVT_TEXT, &TownPalettePanel::OnSearchChange, this, PALETTE_TOWN_SEARCH);
@@ -325,23 +325,23 @@ void TownPalettePanel::OnTownContextMenu(int /*index*/, const TableRow* row, con
 		selected_town_id_ = town->getID();
 
 		auto* goto_item = menu.Append(PALETTE_TOWN_GOTO_TEMPLE, "Go to Temple");
-		goto_item->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_LOCATION_ARROW, wxSize(16, 16)));
+		goto_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_LOCATION_ARROW));
 
 		auto* temple_item = menu.Append(PALETTE_TOWN_CHANGE_TEMPLE, "Change Temple Position");
-		temple_item->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CROSSHAIRS, wxSize(16, 16)));
+		temple_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CROSSHAIRS));
 
 		auto* edit_item = menu.Append(PALETTE_TOWN_EDIT, "Edit Town...");
-		edit_item->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
+		edit_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 
 		menu.AppendSeparator();
 
 		auto* remove_item = menu.Append(PALETTE_TOWN_REMOVE, "Remove Town");
-		remove_item->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+		remove_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 		menu.AppendSeparator();
 	}
 
 	auto* add_item = menu.Append(PALETTE_TOWN_ADD, "Add Town...");
-	add_item->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	add_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 
 	PopupMenu(&menu, pos);
 }
@@ -503,13 +503,13 @@ void TownPalettePanel::OnClickRemoveTown(wxCommandEvent& /*event*/) {
 			map->houses.removeHouse(h);
 		}
 	} else {
-		const int ret = wxMessageBox(
-			wxString::Format("Are you sure you want to remove town '%s' (ID: %u)?", wxstr(town->getName()), town->getID()),
+		const int ret = DialogUtil::PopupDialog(
+			this,
 			"Confirm Removal",
-			wxYES_NO | wxICON_QUESTION | wxCENTER,
-			this
+			wxstr(std::format("Are you sure you want to remove town '{}' (ID: {})?", town->getName(), town->getID())),
+			wxYES_NO | wxICON_QUESTION | wxCENTER
 		);
-		if (ret != wxYES) {
+		if (ret != wxID_YES) {
 			return;
 		}
 	}

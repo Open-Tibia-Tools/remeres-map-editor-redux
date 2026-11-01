@@ -17,7 +17,7 @@
 bool MenuBarLoader::Load(const FileName& path, wxMenuBar* menubar, MainMenuBar* mb, std::unordered_map<MenuBar::ActionID, std::list<wxMenuItem*>>& items, const std::unordered_map<std::string, std::unique_ptr<MenuBar::Action>>& actions, RecentFilesManager& recentFilesManager, std::vector<std::string>& warnings, wxString& error) {
 	// Open the XML file
 	pugi::xml_document doc;
-	pugi::xml_parse_result result = doc.load_file(path.GetFullPath().mb_str());
+	pugi::xml_parse_result result = doc.load_file(path.GetFullPath().ToStdString().c_str());
 	if (!result) {
 		error = "Could not open " + path.GetFullName() + " (file not found or syntax error)";
 		return false;
@@ -67,7 +67,7 @@ wxObject* MenuBarLoader::LoadItem(pugi::xml_node node, wxMenu* parent, MainMenuB
 		std::string name = attribute.as_string();
 		std::replace(name.begin(), name.end(), '$', '&');
 
-		wxMenu* menu = newd wxMenu;
+		wxMenu* menu = new wxMenu;
 		if ((attribute = node.attribute("special")) && std::string(attribute.as_string()) == "RECENT_FILES") {
 			recentFilesManager.UseMenu(menu);
 		} else if ((attribute = node.attribute("special")) && std::string(attribute.as_string()) == "PALETTE") {
@@ -141,7 +141,7 @@ wxObject* MenuBarLoader::LoadItem(pugi::xml_node node, wxMenu* parent, MainMenuB
 			act.kind // Kind of item
 		);
 		if (!act.icon.empty()) {
-			tmp->SetBitmap(IMAGE_MANAGER.GetBitmap(act.icon, wxSize(16, 16)));
+			tmp->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(act.icon));
 		}
 		items[MenuBar::ActionID(act.id)].push_back(tmp);
 		return tmp;
