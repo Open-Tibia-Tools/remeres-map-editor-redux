@@ -464,7 +464,7 @@ namespace LuaAPI {
 				return result;
 			}
 			sessionId = g_nextSessionId++;
-			while (g_streamSessions.find(sessionId) != g_streamSessions.end()) {
+			while (g_streamSessions.contains(sessionId)) {
 				sessionId = g_nextSessionId++;
 			}
 			g_streamSessions[sessionId] = session;

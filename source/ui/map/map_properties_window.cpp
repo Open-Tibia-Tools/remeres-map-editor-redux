@@ -209,7 +209,7 @@ void MapPropertiesWindow::UpdateProtocolList() {
 		} else if (map_version >= MAP_OTBM_4) {
 			protocols = ClientVersion::getAllForOTBMVersion(MAP_OTBM_3);
 			for (auto* c : ClientVersion::getAllForOTBMVersion(MAP_OTBM_4)) {
-				if (std::find(protocols.begin(), protocols.end(), c) == protocols.end()) {
+				if (std::ranges::find(protocols, c) == protocols.end()) {
 					protocols.push_back(c);
 				}
 			}
@@ -222,7 +222,7 @@ void MapPropertiesWindow::UpdateProtocolList() {
 	// never unexpectedly mutates the loaded client version.
 	if (!client.empty()) {
 		if (ClientVersion* cur = ClientVersion::get(nstr(client))) {
-			if (std::find(protocols.begin(), protocols.end(), cur) == protocols.end()) {
+			if (std::ranges::find(protocols, cur) == protocols.end()) {
 				protocols.push_back(cur);
 			}
 		}

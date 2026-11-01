@@ -142,7 +142,7 @@ void ReplaceToolWindow::InitializeWithIDs(const std::vector<uint16_t>& ids) {
 
 	// IDs are already sorted from std::set in MapMenuHandler, but sorting here ensures consistency
 	std::vector<uint16_t> sorted(ids);
-	std::sort(sorted.begin(), sorted.end());
+	std::ranges::sort(sorted);
 	sorted.erase(std::unique(sorted.begin(), sorted.end()), sorted.end());
 
 	std::vector<RuleGroup> rules;
@@ -516,7 +516,7 @@ void ReplaceToolWindow::OnRuleDeleted(const std::string& name) {
 
 void ReplaceToolWindow::OnRuleRenamed(const std::string& oldName, const std::string& newName) {
 	std::vector<std::string> existing = RuleManager::Get().GetAvailableRuleSets();
-	if (std::find(existing.begin(), existing.end(), newName) != existing.end()) {
+	if (std::ranges::find(existing, newName) != existing.end()) {
 		wxMessageBox("A rule set with this name already exists.", "Rename Error", wxOK | wxICON_ERROR);
 		return;
 	}
@@ -600,7 +600,7 @@ bool ReplaceToolWindow::SaveRulesAsNewRuleSet(const wxString& name) {
 	}
 
 	const std::vector<std::string> existing = RuleManager::Get().GetAvailableRuleSets();
-	if (std::find(existing.begin(), existing.end(), name.ToStdString()) != existing.end()) {
+	if (std::ranges::find(existing, name.ToStdString()) != existing.end()) {
 		wxMessageBox("A rule set with this name already exists. Please choose a different name.", "Name Collision", wxOK | wxICON_ERROR, this);
 		return false;
 	}

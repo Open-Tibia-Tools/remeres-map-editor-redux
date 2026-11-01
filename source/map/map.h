@@ -68,13 +68,13 @@ public:
 
 	// Errors/warnings
 	bool hasWarnings() const {
-		return warnings.size() != 0;
+		return !warnings.empty();
 	}
 	const std::vector<std::string>& getWarnings() const {
 		return warnings;
 	}
 	bool hasError() const {
-		return error.size() != 0;
+		return !error.empty();
 	}
 	wxString getError() const {
 		return error;

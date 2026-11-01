@@ -169,7 +169,7 @@ std::optional<ServerItemId> WallBrush::findNextWallVariant(ServerItemId item_id)
 	do {
 		const auto& node = test_brush->items.getWallNode(static_cast<int>(*alignment));
 		for (const auto& wall : node.items) {
-			if (wall.id != 0 && std::find(candidates.begin(), candidates.end(), wall.id) == candidates.end()) {
+			if (wall.id != 0 && std::ranges::find(candidates, wall.id) == candidates.end()) {
 				candidates.push_back(wall.id);
 			}
 		}
@@ -180,7 +180,7 @@ std::optional<ServerItemId> WallBrush::findNextWallVariant(ServerItemId item_id)
 		return std::nullopt;
 	}
 
-	const auto current = std::find(candidates.begin(), candidates.end(), item_id);
+	const auto current = std::ranges::find(candidates, item_id);
 	if (current == candidates.end()) {
 		return candidates.front();
 	}

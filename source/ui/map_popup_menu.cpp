@@ -46,7 +46,7 @@ void MapPopupMenu::Update() {
 		Delete(m_item);
 	}
 
-	bool anything_selected = editor.selection.size() != 0;
+	bool anything_selected = !editor.selection.empty();
 
 	wxMenuItem* cutItem = Append(MAP_POPUP_MENU_CUT, "&Cut\tCTRL+X", "Cut out all selected items");
 	cutItem->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CUT, wxSize(16, 16)));

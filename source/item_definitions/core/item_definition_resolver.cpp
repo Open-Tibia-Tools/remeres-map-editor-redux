@@ -227,7 +227,7 @@ bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input,
 				continue;
 			}
 			// Skip entries that have XML overrides
-			if (fragments.xml.find(server_id) != fragments.xml.end()) {
+			if (fragments.xml.contains(server_id)) {
 				continue;
 			}
 			missingReport->otb_no_xml.push_back({

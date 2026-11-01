@@ -61,7 +61,7 @@ wxBitmap* EditorIconRegistry::GetBitmap(int id, SpriteSize size) {
 
 bool EditorIconRegistry::HasIcon(int id) {
 	auto& storage = GetStorage();
-	return storage.find(id) != storage.end();
+	return storage.contains(id);
 }
 
 void EditorIconRegistry::Clear() {

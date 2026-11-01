@@ -38,7 +38,7 @@ PaletteWindow* PaletteManager::NewPalette() {
 }
 
 void PaletteManager::ActivatePalette(PaletteWindow* p) {
-	auto it = std::find(palettes.begin(), palettes.end(), p);
+	auto it = std::ranges::find(palettes, p);
 	if (it != palettes.end()) {
 		palettes.erase(it);
 		palettes.push_front(p);

@@ -35,7 +35,7 @@ namespace LuaAPI {
 					h = { h[0], h[0], h[1], h[1], h[2], h[2] };
 				}
 
-				if (h.length() != 6 || !std::all_of(h.begin(), h.end(), [](unsigned char c) { return std::isxdigit(c) != 0; })) {
+				if (h.length() != 6 || !std::ranges::all_of(h, [](unsigned char c) { return std::isxdigit(c) != 0; })) {
 					return fallback;
 				}
 

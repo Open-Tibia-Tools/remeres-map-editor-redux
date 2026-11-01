@@ -317,7 +317,7 @@ Item* Tile::getItemAt(int index) const {
 		}
 		index--;
 	}
-	if (index >= 0 && index < (int)items.size()) {
+	if (index >= 0 && index < static_cast<int>(items.size())) {
 		return items.at(index).get();
 	}
 	return nullptr;

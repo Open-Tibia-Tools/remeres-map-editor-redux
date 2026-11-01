@@ -345,7 +345,7 @@ void LuaScriptManager::collectMapOverlayCommands(const MapViewInfo& view, std::v
 
 	// Sort overlays by order (ascending) then by id
 	std::vector<MapOverlay> sorted = mapOverlays;
-	std::sort(sorted.begin(), sorted.end(), [](const MapOverlay& a, const MapOverlay& b) {
+	std::ranges::sort(sorted, [](const MapOverlay& a, const MapOverlay& b) {
 		if (a.order == b.order) {
 			return a.id < b.id;
 		}
@@ -627,7 +627,7 @@ void LuaScriptManager::discoverScripts() {
 	scanDirectory(scriptsDir);
 
 	// Sort scripts by display name
-	std::sort(scripts.begin(), scripts.end(), [](const std::unique_ptr<LuaScript>& a, const std::unique_ptr<LuaScript>& b) {
+	std::ranges::sort(scripts, [](const std::unique_ptr<LuaScript>& a, const std::unique_ptr<LuaScript>& b) {
 		return a->getDisplayName() < b->getDisplayName();
 	});
 

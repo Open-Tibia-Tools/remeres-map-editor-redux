@@ -2064,7 +2064,7 @@ void LuaDialog::popupContextMenu(const sol::function& callback, sol::table info,
 	}
 
 	menu.Bind(wxEVT_MENU, [this, callbacks, info](wxCommandEvent& event) mutable {
-		if (g_pinnedDialogs.find(this) == g_pinnedDialogs.end()) {
+		if (!g_pinnedDialogs.contains(this)) {
 			return; // Dialog is no longer pinned/showing or has been destroyed
 		}
 		if (!lua.lua_state()) {

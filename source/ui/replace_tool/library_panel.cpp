@@ -474,7 +474,7 @@ void LibraryPanel::PopulateRelatedItems(uint16_t brushLookId) {
 		related.push_back(brushLookId);
 	}
 
-	std::sort(related.begin(), related.end());
+	std::ranges::sort(related);
 	related.erase(std::unique(related.begin(), related.end()), related.end());
 
 	m_relatedGrid->SetItems(related);

@@ -73,7 +73,7 @@ public: // Functions
 
 	// Selection
 	bool hasSelection() const {
-		return selection.size() != 0;
+		return !selection.empty();
 	}
 	// Some simple actions that work on the map (these will work through the undo queue)
 	// Moves the selected area by the offset

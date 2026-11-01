@@ -184,7 +184,7 @@ void CollectionStudioWindow::DetachEditor() {
 }
 
 void CollectionStudioWindow::OnDiscardItem(uint16_t itemId) {
-	auto it = std::find(m_staging.itemIds.begin(), m_staging.itemIds.end(), itemId);
+	auto it = std::ranges::find(m_staging.itemIds, itemId);
 	if (it != m_staging.itemIds.end()) {
 		DiscardAction act;
 		act.kind = DiscardAction::Kind::Item;
@@ -199,7 +199,7 @@ void CollectionStudioWindow::OnDiscardItem(uint16_t itemId) {
 }
 
 void CollectionStudioWindow::OnDiscardBrush(Brush* brush) {
-	auto it = std::find(m_staging.brushes.begin(), m_staging.brushes.end(), brush);
+	auto it = std::ranges::find(m_staging.brushes, brush);
 	if (it != m_staging.brushes.end()) {
 		DiscardAction act;
 		act.kind = DiscardAction::Kind::Brush;
@@ -266,7 +266,7 @@ void CollectionStudioWindow::UndoDiscard() {
 
 	switch (act.kind) {
 	case DiscardAction::Kind::Item: {
-		if (std::find(m_staging.itemIds.begin(), m_staging.itemIds.end(), act.itemId) == m_staging.itemIds.end()) {
+		if (std::ranges::find(m_staging.itemIds, act.itemId) == m_staging.itemIds.end()) {
 			if (act.originalIndex < m_staging.itemIds.size()) {
 				m_staging.itemIds.insert(m_staging.itemIds.begin() + act.originalIndex, act.itemId);
 			} else {
@@ -276,7 +276,7 @@ void CollectionStudioWindow::UndoDiscard() {
 		break;
 	}
 	case DiscardAction::Kind::Brush: {
-		if (std::find(m_staging.brushes.begin(), m_staging.brushes.end(), act.brush) == m_staging.brushes.end()) {
+		if (std::ranges::find(m_staging.brushes, act.brush) == m_staging.brushes.end()) {
 			if (act.originalIndex < m_staging.brushes.size()) {
 				m_staging.brushes.insert(m_staging.brushes.begin() + act.originalIndex, act.brush);
 			} else {

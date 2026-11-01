@@ -66,9 +66,9 @@ void NanoVGListBox::SetSelection(int index) {
 
 int NanoVGListBox::GetSelection() const {
 	if (m_style & wxLB_MULTIPLE) {
-		const auto it = std::find(m_multiSelection.begin(), m_multiSelection.end(), true);
+		const auto it = std::ranges::find(m_multiSelection, true);
 		if (it != m_multiSelection.end()) {
-			return (int)std::distance(m_multiSelection.begin(), it);
+			return static_cast<int>(std::distance(m_multiSelection.begin(), it));
 		}
 		return -1;
 	}
@@ -110,7 +110,7 @@ void NanoVGListBox::Select(int index, bool select) {
 
 int NanoVGListBox::GetSelectedCount() const {
 	if (m_style & wxLB_MULTIPLE) {
-		return std::count(m_multiSelection.begin(), m_multiSelection.end(), true);
+		return static_cast<int>(std::ranges::count(m_multiSelection, true));
 	}
 	return (m_selection != -1) ? 1 : 0;
 }

@@ -146,7 +146,7 @@ void SpriteAtlasLUT::ensureCapacity(size_t required_capacity) {
 	}
 
 	const size_t old_capacity = cpu_entries_.size();
-	size_t new_capacity = cpu_entries_.size() == 0 ? DEFAULT_INITIAL_CAPACITY : cpu_entries_.size();
+	size_t new_capacity = cpu_entries_.empty() ? DEFAULT_INITIAL_CAPACITY : cpu_entries_.size();
 	while (new_capacity < required_capacity) {
 		new_capacity *= 2;
 	}

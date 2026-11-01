@@ -341,7 +341,7 @@ void ZoneIndex::rebuild(Map& map) {
 	}
 
 	for (auto& [_, entry] : index_) {
-		std::sort(entry.positions.begin(), entry.positions.end());
+		std::ranges::sort(entry.positions);
 		const auto last = std::unique(entry.positions.begin(), entry.positions.end());
 		entry.positions.erase(last, entry.positions.end());
 		entry.clusters_dirty = true;

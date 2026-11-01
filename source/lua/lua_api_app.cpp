@@ -230,7 +230,7 @@ namespace LuaAPI {
 			uint64_t key = positionKey(pos);
 
 			// Only snapshot the tile once per transaction (first time it's modified)
-			if (originalTiles.find(key) == originalTiles.end()) {
+			if (!originalTiles.contains(key)) {
 				// Preserve whether the tile originally existed so delete/create can undo cleanly
 				originalTiles[key] = originallyExisted ? tile->deepCopy() : std::unique_ptr<Tile>();
 			}
