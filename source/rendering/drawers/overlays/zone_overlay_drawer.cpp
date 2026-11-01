@@ -86,6 +86,12 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		const int min_x = bounds.start_x - 1;
 		const int max_x = bounds.end_x + 1;
 		const int row_width = max_x - min_x + 1;
+		const size_t visible_tiles_estimate = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
+
+		visible_zone_tiles_.reserve(visible_tiles_estimate / 4);
+		alpha_zone_quads_.reserve(visible_tiles_estimate / 4);
+		mult_zone_quads_.reserve(visible_tiles_estimate / 8);
+		border_zone_quads_.reserve(visible_tiles_estimate / 4);
 
 		// Caller-owned cell cursors: consecutive x in a row share the containing
 		// 64x64 cell and 4x4 Floor, so empty cells/floors skip 64 or 4 tiles at once.
@@ -135,8 +141,16 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 		fetchRow(bounds.start_y - 1, row_prev_);
 		fetchRow(bounds.start_y, row_curr_);
 
+		// Precompute screen offset for floor z to hoist redundant multiplications
+		const int offset = (z <= GROUND_LAYER)
+			? (GROUND_LAYER - z) * TILE_SIZE
+			: TILE_SIZE * (view.floor - z);
+		const int base_screen_x = -view.view_scroll_x - offset;
+		const int base_screen_y = -view.view_scroll_y - offset;
+
 		for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
 			fetchRow(y + 1, row_next_);
+			const float draw_y = static_cast<float>(y * TILE_SIZE + base_screen_y);
 
 			for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
 				const int idx = x - min_x;
@@ -164,20 +178,19 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 				if ((zmask & 4u) && options.zone_nologout_blend_mode == 1) is_mult = true;
 				if ((zmask & 8u) && options.zone_pvp_blend_mode == 1) is_mult = true;
 
-				int draw_x, draw_y;
-				view.getScreenPosition(x, y, z, draw_x, draw_y);
+				const float draw_x = static_cast<float>(x * TILE_SIZE + base_screen_x);
 				const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
 
 				if (is_mult) {
 					tile_zone_flags |= ZONE_FLAG_MULTIPLICATIVE;
-					mult_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags, depth });
+					mult_zone_quads_.push_back({ draw_x, draw_y, tile_zone_flags, depth });
 				} else {
-					alpha_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), tile_zone_flags, depth });
+					alpha_zone_quads_.push_back({ draw_x, draw_y, tile_zone_flags, depth });
 				}
 
 				if (options.show_zone_borders && (tile_zone_flags & (ZONE_FLAG_ZONE_BORDER_N | ZONE_FLAG_ZONE_BORDER_S | ZONE_FLAG_ZONE_BORDER_W | ZONE_FLAG_ZONE_BORDER_E))) {
 					uint32_t border_flags = (tile_zone_flags & ~ZONE_FLAG_MULTIPLICATIVE) | ZONE_FLAG_BORDER_PASS;
-					border_zone_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), border_flags, depth });
+					border_zone_quads_.push_back({ draw_x, draw_y, border_flags, depth });
 				}
 			}
 
@@ -358,8 +371,10 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	const int min_x = bounds.start_x - 1;
 	const int max_x = bounds.end_x + 1;
 	const int row_width = max_x - min_x + 1;
+	const size_t visible_tiles_estimate = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
 
 	blocking_border_quads_.clear();
+	blocking_border_quads_.reserve(visible_tiles_estimate / 4);
 
 	SpatialHashGrid::CellCursor secondary_cursor;
 	SpatialHashGrid::CellCursor primary_cursor;
@@ -396,8 +411,15 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	fetchRow(bounds.start_y - 1, blocking_row_prev_);
 	fetchRow(bounds.start_y, blocking_row_curr_);
 
+	const int offset = (z <= GROUND_LAYER)
+		? (GROUND_LAYER - z) * TILE_SIZE
+		: TILE_SIZE * (view.floor - z);
+	const int base_screen_x = -view.view_scroll_x - offset;
+	const int base_screen_y = -view.view_scroll_y - offset;
+
 	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
 		fetchRow(y + 1, blocking_row_next_);
+		const float fy = static_cast<float>(y * TILE_SIZE + base_screen_y);
 
 		for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
 			const int idx = x - min_x;
@@ -419,10 +441,7 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 			if (bW) tile_zone_flags |= ZONE_FLAG_BLOCK_BORDER_W;
 			if (bE) tile_zone_flags |= ZONE_FLAG_BLOCK_BORDER_E;
 
-			int draw_x, draw_y;
-			view.getScreenPosition(x, y, z, draw_x, draw_y);
-			const float fx = static_cast<float>(draw_x);
-			const float fy = static_cast<float>(draw_y);
+			const float fx = static_cast<float>(x * TILE_SIZE + base_screen_x);
 			const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
 
 			sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
@@ -477,8 +496,10 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
 	const int min_x = bounds.start_x - 1;
 	const int max_x = bounds.end_x + 1;
 	const int row_width = max_x - min_x + 1;
+	const size_t visible_tiles_estimate = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
 
 	house_border_quads_.clear();
+	house_border_quads_.reserve(visible_tiles_estimate / 4);
 
 	SpatialHashGrid::CellCursor secondary_cursor;
 	SpatialHashGrid::CellCursor primary_cursor;
@@ -515,8 +536,15 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
 	fetchRow(bounds.start_y - 1, house_row_prev_);
 	fetchRow(bounds.start_y, house_row_curr_);
 
+	const int offset = (z <= GROUND_LAYER)
+		? (GROUND_LAYER - z) * TILE_SIZE
+		: TILE_SIZE * (view.floor - z);
+	const int base_screen_x = -view.view_scroll_x - offset;
+	const int base_screen_y = -view.view_scroll_y - offset;
+
 	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
 		fetchRow(y + 1, house_row_next_);
+		const float draw_y = static_cast<float>(y * TILE_SIZE + base_screen_y);
 
 		for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
 			const int idx = x - min_x;
@@ -537,10 +565,9 @@ void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
 				if (bW) border_flags |= ZONE_FLAG_ZONE_BORDER_W;
 				if (bE) border_flags |= ZONE_FLAG_ZONE_BORDER_E;
 
-				int draw_x, draw_y;
-				view.getScreenPosition(x, y, z, draw_x, draw_y);
+				const float draw_x = static_cast<float>(x * TILE_SIZE + base_screen_x);
 				const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
-				house_border_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), border_flags, depth });
+				house_border_quads_.push_back({ draw_x, draw_y, border_flags, depth });
 			}
 		}
 
@@ -610,10 +637,22 @@ void ZoneOverlayDrawer::drawFloorZones(SpriteBatch& sprite_batch,
 	fetchRow(bounds.start_y - 1, zone_row_prev_);
 	fetchRow(bounds.start_y, zone_row_curr_);
 
+	const int offset = (z <= GROUND_LAYER)
+		? (GROUND_LAYER - z) * TILE_SIZE
+		: TILE_SIZE * (view.floor - z);
+	const int base_screen_x = -view.view_scroll_x - offset;
+	const int base_screen_y = -view.view_scroll_y - offset;
+
+	const AtlasRegion* white_pixel = atlas.getWhitePixel();
+	if (!white_pixel) {
+		return;
+	}
+
 	sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 	constexpr float kBorder = 2.0f;
 	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
 		fetchRow(y + 1, zone_row_next_);
+		const float fy = static_cast<float>(y * TILE_SIZE + base_screen_y);
 
 		for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
 			const int idx = x - min_x;
@@ -625,34 +664,33 @@ void ZoneOverlayDrawer::drawFloorZones(SpriteBatch& sprite_batch,
 
 			const bool active = (zone_id == active_zone);
 			const glm::vec3 rgb = getZoneColor(zone_id);
-			int draw_x, draw_y;
-			view.getScreenPosition(x, y, z, draw_x, draw_y);
-			const float fx = static_cast<float>(draw_x);
-			const float fy = static_cast<float>(draw_y);
+			const float fx = static_cast<float>(x * TILE_SIZE + base_screen_x);
 			const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
 
 			if (cell.secondary != 0) {
 				const glm::vec3 sec_rgb = getZoneColor(cell.secondary);
 				const bool sec_active = (cell.secondary == active_zone);
-				sprite_batch.drawRect(fx, fy, 32.0f, 16.0f, glm::vec4(rgb, active ? 0.45f : 0.25f), atlas, depth);
-				sprite_batch.drawRect(fx, fy + 16.0f, 32.0f, 16.0f, glm::vec4(sec_rgb, sec_active ? 0.45f : 0.25f), atlas, depth);
+				const float prim_a = active ? 0.45f : 0.25f;
+				const float sec_a = sec_active ? 0.45f : 0.25f;
+				sprite_batch.draw(fx, fy, 32.0f, 16.0f, *white_pixel, rgb.r, rgb.g, rgb.b, prim_a, 0.0f, 0u, depth);
+				sprite_batch.draw(fx, fy + 16.0f, 32.0f, 16.0f, *white_pixel, sec_rgb.r, sec_rgb.g, sec_rgb.b, sec_a, 0.0f, 0u, depth);
 			} else {
-				sprite_batch.drawRect(fx, fy, 32.0f, 32.0f, glm::vec4(rgb, active ? 0.45f : 0.25f), atlas, depth);
+				const float a = active ? 0.45f : 0.25f;
+				sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, rgb.r, rgb.g, rgb.b, a, 0.0f, 0u, depth);
 			}
 
 			if (options.show_zone_borders) {
-				const glm::vec4 edge(rgb, 0.9f);
 				if (zone_row_prev_[idx].primary != zone_id) {
-					sprite_batch.drawRect(fx, fy, 32.0f, kBorder, edge, atlas, depth);
+					sprite_batch.draw(fx, fy, 32.0f, kBorder, *white_pixel, rgb.r, rgb.g, rgb.b, 0.9f, 0.0f, 0u, depth);
 				}
 				if (zone_row_next_[idx].primary != zone_id) {
-					sprite_batch.drawRect(fx, fy + 32.0f - kBorder, 32.0f, kBorder, edge, atlas, depth);
+					sprite_batch.draw(fx, fy + 32.0f - kBorder, 32.0f, kBorder, *white_pixel, rgb.r, rgb.g, rgb.b, 0.9f, 0.0f, 0u, depth);
 				}
 				if (zone_row_curr_[idx - 1].primary != zone_id) {
-					sprite_batch.drawRect(fx, fy, kBorder, 32.0f, edge, atlas, depth);
+					sprite_batch.draw(fx, fy, kBorder, 32.0f, *white_pixel, rgb.r, rgb.g, rgb.b, 0.9f, 0.0f, 0u, depth);
 				}
 				if (zone_row_curr_[idx + 1].primary != zone_id) {
-					sprite_batch.drawRect(fx + 32.0f - kBorder, fy, kBorder, 32.0f, edge, atlas, depth);
+					sprite_batch.draw(fx + 32.0f - kBorder, fy, kBorder, 32.0f, *white_pixel, rgb.r, rgb.g, rgb.b, 0.9f, 0.0f, 0u, depth);
 				}
 			}
 		}
@@ -680,12 +718,22 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 	}
 
 	const ViewBounds bounds = view.getBoundsForFloor(z);
+	const size_t visible_tiles_estimate = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
 
 	highlight_quads_.clear();
+	highlight_quads_.reserve(visible_tiles_estimate / 4);
+
+	const int offset = (z <= GROUND_LAYER)
+		? (GROUND_LAYER - z) * TILE_SIZE
+		: TILE_SIZE * (view.floor - z);
+	const int base_screen_x = -view.view_scroll_x - offset;
+	const int base_screen_y = -view.view_scroll_y - offset;
 
 	SpatialHashGrid::CellCursor secondary_cursor;
 	SpatialHashGrid::CellCursor primary_cursor;
 	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
+		const float draw_y = static_cast<float>(y * TILE_SIZE + base_screen_y);
+
 		if (secondary_map) {
 			for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
 				const Tile* t = secondary_map->getTile(x, y, z, secondary_cursor);
@@ -695,10 +743,9 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 				if (!t || t->items.empty() || t->items.back()->isBorder()) {
 					continue;
 				}
-				int draw_x, draw_y;
-				view.getScreenPosition(x, y, z, draw_x, draw_y);
+				const float draw_x = static_cast<float>(x * TILE_SIZE + base_screen_x);
 				const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
-				highlight_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), MakeHighlightItemsFlags(), depth });
+				highlight_quads_.push_back({ draw_x, draw_y, MakeHighlightItemsFlags(), depth });
 			}
 			continue;
 		}
@@ -715,10 +762,9 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 				if (!t || t->items.empty() || t->items.back()->isBorder()) {
 					continue;
 				}
-				int draw_x, draw_y;
-				view.getScreenPosition(x, y, z, draw_x, draw_y);
+				const float draw_x = static_cast<float>(x * TILE_SIZE + base_screen_x);
 				const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
-				highlight_quads_.push_back({ static_cast<float>(draw_x), static_cast<float>(draw_y), MakeHighlightItemsFlags(), depth });
+				highlight_quads_.push_back({ draw_x, draw_y, MakeHighlightItemsFlags(), depth });
 			}
 		}
 	}
@@ -749,7 +795,6 @@ void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
 	}
 	rme::prof::Scope badges_scope(rme::prof::Phase::BadgeOverlay);
 
-	const ViewBounds bounds = view.getBoundsForFloor(z);
 	const float floor_alpha = 1.0f;
 
 	// 1. Cluster Zone Badges Pass (Rendered on top of items, tables, walls, and statues)

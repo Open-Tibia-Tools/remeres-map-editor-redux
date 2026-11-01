@@ -41,7 +41,7 @@ if(WIN32)
 endif()
 find_package(Boost 1.34.0 COMPONENTS thread system REQUIRED)
 
-find_package(wxWidgets 3.3 COMPONENTS html aui gl adv core net base propgrid REQUIRED)
+find_package(wxWidgets 3.2 COMPONENTS html aui gl adv core net base propgrid REQUIRED)
 
 
 find_package(ZLIB REQUIRED)

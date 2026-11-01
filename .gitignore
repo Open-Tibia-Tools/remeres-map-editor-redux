@@ -125,3 +125,9 @@ __pycache__/
 
 # Local agent runtime state (goals, loop logs): contains session ids
 /.opencode/
+linux_build/
+ninja.log
+conanbuild*.sh
+conanrun*.sh
+deactivate_conan*.sh
+CMakeUserPresets.json

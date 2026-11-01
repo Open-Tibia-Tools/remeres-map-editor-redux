@@ -76,12 +76,12 @@ void MissingItemsDialog::BuildUI() {
 	sizer1->Add(listMissingInDat, 1, wxALL | wxEXPAND, FromDIP(5));
 
 	for (const auto& entry : sorted_dat) {
-		listMissingInDat->AppendItem({
-			wxString::FromUTF8(std::format("{}", entry.server_id)),
-			wxString::FromUTF8(std::format("{}", entry.client_id)),
-			wxString::FromUTF8(entry.name.empty() ? "unknown" : entry.name),
-			wxString::FromUTF8(entry.description)
-		});
+		wxVector<wxVariant> row;
+		row.push_back(wxVariant(wxString::FromUTF8(std::format("{}", entry.server_id))));
+		row.push_back(wxVariant(wxString::FromUTF8(std::format("{}", entry.client_id))));
+		row.push_back(wxVariant(wxString::FromUTF8(entry.name.empty() ? "unknown" : entry.name)));
+		row.push_back(wxVariant(wxString::FromUTF8(entry.description)));
+		listMissingInDat->AppendItem(row);
 	}
 	countMissingInDat->SetLabel(wxString::FromUTF8(std::format("Items in {} missing from tibia.dat: {}",
 		hasOtb ? "items.otb" : "items.xml", report.missing_in_dat.size())));
@@ -100,10 +100,10 @@ void MissingItemsDialog::BuildUI() {
 	sizer2->Add(listMissingInOtb, 1, wxALL | wxEXPAND, FromDIP(5));
 
 	for (const auto& entry : sorted_otb) {
-		listMissingInOtb->AppendItem({
-			wxString::FromUTF8(std::format("{}", entry.client_id)),
-			wxString::FromUTF8(entry.name.empty() ? "(no name)" : entry.name)
-		});
+		wxVector<wxVariant> row;
+		row.push_back(wxVariant(wxString::FromUTF8(std::format("{}", entry.client_id))));
+		row.push_back(wxVariant(wxString::FromUTF8(entry.name.empty() ? "(no name)" : entry.name)));
+		listMissingInOtb->AppendItem(row);
 	}
 	countMissingInOtb->SetLabel(wxString::FromUTF8(std::format("Items in tibia.dat not referenced by {}: {}",
 		hasOtb ? "items.otb" : "items.xml", report.missing_in_otb.size())));
@@ -125,12 +125,12 @@ void MissingItemsDialog::BuildUI() {
 		sizer3->Add(listXmlNoOtb, 1, wxALL | wxEXPAND, FromDIP(5));
 
 		for (const auto& entry : sorted_xml_no_otb) {
-			listXmlNoOtb->AppendItem({
-				wxString::FromUTF8(std::format("{}", entry.server_id)),
-				wxString::FromUTF8(std::format("{}", entry.client_id)),
-				wxString::FromUTF8(entry.name.empty() ? "unknown" : entry.name),
-				wxString::FromUTF8(entry.description)
-			});
+			wxVector<wxVariant> row;
+			row.push_back(wxVariant(wxString::FromUTF8(std::format("{}", entry.server_id))));
+			row.push_back(wxVariant(wxString::FromUTF8(std::format("{}", entry.client_id))));
+			row.push_back(wxVariant(wxString::FromUTF8(entry.name.empty() ? "unknown" : entry.name)));
+			row.push_back(wxVariant(wxString::FromUTF8(entry.description)));
+			listXmlNoOtb->AppendItem(row);
 		}
 		countXmlNoOtb->SetLabel(wxString::FromUTF8(std::format("Items in items.xml missing from items.otb: {}", report.xml_no_otb.size())));
 		page3->SetSizer(sizer3);
@@ -152,12 +152,12 @@ void MissingItemsDialog::BuildUI() {
 		sizer4->Add(listOtbNoXml, 1, wxALL | wxEXPAND, FromDIP(5));
 
 		for (const auto& entry : sorted_otb_no_xml) {
-			listOtbNoXml->AppendItem({
-				wxString::FromUTF8(std::format("{}", entry.server_id)),
-				wxString::FromUTF8(std::format("{}", entry.client_id)),
-				wxString::FromUTF8(entry.name.empty() ? "unknown" : entry.name),
-				wxString::FromUTF8(entry.description)
-			});
+			wxVector<wxVariant> row;
+			row.push_back(wxVariant(wxString::FromUTF8(std::format("{}", entry.server_id))));
+			row.push_back(wxVariant(wxString::FromUTF8(std::format("{}", entry.client_id))));
+			row.push_back(wxVariant(wxString::FromUTF8(entry.name.empty() ? "unknown" : entry.name)));
+			row.push_back(wxVariant(wxString::FromUTF8(entry.description)));
+			listOtbNoXml->AppendItem(row);
 		}
 		countOtbNoXml->SetLabel(wxString::FromUTF8(std::format("Items in items.otb missing from items.xml: {}", report.otb_no_xml.size())));
 		page4->SetSizer(sizer4);
