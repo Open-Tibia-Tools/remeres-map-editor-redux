@@ -273,3 +273,22 @@ sprite-hash oracle: the tool recomputes the MD5 sprite hashes stored in
   `--force-version` for custom clients.
 - If multiple OTB items share a server id, the first is used and the rest are
   returned in `result.additionalMatches`.
+
+---
+
+# scan_legacy_wx.py
+
+Automated scanner for legacy wxWidgets patterns, deprecated APIs (from wx 2.8 / 3.0 / 3.2), and modernization opportunities for wxWidgets 3.3.x.
+
+Zero-dependency Python 3.9+ script.
+
+```bash
+# Print summary of all findings
+python tools/scan_legacy_wx.py --summary
+
+# Output markdown report
+python tools/scan_legacy_wx.py --format md --output wx_scan_report.md
+
+# Filter by category (deprecated_api, sizer_patterns, high_dpi, modernization, modern_features)
+python tools/scan_legacy_wx.py --category deprecated_api
+```
