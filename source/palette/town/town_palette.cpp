@@ -80,22 +80,22 @@ TownPalettePanel::TownPalettePanel(wxWindow* parent, wxWindowID id) :
 	auto* button_grid = new wxGridSizer(2, 2, 4, 4);
 
 	add_town_button = new wxButton(this, PALETTE_TOWN_ADD, "Add", wxDefaultPosition, wxDefaultSize);
-	add_town_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	add_town_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	add_town_button->SetFont(Theme::GetFont(9, false));
 	button_grid->Add(add_town_button, wxSizerFlags(1).Expand());
 
 	edit_town_button = new wxButton(this, PALETTE_TOWN_EDIT, "Edit", wxDefaultPosition, wxDefaultSize);
-	edit_town_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
+	edit_town_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 	edit_town_button->SetFont(Theme::GetFont(9, false));
 	button_grid->Add(edit_town_button, wxSizerFlags(1).Expand());
 
 	remove_town_button = new wxButton(this, PALETTE_TOWN_REMOVE, "Remove", wxDefaultPosition, wxDefaultSize);
-	remove_town_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+	remove_town_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	remove_town_button->SetFont(Theme::GetFont(9, false));
 	button_grid->Add(remove_town_button, wxSizerFlags(1).Expand());
 
 	change_temple_button = new wxButton(this, PALETTE_TOWN_CHANGE_TEMPLE, "Set Temple", wxDefaultPosition, wxDefaultSize);
-	change_temple_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CROSSHAIRS, wxSize(16, 16)));
+	change_temple_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CROSSHAIRS));
 	change_temple_button->SetFont(Theme::GetFont(9, false));
 	change_temple_button->SetToolTip("Click to place temple position on the map");
 	button_grid->Add(change_temple_button, wxSizerFlags(1).Expand());
@@ -325,23 +325,23 @@ void TownPalettePanel::OnTownContextMenu(int /*index*/, const TableRow* row, con
 		selected_town_id_ = town->getID();
 
 		auto* goto_item = menu.Append(PALETTE_TOWN_GOTO_TEMPLE, "Go to Temple");
-		goto_item->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_LOCATION_ARROW, wxSize(16, 16)));
+		goto_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_LOCATION_ARROW));
 
 		auto* temple_item = menu.Append(PALETTE_TOWN_CHANGE_TEMPLE, "Change Temple Position");
-		temple_item->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CROSSHAIRS, wxSize(16, 16)));
+		temple_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CROSSHAIRS));
 
 		auto* edit_item = menu.Append(PALETTE_TOWN_EDIT, "Edit Town...");
-		edit_item->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
+		edit_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 
 		menu.AppendSeparator();
 
 		auto* remove_item = menu.Append(PALETTE_TOWN_REMOVE, "Remove Town");
-		remove_item->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+		remove_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 		menu.AppendSeparator();
 	}
 
 	auto* add_item = menu.Append(PALETTE_TOWN_ADD, "Add Town...");
-	add_item->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	add_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 
 	PopupMenu(&menu, pos);
 }

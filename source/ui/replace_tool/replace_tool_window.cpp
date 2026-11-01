@@ -373,7 +373,7 @@ void ReplaceToolWindow::InitLayout() {
 	footerSizer->Add(m_scopeChoice, wxSizerFlags(0).Center().Border(wxRIGHT, padding));
 
 	m_executeBtn = new wxButton(this, wxID_ANY, "EXECUTE REPLACE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
-	m_executeBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLAY, wxSize(16, 16)));
+	m_executeBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLAY));
 	m_executeBtn->SetDefault();
 	m_executeBtn->SetBackgroundColour(Theme::Get(Theme::Role::Accent)); // Blue
 	m_executeBtn->SetForegroundColour(*wxWHITE);
@@ -381,7 +381,7 @@ void ReplaceToolWindow::InitLayout() {
 	footerSizer->Add(m_executeBtn, wxSizerFlags(0).Center().Border(wxLEFT, padding));
 
 	wxButton* closeBtn = new wxButton(this, wxID_ANY, "CLOSE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
-	closeBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	closeBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	closeBtn->SetBackgroundColour(wxColour(120, 120, 120)); // Gray
 	closeBtn->SetForegroundColour(*wxWHITE);
 	closeBtn->SetFont(Theme::GetFont(10, true));

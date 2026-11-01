@@ -40,7 +40,7 @@ TownIdWarningDialog::TownIdWarningDialog(wxWindow* parent, uint32_t old_id, uint
 	auto* topsizer = new wxBoxSizer(wxVERTICAL);
 
 	auto* content_sizer = new wxBoxSizer(wxHORIZONTAL);
-	auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, wxSize(32, 32)));
+	auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, FromDIP(wxSize(32, 32))));
 	content_sizer->Add(icon, wxSizerFlags().Top().Border(wxALL, 15));
 
 	wxString msg = wxstr(std::format(
@@ -58,17 +58,17 @@ TownIdWarningDialog::TownIdWarningDialog(wxWindow* parent, uint32_t old_id, uint
 	auto* btn_sizer = new wxBoxSizer(wxHORIZONTAL);
 
 	auto* update_btn = new wxButton(this, wxID_YES, "Update Houses");
-	update_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	update_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	update_btn->SetToolTip("Update town ID and automatically update all linked houses");
 	btn_sizer->Add(update_btn, wxSizerFlags().Border(wxRIGHT, 8));
 
 	auto* keep_btn = new wxButton(this, wxID_NO, "Keep Old IDs");
-	keep_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, wxSize(16, 16)));
+	keep_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_TRIANGLE_EXCLAMATION));
 	keep_btn->SetToolTip("Update town ID only (houses will remain linked to the old town ID)");
 	btn_sizer->Add(keep_btn, wxSizerFlags().Border(wxRIGHT, 8));
 
 	auto* cancel_btn = new wxButton(this, wxID_CANCEL, "Cancel");
-	cancel_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	cancel_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancel_btn->SetToolTip("Abort changes");
 	btn_sizer->Add(cancel_btn, 0);
 
@@ -92,7 +92,7 @@ TownDeleteDialog::TownDeleteDialog(wxWindow* parent, const std::string& name, ui
 	auto* topsizer = new wxBoxSizer(wxVERTICAL);
 
 	auto* content_sizer = new wxBoxSizer(wxHORIZONTAL);
-	auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, wxSize(32, 32)));
+	auto* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, FromDIP(wxSize(32, 32))));
 	content_sizer->Add(icon, wxSizerFlags().Top().Border(wxALL, 15));
 
 	wxString msg = wxstr(std::format(
@@ -109,12 +109,12 @@ TownDeleteDialog::TownDeleteDialog(wxWindow* parent, const std::string& name, ui
 	auto* btn_sizer = new wxBoxSizer(wxHORIZONTAL);
 
 	auto* delete_btn = new wxButton(this, wxID_YES, "Delete Town and Houses");
-	delete_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+	delete_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	delete_btn->SetToolTip("Delete the town and permanently remove all associated houses");
 	btn_sizer->Add(delete_btn, wxSizerFlags().Border(wxRIGHT, 8));
 
 	auto* cancel_btn = new wxButton(this, wxID_CANCEL, "Cancel");
-	cancel_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	cancel_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancel_btn->SetToolTip("Cancel and keep town");
 	btn_sizer->Add(cancel_btn, 0);
 

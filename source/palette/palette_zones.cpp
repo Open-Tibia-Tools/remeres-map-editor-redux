@@ -68,15 +68,15 @@ ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 	// Action buttons (Add, Rename, Remove)
 	wxBoxSizer* buttons = new wxBoxSizer(wxHORIZONTAL);
 	add_button = new wxButton(this, PALETTE_ZONE_ADD, "Add", wxDefaultPosition, wxSize(50, -1));
-	add_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	add_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	add_button->SetFont(Theme::GetFont(9, false));
 
 	rename_button = new wxButton(this, PALETTE_ZONE_RENAME, "Rename", wxDefaultPosition, wxSize(60, -1));
-	rename_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
+	rename_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 	rename_button->SetFont(Theme::GetFont(9, false));
 
 	remove_button = new wxButton(this, PALETTE_ZONE_REMOVE, "Remove", wxDefaultPosition, wxSize(60, -1));
-	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	remove_button->SetFont(Theme::GetFont(9, false));
 
 	buttons->Add(add_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
@@ -396,15 +396,15 @@ void ZonePalettePanel::OnZoneContextMenu(int /*index*/, const TableRow* row, con
 	if (row && !row->key.empty()) {
 		const auto ref = selectedRow();
 		if (ref.zone != 0) {
-			menu.Append(PALETTE_ZONE_GOTO, "Go to area (double-click)")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MAP_PIN, wxSize(16, 16)));
+			menu.Append(PALETTE_ZONE_GOTO, "Go to area (double-click)")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MAP_PIN));
 			menu.AppendSeparator();
-			menu.Append(PALETTE_ZONE_RENAME, "Rename...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
-			menu.Append(PALETTE_ZONE_REMOVE, "Remove...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+			menu.Append(PALETTE_ZONE_RENAME, "Rename...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
+			menu.Append(PALETTE_ZONE_REMOVE, "Remove...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 			menu.AppendSeparator();
 		}
 	}
 
-	menu.Append(PALETTE_ZONE_ADD, "Add zone...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	menu.Append(PALETTE_ZONE_ADD, "Add zone...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	PopupMenu(&menu);
 }
 

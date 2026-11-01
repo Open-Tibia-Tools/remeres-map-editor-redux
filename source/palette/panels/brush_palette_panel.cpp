@@ -179,7 +179,7 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 
 	// Create the tileset panel
 	wxSizer* ts_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Tileset");
-	PaletteChoicebook* tmp_choicebook = new PaletteChoicebook(static_cast<wxStaticBoxSizer*>(ts_sizer)->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxSize(180, 250));
+	PaletteChoicebook* tmp_choicebook = new PaletteChoicebook(static_cast<wxStaticBoxSizer*>(ts_sizer)->GetStaticBox(), wxID_ANY, wxDefaultPosition, FromDIP(wxSize(180, 250)));
 	ts_sizer->Add(tmp_choicebook, wxSizerFlags(1).Expand());
 	topsizer->Add(ts_sizer, wxSizerFlags(1).Expand());
 

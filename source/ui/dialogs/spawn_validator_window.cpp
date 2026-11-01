@@ -136,7 +136,7 @@ void SpawnValidatorWindow::InitLayout() {
 
 	// 3. Scan Map Button
 	scan_button = new wxButton(leftPanel, ID_SCAN_MAP, "Scan Map");
-	scan_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_LOCATION_CROSSHAIRS, wxSize(16, 16)));
+	scan_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_LOCATION_CROSSHAIRS));
 	scan_button->SetDefault();
 	scan_button->Bind(wxEVT_BUTTON, &SpawnValidatorWindow::OnScanMap, this);
 	leftSizer->Add(scan_button, wxSizerFlags().Expand().Border(wxBOTTOM, 10));
@@ -146,22 +146,22 @@ void SpawnValidatorWindow::InitLayout() {
 	auto* action_grid = new wxGridSizer(2, 2, 6, 6);
 
 	jump_button = new wxButton(actions_box->GetStaticBox(), ID_JUMP_POS, "Jump to Pos");
-	jump_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_LOCATION_ARROW, wxSize(16, 16)));
+	jump_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_LOCATION_ARROW));
 	jump_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnJumpToSelected(); });
 	action_grid->Add(jump_button, wxSizerFlags(1).Expand());
 
 	edit_button = new wxButton(actions_box->GetStaticBox(), ID_EDIT_ISSUE, "Edit...");
-	edit_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
+	edit_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 	edit_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnEditSelected(); });
 	action_grid->Add(edit_button, wxSizerFlags(1).Expand());
 
 	remove_button = new wxButton(actions_box->GetStaticBox(), ID_REMOVE_ISSUE, "Remove");
-	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_TRASH, wxSize(16, 16)));
+	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_TRASH));
 	remove_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnRemoveSelected(); });
 	action_grid->Add(remove_button, wxSizerFlags(1).Expand());
 
 	remove_all_button = new wxButton(actions_box->GetStaticBox(), ID_REMOVE_ALL, "Remove All");
-	remove_all_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_TRASH, wxSize(16, 16)));
+	remove_all_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_TRASH));
 	remove_all_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnRemoveAll(); });
 	action_grid->Add(remove_all_button, wxSizerFlags(1).Expand());
 

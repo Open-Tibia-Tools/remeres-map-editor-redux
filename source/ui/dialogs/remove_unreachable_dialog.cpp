@@ -85,12 +85,12 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	wxBoxSizer* button_sizer = new wxBoxSizer(wxHORIZONTAL);
 
 	wxButton* ok_button = new wxButton(this, wxID_OK, "Remove Tiles");
-	ok_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	ok_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	ok_button->SetDefault();
 	button_sizer->Add(ok_button, wxSizerFlags().Border(wxRIGHT, 10));
 
 	wxButton* cancel_button = new wxButton(this, wxID_CANCEL, "Cancel");
-	cancel_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	cancel_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	button_sizer->Add(cancel_button, 0);
 
 	top_sizer->Add(button_sizer, wxSizerFlags().Right().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
@@ -107,7 +107,7 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	UpdateControlStates();
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_BROOM, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_BROOM, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 

@@ -24,7 +24,7 @@
 #include "util/image_manager.h"
 
 PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelected) :
-	wxDialog(parent, wxID_ANY, "Preferences", wxDefaultPosition, wxSize(980, 720), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER) {
+	wxDialog(parent, wxID_ANY, "Preferences", wxDefaultPosition, parent ? parent->FromDIP(wxSize(980, 720)) : wxSize(980, 720), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER) {
 	SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 	SetMinSize(wxSize(FromDIP(860), FromDIP(640)));
 
@@ -71,15 +71,15 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 	footer_sizer->AddStretchSpacer();
 
 	auto* ok_button = new wxButton(this, wxID_OK, "OK");
-	ok_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	ok_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	footer_sizer->Add(ok_button, wxSizerFlags().Border(wxRIGHT, FromDIP(8)));
 
 	auto* cancel_button = new wxButton(this, wxID_CANCEL, "Cancel");
-	cancel_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	cancel_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	footer_sizer->Add(cancel_button, wxSizerFlags().Border(wxRIGHT, FromDIP(8)));
 
 	auto* apply_button = new wxButton(this, wxID_APPLY, "Apply");
-	apply_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_SYNC, wxSize(16, 16)));
+	apply_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_SYNC));
 	footer_sizer->Add(apply_button, 0);
 
 	sizer->Add(footer_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
@@ -99,7 +99,7 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 	Bind(wxEVT_CLOSE_WINDOW, &PreferencesWindow::OnClose, this);
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 

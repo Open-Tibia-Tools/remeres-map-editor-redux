@@ -16,7 +16,7 @@
 #include <sstream>
 
 EditHouseDialog::EditHouseDialog(wxWindow* parent, Map* map, House* house) :
-	wxDialog(parent, wxID_ANY, "House Properties", wxDefaultPosition, wxSize(250, 160)),
+	wxDialog(parent, wxID_ANY, "House Properties", wxDefaultPosition, parent ? parent->FromDIP(wxSize(250, 160)) : wxSize(250, 160)),
 	map(map),
 	what_house(house) {
 	ASSERT(map);
@@ -35,7 +35,7 @@ EditHouseDialog::EditHouseDialog(wxWindow* parent, Map* map, House* house) :
 	house_rent = std::to_string(house->rent);
 
 	subsizer->Add(new wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Name:"), wxSizerFlags(0).Border(wxLEFT, 5));
-	name_field = new wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, house_name, wxDefaultPosition, wxSize(160, 20), 0, wxTextValidator(wxFILTER_ASCII));
+	name_field = new wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, house_name, wxDefaultPosition, FromDIP(wxSize(160, 20)), 0, wxTextValidator(wxFILTER_ASCII));
 	subsizer->Add(name_field, wxSizerFlags(1).Expand());
 
 	subsizer->Add(new wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Town:"), wxSizerFlags(0).Border(wxLEFT, 5));
@@ -70,7 +70,7 @@ EditHouseDialog::EditHouseDialog(wxWindow* parent, Map* map, House* house) :
 	subsizer->Add(town_id_field, wxSizerFlags(1).Expand());
 
 	subsizer->Add(new wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Rent:"), wxSizerFlags(0).Border(wxLEFT, 5));
-	rent_field = new wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, house_rent, wxDefaultPosition, wxSize(160, 20), 0, wxTextValidator(wxFILTER_DIGITS));
+	rent_field = new wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, house_rent, wxDefaultPosition, FromDIP(wxSize(160, 20)), 0, wxTextValidator(wxFILTER_DIGITS));
 	subsizer->Add(rent_field, wxSizerFlags(1).Expand());
 
 	wxFlexGridSizer* subsizerRight = new wxFlexGridSizer(1, 10, 10);

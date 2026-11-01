@@ -39,7 +39,7 @@
 // ============================================================================
 
 OutfitChooserDialog::OutfitChooserDialog(wxWindow* parent, const Outfit& current_outfit) :
-	wxDialog(parent, wxID_ANY, "Customise Character", wxDefaultPosition, wxSize(1200, 850), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+	wxDialog(parent, wxID_ANY, "Customise Character", wxDefaultPosition, parent ? parent->FromDIP(wxSize(1200, 850)) : wxSize(1200, 850), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
 	current_outfit(current_outfit),
 	current_speed(220),
 	current_name("You"),
@@ -109,13 +109,13 @@ OutfitChooserDialog::OutfitChooserDialog(wxWindow* parent, const Outfit& current
 	col1_sizer->Add(CreateHeader("Appearance"), wxSizerFlags().Border(wxLEFT | wxTOP, 8));
 	wxBoxSizer* part_sizer = new wxBoxSizer(wxHORIZONTAL);
 	head_btn = new wxButton(this, ID_COLOR_HEAD, "Head", wxDefaultPosition, wxSize(50, -1));
-	head_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_USER_SOLID, wxSize(16, 16)));
+	head_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_USER_SOLID));
 	body_btn = new wxButton(this, ID_COLOR_BODY, "Primary", wxDefaultPosition, wxSize(50, -1));
-	body_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_SHIRT, wxSize(16, 16)));
+	body_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_SHIRT));
 	legs_btn = new wxButton(this, ID_COLOR_LEGS, "Secondary", wxDefaultPosition, wxSize(50, -1));
-	legs_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_SOCKS, wxSize(16, 16)));
+	legs_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_SOCKS));
 	feet_btn = new wxButton(this, ID_COLOR_FEET, "Detail", wxDefaultPosition, wxSize(50, -1));
-	feet_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_SHOE_PRINTS, wxSize(16, 16)));
+	feet_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_SHOE_PRINTS));
 
 	part_sizer->Add(head_btn, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
 	part_sizer->Add(body_btn, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
@@ -142,7 +142,7 @@ OutfitChooserDialog::OutfitChooserDialog(wxWindow* parent, const Outfit& current
 	check_sizer->Add(addon2, wxSizerFlags().CenterVertical().Border(wxALL, 2));
 
 	wxButton* rand_btn = new wxButton(this, ID_RANDOMIZE, "Random");
-	rand_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_SHUFFLE, wxSize(16, 16)));
+	rand_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_SHUFFLE));
 	rand_btn->SetToolTip("Randomize outfit colors");
 	check_sizer->Add(rand_btn, wxSizerFlags().CenterVertical().Border(wxLEFT, 5));
 
@@ -186,7 +186,7 @@ OutfitChooserDialog::OutfitChooserDialog(wxWindow* parent, const Outfit& current
 	favs_sizer->Add(favorites_panel, wxSizerFlags(1).Expand());
 
 	wxButton* fav_btn = new wxButton(this, ID_ADD_FAVORITE, "Save Current Outfit as Favorite", wxDefaultPosition, wxSize(-1, 28));
-	fav_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_STAR, wxSize(16, 16)));
+	fav_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_STAR));
 	favs_sizer->Add(fav_btn, wxSizerFlags().Expand().Border(wxTOP, 8));
 
 	main_sizer->Add(favs_sizer, wxSizerFlags().Expand().Border(wxLEFT, 5));
@@ -200,11 +200,11 @@ OutfitChooserDialog::OutfitChooserDialog(wxWindow* parent, const Outfit& current
 	wxBoxSizer* bottom_sizer = new wxBoxSizer(wxHORIZONTAL);
 	bottom_sizer->AddStretchSpacer();
 
-	wxButton* ok_btn = new wxButton(this, wxID_OK, "OK", wxDefaultPosition, wxSize(90, 30));
-	ok_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	wxButton* ok_btn = new wxButton(this, wxID_OK, "OK", wxDefaultPosition, FromDIP(wxSize(90, 30)));
+	ok_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	ok_btn->SetToolTip("Confirm outfit selection");
-	wxButton* cancel_btn = new wxButton(this, wxID_CANCEL, "Cancel", wxDefaultPosition, wxSize(90, 30));
-	cancel_btn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	wxButton* cancel_btn = new wxButton(this, wxID_CANCEL, "Cancel", wxDefaultPosition, FromDIP(wxSize(90, 30)));
+	cancel_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancel_btn->SetToolTip("Cancel outfit selection");
 	bottom_sizer->Add(ok_btn, wxSizerFlags().Border(wxALL, 8));
 	bottom_sizer->Add(cancel_btn, wxSizerFlags().Border(wxALL, 8));
@@ -240,7 +240,7 @@ OutfitChooserDialog::OutfitChooserDialog(wxWindow* parent, const Outfit& current
 	CenterOnParent();
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_USER_SOLID, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_USER_SOLID, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 

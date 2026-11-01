@@ -67,7 +67,7 @@ LightToolBar::~LightToolBar() {
 
 void LightToolBar::UpdateServerLightColorButton() {
 	const int color_index = g_gui.GetServerLightColor();
-	server_light_color_button->SetBitmap(CreateLightColorSwatchBitmap(toolbar, color_index, wxSize(24, 16)));
+	server_light_color_button->SetBitmap(CreateLightColorSwatchBitmap(toolbar, color_index, toolbar->FromDIP(wxSize(24, 16))));
 	server_light_color_button->SetLabelText(wxstr(std::format(" {}", color_index)));
 }
 

@@ -34,10 +34,10 @@ SpawnPropertiesWindow::SpawnPropertiesWindow(wxWindow* win_parent, const Map* ma
 
 	wxSizer* std_sizer = new wxBoxSizer(wxHORIZONTAL);
 	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
-	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	std_sizer->Add(okBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
 	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
-	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	std_sizer->Add(cancelBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
 	topsizer->Add(std_sizer, wxSizerFlags(0).Center().Border(wxLEFT | wxRIGHT, 20));
 
@@ -45,7 +45,7 @@ SpawnPropertiesWindow::SpawnPropertiesWindow(wxWindow* win_parent, const Map* ma
 	Centre(wxBOTH);
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_FIRE, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_FIRE, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 

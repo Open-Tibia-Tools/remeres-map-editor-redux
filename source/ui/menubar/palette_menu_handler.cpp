@@ -28,7 +28,7 @@ void ClearMenu(wxMenu* menu) {
 
 void SetMenuIcon(wxMenuItem* item, std::string_view icon) {
 	if (item && !icon.empty()) {
-		item->SetBitmap(IMAGE_MANAGER.GetBitmap(icon, wxSize(16, 16)));
+		item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(icon));
 	}
 }
 

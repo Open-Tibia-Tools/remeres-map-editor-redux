@@ -91,7 +91,7 @@ LiveLogTab::LiveLogTab(MapTabbook* aui, LiveSocket* server) :
 	left_pane->SetSizerAndFit(left_sizer);
 
 	// Setup right panel
-	user_list = new myGrid(splitter, wxID_ANY, wxDefaultPosition, wxSize(280, 100));
+	user_list = new myGrid(splitter, wxID_ANY, wxDefaultPosition, splitter ? splitter->FromDIP(wxSize(280, 100)) : wxSize(280, 100));
 	user_list->CreateGrid(5, 3);
 	user_list->DisableDragRowSize();
 	user_list->DisableDragColSize();

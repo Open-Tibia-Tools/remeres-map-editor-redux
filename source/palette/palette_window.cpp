@@ -45,13 +45,13 @@ namespace {
 } // namespace
 
 PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
-	wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(230, 250)),
+	wxPanel(parent, wxID_ANY, wxDefaultPosition, parent ? parent->FromDIP(wxSize(230, 250)) : wxSize(230, 250)),
 	choicebook(nullptr),
 	house_palette(nullptr),
 	waypoint_palette(nullptr) {
-	SetMinSize(wxSize(225, 250));
+	SetMinSize(FromDIP(wxSize(225, 250)));
 
-	choicebook = new wxChoicebook(this, PALETTE_CHOICEBOOK, wxDefaultPosition, wxSize(230, 250));
+	choicebook = new wxChoicebook(this, PALETTE_CHOICEBOOK, wxDefaultPosition, FromDIP(wxSize(230, 250)));
 
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGING, &PaletteWindow::OnSwitchingPage, this, PALETTE_CHOICEBOOK);
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGED, &PaletteWindow::OnPageChanged, this, PALETTE_CHOICEBOOK);
@@ -88,7 +88,7 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 	}
 
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-	choicebook->SetMinSize(wxSize(225, 300));
+	choicebook->SetMinSize(FromDIP(wxSize(225, 300)));
 	sizer->Add(choicebook, wxSizerFlags(1).Expand());
 	SetSizer(sizer);
 

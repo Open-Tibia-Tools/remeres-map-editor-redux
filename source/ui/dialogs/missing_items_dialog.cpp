@@ -14,7 +14,7 @@
 #include <wx/wfstream.h>
 
 MissingItemsDialog::MissingItemsDialog(wxWindow* parent, const MissingItemReport& report, bool hasOtb) :
-	wxDialog(parent, wxID_ANY, "Missing Item Definitions Report", wxDefaultPosition, wxSize(700, 600), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+	wxDialog(parent, wxID_ANY, "Missing Item Definitions Report", wxDefaultPosition, parent ? parent->FromDIP(wxSize(700, 600)) : wxSize(700, 600), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
 	report(report),
 	hasOtb(hasOtb),
 	listMissingInDat(nullptr),

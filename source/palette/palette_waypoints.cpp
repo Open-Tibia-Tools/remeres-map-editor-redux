@@ -71,17 +71,17 @@ WaypointPalettePanel::WaypointPalettePanel(wxWindow* parent, wxWindowID id) :
 
 	wxSizer* tmpsizer = new wxBoxSizer(wxHORIZONTAL);
 	add_waypoint_button = new wxButton(this, PALETTE_WAYPOINT_ADD_WAYPOINT, "Add", wxDefaultPosition, wxSize(50, -1));
-	add_waypoint_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	add_waypoint_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	add_waypoint_button->SetFont(Theme::GetFont(9, false));
 	tmpsizer->Add(add_waypoint_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
 
 	rename_waypoint_button = new wxButton(this, PALETTE_WAYPOINT_RENAME_WAYPOINT, "Rename", wxDefaultPosition, wxSize(60, -1));
-	rename_waypoint_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
+	rename_waypoint_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 	rename_waypoint_button->SetFont(Theme::GetFont(9, false));
 	tmpsizer->Add(rename_waypoint_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
 
 	remove_waypoint_button = new wxButton(this, PALETTE_WAYPOINT_REMOVE_WAYPOINT, "Remove", wxDefaultPosition, wxSize(60, -1));
-	remove_waypoint_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+	remove_waypoint_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	remove_waypoint_button->SetFont(Theme::GetFont(9, false));
 	tmpsizer->Add(remove_waypoint_button, wxSizerFlags(1).Expand());
 	sidesizer->Add(tmpsizer, wxSizerFlags().Expand().Border(wxALL, 5));
@@ -315,17 +315,17 @@ void WaypointPalettePanel::OnWaypointContextMenu(int /*index*/, const TableRow* 
 			g_gui.SelectBrush();
 
 			if (wp->pos != Position()) {
-				menu.Append(PALETTE_WAYPOINT_GOTO, "Go to waypoint (double-click)")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MAP_PIN, wxSize(16, 16)));
+				menu.Append(PALETTE_WAYPOINT_GOTO, "Go to waypoint (double-click)")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MAP_PIN));
 				menu.AppendSeparator();
 			}
 
-			menu.Append(PALETTE_WAYPOINT_RENAME_WAYPOINT, "Rename...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
-			menu.Append(PALETTE_WAYPOINT_REMOVE_WAYPOINT, "Remove...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+			menu.Append(PALETTE_WAYPOINT_RENAME_WAYPOINT, "Rename...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
+			menu.Append(PALETTE_WAYPOINT_REMOVE_WAYPOINT, "Remove...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 			menu.AppendSeparator();
 		}
 	}
 
-	menu.Append(PALETTE_WAYPOINT_ADD_WAYPOINT, "Add waypoint...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	menu.Append(PALETTE_WAYPOINT_ADD_WAYPOINT, "Add waypoint...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	PopupMenu(&menu);
 }
 

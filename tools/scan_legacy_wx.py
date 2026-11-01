@@ -199,7 +199,7 @@ RULES: List[Rule] = [
         rule_id="WX_HARDCODED_PIXELS_IN_UI",
         category="high_dpi",
         severity="OPPORTUNITY",
-        pattern=re.compile(r'wxSize(?:\s+\w+)?\s*\(\s*\d{2,}\s*,\s*\d{2,}\s*\)'),
+        pattern=re.compile(r'(?<!FromDIP\()(?<!dipSize\()(?<!FromDIP\( )(?<!dipSize\( )wxSize(?:\s+\w+)?\s*\(\s*\d{2,}\s*,\s*\d{2,}\s*\)'),
         description="Hardcoded wxSize without FromDIP(...) scaling.",
         suggestion="Wrap dimensions in FromDIP(wxSize(w, h)) for per-monitor High-DPI correctness."
     ),
@@ -282,6 +282,10 @@ def scan_file(file_path: Path) -> List[Finding]:
         for rule in RULES:
             match = rule.pattern.search(line)
             if match:
+                # If rule is WX_HARDCODED_PIXELS_IN_UI and the line already applies High-DPI scaling, skip
+                if rule.rule_id == "WX_HARDCODED_PIXELS_IN_UI" and ("FromDIP" in line or "dipSize" in line):
+                    continue
+
                 findings.append(Finding(
                     file_path=str(file_path).replace("\\", "/"),
                     line_num=line_idx,

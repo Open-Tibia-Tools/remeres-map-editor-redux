@@ -90,7 +90,7 @@ DatDebugView::DatDebugView(wxWindow* parent) :
 	sizer->Add(search_field, wxSizerFlags().Expand());
 
 	item_list = new DatDebugViewListBox(this, wxID_ANY);
-	item_list->SetMinSize(wxSize(470, 400));
+	item_list->SetMinSize(FromDIP(wxSize(470, 400)));
 	sizer->Add(item_list, wxSizerFlags(1).Expand().Border(wxALL, 2));
 
 	SetSizerAndFit(sizer);

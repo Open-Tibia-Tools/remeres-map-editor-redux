@@ -16,9 +16,9 @@
 #include <wx/msgdlg.h>
 
 CollectionStudioWindow::CollectionStudioWindow(wxWindow* parent, Editor* editor) :
-	wxDialog(parent, wxID_ANY, "Add to Tileset", wxDefaultPosition, wxSize(940, 600), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+	wxDialog(parent, wxID_ANY, "Add to Tileset", wxDefaultPosition, parent ? parent->FromDIP(wxSize(940, 600)) : wxSize(940, 600), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
 	m_editor(editor) {
-	SetMinSize(wxSize(800, 480));
+	SetMinSize(FromDIP(wxSize(800, 480)));
 	InitLayout();
 
 	Bind(wxEVT_CLOSE_WINDOW, &CollectionStudioWindow::OnClose, this);

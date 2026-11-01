@@ -487,7 +487,7 @@ LuaDialog::LuaDialog(sol::table options, sol::this_state ts) :
 		if (reqWidth != -1 || reqHeight != -1) {
 			info.BestSize(wxSize(reqWidth != -1 ? reqWidth : 300, reqHeight != -1 ? reqHeight : 200));
 		} else {
-			info.BestSize(wxSize(300, 200));
+			info.BestSize(FromDIP(wxSize(300, 200)));
 		}
 
 		info.Dockable(true).Floatable(true);
@@ -744,7 +744,7 @@ LuaDialog* LuaDialog::mapCanvas(sol::table options) {
 	MapPreviewCanvas* canvas = new MapPreviewCanvas(getParentForWidget(), *editor);
 
 	// Smaller default size to keep the window compact
-	canvas->SetMinSize(wxSize(200, 150));
+	canvas->SetMinSize(FromDIP(wxSize(200, 150)));
 
 	// Default to center of map start
 	canvas->SetPosition(1000, 1000, 7);
@@ -2585,7 +2585,7 @@ LuaDialog* LuaDialog::grid(sol::table options) {
 	}
 
 	// Use LuaGridCtrl in Icon mode for grid view
-	LuaGridCtrl* grid = new LuaGridCtrl(getParentForWidget(), wxID_ANY, wxDefaultPosition, wxSize(300, 200), wxLC_ICON | wxLC_AUTOARRANGE | wxLC_SINGLE_SEL);
+	LuaGridCtrl* grid = new LuaGridCtrl(getParentForWidget(), wxID_ANY, wxDefaultPosition, FromDIP(wxSize(300, 200)), wxLC_ICON | wxLC_AUTOARRANGE | wxLC_SINGLE_SEL);
 
 	// Create an image list
 	wxImageList* imageList = new wxImageList(iconWidth, iconHeight, true);

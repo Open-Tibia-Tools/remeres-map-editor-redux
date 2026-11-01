@@ -209,7 +209,7 @@ bool Application::OnInit() {
 	m_file_to_open = wxEmptyString;
 	ParseCommandLineMap(m_file_to_open);
 
-	g_gui.root = new MainFrame(__W_RME_APPLICATION_NAME__, wxDefaultPosition, wxSize(700, 500));
+	g_gui.root = new MainFrame(__W_RME_APPLICATION_NAME__, wxDefaultPosition, wxWindow::FromDIP(wxSize(700, 500), nullptr));
 	SetTopWindow(g_gui.root);
 	g_gui.SetTitle("");
 

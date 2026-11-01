@@ -146,15 +146,15 @@ BrowseFieldList::BrowseFieldList(wxWindow* parent) :
 	// Toolbar
 	wxBoxSizer* toolbar_sizer = new wxBoxSizer(wxHORIZONTAL);
 	btn_up = new wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	btn_up->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_ARROW_UP, wxSize(16, 16)));
+	btn_up->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_ARROW_UP));
 	btn_up->SetToolTip("Move item up in stack");
 
 	btn_down = new wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	btn_down->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_ARROW_DOWN, wxSize(16, 16)));
+	btn_down->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_ARROW_DOWN));
 	btn_down->SetToolTip("Move item down in stack");
 
 	btn_delete = new wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	btn_delete->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_TRASH_CAN, wxSize(16, 16)));
+	btn_delete->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_TRASH_CAN));
 	btn_delete->SetToolTip("Delete item");
 
 	toolbar_sizer->Add(btn_up, wxSizerFlags(0).Border(wxRIGHT, 2));

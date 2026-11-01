@@ -75,15 +75,15 @@ HousePalette::HousePalette(wxWindow* parent) :
 	// Action buttons (Add, Edit, Remove)
 	wxBoxSizer* action_sizer = new wxBoxSizer(wxHORIZONTAL);
 	add_button = new wxButton(this, PALETTE_HOUSE_ADD_HOUSE, "Add", wxDefaultPosition, wxSize(50, -1));
-	add_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	add_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	add_button->SetFont(Theme::GetFont(9, false));
 
 	edit_button = new wxButton(this, PALETTE_HOUSE_EDIT_HOUSE, "Edit", wxDefaultPosition, wxSize(50, -1));
-	edit_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
+	edit_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 	edit_button->SetFont(Theme::GetFont(9, false));
 
 	remove_button = new wxButton(this, PALETTE_HOUSE_REMOVE_HOUSE, "Remove", wxDefaultPosition, wxSize(60, -1));
-	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	remove_button->SetFont(Theme::GetFont(9, false));
 
 	action_sizer->Add(add_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
@@ -96,11 +96,11 @@ HousePalette::HousePalette(wxWindow* parent) :
 	wxBoxSizer* brush_sizer = new wxBoxSizer(wxHORIZONTAL);
 
 	house_brush_button = new wxToggleButton(this, PALETTE_HOUSE_BRUSH_BUTTON, "House tiles");
-	house_brush_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PAINTBRUSH, wxSize(16, 16)));
+	house_brush_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PAINTBRUSH));
 	house_brush_button->SetFont(Theme::GetFont(9, false));
 
 	select_exit_button = new wxToggleButton(this, PALETTE_HOUSE_SELECT_EXIT_BUTTON, "Select Exit");
-	select_exit_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_DOOR_OPEN, wxSize(16, 16)));
+	select_exit_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_DOOR_OPEN));
 	select_exit_button->SetFont(Theme::GetFont(9, false));
 
 	brush_sizer->Add(house_brush_button, wxSizerFlags(1).Expand().Border(wxRIGHT, 2));
@@ -418,18 +418,18 @@ void HousePalette::OnHouseContextMenu(int /*index*/, const TableRow* row, const 
 		selected_house_id_ = house->getID();
 
 		if (house->getExit() != Position(0, 0, 0) && house->getExit().isValid()) {
-			menu.Append(PALETTE_HOUSE_GOTO_EXIT, "Go to exit (double-click)")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MAP_PIN, wxSize(16, 16)));
+			menu.Append(PALETTE_HOUSE_GOTO_EXIT, "Go to exit (double-click)")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MAP_PIN));
 			menu.AppendSeparator();
 		}
-		menu.Append(PALETTE_HOUSE_BRUSH_BUTTON, "Paint house tiles")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PAINTBRUSH, wxSize(16, 16)));
-		menu.Append(PALETTE_HOUSE_SELECT_EXIT_BUTTON, "Select house exit")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_DOOR_OPEN, wxSize(16, 16)));
+		menu.Append(PALETTE_HOUSE_BRUSH_BUTTON, "Paint house tiles")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PAINTBRUSH));
+		menu.Append(PALETTE_HOUSE_SELECT_EXIT_BUTTON, "Select house exit")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_DOOR_OPEN));
 		menu.AppendSeparator();
-		menu.Append(PALETTE_HOUSE_EDIT_HOUSE, "Edit house...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
-		menu.Append(PALETTE_HOUSE_REMOVE_HOUSE, "Remove house...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+		menu.Append(PALETTE_HOUSE_EDIT_HOUSE, "Edit house...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
+		menu.Append(PALETTE_HOUSE_REMOVE_HOUSE, "Remove house...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 		menu.AppendSeparator();
 	}
 
-	menu.Append(PALETTE_HOUSE_ADD_HOUSE, "Add house...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+	menu.Append(PALETTE_HOUSE_ADD_HOUSE, "Add house...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	PopupMenu(&menu);
 }
 

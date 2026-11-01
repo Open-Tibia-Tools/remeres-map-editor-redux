@@ -60,10 +60,10 @@ WritablePropertiesWindow::WritablePropertiesWindow(wxWindow* parent, const Map* 
 
 	wxSizer* buttonsizer = new wxBoxSizer(wxHORIZONTAL);
 	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
-	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	buttonsizer->Add(okBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
 	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
-	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	buttonsizer->Add(cancelBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
 	topsizer->Add(buttonsizer, wxSizerFlags(0).Center().Border(wxLEFT | wxRIGHT, 20));
 
@@ -71,7 +71,7 @@ WritablePropertiesWindow::WritablePropertiesWindow(wxWindow* parent, const Map* 
 	Centre(wxBOTH);
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_FILE_PEN, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_FILE_PEN, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 

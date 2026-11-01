@@ -28,11 +28,11 @@ GotoPositionDialog::GotoPositionDialog(wxWindow* parent, Editor& editor) :
 	// OK/Cancel buttons
 	wxSizer* tmpsizer = new wxBoxSizer(wxHORIZONTAL);
 	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
-	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Go to position");
 	tmpsizer->Add(okBtn, wxSizerFlags(1).Center());
 	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
-	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancelBtn->SetToolTip("Close this window");
 	tmpsizer->Add(cancelBtn, wxSizerFlags(1).Center());
 	sizer->Add(tmpsizer, wxSizerFlags().Center().Border(wxALL, 20)); // Border to top too
@@ -44,7 +44,7 @@ GotoPositionDialog::GotoPositionDialog(wxWindow* parent, Editor& editor) :
 	cancelBtn->Bind(wxEVT_BUTTON, &GotoPositionDialog::OnClickCancel, this);
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_LOCATION, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_LOCATION, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 

@@ -154,7 +154,7 @@ LightColorPickerDialog::LightColorPickerDialog(wxWindow* parent, int current_col
 	main_sizer->Add(palette_, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
 
 	auto* preview_sizer = new wxBoxSizer(wxHORIZONTAL);
-	preview_bitmap_ = new wxStaticBitmap(this, wxID_ANY, CreateLightColorSwatchBitmap(this, selected_color_, wxSize(48, 48)));
+	preview_bitmap_ = new wxStaticBitmap(this, wxID_ANY, CreateLightColorSwatchBitmap(this, selected_color_, FromDIP(wxSize(48, 48))));
 	selection_label_ = new wxStaticText(this, wxID_ANY, wxEmptyString);
 	preview_sizer->Add(preview_bitmap_, wxSizerFlags().CenterVertical().Border(wxRIGHT, 10));
 	preview_sizer->Add(selection_label_, wxSizerFlags().CenterVertical());
@@ -173,7 +173,7 @@ void LightColorPickerDialog::UpdateSelection(int color_index) {
 		palette_->SetSelectedColor(selected_color_);
 	}
 	if (preview_bitmap_) {
-		preview_bitmap_->SetBitmap(CreateLightColorSwatchBitmap(this, selected_color_, wxSize(48, 48)));
+		preview_bitmap_->SetBitmap(CreateLightColorSwatchBitmap(this, selected_color_, FromDIP(wxSize(48, 48))));
 	}
 	if (selection_label_) {
 		const wxColor color = colorFromEightBit(selected_color_);

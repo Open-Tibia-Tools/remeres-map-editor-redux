@@ -97,7 +97,7 @@ void FindItemDialog::buildLayout() {
 	search_field_->SetDescriptiveText("Name, SID, or CID...");
 	search_field_->SetMinSize(FromDIP(wxSize(-1, 32)));
 	search_box_sizer->Add(search_field_, wxSizerFlags(1).Expand().Border(wxALL, 8));
-	reset_search_button_ = new wxBitmapButton(search_box->GetStaticBox(), wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	reset_search_button_ = new wxBitmapButton(search_box->GetStaticBox(), wxID_ANY, IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	reset_search_button_->SetMinSize(FromDIP(wxSize(30, 30)));
 	search_box_sizer->Add(reset_search_button_, wxSizerFlags().Border(wxTOP | wxRIGHT | wxBOTTOM, 8));
 	search_box->Add(search_box_sizer, wxSizerFlags(1).Expand());
@@ -333,7 +333,7 @@ void FindItemDialog::loadInitialState() {
 			Centre(wxBOTH);
 		}
 	} else {
-		SetSize(wxSize(1500, 900));
+		SetSize(FromDIP(wxSize(1500, 900)));
 		Centre(wxBOTH);
 	}
 
