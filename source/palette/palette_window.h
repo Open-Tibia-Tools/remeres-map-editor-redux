@@ -72,6 +72,9 @@ public:
 	// Forward key events to the parent window (The Map Window)
 	void OnKey(wxKeyEvent& event);
 	void OnClose(wxCloseEvent&);
+	void OnSize(wxSizeEvent& event);
+	void SetHorizontalLayout(bool horizontal);
+	bool IsHorizontal() const { return m_isHorizontal; }
 
 protected:
 	struct HardcodedPage {
@@ -79,7 +82,9 @@ protected:
 		const HardcodedPaletteProvider* provider = nullptr;
 	};
 
-	wxChoicebook* choicebook;
+	wxChoicebook* choicebook = nullptr;
+	wxChoice* m_paletteChoice = nullptr;
+	bool m_isHorizontal = false;
 	std::vector<PalettePanel*> palette_pages;
 	std::vector<HardcodedPage> hardcoded_pages;
 	HousePalette* house_palette;

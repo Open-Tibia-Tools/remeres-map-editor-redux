@@ -42,6 +42,41 @@ namespace {
 	return choicebook->GetPage(static_cast<size_t>(index));
 }
 
+class MainPaletteChoicebook final : public wxChoicebook {
+public:
+	MainPaletteChoicebook(wxWindow* parent, wxWindowID id, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0) :
+		wxChoicebook(parent, id, pos, size, style) {
+		Bind(wxEVT_SIZE, &MainPaletteChoicebook::OnSize, this);
+	}
+
+	void SetHorizontal(bool horizontal) {
+		m_horizontal = horizontal;
+	}
+
+	wxRect GetPageRect() const override {
+		if (m_horizontal) {
+			return wxRect(wxPoint(0, 0), GetClientSize());
+		}
+		return wxChoicebook::GetPageRect();
+	}
+
+	void OnSize(wxSizeEvent& event) {
+		if (m_horizontal) {
+			const int sel = GetSelection();
+			if (sel != wxNOT_FOUND && static_cast<size_t>(sel) < GetPageCount()) {
+				if (wxWindow* page = GetPage(static_cast<size_t>(sel))) {
+					page->SetSize(wxRect(wxPoint(0, 0), GetClientSize()));
+					page->Layout();
+				}
+			}
+			return;
+		}
+		event.Skip();
+	}
+
+private:
+	bool m_horizontal = false;
+};
 } // namespace
 
 PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
@@ -49,10 +84,21 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 	choicebook(nullptr),
 	house_palette(nullptr),
 	waypoint_palette(nullptr) {
-	SetMinSize(FromDIP(wxSize(225, 250)));
+	SetMinSize(FromDIP(wxSize(200, 100)));
 
-	choicebook = new wxChoicebook(this, PALETTE_CHOICEBOOK, wxDefaultPosition, FromDIP(wxSize(230, 250)));
+	choicebook = new MainPaletteChoicebook(this, PALETTE_CHOICEBOOK, wxDefaultPosition, FromDIP(wxSize(230, 250)));
+	m_paletteChoice = choicebook->GetChoiceCtrl();
+	m_paletteChoice->Bind(wxEVT_CHOICE, [this](wxCommandEvent& event) {
+		if (choicebook) {
+			const int sel = m_paletteChoice->GetSelection();
+			if (sel != wxNOT_FOUND && sel != choicebook->GetSelection()) {
+				choicebook->SetSelection(sel);
+			}
+		}
+		event.Skip();
+	});
 
+	Bind(wxEVT_SIZE, &PaletteWindow::OnSize, this);
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGING, &PaletteWindow::OnSwitchingPage, this, PALETTE_CHOICEBOOK);
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGED, &PaletteWindow::OnPageChanged, this, PALETTE_CHOICEBOOK);
 	Bind(wxEVT_CLOSE_WINDOW, &PaletteWindow::OnClose, this);
@@ -93,7 +139,6 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 	}
 
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-	choicebook->SetMinSize(FromDIP(wxSize(225, 300)));
 	sizer->Add(choicebook, wxSizerFlags(1).Expand());
 	SetSizer(sizer);
 
@@ -391,10 +436,86 @@ bool PaletteWindow::JumpToBrush(const Brush* brush, std::string_view preferredPa
 	return targetBrushPalettePanel->JumpToTilesetAndBrush(targetTileset->name, brush);
 }
 
+void PaletteWindow::OnSize(wxSizeEvent& event) {
+	event.Skip();
+	const wxSize sz = event.GetSize();
+	if (sz.x <= 0 || sz.y <= 0) {
+		return;
+	}
+
+	const bool shouldBeHorizontal = (sz.x > sz.y * 1.15f && sz.x > FromDIP(320));
+	const bool shouldBeVertical = (sz.x < sz.y * 0.95f || sz.x <= FromDIP(280));
+
+	bool newHorizontal = m_isHorizontal;
+	if (shouldBeHorizontal && !m_isHorizontal) {
+		newHorizontal = true;
+	} else if (shouldBeVertical && m_isHorizontal) {
+		newHorizontal = false;
+	}
+
+	if (newHorizontal != m_isHorizontal) {
+		SetHorizontalLayout(newHorizontal);
+	}
+}
+
+void PaletteWindow::SetHorizontalLayout(bool horizontal) {
+	if (m_isHorizontal == horizontal) {
+		return;
+	}
+	m_isHorizontal = horizontal;
+
+	Freeze();
+	if (choicebook) {
+		if (auto* mainCb = dynamic_cast<MainPaletteChoicebook*>(choicebook)) {
+		mainCb->SetHorizontal(horizontal);
+	}
+	}
+
+	for (auto* page : palette_pages) {
+		if (auto* brushPalette = dynamic_cast<BrushPalettePanel*>(page)) {
+			brushPalette->SetHorizontalLayout(horizontal);
+		}
+	}
+
+	if (horizontal) {
+		if (auto* ctrlSizer = choicebook->GetControlSizer()) {
+			ctrlSizer->Detach(m_paletteChoice);
+		}
+		if (auto* currentBrushPanel = dynamic_cast<BrushPalettePanel*>(choicebook->GetCurrentPage())) {
+			currentBrushPanel->AttachPaletteChoice(m_paletteChoice);
+		}
+	} else {
+		for (auto* page : palette_pages) {
+			if (auto* brushPalette = dynamic_cast<BrushPalettePanel*>(page)) {
+				brushPalette->DetachPaletteChoice();
+			}
+		}
+		if (m_paletteChoice) {
+			m_paletteChoice->Reparent(choicebook);
+		}
+		if (auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(choicebook->GetControlSizer())) {
+			ctrlSizer->Add(m_paletteChoice, wxSizerFlags(1).Expand());
+			ctrlSizer->Layout();
+		}
+	}
+
+	choicebook->Layout();
+	Thaw();
+	Layout();
+}
+
 void PaletteWindow::OnSwitchingPage(wxChoicebookEvent& event) {
 	event.Skip();
 	if (!choicebook) {
 		return;
+	}
+
+	if (m_isHorizontal) {
+		if (wxWindow* oldPage = choicebookPageAt(choicebook, event.GetOldSelection())) {
+			if (auto* oldBrushPanel = dynamic_cast<BrushPalettePanel*>(oldPage)) {
+				oldBrushPanel->DetachPaletteChoice();
+			}
+		}
 	}
 
 	if (wxWindow* oldPage = choicebookPageAt(choicebook, event.GetOldSelection())) {
@@ -414,6 +535,26 @@ void PaletteWindow::OnPageChanged(wxChoicebookEvent&) {
 	if (!choicebook) {
 		return;
 	}
+
+	if (m_isHorizontal) {
+		if (auto* newBrushPanel = dynamic_cast<BrushPalettePanel*>(choicebook->GetCurrentPage())) {
+			newBrushPanel->AttachPaletteChoice(m_paletteChoice);
+			if (m_paletteChoice && choicebook->GetSelection() != wxNOT_FOUND) {
+				m_paletteChoice->SetSelection(choicebook->GetSelection());
+			}
+		} else {
+			if (m_paletteChoice) {
+				m_paletteChoice->Reparent(choicebook);
+				if (auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(choicebook->GetControlSizer())) {
+					if (!ctrlSizer->GetItem(m_paletteChoice)) {
+						ctrlSizer->Add(m_paletteChoice, wxSizerFlags(1).Expand());
+						ctrlSizer->Layout();
+					}
+				}
+			}
+		}
+	}
+
 	g_gui.ActivatePalette(this);
 	g_gui.SelectBrush();
 	const std::string page_name = GetSelectedPageName();

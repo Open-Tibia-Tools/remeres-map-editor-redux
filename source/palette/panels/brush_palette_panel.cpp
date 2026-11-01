@@ -29,10 +29,22 @@ class PaletteChoicebook final : public wxChoicebook {
 public:
 	PaletteChoicebook(wxWindow* parent, wxWindowID id, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0) :
 		wxChoicebook(parent, id, pos, size, style) {
+		Bind(wxEVT_SIZE, &PaletteChoicebook::OnSize, this);
+	}
+
+	void SetHorizontalLayout(bool horizontal) {
+		m_horizontal = horizontal;
 	}
 
 	wxRect GetPageRect() const override {
 		wxRect rectPage(wxPoint(0, 0), GetClientSize());
+		if (m_horizontal) {
+			const int leftWidth = FromDIP(240);
+			rectPage.x = leftWidth + static_cast<int>(GetInternalBorder());
+			rectPage.y = 0;
+			rectPage.width = std::max(0, rectPage.width - rectPage.x);
+			return rectPage;
+		}
 		int controllerHeight = 0;
 		if (auto* ctrlSizer = GetControlSizer()) {
 			const int sizerY = std::max(0, ctrlSizer->GetPosition().y);
@@ -48,6 +60,11 @@ public:
 	}
 
 	wxSize CalcSizeFromPage(const wxSize& sizePage) const override {
+		if (m_horizontal) {
+			wxSize size = sizePage;
+			size.x += FromDIP(240) + static_cast<int>(GetInternalBorder());
+			return size;
+		}
 		if (!GetChoiceCtrl() || !GetChoiceCtrl()->IsShown()) {
 			return sizePage;
 		}
@@ -61,6 +78,28 @@ public:
 		size.y += controllerHeight + static_cast<int>(GetInternalBorder());
 		return size;
 	}
+
+	void OnSize(wxSizeEvent& event) {
+		if (m_horizontal) {
+			if (auto* ctrlSizer = GetControlSizer()) {
+				const int leftWidth = FromDIP(240);
+				ctrlSizer->SetDimension(0, 0, leftWidth, GetClientSize().y);
+				ctrlSizer->Layout();
+			}
+			const int sel = GetSelection();
+			if (sel != wxNOT_FOUND && static_cast<size_t>(sel) < GetPageCount()) {
+				if (wxWindow* page = GetPage(static_cast<size_t>(sel))) {
+					page->SetSize(GetPageRect());
+					page->Layout();
+				}
+			}
+			return;
+		}
+		event.Skip();
+	}
+
+private:
+	bool m_horizontal = false;
 };
 }
 
@@ -178,9 +217,10 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
 
 	// Create the tileset panel
-	wxSizer* ts_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Tileset");
-	PaletteChoicebook* tmp_choicebook = new PaletteChoicebook(static_cast<wxStaticBoxSizer*>(ts_sizer)->GetStaticBox(), wxID_ANY, wxDefaultPosition, FromDIP(wxSize(180, 250)));
-	ts_sizer->Add(tmp_choicebook, wxSizerFlags(1).Expand());
+	ts_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Tileset");
+	PaletteChoicebook* tmp_cb = new PaletteChoicebook(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(180, 250)));
+	choicebook = tmp_cb;
+	ts_sizer->Add(tmp_cb, wxSizerFlags(1).Expand());
 	topsizer->Add(ts_sizer, wxSizerFlags(1).Expand());
 
 	{
@@ -233,15 +273,15 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 			ApplyFilter();
 		};
 
-		gridToolbar = new TilesetGridToolbar(tmp_choicebook, std::move(actions), TilesetGridToolbar::Part_Standard | TilesetGridToolbar::Part_FilterAll);
+		gridToolbar = new TilesetGridToolbar(tmp_cb, std::move(actions), TilesetGridToolbar::Part_Standard | TilesetGridToolbar::Part_FilterAll);
 		gridToolbar->SetStacked(true);
 		gridToolbar->SetState(m_showLabels, m_tileSize, m_hasSort, m_sortKey, m_sortDir, m_filterAll, m_isListMode);
 		gridToolbar->SetIndicatorState(m_indicatorDogEar);
 		gridToolbar->SetGridSpacing(m_gridSpacing);
 		gridToolbar->SetFilterQuery(m_filterQuery);
 	}
-	wxChoice* choice = tmp_choicebook->GetChoiceCtrl();
-	auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(tmp_choicebook->GetControlSizer());
+	wxChoice* choice = tmp_cb->GetChoiceCtrl();
+	auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(tmp_cb->GetControlSizer());
 	if (ctrlSizer && choice) {
 		ctrlSizer->Detach(choice);
 		ctrlSizer->SetOrientation(wxVERTICAL);
@@ -254,12 +294,12 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 		if (m_filterAll && !m_filterQuery.empty()) {
 			choice->Enable(false);
 		}
-		tmp_choicebook->Layout();
+		tmp_cb->Layout();
 	}
 
 	for (const auto& tileset : palette.tilesets) {
 		if (tileset.size() > 0 || tileset.is_import_target) {
-			BrushPanel* panel = new BrushPanel(tmp_choicebook);
+			BrushPanel* panel = new BrushPanel(tmp_cb);
 			// PaletteCatalog keeps tileset objects stable while allowing their brush membership to grow.
 			panel->AssignTileset(&tileset);
 			if (m_hasSort) {
@@ -270,13 +310,13 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 			panel->SetDisplayMode(m_isListMode ? TilesetDisplayMode::List : TilesetDisplayMode::Grid);
 			panel->SetBrushIndicators(m_indicatorDogEar);
 			panel->SetGridSpacing(m_gridSpacing);
-			tmp_choicebook->AddPage(panel, wxstr(tileset.name));
+			tmp_cb->AddPage(panel, wxstr(tileset.name));
 		}
 	}
 
 	SetSizerAndFit(topsizer);
 
-	choicebook = tmp_choicebook;
+	// choicebook already assigned
 	if (choicebook && choicebook->GetPageCount() > 0 && choicebook->GetSelection() == wxNOT_FOUND) {
 		choicebook->SetSelection(0);
 	}
@@ -284,7 +324,66 @@ BrushPalettePanel::BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefin
 }
 
 BrushPalettePanel::~BrushPalettePanel() {
+	DetachPaletteChoice();
 	SavePaletteFilters();
+}
+
+void BrushPalettePanel::SetHorizontalLayout(bool horizontal) {
+	if (m_isHorizontal == horizontal) {
+		return;
+	}
+	m_isHorizontal = horizontal;
+
+	Freeze();
+	if (choicebook) {
+		if (auto* paletteChoicebook = dynamic_cast<PaletteChoicebook*>(choicebook)) {
+			paletteChoicebook->SetHorizontalLayout(horizontal);
+		}
+	}
+
+	if (horizontal) {
+		if (ts_sizer) {
+			ts_sizer->Detach(choicebook);
+			GetSizer()->Detach(ts_sizer);
+			ts_sizer->GetStaticBox()->Show(false);
+		}
+		GetSizer()->Add(choicebook, wxSizerFlags(1).Expand());
+	} else {
+		GetSizer()->Detach(choicebook);
+		if (ts_sizer) {
+			ts_sizer->GetStaticBox()->Show(true);
+			ts_sizer->Add(choicebook, wxSizerFlags(1).Expand());
+			GetSizer()->Add(ts_sizer, wxSizerFlags(1).Expand());
+		}
+	}
+
+	Thaw();
+	Layout();
+}
+
+void BrushPalettePanel::AttachPaletteChoice(wxChoice* paletteChoice) {
+	if (!paletteChoice || m_attachedPaletteChoice == paletteChoice || !choicebook) {
+		return;
+	}
+	m_attachedPaletteChoice = paletteChoice;
+	m_attachedPaletteChoice->Reparent(choicebook);
+
+	if (auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(choicebook->GetControlSizer())) {
+		ctrlSizer->Insert(0, m_attachedPaletteChoice, wxSizerFlags().Expand().Border(wxBOTTOM, 2));
+		ctrlSizer->Layout();
+	}
+	choicebook->Layout();
+}
+
+void BrushPalettePanel::DetachPaletteChoice() {
+	if (!m_attachedPaletteChoice || !choicebook) {
+		return;
+	}
+	if (auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(choicebook->GetControlSizer())) {
+		ctrlSizer->Detach(m_attachedPaletteChoice);
+		ctrlSizer->Layout();
+	}
+	m_attachedPaletteChoice = nullptr;
 }
 
 
