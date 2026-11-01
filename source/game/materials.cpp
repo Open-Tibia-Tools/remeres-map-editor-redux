@@ -78,7 +78,7 @@ MaterialsExtensionList Materials::getExtensionsByVersion(const ClientVersionID& 
 
 bool Materials::loadMaterials(const FileName& identifier, wxString& error, std::vector<std::string>& warnings) {
 	pugi::xml_document doc;
-	pugi::xml_parse_result result = doc.load_file(identifier.GetFullPath().mb_str());
+	pugi::xml_parse_result result = doc.load_file(identifier.GetFullPath().ToStdString().c_str());
 	if (!result) {
 		warnings.push_back((wxString("Could not open ") + identifier.GetFullName() + " (file not found or syntax error)").ToStdString());
 		return false;
@@ -193,7 +193,7 @@ bool Materials::loadModuleIncludes(const FileName& manifest, pugi::xml_node sect
 			}
 
 			pugi::xml_document doc;
-			pugi::xml_parse_result result = doc.load_file(file.GetFullPath().mb_str());
+			pugi::xml_parse_result result = doc.load_file(file.GetFullPath().ToStdString().c_str());
 			if (!result) {
 				error = "Could not parse modular include file: " + file.GetFullPath();
 				return false;
@@ -392,7 +392,7 @@ static void loadTilesetCreatureEntry(pugi::xml_node node, DynamicTilesetDefiniti
 
 bool Materials::loadPaletteFile(const FileName& filename, wxString& error, std::vector<std::string>& warnings) {
 	pugi::xml_document doc;
-	pugi::xml_parse_result result = doc.load_file(filename.GetFullPath().mb_str());
+	pugi::xml_parse_result result = doc.load_file(filename.GetFullPath().ToStdString().c_str());
 	if (!result) {
 		error = "Could not parse palettes file: " + filename.GetFullPath();
 		return false;
@@ -466,7 +466,7 @@ bool Materials::loadTilesetInclude(const FileName& manifest, pugi::xml_node incl
 
 bool Materials::loadDynamicTilesetFile(const FileName& filename, DynamicPaletteDefinition& palette, wxString& error, std::vector<std::string>& warnings) {
 	pugi::xml_document doc;
-	pugi::xml_parse_result result = doc.load_file(filename.GetFullPath().mb_str());
+	pugi::xml_parse_result result = doc.load_file(filename.GetFullPath().ToStdString().c_str());
 	if (!result) {
 		error = "Could not parse tileset file: " + filename.GetFullPath();
 		return false;

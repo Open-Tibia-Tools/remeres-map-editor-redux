@@ -42,7 +42,7 @@ void SetMenuIcon(wxMenuItem* item, std::string_view icon) {
 	if (name == "Town") {
 		return "Town\tT";
 	}
-	return wxString::FromUTF8(std::string(name).c_str());
+	return wxstr(name);
 }
 
 [[nodiscard]] std::string_view PaletteIcon(std::string_view name) {
@@ -169,7 +169,7 @@ void PaletteMenuHandler::RebuildPaletteMenu() {
 			palette_menu->AppendSeparator();
 			for (size_t index = 0; index < palettes.size() && index < maxMenuCount; ++index) {
 				const int menuId = MAIN_FRAME_MENU + PALETTE_MENU_FIRST + static_cast<int>(index);
-				const wxString label = wxString::FromUTF8(palettes[index].name.c_str());
+				const wxString label = wxstr(palettes[index].name);
 				wxMenuItem* item = palette_menu->Append(menuId, label, "Select the " + label + " palette.");
 				SetMenuIcon(item, ICON_PALETTE);
 				catalog_menu_ids.emplace(menuId, palettes[index].name);
@@ -188,7 +188,7 @@ void PaletteMenuHandler::RebuildPaletteMenu() {
 				const int menuId = MAIN_FRAME_MENU + PALETTE_MENU_FIRST + static_cast<int>(menuSlot);
 				const std::string providerName(providers[index].name);
 				const wxString label = PaletteLabel(providers[index].name);
-				wxMenuItem* item = palette_menu->Append(menuId, label, "Select the " + wxString::FromUTF8(providerName.c_str()) + " palette.");
+				wxMenuItem* item = palette_menu->Append(menuId, label, wxstr(std::format("Select the {} palette.", providerName)));
 				SetMenuIcon(item, PaletteIcon(providers[index].name));
 				catalog_menu_ids.emplace(menuId, providerName);
 				++menuSlot;

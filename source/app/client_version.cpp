@@ -520,7 +520,7 @@ bool ClientVersion::hasValidPaths() {
 	}
 
 	// Peek the version of the files
-	FileReadHandle dat_file(static_cast<const char*>(metadata_path.GetFullPath().mb_str()));
+	FileReadHandle dat_file(metadata_path.GetFullPath().ToStdString());
 	if (!dat_file.isOk()) {
 		wxLogError("Could not open metadata file.");
 		return false;
@@ -530,7 +530,7 @@ bool ClientVersion::hasValidPaths() {
 	dat_file.getU32(datSignature);
 	dat_file.close();
 
-	FileReadHandle spr_file(static_cast<const char*>(sprites_path.GetFullPath().mb_str()));
+	FileReadHandle spr_file(sprites_path.GetFullPath().ToStdString());
 	if (!spr_file.isOk()) {
 		wxLogError("Could not open sprites file.");
 		return false;

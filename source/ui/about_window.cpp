@@ -55,7 +55,7 @@ AboutWindow::AboutWindow(wxWindow* parent) :
 
 	about << "Using " << wxVERSION_STRING << " interface\n";
 	const char* gl_version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-	about << "OpenGL version " << (gl_version ? wxString(gl_version, wxConvUTF8) : wxString("Unknown")) << "\n";
+	about << "OpenGL version " << (gl_version ? wxstr(reinterpret_cast<const char*>(gl_version)) : wxString("Unknown")) << "\n";
 	about << "\n";
 	about << "This program comes with ABSOLUTELY NO WARRANTY;\n";
 	about << "for details see the LICENSE file.\n";
@@ -127,7 +127,7 @@ void AboutWindow::OnClickLicense(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 	path.SetFullName("COPYING.txt");
-	std::ifstream gpl(path.GetFullPath().mb_str());
+	std::ifstream gpl(path.GetFullPath().ToStdWstring());
 
 	std::string gpl_str;
 	char ch;

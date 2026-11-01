@@ -202,7 +202,7 @@ std::vector<Chunk> buildChunks(const Bounds& bounds, int outputImageSize, int ch
 
 wxFileName exportRootDirectory(const MinimapExportOptions& options) {
 	wxFileName directory(options.outputDirectory);
-	directory.AppendDir(wxString::FromUTF8(options.fileBaseName.c_str()));
+	directory.AppendDir(wxstr(options.fileBaseName));
 	return directory;
 }
 
@@ -225,7 +225,7 @@ bool ensureDirectory(const wxFileName& directory) {
 wxFileName outputFile(const wxFileName& directory, const std::string& baseName, const std::string& extension) {
 	wxFileName file(directory);
 	const std::string fullName = baseName + extension;
-	file.SetFullName(wxString::FromUTF8(fullName.c_str()));
+	file.SetFullName(wxstr(fullName));
 	return file;
 }
 

@@ -25,7 +25,7 @@ constexpr std::array<int, 8> kImageSizes { 512, 1024, 2048, 4096, 8192, 16384, 3
 constexpr int kMaxSafeImageDimension = 16384;
 
 [[nodiscard]] wxString defaultFileName(const Editor& editor) {
-	const wxString mapName = wxString::FromUTF8(editor.map.getName().c_str());
+	const wxString mapName = wxstr(editor.map.getName());
 	if (mapName.empty()) {
 		return "minimap";
 	}
@@ -169,7 +169,7 @@ void ExportMinimapWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	g_gui.DestroyLoadBar();
 
 	if (!result.ok) {
-		DialogUtil::PopupDialog(this, "Error", wxString::FromUTF8(result.error.c_str()), wxOK);
+		DialogUtil::PopupDialog(this, "Error", wxstr(result.error), wxOK);
 		return;
 	}
 

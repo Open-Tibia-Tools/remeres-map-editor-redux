@@ -106,8 +106,8 @@ bool Map::open(const std::string& file) {
 	change_tracker.markAllDirty();
 
 	wxFileName fn = wxstr(file);
-	filename = fn.GetFullPath().mb_str(wxConvUTF8);
-	name = fn.GetFullName().mb_str(wxConvUTF8);
+	filename = fn.GetFullPath().ToStdString();
+	name = fn.GetFullName().ToStdString();
 
 	// convert(getReplacementMapClassic(), true);
 
