@@ -156,7 +156,7 @@ EditTownDialog::EditTownDialog(wxWindow* parent, Map* map, Town* town, bool is_n
 	// Name
 	town_name = wxstr(town->getName());
 	detailsGrid->Add(newd wxStaticText(detailsBox->GetStaticBox(), wxID_ANY, "Name:"), wxSizerFlags(0).CenterVertical().Border(wxLEFT, 5));
-	name_field = newd wxTextCtrl(detailsBox->GetStaticBox(), wxID_ANY, town_name, wxDefaultPosition, wxDefaultSize, 0, wxTextValidator(wxFILTER_ASCII, &town_name));
+	name_field = newd wxTextCtrl(detailsBox->GetStaticBox(), wxID_ANY, town_name, wxDefaultPosition, wxDefaultSize, 0, wxTextValidator(wxFILTER_ASCII));
 	name_field->SetToolTip("Town display name");
 	detailsGrid->Add(name_field, wxSizerFlags(1).Expand());
 
@@ -228,7 +228,7 @@ void EditTownDialog::OnClickPickFromMap(wxCommandEvent& WXUNUSED(event)) {
 }
 
 void EditTownDialog::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
-	if (!Validate() || !TransferDataFromWindow()) {
+	if (!Validate()) {
 		return;
 	}
 

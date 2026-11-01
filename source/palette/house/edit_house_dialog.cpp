@@ -35,7 +35,7 @@ EditHouseDialog::EditHouseDialog(wxWindow* parent, Map* map, House* house) :
 	house_rent = i2ws(house->rent);
 
 	subsizer->Add(newd wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Name:"), wxSizerFlags(0).Border(wxLEFT, 5));
-	name_field = newd wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(160, 20), 0, wxTextValidator(wxFILTER_ASCII, &house_name));
+	name_field = newd wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, house_name, wxDefaultPosition, wxSize(160, 20), 0, wxTextValidator(wxFILTER_ASCII));
 	subsizer->Add(name_field, wxSizerFlags(1).Expand());
 
 	subsizer->Add(newd wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Town:"), wxSizerFlags(0).Border(wxLEFT, 5));
@@ -70,7 +70,7 @@ EditHouseDialog::EditHouseDialog(wxWindow* parent, Map* map, House* house) :
 	subsizer->Add(town_id_field, wxSizerFlags(1).Expand());
 
 	subsizer->Add(newd wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Rent:"), wxSizerFlags(0).Border(wxLEFT, 5));
-	rent_field = newd wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(160, 20), 0, wxTextValidator(wxFILTER_NUMERIC, &house_rent));
+	rent_field = newd wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, house_rent, wxDefaultPosition, wxSize(160, 20), 0, wxTextValidator(wxFILTER_DIGITS));
 	subsizer->Add(rent_field, wxSizerFlags(1).Expand());
 
 	wxFlexGridSizer* subsizerRight = newd wxFlexGridSizer(1, 10, 10);
@@ -118,7 +118,9 @@ void EditHouseDialog::OnFocusChange(wxFocusEvent& event) {
 }
 
 void EditHouseDialog::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
-	if (Validate() && TransferDataFromWindow()) {
+	if (Validate()) {
+		house_name = name_field->GetValue().Trim(true).Trim(false);
+		house_rent = rent_field->GetValue().Trim(true).Trim(false);
 		long new_house_rent;
 		house_rent.ToLong(&new_house_rent);
 		if (new_house_rent < 0) {
