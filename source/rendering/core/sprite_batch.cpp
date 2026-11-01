@@ -125,8 +125,10 @@ void SpriteBatch::begin(const glm::mat4& projection, const AtlasManager& atlas_m
 	shader_->Use();
 	shader_->SetMat4("uMVP", projection_);
 	shader_->SetInt("uAtlas", 0);
-	last_applied_tint_ = global_tint_;
-	shader_->SetVec4("uGlobalTint", global_tint_);
+	if (!last_applied_tint_.has_value() || *last_applied_tint_ != global_tint_) {
+		last_applied_tint_ = global_tint_;
+		shader_->SetVec4("uGlobalTint", global_tint_);
+	}
 }
 
 void SpriteBatch::setGlobalTint(float r, float g, float b, float a, const AtlasManager& atlas_manager) {
@@ -242,7 +244,7 @@ void SpriteBatch::flush(const AtlasManager& atlas_manager) {
 	shader_->Use();
 	shader_->SetMat4("uMVP", projection_);
 	shader_->SetInt("uAtlas", 0);
-	if (last_applied_tint_ != global_tint_) {
+	if (!last_applied_tint_.has_value() || *last_applied_tint_ != global_tint_) {
 		last_applied_tint_ = global_tint_;
 		shader_->SetVec4("uGlobalTint", global_tint_);
 	}
