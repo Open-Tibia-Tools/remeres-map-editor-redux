@@ -351,7 +351,7 @@ void SpawnValidatorWindow::RefreshTable() {
 		} else if (current_issues.empty()) {
 			status_label->SetLabel("Scan complete: No issues found.");
 		} else {
-			status_label->SetLabel(wxString::Format("Found %zu issues (%zu shown).", current_issues.size(), filtered.size()));
+			status_label->SetLabel(wxstr(std::format("Found {} issues ({} shown).", current_issues.size(), filtered.size())));
 		}
 	}
 
@@ -490,7 +490,7 @@ void SpawnValidatorWindow::OnRemoveAll() {
 	}
 
 	const int answer = wxMessageBox(
-		wxString::Format("Are you sure you want to remove all %zu listed broken spawn entries?\n\nThis action can be undone with Ctrl+Z.", filtered.size()),
+		wxstr(std::format("Are you sure you want to remove all {} listed broken spawn entries?\n\nThis action can be undone with Ctrl+Z.", filtered.size())),
 		"Confirm Remove All",
 		wxYES_NO | wxICON_WARNING,
 		this
@@ -510,6 +510,6 @@ void SpawnValidatorWindow::OnRemoveAll() {
 		selected_issue_id = -1;
 		g_gui.RefreshView();
 		RescanMap();
-		g_gui.SetStatusText(wxString::Format("Removed %zu broken spawn entries.", removedCount));
+		g_gui.SetStatusText(wxstr(std::format("Removed {} broken spawn entries.", removedCount)));
 	}
 }

@@ -237,7 +237,7 @@ namespace IngamePreview {
 		canvas->GetViewportSize(w, h);
 		w++;
 		canvas->SetViewportSize(w, h);
-		viewport_x_text->SetValue(wxString::Format("%d", w));
+		viewport_x_text->SetValue(std::to_string(w));
 	}
 
 	void IngamePreviewWindow::OnViewportWidthDown(wxCommandEvent& event) {
@@ -246,7 +246,7 @@ namespace IngamePreview {
 		if (w > 15) {
 			w--;
 			canvas->SetViewportSize(w, h);
-			viewport_x_text->SetValue(wxString::Format("%d", w));
+			viewport_x_text->SetValue(std::to_string(w));
 		}
 	}
 
@@ -255,7 +255,7 @@ namespace IngamePreview {
 		canvas->GetViewportSize(w, h);
 		h++;
 		canvas->SetViewportSize(w, h);
-		viewport_y_text->SetValue(wxString::Format("%d", h));
+		viewport_y_text->SetValue(std::to_string(h));
 	}
 
 	void IngamePreviewWindow::OnViewportHeightDown(wxCommandEvent& event) {
@@ -264,7 +264,7 @@ namespace IngamePreview {
 		if (h > 11) {
 			h--;
 			canvas->SetViewportSize(w, h);
-			viewport_y_text->SetValue(wxString::Format("%d", h));
+			viewport_y_text->SetValue(std::to_string(h));
 		}
 	}
 

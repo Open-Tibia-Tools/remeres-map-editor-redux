@@ -51,7 +51,7 @@ void OutfitSelectionGrid::UpdateFilter(const wxString& filter, bool colorable_on
 
 	filtered_outfits.clear();
 	std::ranges::copy_if(all_outfits, std::back_inserter(filtered_outfits), [&](const auto& item) {
-		bool match = filter.IsEmpty() || item.name.Lower().Contains(filter.Lower()) || wxString::Format("%d", item.lookType).Contains(filter);
+		bool match = filter.IsEmpty() || item.name.Lower().Contains(filter.Lower()) || wxstr(std::format("{}", item.lookType)).Contains(filter);
 		if (colorable_only && item.layers < 2) {
 			match = false;
 		}

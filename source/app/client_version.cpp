@@ -28,6 +28,7 @@
 #include "util/file_system.h"
 #include "ui/dialog_util.h"
 #include "app/client_version.h"
+#include <format>
 #include "app/client_asset_detector.h"
 
 #include <wx/dir.h>
@@ -545,20 +546,26 @@ bool ClientVersion::hasValidPaths() {
 		}
 	}
 
-	wxString message = "Signatures are incorrect.\n";
-	message << "Metadata signature: %X\n";
-	message << "Sprites signature: %X";
-	wxLogError(wxString::Format(message, datSignature, sprSignature));
+	wxString message = wxstr(std::format(
+		"Signatures are incorrect.\n"
+		"Metadata signature: {:X}\n"
+		"Sprites signature: {:X}",
+		datSignature, sprSignature
+	));
+	wxLogError(message);
 	return false;
 }
 
 bool ClientVersion::loadValidPaths() {
 	while (!hasValidPaths()) {
-		wxString message = "Could not locate metadata and/or sprite files, please navigate to your client assets %s installation folder.\n";
-		message << "Attempted metadata file: %s\n";
-		message << "Attempted sprites file: %s\n";
+		wxString message = wxstr(std::format(
+			"Could not locate metadata and/or sprite files, please navigate to your client assets {} installation folder.\n"
+			"Attempted metadata file: {}\n"
+			"Attempted sprites file: {}\n",
+			name, metadata_path.GetFullPath().ToStdString(), sprites_path.GetFullPath().ToStdString()
+		));
 
-		DialogUtil::PopupDialog("Error", wxString::Format(message, name, metadata_path.GetFullPath(), sprites_path.GetFullPath()), wxOK);
+		DialogUtil::PopupDialog("Error", message, wxOK);
 
 		wxString dirHelpText("Select assets directory.");
 		wxDirDialog file_dlg(nullptr, dirHelpText, "", wxDD_DIR_MUST_EXIST);

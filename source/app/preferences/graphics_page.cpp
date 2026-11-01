@@ -360,7 +360,7 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 	);
 
 	hardware_profile_choice = new wxChoice(hardware_section, wxID_ANY);
-	hardware_profile_choice->Append(wxString::Format("Auto-Detect (Recommended: %s)", wxString(HardwareProfileManager::getTierName(detected_tier).data())));
+	hardware_profile_choice->Append(wxstr(std::format("Auto-Detect (Recommended: {})", HardwareProfileManager::getTierName(detected_tier))));
 	hardware_profile_choice->Append("Low-End (Power Saver / 2 GB VRAM / 2 Threads)");
 	hardware_profile_choice->Append("Medium (Balanced / 4-6 GB VRAM / 4 Threads)");
 	hardware_profile_choice->Append("High (High-Performance / 8+ GB VRAM / Max Threads)");

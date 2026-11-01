@@ -1,6 +1,7 @@
 #include "app/main.h"
 
 #include "ui/result_window.h"
+#include <format>
 
 #include "ui/gui.h"
 #include "ui/theme.h"
@@ -270,7 +271,8 @@ private:
 		nvgFillColor(vg, NvgUtils::ToNvColor(meta_text));
 		nvgFontSize(vg, 11.0f);
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgText(vg, left, static_cast<float>(rect.y + rect.height / 2), wxString::Format("#%u", row.index).utf8_str(), nullptr);
+		const std::string index_str = std::format("#{}", row.index);
+		nvgText(vg, left, static_cast<float>(rect.y + rect.height / 2), index_str.c_str(), nullptr);
 
 		nvgFillColor(vg, NvgUtils::ToNvColor(name_text));
 		nvgFontSize(vg, 12.0f);
@@ -280,13 +282,13 @@ private:
 		nvgText(vg, text_left, name_y, row.name.utf8_str(), nullptr);
 		nvgRestore(vg);
 
-		const wxString coords = wxString::Format("[%d, %d, %d]", row.position.x, row.position.y, row.position.z);
+		const std::string coords = std::format("[{}, {}, {}]", row.position.x, row.position.y, row.position.z);
 		nvgFillColor(vg, NvgUtils::ToNvColor(meta_text));
 		nvgFontSize(vg, 10.0f);
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgSave(vg);
 		nvgScissor(vg, text_left, static_cast<float>(rect.y), text_width, static_cast<float>(rect.height));
-		nvgText(vg, text_left, coords_y, coords.utf8_str(), nullptr);
+		nvgText(vg, text_left, coords_y, coords.c_str(), nullptr);
 		nvgRestore(vg);
 	}
 
@@ -394,7 +396,7 @@ void SearchResultWindow::OnClickExport(wxCommandEvent& WXUNUSED(event)) {
 	const size_t count = rows_.size();
 	for (size_t i = 0; i < count; ++i) {
 		const SearchResultRow& row = rows_[i];
-		file.Write(wxString::Format("%u\t%s\t%d\t%d\t%d\n", row.index, row.name, row.position.x, row.position.y, row.position.z));
+		file.Write(wxstr(std::format("{}\t{}\t{}\t{}\t{}\n", row.index, row.name.ToStdString(), row.position.x, row.position.y, row.position.z)));
 		const auto from = static_cast<int32_t>(std::min<size_t>(i, static_cast<size_t>(std::numeric_limits<int32_t>::max())));
 		const auto to = static_cast<int32_t>(std::min<size_t>(count, static_cast<size_t>(std::numeric_limits<int32_t>::max())));
 		g_gui.SetLoadScale(from, to);
@@ -440,7 +442,7 @@ void SearchResultWindow::updateSummary() {
 	} else {
 		const uint32_t first_visible = std::min(total_count_, page_offset_ + 1);
 		const uint32_t last_visible = std::min(total_count_, page_offset_ + static_cast<uint32_t>(rows_.size()));
-		summary_label->SetLabel(wxString::Format("Results: %u | %u-%u", total_count_, first_visible, last_visible));
+		summary_label->SetLabel(wxstr(std::format("Results: {} | {}-{}", total_count_, first_visible, last_visible)));
 	}
 
 	if (previous_page_button_ != nullptr) {

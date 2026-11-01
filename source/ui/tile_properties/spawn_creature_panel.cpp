@@ -4,6 +4,7 @@
 
 #include "app/main.h"
 #include "ui/tile_properties/spawn_creature_panel.h"
+#include <format>
 #include "map/tile.h"
 #include "map/map.h"
 #include "util/image_manager.h"
@@ -51,7 +52,7 @@ SpawnCreaturePanel::~SpawnCreaturePanel() {
 
 void SpawnCreaturePanel::SetTile(Tile* tile) {
 	if (tile && tile->spawn) {
-		spawn_text->SetLabelText(wxString::Format("Spawn\nR=%d", tile->spawn->getSize()));
+		spawn_text->SetLabelText(wxstr(std::format("Spawn\nR={}", tile->spawn->getSize())));
 		spawn_bitmap->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_FIRE, FromDIP(wxSize(32, 32))));
 		spawn_bitmap->Show();
 	} else {

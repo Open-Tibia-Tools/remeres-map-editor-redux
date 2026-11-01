@@ -504,7 +504,7 @@ void TownPalettePanel::OnClickRemoveTown(wxCommandEvent& /*event*/) {
 		}
 	} else {
 		const int ret = wxMessageBox(
-			wxString::Format("Are you sure you want to remove town '%s' (ID: %u)?", wxstr(town->getName()), town->getID()),
+			wxstr(std::format("Are you sure you want to remove town '{}' (ID: {})?", town->getName(), town->getID())),
 			"Confirm Removal",
 			wxYES_NO | wxICON_QUESTION | wxCENTER,
 			this

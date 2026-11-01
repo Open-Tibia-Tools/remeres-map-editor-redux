@@ -1,4 +1,5 @@
 #include "ui/map/export_minimap_window.h"
+#include <format>
 
 #include "app/application.h"
 #include "editor/editor.h"
@@ -175,7 +176,7 @@ void ExportMinimapWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	if (result.filesWritten == 0) {
 		DialogUtil::PopupDialog(this, "Export Minimap", "No minimap tiles found to export.", wxOK);
 	} else {
-		DialogUtil::PopupDialog(this, "Export Minimap", wxString::Format("Exported %llu minimap file(s).", static_cast<unsigned long long>(result.filesWritten)), wxOK);
+		DialogUtil::PopupDialog(this, "Export Minimap", wxstr(std::format("Exported {} minimap file(s).", result.filesWritten)), wxOK);
 	}
 	EndModal(wxID_OK);
 }
@@ -290,7 +291,7 @@ wxPanel* ExportMinimapWindow::CreateFormatPage(wxNotebook* notebook, MinimapExpo
 				continue;
 			}
 			controls.image_sizes.push_back(size);
-			controls.image_size_choice->Append(wxString::Format("%d x %d", size, size));
+			controls.image_size_choice->Append(wxstr(std::format("{} x {}", size, size)));
 		}
 		controls.image_size_choice->SetSelection(1);
 		controls.image_size_choice->Bind(wxEVT_CHOICE, &ExportMinimapWindow::OnChoiceChanged, this);
@@ -324,7 +325,7 @@ wxSizer* ExportMinimapWindow::CreateAreaSizer() {
 	undergroundSizer->Add(newd wxStaticText(areaParent, wxID_ANY, "Underground floors"), 0, wxLEFT | wxRIGHT | wxTOP | wxBOTTOM, 4);
 
 	for (int floor = 0; floor < MAP_LAYERS; ++floor) {
-		auto* checkbox = newd wxCheckBox(areaParent, wxID_ANY, wxString::Format("Floor %d", floor));
+		auto* checkbox = newd wxCheckBox(areaParent, wxID_ANY, wxstr(std::format("Floor {}", floor)));
 		checkbox->SetValue(true);
 		checkbox->Bind(wxEVT_CHECKBOX, &ExportMinimapWindow::OnChoiceChanged, this);
 		floor_checkboxes_[static_cast<size_t>(floor)] = checkbox;

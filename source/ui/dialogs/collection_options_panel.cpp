@@ -28,11 +28,11 @@ public:
 		wxDialog(parent, wxID_ANY, "Tileset Already Exists", wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE) {
 		wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
 
-		wxString msg = wxString::Format(
-			"A tileset named \"%s\" already exists in the \"%s\" palette.\n\nWould you like to append these elements to it instead?",
-			wxstr(tilesetName),
-			wxstr(paletteName)
-		);
+		wxString msg = wxstr(std::format(
+			"A tileset named \"{}\" already exists in the \"{}\" palette.\n\nWould you like to append these elements to it instead?",
+			tilesetName,
+			paletteName
+		));
 		wxStaticText* text = new wxStaticText(this, wxID_ANY, msg);
 		mainSizer->Add(text, 0, wxALL, 16);
 
@@ -207,7 +207,7 @@ void CollectionOptionsPanel::OnPaletteChanged(wxCommandEvent&) {
 	RefreshExistingTilesets();
 	m_nameInput->SetValue(wxstr(GenerateDefaultTilesetName()));
 	std::string pal = GetTargetPaletteName();
-	m_saveBtn->SetLabel(wxString::Format("&Add to %s", wxstr(pal)));
+	m_saveBtn->SetLabel(wxstr(std::format("&Add to {}", pal)));
 	UpdateFilePreview();
 	Layout();
 }
@@ -271,8 +271,8 @@ void CollectionOptionsPanel::UpdateCounts(size_t itemCount, size_t brushCount) {
 	m_itemCount = itemCount;
 	m_brushCount = brushCount;
 
-	m_includeItemsCheck->SetLabel(wxString::Format("Include Items (%zu)", m_itemCount));
-	m_includeBrushesCheck->SetLabel(wxString::Format("Include Brushes (%zu)", m_brushCount));
+	m_includeItemsCheck->SetLabel(wxstr(std::format("Include Items ({})", m_itemCount)));
+	m_includeBrushesCheck->SetLabel(wxstr(std::format("Include Brushes ({})", m_brushCount)));
 }
 
 void CollectionOptionsPanel::OnModeChanged(wxCommandEvent&) {
@@ -298,7 +298,7 @@ void CollectionOptionsPanel::UpdateFilePreview() {
 	std::error_code ec;
 	auto rel = std::filesystem::relative(filePath, palettesPath.parent_path(), ec);
 	std::string displayRel = ec ? filePath.string() : rel.generic_string();
-	m_filePathLabel->SetLabel(wxString::Format("Target (%s):\n%s", wxstr(pal), wxstr(displayRel)));
+	m_filePathLabel->SetLabel(wxstr(std::format("Target ({}):\n{}", pal, displayRel)));
 	m_filePathLabel->Wrap(240);
 	Layout();
 }

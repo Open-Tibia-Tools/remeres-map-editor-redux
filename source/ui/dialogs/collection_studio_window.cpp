@@ -1,4 +1,5 @@
 #include "ui/dialogs/collection_studio_window.h"
+#include <format>
 
 #include "ui/controls/collection_item_grid.h"
 #include "ui/controls/collection_brush_grid.h"
@@ -359,10 +360,10 @@ void CollectionStudioWindow::UpdateUI() {
 		m_brushGrid->SetBrushes(m_staging.brushes);
 	}
 	if (m_itemCountLabel) {
-		m_itemCountLabel->SetLabel(wxString::Format("Items: %zu", m_staging.itemIds.size()));
+		m_itemCountLabel->SetLabel(wxstr(std::format("Items: {}", m_staging.itemIds.size())));
 	}
 	if (m_brushCountLabel) {
-		m_brushCountLabel->SetLabel(wxString::Format("Brushes: %zu", m_staging.brushes.size()));
+		m_brushCountLabel->SetLabel(wxstr(std::format("Brushes: {}", m_staging.brushes.size())));
 	}
 	if (m_optionsPanel) {
 		m_optionsPanel->UpdateCounts(m_staging.itemIds.size(), m_staging.brushes.size());
@@ -380,12 +381,12 @@ void CollectionStudioWindow::OnSave(const std::string& paletteName, const std::s
 
 	std::string error;
 	if (!rme::collection::CollectionXmlService::SaveTilesetXml(tilesetFilePath, name, itemsToSave, brushesToSave, append, error)) {
-		wxMessageBox(wxString::Format("Error saving tileset:\n%s", wxstr(error)), "Add to Tileset", wxOK | wxICON_ERROR, this);
+		wxMessageBox(wxstr(std::format("Error saving tileset:\n{}", error)), "Add to Tileset", wxOK | wxICON_ERROR, this);
 		return;
 	}
 
 	if (!rme::collection::CollectionXmlService::EnsurePaletteInclude(paletteName, name, error)) {
-		wxMessageBox(wxString::Format("Error updating palettes.xml:\n%s", wxstr(error)), "Add to Tileset", wxOK | wxICON_ERROR, this);
+		wxMessageBox(wxstr(std::format("Error updating palettes.xml:\n{}", error)), "Add to Tileset", wxOK | wxICON_ERROR, this);
 		return;
 	}
 
@@ -393,7 +394,7 @@ void CollectionStudioWindow::OnSave(const std::string& paletteName, const std::s
 
 	m_isDirty = false;
 	m_optionsPanel->RefreshExistingTilesets();
-	wxMessageBox(wxString::Format("Successfully saved tileset to %s palette!", wxstr(paletteName)), "Add to Tileset", wxOK | wxICON_INFORMATION, this);
+	wxMessageBox(wxstr(std::format("Successfully saved tileset to {} palette!", paletteName)), "Add to Tileset", wxOK | wxICON_INFORMATION, this);
 	Close();
 }
 

@@ -1,4 +1,5 @@
 #include "app/preferences/interface_page.h"
+#include <format>
 
 #include <cmath>
 
@@ -11,7 +12,7 @@
 
 namespace {
 wxString FormatSpeedLabel(int raw_value) {
-	return wxString::Format("%.1fx", raw_value / 10.0);
+	return wxstr(std::format("{:.1f}x", raw_value / 10.0));
 }
 }
 

@@ -43,13 +43,13 @@ TownIdWarningDialog::TownIdWarningDialog(wxWindow* parent, uint32_t old_id, uint
 	auto* icon = newd wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, wxSize(32, 32)));
 	content_sizer->Add(icon, 0, wxALL | wxALIGN_TOP, 15);
 
-	wxString msg = wxString::Format(
-		"Changing Town ID from %u to %u has major consequences:\n\n"
-		"  - %zu houses are currently linked to this town in the OTBM map.\n"
+	wxString msg = wxstr(std::format(
+		"Changing Town ID from {} to {} has major consequences:\n\n"
+		"  - {} houses are currently linked to this town in the OTBM map.\n"
 		"  - Server database: Player spawn points ('players' table) and NPC scripts rely on Town ID.\n\n"
-		"Do you want to update all %zu associated houses to use the new Town ID %u?",
+		"Do you want to update all {} associated houses to use the new Town ID {}?",
 		old_id, new_id, house_count, house_count, new_id
-	);
+	));
 	auto* text = newd wxStaticText(this, wxID_ANY, msg);
 	text->Wrap(FromDIP(450));
 	content_sizer->Add(text, 1, wxTOP | wxBOTTOM | wxRIGHT | wxEXPAND, 15);
@@ -95,12 +95,12 @@ TownDeleteDialog::TownDeleteDialog(wxWindow* parent, const std::string& name, ui
 	auto* icon = newd wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, wxSize(32, 32)));
 	content_sizer->Add(icon, 0, wxALL | wxALIGN_TOP, 15);
 
-	wxString msg = wxString::Format(
-		"Town '%s' (ID: %u) has %zu house(s) assigned to it.\n\n"
-		"Deleting this town will permanently delete all %zu associated houses, house tiles, and house exits!\n\n"
-		"Are you sure you want to delete town '%s' and wipe all of its houses?",
-		wxstr(name), town_id, house_count, house_count, wxstr(name)
-	);
+	wxString msg = wxstr(std::format(
+		"Town '{}' (ID: {}) has {} house(s) assigned to it.\n\n"
+		"Deleting this town will permanently delete all {} associated houses, house tiles, and house exits!\n\n"
+		"Are you sure you want to delete town '{}' and wipe all of its houses?",
+		name, town_id, house_count, house_count, name
+	));
 	auto* text = newd wxStaticText(this, wxID_ANY, msg);
 	text->Wrap(FromDIP(450));
 	content_sizer->Add(text, 1, wxTOP | wxBOTTOM | wxRIGHT | wxEXPAND, 15);

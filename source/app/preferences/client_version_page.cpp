@@ -1,4 +1,5 @@
 #include "app/preferences/client_version_page.h"
+#include <format>
 
 #include <algorithm>
 #include <array>
@@ -345,7 +346,7 @@ void ClientVersionPage::PopulateClientTree() {
 			return lhs->getName() < rhs->getName();
 		});
 
-		auto group = client_tree_ctrl->AppendItem(root, wxString::Format("%d.x (%zu)", major_version, versions.size()));
+		auto group = client_tree_ctrl->AppendItem(root, wxstr(std::format("{}.x ({})", major_version, versions.size())));
 		for (auto* version : versions) {
 			auto item = client_tree_ctrl->AppendItem(group, wxstr(version->getName()), -1, -1, new TreeItemData(version));
 			if (!first_item.IsOk()) {
@@ -488,15 +489,15 @@ void ClientVersionPage::RefreshClientEditor() {
 		if (!otbm_versions_text.IsEmpty()) {
 			otbm_versions_text += ", ";
 		}
-		otbm_versions_text += wxString::Format("%d", static_cast<int>(version_id) + 1);
+		otbm_versions_text += wxstr(std::format("{}", static_cast<int>(version_id) + 1));
 	}
 	auto* otbm_property = client_prop_grid->Append(new wxStringProperty("Supported OTBM Versions", "otbmVersions", otbm_versions_text));
 	otbm_property->SetHelpString("Comma-separated list of supported OTBM versions, usually 1 through 4.");
 
 	client_prop_grid->Append(new wxPropertyCategory("Signatures"));
-	auto* dat_signature_property = client_prop_grid->Append(new wxStringProperty("DAT Signature", "datSignature", wxString::Format("%X", active_client->getDatSignature())));
+	auto* dat_signature_property = client_prop_grid->Append(new wxStringProperty("DAT Signature", "datSignature", wxstr(std::format("{:X}", active_client->getDatSignature()))));
 	dat_signature_property->SetHelpString("Expected DAT signature written in hexadecimal.");
-	auto* spr_signature_property = client_prop_grid->Append(new wxStringProperty("SPR Signature", "sprSignature", wxString::Format("%X", active_client->getSprSignature())));
+	auto* spr_signature_property = client_prop_grid->Append(new wxStringProperty("SPR Signature", "sprSignature", wxstr(std::format("{:X}", active_client->getSprSignature()))));
 	spr_signature_property->SetHelpString("Expected SPR signature written in hexadecimal.");
 
 	client_prop_grid->Append(new wxPropertyCategory("Features"));
@@ -728,11 +729,11 @@ void ClientVersionPage::SyncClientPropertiesToGrid(const ClientVersion& client) 
 		if (!otbm_versions_text.IsEmpty()) {
 			otbm_versions_text += ", ";
 		}
-		otbm_versions_text += wxString::Format("%d", static_cast<int>(version_id) + 1);
+		otbm_versions_text += wxstr(std::format("{}", static_cast<int>(version_id) + 1));
 	}
 	UpdateGridProperty(client_prop_grid, "otbmVersions", otbm_versions_text);
-	UpdateGridProperty(client_prop_grid, "datSignature", wxString::Format("%X", client.getDatSignature()));
-	UpdateGridProperty(client_prop_grid, "sprSignature", wxString::Format("%X", client.getSprSignature()));
+	UpdateGridProperty(client_prop_grid, "datSignature", wxstr(std::format("{:X}", client.getDatSignature())));
+	UpdateGridProperty(client_prop_grid, "sprSignature", wxstr(std::format("{:X}", client.getSprSignature())));
 	UpdateGridProperty(client_prop_grid, "transparency", client.isTransparent());
 	UpdateGridProperty(client_prop_grid, "extended", client.isExtended());
 	UpdateGridProperty(client_prop_grid, "frameDurations", client.hasFrameDurations());
@@ -959,7 +960,7 @@ void ClientVersionPage::OnPropertyChanged(wxPropertyGridEvent& event) {
 		if (result.ec == std::errc() && result.ptr == end) {
 			client->setDatSignature(signature);
 		} else {
-			prop->SetValue(wxString::Format("%X", client->getDatSignature()));
+			prop->SetValue(wxstr(std::format("{:X}", client->getDatSignature())));
 		}
 	} else if (prop_name == "sprSignature") {
 		uint32_t signature = 0;
@@ -969,7 +970,7 @@ void ClientVersionPage::OnPropertyChanged(wxPropertyGridEvent& event) {
 		if (result.ec == std::errc() && result.ptr == end) {
 			client->setSprSignature(signature);
 		} else {
-			prop->SetValue(wxString::Format("%X", client->getSprSignature()));
+			prop->SetValue(wxstr(std::format("{:X}", client->getSprSignature())));
 		}
 	} else if (prop_name == "transparency") {
 		client->setTransparent(value.As<bool>());

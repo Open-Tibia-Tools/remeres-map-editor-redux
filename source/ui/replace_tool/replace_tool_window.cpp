@@ -1,5 +1,6 @@
 #include "app/main.h"
 #include "replace_tool_window.h"
+#include <format>
 #include "visual_similarity_service.h"
 #include "ui/theme.h"
 
@@ -109,7 +110,7 @@ void ReplaceToolWindow::OnClose(wxCloseEvent& event) {
 	if (m_rulesDirty && event.CanVeto()) {
 		wxString question = m_activeRuleSetName.empty()
 			? wxString("The rules in the table were never saved to a rule set.\n\nSave them now?")
-			: wxString::Format("Rule set \"%s\" has unsaved changes.\n\nSave before closing?", wxstr(m_activeRuleSetName));
+			: wxstr(std::format("Rule set \"{}\" has unsaved changes.\n\nSave before closing?", m_activeRuleSetName));
 
 		const int answer = wxMessageBox(question, "Unsaved rules", wxYES_NO | wxCANCEL | wxICON_WARNING, this);
 		if (answer == wxCANCEL) {
@@ -713,13 +714,13 @@ void ReplaceToolWindow::OnExecute(wxCommandEvent&) {
 		return;
 	}
 
-	wxString preview = wxString::Format("Up to %u item(s) can be replaced:\n\n", totalMatches);
+	wxString preview = wxstr(std::format("Up to {} item(s) can be replaced:\n\n", totalMatches));
 	for (size_t row = 0; row < groups.size() && row < perRow.size(); ++row) {
 		if (perRow[row] == 0) {
 			continue;
 		}
 		const size_t sourceCount = groups[row].sources.size();
-		preview += wxString::Format("Rule %u (%u source%s): %u hit(s)\n", static_cast<unsigned>(row + 1), static_cast<unsigned>(sourceCount), sourceCount == 1 ? "" : "s", perRow[row]);
+		preview += wxstr(std::format("Rule {} ({} source{}): {} hit(s)\n", row + 1, sourceCount, sourceCount == 1 ? "" : "s", perRow[row]));
 	}
 	preview += "\nChances add up: a rule changes that share of its matches and leaves the rest untouched.\nExecute the replacements?";
 
@@ -762,9 +763,9 @@ void ReplaceToolWindow::OnAutoMatchRules(Brush* brush) {
 	}
 	const size_t matchedCount = ruleBuilder->AutoMatchUnmatchedRules(brush);
 	if (matchedCount > 0) {
-		wxMessageBox(wxString::Format("Successfully matched and filled %zu rule(s) from brush '%s'.", matchedCount, wxstr(brush->getName())), "Auto Match Rules", wxOK | wxICON_INFORMATION, this);
+		wxMessageBox(wxstr(std::format("Successfully matched and filled {} rule(s) from brush '{}'.", matchedCount, brush->getName())), "Auto Match Rules", wxOK | wxICON_INFORMATION, this);
 	} else {
-		wxMessageBox(wxString::Format("No unmatched rules were compatible with brush '%s'.", wxstr(brush->getName())), "Auto Match Rules", wxOK | wxICON_INFORMATION, this);
+		wxMessageBox(wxstr(std::format("No unmatched rules were compatible with brush '{}'.", brush->getName())), "Auto Match Rules", wxOK | wxICON_INFORMATION, this);
 	}
 }
 

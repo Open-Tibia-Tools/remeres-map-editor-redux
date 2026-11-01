@@ -18,6 +18,7 @@
 #include "app/main.h"
 #include "lua_script_manager.h"
 #include "lua_scripts_window.h"
+#include <format>
 #include "ui/gui.h"
 #include "ui/gui_ids.h"
 #include "ui/theme.h"
@@ -408,8 +409,8 @@ void LuaScriptsWindow::RemoveSelectedScript() {
 	const wxString scriptName = wxString::FromUTF8(script->getDisplayName());
 	const wxString targetKind = script->isPackage() ? "script package" : "script file";
 	const wxString message = script->isPackage()
-		? wxString::Format("Delete \"%s\" and its entire script folder?", scriptName)
-		: wxString::Format("Delete \"%s\" from the scripts folder?", scriptName);
+		? wxstr(std::format("Delete \"{}\" and its entire script folder?", script->getDisplayName()))
+		: wxstr(std::format("Delete \"{}\" from the scripts folder?", script->getDisplayName()));
 
 	wxMessageDialog confirm(this, message, "Remove Script", wxYES_NO | wxNO_DEFAULT | wxICON_WARNING);
 	if (confirm.ShowModal() != wxID_YES) {
@@ -431,18 +432,18 @@ void LuaScriptsWindow::RemoveSelectedScript() {
 
 	if (errorCode || !removed) {
 		LogMessage(
-			wxString::Format(
-				"Failed to remove %s: %s",
-				targetKind,
-				wxString::FromUTF8(errorCode ? errorCode.message() : "no filesystem changes were made")
-			),
+			wxstr(std::format(
+				"Failed to remove {}: {}",
+				targetKind.ToStdString(),
+				errorCode ? errorCode.message() : "no filesystem changes were made"
+			)),
 			true
 		);
 		return;
 	}
 
 	selected_script_id.clear();
-	LogMessage(wxString::Format("Removed %s: %s", targetKind, scriptName));
+	LogMessage(wxstr(std::format("Removed {}: {}", targetKind.ToStdString(), script->getDisplayName())));
 	g_luaScripts.reloadScripts();
 	g_gui.UpdateMenubar();
 	RefreshScriptList();
@@ -546,7 +547,7 @@ void LuaScriptsWindow::OnReloadScripts(wxCommandEvent&) {
 	g_luaScripts.reloadScripts();
 	g_gui.UpdateMenubar();
 	RefreshScriptList();
-	LogMessage("Scripts reloaded. Found " + wxString::Format("%zu", g_luaScripts.getScripts().size()) + " scripts.");
+	LogMessage(wxstr(std::format("Scripts reloaded. Found {} scripts.", g_luaScripts.getScripts().size())));
 }
 
 void LuaScriptsWindow::OnOpenFolder(wxCommandEvent&) {
