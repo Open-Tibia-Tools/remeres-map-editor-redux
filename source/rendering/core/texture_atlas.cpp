@@ -209,19 +209,29 @@ std::optional<TextureAtlas::Placement> TextureAtlas::findPlacement(int slot_widt
 	size_t& search_hint = single_slot ? small_search_hint_ : large_search_hint_;
 	for (;;) {
 		const size_t search_limit = static_cast<size_t>(layer_count_) * SLOTS_PER_LAYER;
-		for (size_t linear_index = search_hint; linear_index < search_limit; ++linear_index) {
-			const int layer = static_cast<int>(linear_index / SLOTS_PER_LAYER);
-			const int slot_index = static_cast<int>(linear_index % SLOTS_PER_LAYER);
-			const int slot_y = slot_index / SLOTS_PER_ROW;
-			const int slot_x = slot_index % SLOTS_PER_ROW;
+		if (search_hint < search_limit) {
+			int layer = static_cast<int>(search_hint / SLOTS_PER_LAYER);
+			int slot_index = static_cast<int>(search_hint % SLOTS_PER_LAYER);
+			int slot_y = slot_index / SLOTS_PER_ROW;
+			int slot_x = slot_index % SLOTS_PER_ROW;
 
-			if (isAreaFree(layer, slot_x, slot_y, slot_width, slot_height)) {
-				search_hint = linear_index + 1;
-				return Placement {
-					.layer = layer,
-					.slot_x = slot_x,
-					.slot_y = slot_y,
-				};
+			for (size_t linear_index = search_hint; linear_index < search_limit; ++linear_index) {
+				if (isAreaFree(layer, slot_x, slot_y, slot_width, slot_height)) {
+					search_hint = linear_index + 1;
+					return Placement {
+						.layer = layer,
+						.slot_x = slot_x,
+						.slot_y = slot_y,
+					};
+				}
+
+				if (++slot_x == SLOTS_PER_ROW) {
+					slot_x = 0;
+					if (++slot_y == SLOTS_PER_ROW) {
+						slot_y = 0;
+						++layer;
+					}
+				}
 			}
 		}
 
