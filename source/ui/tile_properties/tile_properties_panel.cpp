@@ -1,3 +1,4 @@
+#include <wx/collheaderctrl.h>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -38,6 +39,9 @@ TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	});
 	left_sizer->Add(browse_field_list, wxSizerFlags(1).Expand().Border(wxALL, 2));
 
+	spawn_creature_header = new wxCollapsibleHeaderCtrl(left_panel, wxID_ANY, "Spawn & Creature");
+	left_sizer->Add(spawn_creature_header, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT | wxTOP, 2));
+
 	spawn_creature_panel = new SpawnCreaturePanel(left_panel);
 	spawn_creature_panel->SetOnSpawnSelectedCallback([this]() {
 		OnSpawnSelected();
@@ -47,13 +51,26 @@ TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	});
 	left_sizer->Add(spawn_creature_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
+	spawn_creature_header->Bind(wxEVT_COLLAPSIBLEHEADER_CHANGED, [this](wxCommandEvent&) {
+		spawn_creature_panel->Show(!spawn_creature_header->IsCollapsed());
+		left_panel->Layout();
+	});
+
 	left_panel->SetSizer(left_sizer);
 
 	right_panel = new wxPanel(splitter);
 	right_sizer = new wxBoxSizer(wxVERTICAL);
 
+	map_flags_header = new wxCollapsibleHeaderCtrl(right_panel, wxID_ANY, "Map Flags");
+	right_sizer->Add(map_flags_header, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT | wxTOP, 2));
+
 	map_flags_panel = new MapFlagsPanel(right_panel);
 	right_sizer->Add(map_flags_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
+
+	map_flags_header->Bind(wxEVT_COLLAPSIBLEHEADER_CHANGED, [this](wxCommandEvent&) {
+		map_flags_panel->Show(!map_flags_header->IsCollapsed());
+		right_panel->Layout();
+	});
 
 	item_property_panel = new ItemPropertyPanel(right_panel);
 	right_sizer->Add(item_property_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
