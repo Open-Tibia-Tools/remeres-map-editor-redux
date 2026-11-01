@@ -1,3 +1,5 @@
+#include "ui/theme.h"
+#include <wx/richtooltip.h>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -205,4 +207,16 @@ void DialogUtil::ShowTextBox(wxWindow* parent, wxString title, wxString content)
 
 	dlg->ShowModal();
 	dlg->Destroy();
+}
+
+
+void DialogUtil::ShowRichToolTip(const wxString& title, const wxString& message, wxWindow* win, const wxRect* rect, int icon) {
+	if (!win) {
+		return;
+	}
+	wxRichToolTip tip(title, message);
+	tip.SetIcon(icon);
+	tip.SetTipKind(wxTipKind_Auto);
+	tip.SetBackgroundColour(Theme::Get(Theme::Role::Surface), Theme::Get(Theme::Role::RaisedSurface));
+	tip.ShowFor(win, rect);
 }

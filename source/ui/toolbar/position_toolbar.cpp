@@ -1,3 +1,4 @@
+#include "ui/dialog_util.h"
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -81,6 +82,8 @@ void PositionToolBar::OnGoClick(wxCommandEvent& event) {
 		Position pos(x_control->GetIntValue(), y_control->GetIntValue(), z_control->GetIntValue());
 		if (pos.isValid()) {
 			g_gui.SetScreenCenterPosition(pos);
+		} else {
+			DialogUtil::ShowRichToolTip("Invalid Coordinates", "Coordinates are out of bounds for the current map.", go_button, nullptr, wxICON_WARNING);
 		}
 	}
 }
@@ -100,6 +103,8 @@ void PositionToolBar::OnKeyUp(wxKeyEvent& event) {
 		Position pos(x_control->GetIntValue(), y_control->GetIntValue(), z_control->GetIntValue());
 		if (pos.isValid()) {
 			g_gui.SetScreenCenterPosition(pos);
+		} else {
+			DialogUtil::ShowRichToolTip("Invalid Coordinates", "Coordinates are out of bounds for the current map.", go_button, nullptr, wxICON_WARNING);
 		}
 	}
 	event.Skip();
