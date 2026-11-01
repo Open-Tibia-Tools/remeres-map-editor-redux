@@ -31,6 +31,14 @@
 #include "brushes/zone/zone_brush.h"
 #include "brushes/town/town_temple_brush.h"
 
+namespace {
+
+[[nodiscard]] inline bool shouldDrawGroundBelow(bool ctrl_down, bool alt_down, const Brush* brush) {
+	return !ctrl_down && !alt_down && brush && brush->is<GroundBrush>() && g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW);
+}
+
+} // namespace
+
 DrawingController::DrawingController(MapCanvas* canvas, Editor& editor) :
 	canvas(canvas),
 	editor(editor),
@@ -47,7 +55,7 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 	Brush* brush = g_gui.GetCurrentBrush();
 	if (brush) {
 		const BrushFootprint footprint = g_gui.GetBrushFootprint();
-		const bool draw_below = !ctrl_down && brush->is<GroundBrush>() && g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW);
+		const bool draw_below = shouldDrawGroundBelow(ctrl_down, alt_down, brush);
 		if (shift_down && brush->canDrag() && !draw_below) {
 			dragging_draw = true;
 		} else {
@@ -235,7 +243,7 @@ void DrawingController::HandleDrag(const Position& mouse_map_pos, bool shift_dow
 
 			BrushUtility::GetTilesToDraw(mouse_map_pos.x, mouse_map_pos.y, mouse_map_pos.z, &tilestodraw, &tilestoborder);
 
-			const bool draw_below = !ctrl_down && brush->is<GroundBrush>() && g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW);
+			const bool draw_below = shouldDrawGroundBelow(ctrl_down, alt_down, brush);
 			if (ctrl_down) {
 				editor.undraw(tilestodraw, tilestoborder, alt_down);
 			} else if (draw_below) {

@@ -23,7 +23,7 @@ wxAuiPaneInfo MinimapManager::DefaultPaneInfo() {
 		.CloseButton(true)
 		.MaximizeButton(true)
 		.BestSize(358, 240)
-		.MinSize(220, 140);
+		.MinSize(g_gui.root ? g_gui.root->FromDIP(wxSize(220, 140)) : wxSize(220, 140));
 }
 
 void MinimapManager::NormalizePaneInfo(wxAuiPaneInfo& info) {
@@ -31,7 +31,7 @@ void MinimapManager::NormalizePaneInfo(wxAuiPaneInfo& info) {
 		.Caption("Minimap")
 		.CloseButton(true)
 		.MaximizeButton(true)
-		.MinSize(220, 140);
+		.MinSize(g_gui.root ? g_gui.root->FromDIP(wxSize(220, 140)) : wxSize(220, 140));
 }
 
 MinimapManager::MinimapManager() :

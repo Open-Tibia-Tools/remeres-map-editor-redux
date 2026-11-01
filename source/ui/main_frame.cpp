@@ -101,7 +101,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 			.CloseButton(true)
 			.MaximizeButton(true)
 			.BestSize(358, 500)
-			.MinSize(220, 180)
+			.MinSize(FromDIP(wxSize(220, 180)))
 	);
 	g_gui.brush_items_window = new BrushItemsWindow(this);
 	g_gui.aui_manager->AddPane(g_gui.brush_items_window,
@@ -115,7 +115,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 			.MaximizeButton(true)
 			.Floatable(true)
 			.BestSize(220, 250)
-			.MinSize(220, 180)
+			.MinSize(FromDIP(wxSize(220, 180)))
 	);
 
 	// Create Script Manager panel (dockable)
@@ -131,7 +131,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 			.MinimizeButton(false)
 			.Floatable(true)
 			.BestSize(450, 350)
-			.MinSize(300, 200)
+			.MinSize(FromDIP(wxSize(300, 200)))
 			.Hide()  // Hidden by default, show from menu
 	);
 

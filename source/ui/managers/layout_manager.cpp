@@ -42,24 +42,62 @@ namespace {
 		return manager.SavePaneInfo(info);
 	}
 
-	void EnsurePaneOnScreen(wxAuiPaneInfo& info) {
-		if (info.IsFloatable()) {
-			bool offscreen = true;
-			for (uint32_t index = 0; index < wxDisplay::GetCount(); ++index) {
-				wxDisplay display(index);
-				wxRect rect = display.GetClientArea();
-				if (rect.Contains(info.floating_pos)) {
-					offscreen = false;
-					break;
-				}
-			}
+} // namespace
 
-			if (offscreen) {
-				info.Dock();
+void LayoutManager::EnsurePaneOnScreen(wxAuiPaneInfo& info) {
+	if (info.IsFloatable()) {
+		bool offscreen = true;
+		for (uint32_t index = 0; index < wxDisplay::GetCount(); ++index) {
+			wxDisplay display(index);
+			wxRect rect = display.GetClientArea();
+			if (rect.Contains(info.floating_pos)) {
+				offscreen = false;
+				break;
 			}
 		}
+
+		if (offscreen) {
+			info.Dock();
+		}
 	}
-} // namespace
+}
+
+void LayoutManager::UpdatePaletteActivePage(PaletteWindow* palette, const std::string& page_name) {
+	if (!palette || !g_gui.aui_manager || page_name.empty()) {
+		return;
+	}
+	const wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(palette);
+	if (!info.IsOk() || info.name.empty()) {
+		return;
+	}
+
+	const std::string pane_name = nstr(info.name);
+	std::string current_data = g_settings.getString(Config::PALETTE_ACTIVE_PAGE);
+	std::unordered_map<std::string, std::string> pane_pages;
+
+	if (!current_data.empty()) {
+		if (current_data.find('=') != std::string::npos) {
+			std::stringstream ss(current_data);
+			std::string item;
+			while (std::getline(ss, item, '|')) {
+				auto eq = item.find('=');
+				if (eq != std::string::npos) {
+					pane_pages[item.substr(0, eq)] = item.substr(eq + 1);
+				}
+			}
+		} else {
+			pane_pages[pane_name] = current_data;
+		}
+	}
+
+	pane_pages[pane_name] = page_name;
+
+	std::string serialized;
+	for (const auto& [pname, ppage] : pane_pages) {
+		serialized += pname + "=" + ppage + "|";
+	}
+	g_settings.setString(Config::PALETTE_ACTIVE_PAGE, serialized);
+}
 
 LayoutManager::LayoutManager() {
 }
@@ -182,11 +220,12 @@ void LayoutManager::LoadPerspective() {
 		if (!layout.empty()) {
 			g_gui.aui_manager->LoadPaneInfo(layout, info);
 		} else {
-			info.Name("ToolOptions").Caption("Brush Options").Left().Layer(0).Position(0).CloseButton(true).MaximizeButton(true).BestSize(220, 330).MinSize(220, 180);
+			info.Name("ToolOptions").Caption("Brush Options").Left().Layer(0).Position(0).CloseButton(true).MaximizeButton(true).BestSize(220, 330);
 		}
 		if (info.name.empty()) {
 			info.Name("ToolOptions");
 		}
+		info.MinSize(g_gui.root ? g_gui.root->FromDIP(wxSize(220, 180)) : wxSize(220, 180));
 
 		g_gui.aui_manager->AddPane(g_gui.tool_options, info);
 	} else {
@@ -195,6 +234,7 @@ void LayoutManager::LoadPerspective() {
 		if (!layout.empty()) {
 			g_gui.aui_manager->LoadPaneInfo(layout, info);
 		}
+		info.MinSize(g_gui.root ? g_gui.root->FromDIP(wxSize(220, 180)) : wxSize(220, 180));
 	}
 
 	if (g_gui.tool_options) {
@@ -204,10 +244,29 @@ void LayoutManager::LoadPerspective() {
 		}
 	}
 
-	const std::string active_page = g_settings.getString(Config::PALETTE_ACTIVE_PAGE);
-	if (!active_page.empty()) {
-		if (PaletteWindow* palette = g_gui.GetPalette()) {
-			palette->SelectPage(active_page);
+	const std::string active_page_data = g_settings.getString(Config::PALETTE_ACTIVE_PAGE);
+	if (!active_page_data.empty()) {
+		if (active_page_data.find('=') != std::string::npos) {
+			std::unordered_map<std::string, std::string> pane_pages;
+			std::stringstream ss(active_page_data);
+			std::string item;
+			while (std::getline(ss, item, '|')) {
+				auto eq = item.find('=');
+				if (eq != std::string::npos) {
+					pane_pages[item.substr(0, eq)] = item.substr(eq + 1);
+				}
+			}
+			for (auto& palette : g_palettes.palettes) {
+				const wxAuiPaneInfo& pinfo = g_gui.aui_manager->GetPane(palette);
+				auto it = pane_pages.find(nstr(pinfo.name));
+				if (it != pane_pages.end()) {
+					palette->SelectPage(it->second);
+				}
+			}
+		} else {
+			if (PaletteWindow* palette = g_gui.GetPalette()) {
+				palette->SelectPage(active_page_data);
+			}
 		}
 	}
 
@@ -254,23 +313,25 @@ void LayoutManager::SavePerspective() {
 	g_settings.setInteger(Config::MINIMAP_VISIBLE, g_minimap.GetWindow() ? 1 : 0);
 
 	wxString pinfo;
+	wxString palette_pages_info;
 	for (auto& palette : g_palettes.palettes) {
 		if (g_gui.aui_manager->GetPane(palette).IsShown()) {
 			pinfo << SavePaneInfoWithCurrentSize(*g_gui.aui_manager, palette) << "|";
+			const wxAuiPaneInfo& p_info = g_gui.aui_manager->GetPane(palette);
+			const std::string page_name = palette->GetSelectedPageName();
+			if (!page_name.empty() && !p_info.name.empty()) {
+				palette_pages_info << p_info.name << "=" << wxstr(page_name) << "|";
+			}
 		}
 	}
 	g_settings.setString(Config::PALETTE_LAYOUT, nstr(pinfo));
+	if (!palette_pages_info.empty()) {
+		g_settings.setString(Config::PALETTE_ACTIVE_PAGE, nstr(palette_pages_info));
+	}
 
 	if (g_minimap.GetWindow()) {
 		wxString s = SavePaneInfoWithCurrentSize(*g_gui.aui_manager, g_minimap.GetWindow());
 		g_settings.setString(Config::MINIMAP_LAYOUT, nstr(s));
-	}
-
-	if (PaletteWindow* palette = g_gui.GetPalette()) {
-		const std::string page_name = palette->GetSelectedPageName();
-		if (!page_name.empty()) {
-			g_settings.setString(Config::PALETTE_ACTIVE_PAGE, page_name);
-		}
 	}
 
 	if (g_gui.tool_options) {

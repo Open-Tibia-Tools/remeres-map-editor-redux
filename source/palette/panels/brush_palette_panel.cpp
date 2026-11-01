@@ -39,7 +39,7 @@ public:
 	wxRect GetPageRect() const override {
 		wxRect rectPage(wxPoint(0, 0), GetClientSize());
 		if (m_horizontal) {
-			const int leftWidth = FromDIP(220);
+			const int leftWidth = FromDIP(PALETTE_HORIZONTAL_LEFT_WIDTH);
 			rectPage.x = leftWidth + static_cast<int>(GetInternalBorder());
 			rectPage.y = 0;
 			rectPage.width = std::max(0, rectPage.width - rectPage.x);
@@ -62,7 +62,7 @@ public:
 	wxSize CalcSizeFromPage(const wxSize& sizePage) const override {
 		if (m_horizontal) {
 			wxSize size = sizePage;
-			size.x += FromDIP(220) + static_cast<int>(GetInternalBorder());
+			size.x += FromDIP(PALETTE_HORIZONTAL_LEFT_WIDTH) + static_cast<int>(GetInternalBorder());
 			return size;
 		}
 		if (!GetChoiceCtrl() || !GetChoiceCtrl()->IsShown()) {
@@ -81,7 +81,7 @@ public:
 
 	bool Layout() override {
 		if (m_horizontal) {
-			const int leftWidth = FromDIP(220);
+			const int leftWidth = FromDIP(PALETTE_HORIZONTAL_LEFT_WIDTH);
 			if (auto* ctrlSizer = GetControlSizer()) {
 				ctrlSizer->SetDimension(0, 0, leftWidth, GetClientSize().y);
 				ctrlSizer->Layout();
@@ -366,7 +366,7 @@ void BrushPalettePanel::SetHorizontalLayout(bool horizontal) {
 			ts_sizer->GetStaticBox()->Show(false);
 		}
 		GetSizer()->Add(choicebook, wxSizerFlags(1).Expand());
-		const int leftWidth = FromDIP(220);
+		const int leftWidth = FromDIP(PALETTE_HORIZONTAL_LEFT_WIDTH);
 		if (choice) {
 			choice->SetMaxSize(wxSize(leftWidth, -1));
 #ifdef __WXMSW__
@@ -430,7 +430,7 @@ void BrushPalettePanel::AttachPaletteChoice(wxChoice* paletteChoice) {
 		ctrlSizer->Layout();
 	}
 	if (m_isHorizontal) {
-		const int leftWidth = FromDIP(220);
+		const int leftWidth = FromDIP(PALETTE_HORIZONTAL_LEFT_WIDTH);
 		m_attachedPaletteChoice->SetMaxSize(wxSize(leftWidth, -1));
 #ifdef __WXMSW__
 		if (m_attachedPaletteChoice->GetHWND()) {

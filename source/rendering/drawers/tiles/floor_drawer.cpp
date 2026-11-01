@@ -17,6 +17,8 @@ void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, Sprit
 
 	// Draw "transparent higher floor"
 	if (view.floor != 8 && view.floor != 0 && options.transparent_floors) {
+		DrawingOptions floor_options = options;
+		floor_options.transparent_items = false;
 		const int map_z = view.floor - 1;
 		// The floor above is drawn one tile up-left, so use its own bounds
 		// rather than the current floor's.
@@ -38,7 +40,7 @@ void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, Sprit
 					// Position pos = tile->getPosition();
 
 					if (tile->ground) {
-						BlitItemParams params(tile, tile->ground.get(), options);
+						BlitItemParams params(tile, tile->ground.get(), floor_options);
 						params.alpha = 255;
 						params.ctx = ctx;
 						if (tile->isPZ()) {
@@ -54,7 +56,7 @@ void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, Sprit
 					}
 					if (view.zoom <= 10.0 || !options.hide_items_when_zoomed) {
 						for (const auto& item : tile->items) {
-							BlitItemParams params(tile, item.get(), options);
+							BlitItemParams params(tile, item.get(), floor_options);
 							params.alpha = 255;
 							params.ctx = ctx;
 							params.red = options.transparent_floors_tint;

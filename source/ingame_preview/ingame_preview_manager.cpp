@@ -2,6 +2,7 @@
 #include <iostream>
 #include "ingame_preview/ingame_preview_manager.h"
 #include "ingame_preview/ingame_preview_window.h"
+#include "ui/managers/layout_manager.h"
 #include "util/image_manager.h"
 
 #include "ui/gui.h"
@@ -66,6 +67,7 @@ namespace IngamePreview {
 				g_gui.aui_manager->LoadPaneInfo(layout, info);
 			}
 			NormalizePaneInfo(info);
+			LayoutManager::EnsurePaneOnScreen(info);
 			info.Show(true);
 
 			g_gui.aui_manager->AddPane(window, info);

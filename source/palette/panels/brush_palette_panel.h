@@ -52,7 +52,6 @@ public:
 	void SetGridSpacing(int spacing);
 	void ApplyTheme();
 	void SetHorizontalLayout(bool horizontal);
-	bool IsHorizontal() const { return m_isHorizontal; }
 	void AttachPaletteChoice(wxChoice* paletteChoice);
 	void DetachPaletteChoice();
 

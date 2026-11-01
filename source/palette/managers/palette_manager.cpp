@@ -196,7 +196,7 @@ PaletteWindow* PaletteManager::CreatePalette() {
 			.TopDockable(true)
 			.BottomDockable(true)
 			.BestSize(220, 650)
-			.MinSize(220, 100)
+			.MinSize(g_gui.root ? g_gui.root->FromDIP(wxSize(PALETTE_HORIZONTAL_LEFT_WIDTH, 100)) : wxSize(PALETTE_HORIZONTAL_LEFT_WIDTH, 100))
 	);
 	g_gui.aui_manager->Update();
 

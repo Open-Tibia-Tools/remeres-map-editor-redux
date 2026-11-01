@@ -24,6 +24,8 @@
 #include <string_view>
 #include <vector>
 
+inline constexpr int PALETTE_HORIZONTAL_LEFT_WIDTH = 220;
+
 class BrushPalettePanel;
 struct HardcodedPaletteProvider;
 class HousePalette;
@@ -74,7 +76,6 @@ public:
 	void OnClose(wxCloseEvent&);
 	void OnSize(wxSizeEvent& event);
 	void SetHorizontalLayout(bool horizontal);
-	bool IsHorizontal() const { return m_isHorizontal; }
 
 protected:
 	struct HardcodedPage {
@@ -93,6 +94,7 @@ protected:
 	TownPalettePanel* town_palette = nullptr;
 
 	void updateZonePage(Map* map);
+	void DetachPaletteChoiceFromAnySizer();
 };
 
 #endif
