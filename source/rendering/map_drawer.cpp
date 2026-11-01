@@ -160,6 +160,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		return;
 	}
 	auto* atlas = g_graphics.getAtlasManager();
+	atlas->setSmoothing(options.anti_aliasing);
 
 	const RenderFrameContext ctx {
 		*atlas,
