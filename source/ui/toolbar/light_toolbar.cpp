@@ -18,7 +18,7 @@ const wxString LightToolBar::PANE_NAME = "light_toolbar";
 LightToolBar::LightToolBar(wxWindow* parent) {
 	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
 
-	toolbar = new wxAuiToolBar(parent, TOOLBAR_LIGHT, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_HORZ_TEXT | wxAUI_TB_OVERFLOW | wxAUI_TB_GRIPPER);
+	toolbar = new wxAuiToolBar(parent, TOOLBAR_LIGHT, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_HORZ_TEXT);
 	toolbar->SetToolBitmapSize(icon_size);
 
 	wxStaticText* intensity_label = new wxStaticText(toolbar, wxID_ANY, "Server Light:");
