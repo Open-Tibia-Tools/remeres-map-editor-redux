@@ -112,7 +112,7 @@ void SpawnValidatorWindow::InitLayout() {
 	chk_empty_tile->SetValue(true);
 	chk_unwalkable_zone->SetValue(true);
 
-	rules_box->Add(chk_invalid_time, wxSizerFlags().Border(wxALL, 5));
+	rules_box->Add(chk_invalid_time, wxSizerFlags().Border(wxALL));
 	rules_box->Add(chk_unknown_creature, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 	rules_box->Add(chk_blocked_tile, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 	rules_box->Add(chk_empty_tile, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
@@ -130,7 +130,7 @@ void SpawnValidatorWindow::InitLayout() {
 	radio_kind_filter = new wxRadioBox(filter_box->GetStaticBox(), ID_KIND_FILTER, "Kind Filter",
 		wxDefaultPosition, wxDefaultSize, kinds, 3, wxRA_SPECIFY_COLS);
 	radio_kind_filter->Bind(wxEVT_RADIOBOX, &SpawnValidatorWindow::OnKindFilterChanged, this);
-	filter_box->Add(radio_kind_filter, wxSizerFlags().Expand().Border(wxALL, 5));
+	filter_box->Add(radio_kind_filter, wxSizerFlags().Expand().Border(wxALL));
 
 	search_ctrl = new PaletteSearchCtrl(filter_box->GetStaticBox(), ID_SEARCH_FILTER, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 	search_ctrl->SetDescriptiveText("Filter results by name or coords...");
@@ -170,7 +170,7 @@ void SpawnValidatorWindow::InitLayout() {
 	remove_all_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnRemoveAll(); });
 	action_grid->Add(remove_all_button, wxSizerFlags(1).Expand());
 
-	actions_box->Add(action_grid, wxSizerFlags().Expand().Border(wxALL, 5));
+	actions_box->Add(action_grid, wxSizerFlags().Expand().Border(wxALL));
 	leftSizer->Add(actions_box, wxSizerFlags().Expand().Border(wxBOTTOM, 10));
 
 	leftSizer->AddStretchSpacer(1);
@@ -180,7 +180,7 @@ void SpawnValidatorWindow::InitLayout() {
 	leftSizer->Add(status_label, wxSizerFlags().Expand().Border(wxBOTTOM, 5));
 
 	leftPanel->SetSizer(leftSizer);
-	rootSizer->Add(leftPanel, wxSizerFlags().Expand().Border(wxALL, 10));
+	rootSizer->Add(leftPanel, wxSizerFlags().Expand().DoubleBorder(wxALL));
 
 	// =========================================================================
 	// RIGHT COLUMN: Results List
@@ -255,7 +255,7 @@ void SpawnValidatorWindow::InitLayout() {
 	rightSizer->Add(results_box, wxSizerFlags(1).Expand());
 	rightPanel->SetSizer(rightSizer);
 
-	rootSizer->Add(rightPanel, wxSizerFlags(1).Expand().Border(wxTOP | wxBOTTOM | wxRIGHT, 10));
+	rootSizer->Add(rightPanel, wxSizerFlags(1).Expand().DoubleBorder(wxTOP | wxBOTTOM | wxRIGHT));
 
 	mainSizer->Add(rootSizer, wxSizerFlags(1).Expand());
 	SetSizer(mainSizer);

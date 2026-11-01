@@ -22,7 +22,7 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	radio_standard = new wxRadioButton(viewport_box->GetStaticBox(), wxID_ANY, "Standard Client (15 x 11)", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
 	radio_custom = new wxRadioButton(viewport_box->GetStaticBox(), wxID_ANY, "Custom Viewport");
 
-	viewport_box->Add(radio_standard, wxSizerFlags().Border(wxALL, 5));
+	viewport_box->Add(radio_standard, wxSizerFlags().Border(wxALL));
 
 	wxBoxSizer* custom_sizer = new wxBoxSizer(wxHORIZONTAL);
 	custom_sizer->Add(radio_custom, wxSizerFlags().CenterVertical().Border(wxRIGHT, 15));
@@ -35,8 +35,8 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	custom_height_spin = new wxSpinCtrl(viewport_box->GetStaticBox(), wxID_ANY, "11", wxDefaultPosition, FromDIP(wxSize(70, -1)), wxSP_ARROW_KEYS, 5, 100, 11);
 	custom_sizer->Add(custom_height_spin, wxSizerFlags().CenterVertical());
 
-	viewport_box->Add(custom_sizer, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
-	top_sizer->Add(viewport_box, wxSizerFlags().Expand().Border(wxALL, 10));
+	viewport_box->Add(custom_sizer, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM));
+	top_sizer->Add(viewport_box, wxSizerFlags().Expand().DoubleBorder(wxALL));
 
 	// 2. Multi-Floor Visibility Group
 	wxStaticBoxSizer* floor_box = new wxStaticBoxSizer(wxVERTICAL, this, "Multi-Floor Visibility");
@@ -44,7 +44,7 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	multi_floor_checkbox = new wxCheckBox(floor_box->GetStaticBox(), wxID_ANY, "Consider multi-floor visibility (Z-axis)");
 	multi_floor_checkbox->SetValue(true);
 	multi_floor_checkbox->SetToolTip("Checks viewports across visible adjacent floors with isometric floor offset projection.");
-	floor_box->Add(multi_floor_checkbox, wxSizerFlags().Border(wxALL, 5));
+	floor_box->Add(multi_floor_checkbox, wxSizerFlags().Border(wxALL));
 
 	wxBoxSizer* scope_sizer = new wxBoxSizer(wxVERTICAL);
 
@@ -62,7 +62,7 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	scope_sizer->Add(radio_scope_underground, 0, 0);
 
 	floor_box->Add(scope_sizer, wxSizerFlags().Border(wxLEFT | wxBOTTOM, 22));
-	top_sizer->Add(floor_box, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
+	top_sizer->Add(floor_box, wxSizerFlags().Expand().DoubleBorder(wxLEFT | wxRIGHT | wxBOTTOM));
 
 	// 3. Cleanup Options Group
 	wxStaticBoxSizer* options_box = new wxStaticBoxSizer(wxVERTICAL, this, "Cleanup Options");
@@ -72,14 +72,14 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	safety_margin_spin = new wxSpinCtrl(options_box->GetStaticBox(), wxID_ANY, "2", wxDefaultPosition, FromDIP(wxSize(65, -1)), wxSP_ARROW_KEYS, 0, 10, 2);
 	safety_margin_spin->SetToolTip("Additional border margin added around viewports to prevent clipping tall sprites.");
 	margin_sizer->Add(safety_margin_spin, wxSizerFlags().CenterVertical());
-	options_box->Add(margin_sizer, wxSizerFlags().Border(wxALL, 5));
+	options_box->Add(margin_sizer, wxSizerFlags().Border(wxALL));
 
 	backup_checkbox = new wxCheckBox(options_box->GetStaticBox(), wxID_ANY, "Create map backup before modifying");
 	backup_checkbox->SetValue(true);
 	backup_checkbox->SetToolTip("Saves a timestamped .otbm copy before removing any tiles.");
-	options_box->Add(backup_checkbox, wxSizerFlags().Border(wxALL, 5));
+	options_box->Add(backup_checkbox, wxSizerFlags().Border(wxALL));
 
-	top_sizer->Add(options_box, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
+	top_sizer->Add(options_box, wxSizerFlags().Expand().DoubleBorder(wxLEFT | wxRIGHT | wxBOTTOM));
 
 	// 4. OK / Cancel Buttons
 	wxBoxSizer* button_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -93,7 +93,7 @@ RemoveUnreachableDialog::RemoveUnreachableDialog(wxWindow* parent) :
 	cancel_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	button_sizer->Add(cancel_button, 0);
 
-	top_sizer->Add(button_sizer, wxSizerFlags().Right().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
+	top_sizer->Add(button_sizer, wxSizerFlags().Right().DoubleBorder(wxLEFT | wxRIGHT | wxBOTTOM));
 
 	SetSizerAndFit(top_sizer);
 	Centre(wxBOTH);

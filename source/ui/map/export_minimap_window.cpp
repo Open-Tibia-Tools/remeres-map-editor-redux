@@ -79,7 +79,7 @@ ExportMinimapWindow::ExportMinimapWindow(wxWindow* parent, Editor& editor) :
 	folderSizer->Add(directory_text_field_, wxSizerFlags(1).Expand().Border(wxALL, 5));
 	auto* browseButton = new wxButton(folderParent, MAP_WINDOW_FILE_BUTTON, "Browse");
 	browseButton->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_FOLDER_OPEN));
-	folderSizer->Add(browseButton, wxSizerFlags().Border(wxALL, 5));
+	folderSizer->Add(browseButton, wxSizerFlags().Border(wxALL));
 	leftSizer->Add(folderSizer, wxSizerFlags().Expand().Border(wxBOTTOM, 5));
 
 	auto* fileSizer = new wxStaticBoxSizer(wxHORIZONTAL, this, "File Name");
@@ -100,8 +100,8 @@ ExportMinimapWindow::ExportMinimapWindow(wxWindow* parent, Editor& editor) :
 	});
 	leftSizer->Add(notebook_, wxSizerFlags(1).Expand());
 
-	contentSizer->Add(leftSizer, wxSizerFlags(1).Expand().Border(wxALL, 5));
-	contentSizer->Add(CreateAreaSizer(), wxSizerFlags().Expand().Border(wxTOP | wxRIGHT | wxBOTTOM, 5));
+	contentSizer->Add(leftSizer, wxSizerFlags(1).Expand().DoubleBorder(wxALL));
+	contentSizer->Add(CreateAreaSizer(), wxSizerFlags().Expand().DoubleBorder(wxTOP | wxRIGHT | wxBOTTOM));
 	sizer->Add(contentSizer, wxSizerFlags(1).Expand());
 
 	auto* buttonSizer = new wxBoxSizer(wxHORIZONTAL);

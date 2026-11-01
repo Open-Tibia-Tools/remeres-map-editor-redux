@@ -191,7 +191,7 @@ OutfitChooserDialog::OutfitChooserDialog(wxWindow* parent, const Outfit& current
 
 	main_sizer->Add(favs_sizer, wxSizerFlags().Expand().Border(wxLEFT, 5));
 
-	outer_sizer->Add(main_sizer, wxSizerFlags(1).Expand().Border(wxALL, 10));
+	outer_sizer->Add(main_sizer, wxSizerFlags(1).Expand().DoubleBorder(wxALL));
 
 	// Bottom Bar (Actions)
 	wxStaticLine* bottom_line = new wxStaticLine(this, wxID_ANY);
