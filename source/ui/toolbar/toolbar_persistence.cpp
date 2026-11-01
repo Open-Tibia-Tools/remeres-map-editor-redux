@@ -36,6 +36,7 @@ void ToolbarPersistence::LoadPerspective(wxAuiManager* manager, MainToolBar* mai
 	loadToolbar(TOOLBAR_BRUSHES, Config::SHOW_TOOLBAR_BRUSHES, Config::TOOLBAR_BRUSHES_LAYOUT);
 	loadToolbar(TOOLBAR_POSITION, Config::SHOW_TOOLBAR_POSITION, Config::TOOLBAR_POSITION_LAYOUT);
 	loadToolbar(TOOLBAR_SIZES, Config::SHOW_TOOLBAR_SIZES, Config::TOOLBAR_SIZES_LAYOUT);
+	loadToolbar(TOOLBAR_LIGHT, Config::SHOW_TOOLBAR_LIGHT, Config::TOOLBAR_LIGHT_LAYOUT);
 
 	manager->Update();
 }
@@ -62,4 +63,5 @@ void ToolbarPersistence::SavePerspective(wxAuiManager* manager, MainToolBar* mai
 	saveToolbar(TOOLBAR_BRUSHES, Config::SHOW_TOOLBAR_BRUSHES, Config::TOOLBAR_BRUSHES_LAYOUT);
 	saveToolbar(TOOLBAR_POSITION, Config::SHOW_TOOLBAR_POSITION, Config::TOOLBAR_POSITION_LAYOUT);
 	saveToolbar(TOOLBAR_SIZES, Config::SHOW_TOOLBAR_SIZES, Config::TOOLBAR_SIZES_LAYOUT);
+	saveToolbar(TOOLBAR_LIGHT, Config::SHOW_TOOLBAR_LIGHT, Config::TOOLBAR_LIGHT_LAYOUT);
 }

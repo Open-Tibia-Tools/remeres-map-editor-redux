@@ -617,10 +617,12 @@ void Settings::IO(IOMode mode) {
 	Bool(SHOW_TOOLBAR_BRUSHES, false);
 	Bool(SHOW_TOOLBAR_POSITION, false);
 	Bool(SHOW_TOOLBAR_SIZES, false);
+	Bool(SHOW_TOOLBAR_LIGHT, true);
 	String(TOOLBAR_STANDARD_LAYOUT, "");
 	String(TOOLBAR_BRUSHES_LAYOUT, "");
 	String(TOOLBAR_POSITION_LAYOUT, "");
 	String(TOOLBAR_SIZES_LAYOUT, "");
+	String(TOOLBAR_LIGHT_LAYOUT, "");
 
 	// Missing items report (added at end to preserve enum stability)
 	section("Editor");

@@ -156,6 +156,11 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 			if (menu_bar) {
 				menu_bar->CheckItem(MenuBar::VIEW_TOOLBARS_SIZES, false);
 			}
+		} else if (pane->name == LightToolBar::PANE_NAME) {
+			g_settings.setInteger(Config::SHOW_TOOLBAR_LIGHT, 0);
+			if (menu_bar) {
+				menu_bar->CheckItem(MenuBar::VIEW_TOOLBARS_LIGHT, false);
+			}
 		}
 		event.Skip();
 	});
