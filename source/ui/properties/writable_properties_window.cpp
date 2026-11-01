@@ -39,12 +39,12 @@ WritablePropertiesWindow::WritablePropertiesWindow(wxWindow* parent, const Map* 
 
 
 	subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Action ID"));
-	action_id_field = newd wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, i2ws(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
+	action_id_field = newd wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, std::to_string(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
 	action_id_field->SetSelection(-1, -1);
 	subsizer->Add(action_id_field, wxSizerFlags(1).Expand());
 
 	subsizer->Add(newd wxStaticText(boxsizer->GetStaticBox(), wxID_ANY, "Unique ID"));
-	unique_id_field = newd wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, i2ws(edit_item->getUniqueID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
+	unique_id_field = newd wxSpinCtrl(boxsizer->GetStaticBox(), wxID_ANY, std::to_string(edit_item->getUniqueID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
 	subsizer->Add(unique_id_field, wxSizerFlags(1).Expand());
 
 	boxsizer->Add(subsizer, wxSizerFlags(1).Expand());

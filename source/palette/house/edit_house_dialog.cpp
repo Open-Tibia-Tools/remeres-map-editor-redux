@@ -31,8 +31,8 @@ EditHouseDialog::EditHouseDialog(wxWindow* parent, Map* map, House* house) :
 	subsizer->AddGrowableCol(1);
 
 	house_name = wxstr(house->name);
-	house_id = i2ws(house->getID());
-	house_rent = i2ws(house->rent);
+	house_id = std::to_string(house->getID());
+	house_rent = std::to_string(house->rent);
 
 	subsizer->Add(newd wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Name:"), wxSizerFlags(0).Border(wxLEFT, 5));
 	name_field = newd wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, house_name, wxDefaultPosition, wxSize(160, 20), 0, wxTextValidator(wxFILTER_ASCII));
@@ -60,7 +60,7 @@ EditHouseDialog::EditHouseDialog(wxWindow* parent, Map* map, House* house) :
 
 		if (!found) {
 			if (houseTownId != 0) {
-				town_id_field->Append("Undefined Town (id:" + i2ws(houseTownId) + ")");
+				town_id_field->Append("Undefined Town (id:" + std::to_string(houseTownId) + ")");
 				town_ids_.push_back(houseTownId);
 				++to_select_index;
 			}

@@ -55,7 +55,7 @@ void DepotPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 			}
 
 			if (!found && depot->getDepotID() != 0) {
-				depot_id_field->Append("Undefined Town (id:" + i2ws(depot->getDepotID()) + ")", (void*)(intptr_t)(depot->getDepotID()));
+				depot_id_field->Append("Undefined Town (id:" + std::to_string(depot->getDepotID()) + ")", (void*)(intptr_t)(depot->getDepotID()));
 			}
 			depot_id_field->Append(wxString("No Town"), (void*)(intptr_t)(0));
 			if (depot->getDepotID() == 0) {

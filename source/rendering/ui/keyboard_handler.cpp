@@ -251,7 +251,7 @@ void KeyboardHandler::HandleHotkeys(MapCanvas* canvas, wxKeyEvent& event) {
 			g_gui.SetSelectionMode();
 			static_cast<MapWindow*>(canvas->GetParent())->SetScreenCenterPosition(hk.GetPosition());
 
-			g_gui.SetStatusText("Used hotkey " + i2ws(index));
+			g_gui.SetStatusText("Used hotkey " + std::to_string(index));
 			canvas->RequestLocalRefresh();
 		} else if (hk.IsBrush()) {
 			g_gui.SetDrawingMode();
@@ -268,10 +268,10 @@ void KeyboardHandler::HandleHotkeys(MapCanvas* canvas, wxKeyEvent& event) {
 				return;
 			}
 
-			g_gui.SetStatusText("Used hotkey " + i2ws(index));
+			g_gui.SetStatusText("Used hotkey " + std::to_string(index));
 			canvas->RequestLocalRefresh();
 		} else {
-			g_gui.SetStatusText("Unassigned hotkey " + i2ws(index));
+			g_gui.SetStatusText("Unassigned hotkey " + std::to_string(index));
 		}
 	}
 }

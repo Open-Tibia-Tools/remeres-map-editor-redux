@@ -73,11 +73,7 @@ double s2f(const std::string& s) {
 	}
 }
 
-wxString i2ws(const int _i) {
-	wxString str;
-	str << _i;
-	return str;
-}
+
 
 wxString f2ws(const double _d) {
 	wxString str;

@@ -705,7 +705,7 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 
 	editor.map.setWidth(newsize_x);
 	editor.map.setHeight(newsize_y);
-	DialogUtil::PopupDialog("Success", "Map imported successfully, " + i2ws(discarded_tiles) + " tiles were discarded as invalid.", wxOK);
+	DialogUtil::PopupDialog("Success", "Map imported successfully, " + std::to_string(discarded_tiles) + " tiles were discarded as invalid.", wxOK);
 
 	g_gui.RefreshPalettes();
 	g_gui.FitViewToMap();

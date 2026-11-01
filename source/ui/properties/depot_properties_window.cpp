@@ -57,7 +57,7 @@ DepotPropertiesWindow::DepotPropertiesWindow(wxWindow* parent, const Map* map, c
 		}
 		if (!found) {
 			if (depot->getDepotID() != 0) {
-				depot_id_field->Append("Undefined Town (id:" + i2ws(depot->getDepotID()) + ")", reinterpret_cast<void*>(static_cast<intptr_t>(depot->getDepotID())));
+				depot_id_field->Append("Undefined Town (id:" + std::to_string(depot->getDepotID()) + ")", reinterpret_cast<void*>(static_cast<intptr_t>(depot->getDepotID())));
 			}
 		}
 	}

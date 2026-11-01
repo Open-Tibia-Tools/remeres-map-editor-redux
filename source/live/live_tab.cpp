@@ -211,7 +211,7 @@ void LiveLogTab::UpdateClientList(const std::unordered_map<uint32_t, std::unique
 	for (const auto& clientEntry : updatedClients) {
 		LivePeer* peer = clientEntry.second.get();
 		user_list->SetCellBackgroundColour(i, 0, peer->getUsedColor());
-		user_list->SetCellValue(i, 1, i2ws((peer->getClientId() >> 1) + 1));
+		user_list->SetCellValue(i, 1, std::to_string((peer->getClientId() >> 1) + 1));
 		user_list->SetCellValue(i, 2, peer->getName());
 		++i;
 	}

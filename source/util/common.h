@@ -45,7 +45,6 @@ std::string i2s(int i);
 std::string f2s(double i);
 int s2i(const std::string& s);
 double s2f(const std::string& s);
-wxString i2ws(int i);
 wxString f2ws(double i);
 int ws2i(wxString s);
 double ws2f(wxString s);

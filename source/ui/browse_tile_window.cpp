@@ -210,7 +210,7 @@ BrowseTileWindow::BrowseTileWindow(wxWindow* parent, Tile* tile, wxPoint positio
 	infoSizer->Add(buttons);
 	infoSizer->AddSpacer(5);
 	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "Position:  " + pos), wxSizerFlags(0).Left());
-	infoSizer->Add(item_count_txt = newd wxStaticText(this, wxID_ANY, "Item count:  " + i2ws(item_list->GetItemCount())), wxSizerFlags(0).Left());
+	infoSizer->Add(item_count_txt = newd wxStaticText(this, wxID_ANY, "Item count:  " + std::to_string(item_list->GetItemCount())), wxSizerFlags(0).Left());
 	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "Protection zone:  " + b2yn(tile->isPZ())), wxSizerFlags(0).Left());
 	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "No PvP:  " + b2yn(tile->getMapFlags() & TILESTATE_NOPVP)), wxSizerFlags(0).Left());
 	infoSizer->Add(newd wxStaticText(this, wxID_ANY, "No logout:  " + b2yn(tile->getMapFlags() & TILESTATE_NOLOGOUT)), wxSizerFlags(0).Left());
@@ -252,7 +252,7 @@ void BrowseTileWindow::OnItemSelected(wxCommandEvent& WXUNUSED(event)) {
 
 void BrowseTileWindow::OnClickDelete(wxCommandEvent& WXUNUSED(event)) {
 	item_list->RemoveSelected();
-	item_count_txt->SetLabelText("Item count:  " + i2ws(item_list->GetItemCount()));
+	item_count_txt->SetLabelText("Item count:  " + std::to_string(item_list->GetItemCount()));
 }
 
 void BrowseTileWindow::OnClickSelectRaw(wxCommandEvent& WXUNUSED(event)) {

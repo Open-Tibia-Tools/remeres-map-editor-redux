@@ -22,7 +22,7 @@ void AttributeService::setGridValue(wxGrid* grid, int rowIndex, const std::strin
 		}
 		case ItemAttribute::INTEGER: {
 			grid->SetCellValue(rowIndex, 1, "Number");
-			grid->SetCellValue(rowIndex, 2, i2ws(*attr.getInteger()));
+			grid->SetCellValue(rowIndex, 2, std::to_string(*attr.getInteger()));
 			grid->SetCellEditor(rowIndex, 2, new wxGridCellNumberEditor);
 			break;
 		}

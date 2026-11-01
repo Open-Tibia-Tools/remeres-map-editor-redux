@@ -89,28 +89,28 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Performance",
 		"Tune undo capacity and background work limits to match your hardware and map size."
 	);
-	undo_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, i2ws(g_settings.getInteger(Config::UNDO_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0x10000000);
+	undo_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, std::to_string(g_settings.getInteger(Config::UNDO_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0x10000000);
 	PreferencesLayout::AddControlRow(
 		performance_section,
 		"Undo queue size",
 		"Maximum number of editor actions kept in history. Larger values improve safety but use more memory.",
 		undo_size_spin
 	);
-	undo_mem_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, i2ws(g_settings.getInteger(Config::UNDO_MEM_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 4096);
+	undo_mem_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, std::to_string(g_settings.getInteger(Config::UNDO_MEM_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 4096);
 	PreferencesLayout::AddControlRow(
 		performance_section,
 		"Undo memory limit (MB)",
 		"Approximate memory budget for the undo queue before old entries begin to drop off.",
 		undo_mem_size_spin
 	);
-	worker_threads_spin = new wxSpinCtrl(performance_section, wxID_ANY, i2ws(g_settings.getInteger(Config::WORKER_THREADS)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 64);
+	worker_threads_spin = new wxSpinCtrl(performance_section, wxID_ANY, std::to_string(g_settings.getInteger(Config::WORKER_THREADS)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 64);
 	PreferencesLayout::AddControlRow(
 		performance_section,
 		"Worker threads",
 		"Number of background threads used for heavier editor tasks. Match this to your logical CPU core count when possible.",
 		worker_threads_spin
 	);
-	replace_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, i2ws(g_settings.getInteger(Config::REPLACE_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100000);
+	replace_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, std::to_string(g_settings.getInteger(Config::REPLACE_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100000);
 	PreferencesLayout::AddControlRow(
 		performance_section,
 		"Replace count limit",
