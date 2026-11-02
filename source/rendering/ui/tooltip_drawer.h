@@ -88,6 +88,8 @@ struct TooltipData {
 	glm::vec3 zoneRgb = glm::vec3(0.0f);
 	size_t zoneTileCount = 0;
 	size_t zoneAreaCount = 0;
+	uint32_t zoneAreaIndex = 0;
+	size_t zoneAreaTileCount = 0;
 	std::string zoneFlags;
 
 	// Container contents
@@ -160,6 +162,8 @@ struct TooltipData {
 		zoneRgb = glm::vec3(0.0f);
 		zoneTileCount = 0;
 		zoneAreaCount = 0;
+		zoneAreaIndex = 0;
+		zoneAreaTileCount = 0;
 		zoneFlags.clear();
 
 		containerItems.clear();

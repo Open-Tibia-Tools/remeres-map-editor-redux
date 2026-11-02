@@ -337,7 +337,8 @@ void MapOverlayCollector::Collect(
 					continue;
 				}
 				const auto& clusters = editor->map.getZoneClusters(zone.id, !options.is_drawing);
-				for (const auto& cluster : clusters) {
+				for (size_t ci = 0; ci < clusters.size(); ++ci) {
+					const auto& cluster = clusters[ci];
 					if (cluster.centroid_pos.z != map_z) {
 						continue;
 					}
@@ -349,10 +350,15 @@ void MapOverlayCollector::Collect(
 					zData.pos = cluster.centroid_pos;
 					zData.category = TooltipCategory::ZONE;
 					zData.zoneId = zone.id;
-					zData.itemName = zone.name.empty() ? "Zone" : zone.name;
+					zData.itemName = !zone.name.empty() ? zone.name : std::format("Zone #{}", zone.id);
+					zData.subtitle = (clusters.size() > 1)
+						? std::format("Area #{} of {}", ci + 1, clusters.size())
+						: std::format("Area #{}", ci + 1);
 					zData.zoneRgb = rme::rendering::getZoneColor(zone.id);
 					zData.zoneTileCount = editor->map.getZoneTilePositions(zone.id).size();
 					zData.zoneAreaCount = clusters.size();
+					zData.zoneAreaIndex = static_cast<uint32_t>(ci);
+					zData.zoneAreaTileCount = cluster.tile_count;
 					out_tooltip_drawer->commitTooltip();
 				}
 			}
