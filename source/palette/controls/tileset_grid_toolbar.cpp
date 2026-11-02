@@ -269,6 +269,8 @@ void TilesetGridToolbar::OnToolClick(wxCommandEvent& event) {
 		if (m_actions.filter_all) {
 			m_actions.filter_all(m_filterAll);
 		}
+	} else {
+		event.Skip();
 	}
 }
 

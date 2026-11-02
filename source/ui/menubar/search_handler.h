@@ -2,6 +2,9 @@
 #define RME_UI_MENUBAR_SEARCH_HANDLER_H_
 
 #include <wx/wx.h>
+#include "editor/operations/search_query.h"
+
+#include <vector>
 
 class MainFrame;
 class Map;
@@ -9,14 +12,15 @@ class Brush;
 class FindItemDialog;
 
 namespace SearchResults {
-	void ShowItems(Map* map, uint16_t item_id, const wxString& load_bar_label, bool on_selection = false, uint32_t page_offset = 0);
-	void ShowCreatures(Map* map, const Brush* creature_brush, const wxString& load_bar_label, uint32_t page_offset = 0);
+	void ShowItems(Map* map, uint16_t item_id, const wxString& load_bar_label, bool on_selection = false);
+	void ShowCreatures(Map* map, const Brush* creature_brush, const wxString& load_bar_label);
+	void ShowFiltered(Map* map, const std::vector<uint16_t>& item_ids, const std::vector<const Brush*>& creature_brushes, const wxString& load_bar_label, bool on_selection = false);
 	void SelectFoundBrush(const FindItemDialog& dialog);
 }
 
 class SearchHandler {
 public:
-	SearchHandler(MainFrame* frame);
+	explicit SearchHandler(MainFrame* frame);
 
 	void OnSearchForItem(wxCommandEvent& event);
 	void OnReplaceItems(wxCommandEvent& event);
@@ -27,6 +31,9 @@ public:
 	void OnSearchForActionOnMap(wxCommandEvent& event);
 	void OnSearchForContainerOnMap(wxCommandEvent& event);
 	void OnSearchForWriteableOnMap(wxCommandEvent& event);
+	void OnSearchForTeleportOnMap(wxCommandEvent& event);
+	void OnSearchForCreatureOnMap(wxCommandEvent& event);
+	void OnSearchForPickupableOnMap(wxCommandEvent& event);
 
 	// Selection searches
 	void OnSearchForStuffOnSelection(wxCommandEvent& event);
@@ -34,14 +41,18 @@ public:
 	void OnSearchForActionOnSelection(wxCommandEvent& event);
 	void OnSearchForContainerOnSelection(wxCommandEvent& event);
 	void OnSearchForWriteableOnSelection(wxCommandEvent& event);
+	void OnSearchForTeleportOnSelection(wxCommandEvent& event);
+	void OnSearchForCreatureOnSelection(wxCommandEvent& event);
+	void OnSearchForPickupableOnSelection(wxCommandEvent& event);
+
 	void OnSearchForItemOnSelection(wxCommandEvent& event);
 	void OnReplaceItemsOnSelection(wxCommandEvent& event);
 	void OnRemoveItemOnSelection(wxCommandEvent& event);
 
 private:
-	void SearchItems(bool unique, bool action, bool container, bool writable, bool onSelection = false);
+	void DispatchSearch(SearchCategory categories, bool onSelection, const std::string& title);
 
 	MainFrame* frame;
 };
 
-#endif
+#endif // RME_UI_MENUBAR_SEARCH_HANDLER_H_

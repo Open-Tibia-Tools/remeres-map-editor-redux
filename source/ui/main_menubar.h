@@ -53,11 +53,17 @@ namespace MenuBar {
 		SEARCH_ON_MAP_ACTION,
 		SEARCH_ON_MAP_CONTAINER,
 		SEARCH_ON_MAP_WRITEABLE,
+		SEARCH_ON_MAP_TELEPORT,
+		SEARCH_ON_MAP_CREATURE,
+		SEARCH_ON_MAP_PICKUPABLE,
 		SEARCH_ON_SELECTION_EVERYTHING,
 		SEARCH_ON_SELECTION_UNIQUE,
 		SEARCH_ON_SELECTION_ACTION,
 		SEARCH_ON_SELECTION_CONTAINER,
 		SEARCH_ON_SELECTION_WRITEABLE,
+		SEARCH_ON_SELECTION_TELEPORT,
+		SEARCH_ON_SELECTION_CREATURE,
+		SEARCH_ON_SELECTION_PICKUPABLE,
 		SEARCH_ON_SELECTION_ITEM,
 		REPLACE_ON_SELECTION_ITEMS,
 		REMOVE_ON_SELECTION_ITEM,
@@ -140,6 +146,7 @@ namespace MenuBar {
 		WIN_INGAME_PREVIEW,
 		WIN_BRUSH_ITEMS,
 		WIN_TILE_PROPERTIES,
+		WIN_SEARCH_RESULTS,
 		NEW_PALETTE,
 		SHOW_PALETTE,
 		SELECT_HOUSE,
@@ -237,11 +244,17 @@ public:
 	void OnSearchForActionOnMap(wxCommandEvent& event);
 	void OnSearchForContainerOnMap(wxCommandEvent& event);
 	void OnSearchForWriteableOnMap(wxCommandEvent& event);
+	void OnSearchForTeleportOnMap(wxCommandEvent& event);
+	void OnSearchForCreatureOnMap(wxCommandEvent& event);
+	void OnSearchForPickupableOnMap(wxCommandEvent& event);
 	void OnSearchForStuffOnSelection(wxCommandEvent& event);
 	void OnSearchForUniqueOnSelection(wxCommandEvent& event);
 	void OnSearchForActionOnSelection(wxCommandEvent& event);
 	void OnSearchForContainerOnSelection(wxCommandEvent& event);
 	void OnSearchForWriteableOnSelection(wxCommandEvent& event);
+	void OnSearchForTeleportOnSelection(wxCommandEvent& event);
+	void OnSearchForCreatureOnSelection(wxCommandEvent& event);
+	void OnSearchForPickupableOnSelection(wxCommandEvent& event);
 	void OnSearchForItemOnSelection(wxCommandEvent& event);
 	void OnReplaceItemsOnSelection(wxCommandEvent& event);
 	void OnRemoveItemOnSelection(wxCommandEvent& event);
@@ -299,6 +312,7 @@ public:
 	void OnIngamePreviewWindow(wxCommandEvent& event);
 	void OnBrushItemsWindow(wxCommandEvent& event);
 	void OnTilePropertiesWindow(wxCommandEvent& event);
+	void OnSearchResultsWindow(wxCommandEvent& event);
 	void OnNewPalette(wxCommandEvent& event);
 	void OnShowPalette(wxCommandEvent& event);
 	void OnSelectHousePalette(wxCommandEvent& event);

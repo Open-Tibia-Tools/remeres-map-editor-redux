@@ -23,6 +23,7 @@
 #include "ui/tool_options_window.h"
 #include "ui/tile_properties/tile_properties_panel.h"
 #include "ui/brush_items/brush_items_window.h"
+#include "ui/managers/search_manager.h"
 
 #include "map/map_statistics.h"
 #include "map/map_search.h"
@@ -333,6 +334,18 @@ void MainMenuBar::OnSearchForWriteableOnMap(wxCommandEvent& event) {
 	searchHandler->OnSearchForWriteableOnMap(event);
 }
 
+void MainMenuBar::OnSearchForTeleportOnMap(wxCommandEvent& event) {
+	searchHandler->OnSearchForTeleportOnMap(event);
+}
+
+void MainMenuBar::OnSearchForCreatureOnMap(wxCommandEvent& event) {
+	searchHandler->OnSearchForCreatureOnMap(event);
+}
+
+void MainMenuBar::OnSearchForPickupableOnMap(wxCommandEvent& event) {
+	searchHandler->OnSearchForPickupableOnMap(event);
+}
+
 void MainMenuBar::OnSearchForStuffOnSelection(wxCommandEvent& event) {
 	searchHandler->OnSearchForStuffOnSelection(event);
 }
@@ -351,6 +364,18 @@ void MainMenuBar::OnSearchForContainerOnSelection(wxCommandEvent& event) {
 
 void MainMenuBar::OnSearchForWriteableOnSelection(wxCommandEvent& event) {
 	searchHandler->OnSearchForWriteableOnSelection(event);
+}
+
+void MainMenuBar::OnSearchForTeleportOnSelection(wxCommandEvent& event) {
+	searchHandler->OnSearchForTeleportOnSelection(event);
+}
+
+void MainMenuBar::OnSearchForCreatureOnSelection(wxCommandEvent& event) {
+	searchHandler->OnSearchForCreatureOnSelection(event);
+}
+
+void MainMenuBar::OnSearchForPickupableOnSelection(wxCommandEvent& event) {
+	searchHandler->OnSearchForPickupableOnSelection(event);
 }
 
 void MainMenuBar::OnSearchForItemOnSelection(wxCommandEvent& event) {
@@ -577,6 +602,11 @@ void MainMenuBar::OnTilePropertiesWindow(wxCommandEvent& event) {
 		}
 		g_gui.aui_manager->Update();
 	}
+}
+
+
+void MainMenuBar::OnSearchResultsWindow(wxCommandEvent& WXUNUSED(event)) {
+	g_search.ShowSearchWindow();
 }
 
 void MainMenuBar::OnNewPalette(wxCommandEvent& event) {

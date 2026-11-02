@@ -1,68 +1,48 @@
-//////////////////////////////////////////////////////////////////////
-// This file is part of Remere's Map Editor
-//////////////////////////////////////////////////////////////////////
-// Remere's Map Editor is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Remere's Map Editor is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <http://www.gnu.org/licenses/>.
-//////////////////////////////////////////////////////////////////////
-
 #ifndef RME_RESULT_WINDOW_H_
 #define RME_RESULT_WINDOW_H_
 
 #include "app/main.h"
+#include "editor/operations/search_query.h"
+#include "palette/controls/tileset_grid_toolbar.h"
 
-#include <functional>
+#include <wx/panel.h>
+#include <wx/stattext.h>
+#include <string>
 #include <vector>
-
-struct SearchResultRow {
-	uint32_t index = 0;
-	wxString name;
-	Position position;
-};
 
 class SearchResultWindow : public wxPanel {
 public:
-	SearchResultWindow(wxWindow* parent);
+	explicit SearchResultWindow(wxWindow* parent);
 	~SearchResultWindow() override;
 
+	void SetSearchResults(std::vector<SearchResultGroup> groups, SearchQuery query = {});
 	void Clear();
-	// page_loader is optional. When provided, it is invoked with the next page offset
-	// requested by the pagination controls and is expected to call SetResults() with
-	// the newly loaded page.
-	void SetResults(std::vector<SearchResultRow> rows, uint32_t total_count = 0, uint32_t page_offset = 0, uint32_t page_limit = 0, std::function<void(uint32_t)> page_loader = {});
+	void RefreshCurrentSearch();
 
-	void OnClickExport(wxCommandEvent& event);
-	void OnClickClear(wxCommandEvent& event);
-	void OnClickPreviousPage(wxCommandEvent& event);
-	void OnClickNextPage(wxCommandEvent& event);
+	void ApplyFilter(const std::string& query);
+	void ExpandAll();
+	void CollapseAll();
+
+	void OnSort(TilesetSortKey key, TilesetSortDirection dir);
+	void OnClearSort();
+
+	[[nodiscard]] const SearchQuery& GetCurrentQuery() const { return m_current_query; }
 
 protected:
-	class ResultCanvas;
+	void UpdateSummary();
 
-	void updateSummary();
-	void focusFirstResult();
-	void activateRow(int index);
+private:
+	class SearchResultCanvas;
 
-	ResultCanvas* result_list = nullptr;
-	wxStaticText* summary_label = nullptr;
-	wxButton* previous_page_button_ = nullptr;
-	wxButton* next_page_button_ = nullptr;
-	wxButton* export_button_ = nullptr;
-	wxButton* clear_button_ = nullptr;
-	std::vector<SearchResultRow> rows_;
-	uint32_t total_count_ = 0;
-	uint32_t page_offset_ = 0;
-	uint32_t page_limit_ = 0;
-	std::function<void(uint32_t)> page_loader_;
+	TilesetGridToolbar* m_gridToolbar = nullptr;
+	SearchResultCanvas* m_canvas = nullptr;
+	wxStaticText* m_summaryLabel = nullptr;
+
+	std::vector<SearchResultGroup> m_all_groups;
+	SearchQuery m_current_query;
+	bool m_hasSort = false;
+	TilesetSortKey m_sortKey = TilesetSortKey::Name;
+	TilesetSortDirection m_sortDir = TilesetSortDirection::Ascending;
 };
 
-#endif
+#endif // RME_RESULT_WINDOW_H_

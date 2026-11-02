@@ -241,6 +241,9 @@ void FindItemDialog::buildLayout() {
 	result_count_label_->SetFont(Theme::GetFont(9, false));
 	footer_buttons->Add(result_count_label_, wxSizerFlags().CenterVertical().Border(wxRIGHT, 8));
 	if (action_set_ == ActionSet::SearchAndSelect) {
+		search_filtered_button_ = new wxButton(footer_panel, wxID_ANY, "Search Filtered");
+		footer_buttons->Add(search_filtered_button_, wxSizerFlags().Border(wxRIGHT, 8));
+
 		search_map_button_ = new wxButton(footer_panel, wxID_FIND, "Search Map");
 		footer_buttons->Add(search_map_button_, wxSizerFlags().Border(wxRIGHT, 8));
 
@@ -294,6 +297,9 @@ void FindItemDialog::bindEvents() {
 		grid_results_view_->Bind(EVT_ADVANCED_FINDER_RESULT_RIGHT_ACTIVATE, &FindItemDialog::OnResultRightActivate, this);
 	}
 
+	if (search_filtered_button_ != nullptr) {
+		search_filtered_button_->Bind(wxEVT_BUTTON, &FindItemDialog::OnSearchFiltered, this);
+	}
 	if (search_map_button_ != nullptr) {
 		search_map_button_->Bind(wxEVT_BUTTON, &FindItemDialog::OnSearchMap, this);
 	}
