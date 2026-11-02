@@ -26,6 +26,7 @@
 #include "rendering/core/coordinate_mapper.h"
 #include <wx/wx.h>
 #include "item_definitions/core/item_definition_store.h"
+#include "util/nvg_utils.h"
 #include <algorithm>
 
 TooltipDrawer::TooltipDrawer() {
@@ -148,76 +149,39 @@ int TooltipDrawer::getSpriteImage(NVGcontext* vg, uint16_t itemId) {
 		lastContext = vg;
 	}
 
-	const auto definition = g_item_definitions.get(itemId);
-	GameSprite* gameSprite = definition ? g_graphics.getGameSprite(definition.clientId()) : nullptr;
-	if (!gameSprite) {
-		return 0;
-	}
-
 	auto itCache = spriteCache.find(itemId);
 	if (itCache != spriteCache.end()) {
 		return itCache->second;
 	}
 
-	if (gameSprite && !gameSprite->spriteList.empty()) {
-		NormalImage* img = gameSprite->spriteList[0];
-		if (img) {
-			const auto dimensions = img->getDimensions();
-			std::unique_ptr<uint8_t[]> rgba;
-
-			// For legacy sprites (no transparency), use getRGBData + Magenta Masking
-			if (!g_graphics.hasTransparency()) {
-				std::unique_ptr<uint8_t[]> rgb = img->getRGBData();
-				if (rgb) {
-					rgba = std::make_unique<uint8_t[]>(dimensions.pixelCount() * 4);
-					for (size_t i = 0; i < dimensions.pixelCount(); ++i) {
-						uint8_t r = rgb[i * 3 + 0];
-						uint8_t g = rgb[i * 3 + 1];
-						uint8_t b = rgb[i * 3 + 2];
-
-						// Magic Pink (Magenta) is transparent for legacy sprites
-						if (r == 0xFF && g == 0x00 && b == 0xFF) {
-							rgba[i * 4 + 0] = 0;
-							rgba[i * 4 + 1] = 0;
-							rgba[i * 4 + 2] = 0;
-							rgba[i * 4 + 3] = 0;
-						} else {
-							rgba[i * 4 + 0] = r;
-							rgba[i * 4 + 1] = g;
-							rgba[i * 4 + 2] = b;
-							rgba[i * 4 + 3] = 255;
-						}
-					}
-				}
-			}
-
-			// Fallback/Standard path for alpha sprites
-			if (!rgba) {
-				rgba = img->getRGBAData();
-			}
-
-			if (rgba) {
-				int image = nvgCreateImageRGBA(vg, dimensions.width, dimensions.height, 0, rgba.get());
-				if (image > 0) {
-					if (spriteCache.contains(itemId) && spriteCache[itemId] > 0) {
-						nvgDeleteImage(vg, spriteCache[itemId]);
-					}
-					spriteCache[itemId] = image;
-					return image;
-				}
-			}
-		}
-	}
-
-	return 0;
+	int image = NvgUtils::CreateItemTexture(vg, itemId);
+	spriteCache[itemId] = image;
+	return image;
 }
 
 void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 	scratch_fields_count = 0;
 	scratch_text_lines.clear();
+	sanitized_text.clear();
 	storage.clear();
 	if (storage.capacity() < 4096) {
 		storage.reserve(4096);
+	}
+
+	if (!tooltip.text.empty()) {
+		sanitized_text.reserve(tooltip.text.size());
+		for (size_t i = 0; i < tooltip.text.size(); ++i) {
+			char c = tooltip.text[i];
+			if (c == '\r') {
+				// Strip '\r'. If followed by '\n', let '\n' handle the newline.
+				if (i + 1 < tooltip.text.size() && tooltip.text[i + 1] == '\n') {
+					continue;
+				}
+				sanitized_text.push_back('\n');
+			} else {
+				sanitized_text.push_back(c);
+			}
+		}
 	}
 
 	auto addField = [&](std::string_view label, std::string_view value, Theme::Role colorRole) {
@@ -238,6 +202,12 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 		size_t start = storage.size();
 		std::format_to(std::back_inserter(storage), "{}", tooltip.houseId);
 		addField("House ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipUniqueId);
+
+		if (tooltip.doorId > 0) {
+			start = storage.size();
+			std::format_to(std::back_inserter(storage), "{}", tooltip.doorId);
+			addField("Door ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipDoorId);
+		}
 
 		start = storage.size();
 		std::format_to(std::back_inserter(storage), "{} sqm", tooltip.houseSize);
@@ -261,6 +231,11 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 		std::format_to(std::back_inserter(storage), "{}, {}, {}", tooltip.pos.x, tooltip.pos.y, tooltip.pos.z);
 		addField("Position", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipWaypoint);
 	} else {
+		if (tooltip.houseId > 0) {
+			size_t start = storage.size();
+			std::format_to(std::back_inserter(storage), "{}", tooltip.houseId);
+			addField("House ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipUniqueId);
+		}
 		if (tooltip.actionId > 0) {
 			size_t start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}", tooltip.actionId);
@@ -284,6 +259,16 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 				std::format_to(std::back_inserter(storage), "{}", tooltip.depotId);
 			}
 			addField("Depot ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipDepotId);
+		}
+		if (tooltip.houseSize > 0) {
+			size_t start = storage.size();
+			std::format_to(std::back_inserter(storage), "{} sqm", tooltip.houseSize);
+			addField("Tile Count", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipDoorId);
+		}
+		if (tooltip.houseRent > 0) {
+			size_t start = storage.size();
+			std::format_to(std::back_inserter(storage), "{} gp", tooltip.houseRent);
+			addField("Rent", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTextValue);
 		}
 		if (tooltip.destination.x > 0) {
 			size_t start = storage.size();
@@ -314,14 +299,10 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 	// Subtitle width
 	float subWidth = 0.0f;
 	std::string subText;
-	if (tooltip.count > 1) {
-		subText = std::format("Count: {} • ID: {}", tooltip.count, tooltip.itemId);
-	} else if (!tooltip.subtitle.empty()) {
+	if (!tooltip.subtitle.empty()) {
 		subText = std::string(tooltip.subtitle);
 	} else if (!tooltip.townName.empty()) {
 		subText = std::format("Town: {}", tooltip.townName);
-	} else if (tooltip.category == TooltipCategory::ITEM && tooltip.itemId > 0) {
-		subText = std::format("ID: {}", tooltip.itemId);
 	} else if (tooltip.category == TooltipCategory::WAYPOINT) {
 		subText = "Waypoint";
 	} else if (tooltip.category == TooltipCategory::ZONE) {
@@ -403,26 +384,7 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 	const float lineHeight = fontSize * 1.35f;
 	lm.fieldsHeight = totalFieldLines * lineHeight;
 
-	// 3. Measure Readable Text Box
-	lm.textBoxHeight = 0.0f;
-	if (!tooltip.text.empty()) {
-		nvgFontSize(vg, 11.0f);
-		float maxTextWellWidth = maxWidth - padding * 2.0f - 14.0f;
-		const char* start = tooltip.text.data();
-		const char* end = start + tooltip.text.length();
-
-		NVGtextRow rows[32];
-		int nRows = nvgTextBreakLines(vg, start, end, maxTextWellWidth, rows, 32);
-		for (int j = 0; j < nRows; j++) {
-			scratch_text_lines.push_back(std::string_view(rows[j].start, rows[j].end - rows[j].start));
-		}
-		if (nRows == 0) {
-			scratch_text_lines.push_back(tooltip.text);
-		}
-		lm.textBoxHeight = scratch_text_lines.size() * (11.0f * 1.35f) + 12.0f; // 6px padding top/bottom
-	}
-
-	// 4. Measure Container Grid
+	// 3. Measure Container Grid
 	lm.containerCols = 0;
 	lm.containerRows = 0;
 	lm.gridSlotSize = 34.0f; // 32px + 2px gutter
@@ -453,10 +415,88 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 		}
 	}
 
-	// 5. Calculate Final Box Dimensions
+	// 4. Calculate Card Width
+	float minTargetWidth = minWidth;
+	if (!sanitized_text.empty()) {
+		minTargetWidth = std::max(minTargetWidth, 220.0f);
+	}
 	float gridWidth = (lm.containerCols > 0) ? (lm.containerCols * lm.gridSlotSize + padding * 2.0f) : 0.0f;
-	lm.width = std::clamp(std::max({ minWidth, headerContentWidth, actualFieldsMaxWidth, gridWidth }), minWidth, maxWidth);
+	lm.width = std::clamp(std::max({ minTargetWidth, headerContentWidth, actualFieldsMaxWidth, gridWidth }), minWidth, maxWidth);
 
+	// 5. Measure Readable Text Box against exact well inner width
+	lm.textBoxHeight = 0.0f;
+	if (!sanitized_text.empty()) {
+		nvgFontSize(vg, 11.0f);
+		nvgFontFace(vg, "sans");
+		const float wellInnerWidth = (lm.width - padding * 2.0f) - 14.0f;
+
+		size_t pStart = 0;
+		while (pStart < sanitized_text.size()) {
+			size_t pEnd = sanitized_text.find('\n', pStart);
+			if (pEnd == std::string::npos) {
+				pEnd = sanitized_text.size();
+			}
+
+			if (pStart == pEnd) {
+				// Empty line / paragraph break
+				scratch_text_lines.push_back(std::string_view{});
+			} else {
+				const char* segStart = sanitized_text.data() + pStart;
+				const char* segEnd = sanitized_text.data() + pEnd;
+
+				float bounds[4];
+				nvgTextBounds(vg, 0, 0, segStart, segEnd, bounds);
+				float segWidth = bounds[2] - bounds[0];
+
+				if (segWidth <= wellInnerWidth) {
+					scratch_text_lines.push_back(std::string_view(segStart, segEnd - segStart));
+				} else {
+					NVGtextRow rows[16];
+					const char* cur = segStart;
+					while (cur < segEnd) {
+						int nRows = nvgTextBreakLines(vg, cur, segEnd, wellInnerWidth, rows, 16);
+						if (nRows == 0) {
+							break;
+						}
+						for (int r = 0; r < nRows; ++r) {
+							// If row width still exceeds wellInnerWidth (e.g. unbroken string like "asdasdasd..."),
+							// break character by character
+							if (rows[r].width > wellInnerWidth) {
+								const char* cStart = rows[r].start;
+								const char* cEnd = rows[r].end;
+								const char* charCur = cStart;
+								const char* lineStart = charCur;
+								while (charCur < cEnd) {
+									float cBounds[4];
+									nvgTextBounds(vg, 0, 0, lineStart, charCur + 1, cBounds);
+									if (cBounds[2] - cBounds[0] > wellInnerWidth && charCur > lineStart) {
+										scratch_text_lines.push_back(std::string_view(lineStart, charCur - lineStart));
+										lineStart = charCur;
+									}
+									charCur++;
+								}
+								if (lineStart < cEnd) {
+									scratch_text_lines.push_back(std::string_view(lineStart, cEnd - lineStart));
+								}
+							} else {
+								scratch_text_lines.push_back(std::string_view(rows[r].start, rows[r].end - rows[r].start));
+							}
+							cur = rows[r].next;
+						}
+					}
+				}
+			}
+
+			pStart = pEnd + 1;
+		}
+
+		if (scratch_text_lines.empty()) {
+			scratch_text_lines.push_back(sanitized_text);
+		}
+		lm.textBoxHeight = scratch_text_lines.size() * (11.0f * 1.35f) + 12.0f; // 6px padding top/bottom
+	}
+
+	// 6. Calculate Final Box Dimensions
 	lm.height = lm.headerHeight;
 	if (scratch_fields_count > 0) {
 		lm.height += 2.0f + lm.fieldsHeight + 8.0f; // 2px divider + fields + spacer
@@ -558,6 +598,21 @@ void TooltipDrawer::drawSunkenSlot(NVGcontext* vg, float sx, float sy, float siz
 			nvgFill(vg);
 		}
 	}
+
+	// Stack count on bottom-right of 32x32 slot
+	if (tooltip.count > 1) {
+		std::string countStr = std::to_string(tooltip.count);
+		nvgFontSize(vg, 10.0f);
+		nvgFontFace(vg, "sans");
+		nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
+
+		nvgFillColor(vg, nvgRGBA(0, 0, 0, 255));
+		nvgText(vg, sx + size, sy + size, countStr.c_str(), nullptr);
+
+		wxColour countCol = Theme::Get(Theme::Role::TooltipCountText);
+		nvgFillColor(vg, nvgRGBA(countCol.Red(), countCol.Green(), countCol.Blue(), 255));
+		nvgText(vg, sx + size - 1.0f, sy + size - 1.0f, countStr.c_str(), nullptr);
+	}
 }
 
 void TooltipDrawer::drawSunkenDivider(NVGcontext* vg, float dx, float dy, float dw) {
@@ -589,39 +644,37 @@ void TooltipDrawer::drawHeader(NVGcontext* vg, float x, float y, float width, co
 
 	// Text block to the right of the slot
 	const float textX = slotX + kSlotSize + kHeaderGap;
-	const float textTopY = slotY + 2.0f;
-	const float textBottomY = slotY + 18.0f;
 
-	// Primary Name (Bold pure white)
-	nvgFontSize(vg, 12.0f);
-	nvgFontFace(vg, "sans");
-	nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
-	const std::string_view nameStr = !tooltip.itemName.empty() ? tooltip.itemName : "Object";
-	nvgText(vg, textX, textTopY, nameStr.data(), nameStr.data() + nameStr.size());
-
-	// Subtitle line (Count, affiliation, or ID)
+	// Subtitle line (affiliation, town, or custom) - NO "Count" and NO "ID"
 	std::string subText;
-	if (tooltip.count > 1) {
-		subText = std::format("Count: {} • ID: {}", tooltip.count, tooltip.itemId);
-	} else if (!tooltip.subtitle.empty()) {
+	if (!tooltip.subtitle.empty()) {
 		subText = std::string(tooltip.subtitle);
 	} else if (!tooltip.townName.empty()) {
 		subText = std::format("Town: {}", tooltip.townName);
-	} else if (tooltip.category == TooltipCategory::ITEM && tooltip.itemId > 0) {
-		subText = std::format("ID: {}", tooltip.itemId);
 	} else if (tooltip.category == TooltipCategory::WAYPOINT) {
 		subText = "Waypoint";
 	} else if (tooltip.category == TooltipCategory::ZONE) {
 		subText = std::format("Zone #{}", tooltip.zoneId);
 	}
 
-	if (!subText.empty()) {
+	nvgFontSize(vg, 12.0f);
+	nvgFontFace(vg, "sans");
+	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
+	const std::string_view nameStr = !tooltip.itemName.empty() ? tooltip.itemName : "Object";
+
+	if (subText.empty()) {
+		// Vertically centered when no subtitle
+		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		nvgText(vg, textX, slotY + kSlotSize * 0.5f, nameStr.data(), nameStr.data() + nameStr.size());
+	} else {
+		// Two-line layout: title at top, subtitle at bottom
+		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
+		nvgText(vg, textX, slotY + 2.0f, nameStr.data(), nameStr.data() + nameStr.size());
+
 		nvgFontSize(vg, 10.0f);
-		nvgFontFace(vg, "sans");
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
 		nvgFillColor(vg, nvgRGBA(160, 165, 175, 255)); // Subtle grey
-		nvgText(vg, textX, textBottomY, subText.c_str(), nullptr);
+		nvgText(vg, textX, slotY + 18.0f, subText.c_str(), nullptr);
 	}
 }
 
@@ -690,7 +743,9 @@ void TooltipDrawer::drawSunkenTextBox(NVGcontext* vg, float x, float y, float wi
 	nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 255));
 
 	for (const auto& line : scratch_text_lines) {
-		nvgText(vg, wellX + 6.0f, textCursorY, line.data(), line.data() + line.size());
+		if (!line.empty()) {
+			nvgText(vg, wellX + 7.0f, textCursorY, line.data(), line.data() + line.size());
+		}
 		textCursorY += lineHeight;
 	}
 }

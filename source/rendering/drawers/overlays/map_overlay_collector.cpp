@@ -22,7 +22,7 @@
 #include <string_view>
 
 namespace {
-	bool FillItemTooltipData(TooltipData& data, Item* item, const Position& pos, bool isHouseTile, float zoom, const Editor* editor) {
+	bool FillItemTooltipData(TooltipData& data, Item* item, const Position& pos, uint32_t houseId, float zoom, const Editor* editor) {
 		if (!item) {
 			return false;
 		}
@@ -43,7 +43,8 @@ namespace {
 		uint16_t count = 0;
 
 		const bool is_complex = item->isComplex();
-		const Door* door = isHouseTile ? item->asDoor() : nullptr;
+		const bool is_house_tile = houseId > 0;
+		const Door* door = is_house_tile ? item->asDoor() : nullptr;
 		const Teleport* tp = item->asTeleport();
 		const Container* container = item->asContainer();
 		const Depot* depot = item->asDepot();
@@ -102,6 +103,24 @@ namespace {
 		data.text = text;
 		data.description = description;
 		data.destination = destination;
+
+		if (door && is_house_tile && editor != nullptr) {
+			if (const House* house = editor->map.houses.getHouse(houseId)) {
+				data.houseId = house->getID();
+				data.houseRent = house->rent;
+				data.houseSize = house->size();
+				data.isGuildhall = house->guildhall;
+				if (!house->name.empty()) {
+					data.subtitle = house->name;
+				}
+				if (house->townid > 0) {
+					auto townIt = editor->map.towns.find(house->townid);
+					if (townIt != editor->map.towns.end() && townIt->second) {
+						data.townName = townIt->second->getName();
+					}
+				}
+			}
+		}
 
 		if (depotId > 0 && editor != nullptr) {
 			auto it = editor->map.towns.find(depotId);
@@ -184,9 +203,10 @@ void MapOverlayCollector::Collect(
 			}
 
 			// 2. Ground tooltip (only complex grounds can have attributes like aid/uid/text)
+			const uint32_t tile_house_id = tile->getHouseID();
 			if (need_tooltips && tile->ground && tile->ground->isComplex()) {
 				TooltipData& groundData = out_tooltip_drawer->requestTooltipData();
-				if (FillItemTooltipData(groundData, tile->ground.get(), pos, tile->isHouseTile(), view.zoom, editor)) {
+				if (FillItemTooltipData(groundData, tile->ground.get(), pos, tile_house_id, view.zoom, editor)) {
 					if (groundData.hasVisibleFields()) {
 						out_tooltip_drawer->commitTooltip();
 					}
@@ -195,7 +215,6 @@ void MapOverlayCollector::Collect(
 
 			// 3. Tile items (single pass over items for both door indicators and tooltips)
 			if (!tile->items.empty() && (need_doors || need_tooltips)) {
-				const bool is_house_tile = tile->isHouseTile();
 				for (const auto& item : tile->items) {
 					if (!item) {
 						continue;
@@ -218,14 +237,14 @@ void MapOverlayCollector::Collect(
 					// Tooltip badges
 					if (need_tooltips) {
 						const bool is_complex = item->isComplex();
-						const Door* door = is_house_tile ? item->asDoor() : nullptr;
+						const Door* door = (tile_house_id > 0) ? item->asDoor() : nullptr;
 						const Teleport* tp = item->asTeleport();
 						const Container* container = item->asContainer();
 						const Depot* depot = item->asDepot();
 
 						if (is_complex || door || tp || container || depot || item->isStackable()) {
 							TooltipData& itemData = out_tooltip_drawer->requestTooltipData();
-							if (FillItemTooltipData(itemData, item.get(), pos, is_house_tile, view.zoom, editor)) {
+							if (FillItemTooltipData(itemData, item.get(), pos, tile_house_id, view.zoom, editor)) {
 								if (itemData.hasVisibleFields()) {
 									out_tooltip_drawer->commitTooltip();
 								}
@@ -235,7 +254,51 @@ void MapOverlayCollector::Collect(
 				}
 			}
 
-			// 4. Waypoint tooltip
+			// 4. House exit tooltip
+			if (need_tooltips && options.show_houses && tile->isHouseExit() && editor != nullptr) {
+				if (const HouseExitList* exits = tile->getHouseExits()) {
+					for (uint32_t hid : *exits) {
+						if (const House* house = editor->map.houses.getHouse(hid)) {
+							TooltipData& hData = out_tooltip_drawer->requestTooltipData();
+							hData.pos = pos;
+							hData.category = TooltipCategory::HOUSE;
+							hData.houseId = house->getID();
+							hData.itemName = house->name.empty() ? "House" : house->name;
+							hData.subtitle = "House Entry";
+							hData.houseRent = house->rent;
+							hData.houseSize = house->size();
+							hData.isGuildhall = house->guildhall;
+							hData.badgeType = house->guildhall ? rme::rendering::TileIndicatorType::GuildHall : rme::rendering::TileIndicatorType::House;
+							if (house->townid > 0) {
+								auto townIt = editor->map.towns.find(house->townid);
+								if (townIt != editor->map.towns.end() && townIt->second) {
+									hData.townName = townIt->second->getName();
+								}
+							}
+							out_tooltip_drawer->commitTooltip();
+							break; // Show one house exit per tile to avoid stacking
+						}
+					}
+				}
+			}
+
+			// 5. Town temple tooltip
+			if (need_tooltips && options.show_towns && tile->isTownExit() && editor != nullptr) {
+				for (const auto& [town_id, town_ptr] : editor->map.towns) {
+					if (town_ptr && town_ptr->getTemplePosition() == pos) {
+						TooltipData& tData = out_tooltip_drawer->requestTooltipData();
+						tData.pos = pos;
+						tData.category = TooltipCategory::WAYPOINT;
+						tData.itemName = town_ptr->getName();
+						tData.subtitle = "Town Temple";
+						tData.badgeType = rme::rendering::TileIndicatorType::TownTemple;
+						out_tooltip_drawer->commitTooltip();
+						break;
+					}
+				}
+			}
+
+			// 6. Waypoint tooltip
 			if (need_tooltips && location->getWaypointCount() > 0 && editor != nullptr) {
 				if (const Waypoint* waypoint = editor->map.waypoints.getWaypoint(location)) {
 					out_tooltip_drawer->addWaypointTooltip(pos, waypoint->name);
@@ -244,63 +307,8 @@ void MapOverlayCollector::Collect(
 		}
 	});
 
-	// 5. Macro entity tooltips (Houses, Towns, Zones)
+	// 7. Macro entity tooltips (Zones)
 	if (need_tooltips && editor != nullptr) {
-		// House tooltips (at exit or floor centroid)
-		if (options.show_houses) {
-			for (const auto& [house_id, house_ptr] : editor->map.houses) {
-				if (!house_ptr) {
-					continue;
-				}
-				const House::FloorSummary& summary = house_ptr->getFloorSummary(map_z);
-				if (summary.count == 0) {
-					continue;
-				}
-				const Position& best_pos = (house_ptr->getExit().z == map_z && house_ptr->getExit().x > 0) ? house_ptr->getExit() : summary.best_tile;
-				if (best_pos.x < bounds.start_x || best_pos.x > bounds.end_x ||
-				    best_pos.y < bounds.start_y || best_pos.y > bounds.end_y) {
-					continue;
-				}
-				TooltipData& hData = out_tooltip_drawer->requestTooltipData();
-				hData.pos = best_pos;
-				hData.category = TooltipCategory::HOUSE;
-				hData.houseId = house_ptr->getID();
-				hData.itemName = house_ptr->name.empty() ? "House" : house_ptr->name;
-				hData.houseRent = house_ptr->rent;
-				hData.houseSize = house_ptr->size();
-				hData.isGuildhall = house_ptr->guildhall;
-				hData.badgeType = house_ptr->guildhall ? rme::rendering::TileIndicatorType::GuildHall : rme::rendering::TileIndicatorType::House;
-				if (house_ptr->townid > 0) {
-					auto it = editor->map.towns.find(house_ptr->townid);
-					if (it != editor->map.towns.end() && it->second) {
-						hData.townName = it->second->getName();
-					}
-				}
-				out_tooltip_drawer->commitTooltip();
-			}
-		}
-
-		// Town Temple tooltips
-		if (options.show_towns) {
-			for (const auto& [town_id, town_ptr] : editor->map.towns) {
-				if (!town_ptr) {
-					continue;
-				}
-				const Position& tpos = town_ptr->getTemplePosition();
-				if (tpos.z != map_z || tpos.x < bounds.start_x || tpos.x > bounds.end_x ||
-				    tpos.y < bounds.start_y || tpos.y > bounds.end_y) {
-					continue;
-				}
-				TooltipData& tData = out_tooltip_drawer->requestTooltipData();
-				tData.pos = tpos;
-				tData.category = TooltipCategory::WAYPOINT;
-				tData.itemName = town_ptr->getName();
-				tData.subtitle = "Town Temple";
-				tData.badgeType = rme::rendering::TileIndicatorType::TownTemple;
-				out_tooltip_drawer->commitTooltip();
-			}
-		}
-
 		// Zone cluster tooltips
 		if (options.show_zones && (map.getVersion().otbm == MAP_OTBM_5)) {
 			for (const auto& zone : map.zones) {

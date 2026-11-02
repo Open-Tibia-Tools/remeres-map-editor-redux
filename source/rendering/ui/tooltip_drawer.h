@@ -206,6 +206,7 @@ protected:
 	size_t scratch_fields_count = 0;
 	std::vector<std::string_view> scratch_text_lines; // For sunken text box
 	std::string storage; // Scratch buffer for text generation
+	std::string sanitized_text; // Scratch buffer for CRLF stripped text
 
 	std::vector<TooltipData> tooltips;
 	size_t active_count = 0;
