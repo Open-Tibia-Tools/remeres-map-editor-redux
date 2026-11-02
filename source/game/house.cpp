@@ -146,7 +146,9 @@ size_t House::size() const {
 void House::addTile(Tile* tile) {
 	ASSERT(tile);
 	tile->setHouse(this);
-	tiles.push_back(tile->getPosition());
+	if (std::ranges::find(tiles, tile->getPosition()) == tiles.end()) {
+		tiles.push_back(tile->getPosition());
+	}
 	invalidateSummary();
 }
 
@@ -155,7 +157,6 @@ void House::removeTile(Tile* tile) {
 	auto it = std::ranges::find(tiles, tile->getPosition());
 	if (it != tiles.end()) {
 		tiles.erase(it);
-		tile->setHouse(nullptr);
 		invalidateSummary();
 	}
 }
