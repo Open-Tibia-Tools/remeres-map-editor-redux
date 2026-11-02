@@ -63,7 +63,7 @@ void LayoutManager::EnsurePaneOnScreen(wxAuiPaneInfo& info) {
 }
 
 void LayoutManager::UpdatePaletteActivePage(PaletteWindow* palette, const std::string& page_name) {
-	if (!palette || !g_gui.aui_manager || page_name.empty()) {
+	if (g_layout.IsLoadingPerspective() || !palette || !g_gui.aui_manager || page_name.empty()) {
 		return;
 	}
 	const wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(palette);
@@ -106,6 +106,12 @@ LayoutManager::~LayoutManager() {
 }
 
 void LayoutManager::LoadPerspective() {
+	struct PerspectiveGuard {
+		bool& flag;
+		explicit PerspectiveGuard(bool& f) : flag(f) { flag = true; }
+		~PerspectiveGuard() { flag = false; }
+	} guard(m_isLoadingPerspective);
+
 	if (!g_version.IsVersionLoaded()) {
 		if (g_settings.getInteger(Config::WINDOW_MAXIMIZED)) {
 			g_gui.root->Maximize();
@@ -256,8 +262,15 @@ void LayoutManager::LoadPerspective() {
 					pane_pages[item.substr(0, eq)] = item.substr(eq + 1);
 				}
 			}
-			for (auto& palette : g_palettes.palettes) {
+			const std::vector<PaletteWindow*> palettes_copy(g_palettes.palettes.begin(), g_palettes.palettes.end());
+			for (auto* palette : palettes_copy) {
+				if (!palette || !g_gui.aui_manager) {
+					continue;
+				}
 				const wxAuiPaneInfo& pinfo = g_gui.aui_manager->GetPane(palette);
+				if (!pinfo.IsOk()) {
+					continue;
+				}
 				auto it = pane_pages.find(nstr(pinfo.name));
 				if (it != pane_pages.end()) {
 					palette->SelectPage(it->second);
@@ -302,7 +315,9 @@ void LayoutManager::LoadPerspective() {
 
 
 	g_gui.aui_manager->Update();
-	g_gui.root->GetAuiToolBar()->LoadPerspective();
+	if (g_gui.root && g_gui.root->GetAuiToolBar()) {
+		g_gui.root->GetAuiToolBar()->LoadPerspective();
+	}
 }
 
 void LayoutManager::SavePerspective() {
@@ -314,8 +329,9 @@ void LayoutManager::SavePerspective() {
 
 	wxString pinfo;
 	wxString palette_pages_info;
-	for (auto& palette : g_palettes.palettes) {
-		if (g_gui.aui_manager->GetPane(palette).IsShown()) {
+	const std::vector<PaletteWindow*> palettes_copy(g_palettes.palettes.begin(), g_palettes.palettes.end());
+	for (auto* palette : palettes_copy) {
+		if (palette && g_gui.aui_manager && g_gui.aui_manager->GetPane(palette).IsShown()) {
 			pinfo << SavePaneInfoWithCurrentSize(*g_gui.aui_manager, palette) << "|";
 			const wxAuiPaneInfo& p_info = g_gui.aui_manager->GetPane(palette);
 			const std::string page_name = palette->GetSelectedPageName();
@@ -360,5 +376,7 @@ void LayoutManager::SavePerspective() {
 		g_settings.setString(Config::INGAME_PREVIEW_LAYOUT, nstr(s));
 	}
 
-	g_gui.root->GetAuiToolBar()->SavePerspective();
+	if (g_gui.root && g_gui.root->GetAuiToolBar()) {
+		g_gui.root->GetAuiToolBar()->SavePerspective();
+	}
 }

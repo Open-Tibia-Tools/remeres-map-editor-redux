@@ -38,6 +38,9 @@ PaletteWindow* PaletteManager::NewPalette() {
 }
 
 void PaletteManager::ActivatePalette(PaletteWindow* p) {
+	if (!p || palettes.empty() || palettes.front() == p) {
+		return;
+	}
 	auto it = std::find(palettes.begin(), palettes.end(), p);
 	if (it != palettes.end()) {
 		palettes.erase(it);
@@ -54,15 +57,19 @@ void PaletteManager::RebuildPalettes() {
 }
 
 void PaletteManager::RefreshPalettes(Map* m, bool usedefault) {
-	for (auto& palette : palettes) {
-		palette->OnUpdate(m ? m : (usedefault ? (g_gui.IsEditorOpen() ? &g_gui.GetCurrentMap() : nullptr) : nullptr));
+	const std::vector<PaletteWindow*> palettes_copy(palettes.begin(), palettes.end());
+	for (auto* palette : palettes_copy) {
+		if (palette) {
+			palette->OnUpdate(m ? m : (usedefault ? (g_gui.IsEditorOpen() ? &g_gui.GetCurrentMap() : nullptr) : nullptr));
+		}
 	}
 	g_brush_manager.SelectBrush();
 }
 
 void PaletteManager::RefreshOtherPalettes(PaletteWindow* p) {
-	for (auto& palette : palettes) {
-		if (palette != p) {
+	const std::vector<PaletteWindow*> palettes_copy(palettes.begin(), palettes.end());
+	for (auto* palette : palettes_copy) {
+		if (palette && palette != p) {
 			palette->OnUpdate(g_gui.IsEditorOpen() ? &g_gui.GetCurrentMap() : nullptr);
 		}
 	}

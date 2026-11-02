@@ -325,7 +325,9 @@ void PaletteWindow::SelectPage(std::string_view paletteName) {
 	for (size_t index = 0; index < choicebook->GetPageCount(); ++index) {
 		auto* panel = dynamic_cast<PalettePanel*>(choicebook->GetPage(index));
 		if (paletteNameMatches(panel, paletteName)) {
-			choicebook->SetSelection(index);
+			if (choicebook->GetSelection() != static_cast<int>(index)) {
+				choicebook->SetSelection(index);
+			}
 			return;
 		}
 	}

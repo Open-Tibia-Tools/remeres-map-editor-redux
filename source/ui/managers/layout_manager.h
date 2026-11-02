@@ -29,6 +29,11 @@ public:
 
 	static void EnsurePaneOnScreen(wxAuiPaneInfo& info);
 	static void UpdatePaletteActivePage(PaletteWindow* palette, const std::string& page_name);
+
+	[[nodiscard]] bool IsLoadingPerspective() const noexcept { return m_isLoadingPerspective; }
+
+private:
+	bool m_isLoadingPerspective = false;
 };
 
 extern LayoutManager g_layout;

@@ -363,10 +363,15 @@ void BrushPalettePanel::SetHorizontalLayout(bool horizontal) {
 		if (ts_sizer) {
 			ts_sizer->Detach(choicebook);
 			GetSizer()->Detach(ts_sizer);
-			ts_sizer->GetStaticBox()->Show(false);
 		}
-		if (choicebook && choicebook->GetParent() != this) {
-			choicebook->Reparent(this);
+		if (choicebook) {
+			if (choicebook->GetParent() != this) {
+				choicebook->Reparent(this);
+			}
+			choicebook->Show(true);
+		}
+		if (ts_sizer) {
+			ts_sizer->GetStaticBox()->Show(false);
 		}
 		GetSizer()->Add(choicebook, wxSizerFlags(1).Expand());
 		const int leftWidth = FromDIP(PALETTE_HORIZONTAL_LEFT_WIDTH);
@@ -392,10 +397,13 @@ void BrushPalettePanel::SetHorizontalLayout(bool horizontal) {
 	} else {
 		GetSizer()->Detach(choicebook);
 		if (ts_sizer) {
-			if (choicebook && choicebook->GetParent() != ts_sizer->GetStaticBox()) {
-				choicebook->Reparent(ts_sizer->GetStaticBox());
-			}
 			ts_sizer->GetStaticBox()->Show(true);
+			if (choicebook) {
+				if (choicebook->GetParent() != ts_sizer->GetStaticBox()) {
+					choicebook->Reparent(ts_sizer->GetStaticBox());
+				}
+				choicebook->Show(true);
+			}
 			ts_sizer->Add(choicebook, wxSizerFlags(1).Expand());
 			GetSizer()->Add(ts_sizer, wxSizerFlags(1).Expand());
 		}
