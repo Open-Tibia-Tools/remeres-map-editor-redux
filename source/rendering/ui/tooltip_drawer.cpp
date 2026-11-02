@@ -592,10 +592,21 @@ void TooltipDrawer::drawSunkenSlot(NVGcontext* vg, float sx, float sy, float siz
 	} else if (tooltip.itemId > 0) {
 		int img = getSpriteImage(vg, tooltip.itemId);
 		if (img > 0) {
-			nvgBeginPath(vg);
-			nvgRect(vg, sx, sy, size, size);
-			nvgFillPaint(vg, nvgImagePattern(vg, sx, sy, size, size, 0, img, 1.0f));
-			nvgFill(vg);
+			int imgW = 0;
+			int imgH = 0;
+			nvgImageSize(vg, img, &imgW, &imgH);
+			if (imgW > 0 && imgH > 0) {
+				const float scale = std::min(size / static_cast<float>(imgW), size / static_cast<float>(imgH));
+				const float drawW = static_cast<float>(imgW) * scale;
+				const float drawH = static_cast<float>(imgH) * scale;
+				const float drawX = sx + (size - drawW) * 0.5f;
+				const float drawY = sy + (size - drawH) * 0.5f;
+
+				nvgBeginPath(vg);
+				nvgRect(vg, drawX, drawY, drawW, drawH);
+				nvgFillPaint(vg, nvgImagePattern(vg, drawX, drawY, drawW, drawH, 0.0f, img, 1.0f));
+				nvgFill(vg);
+			}
 		}
 	}
 
@@ -805,10 +816,21 @@ void TooltipDrawer::drawContainerGrid(NVGcontext* vg, float x, float y, const To
 			const auto& item = tooltip.containerItems[idx];
 			int img = getSpriteImage(vg, item.id);
 			if (img > 0) {
-				nvgBeginPath(vg);
-				nvgRect(vg, itemX, itemY, 32.0f, 32.0f);
-				nvgFillPaint(vg, nvgImagePattern(vg, itemX, itemY, 32.0f, 32.0f, 0, img, 1.0f));
-				nvgFill(vg);
+				int imgW = 0;
+				int imgH = 0;
+				nvgImageSize(vg, img, &imgW, &imgH);
+				if (imgW > 0 && imgH > 0) {
+					const float scale = std::min(32.0f / static_cast<float>(imgW), 32.0f / static_cast<float>(imgH));
+					const float drawW = static_cast<float>(imgW) * scale;
+					const float drawH = static_cast<float>(imgH) * scale;
+					const float drawX = itemX + (32.0f - drawW) * 0.5f;
+					const float drawY = itemY + (32.0f - drawH) * 0.5f;
+
+					nvgBeginPath(vg);
+					nvgRect(vg, drawX, drawY, drawW, drawH);
+					nvgFillPaint(vg, nvgImagePattern(vg, drawX, drawY, drawW, drawH, 0.0f, img, 1.0f));
+					nvgFill(vg);
+				}
 			}
 
 			if (item.count > 1) {
@@ -844,8 +866,21 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	const float screen_max_x = static_cast<float>(view.screensize_x) + 150.0f;
 	const float screen_max_y = static_cast<float>(view.screensize_y) + 300.0f;
 
+	// Dynamic zoom scaling: smoothly scale tooltips down as user zooms out
+	// Clamped to [0.65f, 1.0f] so text and slot icons remain crisp and legible
+	float tooltip_scale = 1.0f;
+	if (view.zoom > 1.0f) {
+		tooltip_scale = std::clamp(1.0f / std::pow(view.zoom, 0.45f), 0.65f, 1.0f);
+	}
+
 	for (size_t i = 0; i < active_count; ++i) {
 		const auto& tooltip = tooltips[i];
+
+		// Far-zoom LOD: when zoomed out very far (zoom > 3.0f), cull dense item tooltips
+		// so street signs/blackboards don't flood whole towns. Macro entities (houses, towns, waypoints) stay visible.
+		if (view.zoom > 3.0f && tooltip.category == TooltipCategory::ITEM) {
+			continue;
+		}
 
 		int unscaled_x, unscaled_y;
 		if (!view.IsTileVisible(tooltip.pos.x, tooltip.pos.y, tooltip.pos.z, unscaled_x, unscaled_y)) {
@@ -881,39 +916,45 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		// 2. Calculate Layout
 		LayoutMetrics layout = calculateLayout(vg, tooltip, maxWidth, minWidth, padding, fontSize);
 
-		// Center horizontally above tile
-		float tooltipX = screen_x - (layout.width * 0.5f);
-		float tooltipY = screen_y - layout.height - 12.0f;
+		// Center horizontally above tile with dynamic scaling
+		float tooltipX = screen_x - (layout.width * tooltip_scale * 0.5f);
+		float tooltipY = screen_y - (layout.height * tooltip_scale) - (12.0f * tooltip_scale);
+
+		nvgSave(vg);
+		nvgTranslate(vg, tooltipX, tooltipY);
+		nvgScale(vg, tooltip_scale, tooltip_scale);
 
 		// 3. Draw Window Frame & Background
-		drawWindowFrame(vg, tooltipX, tooltipY, layout.width, layout.height, tooltip);
+		drawWindowFrame(vg, 0.0f, 0.0f, layout.width, layout.height, tooltip);
 
 		// 4. Draw Header Section (Slot + Name + Subtitle)
-		drawHeader(vg, tooltipX, tooltipY, layout.width, tooltip, layout, padding);
+		drawHeader(vg, 0.0f, 0.0f, layout.width, tooltip, layout, padding);
 
-		float currentY = tooltipY + layout.headerHeight;
+		float currentY = layout.headerHeight;
 
 		// 5. Draw Attribute Fields Section (if any)
 		if (scratch_fields_count > 0) {
-			drawSunkenDivider(vg, tooltipX + 3.0f, currentY, layout.width - 6.0f);
+			drawSunkenDivider(vg, 3.0f, currentY, layout.width - 6.0f);
 			currentY += 5.0f;
-			drawFields(vg, tooltipX, currentY, layout.valueStartX, fontSize * 1.35f, padding, fontSize);
+			drawFields(vg, 0.0f, currentY, layout.valueStartX, fontSize * 1.35f, padding, fontSize);
 			currentY += layout.fieldsHeight + 4.0f;
 		}
 
 		// 6. Draw Sunken Text Well Section (if readable text present)
 		if (!scratch_text_lines.empty()) {
-			drawSunkenDivider(vg, tooltipX + 3.0f, currentY, layout.width - 6.0f);
+			drawSunkenDivider(vg, 3.0f, currentY, layout.width - 6.0f);
 			currentY += 5.0f;
-			drawSunkenTextBox(vg, tooltipX, currentY, layout.width, layout.textBoxHeight, 11.0f * 1.35f, padding, 11.0f);
+			drawSunkenTextBox(vg, 0.0f, currentY, layout.width, layout.textBoxHeight, 11.0f * 1.35f, padding, 11.0f);
 			currentY += layout.textBoxHeight + 4.0f;
 		}
 
 		// 7. Draw Container Grid Section (if container contents present)
 		if (layout.totalContainerSlots > 0) {
-			drawSunkenDivider(vg, tooltipX + 3.0f, currentY, layout.width - 6.0f);
+			drawSunkenDivider(vg, 3.0f, currentY, layout.width - 6.0f);
 			currentY += 5.0f;
-			drawContainerGrid(vg, tooltipX, currentY, tooltip, layout, padding);
+			drawContainerGrid(vg, 0.0f, currentY, tooltip, layout, padding);
 		}
+
+		nvgRestore(vg);
 	}
 }

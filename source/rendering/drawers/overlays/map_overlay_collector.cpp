@@ -172,7 +172,7 @@ void MapOverlayCollector::Collect(
 		return;
 	}
 
-	const bool need_tooltips = options.show_tooltips && out_tooltip_drawer != nullptr;
+	const bool need_tooltips = out_tooltip_drawer != nullptr;
 	const bool need_doors = !options.ingame && options.highlight_locked_doors && out_door_drawer != nullptr;
 	const bool need_hooks = !options.ingame && options.show_hooks && out_hook_drawer != nullptr;
 
