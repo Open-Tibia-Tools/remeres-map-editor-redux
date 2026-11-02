@@ -174,6 +174,10 @@ private:
 		float zoom = -1.0f;
 		ViewBounds bounds{};
 		bool show_tooltips = false;
+		bool show_houses = false;
+		bool show_waypoints = false;
+		bool show_towns = false;
+		bool show_zones = false;
 		bool show_hooks = false;
 		bool highlight_locked_doors = false;
 		uint64_t map_generation = 0;
@@ -184,6 +188,10 @@ private:
 			float cur_zoom,
 			const ViewBounds& cur_bounds,
 			bool opt_tooltips,
+			bool opt_houses,
+			bool opt_waypoints,
+			bool opt_towns,
+			bool opt_zones,
 			bool opt_hooks,
 			bool opt_doors,
 			uint64_t cur_gen
@@ -194,7 +202,9 @@ private:
 			if (floor != cur_floor || zoom != cur_zoom) {
 				return false;
 			}
-			if (show_tooltips != opt_tooltips || show_hooks != opt_hooks || highlight_locked_doors != opt_doors) {
+			if (show_tooltips != opt_tooltips || show_houses != opt_houses ||
+			    show_waypoints != opt_waypoints || show_towns != opt_towns ||
+			    show_zones != opt_zones || show_hooks != opt_hooks || highlight_locked_doors != opt_doors) {
 				return false;
 			}
 			if (map_generation != cur_gen) {

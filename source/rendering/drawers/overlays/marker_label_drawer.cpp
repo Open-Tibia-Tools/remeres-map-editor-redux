@@ -57,11 +57,8 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 		return;
 	}
 
-	const bool show_wp = options.show_waypoints;
-	const bool show_towns = options.show_towns;
-	const bool show_houses = options.show_houses;
 	const bool show_zones = options.show_zones && (map.getVersion().otbm == MAP_OTBM_5);
-	if (!show_wp && !show_towns && !show_houses && !show_zones) {
+	if (!show_zones) {
 		return;
 	}
 	rme::prof::Scope labels_scope(rme::prof::Phase::MarkerLabels);
@@ -161,144 +158,7 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 		return y;
 	};
 
-	// 1. Collect Waypoints
-	if (show_wp) {
-		for (const auto& [wp_name, wp_ptr] : map.waypoints) {
-			if (!wp_ptr || wp_ptr->name.empty()) {
-				continue;
-			}
-			const Position& pos = wp_ptr->pos;
-			if (pos.z != view.floor) {
-				continue;
-			}
-
-			int unscaled_x = 0, unscaled_y = 0;
-			if (!view.IsTileVisible(pos.x, pos.y, pos.z, unscaled_x, unscaled_y)) {
-				continue;
-			}
-
-			const float screen_x = static_cast<float>(unscaled_x) * inv_zoom;
-			const float screen_y = static_cast<float>(unscaled_y) * inv_zoom;
-			if (screen_x < -64.0f || screen_x > screen_max_x || screen_y < -64.0f || screen_y > screen_max_y) {
-				continue;
-			}
-
-			const CachedMetrics m = getMetrics(wp_ptr->name);
-			const float labelX = screen_x + tile_size_screen * 0.5f;
-			const float labelY = resolveCollision(labelX, screen_y - 3.0f, m.width, m.height);
-
-			visible_labels.push_back(VisibleMarkerLabel {
-				.x = labelX,
-				.y = labelY,
-				.width = m.width,
-				.height = m.height,
-				.text = wp_ptr->name,
-				.type = MarkerLabelType::Waypoint
-			});
-		}
-	}
-
-	// 2. Collect Towns
-	if (show_towns) {
-		for (const auto& [town_id, town_ptr] : map.towns) {
-			if (!town_ptr) {
-				continue;
-			}
-			const Position& pos = town_ptr->getTemplePosition();
-			if (pos.z != view.floor) {
-				continue;
-			}
-
-			int unscaled_x = 0, unscaled_y = 0;
-			if (!view.IsTileVisible(pos.x, pos.y, pos.z, unscaled_x, unscaled_y)) {
-				continue;
-			}
-
-			const float screen_x = static_cast<float>(unscaled_x) * inv_zoom;
-			const float screen_y = static_cast<float>(unscaled_y) * inv_zoom;
-			if (screen_x < -64.0f || screen_x > screen_max_x || screen_y < -64.0f || screen_y > screen_max_y) {
-				continue;
-			}
-
-			std::string_view label_text = town_ptr->getName();
-			if (label_text.empty()) {
-				s_frame_fallback_names.push_back(std::format("Town {}", town_id));
-				label_text = s_frame_fallback_names.back();
-			}
-
-			const CachedMetrics m = getMetrics(label_text);
-			const float labelX = screen_x + tile_size_screen * 0.5f;
-			const float labelY = resolveCollision(labelX, screen_y - 3.0f, m.width, m.height);
-
-			visible_labels.push_back(VisibleMarkerLabel {
-				.x = labelX,
-				.y = labelY,
-				.width = m.width,
-				.height = m.height,
-				.text = label_text,
-				.type = MarkerLabelType::Town
-			});
-		}
-	}
-
-	// 3. Collect Houses
-	if (show_houses) {
-		const ViewBounds floor_bounds = view.getBoundsForFloor(view.floor);
-		const int check_z = view.floor;
-
-		for (const auto& [house_id, house_ptr] : map.houses) {
-			if (!house_ptr) {
-				continue;
-			}
-
-			const House::FloorSummary& summary = house_ptr->getFloorSummary(check_z);
-			if (summary.count == 0) {
-				continue;
-			}
-
-			// AABB culling against view bounds on active floor
-			if (summary.max_x < floor_bounds.start_x || summary.min_x > floor_bounds.end_x ||
-			    summary.max_y < floor_bounds.start_y || summary.min_y > floor_bounds.end_y) {
-				continue;
-			}
-
-			// Room tile closest to the room centroid, so the label sits inside the room.
-			const Position& best_pos = summary.best_tile;
-
-			int unscaled_x = 0, unscaled_y = 0;
-			if (!view.IsTileVisible(best_pos.x, best_pos.y, check_z, unscaled_x, unscaled_y)) {
-				continue;
-			}
-
-			const float screen_x = static_cast<float>(unscaled_x) * inv_zoom;
-			const float screen_y = static_cast<float>(unscaled_y) * inv_zoom;
-			if (screen_x < -64.0f || screen_x > screen_max_x || screen_y < -64.0f || screen_y > screen_max_y) {
-				continue;
-			}
-
-			std::string_view label_text = house_ptr->name;
-			if (label_text.empty()) {
-				label_text = "HOUSE";
-			}
-
-			const CachedMetrics m = getMetrics(label_text);
-			const float labelX = screen_x + tile_size_screen * 0.5f;
-			const float labelY = resolveCollision(labelX, screen_y + tile_size_screen * 0.5f + (m.height * 0.5f) - paddingY, m.width, m.height);
-
-			const bool is_active = (options.current_house_id > 0 && house_ptr->getID() == options.current_house_id);
-
-			visible_labels.push_back(VisibleMarkerLabel {
-				.x = labelX,
-				.y = labelY,
-				.width = m.width,
-				.height = m.height,
-				.text = label_text,
-				.type = is_active ? MarkerLabelType::HouseActive : MarkerLabelType::HouseInactive
-			});
-		}
-	}
-
-	// 4. Collect Zones
+	// Collect Zones (Waypoints, Towns, and Houses are now rendered as standard entity tooltips)
 	if (show_zones) {
 		const ViewBounds floor_bounds = view.getBoundsForFloor(view.floor);
 		const int check_z = view.floor;
