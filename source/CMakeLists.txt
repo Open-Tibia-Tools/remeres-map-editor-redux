@@ -408,6 +408,9 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/suggestion_filter_mode.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/visual_similarity_service.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/result_window.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_card_drawer.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_card_layout.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_result_model.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_button.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_card.h
@@ -831,6 +834,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/collection_options_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/collection_studio_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/result_window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_card_drawer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_result_model.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/theme.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_button.cpp

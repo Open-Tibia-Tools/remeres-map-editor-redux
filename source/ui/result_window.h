@@ -38,7 +38,6 @@ private:
 	SearchResultCanvas* m_canvas = nullptr;
 	wxStaticText* m_summaryLabel = nullptr;
 
-	std::vector<SearchResultGroup> m_all_groups;
 	SearchQuery m_current_query;
 	bool m_hasSort = false;
 	TilesetSortKey m_sortKey = TilesetSortKey::Name;

@@ -18,6 +18,15 @@
 #include <algorithm>
 #include <format>
 
+void SearchResults::ExecuteAndShow(Map* map, SearchQuery query) {
+	if (map == nullptr || !g_gui.IsEditorOpen()) {
+		return;
+	}
+
+	auto results = SearchEngine::Execute(*map, query);
+	g_gui.ShowSearchWindow()->SetSearchResults(std::move(results), std::move(query));
+}
+
 void SearchResults::SelectFoundBrush(const FindItemDialog& dialog) {
 	if (const Brush* brush = dialog.getResult()) {
 		g_gui.SelectBrush(brush);
@@ -25,10 +34,6 @@ void SearchResults::SelectFoundBrush(const FindItemDialog& dialog) {
 }
 
 void SearchResults::ShowItems(Map* map, uint16_t item_id, const wxString& WXUNUSED(load_bar_label), bool on_selection) {
-	if (map == nullptr || !g_gui.IsEditorOpen()) {
-		return;
-	}
-
 	SearchQuery query;
 	query.specific_item_id = item_id;
 	query.on_selection = on_selection;
@@ -36,28 +41,18 @@ void SearchResults::ShowItems(Map* map, uint16_t item_id, const wxString& WXUNUS
 	const std::string item_name = def ? std::string(def.name()) : std::format("Item #{}", item_id);
 	query.query_title = std::format("Search: {}", item_name);
 
-	auto results = SearchEngine::Execute(*map, query);
-	g_gui.ShowSearchWindow()->SetSearchResults(std::move(results), query);
+	ExecuteAndShow(map, std::move(query));
 }
 
 void SearchResults::ShowCreatures(Map* map, const Brush* creature_brush, const wxString& WXUNUSED(load_bar_label)) {
-	if (map == nullptr || !g_gui.IsEditorOpen()) {
-		return;
-	}
-
 	SearchQuery query;
 	query.specific_creature_brush = creature_brush;
 	query.query_title = creature_brush ? std::format("Search: {}", creature_brush->getName()) : "Creature Search";
 
-	auto results = SearchEngine::Execute(*map, query);
-	g_gui.ShowSearchWindow()->SetSearchResults(std::move(results), query);
+	ExecuteAndShow(map, std::move(query));
 }
 
 void SearchResults::ShowFiltered(Map* map, const std::vector<uint16_t>& item_ids, const std::vector<const Brush*>& creature_brushes, const wxString& WXUNUSED(load_bar_label), bool on_selection) {
-	if (map == nullptr || !g_gui.IsEditorOpen()) {
-		return;
-	}
-
 	SearchQuery query;
 	query.item_ids = item_ids;
 	query.item_id_set.insert(item_ids.begin(), item_ids.end());
@@ -65,8 +60,7 @@ void SearchResults::ShowFiltered(Map* map, const std::vector<uint16_t>& item_ids
 	query.on_selection = on_selection;
 	query.query_title = std::format("Filtered Search ({} items)", item_ids.size() + creature_brushes.size());
 
-	auto results = SearchEngine::Execute(*map, query);
-	g_gui.ShowSearchWindow()->SetSearchResults(std::move(results), query);
+	ExecuteAndShow(map, std::move(query));
 }
 
 SearchHandler::SearchHandler(MainFrame* frame) :
@@ -118,8 +112,7 @@ void SearchHandler::DispatchSearch(SearchCategory categories, bool onSelection, 
 	query.on_selection = onSelection;
 	query.query_title = title;
 
-	auto results = SearchEngine::Execute(g_gui.GetCurrentMap(), query);
-	g_gui.ShowSearchWindow()->SetSearchResults(std::move(results), query);
+	SearchResults::ExecuteAndShow(&g_gui.GetCurrentMap(), std::move(query));
 }
 
 // Map searches

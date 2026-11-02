@@ -74,24 +74,9 @@ void ExtractItem(
 	SearchResultKind kind = SearchResultKind::GenericItem;
 
 	const bool is_specific = (query.specific_item_id > 0) || (!query.item_id_set.empty());
+	const bool match_any_item = is_specific || HasCategory(query.categories, SearchCategory::AllItems);
 
-	if (is_specific) {
-		is_match = true;
-		if (container != nullptr) {
-			kind = SearchResultKind::Container;
-		} else if (const auto* tp = item->asTeleport()) {
-			kind = SearchResultKind::Teleport;
-			teleport_dest = tp->getDestination();
-		} else if (uid > 0) {
-			kind = SearchResultKind::UniqueID;
-		} else if (aid > 0) {
-			kind = SearchResultKind::ActionID;
-		} else if (!text_view.empty()) {
-			kind = SearchResultKind::Writeable;
-		} else {
-			kind = SearchResultKind::GenericItem;
-		}
-	} else if (HasCategory(query.categories, SearchCategory::AllItems)) {
+	if (match_any_item) {
 		is_match = true;
 		if (container != nullptr) {
 			kind = SearchResultKind::Container;
@@ -173,6 +158,7 @@ void ExtractItem(
 
 	SearchResultChildEntry child;
 	child.position = tile->getPosition();
+	child.formatted_pos = std::format("Position: [{}, {}, {}]", child.position.x, child.position.y, child.position.z);
 	child.kind = kind;
 	child.item_id = item_id;
 	child.unique_id = uid;
@@ -216,6 +202,7 @@ void ExtractCreature(
 
 	SearchResultChildEntry child;
 	child.position = tile->getPosition();
+	child.formatted_pos = std::format("Position: [{}, {}, {}]", child.position.x, child.position.y, child.position.z);
 	child.kind = SearchResultKind::Creature;
 	child.item_id = creature->getLookType().lookType;
 	child.brush = brush;
@@ -237,7 +224,12 @@ std::vector<SearchResultGroup> SearchEngine::Execute(Map& map, const SearchQuery
 	const std::string bar_label = query.query_title.empty()
 		? (query.on_selection ? "Searching on selected area..." : "Searching on map...")
 		: query.query_title;
-	g_gui.CreateLoadBar(bar_label);
+
+	if (query.progress_callback) {
+		query.progress_callback(0.0f, bar_label);
+	} else {
+		g_gui.CreateLoadBar(bar_label);
+	}
 
 	const bool has_creature_filter = (query.specific_creature_brush != nullptr) || (!query.creature_brushes.empty());
 	const bool search_creatures = HasCategory(query.categories, SearchCategory::Creature) || has_creature_filter;
@@ -247,7 +239,11 @@ std::vector<SearchResultGroup> SearchEngine::Execute(Map& map, const SearchQuery
 
 	auto cells = map.getGrid().getSortedCells();
 	if (cells.empty()) {
-		g_gui.DestroyLoadBar();
+		if (query.progress_callback) {
+			query.progress_callback(1.0f, "");
+		} else {
+			g_gui.DestroyLoadBar();
+		}
 		return {};
 	}
 
@@ -387,28 +383,29 @@ std::vector<SearchResultGroup> SearchEngine::Execute(Map& map, const SearchQuery
 		}
 	}
 
-	g_gui.DestroyLoadBar();
+	if (query.progress_callback) {
+		query.progress_callback(1.0f, "");
+	} else {
+		g_gui.DestroyLoadBar();
+	}
 
 	// Merge all groups into a single list
 	std::vector<SearchResultGroup> result;
 	result.reserve(master_item_groups.size() + master_creature_groups.size());
 
-	for (auto& [id, g] : master_item_groups) {
-		g.id_str = std::to_string(g.id);
-		g.lowercase_name.reserve(g.name.size());
-		for (char ch : g.name) {
-			g.lowercase_name.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+	auto append_and_normalize = [&](auto& map) {
+		for (auto& [key, g] : map) {
+			g.id_str = std::to_string(g.id);
+			g.lowercase_name.reserve(g.name.size());
+			for (char ch : g.name) {
+				g.lowercase_name.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+			}
+			result.push_back(std::move(g));
 		}
-		result.push_back(std::move(g));
-	}
-	for (auto& [name, g] : master_creature_groups) {
-		g.id_str = std::to_string(g.id);
-		g.lowercase_name.reserve(g.name.size());
-		for (char ch : g.name) {
-			g.lowercase_name.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
-		}
-		result.push_back(std::move(g));
-	}
+	};
+
+	append_and_normalize(master_item_groups);
+	append_and_normalize(master_creature_groups);
 
 	// Default sort: highest match count first, then alphabetical name
 	std::sort(result.begin(), result.end(), [](const auto& a, const auto& b) {

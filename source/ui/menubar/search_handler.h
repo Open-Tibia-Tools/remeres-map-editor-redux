@@ -12,6 +12,7 @@ class Brush;
 class FindItemDialog;
 
 namespace SearchResults {
+	void ExecuteAndShow(Map* map, SearchQuery query);
 	void ShowItems(Map* map, uint16_t item_id, const wxString& load_bar_label, bool on_selection = false);
 	void ShowCreatures(Map* map, const Brush* creature_brush, const wxString& load_bar_label);
 	void ShowFiltered(Map* map, const std::vector<uint16_t>& item_ids, const std::vector<const Brush*>& creature_brushes, const wxString& load_bar_label, bool on_selection = false);

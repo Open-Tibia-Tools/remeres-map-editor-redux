@@ -4,7 +4,9 @@
 #include "map/position.h"
 
 #include <cstdint>
+#include <functional>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <unordered_set>
 
@@ -57,6 +59,7 @@ struct SearchContainedItem {
 
 struct SearchResultChildEntry {
 	Position position;
+	std::string formatted_pos;
 	SearchResultKind kind = SearchResultKind::GenericItem;
 	uint16_t item_id = 0;
 	uint16_t unique_id = 0;
@@ -91,6 +94,7 @@ struct SearchQuery {
 	std::vector<const Brush*> creature_brushes;
 	std::string filter_text;
 	std::string query_title;
+	std::function<void(float, std::string_view)> progress_callback = nullptr;
 };
 
 class SearchEngine {
