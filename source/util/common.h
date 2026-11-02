@@ -69,7 +69,7 @@ void trim_left(std::string& source, std::string_view t);
 // Converts the argument to lower/uppercase
 void to_lower_str(std::string& source);
 void to_upper_str(std::string& source);
-std::string as_lower_str(const std::string& other);
+std::string as_lower_str(std::string_view other);
 std::string as_upper_str(const std::string& other);
 // Case-insensitive char predicate, e.g. std::ranges::equal(a, b, iequal)
 inline constexpr auto iequal = [](char a, char b) {
