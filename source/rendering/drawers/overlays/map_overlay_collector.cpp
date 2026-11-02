@@ -60,7 +60,7 @@ namespace {
 			description = item->getDescription();
 		}
 
-		if (door && door->isRealDoor()) {
+		if (door) {
 			doorId = door->getDoorID();
 		}
 
@@ -104,7 +104,7 @@ namespace {
 		data.description = description;
 		data.destination = destination;
 
-		if (door && door->isRealDoor() && is_house_tile && editor != nullptr) {
+		if (door && editor != nullptr) {
 			if (const House* house = editor->map.houses.getHouse(houseId)) {
 				data.houseId = house->getID();
 				data.houseRent = house->rent;

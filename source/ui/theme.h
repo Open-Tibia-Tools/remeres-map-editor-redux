@@ -56,6 +56,20 @@ public:
 		TooltipBorderHouse,
 		TooltipBorderZone,
 
+		// Tooltip Window Chrome & Bevels
+		TooltipWindowBg,
+		TooltipWindowOutline,
+		TooltipWindowBevelLight,
+		TooltipWindowBevelDark,
+		TooltipSlotBg,
+		TooltipSlotBevelLight,
+		TooltipSlotBevelDark,
+		TooltipDividerLight,
+		TooltipDividerDark,
+		TooltipTextWellBg,
+		TooltipTitleText,
+		TooltipSubtitleText,
+
 		// Brush Category Colors
 		BrushCategoryGround,
 		BrushCategoryWall,

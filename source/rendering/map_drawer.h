@@ -41,7 +41,6 @@
 #include "rendering/drawers/overlays/hook_indicator_drawer.h"
 #include "rendering/drawers/overlays/lua_overlay_drawer.h"
 #include "rendering/drawers/overlays/marker_drawer.h"
-#include "rendering/drawers/overlays/marker_label_drawer.h"
 #include "rendering/drawers/overlays/preview_drawer.h"
 #include "rendering/drawers/overlays/selection_drawer.h"
 #include "rendering/drawers/overlays/zone_overlay_drawer.h"
@@ -77,7 +76,6 @@ class MapDrawer {
 	DoorIndicatorDrawer door_indicator_drawer;
 	ItemDrawer item_drawer;
 	MarkerDrawer marker_drawer;
-	rme::rendering::MarkerLabelDrawer marker_label_drawer;
 	PreviewDrawer preview_drawer;
 	ShadeDrawer shade_drawer;
 	TileRenderer tile_renderer;
@@ -105,7 +103,6 @@ public:
 	void DrawUIOverlays(NVGcontext* vg);
 	void ClearFrameOverlays();
 	void DrawCreatureNames(NVGcontext* vg);
-	void DrawMarkerLabels(NVGcontext* vg);
 	bool hasOverlays();
 
 	void DrawLight();

@@ -22,6 +22,7 @@
 #include "map/position.h"
 #include "rendering/core/render_view.h"
 #include "rendering/indicators/technical_item_registry.h"
+#include <nanovg.h>
 #include <glm/vec3.hpp>
 #include <vector>
 #include <string>
@@ -209,6 +210,8 @@ protected:
 	std::vector<FieldLine> scratch_fields;
 	size_t scratch_fields_count = 0;
 	std::vector<std::string_view> scratch_text_lines; // For sunken text box
+	std::string_view scratch_title;
+	std::string_view scratch_subtitle;
 	std::string storage; // Scratch buffer for text generation
 	std::string sanitized_text; // Scratch buffer for CRLF stripped text
 
@@ -222,7 +225,7 @@ protected:
 	int getSpriteImage(NVGcontext* vg, uint16_t itemId);
 
 	// Helper to get header border color based on category and tooltip data
-	void getHeaderColor(const TooltipData& tooltip, uint8_t& r, uint8_t& g, uint8_t& b) const;
+	NVGcolor getHeaderColor(const TooltipData& tooltip) const;
 
 	// Layout metrics
 	struct LayoutMetrics {

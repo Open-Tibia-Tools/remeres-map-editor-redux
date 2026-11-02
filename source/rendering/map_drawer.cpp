@@ -402,19 +402,9 @@ void MapDrawer::DrawCreatureNames(NVGcontext* vg) {
 	}
 }
 
-void MapDrawer::DrawMarkerLabels(NVGcontext* vg) {
-	if (!options.ingame && options.show_zones && (editor.map.getVersion().otbm == MAP_OTBM_5) && view.zoom <= 10.0f) {
-		marker_label_drawer.draw(vg, editor.map, view, options);
-	}
-}
-
 bool MapDrawer::hasOverlays() {
 	const bool can_read_labels = view.zoom <= 10.0f;
 	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
-		return true;
-	}
-	if (!options.ingame && can_read_labels &&
-	    options.show_zones && (editor.map.getVersion().otbm == MAP_OTBM_5) && !editor.map.zones.empty()) {
 		return true;
 	}
 	if (!tooltip_drawer.empty() && can_read_labels) {

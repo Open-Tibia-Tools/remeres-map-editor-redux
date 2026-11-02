@@ -23,6 +23,7 @@
 #include "ui/theme.h"
 #include <nanovg.h>
 #include <format>
+#include <charconv>
 #include "rendering/core/coordinate_mapper.h"
 #include <wx/wx.h>
 #include "item_definitions/core/item_definition_store.h"
@@ -30,14 +31,32 @@
 #include <algorithm>
 
 namespace {
-	std::string formatNumberWithCommas(uint64_t value) {
-		std::string s = std::to_string(value);
-		int insertPosition = static_cast<int>(s.length()) - 3;
-		while (insertPosition > 0) {
-			s.insert(insertPosition, ",");
-			insertPosition -= 3;
+	inline NVGcolor ThemeNvColor(Theme::Role role, uint8_t alpha = 255) {
+		const wxColour c = Theme::Get(role);
+		return nvgRGBA(c.Red(), c.Green(), c.Blue(), alpha);
+	}
+
+	void AppendNumberWithCommas(uint64_t value, std::string& out) {
+		char buf[32];
+		auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);
+		if (ec != std::errc()) {
+			return;
 		}
-		return s;
+		const int len = static_cast<int>(ptr - buf);
+		int first_group = len % 3;
+		if (first_group == 0) {
+			first_group = 3;
+		}
+		int i = 0;
+		for (; i < first_group; ++i) {
+			out.push_back(buf[i]);
+		}
+		for (; i < len; i += 3) {
+			out.push_back(',');
+			out.push_back(buf[i]);
+			out.push_back(buf[i + 1]);
+			out.push_back(buf[i + 2]);
+		}
 	}
 } // namespace
 
@@ -104,11 +123,33 @@ void TooltipDrawer::addWaypointTooltip(Position pos, std::string_view name) {
 	commitTooltip();
 }
 
-void TooltipDrawer::getHeaderColor(const TooltipData& /*tooltip*/, uint8_t& r, uint8_t& g, uint8_t& b) const {
-	const wxColour color = Theme::Get(Theme::Role::TooltipBorderItem);
-	r = color.Red();
-	g = color.Green();
-	b = color.Blue();
+NVGcolor TooltipDrawer::getHeaderColor(const TooltipData& tooltip) const {
+	Theme::Role role = Theme::Role::TooltipBorderItem;
+	switch (tooltip.category) {
+		case TooltipCategory::WAYPOINT:
+			role = Theme::Role::TooltipBorderWaypoint;
+			break;
+		case TooltipCategory::DOOR:
+			role = Theme::Role::TooltipBorderDoor;
+			break;
+		case TooltipCategory::TELEPORT:
+			role = Theme::Role::TooltipBorderTeleport;
+			break;
+		case TooltipCategory::TEXT:
+			role = Theme::Role::TooltipBorderText;
+			break;
+		case TooltipCategory::HOUSE:
+			role = Theme::Role::TooltipBorderHouse;
+			break;
+		case TooltipCategory::ZONE:
+			role = Theme::Role::TooltipBorderZone;
+			break;
+		case TooltipCategory::ITEM:
+		default:
+			role = Theme::Role::TooltipBorderItem;
+			break;
+	}
+	return ThemeNvColor(role);
 }
 
 int TooltipDrawer::getSpriteImage(NVGcontext* vg, uint16_t itemId) {
@@ -147,6 +188,30 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 	if (storage.capacity() < 4096) {
 		storage.reserve(4096);
 	}
+
+	// 1. Format Title (zero-allocation into storage scratch buffer)
+	const size_t titleStart = storage.size();
+	if (tooltip.count > 1) {
+		std::format_to(std::back_inserter(storage), "{} • {}", !tooltip.itemName.empty() ? tooltip.itemName : "Item", tooltip.count);
+	} else {
+		std::format_to(std::back_inserter(storage), "{}", !tooltip.itemName.empty() ? tooltip.itemName : "Object");
+	}
+	const size_t titleLen = storage.size() - titleStart;
+	storage.push_back('\0'); // Null terminator for NanoVG C-string APIs
+	scratch_title = std::string_view(storage.data() + titleStart, titleLen);
+
+	// 2. Format Subtitle
+	const size_t subStart = storage.size();
+	if (!tooltip.subtitle.empty()) {
+		std::format_to(std::back_inserter(storage), "{}", tooltip.subtitle);
+	} else if (!tooltip.townName.empty()) {
+		std::format_to(std::back_inserter(storage), "Town: {}", tooltip.townName);
+	} else if (tooltip.category == TooltipCategory::WAYPOINT) {
+		std::format_to(std::back_inserter(storage), "Waypoint");
+	}
+	const size_t subLen = storage.size() - subStart;
+	storage.push_back('\0');
+	scratch_subtitle = (subLen > 0) ? std::string_view(storage.data() + subStart, subLen) : std::string_view{};
 
 	if (!tooltip.text.empty()) {
 		sanitized_text.reserve(tooltip.text.size());
@@ -195,7 +260,8 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 
 		if (tooltip.houseRent > 0) {
 			start = storage.size();
-			std::format_to(std::back_inserter(storage), "{} gp", formatNumberWithCommas(tooltip.houseRent));
+			AppendNumberWithCommas(tooltip.houseRent, storage);
+			storage.append(" gp");
 			addField("Rent", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTextValue);
 		}
 	} else if (tooltip.category == TooltipCategory::ZONE) {
@@ -257,7 +323,8 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 		}
 		if (tooltip.houseRent > 0) {
 			size_t start = storage.size();
-			std::format_to(std::back_inserter(storage), "{} gp", formatNumberWithCommas(tooltip.houseRent));
+			AppendNumberWithCommas(tooltip.houseRent, storage);
+			storage.append(" gp");
 			addField("Rent", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTextValue);
 		}
 		if (tooltip.destination.x > 0) {
@@ -282,32 +349,15 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 	nvgFontSize(vg, 12.0f);
 	nvgFontFace(vg, "sans");
 	float nameBounds[4] = { 0 };
-	std::string titleStr;
-	if (tooltip.count > 1) {
-		titleStr = std::format("{} • {}", !tooltip.itemName.empty() ? tooltip.itemName : "Item", tooltip.count);
-	} else {
-		titleStr = !tooltip.itemName.empty() ? tooltip.itemName : "Object";
-	}
-	nvgTextBounds(vg, 0, 0, titleStr.c_str(), nullptr, nameBounds);
+	nvgTextBounds(vg, 0, 0, scratch_title.data(), nullptr, nameBounds);
 	float nameWidth = nameBounds[2] - nameBounds[0];
 
 	// Subtitle width
 	float subWidth = 0.0f;
-	std::string subText;
-	if (!tooltip.subtitle.empty()) {
-		subText = std::string(tooltip.subtitle);
-	} else if (!tooltip.townName.empty()) {
-		subText = std::format("Town: {}", tooltip.townName);
-	} else if (tooltip.category == TooltipCategory::WAYPOINT) {
-		subText = "Waypoint";
-	} else if (tooltip.category == TooltipCategory::ZONE) {
-		subText = std::format("Zone #{}", tooltip.zoneId);
-	}
-
-	if (!subText.empty()) {
+	if (!scratch_subtitle.empty()) {
 		nvgFontSize(vg, 10.0f);
 		float subBounds[4] = { 0 };
-		nvgTextBounds(vg, 0, 0, subText.c_str(), nullptr, subBounds);
+		nvgTextBounds(vg, 0, 0, scratch_subtitle.data(), nullptr, subBounds);
 		subWidth = subBounds[2] - subBounds[0];
 	}
 
@@ -515,26 +565,23 @@ void TooltipDrawer::drawWindowFrame(NVGcontext* vg, float x, float y, float widt
 	nvgFillPaint(vg, shadowPaint);
 	nvgFill(vg);
 
-	// 2. Outer 1px solid black border
+	// 2. Outer 1px solid border
 	nvgBeginPath(vg);
 	nvgRect(vg, x, y, width, height);
-	nvgFillColor(vg, nvgRGBA(13, 14, 16, 255));
+	nvgFillColor(vg, ThemeNvColor(Theme::Role::TooltipWindowOutline));
 	nvgFill(vg);
 
 	// 3. Category-colored 1px square border
-	uint8_t borderR, borderG, borderB;
-	getHeaderColor(tooltip, borderR, borderG, borderB);
-
 	nvgBeginPath(vg);
 	nvgRect(vg, x + 1.0f, y + 1.0f, width - 2.0f, height - 2.0f);
-	nvgStrokeColor(vg, nvgRGBA(borderR, borderG, borderB, 255));
+	nvgStrokeColor(vg, getHeaderColor(tooltip));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 
-	// 4. Interior Dark Charcoal Well Background Fill
+	// 4. Interior Well Background Fill
 	nvgBeginPath(vg);
 	nvgRect(vg, x + 2.0f, y + 2.0f, width - 4.0f, height - 4.0f);
-	nvgFillColor(vg, nvgRGBA(24, 26, 30, 252));
+	nvgFillColor(vg, ThemeNvColor(Theme::Role::TooltipWindowBg, 252));
 	nvgFill(vg);
 
 	// 5. Classic Inset Outer Sunken Groove (1px shadow top/left, 1px lip bottom/right)
@@ -542,7 +589,7 @@ void TooltipDrawer::drawWindowFrame(NVGcontext* vg, float x, float y, float widt
 	nvgMoveTo(vg, x + 2.0f, y + height - 2.0f);
 	nvgLineTo(vg, x + 2.0f, y + 2.0f);
 	nvgLineTo(vg, x + width - 2.0f, y + 2.0f);
-	nvgStrokeColor(vg, nvgRGBA(14, 15, 17, 255));
+	nvgStrokeColor(vg, ThemeNvColor(Theme::Role::TooltipWindowBevelDark));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 
@@ -550,7 +597,7 @@ void TooltipDrawer::drawWindowFrame(NVGcontext* vg, float x, float y, float widt
 	nvgMoveTo(vg, x + width - 2.5f, y + 2.0f);
 	nvgLineTo(vg, x + width - 2.5f, y + height - 2.5f);
 	nvgLineTo(vg, x + 2.0f, y + height - 2.5f);
-	nvgStrokeColor(vg, nvgRGBA(48, 52, 60, 255));
+	nvgStrokeColor(vg, ThemeNvColor(Theme::Role::TooltipWindowBevelLight));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 }
@@ -559,7 +606,7 @@ void TooltipDrawer::drawSunkenSlot(NVGcontext* vg, float sx, float sy, float siz
 	// Recessed well fill
 	nvgBeginPath(vg);
 	nvgRect(vg, sx + 1.0f, sy + 1.0f, size - 2.0f, size - 2.0f);
-	nvgFillColor(vg, nvgRGBA(18, 20, 24, 255));
+	nvgFillColor(vg, ThemeNvColor(Theme::Role::TooltipSlotBg));
 	nvgFill(vg);
 
 	// Sunken 1px groove
@@ -567,7 +614,7 @@ void TooltipDrawer::drawSunkenSlot(NVGcontext* vg, float sx, float sy, float siz
 	nvgMoveTo(vg, sx, sy + size);
 	nvgLineTo(vg, sx, sy);
 	nvgLineTo(vg, sx + size, sy);
-	nvgStrokeColor(vg, nvgRGBA(14, 15, 17, 255));
+	nvgStrokeColor(vg, ThemeNvColor(Theme::Role::TooltipSlotBevelDark));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 
@@ -575,7 +622,7 @@ void TooltipDrawer::drawSunkenSlot(NVGcontext* vg, float sx, float sy, float siz
 	nvgMoveTo(vg, sx + size - 0.5f, sy);
 	nvgLineTo(vg, sx + size - 0.5f, sy + size - 0.5f);
 	nvgLineTo(vg, sx, sy + size - 0.5f);
-	nvgStrokeColor(vg, nvgRGBA(52, 56, 64, 255));
+	nvgStrokeColor(vg, ThemeNvColor(Theme::Role::TooltipSlotBevelLight));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 
@@ -611,7 +658,7 @@ void TooltipDrawer::drawSunkenDivider(NVGcontext* vg, float dx, float dy, float 
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, dx, dy - 0.5f);
 	nvgLineTo(vg, dx + dw, dy - 0.5f);
-	nvgStrokeColor(vg, nvgRGBA(14, 15, 17, 255));
+	nvgStrokeColor(vg, ThemeNvColor(Theme::Role::TooltipDividerDark));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 
@@ -619,7 +666,7 @@ void TooltipDrawer::drawSunkenDivider(NVGcontext* vg, float dx, float dy, float 
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, dx, dy + 0.5f);
 	nvgLineTo(vg, dx + dw, dy + 0.5f);
-	nvgStrokeColor(vg, nvgRGBA(46, 50, 58, 255));
+	nvgStrokeColor(vg, ThemeNvColor(Theme::Role::TooltipDividerLight));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 }
@@ -636,41 +683,23 @@ void TooltipDrawer::drawHeader(NVGcontext* vg, float x, float y, float width, co
 	// Text block to the right of the slot
 	const float textX = slotX + kSlotSize + kHeaderGap;
 
-	// Subtitle line (affiliation, town, or custom) - NO "Count" and NO "ID"
-	std::string subText;
-	if (!tooltip.subtitle.empty()) {
-		subText = std::string(tooltip.subtitle);
-	} else if (!tooltip.townName.empty()) {
-		subText = std::format("Town: {}", tooltip.townName);
-	} else if (tooltip.category == TooltipCategory::WAYPOINT) {
-		subText = "Waypoint";
-	} else if (tooltip.category == TooltipCategory::ZONE) {
-		subText = std::format("Zone #{}", tooltip.zoneId);
-	}
-
 	nvgFontSize(vg, 12.0f);
 	nvgFontFace(vg, "sans");
-	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
-	std::string titleStr;
-	if (tooltip.count > 1) {
-		titleStr = std::format("{} • {}", !tooltip.itemName.empty() ? tooltip.itemName : "Item", tooltip.count);
-	} else {
-		titleStr = !tooltip.itemName.empty() ? tooltip.itemName : "Object";
-	}
+	nvgFillColor(vg, ThemeNvColor(Theme::Role::TooltipTitleText));
 
-	if (subText.empty()) {
+	if (scratch_subtitle.empty()) {
 		// Vertically centered when no subtitle
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgText(vg, textX, slotY + kSlotSize * 0.5f, titleStr.c_str(), nullptr);
+		nvgText(vg, textX, slotY + kSlotSize * 0.5f, scratch_title.data(), nullptr);
 	} else {
 		// Two-line layout: title at top, subtitle at bottom
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-		nvgText(vg, textX, slotY + 2.0f, titleStr.c_str(), nullptr);
+		nvgText(vg, textX, slotY + 2.0f, scratch_title.data(), nullptr);
 
 		nvgFontSize(vg, 10.0f);
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-		nvgFillColor(vg, nvgRGBA(160, 165, 175, 255)); // Subtle grey
-		nvgText(vg, textX, slotY + 18.0f, subText.c_str(), nullptr);
+		nvgFillColor(vg, ThemeNvColor(Theme::Role::TooltipSubtitleText));
+		nvgText(vg, textX, slotY + 18.0f, scratch_subtitle.data(), nullptr);
 	}
 }
 
@@ -709,7 +738,7 @@ void TooltipDrawer::drawSunkenTextBox(NVGcontext* vg, float x, float y, float wi
 	// Inset well background
 	nvgBeginPath(vg);
 	nvgRect(vg, wellX + 1.0f, wellY + 1.0f, wellW - 2.0f, wellH - 2.0f);
-	nvgFillColor(vg, nvgRGBA(16, 17, 20, 255));
+	nvgFillColor(vg, ThemeNvColor(Theme::Role::TooltipTextWellBg));
 	nvgFill(vg);
 
 	// Sunken groove border
@@ -717,7 +746,7 @@ void TooltipDrawer::drawSunkenTextBox(NVGcontext* vg, float x, float y, float wi
 	nvgMoveTo(vg, wellX, wellY + wellH);
 	nvgLineTo(vg, wellX, wellY);
 	nvgLineTo(vg, wellX + wellW, wellY);
-	nvgStrokeColor(vg, nvgRGBA(14, 15, 17, 255));
+	nvgStrokeColor(vg, ThemeNvColor(Theme::Role::TooltipSlotBevelDark));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 
@@ -725,7 +754,7 @@ void TooltipDrawer::drawSunkenTextBox(NVGcontext* vg, float x, float y, float wi
 	nvgMoveTo(vg, wellX + wellW - 0.5f, wellY);
 	nvgLineTo(vg, wellX + wellW - 0.5f, wellY + wellH - 0.5f);
 	nvgLineTo(vg, wellX, wellY + wellH - 0.5f);
-	nvgStrokeColor(vg, nvgRGBA(46, 50, 58, 255));
+	nvgStrokeColor(vg, ThemeNvColor(Theme::Role::TooltipSlotBevelLight));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 
@@ -764,14 +793,14 @@ void TooltipDrawer::drawContainerGrid(NVGcontext* vg, float x, float y, const To
 		// Sunken slot background
 		nvgBeginPath(vg);
 		nvgRect(vg, itemX + 1.0f, itemY + 1.0f, 30.0f, 30.0f);
-		nvgFillColor(vg, nvgRGBA(18, 20, 24, 255));
+		nvgFillColor(vg, ThemeNvColor(Theme::Role::TooltipSlotBg));
 		nvgFill(vg);
 
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, itemX, itemY + 32.0f);
 		nvgLineTo(vg, itemX, itemY);
 		nvgLineTo(vg, itemX + 32.0f, itemY);
-		nvgStrokeColor(vg, nvgRGBA(14, 15, 17, 255));
+		nvgStrokeColor(vg, ThemeNvColor(Theme::Role::TooltipSlotBevelDark));
 		nvgStrokeWidth(vg, 1.0f);
 		nvgStroke(vg);
 
@@ -779,24 +808,26 @@ void TooltipDrawer::drawContainerGrid(NVGcontext* vg, float x, float y, const To
 		nvgMoveTo(vg, itemX + 31.5f, itemY);
 		nvgLineTo(vg, itemX + 31.5f, itemY + 31.5f);
 		nvgLineTo(vg, itemX, itemY + 31.5f);
-		nvgStrokeColor(vg, nvgRGBA(46, 50, 58, 255));
+		nvgStrokeColor(vg, ThemeNvColor(Theme::Role::TooltipSlotBevelLight));
 		nvgStrokeWidth(vg, 1.0f);
 		nvgStroke(vg);
 
 		bool isSummarySlot = (layout.emptyContainerSlots > 0 && idx == layout.totalContainerSlots - 1);
 
 		if (isSummarySlot) {
-			std::string summary = "+" + std::to_string(layout.emptyContainerSlots);
+			char summaryBuf[16];
+			summaryBuf[0] = '+';
+			auto [ptr, ec] = std::to_chars(summaryBuf + 1, summaryBuf + sizeof(summaryBuf) - 1, layout.emptyContainerSlots);
+			*ptr = '\0';
 			nvgFontSize(vg, 11.5f);
 			nvgFontFace(vg, "sans");
 			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 
 			nvgFillColor(vg, nvgRGBA(0, 0, 0, 255));
-			nvgText(vg, itemX + 17, itemY + 17, summary.c_str(), nullptr);
+			nvgText(vg, itemX + 17.0f, itemY + 17.0f, summaryBuf, nullptr);
 
-			wxColour countCol = Theme::Get(Theme::Role::TooltipCountText);
-			nvgFillColor(vg, nvgRGBA(countCol.Red(), countCol.Green(), countCol.Blue(), 255));
-			nvgText(vg, itemX + 16, itemY + 16, summary.c_str(), nullptr);
+			nvgFillColor(vg, ThemeNvColor(Theme::Role::TooltipCountText));
+			nvgText(vg, itemX + 16.0f, itemY + 16.0f, summaryBuf, nullptr);
 		} else if (idx < layout.numContainerItems) {
 			const auto& item = tooltip.containerItems[idx];
 			int img = getSpriteImage(vg, item.id);
@@ -819,17 +850,18 @@ void TooltipDrawer::drawContainerGrid(NVGcontext* vg, float x, float y, const To
 			}
 
 			if (item.count > 1) {
-				std::string countStr = std::to_string(item.count);
+				char countBuf[16];
+				auto [ptr, ec] = std::to_chars(countBuf, countBuf + sizeof(countBuf) - 1, item.count);
+				*ptr = '\0';
 				nvgFontSize(vg, 10.0f);
 				nvgFontFace(vg, "sans");
 				nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
 
 				nvgFillColor(vg, nvgRGBA(0, 0, 0, 255));
-				nvgText(vg, itemX + 32, itemY + 32, countStr.c_str(), nullptr);
+				nvgText(vg, itemX + 32.0f, itemY + 32.0f, countBuf, nullptr);
 
-				wxColour countCol = Theme::Get(Theme::Role::TooltipCountText);
-				nvgFillColor(vg, nvgRGBA(countCol.Red(), countCol.Green(), countCol.Blue(), 255));
-				nvgText(vg, itemX + 31, itemY + 31, countStr.c_str(), nullptr);
+				nvgFillColor(vg, ThemeNvColor(Theme::Role::TooltipCountText));
+				nvgText(vg, itemX + 31.0f, itemY + 31.0f, countBuf, nullptr);
 			}
 		}
 	}
