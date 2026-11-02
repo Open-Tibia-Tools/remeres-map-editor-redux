@@ -99,8 +99,11 @@
 		<item name="Find Action" action="SEARCH_ON_MAP_ACTION" help="Find all items with an action ID on map."/>
 		<item name="Find Container" action="SEARCH_ON_MAP_CONTAINER" help="Find all containers on map."/>
 		<item name="Find Writeable" action="SEARCH_ON_MAP_WRITEABLE" help="Find all writeable items on map."/>
+		<item name="Find Teleports" action="SEARCH_ON_MAP_TELEPORT" help="Find all teleporters on map."/>
+		<item name="Find Creatures" action="SEARCH_ON_MAP_CREATURE" help="Find all creatures on map."/>
+		<item name="Find Pickupable Items" action="SEARCH_ON_MAP_PICKUPABLE" help="Find all pickupable items on map."/>
 		<separator/>
-		<item name="Find Everything" action="SEARCH_ON_MAP_EVERYTHING" help="Find all unique/action/text/container items."/>
+		<item name="Find Everything" action="SEARCH_ON_MAP_EVERYTHING" help="Find all items with unique ID, action ID, containers, writeables, or teleports on map."/>
 	</menu>
 	<menu name="Map">
 		<item name="Edit Towns..." hotkey="Ctrl+T" action="EDIT_TOWNS" help="Open towns palette."/>
@@ -118,12 +121,15 @@
 		<item name="Remove Item on Selection" action="REMOVE_ON_SELECTION_ITEM" help="Remove item on selected area."/>
 		<separator/>
 		<menu name="Find on Selection">
-			<item name="Find Everything" action="SEARCH_ON_SELECTION_EVERYTHING" help="Find all unique/action/text/container items."/>
+			<item name="Find Everything" action="SEARCH_ON_SELECTION_EVERYTHING" help="Find all items with unique ID, action ID, containers, writeables, or teleports on selected area."/>
 			<separator/>
 			<item name="Find Unique" action="SEARCH_ON_SELECTION_UNIQUE" help="Find all items with an unique ID on selected area."/>
 			<item name="Find Action" action="SEARCH_ON_SELECTION_ACTION" help="Find all items with an action ID on selected area."/>
 			<item name="Find Container" action="SEARCH_ON_SELECTION_CONTAINER" help="Find all containers on selected area."/>
 			<item name="Find Writeable" action="SEARCH_ON_SELECTION_WRITEABLE" help="Find all writeable items on selected area."/>
+			<item name="Find Teleports" action="SEARCH_ON_SELECTION_TELEPORT" help="Find all teleporters on selected area."/>
+			<item name="Find Creatures" action="SEARCH_ON_SELECTION_CREATURE" help="Find all creatures on selected area."/>
+			<item name="Find Pickupable Items" action="SEARCH_ON_SELECTION_PICKUPABLE" help="Find all pickupable items on selected area."/>
 		</menu>
 		<separator/>
 		<menu name="Selection Mode">
@@ -216,6 +222,7 @@
 		<item name="Brush Options" action="WIN_TOOL_OPTIONS" help="Displays the brush options window."/>
 		<item name="Brush Items" action="WIN_BRUSH_ITEMS" help="Displays the brush items window."/>
 		<item name="Tile Properties" action="WIN_TILE_PROPERTIES" help="Displays the tile properties panel."/>
+		<item name="Search Results" action="WIN_SEARCH_RESULTS" help="Displays the search results window."/>
 		<item name="In-game Preview" action="WIN_INGAME_PREVIEW" help="Displays the in-game preview window."/>
 		<item name="New Palette" action="NEW_PALETTE" help="Creates a new palette."/>
 		<menu name="Palette" special="PALETTE"/>

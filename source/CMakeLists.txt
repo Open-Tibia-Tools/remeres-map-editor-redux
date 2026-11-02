@@ -72,6 +72,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/map_version_changer.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/unreachable_cleaner.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/spawn_validator.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/search_query.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/editor_persistence.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_backup_service.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_load_options.h
@@ -407,6 +408,9 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/suggestion_filter_mode.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/visual_similarity_service.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/result_window.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_card_drawer.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_card_layout.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_result_model.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_button.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_card.h
@@ -528,6 +532,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/map_version_changer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/unreachable_cleaner.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/spawn_validator.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/search_query.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/editor_persistence.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_backup_service.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/minimap_exporter.cpp
@@ -829,6 +834,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/collection_options_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/collection_studio_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/result_window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_card_drawer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_result_model.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/theme.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_button.cpp

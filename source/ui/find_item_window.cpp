@@ -39,6 +39,7 @@ void FindItemDialog::refreshResults() {
 	readQueryFromControls();
 
 	auto filtered_rows = FilterAdvancedFinderCatalog(catalog_, query_);
+	has_filtered_results_ = !filtered_rows.empty();
 	if (filtered_rows.empty()) {
 		list_results_view_->SetNoMatches("No results", "Try a different word or fewer filters.");
 		grid_results_view_->SetNoMatches("No results", "Try a different word or fewer filters.");
@@ -74,6 +75,9 @@ void FindItemDialog::refreshResults() {
 void FindItemDialog::updateButtons() {
 	const bool has_selection = activeResultsView() != nullptr && activeResultsView()->GetSelectedRow() != nullptr;
 
+	if (search_filtered_button_ != nullptr) {
+		search_filtered_button_->Enable(has_filtered_results_);
+	}
 	if (search_map_button_ != nullptr) {
 		search_map_button_->Enable(has_selection);
 	}
@@ -210,6 +214,35 @@ void FindItemDialog::OnResultRightActivate(wxCommandEvent& WXUNUSED(event)) {
 
 void FindItemDialog::OnSearchMap(wxCommandEvent& WXUNUSED(event)) {
 	handlePositiveAction(ResultAction::SearchMap);
+}
+
+void FindItemDialog::OnSearchFiltered(wxCommandEvent& WXUNUSED(event)) {
+	readQueryFromControls();
+	auto filtered_rows = FilterAdvancedFinderCatalog(catalog_, query_);
+	if (filtered_rows.empty()) {
+		return;
+	}
+
+	filtered_item_ids_.clear();
+	filtered_creature_brushes_.clear();
+
+	for (const size_t filtered_index : filtered_rows) {
+		if (filtered_index < catalog_.size()) {
+			const auto& row = catalog_[filtered_index];
+			if (row.isItem() && row.server_id > 0) {
+				filtered_item_ids_.push_back(row.server_id);
+			} else if (row.isCreature() && row.creature_brush != nullptr) {
+				filtered_creature_brushes_.push_back(row.creature_brush);
+			}
+		}
+	}
+
+	if (filtered_item_ids_.empty() && filtered_creature_brushes_.empty()) {
+		return;
+	}
+
+	result_action_ = ResultAction::SearchFiltered;
+	EndModal(wxID_FIND);
 }
 
 void FindItemDialog::OnSelectItem(wxCommandEvent& WXUNUSED(event)) {

@@ -116,6 +116,13 @@ public:
 	void ApplyTheme();
 	void FocusSearch();
 
+	wxAuiToolBar* GetToolBar() const {
+		return m_toolbar;
+	}
+	wxSearchCtrl* GetSearchCtrl() const {
+		return m_searchCtrl;
+	}
+
 	/**
 	 * Stacked layout: the tools on one row and the search box below, for the
 	 * narrow palette sidebar. The default is a single row.
