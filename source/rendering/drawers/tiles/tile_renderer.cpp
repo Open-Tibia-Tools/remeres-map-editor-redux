@@ -144,7 +144,7 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 			border_params.zone_flags = (ground_house_id > 0.0f) ? rme::rendering::ZONE_FLAG_HOUSE_GROUND : 0;
 			border_params.depth = border_depth;
 			for (const auto& item : tile->items) {
-				if (!item || !item->isBorder() || item->isInvalidOTBMItem()) {
+				if (!item || !item->isBorderLayer() || item->isInvalidOTBMItem()) {
 					continue;
 				}
 				const ItemDefinitionView it = item->getDefinition();
@@ -215,7 +215,7 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 
 	int elevation_step = 0;
 	for (const auto& item : tile->items) {
-		if (item->isBorder()) {
+		if (item->isBorderLayer()) {
 			continue;
 		}
 		const ItemDefinitionView it = item->getDefinition();
@@ -315,7 +315,7 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 
 	int anim_elevation_step = 0;
 	for (const auto& item : tile->items) {
-		if (item->isBorder()) {
+		if (item->isBorderLayer()) {
 			continue;
 		}
 		const ItemDefinitionView it = item->getDefinition();

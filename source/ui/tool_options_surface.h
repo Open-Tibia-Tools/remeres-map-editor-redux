@@ -10,6 +10,7 @@
 
 class Brush;
 class wxBitmapToggleButton;
+class wxBitmapButton;
 class wxSlider;
 class wxGridSizer;
 class wxSpinCtrl;
@@ -53,6 +54,7 @@ private:
 	[[nodiscard]] bool HasThicknessControl() const;
 	[[nodiscard]] bool HasRandomizeDoodadsControl() const;
 	[[nodiscard]] bool HasPreviewBorderControl() const;
+	[[nodiscard]] bool HasDrawOnFloorBelowControl() const;
 	[[nodiscard]] bool HasLockDoorsControl() const;
 	[[nodiscard]] bool HasSpawnControls() const;
 	[[nodiscard]] bool HasWeightControl() const;
@@ -68,6 +70,8 @@ private:
 	void OnExactToggled(wxCommandEvent& event);
 	void OnAspectToggled(wxCommandEvent& event);
 	void OnPreviewBorderToggled(wxCommandEvent& event);
+	void OnDrawOnFloorBelowToggled(wxCommandEvent& event);
+	void OnDrawOnFloorBelowConfigClicked(wxCommandEvent& event);
 	void OnLockDoorsToggled(wxCommandEvent& event);
 	void OnThicknessChanged(wxCommandEvent& event);
 	void OnRandomizeDoodadsToggled(wxCommandEvent& event);
@@ -97,6 +101,9 @@ private:
 	wxBitmapToggleButton* exact_button = nullptr;
 	wxBitmapToggleButton* aspect_button = nullptr;
 	wxCheckBox* preview_border_checkbox = nullptr;
+	wxPanel* draw_below_panel = nullptr;
+	wxCheckBox* draw_on_floor_below_checkbox = nullptr;
+	wxBitmapButton* draw_on_floor_below_config_button = nullptr;
 	wxCheckBox* lock_doors_checkbox = nullptr;
 	wxCheckBox* randomize_doodads_checkbox = nullptr;
 	wxStaticText* thickness_label = nullptr;

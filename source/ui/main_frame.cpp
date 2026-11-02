@@ -91,21 +91,31 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	g_gui.aui_manager->AddPane(g_gui.tabbook, wxAuiPaneInfo().CenterPane().Floatable(false).CloseButton(false).PaneBorder(false));
 
 	g_gui.tile_properties_panel = new TilePropertiesPanel(this);
-	g_gui.aui_manager->AddPane(g_gui.tile_properties_panel, wxAuiPaneInfo().Name("TileProperties").Caption("Tile Properties").Right().Layer(1).Position(1).CloseButton(true).MaximizeButton(true).Hide());
-	g_gui.brush_items_window = new BrushItemsWindow(this);
-	g_gui.aui_manager->AddPane(g_gui.brush_items_window,
+	g_gui.aui_manager->AddPane(g_gui.tile_properties_panel,
 		wxAuiPaneInfo()
-			.Name("BrushItems")
-			.Caption("Brush Items")
+			.Name("TileProperties")
+			.Caption("Tile Properties")
 			.Right()
 			.Layer(1)
 			.Position(2)
 			.CloseButton(true)
 			.MaximizeButton(true)
+			.BestSize(358, 500)
+			.MinSize(FromDIP(wxSize(220, 180)))
+	);
+	g_gui.brush_items_window = new BrushItemsWindow(this);
+	g_gui.aui_manager->AddPane(g_gui.brush_items_window,
+		wxAuiPaneInfo()
+			.Name("BrushItems")
+			.Caption("Brush Items")
+			.Left()
+			.Layer(0)
+			.Position(2)
+			.CloseButton(true)
+			.MaximizeButton(true)
 			.Floatable(true)
-			.BestSize(320, 450)
-			.MinSize(220, 180)
-			.Hide()
+			.BestSize(220, 250)
+			.MinSize(FromDIP(wxSize(220, 180)))
 	);
 
 	// Create Script Manager panel (dockable)
@@ -121,7 +131,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 			.MinimizeButton(false)
 			.Floatable(true)
 			.BestSize(450, 350)
-			.MinSize(300, 200)
+			.MinSize(FromDIP(wxSize(300, 200)))
 			.Hide()  // Hidden by default, show from menu
 	);
 

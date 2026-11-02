@@ -24,6 +24,8 @@
 #include <string_view>
 #include <vector>
 
+inline constexpr int PALETTE_HORIZONTAL_LEFT_WIDTH = 220;
+
 class BrushPalettePanel;
 struct HardcodedPaletteProvider;
 class HousePalette;
@@ -49,6 +51,7 @@ public:
 	bool SelectTilesetInCurrentPalette(std::string_view tilesetName);
 	// Goes to the selected page and selects any brush there
 	void SelectPage(std::string_view paletteName);
+	std::string GetSelectedPageName() const;
 	// The currently selected brush in this palette
 	Brush* GetSelectedBrush() const;
 	Brush* GetSelectedCreatureBrush() const;
@@ -65,12 +68,16 @@ public:
 	// Updates the content of the palette (eg. houses, creatures)
 	virtual void OnUpdate(Map* map);
 
+	[[nodiscard]] wxChoicebook* GetChoicebook() const noexcept { return choicebook; }
+
 	// wxWidgets Event Handlers
 	void OnSwitchingPage(wxChoicebookEvent& event);
 	void OnPageChanged(wxChoicebookEvent& event);
 	// Forward key events to the parent window (The Map Window)
 	void OnKey(wxKeyEvent& event);
 	void OnClose(wxCloseEvent&);
+	void OnSize(wxSizeEvent& event);
+	void SetHorizontalLayout(bool horizontal);
 
 protected:
 	struct HardcodedPage {
@@ -78,7 +85,9 @@ protected:
 		const HardcodedPaletteProvider* provider = nullptr;
 	};
 
-	wxChoicebook* choicebook;
+	wxChoicebook* choicebook = nullptr;
+	wxChoice* m_paletteChoice = nullptr;
+	bool m_isHorizontal = false;
 	std::vector<PalettePanel*> palette_pages;
 	std::vector<HardcodedPage> hardcoded_pages;
 	HousePalette* house_palette;
@@ -87,6 +96,7 @@ protected:
 	TownPalettePanel* town_palette = nullptr;
 
 	void updateZonePage(Map* map);
+	void DetachPaletteChoiceFromAnySizer();
 };
 
 #endif

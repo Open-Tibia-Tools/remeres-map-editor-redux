@@ -17,6 +17,8 @@ void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, Sprit
 
 	// Draw "transparent higher floor"
 	if (view.floor != 8 && view.floor != 0 && options.transparent_floors) {
+		DrawingOptions floor_options = options;
+		floor_options.transparent_items = false;
 		const int map_z = view.floor - 1;
 		// The floor above is drawn one tile up-left, so use its own bounds
 		// rather than the current floor's.
@@ -38,25 +40,28 @@ void FloorDrawer::draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, Sprit
 					// Position pos = tile->getPosition();
 
 					if (tile->ground) {
-						BlitItemParams params(tile, tile->ground.get(), options);
-						params.alpha = 96;
+						BlitItemParams params(tile, tile->ground.get(), floor_options);
+						params.alpha = 255;
 						params.ctx = ctx;
 						if (tile->isPZ()) {
-							params.red = 128;
-							params.green = 255;
-							params.blue = 128;
+							params.red = options.transparent_floors_tint / 2;
+							params.green = options.transparent_floors_tint;
+							params.blue = options.transparent_floors_tint / 2;
 						} else {
-							params.red = 255;
-							params.green = 255;
-							params.blue = 255;
+							params.red = options.transparent_floors_tint;
+							params.green = options.transparent_floors_tint;
+							params.blue = options.transparent_floors_tint;
 						}
 						item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 					}
 					if (view.zoom <= 10.0 || !options.hide_items_when_zoomed) {
 						for (const auto& item : tile->items) {
-							BlitItemParams params(tile, item.get(), options);
-							params.alpha = 96;
+							BlitItemParams params(tile, item.get(), floor_options);
+							params.alpha = 255;
 							params.ctx = ctx;
+							params.red = options.transparent_floors_tint;
+							params.green = options.transparent_floors_tint;
+							params.blue = options.transparent_floors_tint;
 							item_drawer->BlitItem(sprite_batch, sprite_drawer, creature_drawer, draw_x, draw_y, params);
 						}
 					}

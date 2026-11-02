@@ -13,6 +13,7 @@ DrawingOptions::DrawingOptions() {
 
 void DrawingOptions::SetDefault() {
 	transparent_floors = false;
+	transparent_floors_tint = 128;
 	transparent_items = false;
 	show_ingame_box = false;
 	show_lights = false;
@@ -169,6 +170,8 @@ void DrawingOptions::MarkSettingDirty(uint32_t key) noexcept {
 
 void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_manager) {
 	const bool new_transparent_floors = settings.getBoolean(Config::TRANSPARENT_FLOORS);
+	const int transparent_shade_pct = std::clamp(settings.getInteger(Config::TRANSPARENT_FLOORS_SHADE), 0, 100);
+	const uint8_t new_transparent_floors_tint = static_cast<uint8_t>(255 * (100 - transparent_shade_pct) / 100);
 	const bool new_transparent_items = settings.getBoolean(Config::TRANSPARENT_ITEMS);
 	const bool new_show_ingame_box = settings.getBoolean(Config::SHOW_INGAME_BOX);
 	const bool new_show_lights = settings.getBoolean(Config::SHOW_LIGHTS);
@@ -263,6 +266,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	visual_dirty_ = true;
 
 	transparent_floors = new_transparent_floors;
+	transparent_floors_tint = new_transparent_floors_tint;
 	transparent_items = new_transparent_items;
 	show_ingame_box = new_show_ingame_box;
 	show_lights = new_show_lights;

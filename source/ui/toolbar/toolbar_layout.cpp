@@ -14,14 +14,14 @@ void ToolbarLayout::Configure(wxAuiManager* manager, ToolbarRegistry* registry) 
 	if (auto tb = registry->GetStandardToolbar()) {
 		manager->AddPane(tb->GetToolbar(), wxAuiPaneInfo().Name(StandardToolBar::PANE_NAME).ToolbarPane().Top().Row(0).Position(0).Floatable(false));
 	}
-	if (auto tb = registry->GetLightToolbar()) {
-		manager->AddPane(tb->GetToolbar(), wxAuiPaneInfo().Name(LightToolBar::PANE_NAME).ToolbarPane().Top().Row(0).Position(1).Floatable(false));
+	if (auto tb = registry->GetSizeToolbar()) {
+		manager->AddPane(tb->GetToolbar(), wxAuiPaneInfo().Name(SizeToolBar::PANE_NAME).ToolbarPane().Top().Row(0).Position(1).Floatable(false));
 	}
 	if (auto tb = registry->GetBrushToolbar()) {
 		manager->AddPane(tb->GetToolbar(), wxAuiPaneInfo().Name(BrushToolBar::PANE_NAME).ToolbarPane().Top().Row(0).Position(2).Floatable(false));
 	}
-	if (auto tb = registry->GetSizeToolbar()) {
-		manager->AddPane(tb->GetToolbar(), wxAuiPaneInfo().Name(SizeToolBar::PANE_NAME).ToolbarPane().Top().Row(0).Position(3).Floatable(false));
+	if (auto tb = registry->GetLightToolbar()) {
+		manager->AddPane(tb->GetToolbar(), wxAuiPaneInfo().Name(LightToolBar::PANE_NAME).ToolbarPane().Top().Row(0).Position(3).Floatable(false));
 	}
 	if (auto tb = registry->GetPositionToolbar()) {
 		manager->AddPane(tb->GetToolbar(), wxAuiPaneInfo().Name(PositionToolBar::PANE_NAME).ToolbarPane().Top().Row(0).Position(4).Floatable(false));

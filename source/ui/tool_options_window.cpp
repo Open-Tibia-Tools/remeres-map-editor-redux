@@ -13,6 +13,7 @@ ToolOptionsWindow::ToolOptionsWindow(wxWindow* parent) :
 	main_sizer->Add(surface, wxSizerFlags(1).Expand().Border(wxALL, 0));
 
 	SetSizer(main_sizer);
+	SetMinSize(FromDIP(wxSize(220, 180)));
 
 	// Initialize settings
 	ReloadSettings();

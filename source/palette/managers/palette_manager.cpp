@@ -38,6 +38,9 @@ PaletteWindow* PaletteManager::NewPalette() {
 }
 
 void PaletteManager::ActivatePalette(PaletteWindow* p) {
+	if (!p || palettes.empty() || palettes.front() == p) {
+		return;
+	}
 	auto it = std::find(palettes.begin(), palettes.end(), p);
 	if (it != palettes.end()) {
 		palettes.erase(it);
@@ -54,15 +57,19 @@ void PaletteManager::RebuildPalettes() {
 }
 
 void PaletteManager::RefreshPalettes(Map* m, bool usedefault) {
-	for (auto& palette : palettes) {
-		palette->OnUpdate(m ? m : (usedefault ? (g_gui.IsEditorOpen() ? &g_gui.GetCurrentMap() : nullptr) : nullptr));
+	const std::vector<PaletteWindow*> palettes_copy(palettes.begin(), palettes.end());
+	for (auto* palette : palettes_copy) {
+		if (palette) {
+			palette->OnUpdate(m ? m : (usedefault ? (g_gui.IsEditorOpen() ? &g_gui.GetCurrentMap() : nullptr) : nullptr));
+		}
 	}
 	g_brush_manager.SelectBrush();
 }
 
 void PaletteManager::RefreshOtherPalettes(PaletteWindow* p) {
-	for (auto& palette : palettes) {
-		if (palette != p) {
+	const std::vector<PaletteWindow*> palettes_copy(palettes.begin(), palettes.end());
+	for (auto* palette : palettes_copy) {
+		if (palette && palette != p) {
 			palette->OnUpdate(g_gui.IsEditorOpen() ? &g_gui.GetCurrentMap() : nullptr);
 		}
 	}
@@ -152,19 +159,24 @@ bool PaletteManager::SelectTilesetInPalette(std::string_view paletteName, std::s
 void PaletteManager::DestroyPalettes() {
 	spdlog::info("PaletteManager::DestroyPalettes called - destroying {} palettes", palettes.size());
 	spdlog::default_logger()->flush();
-	for (auto palette : palettes) {
-		spdlog::info("PaletteManager::DestroyPalettes - detaching and destroying a palette");
-		spdlog::default_logger()->flush();
-		g_gui.aui_manager->DetachPane(palette);
-		palette->Destroy();
+	const std::vector<PaletteWindow*> palettes_to_destroy(palettes.begin(), palettes.end());
+	palettes.clear();
+	for (auto* palette : palettes_to_destroy) {
+		if (palette && g_gui.aui_manager) {
+			spdlog::info("PaletteManager::DestroyPalettes - detaching and destroying a palette");
+			spdlog::default_logger()->flush();
+			g_gui.aui_manager->DetachPane(palette);
+			palette->Destroy();
+		}
 	}
 	spdlog::info("PaletteManager::DestroyPalettes - clearing palettes list");
 	spdlog::default_logger()->flush();
-	palettes.clear();
 
 	spdlog::info("PaletteManager::DestroyPalettes - updating aui_manager");
 	spdlog::default_logger()->flush();
-	g_gui.aui_manager->Update();
+	if (g_gui.aui_manager) {
+		g_gui.aui_manager->Update();
+	}
 
 	spdlog::info("PaletteManager::DestroyPalettes finished");
 	spdlog::default_logger()->flush();
@@ -186,7 +198,18 @@ PaletteWindow* PaletteManager::CreatePalette() {
 		name = wxstr(std::format("Palette_{}", ++palette_creation_counter));
 	} while (g_gui.aui_manager->GetPane(name).IsOk());
 
-	g_gui.aui_manager->AddPane(palette, wxAuiPaneInfo().Name(name).Caption("Palette").TopDockable(true).BottomDockable(true));
+	g_gui.aui_manager->AddPane(palette,
+		wxAuiPaneInfo()
+			.Name(name)
+			.Caption("Palette")
+			.Left()
+			.Layer(0)
+			.Position(1)
+			.TopDockable(true)
+			.BottomDockable(true)
+			.BestSize(220, 650)
+			.MinSize(g_gui.root ? g_gui.root->FromDIP(wxSize(PALETTE_HORIZONTAL_LEFT_WIDTH, 100)) : wxSize(PALETTE_HORIZONTAL_LEFT_WIDTH, 100))
+	);
 	g_gui.aui_manager->Update();
 
 	palettes.push_front(palette);

@@ -65,9 +65,15 @@ protected:
 	void OnMouseDown(wxMouseEvent& event);
 	void OnMotion(wxMouseEvent& event);
 	void OnSize(wxSizeEvent& event);
+	void OnShow(wxShowEvent& event);
 
 	// Internal helpers
 	void UpdateLayout();
+	// Scrolls the selected brush into view. When the grid is not on screen yet
+	// (its palette page is still being switched to) its size is not final, so
+	// the scroll is kept pending and redone once it is shown and sized.
+	void EnsureSelectedVisible();
+	bool m_pendingScrollToSelected = false;
 	void RefreshBrushList();
 	void ApplySort();
 	int HitTest(int x, int y) const;

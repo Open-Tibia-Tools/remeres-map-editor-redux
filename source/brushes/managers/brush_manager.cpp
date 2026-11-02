@@ -398,8 +398,11 @@ void BrushManager::IncreaseBrushSize(bool wrap) {
 }
 
 void BrushManager::NotifyBrushSizeChanged() {
-	for (auto& palette : g_palettes.palettes) {
-		palette->OnUpdateBrushSize(brush_shape, GetBrushSizeLegacy());
+	const std::vector<PaletteWindow*> palettes_copy(g_palettes.palettes.begin(), g_palettes.palettes.end());
+	for (auto* palette : palettes_copy) {
+		if (palette) {
+			palette->OnUpdateBrushSize(brush_shape, GetBrushSizeLegacy());
+		}
 	}
 
 	if (g_gui.root && g_gui.root->GetAuiToolBar()) {

@@ -33,6 +33,7 @@
 #include "ui/dat_debug_view.h"
 #include "ui/menubar_loader.h"
 #include "ui/map_statistics_dialog.h"
+#include "rendering/core/floor_visibility_mode.h"
 #include "ui/live_dialogs.h"
 
 #include "ui/extension_window.h"
@@ -154,6 +155,7 @@ void MainMenuBar::Update() {
 
 	paletteMenuHandler->RefreshPaletteMenu();
 	MenuBarActionManager::UpdateState(this);
+	UpdateFloorMenu();
 }
 
 void MainMenuBar::LoadValues() {
@@ -171,6 +173,12 @@ void MainMenuBar::UpdateFloorMenu() {
 			CheckItem(MenuBar::ActionID(MenuBar::FLOOR_0 + g_gui.GetCurrentFloor()), true);
 		}
 	}
+
+	const bool show_all_floors = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
+	const auto floor_visibility_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
+	CheckItem(MenuBar::SHOW_ALL_FLOORS, show_all_floors);
+	CheckItem(MenuBar::SHOW_ALL_FLOORS_CLIENT, show_all_floors && floor_visibility_mode == FloorVisibilityMode::ClientVisible);
+	CheckItem(MenuBar::SHOW_ALL_FLOORS_ALL, show_all_floors && floor_visibility_mode == FloorVisibilityMode::AllVisible);
 }
 
 bool MainMenuBar::Load(const FileName& path, std::vector<std::string>& warnings, wxString& error) {
@@ -539,7 +547,11 @@ void MainMenuBar::OnToolOptionsWindow(wxCommandEvent& event) {
 }
 
 void MainMenuBar::OnIngamePreviewWindow(wxCommandEvent& event) {
-	g_preview.Create();
+	if (g_preview.IsVisible()) {
+		g_preview.Hide();
+	} else {
+		g_preview.Create();
+	}
 }
 
 void MainMenuBar::OnBrushItemsWindow(wxCommandEvent& event) {

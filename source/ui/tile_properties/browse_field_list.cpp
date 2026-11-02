@@ -42,7 +42,7 @@ protected:
 
 TilePropertiesListBox::TilePropertiesListBox(wxWindow* parent, wxWindowID id) :
 	NanoVGListBox(parent, id, wxLB_SINGLE), current_tile(nullptr) {
-	SetMinSize(FromDIP(wxSize(200, 180)));
+	SetMinSize(FromDIP(wxSize(220, 180)));
 }
 
 TilePropertiesListBox::~TilePropertiesListBox() {

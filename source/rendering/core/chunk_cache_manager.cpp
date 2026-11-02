@@ -652,7 +652,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 
 			// 2. Static & animated ground borders (coastlines, grass edges, shallow water, etc.)
 			for (const auto& item : tile->items) {
-				if (!item || !item->isBorder() || item->isInvalidOTBMItem()) {
+				if (!item || !item->isBorderLayer() || item->isInvalidOTBMItem()) {
 					continue;
 				}
 				const ItemDefinitionView it = item->getDefinition();
@@ -745,7 +745,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			int elev = 0;
 			if (bake_items) {
 				for (const auto& item : tile->items) {
-					if (!item || item->isBorder()) {
+					if (!item || item->isBorderLayer()) {
 						continue;
 					}
 					if (item->isInvalidOTBMItem()) {
@@ -799,7 +799,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 						b >>= 1;
 					}
 
-					if (ctx.options.transparent_items && (!it.isGroundTile() || ispr->width > 1 || ispr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || ispr->width > 1 || ispr->height > 1)) {
+					if (ctx.options.transparent_items && (!it.isGroundTile() || ispr->width > 1 || ispr->height > 1) && !it.isSplash() && (!(it.hasFlag(ItemFlag::IsBorder) || (it.hasFlag(ItemFlag::AlwaysOnBottom) && it.attribute(ItemAttributeKey::AlwaysOnTopOrder) == 1)) || ispr->width > 1 || ispr->height > 1)) {
 						a >>= 1;
 					}
 

@@ -51,6 +51,9 @@ public:
 	void SetBrushIndicators(bool dogEar);
 	void SetGridSpacing(int spacing);
 	void ApplyTheme();
+	void SetHorizontalLayout(bool horizontal);
+	void AttachPaletteChoice(wxChoice* paletteChoice);
+	void DetachPaletteChoice();
 
 	// Search and filter operations
 	void ResetFilter();
@@ -71,6 +74,9 @@ protected:
 	const DynamicPaletteDefinition* m_paletteDef;
 	wxChoicebook* choicebook;
 	TilesetGridToolbar* gridToolbar = nullptr;
+	wxStaticBoxSizer* ts_sizer = nullptr;
+	wxChoice* m_attachedPaletteChoice = nullptr;
+	bool m_isHorizontal = false;
 	std::string m_filterQuery;
 	bool m_filterAll;
 

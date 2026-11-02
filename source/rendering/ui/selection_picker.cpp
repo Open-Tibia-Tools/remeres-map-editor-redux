@@ -233,7 +233,7 @@ namespace {
 		int order = 0;
 		for (const std::unique_ptr<Item>& item_ptr : tile.items) {
 			Item* item = item_ptr.get();
-			if (!item || item->isBorder() || item->isMetaItem()) {
+			if (!item || item->isBorderLayer() || item->isMetaItem()) {
 				continue;
 			}
 			if (IsItemHiddenBySettings(*item) || IsItemInvalidAndHidden(*item) || IsItemUnresolvedAndHidden(*item)) {
@@ -323,7 +323,7 @@ namespace {
 
 		for (auto it = tile.items.rbegin(); it != tile.items.rend(); ++it) {
 			Item* item = it->get();
-			if (!item || !item->isBorder() || item->isMetaItem()) {
+			if (!item || !item->isBorderLayer() || item->isMetaItem()) {
 				continue;
 			}
 			if (IsItemHiddenBySettings(*item) || IsItemInvalidAndHidden(*item) || IsItemUnresolvedAndHidden(*item)) {

@@ -1,4 +1,5 @@
 #include "ui/menubar/view_settings_handler.h"
+#include "rendering/core/floor_visibility_mode.h"
 #include "ui/main_menubar.h"
 #include "ui/gui.h"
 #include "app/preferences.h"
@@ -59,7 +60,11 @@ void ViewSettingsHandler::LoadValues() {
 	menuBar->CheckItem(SHOW_INVALID_TILES, g_settings.getBoolean(Config::SHOW_INVALID_TILES));
 	menuBar->CheckItem(SHOW_INVALID_ZONES, g_settings.getBoolean(Config::SHOW_INVALID_ZONES));
 	menuBar->CheckItem(SHOW_WAYPOINTS, g_settings.getBoolean(Config::SHOW_WAYPOINTS));
-	menuBar->CheckItem(SHOW_ALL_FLOORS, g_settings.getBoolean(Config::SHOW_ALL_FLOORS));
+	const bool show_all_floors = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
+	const auto floor_visibility_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
+	menuBar->CheckItem(SHOW_ALL_FLOORS, show_all_floors);
+	menuBar->CheckItem(SHOW_ALL_FLOORS_CLIENT, show_all_floors && floor_visibility_mode == FloorVisibilityMode::ClientVisible);
+	menuBar->CheckItem(SHOW_ALL_FLOORS_ALL, show_all_floors && floor_visibility_mode == FloorVisibilityMode::AllVisible);
 	menuBar->CheckItem(GHOST_ITEMS, g_settings.getBoolean(Config::TRANSPARENT_ITEMS));
 	menuBar->CheckItem(GHOST_HIGHER_FLOORS, g_settings.getBoolean(Config::TRANSPARENT_FLOORS));
 	menuBar->CheckItem(SHOW_EXTRA, !g_settings.getBoolean(Config::SHOW_EXTRA));
@@ -90,11 +95,36 @@ void ViewSettingsHandler::OnChangeViewSettings(wxCommandEvent& event) {
 
 	bool old_grid = g_settings.getBoolean(Config::SHOW_GRID);
 	bool old_ghost = g_settings.getBoolean(Config::TRANSPARENT_ITEMS);
+	bool old_ghost_floors = g_settings.getBoolean(Config::TRANSPARENT_FLOORS);
 
 	const bool supports_zones = g_gui.IsEditorOpen() && g_gui.GetCurrentMap().supportsZones();
 
-	g_settings.setInteger(Config::SHOW_ALL_FLOORS, menuBar->IsItemChecked(SHOW_ALL_FLOORS));
-	if (menuBar->IsItemChecked(SHOW_ALL_FLOORS)) {
+	const ActionID action_id = static_cast<ActionID>(event.GetId() - (wxID_HIGHEST + 1));
+	if (action_id == SHOW_ALL_FLOORS) {
+		const bool current = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
+		g_settings.setInteger(Config::SHOW_ALL_FLOORS, !current);
+	} else if (action_id == SHOW_ALL_FLOORS_CLIENT) {
+		const bool current_show = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
+		const auto current_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
+		if (current_show && current_mode == FloorVisibilityMode::ClientVisible) {
+			g_settings.setInteger(Config::SHOW_ALL_FLOORS, false);
+		} else {
+			g_settings.setInteger(Config::SHOW_ALL_FLOORS, true);
+			g_settings.setInteger(Config::FLOOR_VISIBILITY_MODE, static_cast<int>(FloorVisibilityMode::ClientVisible));
+		}
+	} else if (action_id == SHOW_ALL_FLOORS_ALL) {
+		const bool current_show = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
+		const auto current_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
+		if (current_show && current_mode == FloorVisibilityMode::AllVisible) {
+			g_settings.setInteger(Config::SHOW_ALL_FLOORS, false);
+		} else {
+			g_settings.setInteger(Config::SHOW_ALL_FLOORS, true);
+			g_settings.setInteger(Config::FLOOR_VISIBILITY_MODE, static_cast<int>(FloorVisibilityMode::AllVisible));
+		}
+	}
+
+	const bool show_all_floors = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
+	if (show_all_floors) {
 		menuBar->EnableItem(SELECT_MODE_VISIBLE, true);
 		menuBar->EnableItem(SELECT_MODE_LOWER, true);
 	} else {
@@ -149,6 +179,12 @@ void ViewSettingsHandler::OnChangeViewSettings(wxCommandEvent& event) {
 		g_gui.SetStatusText(std::format("Ghost Mode: {}", new_ghost ? "On" : "Off"));
 	}
 
+	bool new_ghost_floors = g_settings.getBoolean(Config::TRANSPARENT_FLOORS);
+	if (old_ghost_floors != new_ghost_floors) {
+		g_gui.SetStatusText(std::format("Higher Floors: {}", new_ghost_floors ? "On" : "Off"));
+	}
+
+	menuBar->UpdateFloorMenu();
 	g_gui.RefreshView();
 }
 
