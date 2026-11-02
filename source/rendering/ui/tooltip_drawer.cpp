@@ -866,13 +866,6 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	const float screen_max_x = static_cast<float>(view.screensize_x) + 150.0f;
 	const float screen_max_y = static_cast<float>(view.screensize_y) + 300.0f;
 
-	// Dynamic zoom scaling: smoothly scale tooltips down as user zooms out
-	// Clamped to [0.65f, 1.0f] so text and slot icons remain crisp and legible
-	float tooltip_scale = 1.0f;
-	if (view.zoom > 1.0f) {
-		tooltip_scale = std::clamp(1.0f / std::pow(view.zoom, 0.45f), 0.65f, 1.0f);
-	}
-
 	for (size_t i = 0; i < active_count; ++i) {
 		const auto& tooltip = tooltips[i];
 
@@ -916,13 +909,12 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		// 2. Calculate Layout
 		LayoutMetrics layout = calculateLayout(vg, tooltip, maxWidth, minWidth, padding, fontSize);
 
-		// Center horizontally above tile with dynamic scaling
-		float tooltipX = screen_x - (layout.width * tooltip_scale * 0.5f);
-		float tooltipY = screen_y - (layout.height * tooltip_scale) - (12.0f * tooltip_scale);
+		// Center horizontally above tile (pixel-perfect 1:1, no blurry fractional scaling)
+		float tooltipX = std::floor(screen_x - (layout.width * 0.5f));
+		float tooltipY = std::floor(screen_y - layout.height - 12.0f);
 
 		nvgSave(vg);
 		nvgTranslate(vg, tooltipX, tooltipY);
-		nvgScale(vg, tooltip_scale, tooltip_scale);
 
 		// 3. Draw Window Frame & Background
 		drawWindowFrame(vg, 0.0f, 0.0f, layout.width, layout.height, tooltip);
