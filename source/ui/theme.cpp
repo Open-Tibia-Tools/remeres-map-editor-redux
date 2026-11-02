@@ -124,6 +124,8 @@ wxColour Theme::GetDark(Role role) {
 			return wxColour(100, 149, 237); // Cornflower Blue
 		case Role::TooltipDoorId:
 			return wxColour(0, 139, 139); // Dark Cyan
+		case Role::TooltipDepotId:
+			return wxColour(0, 206, 209); // Cyan
 		case Role::TooltipTextValue:
 			return wxColour(255, 215, 0); // Gold
 		case Role::TooltipTeleport:
@@ -144,6 +146,10 @@ wxColour Theme::GetDark(Role role) {
 			return wxColour(153, 50, 204); // Dark Orchid
 		case Role::TooltipBorderText:
 			return wxColour(218, 165, 32); // Goldenrod
+		case Role::TooltipBorderHouse:
+			return wxColour(89, 191, 13); // Emerald
+		case Role::TooltipBorderZone:
+			return wxColour(20, 117, 255); // Vivid Blue
 		case Role::BrushCategoryGround:
 			return wxColour(85, 230, 85);
 		case Role::BrushCategoryWall:
@@ -228,6 +234,8 @@ wxColour Theme::GetLight(Role role) {
 			return wxColour(30, 80, 180); // Dark Blue
 		case Role::TooltipDoorId:
 			return wxColour(0, 100, 100); // Teal
+		case Role::TooltipDepotId:
+			return wxColour(0, 130, 130); // Deep Teal
 		case Role::TooltipTextValue:
 			return wxColour(50, 50, 50); // Near Black
 		case Role::TooltipTeleport:
@@ -248,6 +256,10 @@ wxColour Theme::GetLight(Role role) {
 			return wxColour(153, 50, 204); // Dark Orchid
 		case Role::TooltipBorderText:
 			return wxColour(218, 165, 32); // Goldenrod
+		case Role::TooltipBorderHouse:
+			return wxColour(89, 191, 13); // Emerald
+		case Role::TooltipBorderZone:
+			return wxColour(20, 117, 255); // Vivid Blue
 		case Role::BrushCategoryGround:
 			return wxColour(30, 155, 40);
 		case Role::BrushCategoryWall:

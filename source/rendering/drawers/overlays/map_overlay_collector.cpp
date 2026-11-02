@@ -8,10 +8,13 @@
 #include "rendering/drawers/overlays/hook_indicator_drawer.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
+#include "rendering/indicators/zone_colors.h"
 #include "map/map.h"
 #include "map/tile.h"
 #include "game/item.h"
 #include "game/complexitem.h"
+#include "game/house.h"
+#include "game/town.h"
 #include "editor/editor.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "brushes/brush_enums.h"
@@ -19,7 +22,7 @@
 #include <string_view>
 
 namespace {
-	bool FillItemTooltipData(TooltipData& data, Item* item, const Position& pos, bool isHouseTile, float zoom) {
+	bool FillItemTooltipData(TooltipData& data, Item* item, const Position& pos, bool isHouseTile, float zoom, const Editor* editor) {
 		if (!item) {
 			return false;
 		}
@@ -34,15 +37,18 @@ namespace {
 		std::string_view text;
 		std::string_view description;
 		uint8_t doorId = 0;
+		uint8_t depotId = 0;
 		Position destination;
 		bool hasContent = false;
+		uint16_t count = 0;
 
 		const bool is_complex = item->isComplex();
 		const Door* door = isHouseTile ? item->asDoor() : nullptr;
 		const Teleport* tp = item->asTeleport();
 		const Container* container = item->asContainer();
+		const Depot* depot = item->asDepot();
 
-		if (!is_complex && !door && !tp && !container) {
+		if (!is_complex && !door && !tp && !container && !depot) {
 			return false;
 		}
 
@@ -57,6 +63,10 @@ namespace {
 			doorId = door->getDoorID();
 		}
 
+		if (depot) {
+			depotId = depot->getDepotID();
+		}
+
 		if (tp && tp->hasDestination()) {
 			destination = tp->getDestination();
 		}
@@ -65,7 +75,12 @@ namespace {
 			hasContent = container->getItemCount() > 0;
 		}
 
-		if (unique == 0 && action == 0 && doorId == 0 && text.empty() && description.empty() && destination.x == 0 && !hasContent) {
+		if (item->isStackable() || item->getCount() > 1) {
+			count = static_cast<uint16_t>(item->getCount());
+		}
+
+		if (unique == 0 && action == 0 && doorId == 0 && depotId == 0 && text.empty() &&
+		    description.empty() && destination.x == 0 && !hasContent && count <= 1) {
 			return false;
 		}
 
@@ -79,12 +94,21 @@ namespace {
 		data.itemId = id;
 		data.clientId = static_cast<uint16_t>(item->getClientID());
 		data.itemName = itemName;
+		data.count = count;
 		data.actionId = action;
 		data.uniqueId = unique;
 		data.doorId = doorId;
+		data.depotId = depotId;
 		data.text = text;
 		data.description = description;
 		data.destination = destination;
+
+		if (depotId > 0 && editor != nullptr) {
+			auto it = editor->map.towns.find(depotId);
+			if (it != editor->map.towns.end() && it->second) {
+				data.townName = it->second->getName();
+			}
+		}
 
 		if (container && zoom <= 1.5f) {
 			data.containerCapacity = static_cast<uint8_t>(container->getVolume());
@@ -162,7 +186,7 @@ void MapOverlayCollector::Collect(
 			// 2. Ground tooltip (only complex grounds can have attributes like aid/uid/text)
 			if (need_tooltips && tile->ground && tile->ground->isComplex()) {
 				TooltipData& groundData = out_tooltip_drawer->requestTooltipData();
-				if (FillItemTooltipData(groundData, tile->ground.get(), pos, tile->isHouseTile(), view.zoom)) {
+				if (FillItemTooltipData(groundData, tile->ground.get(), pos, tile->isHouseTile(), view.zoom, editor)) {
 					if (groundData.hasVisibleFields()) {
 						out_tooltip_drawer->commitTooltip();
 					}
@@ -197,10 +221,11 @@ void MapOverlayCollector::Collect(
 						const Door* door = is_house_tile ? item->asDoor() : nullptr;
 						const Teleport* tp = item->asTeleport();
 						const Container* container = item->asContainer();
+						const Depot* depot = item->asDepot();
 
-						if (is_complex || door || tp || container) {
+						if (is_complex || door || tp || container || depot || item->isStackable()) {
 							TooltipData& itemData = out_tooltip_drawer->requestTooltipData();
-							if (FillItemTooltipData(itemData, item.get(), pos, is_house_tile, view.zoom)) {
+							if (FillItemTooltipData(itemData, item.get(), pos, is_house_tile, view.zoom, editor)) {
 								if (itemData.hasVisibleFields()) {
 									out_tooltip_drawer->commitTooltip();
 								}
@@ -218,4 +243,90 @@ void MapOverlayCollector::Collect(
 			}
 		}
 	});
+
+	// 5. Macro entity tooltips (Houses, Towns, Zones)
+	if (need_tooltips && editor != nullptr) {
+		// House tooltips (at exit or floor centroid)
+		if (options.show_houses) {
+			for (const auto& [house_id, house_ptr] : editor->map.houses) {
+				if (!house_ptr) {
+					continue;
+				}
+				const House::FloorSummary& summary = house_ptr->getFloorSummary(map_z);
+				if (summary.count == 0) {
+					continue;
+				}
+				const Position& best_pos = (house_ptr->getExit().z == map_z && house_ptr->getExit().x > 0) ? house_ptr->getExit() : summary.best_tile;
+				if (best_pos.x < bounds.start_x || best_pos.x > bounds.end_x ||
+				    best_pos.y < bounds.start_y || best_pos.y > bounds.end_y) {
+					continue;
+				}
+				TooltipData& hData = out_tooltip_drawer->requestTooltipData();
+				hData.pos = best_pos;
+				hData.category = TooltipCategory::HOUSE;
+				hData.houseId = house_ptr->getID();
+				hData.itemName = house_ptr->name.empty() ? "House" : house_ptr->name;
+				hData.houseRent = house_ptr->rent;
+				hData.houseSize = house_ptr->size();
+				hData.isGuildhall = house_ptr->guildhall;
+				hData.badgeType = house_ptr->guildhall ? rme::rendering::TileIndicatorType::GuildHall : rme::rendering::TileIndicatorType::House;
+				if (house_ptr->townid > 0) {
+					auto it = editor->map.towns.find(house_ptr->townid);
+					if (it != editor->map.towns.end() && it->second) {
+						hData.townName = it->second->getName();
+					}
+				}
+				out_tooltip_drawer->commitTooltip();
+			}
+		}
+
+		// Town Temple tooltips
+		if (options.show_towns) {
+			for (const auto& [town_id, town_ptr] : editor->map.towns) {
+				if (!town_ptr) {
+					continue;
+				}
+				const Position& tpos = town_ptr->getTemplePosition();
+				if (tpos.z != map_z || tpos.x < bounds.start_x || tpos.x > bounds.end_x ||
+				    tpos.y < bounds.start_y || tpos.y > bounds.end_y) {
+					continue;
+				}
+				TooltipData& tData = out_tooltip_drawer->requestTooltipData();
+				tData.pos = tpos;
+				tData.category = TooltipCategory::WAYPOINT;
+				tData.itemName = town_ptr->getName();
+				tData.subtitle = "Town Temple";
+				tData.badgeType = rme::rendering::TileIndicatorType::TownTemple;
+				out_tooltip_drawer->commitTooltip();
+			}
+		}
+
+		// Zone cluster tooltips
+		if (options.show_zones && (map.getVersion().otbm == MAP_OTBM_5)) {
+			for (const auto& zone : map.zones) {
+				if (zone.id == 0) {
+					continue;
+				}
+				const auto& clusters = editor->map.getZoneClusters(zone.id, !options.is_drawing);
+				for (const auto& cluster : clusters) {
+					if (cluster.centroid_pos.z != map_z) {
+						continue;
+					}
+					if (cluster.centroid_pos.x < bounds.start_x || cluster.centroid_pos.x > bounds.end_x ||
+					    cluster.centroid_pos.y < bounds.start_y || cluster.centroid_pos.y > bounds.end_y) {
+						continue;
+					}
+					TooltipData& zData = out_tooltip_drawer->requestTooltipData();
+					zData.pos = cluster.centroid_pos;
+					zData.category = TooltipCategory::ZONE;
+					zData.zoneId = zone.id;
+					zData.itemName = zone.name.empty() ? "Zone" : zone.name;
+					zData.zoneRgb = rme::rendering::getZoneColor(zone.id);
+					zData.zoneTileCount = editor->map.getZoneTilePositions(zone.id).size();
+					zData.zoneAreaCount = clusters.size();
+					out_tooltip_drawer->commitTooltip();
+				}
+			}
+		}
+	}
 }

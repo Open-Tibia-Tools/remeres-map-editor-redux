@@ -41,6 +41,7 @@ public:
 		TooltipActionId, // Action ID value
 		TooltipUniqueId, // Unique ID value
 		TooltipDoorId, // Door ID value
+		TooltipDepotId, // Depot ID value
 		TooltipTextValue, // Readable text (signs, books)
 		TooltipTeleport, // Teleport destination
 		TooltipWaypoint, // Waypoint name
@@ -52,6 +53,8 @@ public:
 		TooltipBorderDoor,
 		TooltipBorderTeleport,
 		TooltipBorderText,
+		TooltipBorderHouse,
+		TooltipBorderZone,
 
 		// Brush Category Colors
 		BrushCategoryGround,
