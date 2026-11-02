@@ -44,7 +44,7 @@ namespace {
 
 		const bool is_complex = item->isComplex();
 		const bool is_house_tile = houseId > 0;
-		const Door* door = is_house_tile ? item->asDoor() : nullptr;
+		const Door* door = (is_house_tile && item->asDoor() && item->asDoor()->isRealDoor()) ? item->asDoor() : nullptr;
 		const Teleport* tp = item->asTeleport();
 		const Container* container = item->asContainer();
 		const Depot* depot = item->asDepot();
@@ -104,7 +104,7 @@ namespace {
 		data.description = description;
 		data.destination = destination;
 
-		if (door && is_house_tile && editor != nullptr) {
+		if (door && door->isRealDoor() && is_house_tile && editor != nullptr) {
 			if (const House* house = editor->map.houses.getHouse(houseId)) {
 				data.houseId = house->getID();
 				data.houseRent = house->rent;
@@ -237,7 +237,7 @@ void MapOverlayCollector::Collect(
 					// Tooltip badges
 					if (need_tooltips) {
 						const bool is_complex = item->isComplex();
-						const Door* door = (tile_house_id > 0) ? item->asDoor() : nullptr;
+						const Door* door = (tile_house_id > 0 && item->asDoor() && item->asDoor()->isRealDoor()) ? item->asDoor() : nullptr;
 						const Teleport* tp = item->asTeleport();
 						const Container* container = item->asContainer();
 						const Depot* depot = item->asDepot();
@@ -263,7 +263,14 @@ void MapOverlayCollector::Collect(
 							hData.pos = pos;
 							hData.category = TooltipCategory::HOUSE;
 							hData.houseId = house->getID();
-							hData.itemName = house->name.empty() ? "House" : house->name;
+							std::string cleanName;
+							cleanName.reserve(house->name.size());
+							for (char c : house->name) {
+								if (static_cast<unsigned char>(c) >= 32) {
+									cleanName.push_back(c);
+								}
+							}
+							hData.itemName = cleanName.empty() ? "House" : cleanName;
 							hData.subtitle = "House Entry";
 							hData.houseRent = house->rent;
 							hData.houseSize = house->size();

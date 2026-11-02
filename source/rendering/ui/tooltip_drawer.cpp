@@ -292,7 +292,7 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 	nvgFontSize(vg, 12.0f);
 	nvgFontFace(vg, "sans");
 	float nameBounds[4] = { 0 };
-	const std::string_view nameStr = !tooltip.itemName.empty() ? tooltip.itemName : "Object";
+	const std::string_view nameStr = !tooltip.itemName.empty() ? std::string_view(tooltip.itemName) : std::string_view("Object");
 	nvgTextBounds(vg, 0, 0, nameStr.data(), nameStr.data() + nameStr.size(), nameBounds);
 	float nameWidth = nameBounds[2] - nameBounds[0];
 
@@ -660,7 +660,7 @@ void TooltipDrawer::drawHeader(NVGcontext* vg, float x, float y, float width, co
 	nvgFontSize(vg, 12.0f);
 	nvgFontFace(vg, "sans");
 	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
-	const std::string_view nameStr = !tooltip.itemName.empty() ? tooltip.itemName : "Object";
+	const std::string_view nameStr = !tooltip.itemName.empty() ? std::string_view(tooltip.itemName) : std::string_view("Object");
 
 	if (subText.empty()) {
 		// Vertically centered when no subtitle

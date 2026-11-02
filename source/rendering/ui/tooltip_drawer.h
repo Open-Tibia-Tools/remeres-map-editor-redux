@@ -57,9 +57,9 @@ struct TooltipData {
 	// Header info
 	uint16_t itemId = 0;
 	uint16_t clientId = 0;
-	std::string_view itemName;
+	std::string itemName;
 	uint16_t count = 0;
-	std::string_view subtitle;
+	std::string subtitle;
 
 	// Indicator badge (for houses, zones, waypoints, towns)
 	rme::rendering::TileIndicatorType badgeType = rme::rendering::TileIndicatorType::None;
@@ -69,13 +69,13 @@ struct TooltipData {
 	uint16_t uniqueId = 0;
 	uint8_t doorId = 0;
 	uint8_t depotId = 0;
-	std::string_view townName;
-	std::string_view text;
-	std::string_view description;
+	std::string townName;
+	std::string text;
+	std::string description;
 	Position destination; // For teleports (check if valid via destination.x > 0)
 
 	// Waypoint-specific
-	std::string_view waypointName;
+	std::string waypointName;
 
 	// House-specific
 	uint32_t houseId = 0;
@@ -88,7 +88,7 @@ struct TooltipData {
 	glm::vec3 zoneRgb = glm::vec3(0.0f);
 	size_t zoneTileCount = 0;
 	size_t zoneAreaCount = 0;
-	std::string_view zoneFlags;
+	std::string zoneFlags;
 
 	// Container contents
 	std::vector<ContainerItem> containerItems;
@@ -98,7 +98,7 @@ struct TooltipData {
 
 	// Constructor for waypoint
 	TooltipData(Position p, std::string_view wpName) :
-		pos(p), category(TooltipCategory::WAYPOINT), waypointName(wpName),
+		pos(p), category(TooltipCategory::WAYPOINT), itemName(wpName), waypointName(wpName),
 		badgeType(rme::rendering::TileIndicatorType::Waypoint) { }
 
 	// Constructor for item
@@ -136,20 +136,20 @@ struct TooltipData {
 		category = TooltipCategory::ITEM;
 		itemId = 0;
 		clientId = 0;
-		itemName = {};
+		itemName.clear();
 		count = 0;
-		subtitle = {};
+		subtitle.clear();
 		badgeType = rme::rendering::TileIndicatorType::None;
 
 		actionId = 0;
 		uniqueId = 0;
 		doorId = 0;
 		depotId = 0;
-		townName = {};
-		text = {};
-		description = {};
+		townName.clear();
+		text.clear();
+		description.clear();
 		destination = Position();
-		waypointName = {};
+		waypointName.clear();
 
 		houseId = 0;
 		houseRent = 0;
@@ -160,7 +160,7 @@ struct TooltipData {
 		zoneRgb = glm::vec3(0.0f);
 		zoneTileCount = 0;
 		zoneAreaCount = 0;
-		zoneFlags = {};
+		zoneFlags.clear();
 
 		containerItems.clear();
 		containerCapacity = 0;
