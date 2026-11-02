@@ -52,6 +52,8 @@ void ExtractItem(
 		subtitle = std::format("Inside {}", parent_container->getName().empty() ? "container" : parent_container->getName());
 	}
 
+	const bool is_specific = (query.specific_item_id > 0) || (!query.item_id_set.empty());
+
 	const auto* container = item->asContainer();
 	if (container != nullptr) {
 		for (const auto& inner : container->getVector()) {
@@ -64,16 +66,15 @@ void ExtractItem(
 			}
 		}
 
-		// If container is empty, and has no unique ID or action ID - don't show it
-		if (container_items.empty() && uid == 0 && aid == 0) {
+		// In general searches, skip empty containers with no UID/AID.
+		// If the user explicitly searched for this container item ID, always include it.
+		if (!is_specific && container_items.empty() && uid == 0 && aid == 0) {
 			return;
 		}
 	}
 
 	bool is_match = false;
 	SearchResultKind kind = SearchResultKind::GenericItem;
-
-	const bool is_specific = (query.specific_item_id > 0) || (!query.item_id_set.empty());
 
 	if (is_specific) {
 		is_match = true;
