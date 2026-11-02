@@ -129,13 +129,13 @@ wxColour Theme::GetDark(Role role) {
 		case Role::TooltipTeleport:
 			return wxColour(186, 85, 211); // Medium Orchid
 		case Role::TooltipWaypoint:
-			return wxColour(50, 205, 50); // Lime Green
+			return wxColour(0, 160, 255); // Vivid Blue
 		case Role::TooltipBodyText:
 			return wxColour(220, 220, 220); // Light Gray
 		case Role::TooltipCountText:
 			return wxColour(200, 200, 200); // Light Gray
 		case Role::TooltipBorderWaypoint:
-			return wxColour(50, 205, 50); // Lime Green
+			return wxColour(0, 160, 255); // Vivid Blue
 		case Role::TooltipBorderItem:
 			return wxColour(58, 58, 64); // Charcoal
 		case Role::TooltipBorderDoor:
@@ -239,7 +239,7 @@ wxColour Theme::GetLight(Role role) {
 		case Role::TooltipCountText:
 			return wxColour(60, 60, 60); // Dark Gray
 		case Role::TooltipBorderWaypoint:
-			return wxColour(50, 205, 50); // Lime Green
+			return wxColour(0, 160, 255); // Vivid Blue
 		case Role::TooltipBorderItem:
 			return wxColour(58, 58, 64); // Charcoal
 		case Role::TooltipBorderDoor:

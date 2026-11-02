@@ -1,72 +1,74 @@
+//////////////////////////////////////////////////////////////////////
+// This file is part of Remere's Map Editor
+//////////////////////////////////////////////////////////////////////
+
 #ifndef RME_PALETTE_ZONES_H_
 #define RME_PALETTE_ZONES_H_
 
 #include "palette/palette_common.h"
-#include "palette/controls/palette_search_ctrl.h"
-#include "util/nanovg_table_ctrl.h"
+#include "palette/controls/tileset_grid_toolbar.h"
+#include "map/map.h"
 
 #include <unordered_set>
+#include <string>
 #include <vector>
 
-struct ZoneCluster;
+class Brush;
 
-// Lists OTBM 5 zones (Canary / Crystal Server) with live vector swatches and feeds the selected id to the zone brush
 class ZonePalettePanel : public PalettePanel {
 public:
 	explicit ZonePalettePanel(wxWindow* parent, wxWindowID id = wxID_ANY);
-	~ZonePalettePanel() override = default;
+	~ZonePalettePanel() override;
 
 	wxString GetName() const override;
 
-	void SelectFirstBrush() override { }
+	void SelectFirstBrush() override;
 	Brush* GetSelectedBrush() const override;
-	int GetSelectedBrushSize() const override {
-		return 0;
-	}
+	int GetSelectedBrushSize() const override;
 	bool SelectBrush(const Brush* whatbrush) override;
+
 	void OnUpdate() override;
 	void OnSwitchIn() override;
+	void OnSwitchOut() override;
 
 	void SetMap(Map* map);
 
-	void UpdateZone(uint16_t zone_id);
-	void UpdateTileCounts();
+	void UpdateZone(uint16_t zone_id = 0) {
+		if (IsShown()) {
+			OnUpdate();
+		}
+	}
+	void UpdateTileCounts() {
+		if (IsShown()) {
+			OnUpdate();
+		}
+	}
 
-	// Table callbacks
-	void OnSelectZone(int index, const TableRow& row);
-	void OnActivateZone(int index, const TableRow& row);
-	void OnSortZones(int column, bool ascending);
-	void OnZoneContextMenu(int index, const TableRow* row, const wxPoint& pos);
-	void OnToggleGroup(int index, const TableRow& row);
+	void SelectZoneById(uint16_t zone_id, int cluster = -1);
+	[[nodiscard]] uint16_t GetSelectedZoneId() const { return selected_zone_id_; }
 
-	// Event handlers
-	void OnSearchChange(wxCommandEvent& event);
-	void OnGoToZone(wxCommandEvent& event);
-	void OnClickAdd(wxCommandEvent& event);
-	void OnClickRename(wxCommandEvent& event);
-	void OnClickRemove(wxCommandEvent& event);
+	// Actions
+	void OnClickAddZone();
+	void OnClickRenameZone();
+	void OnClickRemoveZone();
+	void OnGoToZone();
+
+	void ExpandAll();
+	void CollapseAll();
 
 private:
-	[[nodiscard]] bool supportsZones() const;
-	[[nodiscard]] uint16_t selectedZoneId() const;
+	class ZoneCanvas;
 
-	struct RowRef {
-		uint16_t zone = 0;
-		int cluster = -1;
-	};
-	[[nodiscard]] RowRef selectedRow() const;
-
-	Map* map = nullptr;
-	std::unordered_set<uint16_t> expanded_zones_;
+	Map* map_ = nullptr;
 	uint16_t selected_zone_id_ = 0;
 	int selected_cluster_ = -1;
 
-	PaletteSearchCtrl* search_ctrl = nullptr;
-	NanoVGTableCtrl* zone_table = nullptr;
-	wxButton* add_button = nullptr;
-	wxButton* rename_button = nullptr;
-	wxButton* remove_button = nullptr;
+	TilesetGridToolbar* toolbar_ = nullptr;
+	ZoneCanvas* canvas_ = nullptr;
+
+	wxButton* add_button_ = nullptr;
+	wxButton* rename_button_ = nullptr;
+	wxButton* remove_button_ = nullptr;
 };
 
-#endif
-
+#endif // RME_PALETTE_ZONES_H_

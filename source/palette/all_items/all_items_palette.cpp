@@ -34,6 +34,7 @@ AllItemsPalette::AllItemsPalette(wxWindow* parent, wxWindowID id) :
 	grid_spacing = (loadedSpacing == 2 || loadedSpacing == 6) ? loadedSpacing : 4;
 
 	main_sizer = new wxBoxSizer(wxVERTICAL);
+	box_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Items");
 
 	TilesetGridToolbar::Actions actions;
 	actions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
@@ -88,7 +89,8 @@ AllItemsPalette::AllItemsPalette(wxWindow* parent, wxWindowID id) :
 	toolbar->SetState(show_labels, tile_size, has_sort, sort_key, sort_dir, false, is_list_mode);
 	toolbar->SetIndicatorState(indicator_dogear);
 	toolbar->SetGridSpacing(grid_spacing);
-	main_sizer->Add(toolbar, wxSizerFlags().Expand().Border(wxBOTTOM, 2));
+	box_sizer->Add(toolbar, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(2)));
+	main_sizer->Add(box_sizer, wxSizerFlags(1).Expand());
 
 	SetSizer(main_sizer);
 }
@@ -125,7 +127,7 @@ void AllItemsPalette::InvalidateContents() {
 	loaded = false;
 	tileset_def.brushes.clear();
 	if (grid) {
-		main_sizer->Detach(grid);
+		box_sizer->Detach(grid);
 		grid->Destroy();
 		grid = nullptr;
 	}
@@ -147,7 +149,7 @@ void AllItemsPalette::LoadCurrentContents() {
 		if (!filter_query.empty()) {
 			grid->SetFilterQuery(filter_query);
 		}
-		main_sizer->Add(grid, wxSizerFlags(1).Expand());
+		box_sizer->Add(grid, wxSizerFlags(1).Expand());
 		Layout();
 	}
 }

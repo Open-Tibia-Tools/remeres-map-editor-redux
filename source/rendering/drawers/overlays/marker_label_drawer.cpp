@@ -415,7 +415,7 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 		} else { // MarkerLabelType::HouseInactive
 			nvgFillColor(vg, nvgRGBA(15, 15, 22, 242));
 			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(143, 127, 196, 245)); // Muted Violet #8F7FC4
+			nvgStrokeColor(vg, nvgRGBA(89, 191, 13, 245)); // Crisp Green
 			nvgStrokeWidth(vg, 1.2f);
 			nvgStroke(vg);
 		}
@@ -432,7 +432,7 @@ void MarkerLabelDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& v
 		} else if (vl.type == MarkerLabelType::Zone) {
 			nvgFillColor(vg, vl.custom_color);
 		} else { // MarkerLabelType::HouseInactive
-			nvgFillColor(vg, nvgRGBA(143, 127, 196, 255));
+			nvgFillColor(vg, nvgRGBA(140, 225, 50, 255)); // Bright Green
 		}
 		nvgText(vg, vl.x, vl.y - paddingY, vl.text.data(), vl.text.data() + vl.text.size());
 	}

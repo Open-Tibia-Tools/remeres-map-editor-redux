@@ -126,8 +126,10 @@ void to_upper_str(std::string& source) {
 	std::transform(source.begin(), source.end(), source.begin(), [](unsigned char c) { return std::toupper(c); });
 }
 
-std::string as_lower_str(const std::string& other) {
-	std::string ret = other;
+
+
+std::string as_lower_str(std::string_view other) {
+	std::string ret(other);
 	to_lower_str(ret);
 	return ret;
 }
