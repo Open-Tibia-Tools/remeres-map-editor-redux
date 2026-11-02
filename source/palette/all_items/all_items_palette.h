@@ -57,6 +57,7 @@ protected:
 
 	DynamicTilesetDefinition tileset_def;
 	wxBoxSizer* main_sizer = nullptr;
+	wxStaticBoxSizer* box_sizer = nullptr;
 	TilesetGridToolbar* toolbar = nullptr;
 	VirtualBrushGrid* grid = nullptr;
 

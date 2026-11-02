@@ -1,371 +1,584 @@
-//////////////////////////////////////////////////////////////////////
-// This file is part of Remere's Map Editor
-//////////////////////////////////////////////////////////////////////
-// Remere's Map Editor is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Remere's Map Editor is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <http://www.gnu.org/licenses/>.
-//////////////////////////////////////////////////////////////////////
-
-#include "app/main.h"
-
 #include "palette/town/town_palette.h"
 #include "palette/town/edit_town_dialog.h"
+
+#include "ui/gui.h"
+#include "ui/theme.h"
+#include "ui/map_tab.h"
+#include "util/image_manager.h"
+#include "util/common.h"
+#include "util/nanovg_canvas.h"
+#include "util/nvg_utils.h"
+#include "util/grid_cell_renderer.h"
+#include "palette/controls/tileset_grid_toolbar.h"
+#include "rendering/indicators/technical_item_registry.h"
 #include "brushes/town/town_temple_brush.h"
 #include "brushes/managers/brush_manager.h"
 #include "map/map.h"
-#include "map/tile.h"
-#include "game/town.h"
 #include "game/house.h"
-#include "ui/gui.h"
-#include "ui/gui_ids.h"
-#include "ui/theme.h"
-#include "ui/dialog_util.h"
-#include "ui/map_tab.h"
-#include "ui/managers/minimap_manager.h"
-#include "util/image_manager.h"
 
-#include <wx/evtloop.h>
+#include <nanovg.h>
+#include <wx/menu.h>
 #include <wx/msgdlg.h>
+#include <wx/evtloop.h>
 #include <algorithm>
-#include <unordered_map>
+#include <array>
 #include <format>
-#include <vector>
+#include <string_view>
+#include <unordered_map>
 
-TownPalettePanel::TownPalettePanel(wxWindow* parent, wxWindowID id) :
-	PalettePanel(parent, id),
-	map(nullptr) {
-	auto* sidesizer = new wxBoxSizer(wxVERTICAL);
 
-	// Search control
-	search_ctrl = new PaletteSearchCtrl(this, PALETTE_TOWN_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
-	search_ctrl->SetDescriptiveText("Search towns...");
-	search_ctrl->SetFont(Theme::GetFont(9, false));
-	sidesizer->Add(search_ctrl, wxSizerFlags().Expand().Border(wxALL, 5));
+namespace {
 
-	// Table control (ID, Town, Houses)
-	town_table = new NanoVGTableCtrl(this, PALETTE_TOWN_LISTBOX);
-	town_table->SetRowHeight(36);
-	std::vector<TableColumn> cols = {
-		{ "id", "ID", 35, NVG_ALIGN_RIGHT, true },
-		{ "name", "Town", 0, NVG_ALIGN_LEFT, true },
-		{ "houses", "Houses", 50, NVG_ALIGN_RIGHT, true }
-	};
-	town_table->SetColumns(std::move(cols));
+constexpr int kCardHeight = 44;
+constexpr int kCardSpacing = 4;
+constexpr int kIconSize = 32;
 
-	town_table->SetOnSelect([this](int idx, const TableRow& row) {
-		OnSelectTown(idx, row);
-	});
-	town_table->SetOnActivate([this](int idx, const TableRow& row) {
-		OnActivateTown(idx, row);
-	});
-	town_table->SetOnSort([this](int col, bool asc) {
-		OnSortTowns(col, asc);
-	});
-	town_table->SetOnContextMenu([this](int idx, const TableRow* row, const wxPoint& pos) {
-		OnTownContextMenu(idx, row, pos);
-	});
 
-	sidesizer->Add(town_table, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT, 5));
 
-	// Buttons (2x2 grid)
-	auto* button_grid = new wxGridSizer(2, 2, 4, 4);
+struct TownItem {
+	uint32_t id = 0;
+	std::string name;
+	std::string lowercase_name;
+	Position pos;
+	std::string formatted_pos;
+	size_t house_count = 0;
+	std::string house_count_str;
+	size_t original_index = 0;
+};
 
-	add_town_button = new wxButton(this, PALETTE_TOWN_ADD, "Add", wxDefaultPosition, wxDefaultSize);
-	add_town_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
-	add_town_button->SetFont(Theme::GetFont(9, false));
-	button_grid->Add(add_town_button, wxSizerFlags(1).Expand());
+} // namespace
 
-	edit_town_button = new wxButton(this, PALETTE_TOWN_EDIT, "Edit", wxDefaultPosition, wxDefaultSize);
-	edit_town_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
-	edit_town_button->SetFont(Theme::GetFont(9, false));
-	button_grid->Add(edit_town_button, wxSizerFlags(1).Expand());
+// ============================================================================
+// TownCanvas
+// ============================================================================
 
-	remove_town_button = new wxButton(this, PALETTE_TOWN_REMOVE, "Remove", wxDefaultPosition, wxDefaultSize);
-	remove_town_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
-	remove_town_button->SetFont(Theme::GetFont(9, false));
-	button_grid->Add(remove_town_button, wxSizerFlags(1).Expand());
+class TownPalettePanel::TownCanvas final : public NanoVGCanvas {
+public:
+	explicit TownCanvas(TownPalettePanel* owner) :
+		NanoVGCanvas(owner, wxID_ANY, wxVSCROLL | wxWANTS_CHARS),
+		m_owner(owner) {
+		SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 
-	change_temple_button = new wxButton(this, PALETTE_TOWN_CHANGE_TEMPLE, "Set Temple", wxDefaultPosition, wxDefaultSize);
-	change_temple_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CROSSHAIRS));
-	change_temple_button->SetFont(Theme::GetFont(9, false));
-	change_temple_button->SetToolTip("Click to place temple position on the map");
-	button_grid->Add(change_temple_button, wxSizerFlags(1).Expand());
+		Bind(wxEVT_SIZE, &TownCanvas::OnSize, this);
+		Bind(wxEVT_LEFT_DOWN, &TownCanvas::OnMouseDown, this);
+		Bind(wxEVT_LEFT_DCLICK, &TownCanvas::OnLeftDClick, this);
+		Bind(wxEVT_RIGHT_DOWN, &TownCanvas::OnContextMenu, this);
+		Bind(wxEVT_MOTION, &TownCanvas::OnMouseMove, this);
+		Bind(wxEVT_LEAVE_WINDOW, &TownCanvas::OnMouseLeave, this);
+	}
 
-	sidesizer->Add(button_grid, wxSizerFlags().Expand().Border(wxALL, 5));
-	SetSizer(sidesizer);
+	void SetItems(std::vector<TownItem> items) {
+		m_items = std::move(items);
+		if (m_has_sort) {
+			ApplySort();
+		}
+		RebuildVisibleRows();
+	}
 
-	Bind(wxEVT_TEXT, &TownPalettePanel::OnSearchChange, this, PALETTE_TOWN_SEARCH);
+	void SetFilter(const std::string& query) {
+		m_filter_query = as_lower_str(query);
+		RebuildVisibleRows();
+	}
 
-	Bind(wxEVT_BUTTON, &TownPalettePanel::OnClickAddTown, this, PALETTE_TOWN_ADD);
-	Bind(wxEVT_BUTTON, &TownPalettePanel::OnClickEditTown, this, PALETTE_TOWN_EDIT);
-	Bind(wxEVT_BUTTON, &TownPalettePanel::OnClickRemoveTown, this, PALETTE_TOWN_REMOVE);
-	Bind(wxEVT_BUTTON, &TownPalettePanel::OnClickChangeTemple, this, PALETTE_TOWN_CHANGE_TEMPLE);
+	void SetSort(TilesetSortKey key, TilesetSortDirection dir) {
+		m_sort_key = key;
+		m_sort_dir = dir;
+		m_has_sort = true;
+		ApplySort();
+		RebuildVisibleRows();
+	}
 
-	Bind(wxEVT_MENU, &TownPalettePanel::OnClickAddTown, this, PALETTE_TOWN_ADD);
-	Bind(wxEVT_MENU, &TownPalettePanel::OnClickEditTown, this, PALETTE_TOWN_EDIT);
-	Bind(wxEVT_MENU, &TownPalettePanel::OnClickRemoveTown, this, PALETTE_TOWN_REMOVE);
-	Bind(wxEVT_MENU, &TownPalettePanel::OnClickChangeTemple, this, PALETTE_TOWN_CHANGE_TEMPLE);
-	Bind(wxEVT_MENU, &TownPalettePanel::OnGoToTemple, this, PALETTE_TOWN_GOTO_TEMPLE);
-}
+	void ClearSort() {
+		m_has_sort = false;
+		std::ranges::sort(m_items, [](const auto& a, const auto& b) {
+			return a.id < b.id;
+		});
+		RebuildVisibleRows();
+	}
 
-void TownPalettePanel::OnSwitchIn() {
-	PalettePanel::OnSwitchIn();
-}
+	void SetSelectedId(uint32_t id) {
+		m_selected_id = id;
+		Refresh();
+	}
 
-void TownPalettePanel::OnSwitchOut() {
-	PalettePanel::OnSwitchOut();
-}
+	[[nodiscard]] uint32_t GetSelectedId() const {
+		return m_selected_id;
+	}
 
-void TownPalettePanel::SetMap(Map* m) {
-	if (map != m) {
-		selected_town_id_ = 0;
-		if (g_brush_manager.temple_brush) {
-			g_brush_manager.temple_brush->setTown(nullptr);
+	void RebuildVisibleRows() {
+		m_visible_indices.clear();
+		for (size_t i = 0; i < m_items.size(); ++i) {
+			const auto& item = m_items[i];
+			if (m_filter_query.empty() ||
+			    item.lowercase_name.find(m_filter_query) != std::string::npos ||
+			    std::to_string(item.id).find(m_filter_query) != std::string::npos ||
+			    item.formatted_pos.find(m_filter_query) != std::string::npos) {
+				m_visible_indices.push_back(i);
+			}
+		}
+
+		const int padding = rme::ui::grid::kPadding;
+		const int total_h = static_cast<int>(m_visible_indices.size()) * (kCardHeight + kCardSpacing) + padding * 2;
+		UpdateScrollbar(total_h);
+		Refresh();
+	}
+
+protected:
+	void OnNanoVGPaint(NVGcontext* vg, int width, int height) override {
+		const int scroll_pos = GetScrollPosition();
+		const int padding = rme::ui::grid::kPadding;
+
+		if (m_visible_indices.empty()) {
+			nvgFontFace(vg, "sans");
+			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+			nvgFontSize(vg, 13.0f);
+			nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::TextSubtle)));
+			nvgText(vg, width * 0.5f, static_cast<float>(scroll_pos + height / 2),
+				m_items.empty() ? "No towns defined in map" : "No matching towns found", nullptr);
+			return;
+		}
+
+		const int card_w = std::max(1, width - padding * 2);
+		const int visible_top = scroll_pos;
+		const int visible_bottom = scroll_pos + height;
+
+		const int dip_6 = FromDIP(6);
+		const int dip_8 = FromDIP(8);
+		const int dip_10 = FromDIP(10);
+		const int dip_13 = FromDIP(13);
+		const int dip_11 = FromDIP(11);
+		const int dip_85 = FromDIP(85);
+		const int index_col_w = FromDIP(rme::ui::grid::GetIndexColumnWidth(m_items.size()));
+
+		for (size_t vi = 0; vi < m_visible_indices.size(); ++vi) {
+			const size_t item_idx = m_visible_indices[vi];
+			const auto& item = m_items[item_idx];
+			const int card_y = padding + static_cast<int>(vi) * (kCardHeight + kCardSpacing);
+
+			if (card_y + kCardHeight < visible_top || card_y > visible_bottom) {
+				continue;
+			}
+
+			const wxRect card_rect(padding, card_y, card_w, kCardHeight);
+			const bool is_selected = (item.id == m_selected_id);
+			const bool is_hovered = (static_cast<int>(vi) == m_hover_row);
+
+			const wxRect drawn = rme::ui::grid::DrawCardChrome(vg, card_rect, is_selected, is_hovered, 0.0f, false);
+
+			const wxColour meta_wx = is_selected ? Theme::Get(Theme::Role::TextOnAccent) : Theme::Get(Theme::Role::TextSubtle);
+			const wxColour text_wx = is_selected ? Theme::Get(Theme::Role::TextOnAccent) : Theme::Get(Theme::Role::Text);
+
+			// 1. Index badge (#1, #2) with 14px font matching Search Results
+			std::array<char, 32> id_buf;
+			auto res = std::format_to_n(id_buf.data(), id_buf.size() - 1, "#{}", item.original_index + 1);
+			*res.out = '\0';
+
+			const int index_x = drawn.x + dip_6;
+			nvgFontSize(vg, 14.0f);
+			nvgFontFace(vg, "sans");
+			nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+			nvgFillColor(vg, NvgUtils::ToNvColor(meta_wx));
+			nvgText(vg, static_cast<float>(index_x), static_cast<float>(drawn.y + drawn.height / 2), id_buf.data(), nullptr);
+
+			// 2. 32x32 Sunken Icon slot with TownTemple sprite indicator tile
+			const int icon_x = index_x + index_col_w + dip_6;
+			const int icon_y = drawn.y + (drawn.height - kIconSize) / 2;
+			const wxRect slot_rect(icon_x, icon_y, kIconSize, kIconSize);
+			rme::ui::grid::DrawCardChrome(vg, slot_rect, false, false, 0.0f, false);
+			rme::ui::grid::DrawCellIcon(vg, slot_rect, 0, rme::rendering::TileIndicatorType::TownTemple);
+
+			// 3. Right side: House count formatted like Search Results (14px font)
+			const float badge_w = static_cast<float>(dip_85);
+			const float badge_x = static_cast<float>(drawn.x + drawn.width - dip_8);
+			std::array<char, 64> count_buf;
+			auto count_res = std::format_to_n(count_buf.data(), count_buf.size() - 1, "({} {})",
+				item.house_count, item.house_count == 1 ? "house" : "houses");
+			*count_res.out = '\0';
+
+			nvgFontSize(vg, 14.0f);
+			nvgFontFace(vg, "sans");
+			nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+			nvgFillColor(vg, NvgUtils::ToNvColor(meta_wx));
+			nvgText(vg, badge_x, static_cast<float>(drawn.y + drawn.height / 2), count_buf.data(), nullptr);
+
+			// 4. Center text: Name in Yellow like tooltip on top, Coordinates underneath
+			const float text_x = static_cast<float>(icon_x + kIconSize + dip_8);
+			const float top_y = static_cast<float>(drawn.y + dip_13);
+			const float bottom_y = static_cast<float>(drawn.y + drawn.height - dip_11);
+			const float avail_w = std::max(20.0f, badge_x - text_x - badge_w - static_cast<float>(dip_10));
+
+			nvgSave(vg);
+			nvgScissor(vg, text_x, static_cast<float>(drawn.y), avail_w, static_cast<float>(drawn.height));
+
+			// Top line: Name in standard white text
+			nvgFontSize(vg, 14.0f);
+			nvgFontFace(vg, "sans");
+			nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+			nvgFillColor(vg, NvgUtils::ToNvColor(text_wx));
+			nvgText(vg, text_x, top_y, item.name.c_str(), nullptr);
+
+			// Bottom line: Temple Coordinates
+			nvgFontSize(vg, 12.0f);
+			nvgFontFace(vg, "sans");
+			nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+			nvgFillColor(vg, NvgUtils::ToNvColor(meta_wx));
+			nvgText(vg, text_x, bottom_y, item.formatted_pos.c_str(), nullptr);
+
+			nvgRestore(vg);
 		}
 	}
-	map = m;
-	OnUpdate();
+
+private:
+	void ApplySort() {
+		if (m_sort_key == TilesetSortKey::Name) {
+			if (m_sort_dir == TilesetSortDirection::Ascending) {
+				std::ranges::sort(m_items, [](const auto& a, const auto& b) {
+					return a.name < b.name;
+				});
+			} else {
+				std::ranges::sort(m_items, [](const auto& a, const auto& b) {
+					return a.name > b.name;
+				});
+			}
+		} else if (m_sort_key == TilesetSortKey::ID) {
+			if (m_sort_dir == TilesetSortDirection::Ascending) {
+				std::ranges::sort(m_items, [](const auto& a, const auto& b) {
+					return a.id < b.id;
+				});
+			} else {
+				std::ranges::sort(m_items, [](const auto& a, const auto& b) {
+					return a.id > b.id;
+				});
+			}
+		}
+	}
+
+	void OnSize(wxSizeEvent& event) {
+		RebuildVisibleRows();
+		event.Skip();
+	}
+
+	[[nodiscard]] int HitTest(int mouse_y) const {
+		if (m_visible_indices.empty()) {
+			return -1;
+		}
+		const int padding = rme::ui::grid::kPadding;
+		const int content_y = mouse_y + GetScrollPosition() - padding;
+		if (content_y < 0) {
+			return -1;
+		}
+		const int row = content_y / (kCardHeight + kCardSpacing);
+		const int offset_in_row = content_y % (kCardHeight + kCardSpacing);
+		if (row >= 0 && row < static_cast<int>(m_visible_indices.size()) && offset_in_row < kCardHeight) {
+			return row;
+		}
+		return -1;
+	}
+
+	void OnMouseDown(wxMouseEvent& event) {
+		SetFocus();
+		const int hit = HitTest(event.GetY());
+		if (hit >= 0 && hit < static_cast<int>(m_visible_indices.size())) {
+			const size_t item_idx = m_visible_indices[hit];
+			m_selected_id = m_items[item_idx].id;
+			Refresh();
+
+			if (m_owner) {
+				m_owner->SelectTownById(m_selected_id);
+			}
+		}
+	}
+
+	void OnLeftDClick(wxMouseEvent& event) {
+		const int hit = HitTest(event.GetY());
+		if (hit >= 0 && hit < static_cast<int>(m_visible_indices.size())) {
+			const size_t item_idx = m_visible_indices[hit];
+			const auto& item = m_items[item_idx];
+			if (item.pos.isValid() && g_gui.IsEditorOpen()) {
+				g_gui.SetScreenCenterPosition(item.pos);
+			}
+		}
+	}
+
+	void OnContextMenu(wxMouseEvent& event) {
+		const int hit = HitTest(event.GetY());
+		if (hit >= 0 && hit < static_cast<int>(m_visible_indices.size())) {
+			const size_t item_idx = m_visible_indices[hit];
+			m_selected_id = m_items[item_idx].id;
+			Refresh();
+			if (m_owner) {
+				m_owner->SelectTownById(m_selected_id);
+			}
+		}
+		ShowContextMenu(event.GetPosition());
+	}
+
+	void ShowContextMenu(const wxPoint& pos) {
+		wxMenu menu;
+		if (m_selected_id != 0) {
+			menu.Append(wxID_FORWARD, "Go to Temple (Double-Click)")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_LOCATION_ARROW));
+			menu.Append(wxID_FIND, "Set Temple Position")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CROSSHAIRS));
+			menu.Append(wxID_EDIT, "Edit Town...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
+			menu.AppendSeparator();
+			menu.Append(wxID_DELETE, "Remove Town")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
+			menu.AppendSeparator();
+		}
+		menu.Append(wxID_ADD, "Add Town...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
+
+		menu.Bind(wxEVT_MENU, [this](wxCommandEvent& ev) {
+			if (!m_owner) return;
+			switch (ev.GetId()) {
+				case wxID_FORWARD:
+					m_owner->OnGoToTemple();
+					break;
+				case wxID_FIND:
+					m_owner->OnClickChangeTemple();
+					break;
+				case wxID_EDIT:
+					m_owner->OnClickEditTown();
+					break;
+				case wxID_DELETE:
+					m_owner->OnClickRemoveTown();
+					break;
+				case wxID_ADD:
+					m_owner->OnClickAddTown();
+					break;
+				default:
+					break;
+			}
+		});
+
+		PopupMenu(&menu, pos);
+	}
+
+	void OnMouseMove(wxMouseEvent& event) {
+		const int hit = HitTest(event.GetY());
+		if (hit != m_hover_row) {
+			m_hover_row = hit;
+			Refresh();
+		}
+		if (hit >= 0 && hit < static_cast<int>(m_visible_indices.size())) {
+			const auto& item = m_items[m_visible_indices[hit]];
+			SetToolTip(wxstr(std::format("[{}] {} | {} | {}", item.id, item.name, item.formatted_pos, item.house_count_str)));
+		} else {
+			SetToolTip("");
+		}
+	}
+
+	void OnMouseLeave(wxMouseEvent& WXUNUSED(event)) {
+		if (m_hover_row != -1) {
+			m_hover_row = -1;
+			Refresh();
+		}
+		SetToolTip("");
+	}
+
+	TownPalettePanel* m_owner = nullptr;
+	std::vector<TownItem> m_items;
+	std::vector<size_t> m_visible_indices;
+	std::string m_filter_query;
+	uint32_t m_selected_id = 0;
+	int m_hover_row = -1;
+	bool m_has_sort = false;
+	TilesetSortKey m_sort_key = TilesetSortKey::Name;
+	TilesetSortDirection m_sort_dir = TilesetSortDirection::Ascending;
+};
+
+// ============================================================================
+// TownPalettePanel
+// ============================================================================
+
+TownPalettePanel::TownPalettePanel(wxWindow* parent, wxWindowID id) :
+	PalettePanel(parent, id) {
+	auto* root_sizer = new wxBoxSizer(wxVERTICAL);
+	auto* box_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Towns");
+
+	// 1. TilesetGridToolbar (Filter & Sort)
+	TilesetGridToolbar::Actions actions;
+	actions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
+		if (canvas_) canvas_->SetSort(key, dir);
+	};
+	actions.clear_sort = [this]() {
+		if (canvas_) canvas_->ClearSort();
+	};
+	actions.filter = [this](const std::string& q) {
+		if (canvas_) canvas_->SetFilter(q);
+	};
+	actions.filter_cleared = [this]() {
+		if (canvas_) canvas_->SetFilter("");
+	};
+
+	toolbar_ = new TilesetGridToolbar(this, std::move(actions), TilesetGridToolbar::Part_Sort | TilesetGridToolbar::Part_Search);
+	box_sizer->Add(toolbar_, 0, wxEXPAND | wxBOTTOM, FromDIP(2));
+
+	// 2. Modern Town Card Canvas
+	canvas_ = new TownCanvas(this);
+	box_sizer->Add(canvas_, 1, wxEXPAND | wxBOTTOM, FromDIP(4));
+
+	// 3. Action Button Bar (2x2 Grid)
+	auto* button_grid = new wxGridSizer(2, 2, FromDIP(4), FromDIP(4));
+
+	add_button_ = new wxButton(this, wxID_ANY, "Add", wxDefaultPosition, wxDefaultSize);
+	add_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
+	add_button_->SetFont(Theme::GetFont(9, false));
+	add_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickAddTown(); });
+	button_grid->Add(add_button_, 1, wxEXPAND);
+
+	edit_button_ = new wxButton(this, wxID_ANY, "Edit", wxDefaultPosition, wxDefaultSize);
+	edit_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
+	edit_button_->SetFont(Theme::GetFont(9, false));
+	edit_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickEditTown(); });
+	button_grid->Add(edit_button_, 1, wxEXPAND);
+
+	remove_button_ = new wxButton(this, wxID_ANY, "Remove", wxDefaultPosition, wxSize(FromDIP(60), -1));
+	remove_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
+	remove_button_->SetFont(Theme::GetFont(9, false));
+	remove_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickRemoveTown(); });
+	button_grid->Add(remove_button_, 1, wxEXPAND);
+
+	change_temple_button_ = new wxButton(this, wxID_ANY, "Set Temple", wxDefaultPosition, wxDefaultSize);
+	change_temple_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CROSSHAIRS));
+	change_temple_button_->SetFont(Theme::GetFont(9, false));
+	change_temple_button_->SetToolTip("Click on map to place temple position for selected town");
+	change_temple_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickChangeTemple(); });
+	button_grid->Add(change_temple_button_, 1, wxEXPAND);
+
+	box_sizer->Add(button_grid, 0, wxEXPAND | wxBOTTOM, FromDIP(2));
+
+	root_sizer->Add(box_sizer, 1, wxEXPAND);
+	SetSizer(root_sizer);
+	Layout();
+}
+
+TownPalettePanel::~TownPalettePanel() = default;
+
+wxString TownPalettePanel::GetName() const {
+	return "Town";
 }
 
 void TownPalettePanel::SelectFirstBrush() {
-	if (map && !map->towns.empty()) {
-		selected_town_id_ = map->towns.begin()->first;
+	if (map_ && !map_->towns.empty()) {
+		SelectTownById(map_->towns.begin()->first);
 	}
-}
-
-Town* TownPalettePanel::GetSelectedTown() const {
-	if (!map || selected_town_id_ == 0) {
-		return nullptr;
-	}
-	return map->towns.getTown(selected_town_id_);
 }
 
 Brush* TownPalettePanel::GetSelectedBrush() const {
-	// Browsing towns is not drawing. Do not auto-select temple brush or crosshair cursor.
 	return nullptr;
-}
-
-bool TownPalettePanel::SelectBrush(const Brush* whatbrush) {
-	return g_brush_manager.temple_brush && whatbrush == g_brush_manager.temple_brush;
 }
 
 int TownPalettePanel::GetSelectedBrushSize() const {
 	return 0;
 }
 
-wxString TownPalettePanel::GetName() const {
-	return "Town";
+bool TownPalettePanel::SelectBrush(const Brush* whatbrush) {
+	return g_brush_manager.temple_brush && whatbrush == g_brush_manager.temple_brush;
+}
+
+void TownPalettePanel::OnSwitchIn() {
+	PalettePanel::OnSwitchIn();
+	OnUpdate();
+}
+
+void TownPalettePanel::OnSwitchOut() {
+	PalettePanel::OnSwitchOut();
+}
+
+void TownPalettePanel::SetMap(Map* map) {
+	if (map_ != map) {
+		selected_town_id_ = 0;
+		if (g_brush_manager.temple_brush) {
+			g_brush_manager.temple_brush->setTown(nullptr);
+		}
+	}
+	map_ = map;
+	Enable(map_ != nullptr);
+	OnUpdate();
 }
 
 void TownPalettePanel::OnUpdate() {
-	if (!map) {
-		town_table->ClearRows();
-		town_table->Enable(false);
-		if (search_ctrl) {
-			search_ctrl->Enable(false);
-		}
-		add_town_button->Enable(false);
-		edit_town_button->Enable(false);
-		remove_town_button->Enable(false);
-		change_temple_button->Enable(false);
+	if (!map_) {
+		if (canvas_) canvas_->SetItems({});
+		if (add_button_) add_button_->Enable(false);
+		if (edit_button_) edit_button_->Enable(false);
+		if (remove_button_) remove_button_->Enable(false);
+		if (change_temple_button_) change_temple_button_->Enable(false);
 		return;
 	}
 
-	town_table->Enable(true);
-	if (search_ctrl) {
-		search_ctrl->Enable(true);
-	}
-	add_town_button->Enable(true);
-
-	const bool has_selection = (GetSelectedTown() != nullptr);
-	edit_town_button->Enable(has_selection);
-	remove_town_button->Enable(has_selection);
-	change_temple_button->Enable(has_selection);
-
-	const wxString search_query = search_ctrl ? search_ctrl->GetValue().Lower() : wxString();
+	if (add_button_) add_button_->Enable(true);
 
 	// Precompute house counts per town
 	std::unordered_map<uint32_t, size_t> house_counts;
-	for (const auto& [_, house] : map->houses) {
+	for (const auto& [_, house] : map_->houses) {
 		if (house) {
 			house_counts[house->townid]++;
 		}
 	}
 
-	std::vector<TableRow> rows;
-	for (const auto& [id, town] : map->towns) {
-		if (!town) {
-			continue;
-		}
-
+	std::vector<TownItem> items;
+	size_t orig_idx = 0;
+	for (const auto& [id, town] : map_->towns) {
+		if (!town) continue;
 		const Position& pos = town->getTemplePosition();
-		const bool has_pos = (pos != Position() && pos.isValid());
-		const std::string pos_str = has_pos
-			? std::format("{}, {}, {}", pos.x, pos.y, pos.z)
-			: "—";
+		const size_t hc = house_counts[id];
 
-		const std::string town_display = std::format("{}\n{}", town->getName(), pos_str);
-
-		const size_t h_count = house_counts[id];
-
-		const bool search_match = search_query.IsEmpty() ||
-			wxstr(town->getName()).Lower().Contains(search_query) ||
-			wxstr(std::to_string(id)).Contains(search_query) ||
-			wxstr(pos_str).Lower().Contains(search_query);
-
-		if (search_match) {
-			TableRow row;
-			row.id = static_cast<int>(id);
-			row.key = std::to_string(id);
-			row.cells.push_back(std::to_string(id));
-			row.cells.push_back(town_display);
-			row.cells.push_back(std::to_string(h_count));
-			row.client_data = town.get();
-			rows.push_back(std::move(row));
-		}
-	}
-
-	const int sort_col = town_table->GetSortColumn();
-	const bool asc = town_table->IsSortAscending();
-
-	if (sort_col == 0) {
-		// Sort by ID
-		std::stable_sort(rows.begin(), rows.end(), [asc](const TableRow& a, const TableRow& b) {
-			return asc ? (a.id < b.id) : (b.id < a.id);
-		});
-	} else if (sort_col == 1) {
-		// Sort by Name
-		std::stable_sort(rows.begin(), rows.end(), [asc](const TableRow& a, const TableRow& b) {
-			auto* tA = static_cast<const Town*>(a.client_data);
-			auto* tB = static_cast<const Town*>(b.client_data);
-			if (tA && tB) {
-				int cmp = wxStricmp(wxstr(tA->getName()), wxstr(tB->getName()));
-				if (cmp != 0) {
-					return asc ? (cmp < 0) : (cmp > 0);
-				}
-			}
-			return asc ? (a.id < b.id) : (b.id < a.id);
-		});
-	} else if (sort_col == 2) {
-		// Sort by House count
-		std::stable_sort(rows.begin(), rows.end(), [asc](const TableRow& a, const TableRow& b) {
-			size_t cA = 0, cB = 0;
-			try { cA = std::stoull(a.cells[2]); cB = std::stoull(b.cells[2]); } catch (...) {}
-			if (cA != cB) {
-				return asc ? (cA < cB) : (cB < cA);
-			}
-			return asc ? (a.id < b.id) : (b.id < a.id);
+		items.push_back(TownItem {
+			.id = id,
+			.name = town->getName(),
+			.lowercase_name = as_lower_str(town->getName()),
+			.pos = pos,
+			.formatted_pos = (pos != Position() && pos.isValid())
+				? std::format("Temple: [{}, {}, {}]", pos.x, pos.y, pos.z)
+				: "Temple: Unplaced",
+			.house_count = hc,
+			.house_count_str = std::format("{} {}", hc, hc == 1 ? "house" : "houses"),
+			.original_index = orig_idx++
 		});
 	}
 
-	town_table->SetRows(std::move(rows));
-
-	if (selected_town_id_ != 0) {
-		town_table->SelectById(selected_town_id_);
-		if (town_table->GetSelection() == -1) {
-			selected_town_id_ = 0;
-			edit_town_button->Enable(false);
-			remove_town_button->Enable(false);
-			change_temple_button->Enable(false);
-		} else {
-			edit_town_button->Enable(true);
-			remove_town_button->Enable(true);
-			change_temple_button->Enable(true);
-		}
-	} else {
-		edit_town_button->Enable(false);
-		remove_town_button->Enable(false);
-		change_temple_button->Enable(false);
-	}
-}
-
-void TownPalettePanel::OnSearchChange(wxCommandEvent& /*event*/) {
-	OnUpdate();
-}
-
-void TownPalettePanel::OnSelectTown(int /*index*/, const TableRow& row) {
-	auto* town = static_cast<Town*>(row.client_data);
-	if (town) {
-		selected_town_id_ = town->getID();
-		edit_town_button->Enable(true);
-		remove_town_button->Enable(true);
-		change_temple_button->Enable(true);
-	}
-}
-
-void TownPalettePanel::OnActivateTown(int /*index*/, const TableRow& row) {
-	auto* town = static_cast<Town*>(row.client_data);
-	if (town && town->getTemplePosition().isValid()) {
-		g_gui.SetScreenCenterPosition(town->getTemplePosition());
-		g_gui.RefreshView(true);
-	}
-}
-
-void TownPalettePanel::OnSortTowns(int /*column*/, bool /*ascending*/) {
-	OnUpdate();
-}
-
-void TownPalettePanel::OnTownContextMenu(int /*index*/, const TableRow* row, const wxPoint& pos) {
-	if (!map) {
-		return;
+	if (canvas_) {
+		canvas_->SetItems(std::move(items));
+		canvas_->SetSelectedId(selected_town_id_);
 	}
 
-	wxMenu menu;
-	if (row && row->client_data) {
-		auto* town = static_cast<Town*>(row->client_data);
-		selected_town_id_ = town->getID();
-
-		auto* goto_item = menu.Append(PALETTE_TOWN_GOTO_TEMPLE, "Go to Temple");
-		goto_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_LOCATION_ARROW));
-
-		auto* temple_item = menu.Append(PALETTE_TOWN_CHANGE_TEMPLE, "Change Temple Position");
-		temple_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CROSSHAIRS));
-
-		auto* edit_item = menu.Append(PALETTE_TOWN_EDIT, "Edit Town...");
-		edit_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
-
-		menu.AppendSeparator();
-
-		auto* remove_item = menu.Append(PALETTE_TOWN_REMOVE, "Remove Town");
-		remove_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
-		menu.AppendSeparator();
-	}
-
-	auto* add_item = menu.Append(PALETTE_TOWN_ADD, "Add Town...");
-	add_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
-
-	PopupMenu(&menu, pos);
+	const bool has_selection = (GetSelectedTown() != nullptr);
+	if (edit_button_) edit_button_->Enable(has_selection);
+	if (remove_button_) remove_button_->Enable(has_selection);
+	if (change_temple_button_) change_temple_button_->Enable(has_selection);
 }
 
-void TownPalettePanel::OnGoToTemple(wxCommandEvent& /*event*/) {
-	Town* town = GetSelectedTown();
-	if (town && town->getTemplePosition().isValid()) {
-		g_gui.SetScreenCenterPosition(town->getTemplePosition());
-		g_gui.RefreshView(true);
+void TownPalettePanel::SelectTownById(uint32_t town_id) {
+	selected_town_id_ = town_id;
+	const bool has_selection = (GetSelectedTown() != nullptr);
+	if (edit_button_) edit_button_->Enable(has_selection);
+	if (remove_button_) remove_button_->Enable(has_selection);
+	if (change_temple_button_) change_temple_button_->Enable(has_selection);
+}
+
+Town* TownPalettePanel::GetSelectedTown() const {
+	if (!map_ || selected_town_id_ == 0) {
+		return nullptr;
 	}
+	return map_->towns.getTown(selected_town_id_);
 }
 
 bool TownPalettePanel::RunEditTownModal(wxWindow* parent, Map* map, Town* town, bool is_new) {
-	EditTownDialog dlg(parent, map, town, is_new);
-	const uint32_t saved_town_id = town ? town->getID() : 0;
-	while (true) {
-		int ret = dlg.ShowModal();
-		if (ret == EditTownDialog::DIALOG_PICK_TEMPLE) {
-			Position picked_pos;
-			bool picked = false;
+	if (!map || !town) {
+		return false;
+	}
 
+	const uint32_t saved_town_id = town->getID();
+	EditTownDialog dlg(parent, map, town, is_new);
+
+	while (true) {
+		const int ret = dlg.ShowModal();
+		if (ret == EditTownDialog::DIALOG_PICK_TEMPLE) {
+			dlg.Hide();
+
+			bool picked = false;
+			Position picked_pos;
 			if (g_brush_manager.temple_brush) {
 				g_brush_manager.temple_brush->setTown(town);
-
 				wxEventLoop loop;
 				g_brush_manager.temple_brush->setPlacementCallback([&](const Position& pos) {
 					picked_pos = pos;
@@ -385,17 +598,14 @@ bool TownPalettePanel::RunEditTownModal(wxWindow* parent, Map* map, Town* town, 
 				g_gui.SetStatusText(wxstr(std::format("Click on map to pick temple position for town '{}'... [Esc to cancel]", dlg.GetTownName())));
 
 				loop.Run();
-
 				g_brush_manager.temple_brush->clearCallbacks();
 			}
 
-			// Verify map tab and map are still valid
 			MapTab* mapTab = g_gui.GetCurrentMapTab();
 			if (!mapTab || mapTab->GetMap() != map) {
 				return false;
 			}
 
-			// If not a new town, re-resolve town using saved ID to ensure it wasn't deleted
 			if (!is_new) {
 				Town* resolved_town = map->towns.getTown(saved_town_id);
 				if (!resolved_town) {
@@ -413,139 +623,102 @@ bool TownPalettePanel::RunEditTownModal(wxWindow* parent, Map* map, Town* town, 
 	}
 }
 
-void TownPalettePanel::OnClickAddTown(wxCommandEvent& /*event*/) {
-	if (!map) {
-		return;
-	}
+void TownPalettePanel::OnClickAddTown() {
+	if (!map_) return;
 
-	uint32_t next_id = map->towns.getEmptyID();
+	uint32_t next_id = map_->towns.getEmptyID();
 	MapTab* mapTab = g_gui.GetCurrentMapTab();
 	Position default_pos = mapTab ? mapTab->GetScreenCenterPosition() : Position();
 	if (!default_pos.isValid()) {
-		default_pos = Position(map->getWidth() / 2, map->getHeight() / 2, 7);
+		default_pos = Position(map_->getWidth() / 2, map_->getHeight() / 2, 7);
 	}
 
 	auto new_town = std::make_unique<Town>(next_id);
 	new_town->setName(std::format("Town {}", next_id));
 	new_town->setTemplePosition(default_pos);
 
-	Town* town_ptr = new_town.get();
-	if (RunEditTownModal(this, map, town_ptr, true)) {
-		Position temple = new_town->getTemplePosition();
-		if (auto* tile = map->getOrCreateTile(temple)) {
-			if (auto* loc = tile->getLocation()) {
-				loc->increaseTownCount();
-			}
-		}
-		if (temple.isValid()) {
-			map->getChangeTracker().markTileDirty(temple);
-			g_minimap.MarkTileDirty(*map, temple);
-		}
-		selected_town_id_ = new_town->getID();
-		map->towns.addTown(std::move(new_town));
-		map->doChange();
-		g_gui.RefreshPalettes();
-		g_gui.RefreshView();
+	if (RunEditTownModal(this, map_, new_town.get(), true)) {
+		Town* raw_ptr = new_town.get();
+		map_->towns.addTown(std::move(new_town));
+		SelectTownById(raw_ptr->getID());
+		OnUpdate();
 	}
 }
 
-void TownPalettePanel::OnClickEditTown(wxCommandEvent& /*event*/) {
+void TownPalettePanel::OnClickEditTown() {
 	Town* town = GetSelectedTown();
-	if (!town || !map) {
-		return;
-	}
+	if (!map_ || !town) return;
 
-	const uint32_t old_id = town->getID();
-	if (RunEditTownModal(this, map, town, false)) {
-		MapTab* mapTab = g_gui.GetCurrentMapTab();
-		if (mapTab && mapTab->GetMap() == map) {
-			if (map->towns.getTown(town->getID())) {
-				selected_town_id_ = town->getID();
-			} else if (map->towns.getTown(old_id)) {
-				selected_town_id_ = old_id;
-			}
-			OnUpdate();
-		}
+	if (RunEditTownModal(this, map_, town, false)) {
+		OnUpdate();
 	}
 }
 
-void TownPalettePanel::OnClickRemoveTown(wxCommandEvent& /*event*/) {
+void TownPalettePanel::OnClickRemoveTown() {
 	Town* town = GetSelectedTown();
-	if (!town || !map) {
-		return;
-	}
+	if (!map_ || !town) return;
 
-	size_t house_count = 0;
-	std::vector<House*> houses_to_wipe;
-	for (const auto& [_, house] : map->houses) {
-		if (house && house->townid == town->getID()) {
-			houses_to_wipe.push_back(house.get());
-			++house_count;
+	const uint32_t town_id = town->getID();
+	const std::string town_name = town->getName();
+
+	int house_count = 0;
+	for (const auto& [_, house] : map_->houses) {
+		if (house && house->townid == town_id) {
+			house_count++;
 		}
 	}
 
+	wxString confirm_msg = wxstr(std::format("Are you sure you want to delete town '{}' (ID: {})?", town_name, town_id));
 	if (house_count > 0) {
-		TownDeleteDialog del_dlg(this, town->getName(), town->getID(), house_count);
-		if (del_dlg.ShowModal() != wxID_YES) {
-			return;
-		}
+		confirm_msg += wxstr(std::format("\nWarning: {} house(s) belong to this town and will lose their town assignment.", house_count));
+	}
 
-		// User confirmed wiping all associated houses!
-		for (House* h : houses_to_wipe) {
-			for (const auto& pos : h->getTiles()) {
-				map->getChangeTracker().markTileDirty(pos);
-				g_minimap.MarkTileDirty(*map, pos);
-			}
-			if (h->getExit().isValid()) {
-				map->getChangeTracker().markTileDirty(h->getExit());
-				g_minimap.MarkTileDirty(*map, h->getExit());
-			}
-			map->houses.removeHouse(h);
-		}
-	} else {
-		const int ret = DialogUtil::PopupDialog(
-			this,
-			"Confirm Removal",
-			wxstr(std::format("Are you sure you want to remove town '{}' (ID: {})?", town->getName(), town->getID())),
-			wxYES_NO | wxICON_QUESTION | wxCENTER
-		);
-		if (ret != wxID_YES) {
-			return;
+	if (wxMessageBox(confirm_msg, "Delete Town", wxYES_NO | wxICON_WARNING, this) != wxYES) {
+		return;
+	}
+
+	for (auto& [_, house] : map_->houses) {
+		if (house && house->townid == town_id) {
+			house->townid = 0;
 		}
 	}
 
-	// Remove town flag from tile
 	Position temple_pos = town->getTemplePosition();
 	if (temple_pos != Position()) {
-		if (auto* tile = map->getTile(temple_pos)) {
+		if (auto* tile = map_->getTile(temple_pos)) {
 			if (auto* loc = tile->getLocation()) {
 				loc->decreaseTownCount();
 			}
 		}
 		if (temple_pos.isValid()) {
-			map->getChangeTracker().markTileDirty(temple_pos);
-			g_minimap.MarkTileDirty(*map, temple_pos);
+			map_->getChangeTracker().markTileDirty(temple_pos);
+			g_minimap.MarkTileDirty(*map_, temple_pos);
 		}
 	}
 
-	map->towns.removeTown(town);
-	selected_town_id_ = 0;
-	map->doChange();
+	map_->towns.removeTown(town);
+	if (selected_town_id_ == town_id) {
+		selected_town_id_ = 0;
+	}
+	map_->doChange();
+	OnUpdate();
 	g_gui.RefreshPalettes();
 	g_gui.RefreshView();
 }
 
-void TownPalettePanel::OnClickChangeTemple(wxCommandEvent& /*event*/) {
+void TownPalettePanel::OnClickChangeTemple() {
 	Town* town = GetSelectedTown();
-	if (!town) {
-		g_gui.SetStatusText("Please select a town first.");
-		return;
-	}
+	if (!map_ || !town || !g_brush_manager.temple_brush) return;
 
-	if (g_brush_manager.temple_brush) {
-		g_brush_manager.temple_brush->invokeCancelCallback();
-		g_brush_manager.temple_brush->setTown(town);
-		g_gui.SelectBrush(g_brush_manager.temple_brush);
-		g_gui.SetStatusText(wxstr(std::format("Click on map to set temple position for town '{}' (ID: {})... [Esc to cancel]", town->getName(), town->getID())));
+	g_brush_manager.temple_brush->setTown(town);
+	g_gui.SelectBrush(g_brush_manager.temple_brush);
+	g_gui.SetStatusText(wxstr(std::format("Click on the map to set temple position for town '{}' (ID: {})...", town->getName(), town->getID())));
+}
+
+void TownPalettePanel::OnGoToTemple() {
+	Town* town = GetSelectedTown();
+	if (town && town->getTemplePosition().isValid() && g_gui.IsEditorOpen()) {
+		g_gui.SetScreenCenterPosition(town->getTemplePosition());
 	}
 }
+
