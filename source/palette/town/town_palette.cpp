@@ -4,6 +4,7 @@
 #include "ui/gui.h"
 #include "ui/theme.h"
 #include "ui/map_tab.h"
+#include "ui/managers/minimap_manager.h"
 #include "util/image_manager.h"
 #include "util/common.h"
 #include "util/nanovg_canvas.h"
@@ -638,10 +639,23 @@ void TownPalettePanel::OnClickAddTown() {
 	new_town->setTemplePosition(default_pos);
 
 	if (RunEditTownModal(this, map_, new_town.get(), true)) {
+		Position temple = new_town->getTemplePosition();
+		if (auto* tile = map_->getOrCreateTile(temple)) {
+			if (auto* loc = tile->getLocation()) {
+				loc->increaseTownCount();
+			}
+		}
+		if (temple.isValid()) {
+			map_->getChangeTracker().markTileDirty(temple);
+			g_minimap.MarkTileDirty(*map_, temple);
+		}
 		Town* raw_ptr = new_town.get();
 		map_->towns.addTown(std::move(new_town));
+		map_->doChange();
 		SelectTownById(raw_ptr->getID());
 		OnUpdate();
+		g_gui.RefreshPalettes();
+		g_gui.RefreshView();
 	}
 }
 

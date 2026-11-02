@@ -33,8 +33,16 @@ public:
 
 	void SetMap(Map* map);
 
-	void UpdateZone(uint16_t zone_id = 0) { OnUpdate(); }
-	void UpdateTileCounts() { OnUpdate(); }
+	void UpdateZone(uint16_t zone_id = 0) {
+		if (IsShown()) {
+			OnUpdate();
+		}
+	}
+	void UpdateTileCounts() {
+		if (IsShown()) {
+			OnUpdate();
+		}
+	}
 
 	void SelectZoneById(uint16_t zone_id, int cluster = -1);
 	[[nodiscard]] uint16_t GetSelectedZoneId() const { return selected_zone_id_; }

@@ -634,9 +634,14 @@ void HousePalette::OnUpdate() {
 	if (town_choice_) {
 		const int cur_sel = town_choice_->GetSelection();
 		uint32_t saved_town_id = 0;
-		if (cur_sel > 0 && cur_sel < static_cast<int>(town_choice_->GetCount()) - 1) {
-			auto* t = static_cast<Town*>(town_choice_->GetClientData(cur_sel));
-			if (t) saved_town_id = t->getID();
+		bool saved_no_town = false;
+		if (cur_sel != wxNOT_FOUND && town_choice_->GetCount() > 0) {
+			if (cur_sel == static_cast<int>(town_choice_->GetCount()) - 1) {
+				saved_no_town = true;
+			} else if (cur_sel > 0) {
+				auto* t = static_cast<Town*>(town_choice_->GetClientData(cur_sel));
+				if (t) saved_town_id = t->getID();
+			}
 		}
 
 		town_choice_->Clear();
@@ -650,8 +655,22 @@ void HousePalette::OnUpdate() {
 				reselect_idx = idx;
 			}
 		}
-		town_choice_->Append("No Town");
+		const int no_town_idx = town_choice_->Append("No Town");
+		if (saved_no_town) {
+			reselect_idx = no_town_idx;
+		}
 		town_choice_->SetSelection(reselect_idx);
+
+		if (canvas_) {
+			if (reselect_idx == 0) {
+				canvas_->SetTownFilter(0, false, true);
+			} else if (reselect_idx == no_town_idx) {
+				canvas_->SetTownFilter(0, true, false);
+			} else {
+				auto* town = static_cast<Town*>(town_choice_->GetClientData(reselect_idx));
+				canvas_->SetTownFilter(town ? town->getID() : 0, false, false);
+			}
+		}
 	}
 
 	std::vector<HouseItem> items;
