@@ -25,7 +25,6 @@ enum class SearchCategory : uint32_t {
 	Teleport    = 1 << 4,
 	Creature    = 1 << 5, // Monsters & NPCs
 	Pickupable  = 1 << 6,
-	AllItems    = 1 << 7,
 	Everything  = UniqueID | ActionID | Container | Writeable | Teleport
 };
 

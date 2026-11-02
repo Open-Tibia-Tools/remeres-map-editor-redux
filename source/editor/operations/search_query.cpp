@@ -74,9 +74,8 @@ void ExtractItem(
 	SearchResultKind kind = SearchResultKind::GenericItem;
 
 	const bool is_specific = (query.specific_item_id > 0) || (!query.item_id_set.empty());
-	const bool match_any_item = is_specific || HasCategory(query.categories, SearchCategory::AllItems);
 
-	if (match_any_item) {
+	if (is_specific) {
 		is_match = true;
 		if (container != nullptr) {
 			kind = SearchResultKind::Container;
