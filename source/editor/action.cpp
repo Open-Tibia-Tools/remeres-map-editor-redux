@@ -439,9 +439,6 @@ void Action::undo(DirtyList* dirty_list) {
 							House* house = editor.map.houses.getHouse(newtile->getHouseID());
 							if (house) {
 								house->removeTile(newtile);
-							} else {
-								// Set tile house to 0, house has been removed
-								newtile->setHouse(nullptr);
 							}
 
 							house = editor.map.houses.getHouse(oldtile->getHouseID());
