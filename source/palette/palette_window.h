@@ -68,6 +68,8 @@ public:
 	// Updates the content of the palette (eg. houses, creatures)
 	virtual void OnUpdate(Map* map);
 
+	[[nodiscard]] wxChoicebook* GetChoicebook() const noexcept { return choicebook; }
+
 	// wxWidgets Event Handlers
 	void OnSwitchingPage(wxChoicebookEvent& event);
 	void OnPageChanged(wxChoicebookEvent& event);

@@ -161,6 +161,9 @@ void LayoutManager::LoadPerspective() {
 			}
 
 			wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(palette);
+			if (!info.IsOk()) {
+				continue;
+			}
 			g_gui.aui_manager->LoadPaneInfo(wxstr(name), info);
 
 			if (info.IsFloatable()) {
@@ -285,31 +288,37 @@ void LayoutManager::LoadPerspective() {
 
 	if (g_gui.tile_properties_panel) {
 		wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.tile_properties_panel);
-		const wxString layout = wxstr(g_settings.getString(Config::TILE_PROPERTIES_LAYOUT));
-		if (!layout.empty()) {
-			g_gui.aui_manager->LoadPaneInfo(layout, info);
-			EnsurePaneOnScreen(info);
+		if (info.IsOk()) {
+			const wxString layout = wxstr(g_settings.getString(Config::TILE_PROPERTIES_LAYOUT));
+			if (!layout.empty()) {
+				g_gui.aui_manager->LoadPaneInfo(layout, info);
+				EnsurePaneOnScreen(info);
+			}
 		}
 	}
 
 	if (g_gui.brush_items_window) {
 		wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.brush_items_window);
-		const wxString layout = wxstr(g_settings.getString(Config::BRUSH_ITEMS_LAYOUT));
-		if (!layout.empty()) {
-			g_gui.aui_manager->LoadPaneInfo(layout, info);
-			EnsurePaneOnScreen(info);
-		}
-		if (info.IsShown()) {
-			g_gui.brush_items_window->SetActiveBrush(g_gui.GetCurrentBrush());
+		if (info.IsOk()) {
+			const wxString layout = wxstr(g_settings.getString(Config::BRUSH_ITEMS_LAYOUT));
+			if (!layout.empty()) {
+				g_gui.aui_manager->LoadPaneInfo(layout, info);
+				EnsurePaneOnScreen(info);
+			}
+			if (info.IsShown()) {
+				g_gui.brush_items_window->SetActiveBrush(g_gui.GetCurrentBrush());
+			}
 		}
 	}
 
 	if (LuaScriptsWindow* scripts = LuaScriptsWindow::Get()) {
 		wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(scripts);
-		const wxString layout = wxstr(g_settings.getString(Config::SCRIPTS_MANAGER_LAYOUT));
-		if (!layout.empty()) {
-			g_gui.aui_manager->LoadPaneInfo(layout, info);
-			EnsurePaneOnScreen(info);
+		if (info.IsOk()) {
+			const wxString layout = wxstr(g_settings.getString(Config::SCRIPTS_MANAGER_LAYOUT));
+			if (!layout.empty()) {
+				g_gui.aui_manager->LoadPaneInfo(layout, info);
+				EnsurePaneOnScreen(info);
+			}
 		}
 	}
 

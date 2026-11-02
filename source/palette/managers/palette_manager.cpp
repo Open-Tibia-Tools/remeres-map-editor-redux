@@ -159,19 +159,24 @@ bool PaletteManager::SelectTilesetInPalette(std::string_view paletteName, std::s
 void PaletteManager::DestroyPalettes() {
 	spdlog::info("PaletteManager::DestroyPalettes called - destroying {} palettes", palettes.size());
 	spdlog::default_logger()->flush();
-	for (auto palette : palettes) {
-		spdlog::info("PaletteManager::DestroyPalettes - detaching and destroying a palette");
-		spdlog::default_logger()->flush();
-		g_gui.aui_manager->DetachPane(palette);
-		palette->Destroy();
+	const std::vector<PaletteWindow*> palettes_to_destroy(palettes.begin(), palettes.end());
+	palettes.clear();
+	for (auto* palette : palettes_to_destroy) {
+		if (palette && g_gui.aui_manager) {
+			spdlog::info("PaletteManager::DestroyPalettes - detaching and destroying a palette");
+			spdlog::default_logger()->flush();
+			g_gui.aui_manager->DetachPane(palette);
+			palette->Destroy();
+		}
 	}
 	spdlog::info("PaletteManager::DestroyPalettes - clearing palettes list");
 	spdlog::default_logger()->flush();
-	palettes.clear();
 
 	spdlog::info("PaletteManager::DestroyPalettes - updating aui_manager");
 	spdlog::default_logger()->flush();
-	g_gui.aui_manager->Update();
+	if (g_gui.aui_manager) {
+		g_gui.aui_manager->Update();
+	}
 
 	spdlog::info("PaletteManager::DestroyPalettes finished");
 	spdlog::default_logger()->flush();

@@ -456,7 +456,7 @@ void BrushPalettePanel::AttachPaletteChoice(wxChoice* paletteChoice) {
 }
 
 void BrushPalettePanel::DetachPaletteChoice() {
-	if (!m_attachedPaletteChoice || !choicebook) {
+	if (!m_attachedPaletteChoice) {
 		return;
 	}
 	m_attachedPaletteChoice->SetMaxSize(wxDefaultSize);
@@ -465,9 +465,18 @@ void BrushPalettePanel::DetachPaletteChoice() {
 		::SendMessage(m_attachedPaletteChoice->GetHWND(), CB_SETDROPPEDWIDTH, 0, 0);
 	}
 #endif
-	if (auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(choicebook->GetControlSizer())) {
-		ctrlSizer->Detach(m_attachedPaletteChoice);
-		ctrlSizer->Layout();
+	if (choicebook) {
+		if (auto* ctrlSizer = dynamic_cast<wxBoxSizer*>(choicebook->GetControlSizer())) {
+			ctrlSizer->Detach(m_attachedPaletteChoice);
+			ctrlSizer->Layout();
+		}
+	}
+	if (auto* parentPalette = GetParentPalette()) {
+		if (auto* parentCb = parentPalette->GetChoicebook()) {
+			if (m_attachedPaletteChoice->GetParent() != parentCb) {
+				m_attachedPaletteChoice->Reparent(parentCb);
+			}
+		}
 	}
 	m_attachedPaletteChoice = nullptr;
 }

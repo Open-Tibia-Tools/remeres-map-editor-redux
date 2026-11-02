@@ -167,6 +167,8 @@ PaletteWindow::~PaletteWindow() {
 	spdlog::info("PaletteWindow destructor started");
 	spdlog::default_logger()->flush();
 
+	DetachPaletteChoiceFromAnySizer();
+
 	if (g_gui.house_palette == house_palette) {
 		g_gui.house_palette = nullptr;
 	}
@@ -496,6 +498,9 @@ void PaletteWindow::DetachPaletteChoiceFromAnySizer() {
 	if (choicebook) {
 		if (auto* ctrlSizer = choicebook->GetControlSizer()) {
 			ctrlSizer->Detach(m_paletteChoice);
+		}
+		if (m_paletteChoice->GetParent() != choicebook) {
+			m_paletteChoice->Reparent(choicebook);
 		}
 	}
 	if (auto* parent = m_paletteChoice->GetParent()) {

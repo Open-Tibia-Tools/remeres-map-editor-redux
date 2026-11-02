@@ -683,6 +683,9 @@ void DrawOperations::punchGroundToFloorBelow(Editor& editor, const PositionVecto
 	// 2. Erase ground on current floor (z)
 	PositionVector erased_on_current_floor;
 	for (const auto& pos : tilestodraw) {
+		if (!pos.isValid()) {
+			continue;
+		}
 		Tile* tile = editor.map.getTile(pos);
 		if (!tile || !tile->hasGround()) {
 			continue;
@@ -737,11 +740,15 @@ void DrawOperations::punchGroundToFloorBelow(Editor& editor, const PositionVecto
 				const int nx = pos.x + dx;
 				const int ny = pos.y + dy;
 				const int nz = pos.z;
+				const Position neighbor_pos(nx, ny, nz);
+				if (!neighbor_pos.isValid()) {
+					continue;
+				}
 				const int64_t key = borderKey(nx, ny, nz);
 				if (!border_seen.insert(key).second) {
 					continue;
 				}
-				auto* location = editor.map.createTileL(Position(nx, ny, nz));
+				auto* location = editor.map.createTileL(neighbor_pos);
 				auto* t = location->get();
 				if (t) {
 					std::unique_ptr<Tile> new_t = TileOperations::deepCopy(t, editor.map);
@@ -758,11 +765,14 @@ void DrawOperations::punchGroundToFloorBelow(Editor& editor, const PositionVecto
 		}
 
 		for (const auto& pos : tilestoborder) {
+			if (!pos.isValid()) {
+				continue;
+			}
 			const int64_t key = borderKey(pos.x, pos.y, pos.z);
 			if (!border_seen.insert(key).second) {
 				continue;
 			}
-			auto* location = editor.map.createTileL(Position(pos.x, pos.y, pos.z));
+			auto* location = editor.map.createTileL(pos);
 			auto* t = location->get();
 			if (t) {
 				std::unique_ptr<Tile> new_t = TileOperations::deepCopy(t, editor.map);

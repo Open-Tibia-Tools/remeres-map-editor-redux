@@ -247,6 +247,7 @@ wxSize VirtualBrushGrid::DoGetBestClientSize() const {
 
 void VirtualBrushGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 	if (m_pendingScrollToSelected) {
+		m_pendingScrollToSelected = false;
 		// First paint after the page became visible: finish the deferred scroll
 		// outside of painting and draw again.
 		CallAfter([this]() {
