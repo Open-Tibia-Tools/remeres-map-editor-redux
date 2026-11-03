@@ -21,6 +21,26 @@
 #include "ui/properties/depot_properties_window.h"
 #include "ui/properties/item_properties_window.h"
 
+wxDialog* DialogHelper::CreateItemPropertiesDialog(wxWindow* parent, const Map* map, const Tile* tile, Item* item, wxPoint pos) {
+	if (!item) {
+		return nullptr;
+	}
+
+	if (dynamic_cast<Container*>(item)) {
+		return new ContainerPropertiesWindow(parent, map, tile, item, pos);
+	} else if (dynamic_cast<Podium*>(item)) {
+		return new PodiumPropertiesWindow(parent, map, tile, item, pos);
+	} else if (item->canHoldText() || item->canHoldDescription()) {
+		return new WritablePropertiesWindow(parent, map, tile, item, pos);
+	} else if (item->isSplash() || item->isFluidContainer()) {
+		return new SplashPropertiesWindow(parent, map, tile, item, pos);
+	} else if (dynamic_cast<Depot*>(item)) {
+		return new DepotPropertiesWindow(parent, map, tile, item, pos);
+	} else {
+		return new ItemPropertiesWindow(parent, map, tile, item, pos);
+	}
+}
+
 void DialogHelper::OpenProperties(Editor& editor, Tile* tile) {
 	if (!tile) {
 		return;
@@ -49,19 +69,7 @@ void DialogHelper::OpenProperties(Editor& editor, Tile* tile) {
 		}
 
 		if (item) {
-			if (dynamic_cast<Container*>(item)) {
-				w = new ContainerPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-			} else if (dynamic_cast<Podium*>(item)) {
-				w = new PodiumPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-			} else if (item->canHoldText() || item->canHoldDescription()) {
-				w = new WritablePropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-			} else if (item->isSplash() || item->isFluidContainer()) {
-				w = new SplashPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-			} else if (dynamic_cast<Depot*>(item)) {
-				w = new DepotPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-			} else {
-				w = new ItemPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-			}
+			w = CreateItemPropertiesDialog(g_gui.root, &editor.map, new_tile.get(), item);
 		}
 	}
 
