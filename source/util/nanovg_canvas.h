@@ -11,7 +11,6 @@
 #include "rendering/core/graphics.h"
 
 struct NVGcontext;
-class Item;
 
 /**
  * @class NanoVGCanvas
@@ -106,12 +105,6 @@ public:
 	 * @brief Gets or creates a cached NanoVG image for a Sprite (GameSprite or generic).
 	 */
 	int GetOrCreateSpriteTexture(NVGcontext* vg, Sprite* sprite);
-
-	/**
-	 * @brief Gets or creates a cached NanoVG image for an item: its sprite,
-	 * and for a fluid container or splash the colour of its liquid.
-	 */
-	int GetOrCreateItemTexture(NVGcontext* vg, const Item& item);
 
 	/**
 	 * @brief Gets or creates a cached NanoVG image for an EditorIcon.

@@ -68,7 +68,6 @@ struct TooltipData {
 	uint16_t clientId = 0;
 	std::string itemName;
 	uint16_t count = 0;
-	uint16_t subtype = 0; // a fluid container's or splash's liquid
 	std::string subtitle;
 
 	// Indicator badge (for houses, zones, waypoints, towns)
@@ -174,7 +173,6 @@ struct TooltipData {
 		clientId = 0;
 		itemName.clear();
 		count = 0;
-		subtype = 0;
 		subtitle.clear();
 		badgeType = rme::rendering::TileIndicatorType::None;
 
@@ -266,9 +264,8 @@ protected:
 	std::unordered_map<uint32_t, int> spriteCache; // itemId -> nvg image handle
 	NVGcontext* lastContext = nullptr;
 
-	// Helper to get or load sprite image; a fluid container or splash shows
-	// the liquid `subtype`
-	int getSpriteImage(NVGcontext* vg, uint16_t itemId, uint16_t subtype = 0);
+	// Helper to get or load sprite image
+	int getSpriteImage(NVGcontext* vg, uint16_t itemId);
 
 	// Helper to get header border color based on category and tooltip data
 	NVGcolor getHeaderColor(const TooltipData& tooltip) const;

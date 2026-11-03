@@ -81,13 +81,19 @@ void BrowseTileListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t n)
 			static_cast<float>(rect.y),
 			static_cast<float>(icon_size)
 		);
-	} else if (const int tex = GetOrCreateItemTexture(vg, *item); tex > 0) {
-		int icon_size = 32;
-		NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
-		nvgBeginPath(vg);
-		nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
-		nvgFillPaint(vg, imgPaint);
-		nvgFill(vg);
+	} else {
+		Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());
+		if (sprite) {
+			int tex = GetOrCreateSpriteTexture(vg, sprite);
+			if (tex > 0) {
+				int icon_size = 32;
+				NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
+				nvgBeginPath(vg);
+				nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
+				nvgFillPaint(vg, imgPaint);
+				nvgFill(vg);
+			}
+		}
 	}
 
 	if (IsSelected(n)) {

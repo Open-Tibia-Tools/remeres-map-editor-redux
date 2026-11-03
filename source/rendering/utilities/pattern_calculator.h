@@ -9,8 +9,6 @@
 #include <bit>
 #include <cstdint>
 #include <optional>
-#include <tuple>
-#include <utility>
 
 struct SpritePatterns {
 	int x = 0;
@@ -33,20 +31,6 @@ private:
 	}
 
 public:
-	// The pattern (x, y) that shows `liquid` in a fluid container or splash.
-	static std::pair<int, int> LiquidPattern(const GameSprite& spr, uint16_t liquid) {
-		const uint8_t index = Item::ServerFluidToSpritePattern(liquid);
-		int x = 0;
-		int y = 0;
-		if (spr.pattern_x > 0) {
-			x = index % spr.pattern_x;
-			if (spr.pattern_y > 0) {
-				y = (index / spr.pattern_x) % spr.pattern_y;
-			}
-		}
-		return { x, y };
-	}
-
 	static SpritePatterns Calculate(const GameSprite* spr, const ItemDefinitionView& it, const Item* item, const Tile* tile, const Position& pos, std::optional<int64_t> elapsed_time = std::nullopt) {
 		SpritePatterns patterns;
 
@@ -67,8 +51,12 @@ public:
 		if (it.isSplash() || it.isFluidContainer()) {
 			const uint16_t fluid = item ? item->getSubtype() : 0;
 			patterns.subtype = fluid;
+			const uint8_t pattern_index = Item::ServerFluidToSpritePattern(fluid);
 			if (spr->pattern_x > 0) {
-				std::tie(patterns.x, patterns.y) = LiquidPattern(*spr, fluid);
+				patterns.x = pattern_index % spr->pattern_x;
+				if (spr->pattern_y > 0) {
+					patterns.y = (pattern_index / spr->pattern_x) % spr->pattern_y;
+				}
 			}
 
 		} else if (it.hasFlag(ItemFlag::IsHangable)) {

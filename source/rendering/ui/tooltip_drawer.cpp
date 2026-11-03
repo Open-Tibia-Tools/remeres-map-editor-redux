@@ -179,12 +179,10 @@ NVGcolor TooltipDrawer::getHeaderColor(const TooltipData& tooltip) const {
 	return ThemeNvColor(role);
 }
 
-int TooltipDrawer::getSpriteImage(NVGcontext* vg, uint16_t itemId, uint16_t subtype) {
+int TooltipDrawer::getSpriteImage(NVGcontext* vg, uint16_t itemId) {
 	if (itemId == 0) {
 		return 0;
 	}
-	const auto definition = g_item_definitions.get(itemId);
-	const bool shows_liquid = definition && (definition.isFluidContainer() || definition.isSplash());
 
 	// Detect context change and clear cache
 	if (vg != lastContext) {
@@ -199,15 +197,13 @@ int TooltipDrawer::getSpriteImage(NVGcontext* vg, uint16_t itemId, uint16_t subt
 		lastContext = vg;
 	}
 
-	// Fluid containers and splashes are cached per liquid.
-	const uint32_t key = shows_liquid ? (static_cast<uint32_t>(subtype + 1) << 16) | itemId : itemId;
-	auto itCache = spriteCache.find(key);
+	auto itCache = spriteCache.find(itemId);
 	if (itCache != spriteCache.end()) {
 		return itCache->second;
 	}
 
-	int image = shows_liquid ? NvgUtils::CreateItemTexture(vg, itemId, subtype) : NvgUtils::CreateItemTexture(vg, itemId);
-	spriteCache[key] = image;
+	int image = NvgUtils::CreateItemTexture(vg, itemId);
+	spriteCache[itemId] = image;
 	return image;
 }
 
@@ -816,7 +812,7 @@ void TooltipDrawer::drawSunkenSlot(NVGcontext* vg, float sx, float sy, float siz
 			rme::rendering::drawServerMarkerBadge(vg, *kind, sx, sy, size);
 		}
 	} else if (tooltip.itemId > 0) {
-		int img = getSpriteImage(vg, tooltip.itemId, tooltip.subtype);
+		int img = getSpriteImage(vg, tooltip.itemId);
 		if (img > 0) {
 			int imgW = 0;
 			int imgH = 0;
@@ -1024,7 +1020,7 @@ void TooltipDrawer::drawContainerGrid(NVGcontext* vg, float x, float y, const To
 			nvgText(vg, itemX + 16.0f, itemY + 16.0f, summaryBuf, nullptr);
 		} else if (idx < layout.numContainerItems) {
 			const auto& item = tooltip.containerItems[idx];
-			int img = getSpriteImage(vg, item.id, item.subtype);
+			int img = getSpriteImage(vg, item.id);
 			if (img > 0) {
 				int imgW = 0;
 				int imgH = 0;

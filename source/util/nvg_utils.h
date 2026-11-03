@@ -2,14 +2,12 @@
 #define RME_UTIL_NVG_UTILS_H_
 
 #include "item_definitions/core/item_definition_store.h"
-#include "rendering/utilities/pattern_calculator.h"
 #include "ui/gui.h"
 #include <nanovg.h>
 #include <vector>
 #include <algorithm>
 #include <memory>
 #include <optional>
-#include <utility>
 
 namespace NvgUtils {
 
@@ -20,10 +18,9 @@ namespace NvgUtils {
 		return nvgRGBA(c.Red(), c.Green(), c.Blue(), c.Alpha());
 	}
 
-	// Creates a composite RGBA buffer from a GameSprite, of `pattern` (x, y)
-	// when given (a liquid's colour), else of a pattern picked for display.
+	// Creates a composite RGBA buffer from a GameSprite.
 	// Returns a unique_ptr to the buffer, or nullptr on failure.
-	inline std::unique_ptr<uint8_t[]> CreateCompositeRGBA(GameSprite& gs, int& outW, int& outH, std::optional<bool> is_stackable_opt = std::nullopt, std::optional<std::pair<int, int>> pattern = std::nullopt) {
+	inline std::unique_ptr<uint8_t[]> CreateCompositeRGBA(GameSprite& gs, int& outW, int& outH, std::optional<bool> is_stackable_opt = std::nullopt) {
 		bool is_stackable = false;
 		if (is_stackable_opt.has_value()) {
 			is_stackable = *is_stackable_opt;
@@ -39,8 +36,8 @@ namespace NvgUtils {
 			pattern_x = 1;
 		}
 
-		auto buildComposite = [&](int pat_x, int pattern_y) -> std::unique_ptr<uint8_t[]> {
-			const auto metrics = gs.getPlainLayoutMetrics(-1, pat_x, pattern_y, 0, 0);
+		auto buildComposite = [&](int pat_x) -> std::unique_ptr<uint8_t[]> {
+			const auto metrics = gs.getPlainLayoutMetrics(-1, pat_x, 0, 0, 0);
 			outW = metrics.total_width;
 			outH = metrics.total_height;
 
@@ -51,6 +48,7 @@ namespace NvgUtils {
 			size_t bufferSize = static_cast<size_t>(outW) * outH * 4;
 			auto composite = std::make_unique<uint8_t[]>(bufferSize);
 			std::fill(composite.get(), composite.get() + bufferSize, 0);
+			int pattern_y = 0;
 			int pattern_z = 0;
 			int frame = 0;
 
@@ -122,33 +120,25 @@ namespace NvgUtils {
 			return composite;
 		};
 
-		if (pattern) {
-			return buildComposite(pattern->first, pattern->second);
-		}
-		auto result = buildComposite(pattern_x, 0);
+		auto result = buildComposite(pattern_x);
 		if (!result && pattern_x != 0) {
-			result = buildComposite(0, 0);
+			result = buildComposite(0);
 		}
 		return result;
 	}
 
-	// Generates RGBA pixel data for a given item ID, a fluid container or
-	// splash showing `liquid` (an editor liquid subtype) when given.
+	// Generates RGBA pixel data for a given item ID.
 	// Returns a texture ID created in the given NanoVG context.
 	// Returns 0 if generation fails.
-	inline int CreateItemTexture(NVGcontext* vg, uint16_t id, std::optional<uint16_t> liquid = std::nullopt) {
+	inline int CreateItemTexture(NVGcontext* vg, uint16_t id) {
 		const auto it = g_item_definitions.get(id);
 		GameSprite* gs = it ? dynamic_cast<GameSprite*>(g_gui.gfx.getSprite(it.clientId())) : nullptr;
 		if (!gs) {
 			return 0;
 		}
 
-		std::optional<std::pair<int, int>> pattern;
-		if (liquid && (it.isFluidContainer() || it.isSplash())) {
-			pattern = PatternCalculator::LiquidPattern(*gs, *liquid);
-		}
 		int w, h;
-		auto composite = CreateCompositeRGBA(*gs, w, h, it.hasFlag(ItemFlag::Stackable), pattern);
+		auto composite = CreateCompositeRGBA(*gs, w, h, it.hasFlag(ItemFlag::Stackable));
 		if (!composite) {
 			return 0;
 		}

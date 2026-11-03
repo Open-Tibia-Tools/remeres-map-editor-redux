@@ -106,7 +106,6 @@ namespace {
 		data.clientId = static_cast<uint16_t>(item->getClientID());
 		data.itemName = itemName;
 		data.count = count;
-		data.subtype = item->getSubtype();
 		data.actionId = action;
 		data.uniqueId = unique;
 		data.doorId = doorId;
