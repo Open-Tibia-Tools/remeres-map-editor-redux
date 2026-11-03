@@ -10,6 +10,9 @@
 #include "game/item.h"
 #include "ui/properties/object_properties_base.h"
 
+#include <memory>
+#include <vector>
+
 class ContainerGridCanvas;
 
 class ContainerPropertiesWindow : public ObjectPropertiesWindowBase {
@@ -33,6 +36,9 @@ protected:
 	wxSpinCtrl* unique_id_field;
 
 	ContainerGridCanvas* grid_canvas;
+
+	std::vector<std::unique_ptr<Item>> backup_contents;
+	bool m_committed{false};
 };
 
 #endif

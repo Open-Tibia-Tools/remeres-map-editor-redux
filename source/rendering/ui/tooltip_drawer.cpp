@@ -591,11 +591,8 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 	}
 
 	if (capacity > 0 || lm.numContainerItems > 0) {
-		lm.containerCols = std::min(4, lm.totalContainerSlots);
-		if (lm.totalContainerSlots > 4) lm.containerCols = 5;
-		if (lm.totalContainerSlots > 10) lm.containerCols = 6;
-		if (lm.totalContainerSlots > 15) lm.containerCols = 8;
-		if (lm.containerCols == 0 && lm.totalContainerSlots > 0) lm.containerCols = 1;
+		constexpr int kMaxCols = 5;
+		lm.containerCols = std::clamp(lm.totalContainerSlots, 1, kMaxCols);
 
 		if (lm.containerCols > 0) {
 			lm.containerRows = (lm.totalContainerSlots + lm.containerCols - 1) / lm.containerCols;
@@ -609,7 +606,8 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 		minTargetWidth = std::max(minTargetWidth, 220.0f);
 	}
 	float gridWidth = (lm.containerCols > 0) ? (lm.containerCols * lm.gridSlotSize + padding * 2.0f) : 0.0f;
-	lm.width = std::clamp(std::max({ minTargetWidth, headerContentWidth, actualFieldsMaxWidth, gridWidth }), minWidth, maxWidth);
+	float effectiveMaxWidth = std::max(maxWidth, gridWidth);
+	lm.width = std::clamp(std::max({ minTargetWidth, headerContentWidth, actualFieldsMaxWidth, gridWidth }), minWidth, effectiveMaxWidth);
 
 	// 5. Measure Readable Text Box against exact well inner width
 	lm.textBoxHeight = 0.0f;

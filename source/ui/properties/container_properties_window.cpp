@@ -8,6 +8,7 @@
 
 #include "game/complexitem.h"
 #include "ui/dialog_util.h"
+#include "ui/dialog_helper.h"
 #include "ui/properties/property_validator.h"
 #include "util/image_manager.h"
 #include "app/application.h"
@@ -23,6 +24,13 @@ ContainerPropertiesWindow::ContainerPropertiesWindow(wxWindow* win_parent, const
 	ASSERT(edit_item);
 	Container* container = dynamic_cast<Container*>(edit_item);
 	ASSERT(container);
+
+	backup_contents.reserve(container->getVector().size());
+	for (const auto& item_ptr : container->getVector()) {
+		if (item_ptr) {
+			backup_contents.push_back(item_ptr->deepCopy());
+		}
+	}
 
 	Bind(wxEVT_BUTTON, &ContainerPropertiesWindow::OnClickOK, this, wxID_OK);
 	Bind(wxEVT_BUTTON, &ContainerPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
@@ -90,7 +98,11 @@ ContainerPropertiesWindow::ContainerPropertiesWindow(wxWindow* win_parent, const
 }
 
 ContainerPropertiesWindow::~ContainerPropertiesWindow() {
-	//
+	if (!m_committed && edit_item) {
+		if (Container* container = dynamic_cast<Container*>(edit_item)) {
+			container->getVector() = std::move(backup_contents);
+		}
+	}
 }
 
 void ContainerPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
@@ -104,10 +116,18 @@ void ContainerPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	edit_item->setUniqueID(new_uid);
 	edit_item->setActionID(new_aid);
 	srv_fields.apply(*edit_item);
+	m_committed = true;
+	backup_contents.clear();
 	EndModal(1);
 }
 
 void ContainerPropertiesWindow::OnClickCancel(wxCommandEvent& WXUNUSED(event)) {
+	if (!m_committed && edit_item) {
+		if (Container* container = dynamic_cast<Container*>(edit_item)) {
+			container->getVector() = std::move(backup_contents);
+		}
+	}
+	m_committed = true;
 	EndModal(0);
 }
 
@@ -178,6 +198,10 @@ void ContainerPropertiesWindow::OnAddItem(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 
+	if (container->getVector().size() >= container->getVolume()) {
+		return;
+	}
+
 	FindItemDialog dialog(this, "Select Item");
 	if (dialog.ShowModal() == wxID_OK) {
 		uint16_t item_id = dialog.getResultID();
@@ -216,7 +240,10 @@ void ContainerPropertiesWindow::OnEditItem(wxCommandEvent& WXUNUSED(event)) {
 	Item* sub_item = container->getItem(sub_item_index);
 	wxPoint newDialogAt = GetPosition() + FromDIP(wxPoint(20, 20));
 
-	wxDialog* d = new ItemPropertiesWindow(this, edit_map, nullptr, sub_item, newDialogAt);
+	wxDialog* d = DialogHelper::CreateItemPropertiesDialog(this, edit_map, edit_tile, sub_item, newDialogAt);
+	if (!d) {
+		return;
+	}
 
 	d->ShowModal();
 	d->Destroy();
