@@ -254,6 +254,18 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 			addField("Door ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipDoorId);
 		}
 
+		if (tooltip.actionId > 0) {
+			start = storage.size();
+			std::format_to(std::back_inserter(storage), "{}", tooltip.actionId);
+			addField("Action ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipActionId);
+		}
+
+		if (tooltip.uniqueId > 0) {
+			start = storage.size();
+			std::format_to(std::back_inserter(storage), "{}", tooltip.uniqueId);
+			addField("Unique ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipUniqueId);
+		}
+
 		start = storage.size();
 		std::format_to(std::back_inserter(storage), "{} sqm", tooltip.houseSize);
 		addField("Tile Count", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipDoorId);
@@ -263,6 +275,16 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 			AppendNumberWithCommas(tooltip.houseRent, storage);
 			storage.append(" gp");
 			addField("Rent", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTextValue);
+		}
+
+		if (tooltip.destination.x > 0) {
+			start = storage.size();
+			std::format_to(std::back_inserter(storage), "{}, {}, {}", tooltip.destination.x, tooltip.destination.y, tooltip.destination.z);
+			addField("Destination", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTeleport);
+		}
+
+		if (!tooltip.description.empty()) {
+			addField("Description", tooltip.description, Theme::Role::TooltipBodyText);
 		}
 	} else if (tooltip.category == TooltipCategory::ZONE) {
 		size_t start = storage.size();
@@ -474,9 +496,11 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 		nvgFontSize(vg, 11.0f);
 		nvgFontFace(vg, "sans");
 		const float wellInnerWidth = (lm.width - padding * 2.0f) - 14.0f;
+		constexpr size_t kMaxTextLines = 12;
+		bool textTruncated = false;
 
 		size_t pStart = 0;
-		while (pStart < sanitized_text.size()) {
+		while (pStart < sanitized_text.size() && !textTruncated) {
 			size_t pEnd = sanitized_text.find('\n', pStart);
 			if (pEnd == std::string::npos) {
 				pEnd = sanitized_text.size();
@@ -484,7 +508,11 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 
 			if (pStart == pEnd) {
 				// Empty line / paragraph break
-				scratch_text_lines.push_back(std::string_view{});
+				if (scratch_text_lines.size() < kMaxTextLines) {
+					scratch_text_lines.push_back(std::string_view{});
+				} else {
+					textTruncated = true;
+				}
 			} else {
 				const char* segStart = sanitized_text.data() + pStart;
 				const char* segEnd = sanitized_text.data() + pEnd;
@@ -494,45 +522,74 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 				float segWidth = bounds[2] - bounds[0];
 
 				if (segWidth <= wellInnerWidth) {
-					scratch_text_lines.push_back(std::string_view(segStart, segEnd - segStart));
+					if (scratch_text_lines.size() < kMaxTextLines) {
+						scratch_text_lines.push_back(std::string_view(segStart, segEnd - segStart));
+					} else {
+						textTruncated = true;
+					}
 				} else {
 					NVGtextRow rows[16];
 					const char* cur = segStart;
-					while (cur < segEnd) {
-						int nRows = nvgTextBreakLines(vg, cur, segEnd, wellInnerWidth, rows, 16);
-						if (nRows == 0) {
+					while (cur < segEnd && !textTruncated) {
+					int nRows = nvgTextBreakLines(vg, cur, segEnd, wellInnerWidth, rows, 16);
+					if (nRows == 0) {
+						break;
+					}
+					for (int r = 0; r < nRows; ++r) {
+						if (scratch_text_lines.size() >= kMaxTextLines) {
+							textTruncated = true;
 							break;
 						}
-						for (int r = 0; r < nRows; ++r) {
-							// If row width still exceeds wellInnerWidth (e.g. unbroken string like "asdasdasd..."),
-							// break character by character
-							if (rows[r].width > wellInnerWidth) {
-								const char* cStart = rows[r].start;
-								const char* cEnd = rows[r].end;
-								const char* charCur = cStart;
-								const char* lineStart = charCur;
-								while (charCur < cEnd) {
-									float cBounds[4];
-									nvgTextBounds(vg, 0, 0, lineStart, charCur + 1, cBounds);
-									if (cBounds[2] - cBounds[0] > wellInnerWidth && charCur > lineStart) {
-										scratch_text_lines.push_back(std::string_view(lineStart, charCur - lineStart));
-										lineStart = charCur;
+						// If row width still exceeds wellInnerWidth (e.g. unbroken string like "asdasdasd..."),
+						// break character by character (advancing by full UTF-8 codepoints)
+						if (rows[r].width > wellInnerWidth) {
+							const char* cStart = rows[r].start;
+							const char* cEnd = rows[r].end;
+							const char* charCur = cStart;
+							const char* lineStart = charCur;
+							while (charCur < cEnd && !textTruncated) {
+								// Advance charCur to end of current UTF-8 code point
+								const char* nextChar = charCur + 1;
+								while (nextChar < cEnd && (static_cast<unsigned char>(*nextChar) & 0xC0) == 0x80) {
+									++nextChar;
+								}
+
+								float cBounds[4];
+								nvgTextBounds(vg, 0, 0, lineStart, nextChar, cBounds);
+								if (cBounds[2] - cBounds[0] > wellInnerWidth && charCur > lineStart) {
+									scratch_text_lines.push_back(std::string_view(lineStart, charCur - lineStart));
+									lineStart = charCur;
+									if (scratch_text_lines.size() >= kMaxTextLines) {
+										textTruncated = true;
+										break;
 									}
-									charCur++;
 								}
-								if (lineStart < cEnd) {
-									scratch_text_lines.push_back(std::string_view(lineStart, cEnd - lineStart));
-								}
-							} else {
-								scratch_text_lines.push_back(std::string_view(rows[r].start, rows[r].end - rows[r].start));
+								charCur = nextChar;
 							}
-							cur = rows[r].next;
+							if (!textTruncated && lineStart < cEnd) {
+								if (scratch_text_lines.size() < kMaxTextLines) {
+									scratch_text_lines.push_back(std::string_view(lineStart, cEnd - lineStart));
+								} else {
+									textTruncated = true;
+								}
+							}
+						} else {
+							scratch_text_lines.push_back(std::string_view(rows[r].start, rows[r].end - rows[r].start));
 						}
+						cur = rows[r].next;
 					}
 				}
 			}
+		}
 
+			if (textTruncated) {
+				break;
+			}
 			pStart = pEnd + 1;
+		}
+
+		if (textTruncated) {
+			scratch_text_lines.push_back(std::string_view("[...]"));
 		}
 
 		if (scratch_text_lines.empty()) {
@@ -888,7 +945,8 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 
 		// Far-zoom LOD: when zoomed out very far (zoom > 3.0f), cull dense item tooltips
 		// so street signs/blackboards don't flood whole towns. Macro entities (houses, towns, waypoints) stay visible.
-		if (view.zoom > 3.0f && tooltip.category == TooltipCategory::ITEM) {
+		if (view.zoom > 3.0f && tooltip.category != TooltipCategory::HOUSE &&
+		    tooltip.category != TooltipCategory::ZONE && tooltip.category != TooltipCategory::WAYPOINT) {
 			continue;
 		}
 
