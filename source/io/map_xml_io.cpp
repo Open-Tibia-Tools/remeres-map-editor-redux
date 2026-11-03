@@ -10,12 +10,10 @@
 #include "game/creatures.h"
 #include "game/creature.h"
 #include "game/spawn.h"
-#include "game/srv_homes.h"
 #include "game/town.h"
 #include "game/house.h"
 #include "app/settings.h"
 #include "ui/gui.h"
-#include "ui/properties/srv_attribute_fields.h"
 
 #include <spdlog/spdlog.h>
 #include <algorithm>
@@ -153,41 +151,6 @@ namespace {
 		}
 	}
 
-	// Sector map homes (game/srv_homes.h) have no spawns. When such a map is
-	// saved as OTBM, each creature with a home radius that no spawn took gets
-	// a spawn of its own, centered on it, with that radius as far as the
-	// editor's spawns go. Only the client that opens sector maps places homes.
-	template <typename OnHome>
-	void forEachUnsavedHome(const Map& map, OnHome&& on_home) {
-		if (!rme::srv::isSrvClient()) {
-			return;
-		}
-		for (int z = 0; z < MAP_LAYERS; ++z) {
-			map.visitLeaves(0, 0, MAP_MAX_WIDTH, MAP_MAX_HEIGHT, [&](const MapNode* node, int, int) {
-				const Floor* floor = node->getFloor(z);
-				if (!floor) {
-					return;
-				}
-				for (int index = 0; index < SpatialHashGrid::TILES_PER_NODE; ++index) {
-					const Tile* tile = floor->locs[index].get();
-					if (tile && tile->creature && tile->creature->getHomeRadius() && !tile->creature->isSaved()) {
-						on_home(*tile, *tile->creature);
-					}
-				}
-			});
-		}
-	}
-
-	void appendHomeSpawn(pugi::xml_node spawnNode, const Tile& tile, const Creature& creature, bool isOtbm5) {
-		const Position& position = tile.getPosition();
-		spawnNode.append_attribute("centerx") = position.x;
-		spawnNode.append_attribute("centery") = position.y;
-		spawnNode.append_attribute("centerz") = position.z;
-		spawnNode.append_attribute("radius") = rme::srv::spawnSizeFor(*creature.getHomeRadius(), g_settings.getInteger(Config::MAX_SPAWN_RADIUS));
-		const SpawnAlternative entry { creature.getName(), creature.getSpawnTime(), creature.getDirection(), creature.getWeight() };
-		appendCreatureNode(spawnNode, creature.isNpc() ? "npc" : "monster", 0, 0, position.z, entry, isOtbm5);
-	}
-
 	bool shouldAbortWriting(const MapXMLIO::CancelCheck& shouldCancel, size_t& processed) {
 		if (!shouldCancel || ++processed % kCancelPollStride != 0) {
 			return false;
@@ -278,15 +241,6 @@ namespace {
 				rootNode.remove_child(spawnNode);
 			}
 		}
-
-		forEachUnsavedHome(map, [&](const Tile& tile, Creature& creature) {
-			if (isOtbm5 && creature.isNpc() != (format.filter == CreatureFilter::Npcs)) {
-				return;
-			}
-			appendHomeSpawn(rootNode.append_child(format.spawnTag), tile, creature, isOtbm5);
-			creature.save();
-			creatureList.push_back(&creature);
-		});
 
 		if (report) {
 			report(spawnCount, spawnCount);
@@ -402,16 +356,6 @@ namespace {
 				npcRoot.remove_child(npcNode);
 			}
 		}
-
-		forEachUnsavedHome(map, [&](const Tile& tile, Creature& creature) {
-			if (creature.isNpc()) {
-				appendHomeSpawn(npcRoot.append_child(NPCS_SPAWN_FILE.spawnTag), tile, creature, true);
-			} else {
-				appendHomeSpawn(monsterRoot.append_child(MONSTERS_SPAWN_FILE.spawnTag), tile, creature, true);
-			}
-			creature.save();
-			creatureList.push_back(&creature);
-		});
 
 		if (report) {
 			report(spawnCount, spawnCount);

@@ -18,6 +18,7 @@
 #include "app/settings.h"
 #include "app/managers/version_manager.h"
 #include "ui/gui.h"
+#include "ui/properties/srv_attribute_fields.h"
 #include "lua/lua_script_manager.h"
 
 #include <fstream>
@@ -70,6 +71,11 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 	}
 	if (IOMapSec::isSectorTarget(wxstr(savefile))) {
 		return saveSectorMap(editor, wxstr(savefile), showdialog);
+	}
+	// Sector maps and OTBM maps do not mix: the client that reads objects.srv saves sector files only.
+	if (rme::srv::isSrvClient()) {
+		DialogUtil::PopupDialog("Error", "Maps opened with a client that reads its items from objects.srv are saved as sector maps only.", wxOK);
+		return false;
 	}
 
 	if (!filename.GetFullPath().empty()) {

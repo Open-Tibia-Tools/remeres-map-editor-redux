@@ -8,6 +8,7 @@
 #include "app/preferences.h"
 #include "ui/managers/recent_files_manager.h"
 #include "util/image_manager.h"
+#include "ui/properties/srv_attribute_fields.h"
 
 void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<std::string, std::unique_ptr<MenuBar::Action>>& actions) {
 	using namespace MenuBar;
@@ -228,7 +229,7 @@ void MenuBarActionManager::UpdateState(MainMenuBar* mb) {
 	mb->EnableItem(CLOSE, is_local);
 	mb->EnableItem(SAVE, is_host);
 	mb->EnableItem(SAVE_AS, is_host);
-	mb->EnableItem(SAVE_AS_GZIP, is_host);
+	mb->EnableItem(SAVE_AS_GZIP, is_host && !rme::srv::isSrvClient()); // sector maps save as sector files only
 	mb->EnableItem(GENERATE_MAP, false);
 
 	mb->EnableItem(IMPORT_MAP, is_local);

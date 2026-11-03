@@ -23,6 +23,7 @@
 #include "live/live_client.h"
 #include "io/iomap_otbm.h"
 #include "io/iomap_sec.h"
+#include "ui/properties/srv_attribute_fields.h"
 #include "map/map_initial_position_resolver.h"
 
 #include <chrono>
@@ -288,6 +289,8 @@ void EditorManager::SaveMap() {
 
 	if (GetCurrentMap().hasFile()) {
 		SaveCurrentMap(FileName(""), true);
+	} else if (rme::srv::isSrvClient()) {
+		SaveMapAs();
 	} else {
 		wxString wildcard = MAP_SAVE_FILE_WILDCARD;
 		wxFileDialog dialog(g_gui.root, "Save...", wxEmptyString, wxEmptyString, wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
@@ -303,22 +306,19 @@ void EditorManager::SaveMapAs() {
 		return;
 	}
 
-	constexpr int kSectorFilter = 2;
-	wxString wildcard = "OpenTibia Binary Map (*.otbm)|*.otbm|GZIP Compressed Map (*.otbm)|*.otbm|Sector map, saves into the chosen folder (*.sec)|*.sec";
+	// Sector maps and OTBM maps do not mix: a map opened with the client that
+	// reads objects.srv saves as sector files only, any other map as OTBM only.
+	const bool sector_map = rme::srv::isSrvClient();
+	const wxString wildcard = sector_map ? "Sector map, saves into the chosen folder (*.sec)|*.sec" : "OpenTibia Binary Map (*.otbm)|*.otbm|GZIP Compressed Map (*.otbm)|*.otbm";
 	wxFileDialog dialog(g_gui.root, "Save As...", "", "", wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-	if (IOMapSec::isSectorTarget(wxstr(GetCurrentMap().getFilename()))) {
-		dialog.SetFilterIndex(kSectorFilter);
-	} else {
+	if (!sector_map) {
 		dialog.SetFilterIndex(GetCurrentMap().getCompression() == OtbmCompression::Gzip ? 1 : 0);
 	}
 
 	if (dialog.ShowModal() == wxID_OK) {
-		const bool sector_map = dialog.GetFilterIndex() == kSectorFilter || IOMapSec::isSectorTarget(dialog.GetPath());
 		const OtbmCompression prev_compression = GetCurrentMap().getCompression();
-		if (dialog.GetFilterIndex() == 1) {
-			GetCurrentMap().setCompression(OtbmCompression::Gzip);
-		} else if (dialog.GetFilterIndex() == 0) {
-			GetCurrentMap().setCompression(OtbmCompression::None);
+		if (!sector_map) {
+			GetCurrentMap().setCompression(dialog.GetFilterIndex() == 1 ? OtbmCompression::Gzip : OtbmCompression::None);
 		}
 
 		// A sector map is saved into the folder of the chosen name.
@@ -338,7 +338,7 @@ void EditorManager::SaveMapAs() {
 }
 
 void EditorManager::SaveMapAsGzip() {
-	if (!IsEditorOpen()) {
+	if (!IsEditorOpen() || rme::srv::isSrvClient()) {
 		return;
 	}
 
@@ -400,6 +400,10 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 			if (!target) {
 				throw std::runtime_error(std::format("Unsupported client version (OtbId: {})", static_cast<int>(ver.client)));
 			}
+		}
+		// Sector maps and OTBM maps do not mix (see SaveMapAs).
+		if (!sector_map && target->getItemDefinitionMode() == ItemDefinitionMode::DatSrv) {
+			throw std::runtime_error(std::format("{} reads its items from objects.srv and opens sector maps only. OTBM maps are opened with a client version that has items.otb.", target->getName()));
 		}
 
 		// A sector map brings its own item types: the objects.srv of its server.
