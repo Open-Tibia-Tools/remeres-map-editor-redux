@@ -399,12 +399,12 @@ BorderType Item::getBorderAlignment() const {
 std::string_view Item::LiquidID2Name(uint16_t id) {
 	switch (id) {
 		case LIQUID_NONE:         return "None";
-		case LIQUID_WATER:
-		case LIQUID_WATER2:       return "Water";
+		case LIQUID_WATER:        return "Water";
+		case LIQUID_WATER2:       return "Water (Alternative)";
 		case LIQUID_BLOOD:        return "Blood";
 		case LIQUID_BEER:         return "Beer";
-		case LIQUID_SLIME:
-		case LIQUID_SLIME2:       return "Slime";
+		case LIQUID_SLIME:        return "Slime";
+		case LIQUID_SLIME2:       return "Slime (Alternative)";
 		case LIQUID_LEMONADE:     return "Lemonade";
 		case LIQUID_MILK:         return "Milk";
 		case LIQUID_MANAFLUID:    return "Manafluid";

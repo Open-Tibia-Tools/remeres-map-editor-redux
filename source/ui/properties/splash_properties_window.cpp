@@ -46,12 +46,12 @@ SplashPropertiesWindow::SplashPropertiesWindow(wxWindow* parent, const Map* map,
 		splash_type_field->Append(wxstr(Item::LiquidID2Name(LIQUID_NONE)), reinterpret_cast<void*>(static_cast<intptr_t>(LIQUID_NONE)));
 	}
 
-	for (SplashType splashType : kValidSplashTypes) {
-		splash_type_field->Append(wxstr(Item::LiquidID2Name(splashType)), reinterpret_cast<void*>(static_cast<intptr_t>(splashType)));
+	for (const auto& entry : kFluidDropdownItems) {
+		splash_type_field->Append(wxstr(entry.label), reinterpret_cast<void*>(static_cast<intptr_t>(entry.subtype)));
 	}
 
+	int selection = wxNOT_FOUND;
 	if (item->getSubtype()) {
-		int selection = wxNOT_FOUND;
 		for (unsigned int i = 0; i < splash_type_field->GetCount(); ++i) {
 			if (reinterpret_cast<intptr_t>(splash_type_field->GetClientData(i)) == static_cast<intptr_t>(item->getSubtype())) {
 				selection = static_cast<int>(i);
@@ -62,11 +62,31 @@ SplashPropertiesWindow::SplashPropertiesWindow(wxWindow* parent, const Map* map,
 			splash_type_field->SetSelection(selection);
 		} else {
 			splash_type_field->Append(wxstr(std::format("Unknown ({})", item->getSubtype())), reinterpret_cast<void*>(static_cast<intptr_t>(item->getSubtype())));
-			splash_type_field->SetSelection(static_cast<int>(splash_type_field->GetCount()) - 1);
+			selection = static_cast<int>(splash_type_field->GetCount()) - 1;
+			splash_type_field->SetSelection(selection);
 		}
 	} else {
-		splash_type_field->SetSelection(0);
+		selection = 0;
+		if (reinterpret_cast<intptr_t>(splash_type_field->GetClientData(0)) < 0) {
+			for (unsigned int i = 0; i < splash_type_field->GetCount(); ++i) {
+				if (reinterpret_cast<intptr_t>(splash_type_field->GetClientData(i)) >= 0) {
+					selection = static_cast<int>(i);
+					break;
+				}
+			}
+		}
+		splash_type_field->SetSelection(selection);
 	}
+	last_valid_selection = selection;
+
+	splash_type_field->Bind(wxEVT_CHOICE, [this](wxCommandEvent& event) {
+		int sel = splash_type_field->GetSelection();
+		if (sel != wxNOT_FOUND && reinterpret_cast<intptr_t>(splash_type_field->GetClientData(sel)) < 0) {
+			splash_type_field->SetSelection(last_valid_selection);
+		} else if (sel != wxNOT_FOUND) {
+			last_valid_selection = sel;
+		}
+	});
 
 	subsizer->Add(splash_type_field, wxSizerFlags(1).Expand());
 
@@ -114,8 +134,10 @@ void SplashPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 
 		const int selection = splash_type_field->GetSelection();
 		if (selection != wxNOT_FOUND) {
-			int new_type = static_cast<int>(reinterpret_cast<intptr_t>(splash_type_field->GetClientData(selection)));
-			edit_item->setSubtype(new_type);
+			intptr_t data = reinterpret_cast<intptr_t>(splash_type_field->GetClientData(selection));
+			if (data >= 0) {
+				edit_item->setSubtype(static_cast<int>(data));
+			}
 		}
 		edit_item->setUniqueID(new_uid);
 		edit_item->setActionID(new_aid);

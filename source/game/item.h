@@ -75,30 +75,85 @@ enum SplashType {
 	LIQUID_MEAD = 43
 };
 
-inline constexpr std::array<SplashType, 22> kValidSplashTypes = {
-	LIQUID_WATER,
-	LIQUID_BLOOD,
-	LIQUID_BEER,
-	LIQUID_SLIME,
-	LIQUID_LEMONADE,
-	LIQUID_MILK,
-	LIQUID_MANAFLUID,
-	LIQUID_INK,
-	LIQUID_WATER2,
-	LIQUID_LIFEFLUID,
-	LIQUID_OIL,
-	LIQUID_SLIME2,
-	LIQUID_URINE,
-	LIQUID_COCONUT_MILK,
-	LIQUID_WINE,
-	LIQUID_MUD,
-	LIQUID_FRUIT_JUICE,
-	LIQUID_LAVA,
-	LIQUID_RUM,
-	LIQUID_SWAMP,
-	LIQUID_TEA,
-	LIQUID_MEAD
+inline constexpr int kFluidSeparator = -1;
+
+struct FluidDropdownItem {
+	std::string_view label;
+	int subtype; // kFluidSeparator (-1) for category separator, >= 0 for fluid subtype
 };
+
+inline constexpr std::array<SplashType, 22> kValidSplashTypes = {
+	// Blue
+	LIQUID_WATER,
+	LIQUID_WATER2,
+	// Red
+	LIQUID_BLOOD,
+	LIQUID_LIFEFLUID,
+	LIQUID_LAVA,
+	// Brown
+	LIQUID_BEER,
+	LIQUID_MEAD,
+	LIQUID_MUD,
+	LIQUID_OIL,
+	LIQUID_RUM,
+	LIQUID_TEA,
+	// Green
+	LIQUID_SLIME,
+	LIQUID_SLIME2,
+	LIQUID_SWAMP,
+	// Yellow
+	LIQUID_FRUIT_JUICE,
+	LIQUID_LEMONADE,
+	LIQUID_URINE,
+	// White
+	LIQUID_COCONUT_MILK,
+	LIQUID_MILK,
+	// Purple
+	LIQUID_MANAFLUID,
+	LIQUID_WINE,
+	// Other
+	LIQUID_INK,
+};
+
+inline constexpr std::array<FluidDropdownItem, 30> kFluidDropdownItems = {{
+	{ "── Blue ──", kFluidSeparator },
+	{ "Water", LIQUID_WATER },
+	{ "Water (Alternative)", LIQUID_WATER2 },
+
+	{ "── Red ──", kFluidSeparator },
+	{ "Blood", LIQUID_BLOOD },
+	{ "Lifefluid", LIQUID_LIFEFLUID },
+	{ "Lava", LIQUID_LAVA },
+
+	{ "── Brown ──", kFluidSeparator },
+	{ "Beer", LIQUID_BEER },
+	{ "Mead", LIQUID_MEAD },
+	{ "Mud", LIQUID_MUD },
+	{ "Oil", LIQUID_OIL },
+	{ "Rum", LIQUID_RUM },
+	{ "Tea", LIQUID_TEA },
+
+	{ "── Green ──", kFluidSeparator },
+	{ "Slime", LIQUID_SLIME },
+	{ "Slime (Alternative)", LIQUID_SLIME2 },
+	{ "Swamp", LIQUID_SWAMP },
+
+	{ "── Yellow ──", kFluidSeparator },
+	{ "Fruit Juice", LIQUID_FRUIT_JUICE },
+	{ "Lemonade", LIQUID_LEMONADE },
+	{ "Urine", LIQUID_URINE },
+
+	{ "── White ──", kFluidSeparator },
+	{ "Coconut Milk", LIQUID_COCONUT_MILK },
+	{ "Milk", LIQUID_MILK },
+
+	{ "── Purple ──", kFluidSeparator },
+	{ "Manafluid", LIQUID_MANAFLUID },
+	{ "Wine", LIQUID_WINE },
+
+	{ "── Other ──", kFluidSeparator },
+	{ "Ink", LIQUID_INK },
+}};
 
 class Item : public ItemAttributes {
 public:

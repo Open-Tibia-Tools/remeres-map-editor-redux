@@ -91,12 +91,12 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 				if (item->isFluidContainer()) {
 					splash_type_choice->Append(wxstr(Item::LiquidID2Name(LIQUID_NONE)), (void*)(intptr_t)(LIQUID_NONE));
 				}
-				for (SplashType splashType : kValidSplashTypes) {
-					splash_type_choice->Append(wxstr(Item::LiquidID2Name(splashType)), (void*)(intptr_t)(splashType));
+				for (const auto& entry : kFluidDropdownItems) {
+					splash_type_choice->Append(wxstr(entry.label), reinterpret_cast<void*>(static_cast<intptr_t>(entry.subtype)));
 				}
 
+				int selection = wxNOT_FOUND;
 				if (item->getSubtype()) {
-					int selection = wxNOT_FOUND;
 					for (unsigned int i = 0; i < splash_type_choice->GetCount(); ++i) {
 						if (reinterpret_cast<intptr_t>(splash_type_choice->GetClientData(i)) == static_cast<intptr_t>(item->getSubtype())) {
 							selection = static_cast<int>(i);
@@ -107,11 +107,22 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 						splash_type_choice->SetSelection(selection);
 					} else {
 						splash_type_choice->Append(wxstr(std::format("Unknown ({})", item->getSubtype())), reinterpret_cast<void*>(static_cast<intptr_t>(item->getSubtype())));
-						splash_type_choice->SetSelection(static_cast<int>(splash_type_choice->GetCount()) - 1);
+						selection = static_cast<int>(splash_type_choice->GetCount()) - 1;
+						splash_type_choice->SetSelection(selection);
 					}
 				} else {
-					splash_type_choice->SetSelection(0);
+					selection = 0;
+					if (reinterpret_cast<intptr_t>(splash_type_choice->GetClientData(0)) < 0) {
+						for (unsigned int i = 0; i < splash_type_choice->GetCount(); ++i) {
+							if (reinterpret_cast<intptr_t>(splash_type_choice->GetClientData(i)) >= 0) {
+								selection = static_cast<int>(i);
+								break;
+							}
+						}
+					}
+					splash_type_choice->SetSelection(selection);
 				}
+				last_valid_splash_selection = selection;
 			} else {
 				if (item->isCharged()) {
 					count_sizer->GetStaticBox()->SetLabelText("Charges");
@@ -224,6 +235,17 @@ void ItemPropertyPanel::OnCountChange(wxSpinEvent& event) {
 }
 
 void ItemPropertyPanel::OnSplashTypeChange(wxCommandEvent& event) {
+	int sel = splash_type_choice->GetSelection();
+	if (sel == wxNOT_FOUND) {
+		return;
+	}
+	intptr_t data = reinterpret_cast<intptr_t>(splash_type_choice->GetClientData(sel));
+	if (data < 0) {
+		splash_type_choice->SetSelection(last_valid_splash_selection);
+		return;
+	}
+	last_valid_splash_selection = sel;
+
 	if (current_item && current_tile && current_map) {
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {
@@ -234,16 +256,13 @@ void ItemPropertyPanel::OnSplashTypeChange(wxCommandEvent& event) {
 		int index = current_tile->getIndexOf(current_item);
 		if (index != -1) {
 			Item* new_item = new_tile->getItemAt(index);
-			int sel = splash_type_choice->GetSelection();
-			if (sel != wxNOT_FOUND) {
-				int new_type = (int)(intptr_t)splash_type_choice->GetClientData(sel);
-				new_item->setSubtype(new_type);
+			int new_type = static_cast<int>(data);
+			new_item->setSubtype(new_type);
 
-				std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
-				action->addChange(std::make_unique<Change>(std::move(new_tile)));
-				editor->addAction(std::move(action));
-				g_gui.RefreshView();
-			}
+			std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
+			action->addChange(std::make_unique<Change>(std::move(new_tile)));
+			editor->addAction(std::move(action));
+			g_gui.RefreshView();
 		}
 	}
 }
