@@ -51,9 +51,18 @@ SplashPropertiesWindow::SplashPropertiesWindow(wxWindow* parent, const Map* map,
 	}
 
 	if (item->getSubtype()) {
-		const std::string_view text = Item::LiquidID2Name(item->getSubtype());
-		if (!splash_type_field->SetStringSelection(wxstr(text))) {
-			splash_type_field->SetSelection(0);
+		int selection = wxNOT_FOUND;
+		for (unsigned int i = 0; i < splash_type_field->GetCount(); ++i) {
+			if (reinterpret_cast<intptr_t>(splash_type_field->GetClientData(i)) == static_cast<intptr_t>(item->getSubtype())) {
+				selection = static_cast<int>(i);
+				break;
+			}
+		}
+		if (selection != wxNOT_FOUND) {
+			splash_type_field->SetSelection(selection);
+		} else {
+			splash_type_field->Append(wxstr(std::format("Unknown ({})", item->getSubtype())), reinterpret_cast<void*>(static_cast<intptr_t>(item->getSubtype())));
+			splash_type_field->SetSelection(static_cast<int>(splash_type_field->GetCount()) - 1);
 		}
 	} else {
 		splash_type_field->SetSelection(0);
@@ -98,13 +107,14 @@ void SplashPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	if (edit_item) {
 		int new_uid = unique_id_field->GetValue();
 		int new_aid = action_id_field->GetValue();
-		int new_type = static_cast<int>(reinterpret_cast<intptr_t>(splash_type_field->GetClientData(splash_type_field->GetSelection())));
 
 		if (!PropertyValidator::validateItemProperties(this, new_uid, new_aid, 0)) {
 			return;
 		}
 
-		if (splash_type_field->GetSelection() != wxNOT_FOUND) {
+		const int selection = splash_type_field->GetSelection();
+		if (selection != wxNOT_FOUND) {
+			int new_type = static_cast<int>(reinterpret_cast<intptr_t>(splash_type_field->GetClientData(selection)));
 			edit_item->setSubtype(new_type);
 		}
 		edit_item->setUniqueID(new_uid);

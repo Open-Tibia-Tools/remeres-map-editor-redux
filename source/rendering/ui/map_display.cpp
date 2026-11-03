@@ -596,7 +596,6 @@ void MapCanvas::OnMouseLeftClick(wxMouseEvent& event) {
 
 void MapCanvas::OnMouseLeftDoubleClick(wxMouseEvent& event) {
 	if (!g_gui.IsSelectionMode()) {
-		OnMouseActionClick(event);
 		return;
 	}
 	const MainMapPixelPosition click = ScreenToMapPixel(event.GetX(), event.GetY());

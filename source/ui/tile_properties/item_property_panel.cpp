@@ -96,9 +96,18 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 				}
 
 				if (item->getSubtype()) {
-					const std::string_view text = Item::LiquidID2Name(item->getSubtype());
-					if (!splash_type_choice->SetStringSelection(wxstr(text))) {
-						splash_type_choice->SetSelection(0);
+					int selection = wxNOT_FOUND;
+					for (unsigned int i = 0; i < splash_type_choice->GetCount(); ++i) {
+						if (reinterpret_cast<intptr_t>(splash_type_choice->GetClientData(i)) == static_cast<intptr_t>(item->getSubtype())) {
+							selection = static_cast<int>(i);
+							break;
+						}
+					}
+					if (selection != wxNOT_FOUND) {
+						splash_type_choice->SetSelection(selection);
+					} else {
+						splash_type_choice->Append(wxstr(std::format("Unknown ({})", item->getSubtype())), reinterpret_cast<void*>(static_cast<intptr_t>(item->getSubtype())));
+						splash_type_choice->SetSelection(static_cast<int>(splash_type_choice->GetCount()) - 1);
 					}
 				} else {
 					splash_type_choice->SetSelection(0);
