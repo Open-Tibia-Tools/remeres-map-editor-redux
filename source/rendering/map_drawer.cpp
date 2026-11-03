@@ -329,9 +329,9 @@ void MapDrawer::CollectOverlays() {
 	const bool opt_zones = !options.ingame && options.show_zones;
 	const bool opt_hooks = !options.ingame && options.show_hooks;
 	const bool opt_doors = !options.ingame && options.highlight_locked_doors;
-	const bool opt_server_markers = !options.ingame && options.show_server_markers && editor.map.server_markers;
+	const uint8_t opt_server_markers = (!options.ingame && editor.map.server_markers) ? options.server_marker_kinds : 0;
 
-	const bool need_tooltips = opt_tooltips || opt_houses || opt_waypoints || opt_towns || opt_zones || opt_server_markers;
+	const bool need_tooltips = opt_tooltips || opt_houses || opt_waypoints || opt_towns || opt_zones || opt_server_markers != 0;
 
 	if (!need_tooltips && !opt_doors && !opt_hooks) {
 		if (overlay_cache.valid) {
@@ -379,7 +379,7 @@ void MapDrawer::CollectOverlays() {
 	overlay_cache.show_zones = opt_zones;
 	overlay_cache.show_hooks = opt_hooks;
 	overlay_cache.highlight_locked_doors = opt_doors;
-	overlay_cache.show_server_markers = opt_server_markers;
+	overlay_cache.server_marker_kinds = opt_server_markers;
 	overlay_cache.map_generation = current_generation;
 	overlay_cache.valid = true;
 }
@@ -415,7 +415,7 @@ bool MapDrawer::hasOverlays() {
 	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
 		return true;
 	}
-	if (!options.ingame && can_read_labels && options.show_server_markers && editor.map.server_markers && !editor.map.server_markers->empty()) {
+	if (!options.ingame && can_read_labels && options.server_marker_kinds != 0 && editor.map.server_markers && !editor.map.server_markers->empty()) {
 		return true;
 	}
 	if (!tooltip_drawer.empty() && can_read_labels) {

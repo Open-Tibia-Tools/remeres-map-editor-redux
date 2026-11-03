@@ -22,6 +22,16 @@ namespace rme::srv {
 		return "Script";
 	}
 
+	std::optional<MarkerKind> Marker::shownKind(MarkerKindSet shown) const {
+		for (size_t i = 0; i < kMarkerKindCount; ++i) {
+			const auto candidate = static_cast<MarkerKind>(i);
+			if ((kinds & shown & kindBit(candidate)) != 0) {
+				return candidate;
+			}
+		}
+		return std::nullopt;
+	}
+
 	Marker& ServerMarkers::at(const Position& position) {
 		Marker& marker = pending_[position];
 		marker.position = position;
@@ -57,6 +67,9 @@ namespace rme::srv {
 			}
 			std::ranges::stable_sort(marker.lines, {}, &MarkerLine::kind);
 			marker.kind = marker.lines.front().kind;
+			for (const MarkerLine& line : marker.lines) {
+				marker.kinds |= kindBit(line.kind);
+			}
 			markers_.push_back(std::move(marker));
 		}
 		pending_.clear();

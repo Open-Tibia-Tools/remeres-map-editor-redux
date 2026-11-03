@@ -377,12 +377,12 @@ void MapOverlayCollector::Collect(
 		}
 	}
 
-	// 7. Server markers of sector maps (triggered by options.show_server_markers); they need no tile
-	if (need_tooltips && !options.ingame && options.show_server_markers && map.server_markers) {
+	// 7. Server markers of sector maps (triggered per kind by options.server_marker_kinds); they need no tile
+	if (need_tooltips && !options.ingame && options.server_marker_kinds != 0 && map.server_markers) {
 		for (const rme::srv::Marker& marker : map.server_markers->onFloor(map_z)) {
 			const Position& pos = marker.position;
 			if (pos.x >= bounds.start_x && pos.x <= bounds.end_x && pos.y >= bounds.start_y && pos.y <= bounds.end_y) {
-				out_tooltip_drawer->addServerMarkerTooltip(marker);
+				out_tooltip_drawer->addServerMarkerTooltip(marker, options.server_marker_kinds);
 			}
 		}
 	}

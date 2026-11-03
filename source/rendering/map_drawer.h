@@ -180,7 +180,7 @@ private:
 		bool show_zones = false;
 		bool show_hooks = false;
 		bool highlight_locked_doors = false;
-		bool show_server_markers = false;
+		uint8_t server_marker_kinds = 0;
 		uint64_t map_generation = 0;
 		bool valid = false;
 
@@ -195,7 +195,7 @@ private:
 			bool opt_zones,
 			bool opt_hooks,
 			bool opt_doors,
-			bool opt_server_markers,
+			uint8_t opt_server_markers,
 			uint64_t cur_gen
 		) const noexcept {
 			if (!valid) {
@@ -207,7 +207,7 @@ private:
 			if (show_tooltips != opt_tooltips || show_houses != opt_houses ||
 			    show_waypoints != opt_waypoints || show_towns != opt_towns ||
 			    show_zones != opt_zones || show_hooks != opt_hooks || highlight_locked_doors != opt_doors ||
-			    show_server_markers != opt_server_markers) {
+			    server_marker_kinds != opt_server_markers) {
 				return false;
 			}
 			if (map_generation != cur_gen) {

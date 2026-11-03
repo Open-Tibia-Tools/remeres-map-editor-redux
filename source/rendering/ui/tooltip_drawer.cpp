@@ -29,26 +29,13 @@
 #include "item_definitions/core/item_definition_store.h"
 #include "util/nvg_utils.h"
 #include "game/srv_markers.h"
+#include "rendering/drawers/overlays/server_marker_drawer.h"
 #include <algorithm>
 #include <iterator>
 
 namespace {
 	// Server markers can name dozens of rules; the tooltip lists the first ones.
 	constexpr size_t kMaxServerMarkerLines = 8;
-
-	// Where a marker kind comes from, shown as the tooltip's subtitle.
-	std::string_view ServerMarkerSource(rme::srv::MarkerKind kind) {
-		switch (kind) {
-			case rme::srv::MarkerKind::Start:
-				return "map.dat";
-			case rme::srv::MarkerKind::Raid:
-				return "Raid (mon/*.evt)";
-			case rme::srv::MarkerKind::Depot:
-			case rme::srv::MarkerKind::Script:
-				break;
-		}
-		return "moveuse.dat";
-	}
 
 	inline NVGcolor ThemeNvColor(Theme::Role role, uint8_t alpha = 255) {
 		const wxColour c = Theme::Get(role);
@@ -142,13 +129,18 @@ void TooltipDrawer::addWaypointTooltip(Position pos, std::string_view name) {
 	commitTooltip();
 }
 
-void TooltipDrawer::addServerMarkerTooltip(const rme::srv::Marker& marker) {
+void TooltipDrawer::addServerMarkerTooltip(const rme::srv::Marker& marker, uint8_t shown) {
+	const auto kind = marker.shownKind(shown);
+	if (!kind) {
+		return;
+	}
 	TooltipData& data = requestTooltipData();
 	data.pos = marker.position;
 	data.category = TooltipCategory::SERVER;
 	data.serverMarker = &marker;
-	data.itemName.assign(rme::srv::markerKindLabel(marker.kind));
-	data.subtitle.assign(ServerMarkerSource(marker.kind));
+	data.serverMarkerKinds = shown;
+	data.itemName.assign(rme::srv::markerKindLabel(*kind));
+	data.subtitle.assign(rme::rendering::serverMarkerSource(*kind));
 	commitTooltip();
 }
 
@@ -177,25 +169,7 @@ NVGcolor TooltipDrawer::getHeaderColor(const TooltipData& tooltip) const {
 			role = Theme::Role::TooltipBorderZone;
 			break;
 		case TooltipCategory::SERVER:
-			if (tooltip.serverMarker) {
-				switch (tooltip.serverMarker->kind) {
-					case rme::srv::MarkerKind::Start:
-						role = Theme::Role::ServerMarkerStart;
-						break;
-					case rme::srv::MarkerKind::Depot:
-						role = Theme::Role::ServerMarkerDepot;
-						break;
-					case rme::srv::MarkerKind::Raid:
-						role = Theme::Role::ServerMarkerRaid;
-						break;
-					case rme::srv::MarkerKind::Script:
-					default:
-						role = Theme::Role::ServerMarkerScript;
-						break;
-				}
-			} else {
-				role = Theme::Role::ServerMarkerScript;
-			}
+			role = Theme::Role::TooltipBorderServer;
 			break;
 		case TooltipCategory::ITEM:
 		default:
@@ -385,16 +359,26 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 			addDirectField("Flags", tooltip.zoneFlags, Theme::Role::TooltipTextValue);
 		}
 	} else if (tooltip.category == TooltipCategory::SERVER && tooltip.serverMarker) {
-		// One field per line; the kind labels the first line of its group.
-		const auto& lines = tooltip.serverMarker->lines;
-		const size_t shown = std::min(lines.size(), kMaxServerMarkerLines);
-		for (size_t i = 0; i < shown; ++i) {
-			const bool first_of_kind = i == 0 || lines[i - 1].kind != lines[i].kind;
-			addDirectField(first_of_kind ? rme::srv::markerKindLabel(lines[i].kind) : std::string_view {}, lines[i].text, Theme::Role::TooltipBodyText);
+		// One field per line of a shown kind; the kind labels the first line of its group.
+		size_t listed = 0;
+		size_t hidden = 0;
+		const rme::srv::MarkerLine* previous = nullptr;
+		for (const rme::srv::MarkerLine& line : tooltip.serverMarker->lines) {
+			if ((tooltip.serverMarkerKinds & rme::srv::kindBit(line.kind)) == 0) {
+				continue;
+			}
+			if (listed == kMaxServerMarkerLines) {
+				++hidden;
+				continue;
+			}
+			const bool first_of_kind = !previous || previous->kind != line.kind;
+			addDirectField(first_of_kind ? rme::srv::markerKindLabel(line.kind) : std::string_view {}, line.text, Theme::Role::TooltipBodyText);
+			previous = &line;
+			++listed;
 		}
-		if (lines.size() > shown) {
+		if (hidden > 0) {
 			const size_t start = storage.size();
-			std::format_to(std::back_inserter(storage), "... and {} more", lines.size() - shown);
+			std::format_to(std::back_inserter(storage), "... and {} more", hidden);
 			addStorageField({}, start, Theme::Role::TooltipLabel);
 		}
 	} else if (tooltip.category == TooltipCategory::WAYPOINT || tooltip.category == TooltipCategory::TOWN) {
@@ -826,29 +810,9 @@ void TooltipDrawer::drawSunkenSlot(NVGcontext* vg, float sx, float sy, float siz
 	} else if (tooltip.category == TooltipCategory::ZONE) {
 		rme::rendering::DrawNanoVGCustomIndicatorBadge(vg, sx, sy, size, tooltip.zoneRgb, "zone");
 	} else if (tooltip.category == TooltipCategory::SERVER && tooltip.serverMarker) {
-		wxColour c = Theme::Get(Theme::Role::ServerMarkerScript);
-		const char* label = "srv";
-		switch (tooltip.serverMarker->kind) {
-			case rme::srv::MarkerKind::Start:
-				c = Theme::Get(Theme::Role::ServerMarkerStart);
-				label = "start";
-				break;
-			case rme::srv::MarkerKind::Depot:
-				c = Theme::Get(Theme::Role::ServerMarkerDepot);
-				label = "depot";
-				break;
-			case rme::srv::MarkerKind::Raid:
-				c = Theme::Get(Theme::Role::ServerMarkerRaid);
-				label = "raid";
-				break;
-			case rme::srv::MarkerKind::Script:
-			default:
-				c = Theme::Get(Theme::Role::ServerMarkerScript);
-				label = "srv";
-				break;
+		if (const auto kind = tooltip.serverMarker->shownKind(tooltip.serverMarkerKinds)) {
+			rme::rendering::drawServerMarkerBadge(vg, *kind, sx, sy, size);
 		}
-		const glm::vec3 rgb(c.Red() / 255.0f, c.Green() / 255.0f, c.Blue() / 255.0f);
-		rme::rendering::DrawNanoVGCustomIndicatorBadge(vg, sx, sy, size, rgb, label);
 	} else if (tooltip.itemId > 0) {
 		int img = getSpriteImage(vg, tooltip.itemId);
 		if (img > 0) {

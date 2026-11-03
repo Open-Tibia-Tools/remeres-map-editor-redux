@@ -189,7 +189,10 @@
 		<item name="Show pathing" hotkey="O" action="SHOW_PATHING" help="Show blocking tiles."/>
 		<item name="Show towns" hotkey="" action="SHOW_TOWNS" help="Show temple positions."/>
 		<item name="Show waypoints" hotkey="Shift+W" action="SHOW_WAYPOINTS" help="Show waypoints."/>
-		<item name="Show server markers" hotkey="" action="SHOW_SERVER_MARKERS" help="Mark the tiles that the server's scripts, depots, raids and start positions use (sector maps)."/>
+		<item name="Show scripts" hotkey="" action="SHOW_SCRIPT_MARKERS" help="Mark the tiles that dat/moveuse.dat rules use, with their rules as tooltips (sector maps)."/>
+		<item name="Show depots" hotkey="" action="SHOW_DEPOT_MARKERS" help="Mark the depot chests and the booth tiles that open them (sector maps)."/>
+		<item name="Show raids" hotkey="" action="SHOW_RAID_MARKERS" help="Mark where the monsters of raids (mon/*.evt) appear (sector maps)."/>
+		<item name="Show start positions" hotkey="" action="SHOW_START_MARKERS" help="Mark the newbie and veteran start positions of dat/map.dat (sector maps)."/>
 		<separator/>
 		<item name="Highlight Items" hotkey="V" action="HIGHLIGHT_ITEMS" help="Highlight tiles with items on them."/>
 		<item name="Highlight Locked Doors" hotkey="U" action="HIGHLIGHT_LOCKED_DOORS" help="Highlight doors that require key to open."/>

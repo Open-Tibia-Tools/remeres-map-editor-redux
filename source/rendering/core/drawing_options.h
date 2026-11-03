@@ -64,7 +64,7 @@ struct DrawingOptions {
 	bool show_invalid_tiles;
 	bool show_invalid_zones;
 	bool show_waypoints;
-	bool show_server_markers;
+	uint8_t server_marker_kinds; // rme::srv::MarkerKindSet: the server marker kinds shown (sector maps)
 	bool ingame;
 	bool is_drawing_mode;
 	bool is_drawing = false;

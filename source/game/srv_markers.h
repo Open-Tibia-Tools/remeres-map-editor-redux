@@ -13,8 +13,10 @@
 
 #include "map/position.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -29,6 +31,16 @@ namespace rme::srv {
 		Raid, // monsters of a raid wave appear around the tile
 		Script, // a moveuse.dat rule triggers on, checks or changes the tile
 	};
+
+	inline constexpr size_t kMarkerKindCount = 4;
+
+	// A set of marker kinds, one bit per kind (the View menu shows each kind on its own).
+	using MarkerKindSet = uint8_t;
+
+	[[nodiscard]] constexpr MarkerKindSet kindBit(MarkerKind kind) {
+		return static_cast<MarkerKindSet>(1u << static_cast<unsigned>(kind));
+	}
+	inline constexpr MarkerKindSet kAllMarkerKinds = (1u << kMarkerKindCount) - 1;
 
 	[[nodiscard]] std::string_view markerKindLabel(MarkerKind kind);
 
@@ -46,9 +58,13 @@ namespace rme::srv {
 	struct Marker {
 		Position position;
 		MarkerKind kind = MarkerKind::Script; // the badge's kind
+		MarkerKindSet kinds = 0; // the kinds of its lines
 		std::vector<MarkerLine> lines; // ordered by kind
 		std::vector<QuestReference> quests;
 		int raid_spread = 0; // largest spread of the raid waves here
+
+		// The first of its kinds that `shown` holds, in badge priority.
+		[[nodiscard]] std::optional<MarkerKind> shownKind(MarkerKindSet shown) const;
 	};
 
 	class ServerMarkers {

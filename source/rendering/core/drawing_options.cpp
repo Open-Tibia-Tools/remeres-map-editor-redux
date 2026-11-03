@@ -1,5 +1,6 @@
 #include "app/definitions.h"
 #include "brushes/managers/brush_manager.h"
+#include "game/srv_markers.h"
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/light_defaults.h"
@@ -22,7 +23,7 @@ void DrawingOptions::SetDefault() {
 	show_invalid_tiles = true;
 	show_invalid_zones = true;
 	show_waypoints = true;
-	show_server_markers = true;
+	server_marker_kinds = rme::srv::kAllMarkerKinds;
 	ingame = false;
 	is_drawing_mode = false;
 	is_drawing = false;
@@ -101,7 +102,7 @@ void DrawingOptions::SetIngame() {
 	show_invalid_tiles = false;
 	show_invalid_zones = false;
 	show_waypoints = false;
-	show_server_markers = false;
+	server_marker_kinds = 0;
 	ingame = true;
 	dragging = false;
 	boundbox_selection = false;
@@ -184,7 +185,19 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const bool new_show_invalid_tiles = settings.getBoolean(Config::SHOW_INVALID_TILES);
 	const bool new_show_invalid_zones = settings.getBoolean(Config::SHOW_INVALID_ZONES);
 	const bool new_show_waypoints = settings.getBoolean(Config::SHOW_WAYPOINTS);
-	const bool new_show_server_markers = settings.getBoolean(Config::SHOW_SERVER_MARKERS);
+	rme::srv::MarkerKindSet new_server_marker_kinds = 0;
+	if (settings.getBoolean(Config::SHOW_SCRIPT_MARKERS)) {
+		new_server_marker_kinds |= rme::srv::kindBit(rme::srv::MarkerKind::Script);
+	}
+	if (settings.getBoolean(Config::SHOW_DEPOT_MARKERS)) {
+		new_server_marker_kinds |= rme::srv::kindBit(rme::srv::MarkerKind::Depot);
+	}
+	if (settings.getBoolean(Config::SHOW_RAID_MARKERS)) {
+		new_server_marker_kinds |= rme::srv::kindBit(rme::srv::MarkerKind::Raid);
+	}
+	if (settings.getBoolean(Config::SHOW_START_MARKERS)) {
+		new_server_marker_kinds |= rme::srv::kindBit(rme::srv::MarkerKind::Start);
+	}
 	const int new_show_grid = settings.getInteger(Config::SHOW_GRID);
 	const bool new_ingame = !settings.getBoolean(Config::SHOW_EXTRA);
 	const bool new_show_all_floors = settings.getBoolean(Config::SHOW_ALL_FLOORS);
@@ -282,7 +295,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	show_invalid_tiles = new_show_invalid_tiles;
 	show_invalid_zones = new_show_invalid_zones;
 	show_waypoints = new_show_waypoints;
-	show_server_markers = new_show_server_markers;
+	server_marker_kinds = new_server_marker_kinds;
 	show_grid = new_show_grid;
 	ingame = new_ingame;
 	show_all_floors = new_show_all_floors;

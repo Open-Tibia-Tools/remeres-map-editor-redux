@@ -106,8 +106,10 @@ struct TooltipData {
 	size_t zoneAreaTileCount = 0;
 	std::string zoneFlags;
 
-	// Server marker (sector maps): its lines are the tooltip's fields
+	// Server marker (sector maps): its lines of the shown kinds
+	// (rme::srv::MarkerKindSet) are the tooltip's fields
 	const rme::srv::Marker* serverMarker = nullptr;
+	uint8_t serverMarkerKinds = 0;
 
 	// Container contents
 	std::vector<ContainerItem> containerItems;
@@ -199,6 +201,7 @@ struct TooltipData {
 		zoneAreaTileCount = 0;
 		zoneFlags.clear();
 		serverMarker = nullptr;
+		serverMarkerKinds = 0;
 
 		containerItems.clear();
 		containerCapacity = 0;
@@ -221,8 +224,9 @@ public:
 	// Add a waypoint tooltip
 	void addWaypointTooltip(Position pos, std::string_view name);
 
-	// Add the tooltip of a server marker; `marker` must outlive the tooltip
-	void addServerMarkerTooltip(const rme::srv::Marker& marker);
+	// Add the tooltip of a server marker with its lines of the `shown` kinds
+	// (rme::srv::MarkerKindSet); `marker` must outlive the tooltip
+	void addServerMarkerTooltip(const rme::srv::Marker& marker, uint8_t shown);
 
 	// Draw all tooltips
 	void draw(NVGcontext* vg, const RenderView& view);
