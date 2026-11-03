@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <format>
 #include <iterator>
+#include <spdlog/spdlog.h>
 
 namespace rme::sec::map_dat {
 
@@ -119,7 +120,7 @@ namespace rme::sec::map_dat {
 	std::optional<MapInfo> load(Map& map, const ServerDataFolder& folder, std::vector<std::string>& warnings) {
 		std::string text;
 		if (!readFile(folder.dat() / "map.dat", text)) {
-			warnings.push_back("dat/map.dat was not found; no towns or waypoints were loaded.");
+			spdlog::info("IOMapSec: no dat/map.dat, so the map has no towns or waypoints yet");
 			return std::nullopt;
 		}
 		auto info = readMapInfo(text);
@@ -131,11 +132,15 @@ namespace rme::sec::map_dat {
 		return std::move(*info);
 	}
 
-	void save(const Map& map, const ServerDataFolder& folder, ServerFileWriter& writer, std::vector<std::string>& warnings) {
+	void save(const Map& map, const ServerDataFolder& folder, const std::optional<SectorRange>& sectors, ServerFileWriter& writer, std::vector<std::string>& warnings) {
 		const std::filesystem::path path = folder.dat() / "map.dat";
 		std::string text;
 		if (!readFile(path, text)) {
-			warnings.push_back("dat/map.dat was not found; towns and waypoints were not saved.");
+			MapInfo info { .sectors = sectors };
+			info.depots = depotsOf(map, info);
+			info.marks = marksOf(map, info);
+			writer.write(path, writeMapDat(info));
+			warnings.push_back("The new dat/map.dat has no NewbieStart or VeteranStart (the players' start positions) yet; add them before starting the server.");
 			return;
 		}
 		const auto info = readMapInfo(text);

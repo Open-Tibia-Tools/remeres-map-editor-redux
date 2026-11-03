@@ -11,6 +11,10 @@
 //   dat/moveuse.dat, mon/*.mon, mon/*.evt, npc/*.npc
 // Each of them has its own handler next to this file (map_dat_file.h,
 // house_files.h, monster_files.h, npc_files.h, server_marker_files.h).
+//
+// Only the sector files and dat/objects.srv are needed to open a map; every
+// other file is optional. A map without them starts with no towns, houses or
+// creatures, and saving creates the files that its data needs.
 
 #include <filesystem>
 #include <map>
@@ -43,10 +47,16 @@ namespace rme::sec {
 	// "Rat (x3), Troll (x1)": names with how often they occur, for warnings.
 	[[nodiscard]] std::string listNameCounts(const std::map<std::string, size_t>& names);
 
-	// Writes server files, each one only when its content changed.
+	// Writes server files, each one only when its content changed, creating
+	// the files and folders that do not exist yet.
 	class ServerFileWriter {
 	public:
 		void write(const std::filesystem::path& path, std::string_view content);
+
+		// The files that did not exist before.
+		[[nodiscard]] const std::vector<std::filesystem::path>& createdFiles() const {
+			return created_;
+		}
 
 		// UTF-8 paths of the files that could not be written.
 		[[nodiscard]] const std::vector<std::string>& failedFiles() const {
@@ -56,6 +66,7 @@ namespace rme::sec {
 	private:
 		std::string scratch_;
 		std::vector<std::string> failed_;
+		std::vector<std::filesystem::path> created_;
 	};
 
 	namespace detail {

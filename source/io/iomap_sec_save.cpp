@@ -34,6 +34,7 @@
 #include <format>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <ranges>
 #include <spdlog/spdlog.h>
 #include <tuple>
@@ -186,6 +187,44 @@ namespace {
 		return out;
 	}
 
+	// Tiles by sector (x, y, z).
+	using SectorTiles = std::map<std::tuple<int, int, int>, std::vector<const Tile*>>;
+
+	// The range of the saved sectors, for a new map.dat.
+	std::optional<rme::sec::SectorRange> sectorRange(const SectorTiles& sectors) {
+		if (sectors.empty()) {
+			return std::nullopt;
+		}
+		const auto [first_x, first_y, first_z] = sectors.begin()->first;
+		rme::sec::SectorRange range {
+			.min = { .x = first_x, .y = first_y, .z = first_z },
+			.max = { .x = first_x, .y = first_y, .z = first_z },
+		};
+		for (const auto& [key, tiles] : sectors) {
+			const auto [x, y, z] = key;
+			range.min = { .x = std::min(range.min.x, x), .y = std::min(range.min.y, y), .z = std::min(range.min.z, z) };
+			range.max = { .x = std::max(range.max.x, x), .y = std::max(range.max.y, y), .z = std::max(range.max.z, z) };
+		}
+		return range;
+	}
+
+	// A sector map is opened with the dat/objects.srv next to it, so a folder
+	// without one gets a copy of the file its items came from.
+	void copyObjectsFile(const rme::sec::ServerDataFolder& data, std::vector<std::filesystem::path>& created, std::vector<std::string>& warnings) {
+		const std::filesystem::path target = data.dat() / "objects.srv";
+		std::error_code ec;
+		if (std::filesystem::exists(target, ec)) {
+			return;
+		}
+		const std::filesystem::path source(g_version.GetCurrentVersion().getObjectsPath().GetFullPath().ToStdWstring());
+		std::filesystem::create_directories(data.dat(), ec);
+		if (source.empty() || !std::filesystem::copy_file(source, target, ec)) {
+			warnings.push_back(std::format("objects.srv could not be copied to \"{}\"; the map opens again only once that folder has it.", FileSystem::PathToUtf8(data.dat())));
+			return;
+		}
+		created.push_back(target);
+	}
+
 } // namespace
 
 bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
@@ -204,14 +243,13 @@ bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
 
 	// The server's data folder holds the map folder, dat/, mon/ and npc/.
 	const std::filesystem::path data_folder = folder.parent_path();
-	const bool server_layout = std::filesystem::is_directory(data_folder / "dat", ec);
 
 	SaveStats stats;
 	std::vector<Tile*> monsters;
 	std::vector<Tile*> npcs;
 
 	g_gui.SetLoadDone(0, "Collecting sectors...");
-	std::map<std::tuple<int, int, int>, std::vector<const Tile*>> sectors;
+	SectorTiles sectors;
 	for (auto& location : map.tiles()) {
 		Tile* tile = location.get();
 		if (!tile) {
@@ -262,9 +300,11 @@ bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
 		}
 	}
 
+	const rme::sec::ServerDataFolder data { .root = data_folder };
+
 	// The server loads only the sectors map.dat names; others are saved but ignored.
 	std::string map_dat;
-	if (server_layout && rme::sec::readFile(data_folder / "dat" / "map.dat", map_dat)) {
+	if (rme::sec::readFile(data.dat() / "map.dat", map_dat)) {
 		if (const auto info = rme::sec::readMapInfo(map_dat); info && info->sectors) {
 			const auto outside = std::ranges::count_if(sectors, [&](const auto& entry) {
 				const auto [sector_x, sector_y, sector_z] = entry.first;
@@ -276,18 +316,24 @@ bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
 		}
 	}
 
-	// The server files around the map folder, each written by its own handler (io/sec/data/).
+	// The server files around the map folder, each written by its own handler
+	// (io/sec/data/). A folder without them becomes a server data folder.
 	g_gui.SetLoadDone(95, "Saving monster homes, NPCs, houses, towns and marks...");
-	if (server_layout) {
-		const rme::sec::ServerDataFolder data { .root = data_folder };
-		rme::sec::ServerFileWriter writer;
-		rme::sec::monster_files::save(map, monsters, data, writer, warnings);
-		rme::sec::npc_files::save(npcs, data, writer, warnings);
-		rme::sec::house_files::save(map, data, writer, warnings);
-		rme::sec::map_dat::save(map, data, writer, warnings);
-		std::ranges::copy(writer.failedFiles(), std::back_inserter(stats.failed_files));
-	} else {
-		warnings.push_back("The folder is not in a server data folder (no dat/ next to it), so monster homes, NPCs, houses, towns and marks were not saved.");
+	std::vector<std::filesystem::path> created;
+	copyObjectsFile(data, created, warnings);
+	rme::sec::ServerFileWriter files;
+	rme::sec::monster_files::save(map, monsters, data, files, warnings);
+	rme::sec::npc_files::save(npcs, data, files, warnings);
+	rme::sec::house_files::save(map, data, files, warnings);
+	rme::sec::map_dat::save(map, data, sectorRange(sectors), files, warnings);
+	std::ranges::copy(files.failedFiles(), std::back_inserter(stats.failed_files));
+	std::ranges::copy(files.createdFiles(), std::back_inserter(created));
+	if (!created.empty()) {
+		std::string names;
+		for (const std::filesystem::path& path : created) {
+			names += (names.empty() ? "" : ", ") + FileSystem::PathToUtf8(path.lexically_relative(data_folder));
+		}
+		warnings.push_back(std::format("New server files in \"{}\": {}.", FileSystem::PathToUtf8(data_folder), names));
 	}
 
 	if (!stats.unreadable_sectors.empty()) {

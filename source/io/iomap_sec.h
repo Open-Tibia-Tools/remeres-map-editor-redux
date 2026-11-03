@@ -21,12 +21,15 @@ struct OTBMStartupPeekResult;
 // types from the server's own objects.srv. Nothing comes from the editor's
 // data directory.
 //
-// Saving writes the sector files back in the server's own format and, when
-// the folder sits in a server data folder, the files around it: monster
-// homes (dat/monster.db), houses (dat/houses.dat), towns and marks
+// Saving writes the sector files back in the server's own format and, in
+// the server data folder that holds the map folder, the files around it:
+// monster homes (dat/monster.db), houses (dat/houses.dat), towns and marks
 // (dat/map.dat) and NPC homes (npc/*.npc). Files whose content did not
 // change are left alone. Each of those files has its own handler in
-// io/sec/data/.
+// io/sec/data/. Only the sector files and dat/objects.srv are needed to open
+// a map; a folder without the others gets them once the map has towns,
+// houses or monsters, and a dat/ folder with map.dat and a copy of
+// objects.srv when it has none.
 //
 // Loading also reads the tiles that dat/moveuse.dat, the raids (mon/*.evt)
 // and the start positions in dat/map.dat refer to into Map::server_markers.

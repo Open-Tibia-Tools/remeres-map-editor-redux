@@ -36,12 +36,14 @@ namespace rme::sec {
 	namespace map_dat {
 
 		// Reads map.dat into the map's towns and waypoints. Returns what it
-		// holds for the other handlers; nullopt when it was not read.
+		// holds for the other handlers; nullopt when there is none or it
+		// could not be read.
 		[[nodiscard]] std::optional<MapInfo> load(Map& map, const ServerDataFolder& folder, std::vector<std::string>& warnings);
 
 		// Writes the towns back as depots, and their temples and the waypoints
-		// as marks, when they changed.
-		void save(const Map& map, const ServerDataFolder& folder, ServerFileWriter& writer, std::vector<std::string>& warnings);
+		// as marks, when they changed. Without a map.dat, a new one also gets
+		// `sectors`, the range of the saved sector files.
+		void save(const Map& map, const ServerDataFolder& folder, const std::optional<SectorRange>& sectors, ServerFileWriter& writer, std::vector<std::string>& warnings);
 
 	} // namespace map_dat
 

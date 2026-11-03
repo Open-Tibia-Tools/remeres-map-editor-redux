@@ -7,6 +7,7 @@
 #include "io/sec/data/house_files.h"
 
 #include "game/house.h"
+#include "game/town.h"
 #include "io/sec/data/map_dat_file.h"
 #include "io/sec/sec_file_io.h"
 #include "io/sec/srv_world_files.h"
@@ -16,6 +17,7 @@
 #include <algorithm>
 #include <format>
 #include <ranges>
+#include <spdlog/spdlog.h>
 #include <tuple>
 
 namespace rme::sec::house_files {
@@ -67,24 +69,37 @@ namespace rme::sec::house_files {
 			}
 		}
 
+		// A house area for a town that has none: named after the town, with its
+		// ID in the town's hundred (the original areas use 1xx for depot 0) and
+		// no price per square, so the rent offset carries the whole rent.
+		HouseArea newArea(const std::vector<HouseArea>& areas, int depot, const std::string& town_name) {
+			const auto taken = [&areas](int id) { return std::ranges::any_of(areas, [id](const HouseArea& area) { return area.id == id; }); };
+			const int first = (depot + 1) * 100;
+			int id = first;
+			while (taken(id) && id < first + 99) {
+				++id;
+			}
+			if (taken(id)) {
+				id = std::ranges::max(areas, {}, &HouseArea::id).id + 1;
+			}
+			return HouseArea { .id = id, .name = town_name, .square_price = 0, .depot = depot };
+		}
+
 	} // namespace
 
 	void load(Map& map, const ServerDataFolder& folder, std::vector<std::string>& warnings) {
-		std::string text;
-		if (!readFile(folder.dat() / "houseareas.dat", text)) {
-			warnings.push_back("dat/houseareas.dat was not found; no houses were loaded.");
+		std::string areas_text;
+		std::string houses_text;
+		if (!readFile(folder.dat() / "houseareas.dat", areas_text) || !readFile(folder.dat() / "houses.dat", houses_text)) {
+			spdlog::info("IOMapSec: no dat/houseareas.dat or dat/houses.dat, so the map has no houses yet");
 			return;
 		}
-		const auto areas = readHouseAreas(text);
+		const auto areas = readHouseAreas(areas_text);
 		if (!areas) {
 			warnings.push_back(std::format("houseareas.dat:{}: {}; no houses were loaded.", areas.error().line, areas.error().message));
 			return;
 		}
-		if (!readFile(folder.dat() / "houses.dat", text)) {
-			warnings.push_back("dat/houses.dat was not found; no houses were loaded.");
-			return;
-		}
-		const auto houses = readHouses(text);
+		const auto houses = readHouses(houses_text);
 		if (!houses) {
 			warnings.push_back(std::format("houses.dat:{}: {}; no houses were loaded.", houses.error().line, houses.error().message));
 			return;
@@ -94,14 +109,22 @@ namespace rme::sec::house_files {
 
 	void save(Map& map, const ServerDataFolder& folder, ServerFileWriter& writer, std::vector<std::string>& warnings) {
 		const std::filesystem::path houses_path = folder.dat() / "houses.dat";
+		const std::filesystem::path areas_path = folder.dat() / "houseareas.dat";
 		std::string houses_text;
 		std::string areas_text;
-		if (!readFile(houses_path, houses_text) || !readFile(folder.dat() / "houseareas.dat", areas_text)) {
-			warnings.push_back("dat/houses.dat or dat/houseareas.dat was not found; houses were not saved.");
+		const bool has_houses_file = readFile(houses_path, houses_text);
+		const bool has_areas_file = readFile(areas_path, areas_text);
+		if (!has_houses_file && map.houses.count() == 0) {
 			return;
 		}
-		const auto original = readHouses(houses_text);
-		const auto areas = readHouseAreas(areas_text);
+		std::expected<std::vector<HouseDefinition>, ParseError> original = std::vector<HouseDefinition> {};
+		if (has_houses_file) {
+			original = readHouses(houses_text);
+		}
+		std::expected<std::vector<HouseArea>, ParseError> areas = std::vector<HouseArea> {};
+		if (has_areas_file) {
+			areas = readHouseAreas(areas_text);
+		}
 		if (!original || !areas) {
 			warnings.push_back("dat/houses.dat or dat/houseareas.dat could not be read; houses were not saved.");
 			return;
@@ -114,21 +137,28 @@ namespace rme::sec::house_files {
 		std::ranges::sort(houses, {}, &House::getID);
 
 		std::vector<HouseDefinition> definitions;
-		size_t without_area = 0;
+		std::vector<HouseArea> new_areas;
+		size_t without_town = 0;
 		for (const House* house : houses) {
 			const auto previous = std::ranges::find(*original, static_cast<int>(house->getID()), &HouseDefinition::id);
 			HouseDefinition definition = previous != original->end() ? *previous : HouseDefinition { .id = static_cast<int>(house->getID()) };
 
 			// Towns are depots; keep the house's area while its depot still
-			// matches, else take the town's first area.
+			// matches, else take the town's first area, or give the town one.
 			const int depot = depotOfTownId(house->townid);
 			auto area = std::ranges::find(*areas, definition.area, &HouseArea::id);
 			if (area == areas->end() || area->depot != depot) {
 				area = std::ranges::find(*areas, depot, &HouseArea::depot);
 			}
 			if (area == areas->end()) {
-				++without_area;
-				continue;
+				const Town* town = map.towns.getTown(house->townid);
+				if (!town) {
+					++without_town;
+					continue;
+				}
+				new_areas.push_back(newArea(*areas, depot, town->getName()));
+				areas->push_back(new_areas.back());
+				area = areas->end() - 1;
 			}
 
 			std::vector<AbsolutePosition> fields;
@@ -165,16 +195,19 @@ namespace rme::sec::house_files {
 			definition.fields = std::move(fields);
 			definitions.push_back(std::move(definition));
 		}
-		if (without_area > 0) {
-			warnings.push_back(std::format("{} houses belong to a town without a house area in houseareas.dat and were not saved.", without_area));
+		if (without_town > 0) {
+			warnings.push_back(std::format("{} houses have no town, which their house area needs, and were not saved.", without_town));
+		}
+		if (!new_areas.empty()) {
+			writer.write(areas_path, appendHouseAreas(areas_text, new_areas));
 		}
 		// Written only when a house changed; how the file formats them does not count.
 		std::vector<HouseDefinition> previous = *original;
 		std::ranges::sort(previous, {}, &HouseDefinition::id);
-		if (previous == definitions) {
+		if (has_houses_file && previous == definitions) {
 			return;
 		}
-		writer.write(houses_path, writeHouses(definitions, newlineOf(houses_text)));
+		writer.write(houses_path, writeHouses(definitions, has_houses_file ? newlineOf(houses_text) : std::string_view("\r\n")));
 	}
 
 } // namespace rme::sec::house_files

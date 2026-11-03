@@ -114,6 +114,23 @@ namespace {
 		assert(updateMapDat("SectorXMin = 996", { MapMark { .name = "A", .position = { 1, 2, 3 } } }, depots) ==
 			"SectorXMin = 996\nMark = (\"A\",[1,2,3])\nDepot = (0,\"Thais\",1000)\nDepot = (1,\"Carlin\",2000)\n");
 
+		// A new map.dat reads back as written.
+		MapInfo fresh;
+		fresh.sectors = SectorRange { .min = { .x = 1000, .y = 1000, .z = 7 }, .max = { .x = 1001, .y = 1002, .z = 7 } };
+		fresh.veteran_start = AbsolutePosition { .x = 32000, .y = 32001, .z = 7 };
+		fresh.depots = depots;
+		fresh.marks = { MapMark { .name = "Temple", .position = { 32000, 32000, 7 } } };
+		const auto reread = readMapInfo(writeMapDat(fresh));
+		assert(reread.has_value() && reread->sectors && reread->sectors->max.y == 1002 && reread->sectors->min.z == 7);
+		assert(!reread->newbie_start && reread->veteran_start && *reread->veteran_start == *fresh.veteran_start);
+		assert(reread->depots == fresh.depots && reread->marks.size() == 1 && reread->marks[0].name == "Temple");
+
+		// New house areas go at the end, in the file's line endings.
+		const std::vector<HouseArea> new_areas { HouseArea { .id = 200, .name = "Carlin", .square_price = 0, .depot = 1 } };
+		assert(appendHouseAreas("# areas\nArea = (100,\"A\",45,0)", new_areas) == "# areas\nArea = (100,\"A\",45,0)\nArea = (200,\"Carlin\",0,1)\n");
+		const auto areas = readHouseAreas(appendHouseAreas("", new_areas));
+		assert(areas.has_value() && areas->size() == 1 && (*areas)[0].id == 200 && (*areas)[0].depot == 1);
+
 		// Like the server's loader, commas between fields are optional.
 		const auto no_commas = readHouses("ID = 1\nFields = {[1,2,3] [4,5,6]}\n");
 		assert(no_commas.has_value() && (*no_commas)[0].fields.size() == 2);

@@ -44,8 +44,15 @@ namespace rme::sec {
 	}
 
 	void ServerFileWriter::write(const std::filesystem::path& path, std::string_view content) {
+		std::error_code ec;
+		const bool is_new = !std::filesystem::exists(path, ec);
+		if (is_new) {
+			std::filesystem::create_directories(path.parent_path(), ec);
+		}
 		if (writeFileIfChanged(path, content, scratch_) == WriteResult::Failed) {
 			failed_.push_back(FileSystem::PathToUtf8(path));
+		} else if (is_new) {
+			created_.push_back(path);
 		}
 	}
 

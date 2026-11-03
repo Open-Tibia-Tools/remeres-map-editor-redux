@@ -9,6 +9,7 @@
 //   dat/map.dat         sector range, named marks, depots (the towns) and start positions
 //   dat/houseareas.dat  house areas: name, price per square, depot
 //   dat/houses.dat      houses: name, rent offset, area, exit and fields
+// and their writers, which update a file in place or start a new one.
 
 #include "io/sec/sec_sector_parser.h"
 
@@ -90,6 +91,14 @@ namespace rme::sec {
 	// each written where the first line of its kind was, or at the end when
 	// there was none; every other line is kept as it is.
 	[[nodiscard]] std::string updateMapDat(std::string_view text, const std::vector<MapMark>& marks, const std::vector<MapDepot>& depots);
+
+	// A new map.dat holding what `info` has: the sector range, the start
+	// positions, the depots and the marks.
+	[[nodiscard]] std::string writeMapDat(const MapInfo& info);
+
+	// houseareas.dat with `areas` added at the end; `text` is empty for a new
+	// file, which gets the server's CRLF line endings.
+	[[nodiscard]] std::string appendHouseAreas(std::string_view text, const std::vector<HouseArea>& areas);
 
 } // namespace rme::sec
 

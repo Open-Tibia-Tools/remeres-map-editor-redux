@@ -71,7 +71,7 @@ namespace rme::sec::monster_files {
 		const std::filesystem::path path = folder.dat() / "monster.db";
 		std::string text;
 		if (!readFile(path, text)) {
-			warnings.push_back(std::format("{} was not found; no monsters were placed.", FileSystem::PathToUtf8(path)));
+			spdlog::info("IOMapSec: no dat/monster.db, so the map has no monsters yet");
 			return;
 		}
 		const auto homes = readMonsterHomes(text);
@@ -103,8 +103,15 @@ namespace rme::sec::monster_files {
 		for (const NamedMonsterRace& named : readRaces(folder, ignored, false)) {
 			races.emplace(as_lower_str(named.editor_name), named.race.race);
 		}
+		const std::filesystem::path path = folder.dat() / "monster.db";
+		std::error_code ec;
+		if (tiles.empty() && !std::filesystem::exists(path, ec)) {
+			return;
+		}
 		if (races.empty()) {
-			warnings.push_back("No monster races (mon/*.mon) were found next to the map; monster.db was not written.");
+			if (!tiles.empty()) {
+				warnings.push_back("No monster races (mon/*.mon) were found next to the map; monster.db was not written.");
+			}
 			return;
 		}
 
@@ -135,7 +142,6 @@ namespace rme::sec::monster_files {
 			return std::tuple(home.race, home.position.x, home.position.y);
 		});
 		// Written only when the homes changed; their order in the file does not count.
-		const std::filesystem::path path = folder.dat() / "monster.db";
 		const auto key = [](const MonsterHome& h) { return std::tuple(h.position.x, h.position.y, h.position.z, h.race, h.radius, h.amount, h.regen); };
 		if (std::string text; readFile(path, text)) {
 			if (auto previous = readMonsterHomes(text)) {

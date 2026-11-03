@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <format>
 #include <optional>
+#include <spdlog/spdlog.h>
 
 namespace rme::sec::server_marker_files {
 
@@ -117,7 +118,7 @@ namespace rme::sec::server_marker_files {
 			void loadRules(const std::filesystem::path& path) {
 				std::string text;
 				if (!rme::sec::readFile(path, text)) {
-					warnings_.push_back("dat/moveuse.dat was not found; the tiles its rules use are not marked.");
+					spdlog::info("IOMapSec: no dat/moveuse.dat, so no script tiles are marked");
 					return;
 				}
 				const auto rules = rme::sec::readMoveUseRules(text);

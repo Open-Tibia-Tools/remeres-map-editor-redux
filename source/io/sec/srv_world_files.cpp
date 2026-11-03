@@ -225,6 +225,52 @@ namespace rme::sec {
 		return replaceKeyLines(replaceKeyLines(text, "Mark", mark_lines), "Depot", depot_lines);
 	}
 
+	std::string writeMapDat(const MapInfo& info) {
+		constexpr std::string_view newline = "\n";
+		std::string out = "# map.dat\n";
+		if (info.sectors) {
+			const SectorRange& range = *info.sectors;
+			std::format_to(std::back_inserter(out), "\nSectorXMin = {}\nSectorXMax = {}\nSectorYMin = {}\nSectorYMax = {}\nSectorZMin = {}\nSectorZMax = {}\n", range.min.x, range.max.x, range.min.y, range.max.y, range.min.z, range.max.z);
+		}
+		const auto start = [&out](std::string_view key, const std::optional<AbsolutePosition>& position) {
+			if (position) {
+				std::format_to(std::back_inserter(out), "{} = [{},{},{}]\n", key, position->x, position->y, position->z);
+			}
+		};
+		if (info.newbie_start || info.veteran_start) {
+			out += newline;
+			start("NewbieStart", info.newbie_start);
+			start("VeteranStart", info.veteran_start);
+		}
+		if (!info.depots.empty()) {
+			out += newline;
+			for (const MapDepot& depot : info.depots) {
+				appendDepot(out, depot, newline);
+			}
+		}
+		if (!info.marks.empty()) {
+			out += newline;
+			for (const MapMark& mark : info.marks) {
+				appendMark(out, mark, newline);
+			}
+		}
+		return out;
+	}
+
+	std::string appendHouseAreas(std::string_view text, const std::vector<HouseArea>& areas) {
+		const std::string_view newline = text.empty() ? std::string_view("\r\n") : newlineOf(text);
+		std::string out(text);
+		if (!out.empty() && !out.ends_with('\n')) {
+			out += newline;
+		}
+		for (const HouseArea& area : areas) {
+			std::format_to(std::back_inserter(out), "Area = ({},", area.id);
+			srv::appendQuoted(out, area.name);
+			std::format_to(std::back_inserter(out), ",{},{}){}", area.square_price, area.depot, newline);
+		}
+		return out;
+	}
+
 	std::expected<std::vector<HouseDefinition>, ParseError> readHouses(std::string_view text) {
 		try {
 			ScriptLexer lexer(text);
