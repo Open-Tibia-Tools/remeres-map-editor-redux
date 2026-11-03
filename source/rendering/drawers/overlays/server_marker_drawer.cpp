@@ -34,26 +34,26 @@ namespace rme::rendering {
 		// Badge text per MarkerKind, in enum order.
 		constexpr std::array<std::string_view, 4> kBadgeTexts { "start", "depot", "raid", "script" };
 
+		Theme::Role roleOf(MarkerKind kind) {
+			switch (kind) {
+				case MarkerKind::Start:
+					return Theme::Role::ServerMarkerStart;
+				case MarkerKind::Depot:
+					return Theme::Role::ServerMarkerDepot;
+				case MarkerKind::Raid:
+					return Theme::Role::ServerMarkerRaid;
+				case MarkerKind::Script:
+					break;
+			}
+			return Theme::Role::ServerMarkerScript;
+		}
+
 		NVGcolor withAlpha(NVGcolor color, unsigned char alpha) {
 			color.a = static_cast<float>(alpha) / 255.0f;
 			return color;
 		}
 
 	} // namespace
-
-	Theme::Role serverMarkerRole(MarkerKind kind) {
-		switch (kind) {
-			case MarkerKind::Start:
-				return Theme::Role::ServerMarkerStart;
-			case MarkerKind::Depot:
-				return Theme::Role::ServerMarkerDepot;
-			case MarkerKind::Raid:
-				return Theme::Role::ServerMarkerRaid;
-			case MarkerKind::Script:
-				break;
-		}
-		return Theme::Role::ServerMarkerScript;
-	}
 
 	void ServerMarkerDrawer::draw(NVGcontext* vg, const Map& map, const RenderView& view, const DrawingOptions& options) const {
 		if (!vg || options.ingame || !options.show_server_markers || !map.server_markers || view.zoom > kMaxZoom) {
@@ -87,7 +87,7 @@ namespace rme::rendering {
 				continue;
 			}
 
-			const NVGcolor color = NvgUtils::ToNvColor(Theme::Get(serverMarkerRole(marker.kind)));
+			const NVGcolor color = NvgUtils::ToNvColor(Theme::Get(roleOf(marker.kind)));
 
 			// The square a raid's monsters can appear in.
 			if (marker.raid_spread > 0) {

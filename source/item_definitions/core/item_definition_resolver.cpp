@@ -157,6 +157,12 @@ bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input,
 		// We add it to the rows so the editor recognizes the ID.
 		dat_ids_referenced_by_otb.insert(effective_client_id);
 		row.flags |= dat_it->second.flags & ~flagMask(ItemFlag::Moveable);
+		if (row.group == ITEM_GROUP_NONE && dat_it->second.group != ITEM_GROUP_NONE) {
+			row.group = dat_it->second.group;
+		}
+		if (row.type == ITEM_TYPE_NONE && dat_it->second.type != ITEM_TYPE_NONE) {
+			row.type = dat_it->second.type;
+		}
 		row.passive_metadata_json = dat_it->second.passive_metadata_json;
 
 		if (xml_it != fragments.xml.end()) {

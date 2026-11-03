@@ -1,18 +1,12 @@
 #ifndef RME_RENDERING_DRAWERS_OVERLAYS_SERVER_MARKER_DRAWER_H_
 #define RME_RENDERING_DRAWERS_OVERLAYS_SERVER_MARKER_DRAWER_H_
 
-#include "game/srv_markers.h"
-#include "ui/theme.h"
-
 struct NVGcontext;
 class Map;
 struct RenderView;
 struct DrawingOptions;
 
 namespace rme::rendering {
-
-	// The colour of a marker kind (frame, badge and tooltip border).
-	[[nodiscard]] Theme::Role serverMarkerRole(rme::srv::MarkerKind kind);
 
 	// NanoVG overlay for the read-only server markers of sector maps (see
 	// game/srv_markers.h): a frame and a small badge on each marked tile, and

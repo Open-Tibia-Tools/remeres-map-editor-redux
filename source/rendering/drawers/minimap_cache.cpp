@@ -121,41 +121,41 @@ void MinimapCache::uploadRect(const Map& map, int floor, FloorCachePage& page, c
 	}
 
 	const size_t buffer_size = static_cast<size_t>(clamped_rect.width) * clamped_rect.height;
-	upload_buffer_.resize(buffer_size);
-	std::fill(upload_buffer_.begin(), upload_buffer_.end(), 0);
+	upload_buffer_.assign(buffer_size, 0);
 
 	const int origin_x = page.page_x * PageSize + clamped_rect.x;
 	const int origin_y = page.page_y * PageSize + clamped_rect.y;
 	const int rect_end_x = origin_x + clamped_rect.width - 1;
 	const int rect_end_y = origin_y + clamped_rect.height - 1;
+	const int rect_w = clamped_rect.width;
+
 	map.visitLeaves(origin_x, origin_y, rect_end_x, rect_end_y, [&](const MapNode* node, int node_map_x, int node_map_y) {
 		const Floor* node_floor = node->getFloor(floor);
 		if (!node_floor) {
 			return;
 		}
 
-		for (int local_node_x = 0; local_node_x < 4; ++local_node_x) {
+		const int start_lx = std::max(0, origin_x - node_map_x);
+		const int end_lx = std::min(3, rect_end_x - node_map_x);
+		const int start_ly = std::max(0, origin_y - node_map_y);
+		const int end_ly = std::min(3, rect_end_y - node_map_y);
+
+		for (int local_node_x = start_lx; local_node_x <= end_lx; ++local_node_x) {
 			const int map_x = node_map_x + local_node_x;
-			if (map_x < origin_x || map_x > rect_end_x) {
-				continue;
-			}
+			const int buffer_x = map_x - origin_x;
+			const int x_offset = local_node_x * 4;
 
-			for (int local_node_y = 0; local_node_y < 4; ++local_node_y) {
-				const int map_y = node_map_y + local_node_y;
-				if (map_y < origin_y || map_y > rect_end_y) {
-					continue;
-				}
-
-				const int floor_index = local_node_x * 4 + local_node_y;
+			for (int local_node_y = start_ly; local_node_y <= end_ly; ++local_node_y) {
+				const int floor_index = x_offset + local_node_y;
 				const TileLocation& location = node_floor->locs[static_cast<size_t>(floor_index)];
 				const Tile* tile = location.get();
 				if (!tile) {
 					continue;
 				}
 
-				const int buffer_x = map_x - origin_x;
+				const int map_y = node_map_y + local_node_y;
 				const int buffer_y = map_y - origin_y;
-				upload_buffer_[static_cast<size_t>(buffer_y) * clamped_rect.width + buffer_x] = tile->getMiniMapColor();
+				upload_buffer_[static_cast<size_t>(buffer_y) * rect_w + buffer_x] = tile->getMiniMapColor();
 			}
 		}
 	});

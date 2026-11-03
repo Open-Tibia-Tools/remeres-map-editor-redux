@@ -13,8 +13,9 @@ namespace rme::srv {
 
 	// The liquids of the original server, indexed by its liquid type
 	// number (ContainerLiquidType / PoolLiquidType), as editor liquid subtypes.
-	// The client draws a liquid by colour, and subtype % 8 lands on the colour
-	// the server sends for it (GetLiquidColor): wine 15 -> purple, mud 19 -> brown.
+	// The client draws a liquid by colour; Item::ServerFluidToSpritePattern
+	// maps each of these to the colour the server sends for it (GetLiquidColor):
+	// wine -> purple, mud and oil -> brown, lifefluid -> red.
 	inline constexpr std::array<SplashType, 13> kLiquids = {
 		LIQUID_NONE,
 		LIQUID_WATER,

@@ -326,6 +326,10 @@ void SelectionController::ApplyHit(const Position& mouse_map_pos, const Selectio
 		return;
 	}
 
+	if (!toggle && IsHitSelected(hit) && editor.selection.size() == 1) {
+		return;
+	}
+
 	editor.selection.start();
 	SelectionHit effective_hit = hit;
 	if (!toggle) {
@@ -482,6 +486,8 @@ void SelectionController::HandlePropertiesRelease(const Position& mouse_map_pos,
 }
 
 void SelectionController::HandleDoubleClick(const Position& mouse_map_pos) {
+	dragging = false;
+	boundbox_selection = false;
 	if (g_settings.getInteger(Config::DOUBLECLICK_PROPERTIES)) {
 		Tile* tile = nullptr;
 		if (editor.selection.size() == 1) {

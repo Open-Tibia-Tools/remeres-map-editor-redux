@@ -132,6 +132,7 @@ private:
 	std::vector<size_t> used_sections_;
 	glm::mat4 projection_ { 1.0f };
 	glm::vec4 global_tint_ { 1.0f };
+	std::optional<glm::vec4> last_applied_tint_;
 	const AtlasManager* current_atlas_manager_ = nullptr;
 
 	// Scoped state for batch duration

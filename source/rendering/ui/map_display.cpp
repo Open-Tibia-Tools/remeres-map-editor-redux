@@ -266,10 +266,7 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 	if (!options.ingame && options.show_server_markers) {
 		drawer->DrawServerMarkers(vg);
 	}
-	if (!options.ingame && (options.show_waypoints || options.show_towns || options.show_houses || options.show_zones)) {
-		drawer->DrawMarkerLabels(vg);
-	}
-	if (options.show_tooltips) {
+	if (options.show_tooltips || options.show_houses || options.show_waypoints || options.show_towns || options.show_zones || options.show_server_markers) {
 		drawer->DrawTooltips(vg);
 	}
 	if (options.show_hooks) {
@@ -601,6 +598,9 @@ void MapCanvas::OnMouseLeftClick(wxMouseEvent& event) {
 }
 
 void MapCanvas::OnMouseLeftDoubleClick(wxMouseEvent& event) {
+	if (!g_gui.IsSelectionMode()) {
+		return;
+	}
 	const MainMapPixelPosition click = ScreenToMapPixel(event.GetX(), event.GetY());
 	if (selection_controller) {
 		selection_controller->HandleDoubleClick(Position(click.map_x, click.map_y, floor));

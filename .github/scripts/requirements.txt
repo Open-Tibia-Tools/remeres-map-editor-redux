@@ -1,3 +1,6 @@
 huggingface_hub>=0.23.0
 PyGithub>=2.3.0
-llama-cpp-python>=0.3.0
+transformers>=4.46.0
+torch>=2.2.0
+numpy>=1.24.0
+

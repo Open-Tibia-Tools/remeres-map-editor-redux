@@ -41,6 +41,7 @@ public:
 		TooltipActionId, // Action ID value
 		TooltipUniqueId, // Unique ID value
 		TooltipDoorId, // Door ID value
+		TooltipDepotId, // Depot ID value
 		TooltipTextValue, // Readable text (signs, books)
 		TooltipTeleport, // Teleport destination
 		TooltipWaypoint, // Waypoint name
@@ -52,6 +53,22 @@ public:
 		TooltipBorderDoor,
 		TooltipBorderTeleport,
 		TooltipBorderText,
+		TooltipBorderHouse,
+		TooltipBorderZone,
+
+		// Tooltip Window Chrome & Bevels
+		TooltipWindowBg,
+		TooltipWindowOutline,
+		TooltipWindowBevelLight,
+		TooltipWindowBevelDark,
+		TooltipSlotBg,
+		TooltipSlotBevelLight,
+		TooltipSlotBevelDark,
+		TooltipDividerLight,
+		TooltipDividerDark,
+		TooltipTextWellBg,
+		TooltipTitleText,
+		TooltipSubtitleText,
 
 		// Server markers on sector maps (see game/srv_markers.h): tile frame, badge and tooltip border
 		ServerMarkerStart,

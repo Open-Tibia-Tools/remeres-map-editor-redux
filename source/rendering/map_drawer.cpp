@@ -305,7 +305,7 @@ void MapDrawer::DrawGrid(const ViewBounds& bounds, const AtlasManager& atlas) {
 }
 
 void MapDrawer::DrawTooltips(NVGcontext* vg) {
-	if (options.show_tooltips && !tooltip_drawer.empty() && view.zoom <= 10.0f) {
+	if (!tooltip_drawer.empty() && view.zoom <= 10.0f) {
 		tooltip_drawer.draw(vg, view);
 	}
 }
@@ -322,11 +322,18 @@ void MapDrawer::CollectOverlays() {
 		return;
 	}
 
-	const bool need_tooltips = options.show_tooltips;
-	const bool need_hooks = !options.ingame && options.show_hooks;
-	const bool need_doors = !options.ingame && options.highlight_locked_doors;
+	const bool opt_tooltips = options.show_tooltips;
+	const bool opt_houses = !options.ingame && options.show_houses;
+	const bool opt_waypoints = !options.ingame && options.show_waypoints;
+	const bool opt_towns = !options.ingame && options.show_towns;
+	const bool opt_zones = !options.ingame && options.show_zones;
+	const bool opt_hooks = !options.ingame && options.show_hooks;
+	const bool opt_doors = !options.ingame && options.highlight_locked_doors;
+	const bool opt_server_markers = !options.ingame && options.show_server_markers && editor.map.server_markers;
 
-	if (!need_tooltips && !need_doors && !need_hooks) {
+	const bool need_tooltips = opt_tooltips || opt_houses || opt_waypoints || opt_towns || opt_zones || opt_server_markers;
+
+	if (!need_tooltips && !opt_doors && !opt_hooks) {
 		if (overlay_cache.valid) {
 			tooltip_drawer.clear();
 			hook_indicator_drawer.clear();
@@ -340,7 +347,7 @@ void MapDrawer::CollectOverlays() {
 	const ViewBounds current_bounds = view.getBoundsForFloor(map_z);
 	const uint64_t current_generation = editor.map.getChangeTracker().getGeneration();
 
-	if (overlay_cache.isValid(map_z, view.zoom, current_bounds, need_tooltips, need_hooks, need_doors, options.show_server_markers, current_generation)) {
+	if (overlay_cache.isValid(map_z, view.zoom, current_bounds, opt_tooltips, opt_houses, opt_waypoints, opt_towns, opt_zones, opt_hooks, opt_doors, opt_server_markers, current_generation)) {
 		return;
 	}
 
@@ -358,17 +365,21 @@ void MapDrawer::CollectOverlays() {
 		options,
 		&editor,
 		need_tooltips ? &tooltip_drawer : nullptr,
-		need_doors ? &door_indicator_drawer : nullptr,
-		need_hooks ? &hook_indicator_drawer : nullptr
+		opt_doors ? &door_indicator_drawer : nullptr,
+		opt_hooks ? &hook_indicator_drawer : nullptr
 	);
 
 	overlay_cache.floor = map_z;
 	overlay_cache.zoom = view.zoom;
 	overlay_cache.bounds = collect_bounds;
-	overlay_cache.show_tooltips = need_tooltips;
-	overlay_cache.show_hooks = need_hooks;
-	overlay_cache.highlight_locked_doors = need_doors;
-	overlay_cache.show_server_markers = options.show_server_markers;
+	overlay_cache.show_tooltips = opt_tooltips;
+	overlay_cache.show_houses = opt_houses;
+	overlay_cache.show_waypoints = opt_waypoints;
+	overlay_cache.show_towns = opt_towns;
+	overlay_cache.show_zones = opt_zones;
+	overlay_cache.show_hooks = opt_hooks;
+	overlay_cache.highlight_locked_doors = opt_doors;
+	overlay_cache.show_server_markers = opt_server_markers;
 	overlay_cache.map_generation = current_generation;
 	overlay_cache.valid = true;
 }
@@ -399,12 +410,6 @@ void MapDrawer::DrawServerMarkers(NVGcontext* vg) {
 	server_marker_drawer.draw(vg, editor.map, view, options);
 }
 
-void MapDrawer::DrawMarkerLabels(NVGcontext* vg) {
-	if (!options.ingame && (options.show_waypoints || options.show_towns || options.show_houses || options.show_zones) && view.zoom <= 10.0f) {
-		marker_label_drawer.draw(vg, editor.map, view, options);
-	}
-}
-
 bool MapDrawer::hasOverlays() {
 	const bool can_read_labels = view.zoom <= 10.0f;
 	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
@@ -413,14 +418,7 @@ bool MapDrawer::hasOverlays() {
 	if (!options.ingame && can_read_labels && options.show_server_markers && editor.map.server_markers && !editor.map.server_markers->empty()) {
 		return true;
 	}
-	if (!options.ingame && can_read_labels &&
-	    ((options.show_waypoints && !editor.map.waypoints.empty()) ||
-	     (options.show_towns && !editor.map.towns.empty()) ||
-	     (options.show_houses && editor.map.houses.count() > 0) ||
-	     (options.show_zones && !editor.map.zones.empty()))) {
-		return true;
-	}
-	if (options.show_tooltips && !tooltip_drawer.empty() && can_read_labels) {
+	if (!tooltip_drawer.empty() && can_read_labels) {
 		return true;
 	}
 	if (options.show_hooks && !hook_indicator_drawer.empty() && can_read_labels) {

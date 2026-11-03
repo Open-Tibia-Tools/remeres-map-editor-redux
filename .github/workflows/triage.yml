@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   triage:
-    name: AI Triage (Qwen3.5-0.8B)
+    name: AI Triage (EmbeddingGemma-2)
     runs-on: ubuntu-24.04
 
     steps:
@@ -44,17 +44,17 @@ jobs:
           cache: 'pip'
           cache-dependency-path: .github/scripts/requirements.txt
 
-      - name: Cache Qwen Model
+      - name: Cache Gemma Model
         uses: actions/cache@v4
         id: model-cache
         with:
-          path: ~/.cache/models
-          key: qwen3.5-0.8b-gguf-v1
+          path: ~/.cache/huggingface
+          key: embeddinggemma-2-v1
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r .github/scripts/requirements.txt --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+          python -m pip install -r .github/scripts/requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
       - name: Run AI Triage
         env:
