@@ -8,7 +8,6 @@
 
 #include "app/settings.h"
 #include "game/creature.h"
-#include "game/spawn.h"
 #include "game/srv_homes.h"
 #include "io/sec/data/creature_placement.h"
 #include "io/sec/sec_file_io.h"
