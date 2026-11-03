@@ -51,11 +51,11 @@ public:
 		if (it.isSplash() || it.isFluidContainer()) {
 			const uint16_t fluid = item ? item->getSubtype() : 0;
 			patterns.subtype = fluid;
-			const uint8_t client_color = Item::ServerFluidToClientFluidColor(fluid);
+			const uint8_t pattern_index = Item::ServerFluidToSpritePattern(fluid);
 			if (spr->pattern_x > 0) {
-				patterns.x = (client_color % 4) % spr->pattern_x;
+				patterns.x = pattern_index % spr->pattern_x;
 				if (spr->pattern_y > 0) {
-					patterns.y = (client_color / 4) % spr->pattern_y;
+					patterns.y = (pattern_index / spr->pattern_x) % spr->pattern_y;
 				}
 			}
 

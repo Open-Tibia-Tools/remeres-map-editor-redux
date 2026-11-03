@@ -52,10 +52,9 @@ SplashPropertiesWindow::SplashPropertiesWindow(wxWindow* parent, const Map* map,
 
 	if (item->getSubtype()) {
 		const std::string_view text = Item::LiquidID2Name(item->getSubtype());
-		if (text == "Unknown") {
-			splash_type_field->Append(wxstr(Item::LiquidID2Name(LIQUID_NONE)), reinterpret_cast<void*>(static_cast<intptr_t>(LIQUID_NONE)));
+		if (!splash_type_field->SetStringSelection(wxstr(text))) {
+			splash_type_field->SetSelection(0);
 		}
-		splash_type_field->SetStringSelection(wxstr(text));
 	} else {
 		splash_type_field->SetSelection(0);
 	}
