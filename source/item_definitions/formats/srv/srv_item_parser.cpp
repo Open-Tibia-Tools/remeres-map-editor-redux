@@ -3,6 +3,7 @@
 #include "item_definitions/formats/srv/objects_srv_reader.h"
 #include "util/common.h"
 
+#include <filesystem>
 #include <format>
 #include <fstream>
 #include <iterator>
@@ -131,7 +132,7 @@ bool SrvItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFr
 		return false;
 	}
 
-	std::ifstream stream(path.ToStdWstring(), std::ios::binary);
+	std::ifstream stream(std::filesystem::path(path.ToStdWstring()), std::ios::binary);
 	const std::string text((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
 	if (!stream.good() && !stream.eof()) {
 		error = wxstr(std::format("Could not read \"{}\".", nstr(path)));
