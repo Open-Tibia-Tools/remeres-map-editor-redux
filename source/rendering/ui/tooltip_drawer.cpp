@@ -173,6 +173,27 @@ NVGcolor TooltipDrawer::getHeaderColor(const TooltipData& tooltip) const {
 		case TooltipCategory::ZONE:
 			role = Theme::Role::TooltipBorderZone;
 			break;
+		case TooltipCategory::SERVER:
+			if (tooltip.serverMarker) {
+				switch (tooltip.serverMarker->kind) {
+					case rme::srv::MarkerKind::Start:
+						role = Theme::Role::ServerMarkerStart;
+						break;
+					case rme::srv::MarkerKind::Depot:
+						role = Theme::Role::ServerMarkerDepot;
+						break;
+					case rme::srv::MarkerKind::Raid:
+						role = Theme::Role::ServerMarkerRaid;
+						break;
+					case rme::srv::MarkerKind::Script:
+					default:
+						role = Theme::Role::ServerMarkerScript;
+						break;
+				}
+			} else {
+				role = Theme::Role::ServerMarkerScript;
+			}
+			break;
 		case TooltipCategory::ITEM:
 		default:
 			role = Theme::Role::TooltipBorderItem;
@@ -451,7 +472,9 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 	nvgFontSize(vg, 12.0f);
 	nvgFontFace(vg, "sans");
 	float nameBounds[4] = { 0 };
-	nvgTextBounds(vg, 0, 0, scratch_title.data(), nullptr, nameBounds);
+	if (!scratch_title.empty()) {
+		nvgTextBounds(vg, 0, 0, scratch_title.data(), scratch_title.data() + scratch_title.size(), nameBounds);
+	}
 	float nameWidth = nameBounds[2] - nameBounds[0];
 
 	// Subtitle width
@@ -473,6 +496,9 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 	float maxLabelWidth = 0.0f;
 	for (size_t i = 0; i < scratch_fields_count; ++i) {
 		const auto& field = scratch_fields[i];
+		if (field.label.empty()) {
+			continue;
+		}
 		auto it = s_label_width_cache.find(field.label);
 		float lw = 0.0f;
 		if (it != s_label_width_cache.end()) {
@@ -488,7 +514,7 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 		}
 	}
 
-	lm.valueStartX = maxLabelWidth + 12.0f;
+	lm.valueStartX = (maxLabelWidth > 0.0f) ? (maxLabelWidth + 12.0f) : 0.0f;
 	float maxValueWidth = maxWidth - lm.valueStartX - padding * 2.0f;
 
 	int totalFieldLines = 0;
@@ -496,6 +522,11 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 
 	for (size_t i = 0; i < scratch_fields_count; ++i) {
 		auto& field = scratch_fields[i];
+		if (field.value.empty()) {
+			field.wrappedLines.push_back(field.value);
+			totalFieldLines++;
+			continue;
+		}
 		const char* start = field.value.data();
 		const char* end = start + field.value.length();
 
@@ -786,6 +817,30 @@ void TooltipDrawer::drawSunkenSlot(NVGcontext* vg, float sx, float sy, float siz
 		rme::rendering::DrawNanoVGIndicatorBadge(vg, tooltip.badgeType, sx, sy, size);
 	} else if (tooltip.category == TooltipCategory::ZONE) {
 		rme::rendering::DrawNanoVGCustomIndicatorBadge(vg, sx, sy, size, tooltip.zoneRgb, "zone");
+	} else if (tooltip.category == TooltipCategory::SERVER && tooltip.serverMarker) {
+		wxColour c = Theme::Get(Theme::Role::ServerMarkerScript);
+		const char* label = "srv";
+		switch (tooltip.serverMarker->kind) {
+			case rme::srv::MarkerKind::Start:
+				c = Theme::Get(Theme::Role::ServerMarkerStart);
+				label = "start";
+				break;
+			case rme::srv::MarkerKind::Depot:
+				c = Theme::Get(Theme::Role::ServerMarkerDepot);
+				label = "depot";
+				break;
+			case rme::srv::MarkerKind::Raid:
+				c = Theme::Get(Theme::Role::ServerMarkerRaid);
+				label = "raid";
+				break;
+			case rme::srv::MarkerKind::Script:
+			default:
+				c = Theme::Get(Theme::Role::ServerMarkerScript);
+				label = "srv";
+				break;
+		}
+		const glm::vec3 rgb(c.Red() / 255.0f, c.Green() / 255.0f, c.Blue() / 255.0f);
+		rme::rendering::DrawNanoVGCustomIndicatorBadge(vg, sx, sy, size, rgb, label);
 	} else if (tooltip.itemId > 0) {
 		int img = getSpriteImage(vg, tooltip.itemId);
 		if (img > 0) {
@@ -845,16 +900,22 @@ void TooltipDrawer::drawHeader(NVGcontext* vg, float x, float y, float width, co
 	if (scratch_subtitle.empty()) {
 		// Vertically centered when no subtitle
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgText(vg, textX, slotY + kSlotSize * 0.5f, scratch_title.data(), nullptr);
+		if (!scratch_title.empty()) {
+			nvgText(vg, textX, slotY + kSlotSize * 0.5f, scratch_title.data(), scratch_title.data() + scratch_title.size());
+		}
 	} else {
 		// Two-line layout: title at top, subtitle at bottom
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-		nvgText(vg, textX, slotY + 2.0f, scratch_title.data(), nullptr);
+		if (!scratch_title.empty()) {
+			nvgText(vg, textX, slotY + 2.0f, scratch_title.data(), scratch_title.data() + scratch_title.size());
+		}
 
 		nvgFontSize(vg, 10.0f);
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
 		nvgFillColor(vg, ThemeNvColor(Theme::Role::TooltipSubtitleText));
-		nvgText(vg, textX, slotY + 18.0f, scratch_subtitle.data(), nullptr);
+		if (!scratch_subtitle.empty()) {
+			nvgText(vg, textX, slotY + 18.0f, scratch_subtitle.data(), scratch_subtitle.data() + scratch_subtitle.size());
+		}
 	}
 }
 
@@ -871,14 +932,18 @@ void TooltipDrawer::drawFields(NVGcontext* vg, float x, float y, float valueStar
 		bool firstLine = true;
 		for (const auto& line : field.wrappedLines) {
 			if (firstLine) {
-				wxColour labelCol = Theme::Get(Theme::Role::TooltipLabel);
-				nvgFillColor(vg, nvgRGBA(labelCol.Red(), labelCol.Green(), labelCol.Blue(), 200));
-				nvgText(vg, contentX, cursorY, field.label.data(), field.label.data() + field.label.size());
+				if (!field.label.empty()) {
+					wxColour labelCol = Theme::Get(Theme::Role::TooltipLabel);
+					nvgFillColor(vg, nvgRGBA(labelCol.Red(), labelCol.Green(), labelCol.Blue(), 200));
+					nvgText(vg, contentX, cursorY, field.label.data(), field.label.data() + field.label.size());
+				}
 				firstLine = false;
 			}
 
-			nvgFillColor(vg, nvgRGBA(field.r, field.g, field.b, 255));
-			nvgText(vg, contentX + valueStartX, cursorY, line.data(), line.data() + line.size());
+			if (!line.empty()) {
+				nvgFillColor(vg, nvgRGBA(field.r, field.g, field.b, 255));
+				nvgText(vg, contentX + valueStartX, cursorY, line.data(), line.data() + line.size());
+			}
 			cursorY += lineHeight;
 		}
 	}
