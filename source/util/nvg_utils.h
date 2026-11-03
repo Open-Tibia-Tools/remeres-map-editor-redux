@@ -57,8 +57,37 @@ namespace NvgUtils {
 					pattern_y = (pattern_index / gs.pattern_x) % gs.pattern_y;
 				}
 			}
-		} else if (is_stackable && gs.pattern_x >= 3) {
-			pattern_x = 2;
+		} else if (is_stackable) {
+			int exactCount = 0;
+			if (subtype_opt.has_value() && *subtype_opt > 0) {
+				const uint16_t count = *subtype_opt;
+				if (count <= 1) {
+					exactCount = 0;
+				} else if (count <= 2) {
+					exactCount = 1;
+				} else if (count <= 3) {
+					exactCount = 2;
+				} else if (count <= 4) {
+					exactCount = 3;
+				} else if (count < 10) {
+					exactCount = 4;
+				} else if (count < 25) {
+					exactCount = 5;
+				} else if (count < 50) {
+					exactCount = 6;
+				} else {
+					exactCount = 7;
+				}
+			} else {
+				// Representative preview (e.g. palette or catalog view)
+				exactCount = (gs.pattern_x >= 3) ? 2 : 0;
+			}
+			if (gs.pattern_x > 0) {
+				pattern_x = exactCount % gs.pattern_x;
+				if (gs.pattern_y > 0) {
+					pattern_y = (exactCount / gs.pattern_x) % gs.pattern_y;
+				}
+			}
 		} else if (it && it.hasFlag(ItemFlag::IsHangable) && gs.pattern_x > 1) {
 			pattern_x = 1;
 		}
