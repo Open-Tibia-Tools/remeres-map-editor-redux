@@ -603,18 +603,18 @@ std::vector<Brush*> ToolOptionsSurface::GetDefaultTools() const {
 	if (g_brush_manager.pz_brush) {
 		brushes.push_back(g_brush_manager.pz_brush);
 	}
-	// Sector maps cannot hold PvP or No-PvP zones.
-	const bool with_pvp = !rme::srv::isSrvClient();
-	if (with_pvp && g_brush_manager.rook_brush) {
+	// Sector maps have Refresh tiles but no PvP or No-PvP zones; other maps the other way round.
+	const bool sector_map = rme::srv::isSrvClient();
+	if (!sector_map && g_brush_manager.rook_brush) {
 		brushes.push_back(g_brush_manager.rook_brush);
 	}
 	if (g_brush_manager.nolog_brush) {
 		brushes.push_back(g_brush_manager.nolog_brush);
 	}
-	if (with_pvp && g_brush_manager.pvp_brush) {
+	if (!sector_map && g_brush_manager.pvp_brush) {
 		brushes.push_back(g_brush_manager.pvp_brush);
 	}
-	if (g_brush_manager.refresh_brush) {
+	if (sector_map && g_brush_manager.refresh_brush) {
 		brushes.push_back(g_brush_manager.refresh_brush);
 	}
 	if (g_brush_manager.normal_door_brush) {

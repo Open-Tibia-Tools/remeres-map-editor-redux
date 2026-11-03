@@ -26,10 +26,10 @@ public:
 	static const wxString PANE_NAME;
 
 private:
-	void AddTools(bool with_pvp);
+	void AddTools(bool sector_map);
 
 	wxAuiToolBar* toolbar;
-	bool pvp_tools_shown = true;
+	bool sector_tools_shown = false;
 };
 
 #endif

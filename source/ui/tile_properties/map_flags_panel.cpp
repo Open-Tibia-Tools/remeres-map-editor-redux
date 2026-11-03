@@ -23,6 +23,7 @@ MapFlagsPanel::MapFlagsPanel(wxWindow* parent) :
 	chk_nologout = new wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "No Logout");
 	chk_pvpzone = new wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "PvP Zone");
 	chk_refresh = new wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "Refresh");
+	chk_refresh->Hide(); // shown for sector maps (SetTile)
 
 	sizer->Add(chk_pz, wxSizerFlags(0).Left().Border(wxALL, 2));
 	sizer->Add(chk_nopvp, wxSizerFlags(0).Left().Border(wxALL, 2));
@@ -46,11 +47,12 @@ void MapFlagsPanel::SetTile(Tile* tile, Map* map) {
 	current_tile = tile;
 	current_map = map;
 
-	// Sector maps cannot hold PvP or No-PvP zones.
-	const bool with_pvp = !rme::srv::isSrvClient();
-	if (chk_nopvp->IsShown() != with_pvp) {
-		chk_nopvp->Show(with_pvp);
-		chk_pvpzone->Show(with_pvp);
+	// Sector maps have Refresh tiles but no PvP or No-PvP zones; other maps the other way round.
+	const bool sector_map = rme::srv::isSrvClient();
+	if (chk_refresh->IsShown() != sector_map) {
+		chk_nopvp->Show(!sector_map);
+		chk_pvpzone->Show(!sector_map);
+		chk_refresh->Show(sector_map);
 		Layout();
 	}
 
