@@ -311,14 +311,25 @@ protected:
 		row_cells.clear();
 		row_cells.reserve(end_cx - start_cx + 1);
 
+		// Monotonic forward search optimization: cell keys are sorted by cy (high 32 bits),
+		// so row cy+1 starts at or after the end of row cy.
+		// We track position by index to be resilient against callback mutations that insert cells.
+		size_t row_search_idx = 0;
+		size_t prev_cells_size = cells_.size();
+
 		for (int cy = start_cy; cy <= end_cy; ++cy) {
 			row_cells.clear();
 
-			// Binary search for the first cell in this row
+			// If callback mutated the grid and reallocated cells_, reset search index to 0 for safety
+			if (cells_.size() != prev_cells_size) {
+				row_search_idx = 0;
+				prev_cells_size = cells_.size();
+			}
+
 			uint64_t row_start_key = makeKeyFromCell(start_cx, cy);
 			uint64_t row_end_key = makeKeyFromCell(end_cx, cy);
 
-			auto it = std::lower_bound(cells_.begin(), cells_.end(), row_start_key, cell_key_less);
+			auto it = std::lower_bound(cells_.begin() + row_search_idx, cells_.end(), row_start_key, cell_key_less);
 
 			// Scan linearly through matching cells in this row (contiguous in sorted order!)
 			while (it != cells_.end() && it->key <= row_end_key) {
@@ -333,6 +344,8 @@ protected:
 				}
 				++it;
 			}
+			// Advance search index past scanned cells for true O(M + log N) monotonic search
+			row_search_idx = static_cast<size_t>(it - cells_.begin());
 
 			if (row_cells.empty()) {
 				continue;
@@ -373,13 +386,21 @@ protected:
 		row_cells.clear();
 		row_cells.reserve(end_cx - start_cx + 1);
 
+		// Monotonic forward search optimization: cell keys are sorted by cy (high 32 bits),
+		// so row cy+1 starts at or after the end of row cy. Reusing row_it across rows
+		// avoids restarting std::lower_bound from cells_.cbegin() on every row.
+		// Note: in const traversal, cells_ cannot be mutated or reallocated.
+		auto row_it = cells_.cbegin();
+
 		for (int cy = start_cy; cy <= end_cy; ++cy) {
 			row_cells.clear();
 
 			const uint64_t row_start_key = makeKeyFromCell(start_cx, cy);
 			const uint64_t row_end_key = makeKeyFromCell(end_cx, cy);
 
-			auto it = std::lower_bound(cells_.cbegin(), cells_.cend(), row_start_key, cell_key_less);
+			row_it = std::lower_bound(row_it, cells_.cend(), row_start_key, cell_key_less);
+			auto it = row_it;
+
 			while (it != cells_.cend() && it->key <= row_end_key) {
 				int cx, cell_cy;
 				getCellCoordsFromKey(it->key, cx, cell_cy);
@@ -392,6 +413,8 @@ protected:
 				}
 				++it;
 			}
+			// Advance row_it to end of scanned cells for true O(M + log N) monotonic search
+			row_it = it;
 
 			if (row_cells.empty()) {
 				continue;
