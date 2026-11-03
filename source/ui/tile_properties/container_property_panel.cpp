@@ -10,6 +10,7 @@
 #include "map/tile.h"
 #include "map/map.h"
 #include "ui/dialog_util.h"
+#include "ui/dialog_helper.h"
 #include "ui/find_item_window.h"
 #include "ui/gui_ids.h"
 #include "util/image_manager.h"
@@ -116,6 +117,9 @@ void ContainerPropertyPanel::OnAddItem(wxCommandEvent& WXUNUSED(event)) {
 				Item* new_item_base = new_tile->getItemAt(index);
 				if (new_item_base && new_item_base->asContainer()) {
 					Container* container = static_cast<Container*>(new_item_base);
+					if (container->getVector().size() >= container->getVolume()) {
+						return;
+					}
 					auto& contents = container->getVector();
 					uint32_t sub_index = grid_canvas->GetSelectedIndex();
 
@@ -176,7 +180,10 @@ void ContainerPropertyPanel::OnEditItem(wxCommandEvent& WXUNUSED(event)) {
 	Item* new_sub_item = new_container->getItem(sub_item_index);
 	wxPoint newDialogAt = GetPosition() + FromDIP(wxPoint(20, 20));
 
-	wxDialog* d = new ItemPropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
+	wxDialog* d = DialogHelper::CreateItemPropertiesDialog(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
+	if (!d) {
+		return;
+	}
 
 	const int result = d->ShowModal();
 	if (result == 1 || result == wxID_OK) {
