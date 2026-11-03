@@ -149,6 +149,10 @@ MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
 	Bind(wxEVT_PAINT, &MapCanvas::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, &MapCanvas::OnEraseBackground, this);
 	Bind(wxEVT_IDLE, &MapCanvas::OnIdle, this);
+	Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+		Refresh(false);
+		event.Skip();
+	});
 }
 
 MapCanvas::~MapCanvas() {
@@ -259,10 +263,7 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 	if (options.show_creatures) {
 		drawer->DrawCreatureNames(vg);
 	}
-	if (!options.ingame && (options.show_waypoints || options.show_towns || options.show_houses || options.show_zones)) {
-		drawer->DrawMarkerLabels(vg);
-	}
-	if (options.show_tooltips) {
+	if (options.show_tooltips || options.show_houses || options.show_waypoints || options.show_towns || options.show_zones) {
 		drawer->DrawTooltips(vg);
 	}
 	if (options.show_hooks) {

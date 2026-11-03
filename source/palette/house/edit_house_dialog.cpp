@@ -16,32 +16,32 @@
 #include <sstream>
 
 EditHouseDialog::EditHouseDialog(wxWindow* parent, Map* map, House* house) :
-	wxDialog(parent, wxID_ANY, "House Properties", wxDefaultPosition, wxSize(250, 160)),
+	wxDialog(parent, wxID_ANY, "House Properties", wxDefaultPosition, parent ? parent->FromDIP(wxSize(250, 160)) : wxSize(250, 160)),
 	map(map),
 	what_house(house) {
 	ASSERT(map);
 	ASSERT(house);
 
-	wxSizer* topsizer = newd wxBoxSizer(wxVERTICAL);
-	wxSizer* boxsizer = newd wxStaticBoxSizer(wxVERTICAL, this, "House Properties");
-	wxFlexGridSizer* housePropContainer = newd wxFlexGridSizer(2, 10, 10);
+	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
+	wxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "House Properties");
+	wxFlexGridSizer* housePropContainer = new wxFlexGridSizer(2, 10, 10);
 	housePropContainer->AddGrowableCol(1);
 
-	wxFlexGridSizer* subsizer = newd wxFlexGridSizer(2, 10, 10);
+	wxFlexGridSizer* subsizer = new wxFlexGridSizer(2, 10, 10);
 	subsizer->AddGrowableCol(1);
 
 	house_name = wxstr(house->name);
-	house_id = i2ws(house->getID());
-	house_rent = i2ws(house->rent);
+	house_id = std::to_string(house->getID());
+	house_rent = std::to_string(house->rent);
 
-	subsizer->Add(newd wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Name:"), wxSizerFlags(0).Border(wxLEFT, 5));
-	name_field = newd wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(160, 20), 0, wxTextValidator(wxFILTER_ASCII, &house_name));
+	subsizer->Add(new wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Name:"), wxSizerFlags(0).Border(wxLEFT, 5));
+	name_field = new wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, house_name, wxDefaultPosition, FromDIP(wxSize(160, 20)), 0, wxTextValidator(wxFILTER_ASCII));
 	subsizer->Add(name_field, wxSizerFlags(1).Expand());
 
-	subsizer->Add(newd wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Town:"), wxSizerFlags(0).Border(wxLEFT, 5));
+	subsizer->Add(new wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Town:"), wxSizerFlags(0).Border(wxLEFT, 5));
 
 	const Towns& towns = map->towns;
-	town_id_field = newd wxChoice(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY);
+	town_id_field = new wxChoice(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY);
 	int to_select_index = 0;
 	uint32_t houseTownId = house->townid;
 
@@ -60,7 +60,7 @@ EditHouseDialog::EditHouseDialog(wxWindow* parent, Map* map, House* house) :
 
 		if (!found) {
 			if (houseTownId != 0) {
-				town_id_field->Append("Undefined Town (id:" + i2ws(houseTownId) + ")");
+				town_id_field->Append("Undefined Town (id:" + std::to_string(houseTownId) + ")");
 				town_ids_.push_back(houseTownId);
 				++to_select_index;
 			}
@@ -69,21 +69,21 @@ EditHouseDialog::EditHouseDialog(wxWindow* parent, Map* map, House* house) :
 	town_id_field->SetSelection(to_select_index);
 	subsizer->Add(town_id_field, wxSizerFlags(1).Expand());
 
-	subsizer->Add(newd wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Rent:"), wxSizerFlags(0).Border(wxLEFT, 5));
-	rent_field = newd wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxSize(160, 20), 0, wxTextValidator(wxFILTER_NUMERIC, &house_rent));
+	subsizer->Add(new wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Rent:"), wxSizerFlags(0).Border(wxLEFT, 5));
+	rent_field = new wxTextCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, house_rent, wxDefaultPosition, FromDIP(wxSize(160, 20)), 0, wxTextValidator(wxFILTER_DIGITS));
 	subsizer->Add(rent_field, wxSizerFlags(1).Expand());
 
-	wxFlexGridSizer* subsizerRight = newd wxFlexGridSizer(1, 10, 10);
-	wxFlexGridSizer* houseSizer = newd wxFlexGridSizer(2, 10, 10);
+	wxFlexGridSizer* subsizerRight = new wxFlexGridSizer(1, 10, 10);
+	wxFlexGridSizer* houseSizer = new wxFlexGridSizer(2, 10, 10);
 
-	houseSizer->Add(newd wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "ID:"), wxSizerFlags(0).Center());
-	id_field = newd wxSpinCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, FROM_DIP(this, wxSize(64, 20)), wxSP_ARROW_KEYS, 1, 0xFFFF, house->getID());
+	houseSizer->Add(new wxStaticText(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "ID:"), wxSizerFlags(0).Center());
+	id_field = new wxSpinCtrl(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(64, 20)), wxSP_ARROW_KEYS, 1, 0xFFFF, house->getID());
 	houseSizer->Add(id_field, wxSizerFlags(1).Expand());
 	subsizerRight->Add(houseSizer, wxSizerFlags(1).Expand());
 
-	wxSizer* checkbox_sub_sizer = newd wxBoxSizer(wxVERTICAL);
+	wxSizer* checkbox_sub_sizer = new wxBoxSizer(wxVERTICAL);
 	checkbox_sub_sizer->AddSpacer(4);
-	guildhall_field = newd wxCheckBox(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Guildhall");
+	guildhall_field = new wxCheckBox(static_cast<wxStaticBoxSizer*>(boxsizer)->GetStaticBox(), wxID_ANY, "Guildhall");
 	checkbox_sub_sizer->Add(guildhall_field);
 	subsizerRight->Add(checkbox_sub_sizer);
 	guildhall_field->SetValue(house->guildhall);
@@ -93,9 +93,9 @@ EditHouseDialog::EditHouseDialog(wxWindow* parent, Map* map, House* house) :
 	boxsizer->Add(housePropContainer, wxSizerFlags(5).Expand().Border(wxTOP | wxBOTTOM, 10));
 	topsizer->Add(boxsizer, wxSizerFlags(0).Expand().Border(wxRIGHT | wxLEFT, 20));
 
-	wxSizer* buttonsSizer = newd wxBoxSizer(wxHORIZONTAL);
-	buttonsSizer->Add(newd wxButton(this, wxID_OK, "OK"), wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
-	buttonsSizer->Add(newd wxButton(this, wxID_CANCEL, "Cancel"), wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
+	wxSizer* buttonsSizer = new wxBoxSizer(wxHORIZONTAL);
+	buttonsSizer->Add(new wxButton(this, wxID_OK, "OK"), wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
+	buttonsSizer->Add(new wxButton(this, wxID_CANCEL, "Cancel"), wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
 	topsizer->Add(buttonsSizer, wxSizerFlags(0).Center().Border(wxLEFT | wxRIGHT, 20));
 
 	SetSizerAndFit(topsizer);
@@ -118,7 +118,9 @@ void EditHouseDialog::OnFocusChange(wxFocusEvent& event) {
 }
 
 void EditHouseDialog::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
-	if (Validate() && TransferDataFromWindow()) {
+	if (Validate()) {
+		house_name = name_field->GetValue().Trim(true).Trim(false);
+		house_rent = rent_field->GetValue().Trim(true).Trim(false);
 		long new_house_rent;
 		house_rent.ToLong(&new_house_rent);
 		if (new_house_rent < 0) {

@@ -1,32 +1,25 @@
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
-// Remere's Map Editor is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Remere's Map Editor is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <http://www.gnu.org/licenses/>.
-//////////////////////////////////////////////////////////////////////
 
 #ifndef RME_PALETTE_TOWNS_H_
 #define RME_PALETTE_TOWNS_H_
 
-#include "util/nanovg_table_ctrl.h"
-#include "palette/controls/palette_search_ctrl.h"
-#include "game/town.h"
 #include "palette/palette_common.h"
+#include "palette/controls/tileset_grid_toolbar.h"
+#include "game/town.h"
+
+#include <string>
+#include <vector>
+
+class Map;
+class Town;
+class Brush;
 
 class TownPalettePanel : public PalettePanel {
 public:
-	TownPalettePanel(wxWindow* parent, wxWindowID id = wxID_ANY);
-	~TownPalettePanel() override = default;
+	explicit TownPalettePanel(wxWindow* parent, wxWindowID id = wxID_ANY);
+	~TownPalettePanel() override;
 
 	wxString GetName() const override;
 
@@ -39,35 +32,33 @@ public:
 	void OnSwitchIn() override;
 	void OnSwitchOut() override;
 
-	// Table callbacks
-	void OnSelectTown(int index, const TableRow& row);
-	void OnActivateTown(int index, const TableRow& row);
-	void OnSortTowns(int column, bool ascending);
-	void OnTownContextMenu(int index, const TableRow* row, const wxPoint& pos);
-
-	// Event handlers
-	void OnSearchChange(wxCommandEvent& event);
-	void OnClickAddTown(wxCommandEvent& event);
-	void OnClickEditTown(wxCommandEvent& event);
-	void OnClickRemoveTown(wxCommandEvent& event);
-	void OnClickChangeTemple(wxCommandEvent& event);
-	void OnGoToTemple(wxCommandEvent& event);
-
 	void SetMap(Map* map);
+
+	void SelectTownById(uint32_t town_id);
+	Town* GetSelectedTown() const;
+
+	// Actions
+	void OnClickAddTown();
+	void OnClickEditTown();
+	void OnClickRemoveTown();
+	void OnClickChangeTemple();
+	void OnGoToTemple();
 
 protected:
 	bool RunEditTownModal(wxWindow* parent, Map* map, Town* town, bool is_new);
-	Town* GetSelectedTown() const;
 
-	Map* map = nullptr;
+private:
+	class TownCanvas;
+
+	Map* map_ = nullptr;
 	uint32_t selected_town_id_ = 0;
 
-	PaletteSearchCtrl* search_ctrl = nullptr;
-	NanoVGTableCtrl* town_table = nullptr;
-	wxButton* add_town_button = nullptr;
-	wxButton* edit_town_button = nullptr;
-	wxButton* remove_town_button = nullptr;
-	wxButton* change_temple_button = nullptr;
+	TilesetGridToolbar* toolbar_ = nullptr;
+	TownCanvas* canvas_ = nullptr;
+	wxButton* add_button_ = nullptr;
+	wxButton* edit_button_ = nullptr;
+	wxButton* remove_button_ = nullptr;
+	wxButton* change_temple_button_ = nullptr;
 };
 
-#endif
+#endif // RME_PALETTE_TOWNS_H_

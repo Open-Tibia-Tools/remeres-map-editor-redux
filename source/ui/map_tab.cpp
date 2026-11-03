@@ -33,7 +33,7 @@ MapTab::MapTab(MapTabbook* aui, Editor* editor) :
 	EditorTab(),
 	MapWindow(aui, *editor),
 	aui(aui) {
-	iref = newd InternalReference(editor);
+	iref = new InternalReference(editor);
 
 	spdlog::info("MapTab created (New Editor) [Tab={}]", (void*)this);
 

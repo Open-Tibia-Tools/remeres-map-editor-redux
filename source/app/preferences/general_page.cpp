@@ -63,7 +63,7 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Maps opened from Explorer or shell integrations are routed into the already running editor window.",
 		g_settings.getBoolean(Config::ONLY_ONE_INSTANCE)
 	);
-	page_sizer->Add(startup_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
+	page_sizer->Add(startup_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(10)));
 
 	auto* safety_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -82,42 +82,42 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Show palette editing tools for customizing tileset organization.",
 		g_settings.getBoolean(Config::SHOW_TILESET_EDITOR)
 	);
-	page_sizer->Add(safety_section, 0, wxEXPAND | wxALL, FromDIP(10));
+	page_sizer->Add(safety_section, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
 
 	auto* performance_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
 		"Performance",
 		"Tune undo capacity and background work limits to match your hardware and map size."
 	);
-	undo_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, i2ws(g_settings.getInteger(Config::UNDO_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0x10000000);
+	undo_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, std::to_string(g_settings.getInteger(Config::UNDO_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0x10000000);
 	PreferencesLayout::AddControlRow(
 		performance_section,
 		"Undo queue size",
 		"Maximum number of editor actions kept in history. Larger values improve safety but use more memory.",
 		undo_size_spin
 	);
-	undo_mem_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, i2ws(g_settings.getInteger(Config::UNDO_MEM_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 4096);
+	undo_mem_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, std::to_string(g_settings.getInteger(Config::UNDO_MEM_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 4096);
 	PreferencesLayout::AddControlRow(
 		performance_section,
 		"Undo memory limit (MB)",
 		"Approximate memory budget for the undo queue before old entries begin to drop off.",
 		undo_mem_size_spin
 	);
-	worker_threads_spin = new wxSpinCtrl(performance_section, wxID_ANY, i2ws(g_settings.getInteger(Config::WORKER_THREADS)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 64);
+	worker_threads_spin = new wxSpinCtrl(performance_section, wxID_ANY, std::to_string(g_settings.getInteger(Config::WORKER_THREADS)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 64);
 	PreferencesLayout::AddControlRow(
 		performance_section,
 		"Worker threads",
 		"Number of background threads used for heavier editor tasks. Match this to your logical CPU core count when possible.",
 		worker_threads_spin
 	);
-	replace_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, i2ws(g_settings.getInteger(Config::REPLACE_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100000);
+	replace_size_spin = new wxSpinCtrl(performance_section, wxID_ANY, std::to_string(g_settings.getInteger(Config::REPLACE_SIZE)), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100000);
 	PreferencesLayout::AddControlRow(
 		performance_section,
 		"Replace count limit",
 		"Maximum number of items the Replace Item tool can affect in one operation.",
 		replace_size_spin
 	);
-	page_sizer->Add(performance_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(performance_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	auto* clipboard_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
@@ -141,7 +141,7 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Example output shown with representative map coordinates.",
 		BuildPositionPreview(position_format_choice->GetSelection())
 	);
-	page_sizer->Add(clipboard_section, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	page_sizer->Add(clipboard_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 
 	position_format_choice->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) {
 		UpdatePositionPreview();
@@ -152,7 +152,7 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 
 void GeneralPage::UpdatePositionPreview() {
 	if (position_preview_label && position_format_choice) {
-		position_preview_label->SetLabel(BuildPositionPreview(position_format_choice->GetSelection()));
+		position_preview_label->SetLabelText(BuildPositionPreview(position_format_choice->GetSelection()));
 		position_preview_label->GetParent()->Layout();
 	}
 }

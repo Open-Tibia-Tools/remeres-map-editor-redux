@@ -120,7 +120,7 @@ public:
 
 protected:
 	// For internal use, call to resize the scrollbars with
-	// the newd dimensions of *this* window
+	// the new dimensions of *this* window
 	void UpdateScrollbars(int nx, int ny);
 	void UpdateDialogs(bool show);
 
@@ -158,10 +158,10 @@ public:
 	~MapScrollBar() override { }
 
 	void OnKey(wxKeyEvent& event) {
-		canvas->GetEventHandler()->AddPendingEvent(event);
+		canvas->GetEventHandler()->QueueEvent(event.Clone());
 	}
 	void OnWheel(wxMouseEvent& event) {
-		canvas->GetEventHandler()->AddPendingEvent(event);
+		canvas->GetEventHandler()->QueueEvent(event.Clone());
 	}
 	void OnFocus(wxFocusEvent& event) {
 		canvas->SetFocus();

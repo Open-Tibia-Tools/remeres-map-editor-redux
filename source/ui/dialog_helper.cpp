@@ -30,9 +30,9 @@ void DialogHelper::OpenProperties(Editor& editor, Tile* tile) {
 	wxDialog* w = nullptr;
 
 	if (new_tile->spawn && g_settings.getInteger(Config::SHOW_SPAWNS)) {
-		w = newd SpawnPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), new_tile->spawn.get());
+		w = new SpawnPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), new_tile->spawn.get());
 	} else if (new_tile->creature && g_settings.getInteger(Config::SHOW_CREATURES)) {
-		w = newd CreaturePropertiesWindow(g_gui.root, &editor.map, new_tile.get(), new_tile->creature.get());
+		w = new CreaturePropertiesWindow(g_gui.root, &editor.map, new_tile.get(), new_tile->creature.get());
 	} else {
 		ItemVector selected_items = TileOperations::getSelectedItems(new_tile.get());
 		Item* item = nullptr;
@@ -50,17 +50,17 @@ void DialogHelper::OpenProperties(Editor& editor, Tile* tile) {
 
 		if (item) {
 			if (dynamic_cast<Container*>(item)) {
-				w = newd ContainerPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
+				w = new ContainerPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
 			} else if (dynamic_cast<Podium*>(item)) {
-				w = newd PodiumPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
+				w = new PodiumPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
 			} else if (item->canHoldText() || item->canHoldDescription()) {
-				w = newd WritablePropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
+				w = new WritablePropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
 			} else if (item->isSplash() || item->isFluidContainer()) {
-				w = newd SplashPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
+				w = new SplashPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
 			} else if (dynamic_cast<Depot*>(item)) {
-				w = newd DepotPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
+				w = new DepotPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
 			} else {
-				w = newd ItemPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
+				w = new ItemPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
 			}
 		}
 	}

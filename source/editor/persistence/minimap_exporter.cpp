@@ -1,4 +1,5 @@
 #include "editor/persistence/minimap_exporter.h"
+#include <format>
 
 #include "editor/editor.h"
 #include "editor/persistence/minimap_exporter_internal.h"
@@ -201,13 +202,13 @@ std::vector<Chunk> buildChunks(const Bounds& bounds, int outputImageSize, int ch
 
 wxFileName exportRootDirectory(const MinimapExportOptions& options) {
 	wxFileName directory(options.outputDirectory);
-	directory.AppendDir(wxString::FromUTF8(options.fileBaseName.c_str()));
+	directory.AppendDir(wxstr(options.fileBaseName));
 	return directory;
 }
 
 wxFileName floorDirectory(const MinimapExportOptions& options, int floor) {
 	wxFileName directory(exportRootDirectory(options));
-	directory.AppendDir(wxString::Format("%d", floor));
+	directory.AppendDir(wxstr(std::format("{}", floor)));
 	return directory;
 }
 
@@ -224,21 +225,21 @@ bool ensureDirectory(const wxFileName& directory) {
 wxFileName outputFile(const wxFileName& directory, const std::string& baseName, const std::string& extension) {
 	wxFileName file(directory);
 	const std::string fullName = baseName + extension;
-	file.SetFullName(wxString::FromUTF8(fullName.c_str()));
+	file.SetFullName(wxstr(fullName));
 	return file;
 }
 
 wxFileName chunkFile(const MinimapExportOptions& options, int floor, const Chunk& chunk) {
 	const std::string extension = options.format == MinimapExportFormat::Jpg ? ".jpg" : ".webp";
 	wxFileName file(floorDirectory(options, floor));
-	file.SetFullName(wxString::FromUTF8(options.fileBaseName.c_str()) + wxString::Format("_z%d_x%d_y%d", floor, chunk.x, chunk.y) + wxString::FromUTF8(extension.c_str()));
+	file.SetFullName(wxstr(std::format("{}_z{}_x{}_y{}{}", options.fileBaseName, floor, chunk.x, chunk.y, extension)));
 	return file;
 }
 
 wxFileName fullImageFile(const MinimapExportOptions& options, int floor) {
 	const std::string extension = options.format == MinimapExportFormat::Jpg ? ".jpg" : ".webp";
 	wxFileName file(fullImagesDirectory(options));
-	file.SetFullName(wxString::FromUTF8(options.fileBaseName.c_str()) + wxString::Format("_z%d_full", floor) + wxString::FromUTF8(extension.c_str()));
+	file.SetFullName(wxstr(std::format("{}_z{}_full{}", options.fileBaseName, floor, extension)));
 	return file;
 }
 

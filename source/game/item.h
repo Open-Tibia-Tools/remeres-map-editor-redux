@@ -373,8 +373,15 @@ public:
 	bool hasCharges() const {
 		return getDefinition().attribute(ItemAttributeKey::Charges) != 0;
 	}
+	// Border item of a border brush (borders.xml). Auto-bordering only ever
+	// removes or replaces these, so hand-placed edges survive re-bordering.
 	bool isBorder() const {
-		return getDefinition().hasFlag(ItemFlag::IsBorder) || (isAlwaysOnBottom() && getTopOrder() == 1);
+		return getDefinition().hasFlag(ItemFlag::IsBorder);
+	}
+	// Drawn in the ground-border render layer: brush borders plus every other
+	// "clip" item (always-on-bottom, top order 1) such as hand-placed edges.
+	bool isBorderLayer() const {
+		return isBorder() || (isAlwaysOnBottom() && getTopOrder() == 1);
 	}
 	bool isOptionalBorder() const {
 		return getDefinition().hasFlag(ItemFlag::IsOptionalBorder);

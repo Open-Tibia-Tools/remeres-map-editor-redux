@@ -178,10 +178,11 @@ namespace {
 
 		for (const auto format : formats) {
 			for (const bool extended : { false, true }) {
-				const std::array<bool, 2> frame_duration_options = (format < DAT_FORMAT_1050)
-					? std::array<bool, 2>{ false, false }
-					: std::array<bool, 2>{ false, true };
-				const size_t duration_count = (format < DAT_FORMAT_1050) ? 1 : 2;
+				// Frame durations ("improved animations") are not tied to the DAT
+				// format: ObjectBuilder writes them into older clients too (e.g. a
+				// custom 8.60 with signature 4C2C7993), so probe them for every format.
+				const std::array<bool, 2> frame_duration_options { false, true };
+				const size_t duration_count = 2;
 
 				const std::array<bool, 2> frame_group_options = (format < DAT_FORMAT_1057)
 					? std::array<bool, 2>{ false, false }

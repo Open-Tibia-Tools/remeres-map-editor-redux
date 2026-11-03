@@ -25,7 +25,11 @@ layout (location = 7) in float aDepth;
 
 out vec2 vWorldPos;
 out vec2 vQuadCoord;
-out vec3 vTexCoord;
+// centroid: with MSAA a partially covered edge pixel is shaded at its centre,
+// which can lie outside the quad; extrapolated UVs then sample the neighbouring
+// atlas sprite and show up as coloured lines along tile edges when zoomed out.
+centroid out vec3 vTexCoord;
+flat out vec4 vUVBounds;
 out vec4 vColor;
 flat out float vFlags;
 flat out float vHouseId;
@@ -48,12 +52,14 @@ void main() {
 	int flagBits = int(aFlags + 0.5);
 	if ((flagBits & 1) != 0) {
 		vTexCoord = vec3(0.0);
+		vUVBounds = vec4(0.0);
 	} else {
 		int baseTexel = int(aSpriteId + 0.5) * 2;
 		vec4 uvRect = texelFetch(uAtlasLUT, baseTexel);
 		vec4 meta = texelFetch(uAtlasLUT, baseTexel + 1);
 		vec2 uv = mix(uvRect.xy, uvRect.zw, aTexCoord);
 		vTexCoord = vec3(uv, meta.x);
+		vUVBounds = uvRect;
 	}
 }
 )";
@@ -68,7 +74,8 @@ flat in float vFlags;
 flat in float vHouseId;
 in vec2 vWorldPos;
 in vec2 vQuadCoord;
-in vec3 vTexCoord;
+centroid in vec3 vTexCoord;
+flat in vec4 vUVBounds;
 in vec4 vColor;
 out vec4 FragColor;
 
@@ -84,6 +91,16 @@ uniform int uShowBlocking;
 uniform int uExtendedPathingShader;
 uniform vec4 uBlockingWash;
 uniform int uBlockingBlendMode;
+
+// Keep filtered lookups inside the sprite's own atlas rect: with smooth
+// (linear) filtering a sample at the sprite edge would otherwise blend in
+// texels of the neighbouring atlas slot.
+vec3 clampToSprite(vec3 uv, vec4 bounds) {
+	vec2 halfTexel = 0.5 / vec2(textureSize(uAtlas, 0).xy);
+	vec2 lo = min(bounds.xy, bounds.zw) + halfTexel;
+	vec2 hi = max(bounds.xy, bounds.zw) - halfTexel;
+	return vec3(clamp(uv.xy, min(lo, hi), max(lo, hi)), uv.z);
+}
 
 )") + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + R"(
 
@@ -108,7 +125,7 @@ void main() {
 		return;
 	}
 
-	vec4 texColor = texture(uAtlas, vTexCoord);
+	vec4 texColor = texture(uAtlas, clampToSprite(vTexCoord, vUVBounds));
 	FragColor = texColor * vColor;
 	if (FragColor.a < 0.01) {
 		discard;

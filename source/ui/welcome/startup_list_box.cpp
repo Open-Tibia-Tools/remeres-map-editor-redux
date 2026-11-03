@@ -76,7 +76,7 @@ wxBitmap StartupListBox::GetIconBitmap(const std::string& art_id) const {
 		return cached->second;
 	}
 
-	wxBitmap bitmap = IMAGE_MANAGER.GetBitmap(art_id, wxSize(16, 16));
+	wxBitmap bitmap = IMAGE_MANAGER.GetBitmap(art_id, FromDIP(wxSize(16, 16)));
 	m_icon_cache.emplace(art_id, bitmap);
 	return bitmap;
 }

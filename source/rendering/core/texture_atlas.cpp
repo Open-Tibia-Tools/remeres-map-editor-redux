@@ -20,6 +20,7 @@ TextureAtlas::TextureAtlas(TextureAtlas&& other) noexcept :
 	occupancy_(std::move(other.occupancy_)),
 	free_slots_(std::move(other.free_slots_)),
 	pbo_(std::move(other.pbo_)) {
+	smooth_ = other.smooth_;
 	other.layer_count_ = 0;
 	other.allocated_layers_ = 0;
 	other.total_sprite_count_ = 0;
@@ -38,6 +39,7 @@ TextureAtlas& TextureAtlas::operator=(TextureAtlas&& other) noexcept {
 		small_search_hint_ = other.small_search_hint_;
 		large_search_hint_ = other.large_search_hint_;
 		occupancy_ = std::move(other.occupancy_);
+		smooth_ = other.smooth_;
 		free_slots_ = std::move(other.free_slots_);
 		pbo_ = std::move(other.pbo_);
 		other.layer_count_ = 0;
@@ -60,8 +62,8 @@ bool TextureAtlas::initialize(int initial_layers) {
 	texture_id_ = std::make_unique<GLTextureResource>(GL_TEXTURE_2D_ARRAY);
 
 	// Set texture parameters
-	glTextureParameteri(texture_id_->GetID(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTextureParameteri(texture_id_->GetID(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	applyFilter(texture_id_->GetID());
+
 	glTextureParameteri(texture_id_->GetID(), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTextureParameteri(texture_id_->GetID(), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -102,8 +104,8 @@ bool TextureAtlas::addLayer() {
 		// Create new larger texture array
 		auto new_texture = std::make_unique<GLTextureResource>(GL_TEXTURE_2D_ARRAY);
 
-		glTextureParameteri(new_texture->GetID(), GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTextureParameteri(new_texture->GetID(), GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		applyFilter(new_texture->GetID());
+
 		glTextureParameteri(new_texture->GetID(), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTextureParameteri(new_texture->GetID(), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -209,19 +211,29 @@ std::optional<TextureAtlas::Placement> TextureAtlas::findPlacement(int slot_widt
 	size_t& search_hint = single_slot ? small_search_hint_ : large_search_hint_;
 	for (;;) {
 		const size_t search_limit = static_cast<size_t>(layer_count_) * SLOTS_PER_LAYER;
-		for (size_t linear_index = search_hint; linear_index < search_limit; ++linear_index) {
-			const int layer = static_cast<int>(linear_index / SLOTS_PER_LAYER);
-			const int slot_index = static_cast<int>(linear_index % SLOTS_PER_LAYER);
-			const int slot_y = slot_index / SLOTS_PER_ROW;
-			const int slot_x = slot_index % SLOTS_PER_ROW;
+		if (search_hint < search_limit) {
+			int layer = static_cast<int>(search_hint / SLOTS_PER_LAYER);
+			int slot_index = static_cast<int>(search_hint % SLOTS_PER_LAYER);
+			int slot_y = slot_index / SLOTS_PER_ROW;
+			int slot_x = slot_index % SLOTS_PER_ROW;
 
-			if (isAreaFree(layer, slot_x, slot_y, slot_width, slot_height)) {
-				search_hint = linear_index + 1;
-				return Placement {
-					.layer = layer,
-					.slot_x = slot_x,
-					.slot_y = slot_y,
-				};
+			for (size_t linear_index = search_hint; linear_index < search_limit; ++linear_index) {
+				if (isAreaFree(layer, slot_x, slot_y, slot_width, slot_height)) {
+					search_hint = linear_index + 1;
+					return Placement {
+						.layer = layer,
+						.slot_x = slot_x,
+						.slot_y = slot_y,
+					};
+				}
+
+				if (++slot_x == SLOTS_PER_ROW) {
+					slot_x = 0;
+					if (++slot_y == SLOTS_PER_ROW) {
+						slot_y = 0;
+						++layer;
+					}
+				}
 			}
 		}
 
@@ -370,4 +382,19 @@ void TextureAtlas::release() {
 	large_search_hint_ = 0;
 	occupancy_.clear();
 	free_slots_.clear();
+}
+
+void TextureAtlas::applyFilter(GLuint texture) const {
+	glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, smooth_ ? GL_LINEAR : GL_NEAREST);
+	glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, smooth_ ? GL_LINEAR : GL_NEAREST);
+}
+
+void TextureAtlas::setSmoothing(bool smooth) {
+	if (smooth_ == smooth) {
+		return;
+	}
+	smooth_ = smooth;
+	if (texture_id_) {
+		applyFilter(texture_id_->GetID());
+	}
 }

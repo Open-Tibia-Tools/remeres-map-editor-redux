@@ -45,7 +45,6 @@ std::string i2s(int i);
 std::string f2s(double i);
 int s2i(const std::string& s);
 double s2f(const std::string& s);
-wxString i2ws(int i);
 wxString f2ws(double i);
 int ws2i(wxString s);
 double ws2f(wxString s);
@@ -70,7 +69,7 @@ void trim_left(std::string& source, std::string_view t);
 // Converts the argument to lower/uppercase
 void to_lower_str(std::string& source);
 void to_upper_str(std::string& source);
-std::string as_lower_str(const std::string& other);
+std::string as_lower_str(std::string_view other);
 std::string as_upper_str(const std::string& other);
 // Case-insensitive char predicate, e.g. std::ranges::equal(a, b, iequal)
 inline constexpr auto iequal = [](char a, char b) {

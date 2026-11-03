@@ -19,13 +19,14 @@
 #define RME_TOOLTIP_DRAWER_H_
 
 #include "app/definitions.h"
-#include <iostream>
 #include "map/position.h"
 #include "rendering/core/render_view.h"
+#include "rendering/indicators/technical_item_registry.h"
+#include <nanovg.h>
+#include <glm/vec3.hpp>
 #include <vector>
 #include <string>
 #include <string_view>
-#include <sstream>
 #include <unordered_map>
 
 class Item;
@@ -33,18 +34,20 @@ class Waypoint;
 struct NVGcontext;
 
 struct ContainerItem {
-	uint16_t id;
-	uint8_t count;
-	uint8_t subtype;
+	uint16_t id = 0;
+	uint8_t count = 0;
+	uint8_t subtype = 0;
 };
 
-// Tooltip category determines header color and icon
+// Tooltip category determines header border accent and icon badge
 enum class TooltipCategory {
-	WAYPOINT, // Green - landmark
-	ITEM, // Dark charcoal - generic item
-	DOOR, // Brown - door with door ID
-	TELEPORT, // Purple - teleporter
-	TEXT // Gold - readable text (signs, books)
+	ITEM,      // Dark charcoal - generic item
+	DOOR,      // Saddle Brown - door with door ID
+	TELEPORT,  // Purple - teleporter
+	TEXT,      // Gold - readable text (signs, books)
+	WAYPOINT,  // Vivid Blue - landmark
+	HOUSE,     // Emerald Green / Orange - house / guildhall
+	ZONE       // Dynamic Zone RGB - zone area
 };
 
 // Structured tooltip data for card-based rendering
@@ -55,18 +58,40 @@ struct TooltipData {
 	// Header info
 	uint16_t itemId = 0;
 	uint16_t clientId = 0;
-	std::string_view itemName;
+	std::string itemName;
+	uint16_t count = 0;
+	std::string subtitle;
+
+	// Indicator badge (for houses, zones, waypoints, towns)
+	rme::rendering::TileIndicatorType badgeType = rme::rendering::TileIndicatorType::None;
 
 	// Optional fields (0 or empty = not shown)
 	uint16_t actionId = 0;
 	uint16_t uniqueId = 0;
 	uint8_t doorId = 0;
-	std::string_view text;
-	std::string_view description;
+	uint8_t depotId = 0;
+	std::string townName;
+	std::string text;
+	std::string description;
 	Position destination; // For teleports (check if valid via destination.x > 0)
 
 	// Waypoint-specific
-	std::string_view waypointName;
+	std::string waypointName;
+
+	// House-specific
+	uint32_t houseId = 0;
+	uint32_t houseRent = 0;
+	size_t houseSize = 0;
+	bool isGuildhall = false;
+
+	// Zone-specific
+	uint16_t zoneId = 0;
+	glm::vec3 zoneRgb = glm::vec3(0.0f);
+	size_t zoneTileCount = 0;
+	size_t zoneAreaCount = 0;
+	uint32_t zoneAreaIndex = 0;
+	size_t zoneAreaTileCount = 0;
+	std::string zoneFlags;
 
 	// Container contents
 	std::vector<ContainerItem> containerItems;
@@ -76,7 +101,8 @@ struct TooltipData {
 
 	// Constructor for waypoint
 	TooltipData(Position p, std::string_view wpName) :
-		pos(p), category(TooltipCategory::WAYPOINT), waypointName(wpName) { }
+		pos(p), category(TooltipCategory::WAYPOINT), itemName(wpName), waypointName(wpName),
+		badgeType(rme::rendering::TileIndicatorType::Waypoint) { }
 
 	// Constructor for item
 	TooltipData(Position p, uint16_t id, std::string_view name) :
@@ -84,7 +110,11 @@ struct TooltipData {
 
 	// Determine category based on fields
 	void updateCategory() {
-		if (!waypointName.empty()) {
+		if (houseId > 0) {
+			category = TooltipCategory::HOUSE;
+		} else if (zoneId > 0) {
+			category = TooltipCategory::ZONE;
+		} else if (!waypointName.empty()) {
 			category = TooltipCategory::WAYPOINT;
 		} else if (destination.x > 0) {
 			category = TooltipCategory::TELEPORT;
@@ -99,24 +129,44 @@ struct TooltipData {
 
 	// Check if this tooltip has any visible fields
 	bool hasVisibleFields() const {
-		return !waypointName.empty() || actionId > 0 || uniqueId > 0 || doorId > 0 || !text.empty() || !description.empty() || destination.x > 0 || !containerItems.empty();
+		return houseId > 0 || zoneId > 0 || !waypointName.empty() || actionId > 0 ||
+		       uniqueId > 0 || doorId > 0 || depotId > 0 || !text.empty() ||
+		       !description.empty() || destination.x > 0 || !containerItems.empty() || count > 1;
 	}
 
 	void clear() {
-		// Reset scalars
 		pos = Position();
 		category = TooltipCategory::ITEM;
 		itemId = 0;
 		clientId = 0;
-		// clear strings
-		itemName = {};
+		itemName.clear();
+		count = 0;
+		subtitle.clear();
+		badgeType = rme::rendering::TileIndicatorType::None;
+
 		actionId = 0;
 		uniqueId = 0;
 		doorId = 0;
-		text = {};
-		description = {};
+		depotId = 0;
+		townName.clear();
+		text.clear();
+		description.clear();
 		destination = Position();
-		waypointName = {};
+		waypointName.clear();
+
+		houseId = 0;
+		houseRent = 0;
+		houseSize = 0;
+		isGuildhall = false;
+
+		zoneId = 0;
+		zoneRgb = glm::vec3(0.0f);
+		zoneTileCount = 0;
+		zoneAreaCount = 0;
+		zoneAreaIndex = 0;
+		zoneAreaTileCount = 0;
+		zoneFlags.clear();
+
 		containerItems.clear();
 		containerCapacity = 0;
 	}
@@ -152,44 +202,62 @@ protected:
 	struct FieldLine {
 		std::string_view label;
 		std::string_view value;
-		uint8_t r, g, b;
+		size_t valOffset = 0;
+		size_t valLength = 0;
+		bool fromStorage = false;
+		uint8_t r = 255;
+		uint8_t g = 255;
+		uint8_t b = 255;
 		std::vector<std::string_view> wrappedLines; // For multi-line values
 	};
 	std::vector<FieldLine> scratch_fields;
 	size_t scratch_fields_count = 0;
+	std::vector<std::string_view> scratch_text_lines; // For sunken text box
+	std::string_view scratch_title;
+	std::string_view scratch_subtitle;
 	std::string storage; // Scratch buffer for text generation
+	std::string sanitized_text; // Scratch buffer for CRLF stripped text
 
 	std::vector<TooltipData> tooltips;
 	size_t active_count = 0;
 
-	std::unordered_map<uint32_t, int> spriteCache; // sprite_id -> nvg image handle
+	std::unordered_map<uint32_t, int> spriteCache; // itemId -> nvg image handle
 	NVGcontext* lastContext = nullptr;
 
 	// Helper to get or load sprite image
 	int getSpriteImage(NVGcontext* vg, uint16_t itemId);
 
-	// Helper to get header color based on category
-	void getHeaderColor(TooltipCategory cat, uint8_t& r, uint8_t& g, uint8_t& b) const;
+	// Helper to get header border color based on category and tooltip data
+	NVGcolor getHeaderColor(const TooltipData& tooltip) const;
 
-	// Refactored drawing helpers
+	// Layout metrics
 	struct LayoutMetrics {
-		float width;
-		float height;
-		float valueStartX;
-		float gridSlotSize;
-		int containerCols;
-		int containerRows;
-		float containerHeight;
-		int totalContainerSlots;
-		int emptyContainerSlots;
-		int numContainerItems;
+		float width = 0.0f;
+		float height = 0.0f;
+		float headerHeight = 0.0f;
+		float valueStartX = 0.0f;
+		float fieldsHeight = 0.0f;
+		float textBoxHeight = 0.0f;
+		float gridSlotSize = 34.0f;
+		int containerCols = 0;
+		int containerRows = 0;
+		float containerHeight = 0.0f;
+		int totalContainerSlots = 0;
+		int emptyContainerSlots = 0;
+		int numContainerItems = 0;
 	};
 
 	void prepareFields(const TooltipData& tooltip);
 	LayoutMetrics calculateLayout(NVGcontext* vg, const TooltipData& tooltip, float maxWidth, float minWidth, float padding, float fontSize);
-	void drawBackground(NVGcontext* vg, float x, float y, float width, float height, float cornerRadius, const TooltipData& tooltip);
+
+	// Classic Tibia window drawing helpers
+	void drawWindowFrame(NVGcontext* vg, float x, float y, float width, float height, const TooltipData& tooltip);
+	void drawSunkenSlot(NVGcontext* vg, float x, float y, float size, const TooltipData& tooltip);
+	void drawSunkenDivider(NVGcontext* vg, float x, float y, float width);
+	void drawHeader(NVGcontext* vg, float x, float y, float width, const TooltipData& tooltip, const LayoutMetrics& layout, float padding);
 	void drawFields(NVGcontext* vg, float x, float y, float valueStartX, float lineHeight, float padding, float fontSize);
-	void drawContainerGrid(NVGcontext* vg, float x, float y, const TooltipData& tooltip, const LayoutMetrics& layout);
+	void drawSunkenTextBox(NVGcontext* vg, float x, float y, float width, float height, float lineHeight, float padding, float fontSize);
+	void drawContainerGrid(NVGcontext* vg, float x, float y, const TooltipData& tooltip, const LayoutMetrics& layout, float padding);
 };
 
-#endif
+#endif // RME_TOOLTIP_DRAWER_H_

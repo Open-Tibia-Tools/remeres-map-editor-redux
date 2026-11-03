@@ -8,6 +8,7 @@
 #include "app/main.h"
 #include <wx/progdlg.h>
 #include <wx/stattext.h>
+#include <wx/activityindicator.h>
 #include <wx/utils.h>
 #include <memory>
 
@@ -30,6 +31,7 @@ public:
 	 * with no gauge and no cancel button.
 	 */
 	void CreateInfoBar(wxString message, const wxString& title = "Closing");
+	void CreateActivityDialog(wxString message, const wxString& title = "Processing") { CreateInfoBar(message, title); }
 
 	/**
 	 * Sets how much of the load has completed, the scale can be set with
@@ -83,6 +85,7 @@ private:
 	// Informational sibling of the progress bar (no gauge, no cancel button).
 	wxDialog* infoDialog;
 	wxStaticText* infoText;
+	wxActivityIndicator* infoSpinner;
 	std::unique_ptr<wxWindowDisabler> infoDisabler;
 	bool cancelled;
 	// Whether the current bar offers an Abort button; without it there is

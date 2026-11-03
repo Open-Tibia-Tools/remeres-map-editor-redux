@@ -1,509 +1,907 @@
-//////////////////////////////////////////////////////////////////////
-// This file is part of Remere's Map Editor
-//////////////////////////////////////////////////////////////////////
-
-#include "app/main.h"
-
 #include "palette/palette_zones.h"
 
-#include "brushes/managers/brush_manager.h"
-#include "brushes/zone/zone_brush.h"
-#include "map/map.h"
 #include "ui/gui.h"
-#include "ui/gui_ids.h"
-#include "editor/editor.h"
-#include "editor/action_queue.h"
+#include "ui/theme.h"
+#include "ui/dialog_util.h"
 #include "util/image_manager.h"
 #include "util/common.h"
+#include "util/nanovg_canvas.h"
+#include "util/nvg_utils.h"
+#include "util/grid_cell_renderer.h"
+#include "palette/controls/tileset_grid_toolbar.h"
+#include "brushes/zone/zone_brush.h"
+#include "brushes/managers/brush_manager.h"
 #include "rendering/indicators/zone_colors.h"
-#include "ui/theme.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
+#include "editor/editor.h"
+#include "editor/action_queue.h"
 
-#include <wx/textdlg.h>
+#include <nanovg.h>
 #include <wx/menu.h>
-
+#include <wx/textdlg.h>
+#include <wx/msgdlg.h>
+#include <wx/aui/auibar.h>
 #include <algorithm>
+#include <array>
 #include <format>
-#include <ranges>
+#include <string_view>
+
+
+namespace {
+
+constexpr int kGroupHeaderHeight = 44;
+constexpr int kChildHeight = 44;
+constexpr int kCardSpacing = 4;
+constexpr int kTreeIndent = 20;
+constexpr int kIconSize = 32;
+
+enum CustomToolID {
+	TOOL_EXPAND_ALL = wxID_HIGHEST + 8101,
+	TOOL_COLLAPSE_ALL
+};
+
+
+
+struct AreaClusterItem {
+	size_t area_index = 0;
+	Position centroid_pos;
+	std::string formatted_pos;
+	size_t tile_count = 0;
+	std::string tile_count_str;
+};
+
+struct ZoneGroupItem {
+	uint16_t id = 0;
+	std::string name;
+	std::string lowercase_name;
+	glm::vec3 rgb { 0.5f, 0.5f, 0.5f };
+	size_t total_tiles = 0;
+	std::string total_tiles_str;
+	std::string areas_str;
+	std::vector<AreaClusterItem> clusters;
+	bool expanded = false;
+	size_t original_index = 0;
+};
+
+enum class VisualRowKind {
+	GroupHeader,
+	ChildArea
+};
+
+struct VisualRow {
+	VisualRowKind kind = VisualRowKind::GroupHeader;
+	size_t group_idx = 0;
+	size_t child_idx = 0;
+	int y = 0;
+	int height = 0;
+};
+
+} // namespace
+
+// ============================================================================
+// ZoneCanvas
+// ============================================================================
+
+class ZonePalettePanel::ZoneCanvas final : public NanoVGCanvas {
+public:
+	explicit ZoneCanvas(ZonePalettePanel* owner) :
+		NanoVGCanvas(owner, wxID_ANY, wxVSCROLL | wxWANTS_CHARS),
+		m_owner(owner) {
+		SetBackgroundColour(Theme::Get(Theme::Role::Surface));
+
+		Bind(wxEVT_SIZE, &ZoneCanvas::OnSize, this);
+		Bind(wxEVT_LEFT_DOWN, &ZoneCanvas::OnMouseDown, this);
+		Bind(wxEVT_LEFT_DCLICK, &ZoneCanvas::OnLeftDClick, this);
+		Bind(wxEVT_RIGHT_DOWN, &ZoneCanvas::OnContextMenu, this);
+		Bind(wxEVT_MOTION, &ZoneCanvas::OnMouseMove, this);
+		Bind(wxEVT_LEAVE_WINDOW, &ZoneCanvas::OnMouseLeave, this);
+	}
+
+	void SetZones(std::vector<ZoneGroupItem> groups) {
+		m_groups = std::move(groups);
+		if (m_has_sort) {
+			ApplySort();
+		}
+		RebuildVisibleRows();
+	}
+
+	void SetFilter(const std::string& query) {
+		m_filter_query = as_lower_str(query);
+		if (!m_filter_query.empty()) {
+			for (auto& g : m_groups) {
+				g.expanded = true;
+			}
+		}
+		RebuildVisibleRows();
+	}
+
+	void ExpandAll() {
+		for (auto& g : m_groups) {
+			g.expanded = true;
+		}
+		RebuildVisibleRows();
+	}
+
+	void CollapseAll() {
+		for (auto& g : m_groups) {
+			g.expanded = false;
+		}
+		RebuildVisibleRows();
+	}
+
+	void SetSort(TilesetSortKey key, TilesetSortDirection dir) {
+		m_sort_key = key;
+		m_sort_dir = dir;
+		m_has_sort = true;
+		ApplySort();
+		RebuildVisibleRows();
+	}
+
+	void ClearSort() {
+		m_has_sort = false;
+		std::ranges::sort(m_groups, [](const auto& a, const auto& b) {
+			return a.id < b.id;
+		});
+		RebuildVisibleRows();
+	}
+
+	void SetSelection(uint16_t zid, int cluster) {
+		selected_zone_id_ = zid;
+		selected_cluster_ = cluster;
+		Refresh();
+	}
+
+	[[nodiscard]] uint16_t GetSelectedZoneId() const { return selected_zone_id_; }
+	[[nodiscard]] int GetSelectedCluster() const { return selected_cluster_; }
+
+	void RebuildVisibleRows() {
+		m_visible_rows.clear();
+		const int padding = rme::ui::grid::kPadding;
+		int cur_y = padding;
+
+		for (size_t gi = 0; gi < m_groups.size(); ++gi) {
+			const auto& g = m_groups[gi];
+			const bool group_matches = m_filter_query.empty() ||
+			                           g.lowercase_name.find(m_filter_query) != std::string::npos ||
+			                           std::to_string(g.id).find(m_filter_query) != std::string::npos;
+
+			bool any_child_matches = false;
+			if (!group_matches && !m_filter_query.empty()) {
+				for (const auto& c : g.clusters) {
+					if (c.formatted_pos.find(m_filter_query) != std::string::npos ||
+					    std::format("area {}", c.area_index + 1).find(m_filter_query) != std::string::npos) {
+						any_child_matches = true;
+						break;
+					}
+				}
+			}
+
+			if (!group_matches && !any_child_matches) {
+				continue;
+			}
+
+			// Group Header
+			m_visible_rows.push_back(VisualRow {
+				.kind = VisualRowKind::GroupHeader,
+				.group_idx = gi,
+				.child_idx = 0,
+				.y = cur_y,
+				.height = kGroupHeaderHeight,
+			});
+			cur_y += kGroupHeaderHeight + kCardSpacing;
+
+			// Child clusters
+			if (g.expanded && g.clusters.size() > 1) {
+				for (size_t ci = 0; ci < g.clusters.size(); ++ci) {
+					const auto& c = g.clusters[ci];
+					if (!group_matches && !m_filter_query.empty()) {
+						if (c.formatted_pos.find(m_filter_query) == std::string::npos &&
+						    std::format("area {}", c.area_index + 1).find(m_filter_query) == std::string::npos) {
+							continue;
+						}
+					}
+
+					m_visible_rows.push_back(VisualRow {
+						.kind = VisualRowKind::ChildArea,
+						.group_idx = gi,
+						.child_idx = ci,
+						.y = cur_y,
+						.height = kChildHeight,
+					});
+					cur_y += kChildHeight + kCardSpacing;
+				}
+			}
+		}
+
+		UpdateScrollbar(cur_y + padding);
+		Refresh();
+	}
+
+protected:
+	void OnNanoVGPaint(NVGcontext* vg, int width, int height) override {
+		const int scroll_pos = GetScrollPosition();
+		const int padding = rme::ui::grid::kPadding;
+
+		if (m_visible_rows.empty()) {
+			nvgFontFace(vg, "sans");
+			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+			nvgFontSize(vg, 13.0f);
+			nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::TextSubtle)));
+			nvgText(vg, width * 0.5f, static_cast<float>(scroll_pos + height / 2),
+				m_groups.empty() ? "No zones defined in map" : "No matching zones found", nullptr);
+			return;
+		}
+
+		const int indent = FromDIP(kTreeIndent);
+		const int visible_top = scroll_pos;
+		const int visible_bottom = scroll_pos + height;
+
+		const int dip_6 = FromDIP(6);
+		const int dip_7 = FromDIP(7);
+		const int dip_8 = FromDIP(8);
+		const int dip_10 = FromDIP(10);
+		const int dip_12 = FromDIP(12);
+		const int dip_13 = FromDIP(13);
+		const int dip_11 = FromDIP(11);
+		const int dip_24 = FromDIP(24);
+		const int dip_80 = FromDIP(80);
+
+		for (size_t vi = 0; vi < m_visible_rows.size(); ++vi) {
+			const auto& vrow = m_visible_rows[vi];
+			if (vrow.y + vrow.height < visible_top || vrow.y > visible_bottom) {
+				continue;
+			}
+
+			const bool is_group = (vrow.kind == VisualRowKind::GroupHeader);
+			const int card_x = is_group ? padding : padding + indent;
+			const int card_w = is_group ? width - padding * 2 : width - padding * 2 - indent;
+			const wxRect card_rect(card_x, vrow.y, std::max(1, card_w), vrow.height);
+
+			const bool is_hovered = (static_cast<int>(vi) == m_hover_row);
+			const auto& g = m_groups[vrow.group_idx];
+
+			if (is_group) {
+				const bool is_selected = (g.id == selected_zone_id_ && selected_cluster_ == -1);
+				const wxRect drawn = rme::ui::grid::DrawCardChrome(vg, card_rect, is_selected, is_hovered, 0.0f, false);
+				const float center_y = static_cast<float>(drawn.y + drawn.height / 2);
+
+				const wxColour meta_wx = is_selected ? Theme::Get(Theme::Role::TextOnAccent) : Theme::Get(Theme::Role::TextSubtle);
+				const wxColour text_wx = is_selected ? Theme::Get(Theme::Role::TextOnAccent) : Theme::Get(Theme::Role::Text);
+
+				// 1. Expander Chevron if multi-area
+				const float arrow_x = static_cast<float>(drawn.x + dip_8);
+				const float arrow_sz = static_cast<float>(dip_7);
+				if (g.clusters.size() > 1) {
+					nvgBeginPath(vg);
+					if (g.expanded) {
+						nvgMoveTo(vg, arrow_x, center_y - arrow_sz * 0.5f);
+						nvgLineTo(vg, arrow_x + arrow_sz, center_y - arrow_sz * 0.5f);
+						nvgLineTo(vg, arrow_x + arrow_sz * 0.5f, center_y + arrow_sz * 0.5f);
+					} else {
+						nvgMoveTo(vg, arrow_x, center_y - arrow_sz * 0.5f);
+						nvgLineTo(vg, arrow_x + arrow_sz, center_y);
+						nvgLineTo(vg, arrow_x, center_y + arrow_sz * 0.5f);
+					}
+					nvgClosePath(vg);
+					nvgFillColor(vg, NvgUtils::ToNvColor(meta_wx));
+					nvgFill(vg);
+				}
+
+				// 2. Zone ID badge (#1, #2) with 14px font matching Search Results
+				const float index_x = arrow_x + arrow_sz + static_cast<float>(dip_6);
+				std::array<char, 32> id_buf;
+				auto res = std::format_to_n(id_buf.data(), id_buf.size() - 1, "#{}", g.id);
+				*res.out = '\0';
+
+				nvgFontSize(vg, 14.0f);
+				nvgFontFace(vg, "sans");
+				nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+				nvgFillColor(vg, NvgUtils::ToNvColor(meta_wx));
+				nvgText(vg, index_x, center_y, id_buf.data(), nullptr);
+
+				float id_bounds[4] = {0};
+				nvgTextBounds(vg, index_x, center_y, id_buf.data(), nullptr, id_bounds);
+				const float id_w = std::max(static_cast<float>(FromDIP(24)), id_bounds[2] - id_bounds[0]);
+
+				// 3. Crisp 32x32 Color Tile (Sunken slot with zone RGB fill)
+				const int icon_x = static_cast<int>(index_x + id_w + static_cast<float>(dip_6));
+				const int icon_y = drawn.y + (drawn.height - kIconSize) / 2;
+				const wxRect slot_rect(icon_x, icon_y, kIconSize, kIconSize);
+				rme::ui::grid::DrawCardChrome(vg, slot_rect, false, false, 0.0f, false);
+				rme::rendering::DrawNanoVGCustomIndicatorBadge(vg, static_cast<float>(slot_rect.x), static_cast<float>(slot_rect.y), static_cast<float>(kIconSize), g.rgb, "zone");
+
+				// 4. Right side: Tiles count formatted like Search Results (14px font)
+				const float badge_x = static_cast<float>(drawn.x + drawn.width - dip_8);
+				std::array<char, 64> count_buf;
+				auto count_res = std::format_to_n(count_buf.data(), count_buf.size() - 1, "({} {})",
+					g.total_tiles, g.total_tiles == 1 ? "tile" : "tiles");
+				*count_res.out = '\0';
+
+				nvgFontSize(vg, 14.0f);
+				nvgFontFace(vg, "sans");
+				nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+				nvgFillColor(vg, NvgUtils::ToNvColor(meta_wx));
+				nvgText(vg, badge_x, center_y, count_buf.data(), nullptr);
+
+				// 5. Center: Name on top line, Areas underneath
+				const float text_x = static_cast<float>(icon_x + kIconSize + dip_8);
+				const float top_y = static_cast<float>(drawn.y + dip_13);
+				const float bottom_y = static_cast<float>(drawn.y + drawn.height - dip_11);
+				const float avail_w = std::max(20.0f, badge_x - text_x - static_cast<float>(dip_80 + dip_10));
+
+			nvgSave(vg);
+			nvgScissor(vg, text_x, static_cast<float>(drawn.y), avail_w, static_cast<float>(drawn.height));
+
+				// Top line: Zone Name (14px)
+				nvgFontSize(vg, 14.0f);
+				nvgFontFace(vg, "sans");
+				nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+				nvgFillColor(vg, NvgUtils::ToNvColor(text_wx));
+				nvgText(vg, text_x, top_y, g.name.c_str(), nullptr);
+
+				// Bottom line: Area count
+				std::array<char, 64> area_buf;
+				auto a_res = std::format_to_n(area_buf.data(), area_buf.size() - 1, "({} {})",
+					g.clusters.size(), g.clusters.size() == 1 ? "area" : "areas");
+				*a_res.out = '\0';
+
+				nvgFontSize(vg, 12.0f);
+				nvgFontFace(vg, "sans");
+				nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+				nvgFillColor(vg, NvgUtils::ToNvColor(meta_wx));
+				nvgText(vg, text_x, bottom_y, area_buf.data(), nullptr);
+
+			nvgRestore(vg);
+
+			} else {
+				// Child Area Card
+				const auto& c = g.clusters[vrow.child_idx];
+				const bool is_selected = (g.id == selected_zone_id_ && static_cast<int>(vrow.child_idx) == selected_cluster_);
+				const wxRect drawn = rme::ui::grid::DrawCardChrome(vg, card_rect, is_selected, is_hovered, 0.0f, false);
+				const float center_y = static_cast<float>(drawn.y + drawn.height / 2);
+
+				const wxColour meta_wx = is_selected ? Theme::Get(Theme::Role::TextOnAccent) : Theme::Get(Theme::Role::TextSubtle);
+				const wxColour text_wx = is_selected ? Theme::Get(Theme::Role::TextOnAccent) : Theme::Get(Theme::Role::Text);
+
+				// 1. Child Index badge (#1, #2...) with 14px font
+				const float index_x = static_cast<float>(drawn.x + dip_8);
+				std::array<char, 32> id_buf;
+				auto res = std::format_to_n(id_buf.data(), id_buf.size() - 1, "#{}", c.area_index + 1);
+				*res.out = '\0';
+
+				nvgFontSize(vg, 14.0f);
+				nvgFontFace(vg, "sans");
+				nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+				nvgFillColor(vg, NvgUtils::ToNvColor(meta_wx));
+				nvgText(vg, index_x, center_y, id_buf.data(), nullptr);
+
+				// 2. Child 32x32 crisp Color Tile (same color as parent!)
+				const int icon_x = static_cast<int>(index_x + static_cast<float>(dip_24 + dip_6));
+				const int icon_y = drawn.y + (drawn.height - kIconSize) / 2;
+				const wxRect slot_rect(icon_x, icon_y, kIconSize, kIconSize);
+				rme::ui::grid::DrawCardChrome(vg, slot_rect, false, false, 0.0f, false);
+				rme::rendering::DrawNanoVGCustomIndicatorBadge(vg, static_cast<float>(slot_rect.x), static_cast<float>(slot_rect.y), static_cast<float>(kIconSize), g.rgb, "zone");
+
+				// 3. Right side: Tile count (14px font)
+				const float badge_x = static_cast<float>(drawn.x + drawn.width - dip_8);
+				std::array<char, 64> count_buf;
+				auto count_res = std::format_to_n(count_buf.data(), count_buf.size() - 1, "({} {})",
+					c.tile_count, c.tile_count == 1 ? "tile" : "tiles");
+				*count_res.out = '\0';
+
+				nvgFontSize(vg, 14.0f);
+				nvgFontFace(vg, "sans");
+				nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+				nvgFillColor(vg, NvgUtils::ToNvColor(meta_wx));
+				nvgText(vg, badge_x, center_y, count_buf.data(), nullptr);
+
+				// 4. Center: Area #X on top, Centroid coordinates underneath
+				const float text_x = static_cast<float>(icon_x + kIconSize + dip_8);
+				const float top_y = static_cast<float>(drawn.y + dip_13);
+				const float bottom_y = static_cast<float>(drawn.y + drawn.height - dip_11);
+				const float avail_w = std::max(20.0f, badge_x - text_x - static_cast<float>(dip_80 + dip_10));
+
+			nvgSave(vg);
+			nvgScissor(vg, text_x, static_cast<float>(drawn.y), avail_w, static_cast<float>(drawn.height));
+
+				// Top line: Area title (14px)
+				std::array<char, 32> title_buf;
+				auto t_res = std::format_to_n(title_buf.data(), title_buf.size() - 1, "Area #{}", c.area_index + 1);
+				*t_res.out = '\0';
+
+				nvgFontSize(vg, 14.0f);
+				nvgFontFace(vg, "sans");
+				nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+				nvgFillColor(vg, NvgUtils::ToNvColor(text_wx));
+				nvgText(vg, text_x, top_y, title_buf.data(), nullptr);
+
+				// Bottom line: Centroid coords
+				nvgFontSize(vg, 12.0f);
+				nvgFontFace(vg, "sans");
+				nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+				nvgFillColor(vg, NvgUtils::ToNvColor(meta_wx));
+				nvgText(vg, text_x, bottom_y, c.formatted_pos.c_str(), nullptr);
+
+			nvgRestore(vg);
+		}
+	}
+}
+
+private:
+	void ApplySort() {
+		if (m_sort_key == TilesetSortKey::Name) {
+			if (m_sort_dir == TilesetSortDirection::Ascending) {
+				std::ranges::sort(m_groups, [](const auto& a, const auto& b) {
+					return a.name < b.name;
+				});
+			} else {
+				std::ranges::sort(m_groups, [](const auto& a, const auto& b) {
+					return a.name > b.name;
+				});
+			}
+		} else if (m_sort_key == TilesetSortKey::ID) {
+			if (m_sort_dir == TilesetSortDirection::Ascending) {
+				std::ranges::sort(m_groups, [](const auto& a, const auto& b) {
+					return a.id < b.id;
+				});
+			} else {
+				std::ranges::sort(m_groups, [](const auto& a, const auto& b) {
+					return a.id > b.id;
+				});
+			}
+		}
+	}
+
+	void OnSize(wxSizeEvent& event) {
+		RebuildVisibleRows();
+		event.Skip();
+	}
+
+	[[nodiscard]] int HitTest(int mouse_y) const {
+		if (m_visible_rows.empty()) return -1;
+		const int padding = rme::ui::grid::kPadding;
+		const int content_y = mouse_y + GetScrollPosition();
+		if (content_y < padding) return -1;
+		auto it = std::lower_bound(m_visible_rows.begin(), m_visible_rows.end(), content_y, [](const VisualRow& row, int target_y) {
+			return (row.y + row.height) <= target_y;
+		});
+		if (it != m_visible_rows.end() && content_y >= it->y && content_y < it->y + it->height) {
+			return static_cast<int>(it - m_visible_rows.begin());
+		}
+		return -1;
+	}
+
+	void OnMouseDown(wxMouseEvent& event) {
+		SetFocus();
+		const int hit = HitTest(event.GetY());
+		if (hit >= 0 && hit < static_cast<int>(m_visible_rows.size())) {
+			const auto& vrow = m_visible_rows[hit];
+			auto& g = m_groups[vrow.group_idx];
+
+			if (vrow.kind == VisualRowKind::GroupHeader) {
+				// Check if click was on expand chevron
+				const int indent = FromDIP(kTreeIndent);
+				const int dip_20 = FromDIP(20);
+				if (g.clusters.size() > 1 && event.GetX() < dip_20) {
+					g.expanded = !g.expanded;
+					RebuildVisibleRows();
+					return;
+				}
+
+				selected_zone_id_ = g.id;
+				selected_cluster_ = -1;
+				Refresh();
+
+				if (m_owner) {
+					m_owner->SelectZoneById(selected_zone_id_, -1);
+				}
+			} else {
+				selected_zone_id_ = g.id;
+				selected_cluster_ = static_cast<int>(vrow.child_idx);
+				Refresh();
+
+				if (m_owner) {
+					m_owner->SelectZoneById(selected_zone_id_, selected_cluster_);
+				}
+			}
+		}
+	}
+
+	void OnLeftDClick(wxMouseEvent& event) {
+		const int hit = HitTest(event.GetY());
+		if (hit >= 0 && hit < static_cast<int>(m_visible_rows.size())) {
+			const auto& vrow = m_visible_rows[hit];
+			const auto& g = m_groups[vrow.group_idx];
+
+			if (vrow.kind == VisualRowKind::ChildArea) {
+				const auto& c = g.clusters[vrow.child_idx];
+				if (c.centroid_pos.isValid() && g_gui.IsEditorOpen()) {
+					g_gui.SetScreenCenterPosition(c.centroid_pos);
+				}
+			} else {
+				if (!g.clusters.empty() && g_gui.IsEditorOpen()) {
+					const auto it = std::ranges::max_element(g.clusters, {}, &AreaClusterItem::tile_count);
+					if (it != g.clusters.end() && it->centroid_pos.isValid()) {
+						g_gui.SetScreenCenterPosition(it->centroid_pos);
+					}
+				}
+			}
+		}
+	}
+
+	void OnContextMenu(wxMouseEvent& event) {
+		const int hit = HitTest(event.GetY());
+		if (hit >= 0 && hit < static_cast<int>(m_visible_rows.size())) {
+			const auto& vrow = m_visible_rows[hit];
+			const auto& g = m_groups[vrow.group_idx];
+			selected_zone_id_ = g.id;
+			selected_cluster_ = (vrow.kind == VisualRowKind::ChildArea) ? static_cast<int>(vrow.child_idx) : -1;
+			Refresh();
+			if (m_owner) {
+				m_owner->SelectZoneById(selected_zone_id_, selected_cluster_);
+			}
+		}
+		ShowContextMenu(event.GetPosition());
+	}
+
+	void ShowContextMenu(const wxPoint& pos) {
+		wxMenu menu;
+		if (selected_zone_id_ != 0) {
+			menu.Append(wxID_FORWARD, "Go to Zone (Double-Click)")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_LOCATION_ARROW));
+			menu.Append(wxID_EDIT, "Rename Zone...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
+			menu.AppendSeparator();
+			menu.Append(wxID_DELETE, "Remove Zone")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
+			menu.AppendSeparator();
+		}
+		menu.Append(wxID_ADD, "Add Zone...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
+
+		menu.Bind(wxEVT_MENU, [this](wxCommandEvent& ev) {
+			if (!m_owner) return;
+			switch (ev.GetId()) {
+				case wxID_FORWARD:
+					m_owner->OnGoToZone();
+					break;
+				case wxID_EDIT:
+					m_owner->OnClickRenameZone();
+					break;
+				case wxID_DELETE:
+					m_owner->OnClickRemoveZone();
+					break;
+				case wxID_ADD:
+					m_owner->OnClickAddZone();
+					break;
+				default:
+					break;
+			}
+		});
+
+		PopupMenu(&menu, pos);
+	}
+
+	void OnMouseMove(wxMouseEvent& event) {
+		const int hit = HitTest(event.GetY());
+		if (hit != m_hover_row) {
+			m_hover_row = hit;
+			Refresh();
+		}
+		if (hit >= 0 && hit < static_cast<int>(m_visible_rows.size())) {
+			const auto& vrow = m_visible_rows[hit];
+			const auto& g = m_groups[vrow.group_idx];
+			if (vrow.kind == VisualRowKind::GroupHeader) {
+				SetToolTip(wxstr(std::format("Zone #{}: {} ({} areas, {} tiles)", g.id, g.name, g.clusters.size(), g.total_tiles)));
+			} else {
+				const auto& c = g.clusters[vrow.child_idx];
+				SetToolTip(wxstr(std::format("Zone #{}, Area #{}: {} ({})", g.id, c.area_index + 1, c.formatted_pos, c.tile_count_str)));
+			}
+		} else {
+			SetToolTip("");
+		}
+	}
+
+	void OnMouseLeave(wxMouseEvent& WXUNUSED(event)) {
+		if (m_hover_row != -1) {
+			m_hover_row = -1;
+			Refresh();
+		}
+		SetToolTip("");
+	}
+
+	ZonePalettePanel* m_owner = nullptr;
+	std::vector<ZoneGroupItem> m_groups;
+	std::vector<VisualRow> m_visible_rows;
+	std::string m_filter_query;
+	uint16_t selected_zone_id_ = 0;
+	int selected_cluster_ = -1;
+	int m_hover_row = -1;
+	bool m_has_sort = false;
+	TilesetSortKey m_sort_key = TilesetSortKey::Name;
+	TilesetSortDirection m_sort_dir = TilesetSortDirection::Ascending;
+};
+
+// ============================================================================
+// ZonePalettePanel
+// ============================================================================
 
 ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 	PalettePanel(parent, id) {
-	wxBoxSizer* sidesizer = newd wxBoxSizer(wxVERTICAL);
+	auto* root_sizer = new wxBoxSizer(wxVERTICAL);
+	auto* box_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Zones");
 
-	// Search control
-	search_ctrl = newd PaletteSearchCtrl(this, PALETTE_ZONE_SEARCH, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
-	search_ctrl->SetDescriptiveText("Search zones...");
-	search_ctrl->SetFont(Theme::GetFont(9, false));
-	sidesizer->Add(search_ctrl, 0, wxEXPAND | wxALL, 5);
-
-	// NanoVG Table
-	zone_table = newd NanoVGTableCtrl(this, PALETTE_ZONE_LISTBOX);
-	std::vector<TableColumn> cols = {
-		{ "swatch", "#", 30, NVG_ALIGN_CENTER, false },
-		{ "id", "ID", 38, NVG_ALIGN_CENTER, true },
-		{ "name", "Name", 0, NVG_ALIGN_LEFT, true },
-		{ "areas", "Areas", 46, NVG_ALIGN_CENTER, true },
-		{ "tiles", "Tiles", 56, NVG_ALIGN_RIGHT, true }
+	// 1. TilesetGridToolbar (Filter, Sort, Expand All / Collapse All)
+	TilesetGridToolbar::Actions actions;
+	actions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
+		if (canvas_) canvas_->SetSort(key, dir);
 	};
-	zone_table->SetColumns(std::move(cols));
+	actions.clear_sort = [this]() {
+		if (canvas_) canvas_->ClearSort();
+	};
+	actions.filter = [this](const std::string& q) {
+		if (canvas_) canvas_->SetFilter(q);
+	};
+	actions.filter_cleared = [this]() {
+		if (canvas_) canvas_->SetFilter("");
+	};
 
-	zone_table->SetOnSelect([this](int idx, const TableRow& row) {
-		OnSelectZone(idx, row);
-	});
-	zone_table->SetOnActivate([this](int idx, const TableRow& row) {
-		OnActivateZone(idx, row);
-	});
-	zone_table->SetOnSort([this](int col, bool asc) {
-		OnSortZones(col, asc);
-	});
-	zone_table->SetOnContextMenu([this](int idx, const TableRow* row, const wxPoint& pos) {
-		OnZoneContextMenu(idx, row, pos);
-	});
-	zone_table->SetOnToggleGroup([this](int idx, const TableRow& row) {
-		OnToggleGroup(idx, row);
-	});
+	toolbar_ = new TilesetGridToolbar(this, std::move(actions), TilesetGridToolbar::Part_Sort | TilesetGridToolbar::Part_Search);
 
-	sidesizer->Add(zone_table, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
+	// Expand / Collapse tools on toolbar
+	if (auto* aui = toolbar_->GetToolBar()) {
+		const wxColour icon_color = Theme::Get(Theme::Role::Text);
+		aui->AddTool(TOOL_EXPAND_ALL, wxEmptyString,
+			IMAGE_MANAGER.GetBitmapBundle(ICON_ANGLES_DOWN, icon_color),
+			"Expand all zone areas");
+		aui->AddTool(TOOL_COLLAPSE_ALL, wxEmptyString,
+			IMAGE_MANAGER.GetBitmapBundle(ICON_ANGLES_RIGHT, icon_color),
+			"Collapse all zone areas");
+		aui->Realize();
+		toolbar_->Layout();
 
-	// Action buttons (Add, Rename, Remove)
-	wxBoxSizer* buttons = newd wxBoxSizer(wxHORIZONTAL);
-	add_button = newd wxButton(this, PALETTE_ZONE_ADD, "Add", wxDefaultPosition, wxSize(50, -1));
-	add_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
-	add_button->SetFont(Theme::GetFont(9, false));
+		aui->Bind(wxEVT_TOOL, [this](wxCommandEvent& ev) {
+			if (ev.GetId() == TOOL_EXPAND_ALL) ExpandAll();
+			else if (ev.GetId() == TOOL_COLLAPSE_ALL) CollapseAll();
+		});
+	}
 
-	rename_button = newd wxButton(this, PALETTE_ZONE_RENAME, "Rename", wxDefaultPosition, wxSize(60, -1));
-	rename_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
-	rename_button->SetFont(Theme::GetFont(9, false));
+	box_sizer->Add(toolbar_, 0, wxEXPAND | wxBOTTOM, FromDIP(2));
 
-	remove_button = newd wxButton(this, PALETTE_ZONE_REMOVE, "Remove", wxDefaultPosition, wxSize(60, -1));
-	remove_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
-	remove_button->SetFont(Theme::GetFont(9, false));
+	// 2. Modern Zone Tree Canvas
+	canvas_ = new ZoneCanvas(this);
+	box_sizer->Add(canvas_, 1, wxEXPAND | wxBOTTOM, FromDIP(4));
 
-	buttons->Add(add_button, 1, wxEXPAND | wxRIGHT, 2);
-	buttons->Add(rename_button, 1, wxEXPAND | wxRIGHT, 2);
-	buttons->Add(remove_button, 1, wxEXPAND);
-	sidesizer->Add(buttons, 0, wxEXPAND | wxALL, 5);
+	// 3. Action Button Bar (Add, Rename, Remove)
+	auto* button_sizer = new wxBoxSizer(wxHORIZONTAL);
+	const int dip_2 = FromDIP(2);
 
-	SetSizer(sidesizer);
+	add_button_ = new wxButton(this, wxID_ANY, "Add", wxDefaultPosition, wxSize(FromDIP(50), -1));
+	add_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
+	add_button_->SetFont(Theme::GetFont(9, false));
+	add_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickAddZone(); });
+	button_sizer->Add(add_button_, 1, wxEXPAND | wxRIGHT, dip_2);
 
-	Bind(wxEVT_TEXT, &ZonePalettePanel::OnSearchChange, this, PALETTE_ZONE_SEARCH);
+	rename_button_ = new wxButton(this, wxID_ANY, "Rename", wxDefaultPosition, wxSize(FromDIP(60), -1));
+	rename_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
+	rename_button_->SetFont(Theme::GetFont(9, false));
+	rename_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickRenameZone(); });
+	button_sizer->Add(rename_button_, 1, wxEXPAND | wxRIGHT, dip_2);
 
-	Bind(wxEVT_BUTTON, &ZonePalettePanel::OnClickAdd, this, PALETTE_ZONE_ADD);
-	Bind(wxEVT_BUTTON, &ZonePalettePanel::OnClickRename, this, PALETTE_ZONE_RENAME);
-	Bind(wxEVT_BUTTON, &ZonePalettePanel::OnClickRemove, this, PALETTE_ZONE_REMOVE);
+	remove_button_ = new wxButton(this, wxID_ANY, "Remove", wxDefaultPosition, wxSize(FromDIP(60), -1));
+	remove_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
+	remove_button_->SetFont(Theme::GetFont(9, false));
+	remove_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickRemoveZone(); });
+	button_sizer->Add(remove_button_, 1, wxEXPAND);
 
-	Bind(wxEVT_MENU, &ZonePalettePanel::OnClickAdd, this, PALETTE_ZONE_ADD);
-	Bind(wxEVT_MENU, &ZonePalettePanel::OnClickRename, this, PALETTE_ZONE_RENAME);
-	Bind(wxEVT_MENU, &ZonePalettePanel::OnClickRemove, this, PALETTE_ZONE_REMOVE);
-	Bind(wxEVT_MENU, &ZonePalettePanel::OnGoToZone, this, PALETTE_ZONE_GOTO);
+	box_sizer->Add(button_sizer, 0, wxEXPAND | wxBOTTOM, FromDIP(2));
+
+	root_sizer->Add(box_sizer, 1, wxEXPAND);
+	SetSizer(root_sizer);
+	Layout();
 }
+
+ZonePalettePanel::~ZonePalettePanel() = default;
 
 wxString ZonePalettePanel::GetName() const {
 	return "Zone";
 }
 
-void ZonePalettePanel::SetMap(Map* m) {
-	if (map != m) {
+void ZonePalettePanel::SelectFirstBrush() {
+	if (map_ && !map_->zones.empty()) {
+		for (const auto& z : map_->zones) {
+			if (z.id != 0) {
+				SelectZoneById(z.id, -1);
+				break;
+			}
+		}
+	}
+}
+
+Brush* ZonePalettePanel::GetSelectedBrush() const {
+	if (g_brush_manager.zone_brush) {
+		g_brush_manager.zone_brush->setZone(selected_zone_id_);
+		return g_brush_manager.zone_brush;
+	}
+	return nullptr;
+}
+
+int ZonePalettePanel::GetSelectedBrushSize() const {
+	return 1;
+}
+
+bool ZonePalettePanel::SelectBrush(const Brush* whatbrush) {
+	return g_brush_manager.zone_brush && whatbrush == g_brush_manager.zone_brush;
+}
+
+void ZonePalettePanel::OnSwitchIn() {
+	PalettePanel::OnSwitchIn();
+	OnUpdate();
+}
+
+void ZonePalettePanel::OnSwitchOut() {
+	PalettePanel::OnSwitchOut();
+}
+
+void ZonePalettePanel::SetMap(Map* map) {
+	if (map_ != map) {
 		selected_zone_id_ = 0;
 		selected_cluster_ = -1;
 		if (g_brush_manager.zone_brush) {
 			g_brush_manager.zone_brush->setZone(0);
 		}
 	}
-	map = m;
+	map_ = map;
+	Enable(map_ != nullptr);
 	OnUpdate();
 }
 
-bool ZonePalettePanel::supportsZones() const {
-	return map && map->getVersion().otbm == MAP_OTBM_5;
+void ZonePalettePanel::ExpandAll() {
+	if (canvas_) canvas_->ExpandAll();
 }
 
-uint16_t ZonePalettePanel::selectedZoneId() const {
-	return selectedRow().zone;
-}
-
-ZonePalettePanel::RowRef ZonePalettePanel::selectedRow() const {
-	if (!zone_table) {
-		return {};
-	}
-	const TableRow* r = zone_table->GetSelectedRow();
-	if (!r || r->key.empty()) {
-		if (selected_zone_id_ != 0) {
-			return RowRef{ selected_zone_id_, selected_cluster_ };
-		}
-		return {};
-	}
-	const auto colon = r->key.find(':');
-	if (colon != std::string::npos) {
-		const uint16_t zid = static_cast<uint16_t>(std::strtoul(r->key.substr(0, colon).c_str(), nullptr, 10));
-		const int cidx = static_cast<int>(std::strtol(r->key.substr(colon + 1).c_str(), nullptr, 10));
-		return RowRef{ zid, cidx };
-	} else {
-		const uint16_t zid = static_cast<uint16_t>(std::strtoul(r->key.c_str(), nullptr, 10));
-		return RowRef{ zid, -1 };
-	}
-}
-
-Brush* ZonePalettePanel::GetSelectedBrush() const {
-	const uint16_t id = supportsZones() ? selectedZoneId() : 0;
-	return id != 0 ? g_brush_manager.zone_brush : nullptr;
-}
-
-bool ZonePalettePanel::SelectBrush(const Brush* whatbrush) {
-	return whatbrush == g_brush_manager.zone_brush;
-}
-
-void ZonePalettePanel::OnSwitchIn() {
-	PalettePanel::OnSwitchIn();
-	OnUpdate();
-	const uint16_t id = supportsZones() ? selectedZoneId() : 0;
-	if (g_brush_manager.zone_brush) {
-		g_brush_manager.zone_brush->setZone(id);
-	}
+void ZonePalettePanel::CollapseAll() {
+	if (canvas_) canvas_->CollapseAll();
 }
 
 void ZonePalettePanel::OnUpdate() {
-	const bool enabled = supportsZones();
-
-	if (!enabled || !map) {
-		zone_table->ClearRows();
-		zone_table->Enable(false);
-		if (search_ctrl) {
-			search_ctrl->Enable(false);
-		}
-		add_button->Enable(false);
-		rename_button->Enable(false);
-		remove_button->Enable(false);
-		zone_table->SetToolTip(enabled || !map ? wxString() : wxString("Zones require an OTBM 5 map (Canary / Crystal Server)."));
+	if (!map_ || !map_->supportsZones()) {
+		if (canvas_) canvas_->SetZones({});
+		if (add_button_) add_button_->Enable(false);
+		if (rename_button_) rename_button_->Enable(false);
+		if (remove_button_) remove_button_->Enable(false);
 		return;
 	}
 
-	zone_table->Enable(true);
-	if (search_ctrl) {
-		search_ctrl->Enable(true);
-	}
-	add_button->Enable(true);
-	rename_button->Enable(true);
-	remove_button->Enable(true);
-	zone_table->SetToolTip(wxString());
+	if (add_button_) add_button_->Enable(true);
 
-	const wxString search_query = search_ctrl ? search_ctrl->GetValue().Lower() : wxString();
-	const bool has_search = !search_query.IsEmpty();
+	std::vector<ZoneGroupItem> groups;
+	size_t orig_idx = 0;
 
-	struct ZoneEntry {
-		const Map::Zone* zone = nullptr;
-		size_t total_tiles = 0;
-		std::vector<ZoneCluster> clusters;
-	};
+	for (const auto& z : map_->zones) {
+		if (z.id == 0) continue;
 
-	std::vector<ZoneEntry> zone_entries;
-	for (const auto& z : map->zones) {
-		if (z.id == 0) {
-			continue;
+		auto raw_clusters = map_->getZoneClusters(z.id);
+		const size_t total_tiles = map_->getZoneTilePositions(z.id).size();
+
+		ZoneGroupItem g;
+		g.id = z.id;
+		g.name = z.name;
+		g.lowercase_name = as_lower_str(z.name);
+		g.rgb = rme::rendering::getZoneColor(z.id);
+		g.total_tiles = total_tiles;
+		g.total_tiles_str = std::format("{} tiles", total_tiles);
+		g.areas_str = std::format("{} {}", raw_clusters.size(), raw_clusters.size() == 1 ? "area" : "areas");
+		g.original_index = orig_idx++;
+
+		for (size_t ci = 0; ci < raw_clusters.size(); ++ci) {
+			const auto& c = raw_clusters[ci];
+			g.clusters.push_back(AreaClusterItem {
+				.area_index = ci,
+				.centroid_pos = c.centroid_pos,
+				.formatted_pos = std::format("[{}, {}, {}]", c.centroid_pos.x, c.centroid_pos.y, c.centroid_pos.z),
+				.tile_count = c.tile_count,
+				.tile_count_str = std::format("{} tiles", c.tile_count)
+			});
 		}
-		ZoneEntry entry;
-		entry.zone = &z;
-		entry.clusters = map->getZoneClusters(z.id);
-		entry.total_tiles = map->getZoneTilePositions(z.id).size();
 
-		if (has_search) {
-			bool match = wxstr(z.name).Lower().Contains(search_query) ||
-			             wxstr(std::to_string(z.id)).Contains(search_query);
-			if (!match) {
-				for (size_t ci = 0; ci < entry.clusters.size(); ++ci) {
-					const auto& c = entry.clusters[ci];
-					if (wxstr(std::format("{}, {}, {}", c.centroid_pos.x, c.centroid_pos.y, c.centroid_pos.z)).Lower().Contains(search_query) ||
-					    wxstr(std::format("area {}", ci + 1)).Lower().Contains(search_query)) {
-						match = true;
-						break;
-					}
-				}
-			}
-			if (!match) {
-				continue;
-			}
-		}
-		zone_entries.push_back(std::move(entry));
+		groups.push_back(std::move(g));
 	}
 
-	// Sort zones according to active table sort column
-	const int sort_col = zone_table->GetSortColumn();
-	const bool asc = zone_table->IsSortAscending();
-
-	if (sort_col >= 0) {
-		std::stable_sort(zone_entries.begin(), zone_entries.end(), [sort_col, asc](const ZoneEntry& a, const ZoneEntry& b) {
-			switch (sort_col) {
-				case 1: // ID
-					return asc ? (a.zone->id < b.zone->id) : (b.zone->id < a.zone->id);
-				case 2: { // Name
-					int cmp = wxStricmp(wxstr(a.zone->name), wxstr(b.zone->name));
-					if (cmp != 0) {
-						return asc ? (cmp < 0) : (cmp > 0);
-					}
-					return asc ? (a.zone->id < b.zone->id) : (b.zone->id < a.zone->id);
-				}
-				case 3: // Areas
-					if (a.clusters.size() != b.clusters.size()) {
-						return asc ? (a.clusters.size() < b.clusters.size()) : (b.clusters.size() < a.clusters.size());
-					}
-					return asc ? (a.zone->id < b.zone->id) : (b.zone->id < a.zone->id);
-				case 4: // Tiles
-					if (a.total_tiles != b.total_tiles) {
-						return asc ? (a.total_tiles < b.total_tiles) : (b.total_tiles < a.total_tiles);
-					}
-					return asc ? (a.zone->id < b.zone->id) : (b.zone->id < a.zone->id);
-				default:
-					return asc ? (a.zone->id < b.zone->id) : (b.zone->id < a.zone->id);
-			}
-		});
+	if (canvas_) {
+		canvas_->SetZones(std::move(groups));
+		canvas_->SetSelection(selected_zone_id_, selected_cluster_);
 	}
 
-	// Flatten into TableRows
-	std::vector<TableRow> rows;
-	for (const auto& entry : zone_entries) {
-		const auto& z = *entry.zone;
-		const glm::vec3 rgb = rme::rendering::getZoneColor(z.id);
-		const bool is_multi_area = (entry.clusters.size() > 1);
-		const bool is_expanded = (is_multi_area && (expanded_zones_.contains(z.id) || has_search));
-
-		TableRow row;
-		row.id = (static_cast<uint64_t>(z.id) << 32);
-		row.key = std::to_string(z.id);
-		row.client_data = const_cast<Map::Zone*>(&z);
-
-		row.has_color_swatch = true;
-		row.color_swatch_col = 0;
-		row.swatch_r = static_cast<uint8_t>(std::clamp(rgb.r * 255.0f, 0.0f, 255.0f));
-		row.swatch_g = static_cast<uint8_t>(std::clamp(rgb.g * 255.0f, 0.0f, 255.0f));
-		row.swatch_b = static_cast<uint8_t>(std::clamp(rgb.b * 255.0f, 0.0f, 255.0f));
-
-		row.indent_level = 0;
-		row.group_col = 2; // Name column contains the expander arrow
-		row.is_group = is_multi_area;
-		row.is_expanded = is_expanded;
-
-		row.cells.push_back(""); // Swatch column
-		row.cells.push_back(std::to_string(z.id));
-		row.cells.push_back(z.name);
-		row.cells.push_back(is_multi_area ? std::to_string(entry.clusters.size()) : "1");
-		row.cells.push_back(format_thousands_separator(entry.total_tiles));
-
-		rows.push_back(std::move(row));
-
-		if (is_expanded) {
-			for (size_t ci = 0; ci < entry.clusters.size(); ++ci) {
-				const auto& c = entry.clusters[ci];
-				TableRow child_row;
-				child_row.id = (static_cast<uint64_t>(z.id) << 32) | static_cast<uint32_t>(ci + 1);
-				child_row.key = std::format("{}:{}", z.id, ci);
-				child_row.client_data = const_cast<Map::Zone*>(&z);
-
-				child_row.indent_level = 1;
-				child_row.group_col = 2;
-				child_row.is_group = false;
-				child_row.is_expanded = false;
-
-				child_row.cells.push_back("");
-				child_row.cells.push_back("");
-				child_row.cells.push_back(std::format("Area {} @ ({}, {}, z{})", ci + 1, c.centroid_pos.x, c.centroid_pos.y, c.centroid_pos.z));
-				child_row.cells.push_back("");
-				child_row.cells.push_back(format_thousands_separator(c.tile_count));
-
-				rows.push_back(std::move(child_row));
-			}
-		}
-	}
-
-	zone_table->SetRows(std::move(rows));
-
-	// Reselect active zone/cluster
-	if (selected_zone_id_ != 0) {
-		const std::string target_key = (selected_cluster_ >= 0)
-			? std::format("{}:{}", selected_zone_id_, selected_cluster_)
-			: std::to_string(selected_zone_id_);
-		zone_table->SelectByKey(target_key);
-	}
+	const bool has_selection = (selected_zone_id_ != 0 && map_->findZone(selected_zone_id_) != nullptr);
+	if (rename_button_) rename_button_->Enable(has_selection);
+	if (remove_button_) remove_button_->Enable(has_selection);
 }
 
-void ZonePalettePanel::OnSearchChange(wxCommandEvent& /*event*/) {
-	OnUpdate();
-}
-
-void ZonePalettePanel::OnSelectZone(int /*index*/, const TableRow& /*row*/) {
-	const auto ref = selectedRow();
-	selected_zone_id_ = ref.zone;
-	selected_cluster_ = ref.cluster;
+void ZonePalettePanel::SelectZoneById(uint16_t zone_id, int cluster) {
+	selected_zone_id_ = zone_id;
+	selected_cluster_ = cluster;
 
 	if (g_brush_manager.zone_brush) {
-		g_brush_manager.zone_brush->setZone(ref.zone);
+		g_brush_manager.zone_brush->setZone(zone_id);
 	}
 	g_gui.SelectBrush();
 
-	if (supportsZones() && map && ref.zone != 0) {
-		if (ref.cluster >= 0) {
-			const auto& clusters = map->getZoneClusters(ref.zone);
-			if (static_cast<size_t>(ref.cluster) < clusters.size()) {
-				const auto& region = clusters[static_cast<size_t>(ref.cluster)];
-				g_gui.SetStatusText(wxstr(std::format("Zone {} Area {}/{}: {} tiles @ ({}, {}, z{})",
-					ref.zone, ref.cluster + 1, clusters.size(), region.tile_count,
-					region.centroid_pos.x, region.centroid_pos.y, region.centroid_pos.z)));
-			}
-		} else {
-			const auto& clusters = map->getZoneClusters(ref.zone);
-			const size_t total_tiles = map->getZoneTilePositions(ref.zone).size();
-			if (clusters.size() > 1) {
-				g_gui.SetStatusText(wxstr(std::format("Zone {}: {} tiles across {} area(s)",
-					ref.zone, total_tiles, clusters.size())));
-			} else {
-				g_gui.SetStatusText(wxstr(std::format("Zone {}: {} tiles",
-					ref.zone, total_tiles)));
-			}
-		}
-	}
+	const bool has_selection = (selected_zone_id_ != 0 && map_ && map_->findZone(selected_zone_id_) != nullptr);
+	if (rename_button_) rename_button_->Enable(has_selection);
+	if (remove_button_) remove_button_->Enable(has_selection);
 }
 
-void ZonePalettePanel::OnActivateZone(int /*index*/, const TableRow& /*row*/) {
-	wxCommandEvent unused;
-	OnGoToZone(unused);
-}
+void ZonePalettePanel::OnClickAddZone() {
+	if (!map_ || !map_->supportsZones()) return;
 
-void ZonePalettePanel::OnSortZones(int /*column*/, bool /*ascending*/) {
-	OnUpdate();
-}
-
-void ZonePalettePanel::OnToggleGroup(int /*index*/, const TableRow& row) {
-	const auto colon = row.key.find(':');
-	const uint16_t zid = (colon != std::string::npos)
-		? static_cast<uint16_t>(std::strtoul(row.key.substr(0, colon).c_str(), nullptr, 10))
-		: static_cast<uint16_t>(std::strtoul(row.key.c_str(), nullptr, 10));
-
-	if (zid != 0) {
-		if (expanded_zones_.contains(zid)) {
-			expanded_zones_.erase(zid);
-		} else {
-			expanded_zones_.insert(zid);
-		}
-		OnUpdate();
-	}
-}
-
-void ZonePalettePanel::OnZoneContextMenu(int /*index*/, const TableRow* row, const wxPoint& /*pos*/) {
-	if (!supportsZones()) {
-		return;
-	}
-
-	wxMenu menu;
-	if (row && !row->key.empty()) {
-		const auto ref = selectedRow();
-		if (ref.zone != 0) {
-			menu.Append(PALETTE_ZONE_GOTO, "Go to area (double-click)")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MAP_PIN, wxSize(16, 16)));
-			menu.AppendSeparator();
-			menu.Append(PALETTE_ZONE_RENAME, "Rename...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN, wxSize(16, 16)));
-			menu.Append(PALETTE_ZONE_REMOVE, "Remove...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
-			menu.AppendSeparator();
-		}
-	}
-
-	menu.Append(PALETTE_ZONE_ADD, "Add zone...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
-	PopupMenu(&menu);
-}
-
-void ZonePalettePanel::OnGoToZone(wxCommandEvent& /*event*/) {
-	const RowRef row = supportsZones() ? selectedRow() : RowRef{};
-	if (row.zone == 0 || !map) {
-		return;
-	}
-	wxBusyCursor busy;
-	const auto& clusters = map->getZoneClusters(row.zone);
-	if (!clusters.empty()) {
-		if (row.cluster >= 0 && static_cast<size_t>(row.cluster) < clusters.size()) {
-			const auto& region = clusters[static_cast<size_t>(row.cluster)];
-			g_gui.SetScreenCenterPosition(region.centroid_pos);
-			g_gui.SetStatusText(wxstr(std::format("Zone {} Area {}/{}: {} tiles @ ({}, {}, z{})",
-				row.zone, row.cluster + 1, clusters.size(), region.tile_count,
-				region.centroid_pos.x, region.centroid_pos.y, region.centroid_pos.z)));
-		} else {
-			const auto it = std::ranges::max_element(clusters, {}, &ZoneCluster::tile_count);
-			g_gui.SetScreenCenterPosition(it->centroid_pos);
-			const size_t total_tiles = map->getZoneTilePositions(row.zone).size();
-			g_gui.SetStatusText(wxstr(std::format("Zone {}: {} tiles across {} area(s) @ ({}, {}, z{})",
-				row.zone, total_tiles, clusters.size(), it->centroid_pos.x, it->centroid_pos.y, it->centroid_pos.z)));
-		}
-	} else {
-		g_gui.SetStatusText("This zone has no tiles yet.");
-	}
-}
-
-void ZonePalettePanel::OnClickAdd(wxCommandEvent& /*event*/) {
-	if (!supportsZones() || !map) {
-		return;
-	}
 	const std::string name = nstr(wxGetTextFromUser("Zone name:", "Add Zone", wxEmptyString, this).Trim().Trim(false));
-	if (name.empty()) {
-		return;
-	}
-	const uint16_t id = map->addZone(name);
+	if (name.empty()) return;
+
+	const uint16_t id = map_->addZone(name);
 	if (id == 0) {
 		g_gui.SetStatusText("A zone with this name already exists.");
 		return;
 	}
-	selected_zone_id_ = id;
-	selected_cluster_ = -1;
-	if (g_brush_manager.zone_brush) {
-		g_brush_manager.zone_brush->setZone(id);
-	}
+
+	SelectZoneById(id, -1);
 	OnUpdate();
-	g_gui.SelectBrush();
 }
 
-void ZonePalettePanel::OnClickRename(wxCommandEvent& /*event*/) {
-	const uint16_t id = selectedZoneId();
-	const Map::Zone* zone = supportsZones() && id != 0 ? map->findZone(id) : nullptr;
-	if (!zone) {
-		return;
-	}
+void ZonePalettePanel::OnClickRenameZone() {
+	if (!map_ || selected_zone_id_ == 0) return;
+	const Map::Zone* zone = map_->findZone(selected_zone_id_);
+	if (!zone) return;
+
 	const std::string name = nstr(wxGetTextFromUser("Zone name:", "Rename Zone", wxstr(zone->name), this).Trim().Trim(false));
-	if (name.empty() || name == zone->name) {
-		return;
-	}
-	if (!map->renameZone(id, name)) {
+	if (name.empty() || name == zone->name) return;
+
+	if (!map_->renameZone(selected_zone_id_, name)) {
 		g_gui.SetStatusText("A zone with this name already exists.");
 		return;
 	}
+
 	OnUpdate();
 }
 
-void ZonePalettePanel::OnClickRemove(wxCommandEvent& /*event*/) {
-	const uint16_t id = selectedZoneId();
-	const Map::Zone* zone = supportsZones() && id != 0 ? map->findZone(id) : nullptr;
-	if (!zone) {
+void ZonePalettePanel::OnClickRemoveZone() {
+	if (!map_ || selected_zone_id_ == 0) return;
+	const Map::Zone* zone = map_->findZone(selected_zone_id_);
+	if (!zone) return;
+
+	const wxString question = wxstr(std::format("Remove zone \"{}\" (ID: {}) and clear it from all tiles?\nThis cannot be undone.", zone->name, selected_zone_id_));
+	if (DialogUtil::PopupDialog(this, "Remove Zone", question, wxYES_NO | wxICON_WARNING) != wxYES) {
 		return;
 	}
-	const wxString question = wxstr(std::format("Remove zone \"{}\" (id {}) and clear it from every tile?\nThis cannot be undone.", zone->name, id));
-	if (wxMessageBox(question, "Remove Zone", wxYES_NO | wxICON_WARNING, this) != wxYES) {
-		return;
-	}
+
 	if (Editor* editor = g_gui.GetCurrentEditor()) {
 		if (editor->actionQueue) {
 			editor->actionQueue->clear();
 		}
 	}
-	map->removeZone(id);
-	if (selected_zone_id_ == id) {
-		selected_zone_id_ = 0;
-		selected_cluster_ = -1;
-	}
+
+	const uint16_t id = selected_zone_id_;
+	map_->removeZone(id);
+	selected_zone_id_ = 0;
+	selected_cluster_ = -1;
+
 	if (g_brush_manager.zone_brush) {
 		g_brush_manager.zone_brush->setZone(0);
 	}
+
 	OnUpdate();
 	g_gui.SelectBrush();
 	g_gui.RefreshView();
 }
 
-void ZonePalettePanel::UpdateZone(uint16_t /*zone_id*/) {
-	OnUpdate();
+void ZonePalettePanel::OnGoToZone() {
+	if (!map_ || selected_zone_id_ == 0) return;
+	const auto clusters = map_->getZoneClusters(selected_zone_id_);
+	if (clusters.empty()) return;
+
+	if (selected_cluster_ >= 0 && static_cast<size_t>(selected_cluster_) < clusters.size()) {
+		g_gui.SetScreenCenterPosition(clusters[static_cast<size_t>(selected_cluster_)].centroid_pos);
+	} else {
+		const auto it = std::ranges::max_element(clusters, {}, &ZoneCluster::tile_count);
+		if (it != clusters.end()) {
+			g_gui.SetScreenCenterPosition(it->centroid_pos);
+		}
+	}
 }
 
-void ZonePalettePanel::UpdateTileCounts() {
-	OnUpdate();
-}

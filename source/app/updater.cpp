@@ -1,95 +1,58 @@
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
-// Remere's Map Editor is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Remere's Map Editor is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <http://www.gnu.org/licenses/>.
-//////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
 #include "app/application.h"
 
 #ifdef _USE_UPDATER_
 
-	#include <wx/url.h>
-
-	#include "util/json.h"
-
 	#include "app/updater.h"
-	#include <thread>
-	#include <atomic>
-	#include <memory>
+	#include "ui/main_frame.h"
 
-wxDEFINE_EVENT(EVT_UPDATE_CHECK_FINISHED, wxCommandEvent);
-
-UpdateChecker::UpdateChecker() :
-	m_alive(std::make_shared<std::atomic<bool>>(true)) {
-	////
-}
+UpdateChecker::UpdateChecker() = default;
 
 UpdateChecker::~UpdateChecker() {
-	if (m_alive) {
-		*m_alive = false;
+	if (m_request.IsOk()) {
+		m_request.Cancel();
 	}
 }
 
-void UpdateChecker::connect(wxEvtHandler* receiver) {
-	wxString address = "http://www.remeresmapeditor.com/update.php";
+void UpdateChecker::connect(MainFrame* receiver) {
+	m_receiver = receiver;
+
+	wxString address = "https://www.remeresmapeditor.com/update.php";
 	address << "?os="
-			<<
 	#ifdef __WINDOWS__
-		"windows";
+		<< "windows";
 	#elif __LINUX__
-		"linux";
+		<< "linux";
 	#else
-		"unknown";
+		<< "unknown";
 	#endif
 	address << "&verid=" << __RME_VERSION_ID__;
 	#ifdef __EXPERIMENTAL__
 	address << "&beta";
 	#endif
-	wxURL* url = newd wxURL(address);
 
-	m_thread = std::jthread([receiver, url, alive = m_alive](std::stop_token stop_token) {
-		wxInputStream* input = url->GetInputStream();
-		if (!input) {
-			delete url;
-			return;
-		}
+#if wxUSE_WEBREQUEST
+	auto& session = wxWebSession::GetDefault();
+	m_request = session.CreateRequest(this, address);
+	if (!m_request.IsOk()) {
+		return;
+	}
 
-		std::string data;
-		while (!input->Eof()) {
-			if (stop_token.stop_requested()) {
-				delete input;
-				delete url;
-				return;
+	Bind(wxEVT_WEBREQUEST_STATE, [this](wxWebRequestEvent& evt) {
+		if (evt.GetState() == wxWebRequest::State_Completed) {
+			wxWebResponse resp = evt.GetResponse();
+			if (resp.IsOk() && resp.GetStatus() == 200 && m_receiver) {
+				m_receiver->OnUpdateDataReceived(resp.AsString().ToStdString());
 			}
-			data += input->GetC();
 		}
-
-		delete input;
-		delete url;
-
-		// We use raw pointer 'receiver' because Application manages lifetime of UpdateChecker
-		// and ensures thread is joined before receiver (MainFrame) is destroyed.
-		// However, we still check 'alive' flag to be safe.
-		wxGetApp().CallAfter([receiver, data, alive]() {
-			if (*alive && receiver) {
-				wxCommandEvent event(EVT_UPDATE_CHECK_FINISHED);
-				event.SetClientData(newd std::string(data));
-				receiver->AddPendingEvent(event);
-			}
-		});
 	});
+
+	m_request.Start();
+#endif
 }
 
 #endif

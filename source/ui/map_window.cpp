@@ -53,15 +53,15 @@ MapWindow::MapWindow(wxWindow* parent, Editor& editor) :
 	GL_settings[0] = WX_GL_RGBA;
 	GL_settings[1] = WX_GL_DOUBLEBUFFER;
 	GL_settings[2] = 0;
-	canvas = newd MapCanvas(this, editor, GL_settings);
+	canvas = new MapCanvas(this, editor, GL_settings);
 
-	vScroll = newd MapScrollBar(this, MAP_WINDOW_VSCROLL, wxVERTICAL, canvas);
-	hScroll = newd MapScrollBar(this, MAP_WINDOW_HSCROLL, wxHORIZONTAL, canvas);
+	vScroll = new MapScrollBar(this, MAP_WINDOW_VSCROLL, wxVERTICAL, canvas);
+	hScroll = new MapScrollBar(this, MAP_WINDOW_HSCROLL, wxHORIZONTAL, canvas);
 
-	gem = newd DCButton(this, MAP_WINDOW_GEM, wxDefaultPosition, DC_BTN_NORMAL, RENDER_SIZE_16x16, EDITOR_SPRITE_SELECTION_GEM);
+	gem = new DCButton(this, MAP_WINDOW_GEM, wxDefaultPosition, DC_BTN_NORMAL, RENDER_SIZE_16x16, EDITOR_SPRITE_SELECTION_GEM);
 	gem->SetToolTip("Switch between Drawing and Selection mode (Space)");
 
-	wxFlexGridSizer* topsizer = newd wxFlexGridSizer(2, 0, 0);
+	wxFlexGridSizer* topsizer = new wxFlexGridSizer(2, 0, 0);
 
 	topsizer->AddGrowableCol(0);
 	topsizer->AddGrowableRow(0);

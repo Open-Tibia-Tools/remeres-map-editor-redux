@@ -6,6 +6,7 @@
 #include "map_xml_io.h"
 #include "map/map.h"
 #include "map/tile.h"
+#include "map/map_region.h"
 #include "game/creatures.h"
 #include "game/creature.h"
 #include "game/spawn.h"
@@ -37,8 +38,8 @@ std::pair<std::string, std::string> MapXMLIO::normalizeMapFilePaths(const wxFile
 		resolved = wxFileName(base_dir, resolved.GetFullName());
 	}
 
-	std::string utf8_path = (const char*)(resolved.GetFullPath().mb_str(wxConvUTF8));
-	std::string encoded_path = (const char*)(resolved.GetFullPath().mb_str(wxConvLocal));
+	std::string utf8_path = resolved.GetFullPath().ToStdString();
+	std::string encoded_path = resolved.GetFullPath().ToStdString();
 
 	return { utf8_path, encoded_path };
 }
@@ -117,6 +118,39 @@ namespace {
 	// Progress within one document, before the stage it belongs to is applied.
 	using ItemProgress = std::function<void(size_t done, size_t total)>;
 
+	// Visits the creature tiles in the square of the given radius around a spawn,
+	// row by row in the same order as a plain nested x/y loop. Uses a cell
+	// cursor so neighbouring tiles share one cell/floor lookup and empty
+	// 4/16/64-tile spans are skipped at once; a plain getTile() per tile does a
+	// binary search over the map's cells, which made saving maps with many or
+	// large spawns very slow.
+	template <typename Fn>
+	void forEachCreatureTileAround(const Map& map, const Position& center, int32_t radius, SpatialHashGrid::CellCursor& cursor, Fn&& fn) {
+		for (int32_t y = -radius; y <= radius; ++y) {
+			const int32_t ty = center.y + y;
+			if (ty < 0) {
+				continue;
+			}
+			for (int32_t x = -radius; x <= radius;) {
+				const int32_t tx = center.x + x;
+				if (tx < 0) {
+					++x;
+					continue;
+				}
+				const Floor* floor = map.getFloor(tx, ty, center.z, cursor);
+				if (!floor) {
+					x += ((tx | cursor.empty_span_mask) + 1) - tx;
+					continue;
+				}
+				const Tile* tile = floor->locs[(tx & 3) * 4 + (ty & 3)].get();
+				if (tile && tile->creature) {
+					fn(x, y, *tile);
+				}
+				++x;
+			}
+		}
+	}
+
 	bool shouldAbortWriting(const MapXMLIO::CancelCheck& shouldCancel, size_t& processed) {
 		if (!shouldCancel || ++processed % kCancelPollStride != 0) {
 			return false;
@@ -145,6 +179,7 @@ namespace {
 		ResetSavedGuard guard { creatureList };
 
 		size_t processed = 0;
+		SpatialHashGrid::CellCursor cursor;
 		// Building one spawn node rescans every tile inside its radius, and that
 		// scan dominates the stage, so report often enough to move the bar.
 		constexpr size_t kProgressReportStride = 256;
@@ -179,30 +214,27 @@ namespace {
 			spawnNode.append_attribute("radius") = radius;
 
 			bool skippedOtherKind = false;
-			for (int32_t y = -radius; y <= radius; ++y) {
-				for (int32_t x = -radius; x <= radius; ++x) {
-					const Tile* creatureTile = map.getTile(spawnPosition + Position(x, y, 0));
-					if (!creatureTile || !creatureTile->creature || creatureTile->creature->isSaved()) {
-						continue;
-					}
-					Creature* creature = creatureTile->creature.get();
-					if (isOtbm5 && creature->isNpc() != (format.filter == CreatureFilter::Npcs)) {
-						skippedOtherKind = true;
-						continue;
-					}
-
-					const SpawnAlternative entry { creature->getName(), creature->getSpawnTime(), creature->getDirection(), creature->getWeight() };
-					appendCreatureNode(spawnNode, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, isOtbm5);
-					if (isOtbm5) {
-						for (const auto& alternative : creature->getAlternatives()) {
-							appendCreatureNode(spawnNode, "monster", x, y, spawnPosition.z, alternative, isOtbm5);
-						}
-					}
-
-					creature->save();
-					creatureList.push_back(creature);
+			forEachCreatureTileAround(map, spawnPosition, radius, cursor, [&](int32_t x, int32_t y, const Tile& creatureTile) {
+				Creature* creature = creatureTile.creature.get();
+				if (creature->isSaved()) {
+					return;
 				}
-			}
+				if (isOtbm5 && creature->isNpc() != (format.filter == CreatureFilter::Npcs)) {
+					skippedOtherKind = true;
+					return;
+				}
+
+				const SpawnAlternative entry { creature->getName(), creature->getSpawnTime(), creature->getDirection(), creature->getWeight() };
+				appendCreatureNode(spawnNode, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, isOtbm5);
+				if (isOtbm5) {
+					for (const auto& alternative : creature->getAlternatives()) {
+						appendCreatureNode(spawnNode, "monster", x, y, spawnPosition.z, alternative, isOtbm5);
+					}
+				}
+
+				creature->save();
+				creatureList.push_back(creature);
+			});
 
 			// A spawn holding only the other kind of creature belongs to the other file; empty spawns stay with the monsters
 			if (isOtbm5 && !spawnNode.first_child() && (skippedOtherKind || format.filter == CreatureFilter::Npcs)) {
@@ -244,6 +276,7 @@ namespace {
 		ResetSavedGuard guard { creatureList };
 
 		size_t processed = 0;
+		SpatialHashGrid::CellCursor cursor;
 		constexpr size_t kProgressReportStride = 256;
 		const size_t spawnCount = map.spawns.size();
 		size_t index = 0;
@@ -285,40 +318,34 @@ namespace {
 			// only if it falls inside the radius that file declares for this spawn.
 			bool npcInsideMonsterWindow = false;
 			const int32_t scanRadius = std::max(monsterRadius, npcRadius);
-			for (int32_t y = -scanRadius; y <= scanRadius; ++y) {
-				for (int32_t x = -scanRadius; x <= scanRadius; ++x) {
-					const Tile* creatureTile = map.getTile(spawnPosition + Position(x, y, 0));
-					if (!creatureTile || !creatureTile->creature) {
-						continue;
-					}
-					Creature* creature = creatureTile->creature.get();
+			forEachCreatureTileAround(map, spawnPosition, scanRadius, cursor, [&](int32_t x, int32_t y, const Tile& creatureTile) {
+				Creature* creature = creatureTile.creature.get();
 
-					const bool insideMonster = x >= -monsterRadius && x <= monsterRadius && y >= -monsterRadius && y <= monsterRadius;
-					const bool insideNpc = x >= -npcRadius && x <= npcRadius && y >= -npcRadius && y <= npcRadius;
-					if (creature->isNpc() && insideMonster) {
-						// An NPC inside the monster window marks this spawn as belonging
-						// to the NPC file even when an earlier spawn already claimed it;
-						// it is written to the NPC file, not here.
-						npcInsideMonsterWindow = true;
-					}
-					if (creature->isSaved()) {
-						continue;
-					}
-					if (creature->isNpc() ? !insideNpc : !insideMonster) {
-						continue;
-					}
-
-					pugi::xml_node node = creature->isNpc() ? npcNode : monsterNode;
-					const SpawnAlternative entry { creature->getName(), creature->getSpawnTime(), creature->getDirection(), creature->getWeight() };
-					appendCreatureNode(node, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, true);
-					for (const auto& alternative : creature->getAlternatives()) {
-						appendCreatureNode(node, "monster", x, y, spawnPosition.z, alternative, true);
-					}
-
-					creature->save();
-					creatureList.push_back(creature);
+				const bool insideMonster = x >= -monsterRadius && x <= monsterRadius && y >= -monsterRadius && y <= monsterRadius;
+				const bool insideNpc = x >= -npcRadius && x <= npcRadius && y >= -npcRadius && y <= npcRadius;
+				if (creature->isNpc() && insideMonster) {
+					// An NPC inside the monster window marks this spawn as belonging
+					// to the NPC file even when an earlier spawn already claimed it;
+					// it is written to the NPC file, not here.
+					npcInsideMonsterWindow = true;
 				}
-			}
+				if (creature->isSaved()) {
+					return;
+				}
+				if (creature->isNpc() ? !insideNpc : !insideMonster) {
+					return;
+				}
+
+				pugi::xml_node node = creature->isNpc() ? npcNode : monsterNode;
+				const SpawnAlternative entry { creature->getName(), creature->getSpawnTime(), creature->getDirection(), creature->getWeight() };
+				appendCreatureNode(node, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, true);
+				for (const auto& alternative : creature->getAlternatives()) {
+					appendCreatureNode(node, "monster", x, y, spawnPosition.z, alternative, true);
+				}
+
+				creature->save();
+				creatureList.push_back(creature);
+			});
 
 			// A spawn holding only the other kind of creature belongs to the other
 			// file; empty spawns stay with the monsters.

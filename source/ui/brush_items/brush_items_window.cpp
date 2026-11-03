@@ -30,7 +30,8 @@
 BrushItemsGrid::BrushItemsGrid(wxWindow* parent) :
 	VirtualItemGrid(parent, wxID_ANY) {
 	SetIconSize(32);
-	SetShowLabels(true);
+	SetShowLabels(g_settings.getBoolean(Config::BRUSH_ITEMS_SHOW_LABELS));
+	SetBrushIndicators(g_settings.getBoolean(Config::BRUSH_ITEMS_INDICATOR_DOGEAR));
 }
 
 void BrushItemsGrid::SetItems(std::vector<uint16_t> items) {
@@ -151,7 +152,7 @@ void BrushItemsGrid::ApplyFilterAndSort() {
 
 BrushBottomCardWidget::BrushBottomCardWidget(wxWindow* parent) :
 	NanoVGCanvas(parent, wxID_ANY, wxBORDER_NONE) {
-	SetMinSize(FromDIP(wxSize(-1, 42)));
+	SetMinSize(FromDIP(wxSize(220, 42)));
 	Bind(wxEVT_LEFT_DOWN, &BrushBottomCardWidget::OnMouseDown, this);
 	Bind(wxEVT_ENTER_WINDOW, &BrushBottomCardWidget::OnMouseEnter, this);
 	Bind(wxEVT_LEAVE_WINDOW, &BrushBottomCardWidget::OnMouseLeave, this);
@@ -307,6 +308,7 @@ void BrushItemsWindow::BuildUI() {
 		if (m_grid) {
 			m_grid->SetShowLabels(show);
 		}
+		g_settings.setInteger(Config::BRUSH_ITEMS_SHOW_LABELS, show ? 1 : 0);
 	};
 	actions.icon_size = [this](int size) {
 		if (m_grid) {
@@ -323,6 +325,7 @@ void BrushItemsWindow::BuildUI() {
 		if (m_toolbar) {
 			m_toolbar->SetIndicatorState(dogEar);
 		}
+		g_settings.setInteger(Config::BRUSH_ITEMS_INDICATOR_DOGEAR, dogEar ? 1 : 0);
 	};
 	actions.grid_spacing = [this](int spacingPx) {
 		if (m_grid) {
@@ -338,16 +341,22 @@ void BrushItemsWindow::BuildUI() {
 	                       TilesetGridToolbar::Part_Size |
 	                       TilesetGridToolbar::Part_Indicators |
 	                       TilesetGridToolbar::Part_Spacing;
+	const bool initShowLabels = g_settings.getBoolean(Config::BRUSH_ITEMS_SHOW_LABELS);
+	const bool initDogEar = g_settings.getBoolean(Config::BRUSH_ITEMS_INDICATOR_DOGEAR);
+	m_grid->SetShowLabels(initShowLabels);
+	m_grid->SetBrushIndicators(initDogEar);
+
 	m_toolbar = new TilesetGridToolbar(this, std::move(actions), parts);
-	m_toolbar->SetState(m_grid->GetShowLabels(), m_grid->GetIconSize(), m_grid->HasSort(), m_grid->GetSortKey(), m_grid->GetSortDirection(), false);
-	mainSizer->Add(m_toolbar, 0, wxEXPAND);
+	m_toolbar->SetState(initShowLabels, m_grid->GetIconSize(), m_grid->HasSort(), m_grid->GetSortKey(), m_grid->GetSortDirection(), false);
+	m_toolbar->SetIndicatorState(initDogEar);
+	mainSizer->Add(m_toolbar, wxSizerFlags().Expand());
 
 	// Empty state banner
 	m_emptyLabel = new wxStaticText(this, wxID_ANY, "Select a brush to view its items.", wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL);
 	m_emptyLabel->SetForegroundColour(Theme::Get(Theme::Role::TextSubtle));
-	mainSizer->Add(m_emptyLabel, 0, wxEXPAND | wxTOP | wxBOTTOM, 24);
+	mainSizer->Add(m_emptyLabel, wxSizerFlags().Expand().Border(wxTOP | wxBOTTOM, 24));
 
-	mainSizer->Add(m_grid, 1, wxEXPAND);
+	mainSizer->Add(m_grid, wxSizerFlags(1).Expand());
 
 	// Bottom tile square with brush name
 	m_bottomCard = new BrushBottomCardWidget(this);
@@ -355,7 +364,7 @@ void BrushItemsWindow::BuildUI() {
 		m_bottomCard->SetIndicatorDogEar(m_grid->GetBrushIndicators());
 	}
 	m_bottomCard->Show(false);
-	mainSizer->Add(m_bottomCard, 0, wxEXPAND);
+	mainSizer->Add(m_bottomCard, wxSizerFlags().Expand());
 
 	SetSizer(mainSizer);
 }
@@ -372,7 +381,7 @@ void BrushItemsWindow::SetActiveBrush(const Brush* brush) {
 			m_bottomCard->Show(false);
 		}
 		if (m_emptyLabel) {
-			m_emptyLabel->SetLabel("Select a brush to view its items.");
+			m_emptyLabel->SetLabelText("Select a brush to view its items.");
 			m_emptyLabel->Show(true);
 		}
 		if (m_grid) m_grid->Show(false);
@@ -438,7 +447,7 @@ void BrushItemsWindow::SetActiveBrush(const Brush* brush) {
 	}
 
 	if (m_emptyLabel) {
-		m_emptyLabel->SetLabel("No items associated with this brush.");
+		m_emptyLabel->SetLabelText("No items associated with this brush.");
 		m_emptyLabel->Show(count == 0);
 	}
 	if (m_grid) {

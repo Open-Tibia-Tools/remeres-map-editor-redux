@@ -71,7 +71,7 @@ Change::Change(std::unique_ptr<Tile> t, const Position& pos) :
 }
 
 Change* Change::Create(House* house, const Position& where) {
-	Change* c = newd Change();
+	Change* c = new Change();
 	c->type = CHANGE_MOVE_HOUSE_EXIT;
 	c->position = where;
 	c->data = HouseExitChangeData { .houseId = house->getID(), .pos = where };
@@ -79,7 +79,7 @@ Change* Change::Create(House* house, const Position& where) {
 }
 
 Change* Change::Create(Waypoint* wp, const Position& where) {
-	Change* c = newd Change();
+	Change* c = new Change();
 	c->type = CHANGE_MOVE_WAYPOINT;
 	c->position = where;
 	c->data = WaypointChangeData { .name = wp->name, .pos = where };
@@ -87,7 +87,7 @@ Change* Change::Create(Waypoint* wp, const Position& where) {
 }
 
 Change* Change::Create(Town* town, const Position& where) {
-	Change* c = newd Change();
+	Change* c = new Change();
 	c->type = CHANGE_MOVE_TOWN_TEMPLE;
 	c->position = where;
 	c->data = TownTempleChangeData { .townId = town->getID(), .pos = where };
@@ -439,9 +439,6 @@ void Action::undo(DirtyList* dirty_list) {
 							House* house = editor.map.houses.getHouse(newtile->getHouseID());
 							if (house) {
 								house->removeTile(newtile);
-							} else {
-								// Set tile house to 0, house has been removed
-								newtile->setHouse(nullptr);
 							}
 
 							house = editor.map.houses.getHouse(oldtile->getHouseID());

@@ -48,11 +48,17 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	MAKE_ACTION_ICON(SEARCH_ON_MAP_ACTION, wxITEM_NORMAL, ICON_SEARCH, OnSearchForActionOnMap);
 	MAKE_ACTION_ICON(SEARCH_ON_MAP_CONTAINER, wxITEM_NORMAL, ICON_SEARCH, OnSearchForContainerOnMap);
 	MAKE_ACTION_ICON(SEARCH_ON_MAP_WRITEABLE, wxITEM_NORMAL, ICON_SEARCH, OnSearchForWriteableOnMap);
+	MAKE_ACTION_ICON(SEARCH_ON_MAP_TELEPORT, wxITEM_NORMAL, ICON_SEARCH, OnSearchForTeleportOnMap);
+	MAKE_ACTION_ICON(SEARCH_ON_MAP_CREATURE, wxITEM_NORMAL, ICON_SEARCH, OnSearchForCreatureOnMap);
+	MAKE_ACTION_ICON(SEARCH_ON_MAP_PICKUPABLE, wxITEM_NORMAL, ICON_SEARCH, OnSearchForPickupableOnMap);
 	MAKE_ACTION_ICON(SEARCH_ON_SELECTION_EVERYTHING, wxITEM_NORMAL, ICON_SEARCH, OnSearchForStuffOnSelection);
 	MAKE_ACTION_ICON(SEARCH_ON_SELECTION_UNIQUE, wxITEM_NORMAL, ICON_SEARCH, OnSearchForUniqueOnSelection);
 	MAKE_ACTION_ICON(SEARCH_ON_SELECTION_ACTION, wxITEM_NORMAL, ICON_SEARCH, OnSearchForActionOnSelection);
 	MAKE_ACTION_ICON(SEARCH_ON_SELECTION_CONTAINER, wxITEM_NORMAL, ICON_SEARCH, OnSearchForContainerOnSelection);
 	MAKE_ACTION_ICON(SEARCH_ON_SELECTION_WRITEABLE, wxITEM_NORMAL, ICON_SEARCH, OnSearchForWriteableOnSelection);
+	MAKE_ACTION_ICON(SEARCH_ON_SELECTION_TELEPORT, wxITEM_NORMAL, ICON_SEARCH, OnSearchForTeleportOnSelection);
+	MAKE_ACTION_ICON(SEARCH_ON_SELECTION_CREATURE, wxITEM_NORMAL, ICON_SEARCH, OnSearchForCreatureOnSelection);
+	MAKE_ACTION_ICON(SEARCH_ON_SELECTION_PICKUPABLE, wxITEM_NORMAL, ICON_SEARCH, OnSearchForPickupableOnSelection);
 	MAKE_ACTION_ICON(SEARCH_ON_SELECTION_ITEM, wxITEM_NORMAL, ICON_SEARCH, OnSearchForItemOnSelection);
 	MAKE_ACTION_ICON(REPLACE_ON_SELECTION_ITEMS, wxITEM_NORMAL, ICON_SYNC, OnReplaceItemsOnSelection);
 	MAKE_ACTION_ICON(REMOVE_ON_SELECTION_ITEM, wxITEM_NORMAL, ICON_TRASH_CAN, OnRemoveItemOnSelection);
@@ -96,6 +102,7 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	MAKE_ACTION_ICON(VIEW_TOOLBARS_POSITION, wxITEM_CHECK, ICON_LOCATION, OnToolbars);
 	MAKE_ACTION_ICON(VIEW_TOOLBARS_SIZES, wxITEM_CHECK, ICON_UP_RIGHT_AND_DOWN_LEFT_FROM_CENTER, OnToolbars);
 	MAKE_ACTION_ICON(VIEW_TOOLBARS_STANDARD, wxITEM_CHECK, ICON_TABLE, OnToolbars);
+	MAKE_ACTION_ICON(VIEW_TOOLBARS_LIGHT, wxITEM_CHECK, ICON_SUNNY, OnToolbars);
 	MAKE_ACTION_ICON(NEW_VIEW, wxITEM_NORMAL, ICON_WINDOW_MAXIMIZE, OnNewView);
 	MAKE_ACTION_ICON(TOGGLE_FULLSCREEN, wxITEM_NORMAL, ICON_EXPAND, OnToggleFullscreen);
 
@@ -105,6 +112,8 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 
 	MAKE_ACTION_ICON(SHOW_SHADE, wxITEM_CHECK, ICON_CLOUD, OnChangeViewSettings);
 	MAKE_ACTION_ICON(SHOW_ALL_FLOORS, wxITEM_CHECK, ICON_LAYER_GROUP, OnChangeViewSettings);
+	MAKE_ACTION(SHOW_ALL_FLOORS_CLIENT, wxITEM_CHECK, OnChangeViewSettings);
+	MAKE_ACTION(SHOW_ALL_FLOORS_ALL, wxITEM_CHECK, OnChangeViewSettings);
 	MAKE_ACTION_ICON(GHOST_ITEMS, wxITEM_CHECK, ICON_GHOST, OnChangeViewSettings);
 	MAKE_ACTION_ICON(GHOST_HIGHER_FLOORS, wxITEM_CHECK, ICON_GHOST, OnChangeViewSettings);
 	MAKE_ACTION_ICON(HIGHLIGHT_ITEMS, wxITEM_CHECK, ICON_HIGHLIGHTER, OnChangeViewSettings);
@@ -140,6 +149,7 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	MAKE_ACTION_ICON(WIN_INGAME_PREVIEW, wxITEM_NORMAL, ICON_GAMEPAD, OnIngamePreviewWindow);
 	MAKE_ACTION_ICON(WIN_BRUSH_ITEMS, wxITEM_NORMAL, ICON_BOXES_STACKED, OnBrushItemsWindow);
 	MAKE_ACTION_ICON(WIN_TILE_PROPERTIES, wxITEM_NORMAL, ICON_LIST, OnTilePropertiesWindow);
+	MAKE_ACTION_ICON(WIN_SEARCH_RESULTS, wxITEM_NORMAL, ICON_SEARCH, OnSearchResultsWindow);
 	MAKE_ACTION_ICON(NEW_PALETTE, wxITEM_NORMAL, ICON_PLUS, OnNewPalette);
 	MAKE_ACTION_ICON(SHOW_PALETTE, wxITEM_NORMAL, ICON_PALETTE, OnShowPalette);
 	MAKE_ACTION_ICON(SELECT_HOUSE, wxITEM_NORMAL, ICON_HOUSE, OnSelectHousePalette);
@@ -229,11 +239,17 @@ void MenuBarActionManager::UpdateState(MainMenuBar* mb) {
 	mb->EnableItem(SEARCH_ON_MAP_ACTION, is_host);
 	mb->EnableItem(SEARCH_ON_MAP_CONTAINER, is_host);
 	mb->EnableItem(SEARCH_ON_MAP_WRITEABLE, is_host);
+	mb->EnableItem(SEARCH_ON_MAP_TELEPORT, is_host);
+	mb->EnableItem(SEARCH_ON_MAP_CREATURE, is_host);
+	mb->EnableItem(SEARCH_ON_MAP_PICKUPABLE, is_host);
 	mb->EnableItem(SEARCH_ON_SELECTION_EVERYTHING, has_selection && is_host);
 	mb->EnableItem(SEARCH_ON_SELECTION_UNIQUE, has_selection && is_host);
 	mb->EnableItem(SEARCH_ON_SELECTION_ACTION, has_selection && is_host);
 	mb->EnableItem(SEARCH_ON_SELECTION_CONTAINER, has_selection && is_host);
 	mb->EnableItem(SEARCH_ON_SELECTION_WRITEABLE, has_selection && is_host);
+	mb->EnableItem(SEARCH_ON_SELECTION_TELEPORT, has_selection && is_host);
+	mb->EnableItem(SEARCH_ON_SELECTION_CREATURE, has_selection && is_host);
+	mb->EnableItem(SEARCH_ON_SELECTION_PICKUPABLE, has_selection && is_host);
 	mb->EnableItem(SEARCH_ON_SELECTION_ITEM, has_selection && is_host);
 	mb->EnableItem(REPLACE_ON_SELECTION_ITEMS, has_selection && is_host);
 	mb->EnableItem(REMOVE_ON_SELECTION_ITEM, has_selection && is_host);
@@ -285,6 +301,7 @@ void MenuBarActionManager::UpdateState(MainMenuBar* mb) {
 	mb->EnableItem(WIN_INGAME_PREVIEW, loaded);
 	mb->EnableItem(WIN_BRUSH_ITEMS, loaded);
 	mb->EnableItem(WIN_TILE_PROPERTIES, loaded);
+	mb->EnableItem(WIN_SEARCH_RESULTS, true);
 	mb->EnableItem(NEW_PALETTE, loaded);
 	mb->EnableItem(SHOW_PALETTE, loaded);
 	mb->EnableItem(SELECT_HOUSE, loaded);

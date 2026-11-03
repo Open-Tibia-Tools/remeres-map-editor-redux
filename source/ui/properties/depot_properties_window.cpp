@@ -25,22 +25,22 @@ DepotPropertiesWindow::DepotPropertiesWindow(wxWindow* parent, const Map* map, c
 	Bind(wxEVT_BUTTON, &DepotPropertiesWindow::OnClickOK, this, wxID_OK);
 	Bind(wxEVT_BUTTON, &DepotPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
 
-	wxSizer* topsizer = newd wxBoxSizer(wxVERTICAL);
-	wxSizer* boxsizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Depot Properties");
-	wxFlexGridSizer* subsizer = newd wxFlexGridSizer(2, 10, 10);
+	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
+	wxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Depot Properties");
+	wxFlexGridSizer* subsizer = new wxFlexGridSizer(2, 10, 10);
 
 	subsizer->AddGrowableCol(1);
 	if (item->getClientID() != 0 && item->getClientID() != item->getID()) {
-		subsizer->Add(newd wxStaticText(this, wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
+		subsizer->Add(new wxStaticText(this, wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
 	} else {
-		subsizer->Add(newd wxStaticText(this, wxID_ANY, std::format("ID: {}", item->getID())));
+		subsizer->Add(new wxStaticText(this, wxID_ANY, std::format("ID: {}", item->getID())));
 	}
-	subsizer->Add(newd wxStaticText(this, wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
+	subsizer->Add(new wxStaticText(this, wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
 
 
 	const Towns& towns = map->towns;
-	subsizer->Add(newd wxStaticText(this, wxID_ANY, "Depot ID"));
-	depot_id_field = newd wxChoice(this, wxID_ANY);
+	subsizer->Add(new wxStaticText(this, wxID_ANY, "Depot ID"));
+	depot_id_field = new wxChoice(this, wxID_ANY);
 	int to_select_index = 0;
 	if (towns.count() > 0) {
 		bool found = false;
@@ -57,7 +57,7 @@ DepotPropertiesWindow::DepotPropertiesWindow(wxWindow* parent, const Map* map, c
 		}
 		if (!found) {
 			if (depot->getDepotID() != 0) {
-				depot_id_field->Append("Undefined Town (id:" + i2ws(depot->getDepotID()) + ")", reinterpret_cast<void*>(static_cast<intptr_t>(depot->getDepotID())));
+				depot_id_field->Append("Undefined Town (id:" + std::to_string(depot->getDepotID()) + ")", reinterpret_cast<void*>(static_cast<intptr_t>(depot->getDepotID())));
 			}
 		}
 	}
@@ -72,12 +72,12 @@ DepotPropertiesWindow::DepotPropertiesWindow(wxWindow* parent, const Map* map, c
 	boxsizer->Add(subsizer, wxSizerFlags(5).Expand());
 	topsizer->Add(boxsizer, wxSizerFlags(0).Expand().Border(wxALL, 20));
 
-	wxSizer* buttonsizer = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(this, wxID_OK, "OK");
-	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	wxSizer* buttonsizer = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
+	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	buttonsizer->Add(okBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
-	wxButton* cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
-	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
+	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	buttonsizer->Add(cancelBtn, wxSizerFlags(1).Center().Border(wxTOP | wxBOTTOM, 10));
 	topsizer->Add(buttonsizer, wxSizerFlags(0).Center().Border(wxLEFT | wxRIGHT, 20));
 
@@ -85,7 +85,7 @@ DepotPropertiesWindow::DepotPropertiesWindow(wxWindow* parent, const Map* map, c
 	Centre(wxBOTH);
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_BOX, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_BOX, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 

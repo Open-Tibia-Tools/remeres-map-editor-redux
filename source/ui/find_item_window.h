@@ -10,6 +10,7 @@
 
 #include <array>
 #include <string>
+#include <vector>
 
 class Brush;
 class CreatureBrush;
@@ -32,6 +33,7 @@ public:
 		None = 0,
 		ConfirmSelection,
 		SearchMap,
+		SearchFiltered,
 		SelectItem,
 	};
 
@@ -69,6 +71,14 @@ public:
 		return result_action_;
 	}
 
+	[[nodiscard]] const std::vector<uint16_t>& getFilteredItemIDs() const {
+		return filtered_item_ids_;
+	}
+
+	[[nodiscard]] const std::vector<const Brush*>& getFilteredCreatureBrushes() const {
+		return filtered_creature_brushes_;
+	}
+
 private:
 	static constexpr size_t kTypeCheckboxCount = static_cast<size_t>(AdvancedFinderTypeFilter::Count);
 	static constexpr size_t kPropertyCheckboxCount = static_cast<size_t>(AdvancedFinderPropertyFilter::Count);
@@ -99,6 +109,7 @@ private:
 	void OnResultActivate(wxCommandEvent& event);
 	void OnResultRightActivate(wxCommandEvent& event);
 	void OnSearchMap(wxCommandEvent& event);
+	void OnSearchFiltered(wxCommandEvent& event);
 	void OnSelectItem(wxCommandEvent& event);
 	void OnResetSearch(wxCommandEvent& event);
 	void OnCancel(wxCommandEvent& event);
@@ -112,6 +123,7 @@ private:
 	std::array<wxCheckBox*, kInteractionCheckboxCount> interaction_checkboxes_ {};
 	std::array<wxCheckBox*, kVisualCheckboxCount> visual_checkboxes_ {};
 	wxStaticText* result_count_label_ = nullptr;
+	wxButton* search_filtered_button_ = nullptr;
 	wxButton* search_map_button_ = nullptr;
 	wxButton* select_item_button_ = nullptr;
 	wxButton* ok_button_ = nullptr;
@@ -125,6 +137,9 @@ private:
 	AdvancedFinderPersistedState persisted_state_;
 	AdvancedFinderSelectionKey current_selection_;
 	std::vector<AdvancedFinderCatalogRow> catalog_;
+	std::vector<uint16_t> filtered_item_ids_;
+	std::vector<const Brush*> filtered_creature_brushes_;
+	bool has_filtered_results_ = false;
 
 	ResultAction result_action_ = ResultAction::None;
 	AdvancedFinderCatalogKind result_kind_ = AdvancedFinderCatalogKind::Item;

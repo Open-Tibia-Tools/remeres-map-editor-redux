@@ -84,9 +84,9 @@ wxGLContext* GLContextManager::GetGLContext(wxGLCanvas* win) {
 		OGLContext = std::make_unique<wxGLContext>(win, nullptr);
 #else
 		wxGLContextAttrs ctxAttrs;
-		ctxAttrs.PlatformDefaults().CoreProfile().MajorVersion(4).MinorVersion(5).EndList();
+		ctxAttrs.PlatformDefaults().CoreProfile().OGLVersion(4, 6).EndList();
 		OGLContext = std::make_unique<wxGLContext>(win, nullptr, &ctxAttrs);
-		spdlog::info("GLContextManager: Created new OpenGL 4.5 Core Profile context");
+		spdlog::info("GLContextManager: Created new OpenGL 4.6 Core Profile context");
 #endif
 		// Initialize GLAD for the new context
 		if (win) {

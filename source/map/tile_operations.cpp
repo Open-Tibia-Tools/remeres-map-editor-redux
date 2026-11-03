@@ -322,7 +322,7 @@ namespace TileOperations {
 			selected_ = true;
 		}
 
-		for (const auto& i : tile->items | std::views::take_while([](const auto& item) { return item->isBorder(); })) {
+		for (const auto& i : tile->items | std::views::take_while([](const auto& item) { return item->isBorderLayer(); })) {
 			i->select();
 			selected_ = true;
 		}
@@ -337,7 +337,7 @@ namespace TileOperations {
 			tile->ground->deselect();
 		}
 
-		for (const auto& i : tile->items | std::views::take_while([](const auto& item) { return item->isBorder(); })) {
+		for (const auto& i : tile->items | std::views::take_while([](const auto& item) { return item->isBorderLayer(); })) {
 			i->deselect();
 		}
 

@@ -29,88 +29,102 @@ namespace NvgUtils {
 				is_stackable = g_item_definitions.get(*sid).hasFlag(ItemFlag::Stackable);
 			}
 		}
-		const int pattern_x = (is_stackable && gs.pattern_x >= 3) ? 2 : 0;
-		const auto metrics = gs.getPlainLayoutMetrics(-1, pattern_x, 0, 0, 0);
-		outW = metrics.total_width;
-		outH = metrics.total_height;
-
-		if (outW <= 0 || outH <= 0) {
-			return nullptr;
+		int pattern_x = 0;
+		if (is_stackable && gs.pattern_x >= 3) {
+			pattern_x = 2;
+		} else if (gs.pattern_x > 1) {
+			pattern_x = 1;
 		}
 
-		size_t bufferSize = static_cast<size_t>(outW) * outH * 4;
-		auto composite = std::make_unique<uint8_t[]>(bufferSize);
-		std::fill(composite.get(), composite.get() + bufferSize, 0);
-		int pattern_y = 0;
-		int pattern_z = 0;
-		int frame = 0;
+		auto buildComposite = [&](int pat_x) -> std::unique_ptr<uint8_t[]> {
+			const auto metrics = gs.getPlainLayoutMetrics(-1, pat_x, 0, 0, 0);
+			outW = metrics.total_width;
+			outH = metrics.total_height;
 
-		bool hasVisiblePixels = false;
+			if (outW <= 0 || outH <= 0) {
+				return nullptr;
+			}
 
-		for (int l = 0; l < gs.layers; ++l) {
-			for (int w = 0; w < gs.width; ++w) {
-				for (int h = 0; h < gs.height; ++h) {
-					int spriteIdx = gs.getIndex(w, h, l, pattern_x, pattern_y, pattern_z, frame);
-					if (spriteIdx < 0 || (size_t)spriteIdx >= gs.spriteList.size()) {
-						continue;
-					}
+			size_t bufferSize = static_cast<size_t>(outW) * outH * 4;
+			auto composite = std::make_unique<uint8_t[]>(bufferSize);
+			std::fill(composite.get(), composite.get() + bufferSize, 0);
+			int pattern_y = 0;
+			int pattern_z = 0;
+			int frame = 0;
 
-					auto spriteData = gs.spriteList[spriteIdx]->getRGBAData();
-					if (!spriteData) {
-						continue;
-					}
-					const auto dimensions = gs.spriteList[spriteIdx]->getDimensions();
+			bool hasVisiblePixels = false;
 
-					int part_x = 0;
-					for (int column = w + 1; column < gs.width; ++column) {
-						part_x += metrics.column_widths[column];
-					}
-					int part_y = 0;
-					for (int row = h + 1; row < gs.height; ++row) {
-						part_y += metrics.row_heights[row];
-					}
+			for (int l = 0; l < gs.layers; ++l) {
+				for (int w = 0; w < gs.width; ++w) {
+					for (int h = 0; h < gs.height; ++h) {
+						int spriteIdx = gs.getIndex(w, h, l, pat_x, pattern_y, pattern_z, frame);
+						if (spriteIdx < 0 || (size_t)spriteIdx >= gs.spriteList.size()) {
+							continue;
+						}
 
-					for (int sy = 0; sy < dimensions.height; ++sy) {
-						for (int sx = 0; sx < dimensions.width; ++sx) {
-							int dy = part_y + sy;
-							int dx = part_x + sx;
+						auto spriteData = gs.spriteList[spriteIdx]->getRGBAData();
+						if (!spriteData) {
+							continue;
+						}
+						const auto dimensions = gs.spriteList[spriteIdx]->getDimensions();
 
-							if (dx < 0 || dx >= outW || dy < 0 || dy >= outH) {
-								continue;
-							}
+						int part_x = 0;
+						for (int column = w + 1; column < gs.width; ++column) {
+							part_x += metrics.column_widths[column];
+						}
+						int part_y = 0;
+						for (int row = h + 1; row < gs.height; ++row) {
+							part_y += metrics.row_heights[row];
+						}
 
-							int src_idx = (sy * dimensions.width + sx) * 4;
-							int dst_idx = (dy * outW + dx) * 4;
+						for (int sy = 0; sy < dimensions.height; ++sy) {
+							for (int sx = 0; sx < dimensions.width; ++sx) {
+								int dy = part_y + sy;
+								int dx = part_x + sx;
 
-							uint8_t sa = spriteData[src_idx + 3];
-							if (sa == 0) {
-								continue;
-							}
+								if (dx < 0 || dx >= outW || dy < 0 || dy >= outH) {
+									continue;
+								}
 
-							hasVisiblePixels = true;
+								int src_idx = (sy * dimensions.width + sx) * 4;
+								int dst_idx = (dy * outW + dx) * 4;
 
-							if (sa == 255) {
-								composite[dst_idx + 0] = spriteData[src_idx + 0];
-								composite[dst_idx + 1] = spriteData[src_idx + 1];
-								composite[dst_idx + 2] = spriteData[src_idx + 2];
-								composite[dst_idx + 3] = 255;
-							} else {
-								float a = sa / 255.0f;
-								float inv_a = 1.0f - a;
-								composite[dst_idx + 0] = (uint8_t)(spriteData[src_idx + 0] * a + composite[dst_idx + 0] * inv_a);
-								composite[dst_idx + 1] = (uint8_t)(spriteData[src_idx + 1] * a + composite[dst_idx + 1] * inv_a);
-								composite[dst_idx + 2] = (uint8_t)(spriteData[src_idx + 2] * a + composite[dst_idx + 2] * inv_a);
-								composite[dst_idx + 3] = std::max(composite[dst_idx + 3], sa);
+								uint8_t sa = spriteData[src_idx + 3];
+								if (sa == 0) {
+									continue;
+								}
+
+								hasVisiblePixels = true;
+
+								if (sa == 255) {
+									composite[dst_idx + 0] = spriteData[src_idx + 0];
+									composite[dst_idx + 1] = spriteData[src_idx + 1];
+									composite[dst_idx + 2] = spriteData[src_idx + 2];
+									composite[dst_idx + 3] = 255;
+								} else {
+									float a = sa / 255.0f;
+									float inv_a = 1.0f - a;
+									composite[dst_idx + 0] = (uint8_t)(spriteData[src_idx + 0] * a + composite[dst_idx + 0] * inv_a);
+									composite[dst_idx + 1] = (uint8_t)(spriteData[src_idx + 1] * a + composite[dst_idx + 1] * inv_a);
+									composite[dst_idx + 2] = (uint8_t)(spriteData[src_idx + 2] * a + composite[dst_idx + 2] * inv_a);
+									composite[dst_idx + 3] = std::max(composite[dst_idx + 3], sa);
+								}
 							}
 						}
 					}
 				}
 			}
+			if (!hasVisiblePixels) {
+				return nullptr;
+			}
+			return composite;
+		};
+
+		auto result = buildComposite(pattern_x);
+		if (!result && pattern_x != 0) {
+			result = buildComposite(0);
 		}
-		if (!hasVisiblePixels) {
-			return nullptr;
-		}
-		return composite;
+		return result;
 	}
 
 	// Generates RGBA pixel data for a given item ID.

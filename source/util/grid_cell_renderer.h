@@ -33,6 +33,13 @@ namespace rme::ui::grid {
 	inline constexpr int kLabelFontSize = 11;
 	inline constexpr int kListLabelFontSize = 14;
 
+	/** Index column width for list cards based on item count. */
+	inline int GetIndexColumnWidth(size_t total_count) {
+		if (total_count >= 1000) return 42;
+		if (total_count >= 100) return 34;
+		return 28;
+	}
+
 	/** Width of a cell: the icon plus its inset. A cell is never wider than this. */
 	inline int CellWidth(int iconSizePx) {
 		return iconSizePx + 2 * kIconOffset;

@@ -26,7 +26,7 @@ bool LoadMaterialManifestFiles(const FileName& manifestFile, MaterialManifestFil
 	files = {};
 
 	pugi::xml_document doc;
-	const pugi::xml_parse_result result = doc.load_file(manifestFile.GetFullPath().mb_str());
+	const pugi::xml_parse_result result = doc.load_file(manifestFile.GetFullPath().ToStdString().c_str());
 	if (!result) {
 		error = wxstr(std::format("Could not parse materials manifest: {}: {} at offset {}",
 			manifestFile.GetFullPath().ToStdString(), result.description(), result.offset));

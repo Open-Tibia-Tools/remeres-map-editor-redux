@@ -123,7 +123,7 @@ void RuleChanceDialog::RefreshTotals() {
 		const int value = m_sliders[i]->GetValue();
 		total += value;
 		if (i < m_values.size()) {
-			m_values[i]->SetLabel(wxstr(FormatChance(value)));
+			m_values[i]->SetLabelText(wxstr(FormatChance(value)));
 		}
 	}
 
@@ -137,7 +137,7 @@ void RuleChanceDialog::RefreshTotals() {
 	} else {
 		text += " - every match changes, split between the targets above.";
 	}
-	m_totalLabel->SetLabel(text);
+	m_totalLabel->SetLabelText(text);
 	Layout();
 }
 

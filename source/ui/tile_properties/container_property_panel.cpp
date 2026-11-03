@@ -23,7 +23,7 @@
 ContainerPropertyPanel::ContainerPropertyPanel(wxWindow* parent) :
 	ItemPropertyPanel(parent), grid_canvas(nullptr) {
 
-	grid_canvas = newd ContainerGridCanvas(this, g_settings.getBoolean(Config::USE_LARGE_CONTAINER_ICONS));
+	grid_canvas = new ContainerGridCanvas(this, g_settings.getBoolean(Config::USE_LARGE_CONTAINER_ICONS));
 	grid_canvas->Bind(wxEVT_BUTTON, &ContainerPropertyPanel::OnContainerItemClick, this);
 	grid_canvas->Bind(wxEVT_CONTEXT_MENU, &ContainerPropertyPanel::OnContainerItemRightClick, this);
 
@@ -80,11 +80,11 @@ void ContainerPropertyPanel::OnContainerItemRightClick(wxContextMenuEvent& event
 
 	wxMenu menu;
 	if (index < static_cast<int>(container->getItemCount())) {
-		menu.Append(CONTAINER_POPUP_MENU_EDIT, "&Edit Item")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN_TO_SQUARE, wxSize(16, 16)));
-		menu.Append(CONTAINER_POPUP_MENU_ADD, "&Add Item")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
-		menu.Append(CONTAINER_POPUP_MENU_REMOVE, "&Remove Item")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+		menu.Append(CONTAINER_POPUP_MENU_EDIT, "&Edit Item")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN_TO_SQUARE));
+		menu.Append(CONTAINER_POPUP_MENU_ADD, "&Add Item")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
+		menu.Append(CONTAINER_POPUP_MENU_REMOVE, "&Remove Item")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	} else {
-		menu.Append(CONTAINER_POPUP_MENU_ADD, "&Add Item")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+		menu.Append(CONTAINER_POPUP_MENU_ADD, "&Add Item")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	}
 
 	if (container->getVolume() <= (int)container->getVector().size()) {
@@ -174,9 +174,9 @@ void ContainerPropertyPanel::OnEditItem(wxCommandEvent& WXUNUSED(event)) {
 	}
 
 	Item* new_sub_item = new_container->getItem(sub_item_index);
-	wxPoint newDialogAt = GetPosition() + FROM_DIP(this, wxPoint(20, 20));
+	wxPoint newDialogAt = GetPosition() + FromDIP(wxPoint(20, 20));
 
-	wxDialog* d = newd ItemPropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
+	wxDialog* d = new ItemPropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
 
 	const int result = d->ShowModal();
 	if (result == 1 || result == wxID_OK) {

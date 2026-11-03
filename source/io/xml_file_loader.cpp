@@ -37,7 +37,7 @@ namespace {
 		}
 
 		pugi::xml_document doc;
-		const pugi::xml_parse_result result = doc.load_file(filename.GetFullPath().mb_str());
+		const pugi::xml_parse_result result = doc.load_file(filename.GetFullPath().ToStdString().c_str());
 		if (!result) {
 			error = wxString::FromUTF8(std::format("Could not open XML file {}.", filename.GetFullPath().utf8_string()));
 			return false;

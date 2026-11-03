@@ -23,6 +23,7 @@
 #include "ui/tool_options_window.h"
 #include "ui/tile_properties/tile_properties_panel.h"
 #include "ui/brush_items/brush_items_window.h"
+#include "ui/managers/search_manager.h"
 
 #include "map/map_statistics.h"
 #include "map/map_search.h"
@@ -33,6 +34,7 @@
 #include "ui/dat_debug_view.h"
 #include "ui/menubar_loader.h"
 #include "ui/map_statistics_dialog.h"
+#include "rendering/core/floor_visibility_mode.h"
 #include "ui/live_dialogs.h"
 
 #include "ui/extension_window.h"
@@ -71,13 +73,13 @@ MainMenuBar::MainMenuBar(MainFrame* frame) :
 	fileMenuHandler = new FileMenuHandler(frame, this);
 	navigationMenuHandler = new NavigationMenuHandler(frame, this);
 	paletteMenuHandler = new PaletteMenuHandler(frame, this);
-	scriptMenuHandler = newd ScriptMenuHandler(frame);
+	scriptMenuHandler = new ScriptMenuHandler(frame);
 
 	MenuBarActionManager::RegisterActions(this, actions);
 
 	// Don't use a custom deleter that deletes us back!
 	// MainFrame owns MainMenuBar via std::unique_ptr.
-	menubar = newd wxMenuBar();
+	menubar = new wxMenuBar();
 	frame->SetMenuBar(menubar);
 
 	// Tie all events to this handler!
@@ -154,6 +156,7 @@ void MainMenuBar::Update() {
 
 	paletteMenuHandler->RefreshPaletteMenu();
 	MenuBarActionManager::UpdateState(this);
+	UpdateFloorMenu();
 }
 
 void MainMenuBar::LoadValues() {
@@ -171,6 +174,12 @@ void MainMenuBar::UpdateFloorMenu() {
 			CheckItem(MenuBar::ActionID(MenuBar::FLOOR_0 + g_gui.GetCurrentFloor()), true);
 		}
 	}
+
+	const bool show_all_floors = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
+	const auto floor_visibility_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
+	CheckItem(MenuBar::SHOW_ALL_FLOORS, show_all_floors);
+	CheckItem(MenuBar::SHOW_ALL_FLOORS_CLIENT, show_all_floors && floor_visibility_mode == FloorVisibilityMode::ClientVisible);
+	CheckItem(MenuBar::SHOW_ALL_FLOORS_ALL, show_all_floors && floor_visibility_mode == FloorVisibilityMode::AllVisible);
 }
 
 bool MainMenuBar::Load(const FileName& path, std::vector<std::string>& warnings, wxString& error) {
@@ -325,6 +334,18 @@ void MainMenuBar::OnSearchForWriteableOnMap(wxCommandEvent& event) {
 	searchHandler->OnSearchForWriteableOnMap(event);
 }
 
+void MainMenuBar::OnSearchForTeleportOnMap(wxCommandEvent& event) {
+	searchHandler->OnSearchForTeleportOnMap(event);
+}
+
+void MainMenuBar::OnSearchForCreatureOnMap(wxCommandEvent& event) {
+	searchHandler->OnSearchForCreatureOnMap(event);
+}
+
+void MainMenuBar::OnSearchForPickupableOnMap(wxCommandEvent& event) {
+	searchHandler->OnSearchForPickupableOnMap(event);
+}
+
 void MainMenuBar::OnSearchForStuffOnSelection(wxCommandEvent& event) {
 	searchHandler->OnSearchForStuffOnSelection(event);
 }
@@ -343,6 +364,18 @@ void MainMenuBar::OnSearchForContainerOnSelection(wxCommandEvent& event) {
 
 void MainMenuBar::OnSearchForWriteableOnSelection(wxCommandEvent& event) {
 	searchHandler->OnSearchForWriteableOnSelection(event);
+}
+
+void MainMenuBar::OnSearchForTeleportOnSelection(wxCommandEvent& event) {
+	searchHandler->OnSearchForTeleportOnSelection(event);
+}
+
+void MainMenuBar::OnSearchForCreatureOnSelection(wxCommandEvent& event) {
+	searchHandler->OnSearchForCreatureOnSelection(event);
+}
+
+void MainMenuBar::OnSearchForPickupableOnSelection(wxCommandEvent& event) {
+	searchHandler->OnSearchForPickupableOnSelection(event);
 }
 
 void MainMenuBar::OnSearchForItemOnSelection(wxCommandEvent& event) {
@@ -462,7 +495,7 @@ void MainMenuBar::OnMapCleanInvalidZones(wxCommandEvent& event) {
 }
 
 void MainMenuBar::OnMapProperties(wxCommandEvent& WXUNUSED(event)) {
-	wxDialog* properties = newd MapPropertiesWindow(
+	wxDialog* properties = new MapPropertiesWindow(
 		frame,
 		static_cast<MapTab*>(g_gui.GetCurrentTab()),
 		*g_gui.GetCurrentEditor()
@@ -539,7 +572,11 @@ void MainMenuBar::OnToolOptionsWindow(wxCommandEvent& event) {
 }
 
 void MainMenuBar::OnIngamePreviewWindow(wxCommandEvent& event) {
-	g_preview.Create();
+	if (g_preview.IsVisible()) {
+		g_preview.Hide();
+	} else {
+		g_preview.Create();
+	}
 }
 
 void MainMenuBar::OnBrushItemsWindow(wxCommandEvent& event) {
@@ -565,6 +602,11 @@ void MainMenuBar::OnTilePropertiesWindow(wxCommandEvent& event) {
 		}
 		g_gui.aui_manager->Update();
 	}
+}
+
+
+void MainMenuBar::OnSearchResultsWindow(wxCommandEvent& WXUNUSED(event)) {
+	g_search.ShowSearchWindow();
 }
 
 void MainMenuBar::OnNewPalette(wxCommandEvent& event) {

@@ -12,6 +12,7 @@ public:
 	static void draw(Editor& editor, Position offset, bool alt, bool dodraw);
 	static void draw(Editor& editor, const PositionVector& tilestodraw, bool alt, bool dodraw);
 	static void draw(Editor& editor, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw);
+	static void punchGroundToFloorBelow(Editor& editor, const PositionVector& tilestodraw, const PositionVector& tilestoborder);
 };
 
 #endif

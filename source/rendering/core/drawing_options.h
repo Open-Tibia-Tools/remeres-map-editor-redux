@@ -55,6 +55,7 @@ struct DrawingOptions {
 	bool isDrawLight() const noexcept;
 
 	bool transparent_floors;
+	uint8_t transparent_floors_tint = 128;
 	bool transparent_items;
 	bool show_ingame_box;
 	bool show_lights;

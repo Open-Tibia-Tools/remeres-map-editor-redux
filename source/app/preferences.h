@@ -30,6 +30,21 @@
 #include "app/preferences/interface_page.h"
 #include "app/preferences/map_compatibility_page.h"
 
+#include <wx/preferences.h>
+#include <memory>
+
+class RMEPreferencesEditor {
+public:
+	explicit RMEPreferencesEditor(const wxString& title = "Preferences");
+	~RMEPreferencesEditor();
+
+	void Show(wxWindow* parent);
+	void Dismiss();
+
+private:
+	std::unique_ptr<wxPreferencesEditor> m_editor;
+};
+
 class PreferencesWindow : public wxDialog {
 public:
 	PreferencesWindow(wxWindow* parent, bool clientVersionSelected = false);

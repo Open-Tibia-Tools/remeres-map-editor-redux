@@ -69,7 +69,7 @@ bool PropertyValidator::validatePodiumProperties(wxWindow* parent, int tier, con
 
 	if (outfit.lookHead < 0 || outfit.lookHead > OUTFIT_COLOR_MAX || outfit.lookBody < 0 || outfit.lookBody > OUTFIT_COLOR_MAX || outfit.lookLegs < 0 || outfit.lookLegs > OUTFIT_COLOR_MAX || outfit.lookFeet < 0 || outfit.lookFeet > OUTFIT_COLOR_MAX || outfit.lookMountHead < 0 || outfit.lookMountHead > OUTFIT_COLOR_MAX || outfit.lookMountBody < 0 || outfit.lookMountBody > OUTFIT_COLOR_MAX || outfit.lookMountLegs < 0 || outfit.lookMountLegs > OUTFIT_COLOR_MAX || outfit.lookMountFeet < 0 || outfit.lookMountFeet > OUTFIT_COLOR_MAX) {
 		wxString response = "Outfit and mount colors must be between 0 and ";
-		response << i2ws(OUTFIT_COLOR_MAX) << ".";
+		response << std::to_string(OUTFIT_COLOR_MAX) << ".";
 		DialogUtil::PopupDialog(parent, "Error", response, wxOK);
 		return false;
 	}

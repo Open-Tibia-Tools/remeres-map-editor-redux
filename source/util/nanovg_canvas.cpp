@@ -1,5 +1,6 @@
 #include "app/main.h"
 #include "util/nanovg_canvas.h"
+#include "ui/managers/gl_context_manager.h"
 
 #include "app/definitions.h"
 #include "util/image_manager.h"
@@ -29,7 +30,7 @@ ScopedGLContext::ScopedGLContext(NanoVGCanvas* canvas) : m_canvas(canvas) {
 }
 
 NanoVGCanvas::NanoVGCanvas(wxWindow* parent, wxWindowID id, long style) :
-	wxGLCanvas(parent, id, nullptr, wxDefaultPosition, wxDefaultSize, style) {
+	wxGLCanvas(parent, GLContextManager::CanvasAttributes(), id, wxDefaultPosition, wxDefaultSize, style) {
 	SetBackgroundStyle(wxBG_STYLE_PAINT);
 
 	Bind(wxEVT_PAINT, &NanoVGCanvas::OnPaint, this);
@@ -46,6 +47,10 @@ NanoVGCanvas::NanoVGCanvas(wxWindow* parent, wxWindowID id, long style) :
 	Bind(wxEVT_SCROLLWIN_PAGEDOWN, &NanoVGCanvas::OnScroll, this);
 	Bind(wxEVT_SCROLLWIN_THUMBTRACK, &NanoVGCanvas::OnScroll, this);
 	Bind(wxEVT_SCROLLWIN_THUMBRELEASE, &NanoVGCanvas::OnScroll, this);
+	Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+		Refresh(false);
+		event.Skip();
+	});
 }
 
 NanoVGCanvas::~NanoVGCanvas() {

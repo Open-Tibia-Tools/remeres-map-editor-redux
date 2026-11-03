@@ -18,18 +18,20 @@ wxAuiPaneInfo MinimapManager::DefaultPaneInfo() {
 		.Name("Minimap")
 		.Caption("Minimap")
 		.Right()
-		.Layer(0)
-		.Position(2)
+		.Layer(1)
+		.Position(1)
 		.CloseButton(true)
 		.MaximizeButton(true)
-		.BestSize(260, 220);
+		.BestSize(358, 240)
+		.MinSize(g_gui.root ? g_gui.root->FromDIP(wxSize(220, 140)) : wxSize(220, 140));
 }
 
 void MinimapManager::NormalizePaneInfo(wxAuiPaneInfo& info) {
 	info.Name("Minimap")
 		.Caption("Minimap")
 		.CloseButton(true)
-		.MaximizeButton(true);
+		.MaximizeButton(true)
+		.MinSize(g_gui.root ? g_gui.root->FromDIP(wxSize(220, 140)) : wxSize(220, 140));
 }
 
 MinimapManager::MinimapManager() :
@@ -68,7 +70,7 @@ void MinimapManager::Create() {
 		NormalizePaneInfo(info);
 		info.Show(true);
 	} else {
-		minimap = newd MinimapWindow(g_gui.root);
+		minimap = new MinimapWindow(g_gui.root);
 		minimap->Show(true);
 		g_gui.aui_manager->AddPane(minimap, DefaultPaneInfo());
 	}
