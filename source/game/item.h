@@ -75,13 +75,6 @@ enum SplashType {
 	LIQUID_MEAD = 43
 };
 
-inline constexpr int kFluidSeparator = -1;
-
-struct FluidDropdownItem {
-	std::string_view label;
-	int subtype; // kFluidSeparator (-1) for category separator, >= 0 for fluid subtype
-};
-
 inline constexpr std::array<SplashType, 22> kValidSplashTypes = {
 	// Blue
 	LIQUID_WATER,
@@ -114,46 +107,6 @@ inline constexpr std::array<SplashType, 22> kValidSplashTypes = {
 	// Other
 	LIQUID_INK,
 };
-
-inline constexpr std::array<FluidDropdownItem, 30> kFluidDropdownItems = {{
-	{ "── Blue ──", kFluidSeparator },
-	{ "Water", LIQUID_WATER },
-	{ "Water (Alternative)", LIQUID_WATER2 },
-
-	{ "── Red ──", kFluidSeparator },
-	{ "Blood", LIQUID_BLOOD },
-	{ "Lifefluid", LIQUID_LIFEFLUID },
-	{ "Lava", LIQUID_LAVA },
-
-	{ "── Brown ──", kFluidSeparator },
-	{ "Beer", LIQUID_BEER },
-	{ "Mead", LIQUID_MEAD },
-	{ "Mud", LIQUID_MUD },
-	{ "Oil", LIQUID_OIL },
-	{ "Rum", LIQUID_RUM },
-	{ "Tea", LIQUID_TEA },
-
-	{ "── Green ──", kFluidSeparator },
-	{ "Slime", LIQUID_SLIME },
-	{ "Slime (Alternative)", LIQUID_SLIME2 },
-	{ "Swamp", LIQUID_SWAMP },
-
-	{ "── Yellow ──", kFluidSeparator },
-	{ "Fruit Juice", LIQUID_FRUIT_JUICE },
-	{ "Lemonade", LIQUID_LEMONADE },
-	{ "Urine", LIQUID_URINE },
-
-	{ "── White ──", kFluidSeparator },
-	{ "Coconut Milk", LIQUID_COCONUT_MILK },
-	{ "Milk", LIQUID_MILK },
-
-	{ "── Purple ──", kFluidSeparator },
-	{ "Manafluid", LIQUID_MANAFLUID },
-	{ "Wine", LIQUID_WINE },
-
-	{ "── Other ──", kFluidSeparator },
-	{ "Ink", LIQUID_INK },
-}};
 
 class Item : public ItemAttributes {
 public:

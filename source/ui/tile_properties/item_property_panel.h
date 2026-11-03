@@ -35,7 +35,6 @@ protected:
 	wxStaticBoxSizer* count_sizer;
 	wxSpinCtrl* count_spin;
 	wxChoice* splash_type_choice;
-	int last_valid_splash_selection = 0;
 
 	wxStaticBoxSizer* text_sizer;
 	wxTextCtrl* text_ctrl;

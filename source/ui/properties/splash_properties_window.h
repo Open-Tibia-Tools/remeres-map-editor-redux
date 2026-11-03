@@ -20,7 +20,6 @@ protected:
 	wxSpinCtrl* action_id_field;
 	wxSpinCtrl* unique_id_field;
 	wxChoice* splash_type_field;
-	int last_valid_selection = 0;
 };
 
 #endif
