@@ -136,6 +136,13 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/io/iomap.h
     ${CMAKE_CURRENT_LIST_DIR}/io/iomap_otbm.h
     ${CMAKE_CURRENT_LIST_DIR}/io/iomap_sec.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/creature_placement.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/house_files.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/map_dat_file.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/monster_files.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/npc_files.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/server_data_folder.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/server_marker_files.h
     ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_creature_files.h
     ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_moveuse.h
     ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_script_lexer.h
@@ -600,6 +607,13 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/io/iomap_otbm.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/iomap_sec.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/iomap_sec_save.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/creature_placement.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/house_files.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/map_dat_file.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/monster_files.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/npc_files.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/server_data_folder.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/server_marker_files.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_creature_files.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_moveuse.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_world_files.cpp

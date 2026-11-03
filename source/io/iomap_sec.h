@@ -25,6 +25,7 @@ struct OTBMStartupPeekResult;
 // the folder sits in a server data folder, the files around it: monster
 // homes (dat/monster.db), houses (dat/houses.dat), marks (dat/map.dat) and
 // NPC homes (npc/*.npc). Files whose content did not change are left alone.
+// Each of those files has its own handler in io/sec/data/.
 //
 // Loading also reads the tiles that dat/moveuse.dat, the raids (mon/*.evt)
 // and the start positions in dat/map.dat refer to into Map::server_markers.

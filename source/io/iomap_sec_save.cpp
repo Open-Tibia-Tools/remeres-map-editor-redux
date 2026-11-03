@@ -12,17 +12,14 @@
 
 #include "app/client_version.h"
 #include "app/managers/version_manager.h"
-#include "app/settings.h"
-#include "game/srv_homes.h"
 #include "game/srv_liquids.h"
 #include "game/complexitem.h"
 #include "game/creature.h"
-#include "game/house.h"
 #include "game/item.h"
-#include "game/spawn.h"
-#include "game/waypoints.h"
-#include "io/sec/srv_creature_files.h"
-#include "io/sec/srv_script_lexer.h"
+#include "io/sec/data/house_files.h"
+#include "io/sec/data/map_dat_file.h"
+#include "io/sec/data/monster_files.h"
+#include "io/sec/data/npc_files.h"
 #include "io/sec/srv_world_files.h"
 #include "io/sec/sec_file_io.h"
 #include "io/sec/sec_sector_parser.h"
@@ -35,11 +32,11 @@
 #include <algorithm>
 #include <array>
 #include <format>
+#include <iterator>
 #include <map>
 #include <ranges>
 #include <spdlog/spdlog.h>
 #include <tuple>
-#include <unordered_map>
 
 namespace {
 
@@ -49,25 +46,9 @@ namespace {
 	using rme::sec::SectorObject;
 	using rme::sec::SectorTile;
 	using rme::sec::TileFlag;
-	using rme::sec::WriteResult;
-
-	constexpr size_t kMaxListedNames = 20;
 
 	AbsolutePosition toAbsolute(const Position& position) {
 		return AbsolutePosition { .x = position.x, .y = position.y, .z = position.z };
-	}
-
-	std::string listNames(const std::map<std::string, size_t>& names) {
-		std::string out;
-		size_t listed = 0;
-		for (const auto& [name, count] : names) {
-			if (listed++ == kMaxListedNames) {
-				out += ", ...";
-				break;
-			}
-			std::format_to(std::back_inserter(out), "{}{} (x{})", out.empty() ? "" : ", ", name, count);
-		}
-		return out;
 	}
 
 	struct SaveStats {
@@ -205,285 +186,6 @@ namespace {
 		return out;
 	}
 
-	// The spawn size a creature's home radius is read from: the spawn on its
-	// tile, else the first spawn covering it.
-	int spawnSizeAt(Map& map, Tile& tile) {
-		if (tile.spawn) {
-			return tile.spawn->getSize();
-		}
-		const SpawnList spawns = map.getSpawnList(&tile);
-		return spawns.empty() ? 1 : spawns.front()->getSize();
-	}
-
-	class ServerDataWriter {
-	public:
-		ServerDataWriter(Map& map, const std::filesystem::path& data_folder, std::vector<std::string>& warnings, SaveStats& stats) :
-			map_(map), data_folder_(data_folder), warnings_(warnings), stats_(stats), max_radius_(g_settings.getInteger(Config::MAX_SPAWN_RADIUS)) { }
-
-		void addCreature(Tile& tile) {
-			if (tile.creature->isNpc()) {
-				npcs_.push_back(&tile);
-			} else {
-				monsters_.push_back(&tile);
-			}
-		}
-
-		void write() {
-			writeMonsterHomes();
-			writeNpcHomes();
-			writeHouses();
-			writeMarks();
-		}
-
-	private:
-		void save(const std::filesystem::path& path, std::string_view content) {
-			if (rme::sec::writeFileIfChanged(path, content, scratch_) == WriteResult::Failed) {
-				stats_.failed_files.push_back(FileSystem::PathToUtf8(path));
-			}
-		}
-
-		template <typename OnFile>
-		void forEachFile(const std::filesystem::path& folder, std::string_view extension, OnFile on_file) {
-			std::error_code ec;
-			std::string text;
-			for (const auto& entry : std::filesystem::directory_iterator(folder, ec)) {
-				if (entry.is_regular_file(ec) && rme::srv::equalsIgnoreCase(entry.path().extension().string(), extension) && rme::sec::readFile(entry.path(), text)) {
-					on_file(entry.path(), text);
-				}
-			}
-		}
-
-		void writeMonsterHomes() {
-			// Named as the loader named them, so each race maps back to itself.
-			std::vector<std::pair<std::string, rme::sec::MonsterRace>> by_file;
-			forEachFile(data_folder_ / "mon", ".mon", [&](const std::filesystem::path& path, std::string_view text) {
-				if (auto race = rme::sec::readMonsterRace(text)) {
-					by_file.emplace_back(FileSystem::PathToUtf8(path.stem()), std::move(*race));
-				}
-			});
-			std::unordered_map<std::string, int> races;
-			for (const rme::sec::NamedMonsterRace& named : rme::sec::nameMonsterRaces(std::move(by_file))) {
-				races.emplace(as_lower_str(named.editor_name), named.race.race);
-			}
-			if (races.empty()) {
-				warnings_.push_back("No monster races (mon/*.mon) were found next to the map; monster.db was not written.");
-				return;
-			}
-
-			std::vector<rme::sec::MonsterHome> homes;
-			homes.reserve(monsters_.size());
-			std::map<std::string, size_t> unknown;
-			for (Tile* tile : monsters_) {
-				const Creature& creature = *tile->creature;
-				const auto race = races.find(as_lower_str(creature.getName()));
-				if (race == races.end()) {
-					++unknown[creature.getName()];
-					continue;
-				}
-				homes.push_back(rme::sec::MonsterHome {
-					.race = race->second,
-					.position = toAbsolute(tile->getPosition()),
-					.radius = rme::srv::homeRadius(creature, spawnSizeAt(map_, *tile), max_radius_),
-					.amount = creature.getAmount(),
-					.regen = creature.getSpawnTime(),
-				});
-			}
-			if (!unknown.empty()) {
-				warnings_.push_back(std::format("Monsters without a mon/*.mon race were not written to monster.db: {}", listNames(unknown)));
-			}
-			// Within a sector, homes are listed by race and position.
-			std::ranges::sort(homes, {}, [](const rme::sec::MonsterHome& home) {
-				return std::tuple(home.race, home.position.x, home.position.y);
-			});
-			// Written only when the homes changed; their order in the file does not count.
-			const std::filesystem::path path = data_folder_ / "dat" / "monster.db";
-			const auto key = [](const rme::sec::MonsterHome& h) { return std::tuple(h.position.x, h.position.y, h.position.z, h.race, h.radius, h.amount, h.regen); };
-			if (std::string text; rme::sec::readFile(path, text)) {
-				if (auto previous = rme::sec::readMonsterHomes(text)) {
-					std::vector<rme::sec::MonsterHome> sorted = homes;
-					std::ranges::sort(sorted, {}, key);
-					std::ranges::sort(*previous, {}, key);
-					if (std::ranges::equal(sorted, *previous, {}, key, key)) {
-						return;
-					}
-				}
-			}
-			save(path, rme::sec::writeMonsterHomes(std::move(homes)));
-		}
-
-		void writeNpcHomes() {
-			struct NpcFile {
-				std::filesystem::path path;
-				std::string text;
-				rme::sec::NpcDefinition definition;
-				bool on_map = false;
-			};
-			std::unordered_map<std::string, NpcFile> files;
-			forEachFile(data_folder_ / "npc", ".npc", [&](const std::filesystem::path& path, std::string_view text) {
-				if (auto npc = rme::sec::readNpc(text)) {
-					std::string key = as_lower_str(npc->name);
-					files.emplace(std::move(key), NpcFile { .path = path, .text = std::string(text), .definition = std::move(*npc) });
-				}
-			});
-
-			std::map<std::string, size_t> without_file;
-			for (Tile* tile : npcs_) {
-				const Creature& creature = *tile->creature;
-				const auto file = files.find(as_lower_str(creature.getName()));
-				if (file == files.end()) {
-					++without_file[creature.getName()];
-					continue;
-				}
-				file->second.on_map = true;
-				// An NPC stands on its home tile, with its spawn. One without a
-				// spawn was put next to its home at load (the tile was taken),
-				// so its file keeps the home it has.
-				if (!tile->spawn) {
-					continue;
-				}
-				const AbsolutePosition home = toAbsolute(tile->getPosition());
-				const int radius = rme::srv::homeRadius(creature, tile->spawn->getSize(), max_radius_);
-				const rme::sec::NpcDefinition& definition = file->second.definition;
-				if (home != definition.home || radius != definition.radius) {
-					save(file->second.path, rme::sec::updateNpcHome(file->second.text, home, radius));
-				}
-			}
-
-			if (!without_file.empty()) {
-				warnings_.push_back(std::format("NPCs without an npc/*.npc file were not saved (an NPC needs its file with its dialogue): {}", listNames(without_file)));
-			}
-			std::map<std::string, size_t> missing;
-			for (const auto& [key, file] : files) {
-				if (!file.on_map) {
-					++missing[file.definition.name];
-				}
-			}
-			if (!missing.empty()) {
-				warnings_.push_back(std::format("NPCs that are no longer on the map keep their npc/*.npc file (delete it to remove them from the server): {}", listNames(missing)));
-			}
-		}
-
-		void writeHouses() {
-			const std::filesystem::path houses_path = data_folder_ / "dat" / "houses.dat";
-			std::string houses_text;
-			std::string areas_text;
-			if (!rme::sec::readFile(houses_path, houses_text) || !rme::sec::readFile(data_folder_ / "dat" / "houseareas.dat", areas_text)) {
-				warnings_.push_back("dat/houses.dat or dat/houseareas.dat was not found; houses were not saved.");
-				return;
-			}
-			const auto original = rme::sec::readHouses(houses_text);
-			const auto areas = rme::sec::readHouseAreas(areas_text);
-			if (!original || !areas) {
-				warnings_.push_back("dat/houses.dat or dat/houseareas.dat could not be read; houses were not saved.");
-				return;
-			}
-
-			std::vector<const House*> houses;
-			for (const auto& [id, house] : map_.houses) {
-				houses.push_back(house.get());
-			}
-			std::ranges::sort(houses, {}, &House::getID);
-
-			std::vector<rme::sec::HouseDefinition> definitions;
-			std::vector<uint32_t> without_area;
-			for (const House* house : houses) {
-				const auto previous = std::ranges::find(*original, static_cast<int>(house->getID()), &rme::sec::HouseDefinition::id);
-				rme::sec::HouseDefinition definition = previous != original->end() ? *previous : rme::sec::HouseDefinition { .id = static_cast<int>(house->getID()) };
-
-				// Towns are depots (town ID = depot + 1); keep the house's area
-				// while its depot still matches, else take the town's first area.
-				const int depot = static_cast<int>(house->townid) - 1;
-				auto area = std::ranges::find(*areas, definition.area, &rme::sec::HouseArea::id);
-				if (area == areas->end() || area->depot != depot) {
-					area = std::ranges::find(*areas, depot, &rme::sec::HouseArea::depot);
-				}
-				if (area == areas->end()) {
-					without_area.push_back(house->getID());
-					continue;
-				}
-
-				std::vector<AbsolutePosition> fields;
-				for (const Position& position : house->getTiles()) {
-					fields.push_back(toAbsolute(position));
-				}
-				const auto field_order = [](const AbsolutePosition& p) { return std::tuple(p.z, p.y, p.x); };
-				std::ranges::sort(fields, {}, field_order);
-				// Unchanged fields keep the order the file has them in.
-				std::vector<AbsolutePosition> previous_fields = definition.fields;
-				std::ranges::sort(previous_fields, {}, field_order);
-				if (previous_fields == fields) {
-					fields = definition.fields;
-				}
-
-				// The server's rent is the area's price per square times the
-				// size plus the offset: keep the offset unless the rent was edited.
-				const int previous_size = static_cast<int>(definition.fields.size());
-				const auto previous_area = std::ranges::find(*areas, definition.area, &rme::sec::HouseArea::id);
-				const int previous_rent = previous_area != areas->end() ? previous_area->square_price * previous_size + definition.rent_offset : -1;
-				if (house->rent != previous_rent) {
-					definition.rent_offset = house->rent - area->square_price * static_cast<int>(fields.size());
-				}
-
-				definition.name = house->name;
-				definition.area = area->id;
-				definition.guild_house = house->guildhall;
-				definition.exit = toAbsolute(house->getExit());
-				if (previous == original->end() && !fields.empty()) {
-					const auto [min_x, max_x] = std::ranges::minmax(fields | std::views::transform(&AbsolutePosition::x));
-					const auto [min_y, max_y] = std::ranges::minmax(fields | std::views::transform(&AbsolutePosition::y));
-					definition.center = AbsolutePosition { .x = (min_x + max_x) / 2, .y = (min_y + max_y) / 2, .z = definition.exit.z };
-				}
-				definition.fields = std::move(fields);
-				definitions.push_back(std::move(definition));
-			}
-			if (!without_area.empty()) {
-				warnings_.push_back(std::format("{} houses belong to a town without a house area in houseareas.dat and were not saved.", without_area.size()));
-			}
-			// Written only when a house changed; how the file formats them does not count.
-			std::vector<rme::sec::HouseDefinition> previous = *original;
-			std::ranges::sort(previous, {}, &rme::sec::HouseDefinition::id);
-			if (previous == definitions) {
-				return;
-			}
-			save(houses_path, rme::sec::writeHouses(definitions, rme::sec::newlineOf(houses_text)));
-		}
-
-		// Waypoints are the server's marks; known ones keep their place in map.dat.
-		void writeMarks() {
-			const std::filesystem::path map_dat = data_folder_ / "dat" / "map.dat";
-			std::string text;
-			if (!rme::sec::readFile(map_dat, text)) {
-				warnings_.push_back("dat/map.dat was not found; waypoints were not saved.");
-				return;
-			}
-			const auto info = rme::sec::readMapInfo(text);
-			if (!info) {
-				warnings_.push_back("dat/map.dat could not be read; waypoints were not saved.");
-				return;
-			}
-
-			std::vector<rme::sec::MapMark> marks;
-			for (const auto& [key, waypoint] : map_.waypoints) {
-				marks.push_back(rme::sec::MapMark { .name = waypoint->name, .position = toAbsolute(waypoint->pos) });
-			}
-			const auto order = [&info](const rme::sec::MapMark& mark) {
-				const auto it = std::ranges::find(info->marks, mark.name, &rme::sec::MapMark::name);
-				return std::pair(std::distance(info->marks.begin(), it), mark.name);
-			};
-			std::ranges::sort(marks, {}, order);
-			save(map_dat, rme::sec::updateMapMarks(text, marks));
-		}
-
-		Map& map_;
-		std::filesystem::path data_folder_;
-		std::vector<std::string>& warnings_;
-		SaveStats& stats_;
-		const int max_radius_;
-		std::vector<Tile*> monsters_;
-		std::vector<Tile*> npcs_;
-		std::string scratch_;
-	};
-
 } // namespace
 
 bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
@@ -505,7 +207,8 @@ bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
 	const bool server_layout = std::filesystem::is_directory(data_folder / "dat", ec);
 
 	SaveStats stats;
-	ServerDataWriter server_data(map, data_folder, warnings, stats);
+	std::vector<Tile*> monsters;
+	std::vector<Tile*> npcs;
 
 	g_gui.SetLoadDone(0, "Collecting sectors...");
 	std::map<std::tuple<int, int, int>, std::vector<const Tile*>> sectors;
@@ -517,7 +220,7 @@ bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
 		const Position& position = tile->getPosition();
 		sectors[std::tuple(position.x / rme::sec::kSectorSize, position.y / rme::sec::kSectorSize, position.z)].push_back(tile);
 		if (tile->creature) {
-			server_data.addCreature(*tile);
+			(tile->creature->isNpc() ? npcs : monsters).push_back(tile);
 		}
 	}
 
@@ -573,9 +276,16 @@ bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
 		}
 	}
 
+	// The server files around the map folder, each written by its own handler (io/sec/data/).
 	g_gui.SetLoadDone(95, "Saving monster homes, NPCs, houses and marks...");
 	if (server_layout) {
-		server_data.write();
+		const rme::sec::ServerDataFolder data { .root = data_folder };
+		rme::sec::ServerFileWriter writer;
+		rme::sec::monster_files::save(map, monsters, data, writer, warnings);
+		rme::sec::npc_files::save(npcs, data, writer, warnings);
+		rme::sec::house_files::save(map, data, writer, warnings);
+		rme::sec::map_dat::save(map, data, writer, warnings);
+		std::ranges::copy(writer.failedFiles(), std::back_inserter(stats.failed_files));
 	} else {
 		warnings.push_back("The folder is not in a server data folder (no dat/ next to it), so monster homes, NPCs, houses and marks were not saved.");
 	}
