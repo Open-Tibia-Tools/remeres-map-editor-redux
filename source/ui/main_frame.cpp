@@ -62,7 +62,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 		wxLogError(wxString() + "Could not load menubar.xml, editor will NOT be able to show its menu.\n");
 	}
 
-	wxStatusBar* statusbar = CreateStatusBar();
+	wxStatusBar* statusbar = CreateStatusBar(1, wxSTB_DEFAULT_STYLE & ~wxSTB_SIZEGRIP);
 	statusbar->SetFieldsCount(4);
 	// FPS | tile description (stretch) | coordinates | floor/zoom
 	const int status_widths[4] = { FromDIP(80), -1, FromDIP(150), FromDIP(160) };
