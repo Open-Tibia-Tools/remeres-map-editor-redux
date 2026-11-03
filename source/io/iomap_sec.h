@@ -36,6 +36,12 @@ struct OTBMStartupPeekResult;
 // They are shown on the map and never saved.
 class IOMapSec : public IOMap {
 public:
+	// A new sector map covers the sectors of the original map (996-1043 x
+	// 984-1031, 32 tiles each) and starts with the view on their middle.
+	static constexpr int kNewMapSize = 1056 * 32;
+	static constexpr int kNewMapCenterX = 32640;
+	static constexpr int kNewMapCenterY = 32256;
+
 	// True for a sector file, or for a folder that contains sector files.
 	[[nodiscard]] static bool isSectorMap(const FileName& identifier);
 

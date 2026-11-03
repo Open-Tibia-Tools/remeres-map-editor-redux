@@ -199,6 +199,10 @@ void MainMenuBar::OnNew(wxCommandEvent& event) {
 	fileMenuHandler->OnNew(event);
 }
 
+void MainMenuBar::OnNewSectorMap(wxCommandEvent& event) {
+	fileMenuHandler->OnNewSectorMap(event);
+}
+
 void MainMenuBar::OnGenerateMap(wxCommandEvent& event) {
 	fileMenuHandler->OnGenerateMap(event);
 }

@@ -655,6 +655,10 @@ std::unique_ptr<LiveClient> GUI::PopPendingLiveClient(LiveClient* ptr) {
 bool GUI::NewMap() {
 	return g_editors.NewMap();
 }
+
+bool GUI::NewSectorMap() {
+	return g_editors.NewSectorMap();
+}
 void GUI::OpenMap() {
 	g_editors.OpenMap();
 }

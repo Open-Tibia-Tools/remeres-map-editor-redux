@@ -21,6 +21,7 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	actions[#id]->setting = setting_
 
 	MAKE_ACTION_ICON(NEW, wxITEM_NORMAL, ICON_NEW, OnNew);
+	MAKE_ACTION_ICON(NEW_SECTOR_MAP, wxITEM_NORMAL, ICON_NEW, OnNewSectorMap);
 	MAKE_ACTION_ICON(OPEN, wxITEM_NORMAL, ICON_OPEN, OnOpen);
 	MAKE_ACTION_ICON(SAVE, wxITEM_NORMAL, ICON_SAVE, OnSave);
 	MAKE_ACTION_ICON(SAVE_AS, wxITEM_NORMAL, ICON_SAVE, OnSaveAs);

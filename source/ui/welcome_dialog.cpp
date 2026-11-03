@@ -171,6 +171,12 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	new_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnNewMap, this);
 	actions_card->GetBodySizer()->Add(new_map_button, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(10)));
 
+	auto* new_sector_map_button = new StartupButton(actions_card, WELCOME_NEW_SECTOR_MAP, "New Sector Map", StartupButtonVariant::Secondary);
+	new_sector_map_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_NEW));
+	new_sector_map_button->SetToolTip("A new map in the original server's sector format (.sec)");
+	new_sector_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnNewSectorMap, this);
+	actions_card->GetBodySizer()->Add(new_sector_map_button, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(10)));
+
 	auto* browse_map_button = new StartupButton(actions_card, wxID_OPEN, "Browse Map", StartupButtonVariant::Secondary);
 	browse_map_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_OPEN));
 	browse_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnBrowseMap, this);
@@ -258,6 +264,10 @@ void WelcomeDialog::OnPreferences(wxCommandEvent& WXUNUSED(event)) {
 void WelcomeDialog::OnNewMap(wxCommandEvent& WXUNUSED(event)) {
 	auto* new_event = new wxCommandEvent(WELCOME_DIALOG_ACTION, wxID_NEW);
 	QueueEvent(new_event);
+}
+
+void WelcomeDialog::OnNewSectorMap(wxCommandEvent& WXUNUSED(event)) {
+	QueueEvent(new wxCommandEvent(WELCOME_DIALOG_ACTION, WELCOME_NEW_SECTOR_MAP));
 }
 
 void WelcomeDialog::OnBrowseMap(wxCommandEvent& WXUNUSED(event)) {

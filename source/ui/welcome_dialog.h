@@ -17,6 +17,9 @@ class StartupListBox;
 
 wxDECLARE_EVENT(WELCOME_DIALOG_ACTION, wxCommandEvent);
 
+// The WELCOME_DIALOG_ACTION id for "New Sector Map" (wxID_NEW and wxID_OPEN are the others).
+inline constexpr int WELCOME_NEW_SECTOR_MAP = wxID_HIGHEST + 110;
+
 class WelcomeDialog : public wxDialog {
 public:
 	WelcomeDialog(const wxString& title_text, const wxString& version_text, const wxSize& size, const wxBitmap& rme_logo, const std::vector<wxString>& recent_files);
@@ -30,6 +33,7 @@ private:
 
 	void OnPreferences(wxCommandEvent& event);
 	void OnNewMap(wxCommandEvent& event);
+	void OnNewSectorMap(wxCommandEvent& event);
 	void OnBrowseMap(wxCommandEvent& event);
 	void OnExit(wxCommandEvent& event);
 	void OnLoadRequested(wxCommandEvent& event);

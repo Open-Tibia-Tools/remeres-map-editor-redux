@@ -8,6 +8,8 @@
 #include "app/main.h"
 #include "editor/persistence/map_load_options.h"
 
+#include <memory>
+
 class Map;
 class Editor;
 class EditorTab;
@@ -38,6 +40,8 @@ public:
 	bool ShouldSave();
 	bool SaveCurrentMap(FileName filename, bool showdialog);
 	bool NewMap();
+	// An empty sector map (see IOMapSec), with the client that reads objects.srv
+	bool NewSectorMap();
 	void OpenMap();
 	void SaveMap();
 	void SaveMapAs();
@@ -56,6 +60,10 @@ public:
 	bool CanRedo();
 	bool DoUndo();
 	bool DoRedo();
+
+private:
+	// Shows a newly created empty map in a tab of its own.
+	MapTab* ShowNewMap(std::unique_ptr<Editor> editor);
 };
 
 extern EditorManager g_editors;

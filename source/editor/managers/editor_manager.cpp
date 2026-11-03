@@ -31,6 +31,7 @@
 #include <format>
 #include <set>
 #include <sstream>
+#include <string_view>
 
 EditorManager g_editors;
 
@@ -256,7 +257,64 @@ bool EditorManager::NewMap() {
 		DialogUtil::PopupDialog(g_gui.root, "Error!", wxString(e.what(), wxConvUTF8), wxOK);
 		return false;
 	}
+	ShowNewMap(std::move(editor));
+	return true;
+}
 
+bool EditorManager::NewSectorMap() {
+	spdlog::info("EditorManager::NewSectorMap - Creating new sector map");
+	ClientVersion* target = IOMapSec::findClientVersion();
+	if (!target) {
+		DialogUtil::PopupDialog(g_gui.root, "Error!", "A sector map needs a client version that reads its items from objects.srv (configType dat_srv, such as 7.7-srv).", wxOK);
+		return false;
+	}
+
+	// Its items come from a server's objects.srv; the client keeps the one it last used.
+	bool reload_items = false;
+	if (!target->getObjectsPath().FileExists()) {
+		wxFileDialog dialog(g_gui.root, "Choose the server's objects.srv", wxEmptyString, "objects.srv", "objects.srv|objects.srv|All files (*.*)|*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+		if (dialog.ShowModal() != wxID_OK) {
+			return false;
+		}
+		target->setObjectsPath(wxFileName(dialog.GetPath()));
+		reload_items = true;
+	}
+	g_gui.FinishWelcomeDialog();
+
+	ClientVersion* current = g_version.getLoadedVersion();
+	if (!current || current->getID() != target->getID() || reload_items) {
+		if (!CloseAllEditors()) {
+			return false;
+		}
+		wxString error;
+		std::vector<std::string> warnings;
+		if (!g_version.LoadVersion(target->getID(), error, warnings, reload_items)) {
+			DialogUtil::PopupDialog("Error", error, wxOK);
+			return false;
+		}
+		if (!warnings.empty()) {
+			DialogUtil::ListDialog("Warnings", warnings);
+		}
+	}
+
+	std::unique_ptr<Editor> editor;
+	try {
+		editor = EditorFactory::CreateEmpty(g_gui.copybuffer, target);
+	} catch (std::runtime_error& e) {
+		DialogUtil::PopupDialog(g_gui.root, "Error!", wxString(e.what(), wxConvUTF8), wxOK);
+		return false;
+	}
+	editor->map.setWidth(IOMapSec::kNewMapSize);
+	editor->map.setHeight(IOMapSec::kNewMapSize);
+	// A sector map is a folder; it has no OTBM file name ("Untitled-1.otbm").
+	if (const std::string name = editor->map.getName(); name.ends_with(".otbm")) {
+		editor->map.setName(name.substr(0, name.size() - std::string_view(".otbm").size()));
+	}
+	ShowNewMap(std::move(editor))->SetScreenCenterPosition(Position(IOMapSec::kNewMapCenterX, IOMapSec::kNewMapCenterY, GROUND_LAYER));
+	return true;
+}
+
+MapTab* EditorManager::ShowNewMap(std::unique_ptr<Editor> editor) {
 	auto* mapTab = new MapTab(g_gui.tabbook, editor.release());
 	mapTab->OnSwitchEditorMode(SELECTION_MODE);
 	mapTab->GetMap()->clearChanges();
@@ -269,8 +327,7 @@ bool EditorManager::NewMap() {
 	g_gui.root->UpdateMenubar();
 	g_gui.root->Refresh();
 	g_gui.UpdateMinimap(true);
-
-	return true;
+	return mapTab;
 }
 
 void EditorManager::OpenMap() {

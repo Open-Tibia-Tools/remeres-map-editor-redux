@@ -31,6 +31,7 @@
 
 	<menu name="File">
 		<item name="New..." hotkey="Ctrl+N" action="NEW" help="Create a new map."/>
+		<item name="New Sector Map..." action="NEW_SECTOR_MAP" help="Create a new map in the original server's sector format (.sec)."/>
 		<item name="Open..." hotkey="Ctrl+O" action="OPEN" help="Open another map."/>
 		<item name="Save" hotkey="Ctrl+S" action="SAVE" help="Save the current map."/>
 		<item name="Save As..." hotkey="Ctrl+Alt+S" action="SAVE_AS" help="Save the current map as a new file."/>

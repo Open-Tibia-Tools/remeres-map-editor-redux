@@ -29,6 +29,7 @@ namespace MenuBar {
 
 	enum ActionID {
 		NEW,
+		NEW_SECTOR_MAP,
 		OPEN,
 		SAVE,
 		SAVE_AS,
@@ -218,6 +219,7 @@ public:
 
 	// Handlers
 	void OnNew(wxCommandEvent& event);
+	void OnNewSectorMap(wxCommandEvent& event);
 	void OnOpen(wxCommandEvent& event);
 	void OnSave(wxCommandEvent& event);
 	void OnSaveAs(wxCommandEvent& event);
