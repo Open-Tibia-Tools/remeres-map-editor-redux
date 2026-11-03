@@ -277,7 +277,7 @@ bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
 	}
 
 	// The server files around the map folder, each written by its own handler (io/sec/data/).
-	g_gui.SetLoadDone(95, "Saving monster homes, NPCs, houses and marks...");
+	g_gui.SetLoadDone(95, "Saving monster homes, NPCs, houses, towns and marks...");
 	if (server_layout) {
 		const rme::sec::ServerDataFolder data { .root = data_folder };
 		rme::sec::ServerFileWriter writer;
@@ -287,7 +287,7 @@ bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
 		rme::sec::map_dat::save(map, data, writer, warnings);
 		std::ranges::copy(writer.failedFiles(), std::back_inserter(stats.failed_files));
 	} else {
-		warnings.push_back("The folder is not in a server data folder (no dat/ next to it), so monster homes, NPCs, houses and marks were not saved.");
+		warnings.push_back("The folder is not in a server data folder (no dat/ next to it), so monster homes, NPCs, houses, towns and marks were not saved.");
 	}
 
 	if (!stats.unreadable_sectors.empty()) {

@@ -5,9 +5,13 @@
 #ifndef RME_IO_SEC_DATA_MAP_DAT_FILE_H_
 #define RME_IO_SEC_DATA_MAP_DAT_FILE_H_
 
-// dat/map.dat: the towns (one per depot), the named marks (the editor's
-// waypoints) and, read-only, the sectors the server loads and the start
-// positions.
+// dat/map.dat: the towns (one per Depot line), the named marks and,
+// read-only, the sectors the server loads and the start positions. It is
+// the only source of the map's towns.
+//
+// The server has no temples: a town's temple is the mark named like the
+// town ("PortHope" for Port Hope), or the veteran start when it has none.
+// That mark belongs to its town; the other marks are the map's waypoints.
 
 #include "io/sec/data/server_data_folder.h"
 #include "io/sec/srv_world_files.h"
@@ -35,7 +39,8 @@ namespace rme::sec {
 		// holds for the other handlers; nullopt when it was not read.
 		[[nodiscard]] std::optional<MapInfo> load(Map& map, const ServerDataFolder& folder, std::vector<std::string>& warnings);
 
-		// Writes the map's waypoints back as its marks, when they changed.
+		// Writes the towns back as depots, and their temples and the waypoints
+		// as marks, when they changed.
 		void save(const Map& map, const ServerDataFolder& folder, ServerFileWriter& writer, std::vector<std::string>& warnings);
 
 	} // namespace map_dat

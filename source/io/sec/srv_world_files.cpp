@@ -4,6 +4,7 @@
 
 #include "io/sec/srv_world_files.h"
 
+#include "io/sec/sec_file_io.h"
 #include "io/sec/srv_script_lexer.h"
 
 #include <algorithm>
@@ -67,6 +68,9 @@ namespace rme::sec {
 						MapDepot depot { .id = static_cast<int>(lexer.readNumber()) };
 						lexer.expectSpecial(',');
 						depot.name = lexer.readString();
+						lexer.expectSpecial(',');
+						depot.capacity = static_cast<int>(lexer.readNumber());
+						lexer.expectSpecial(')');
 						return depot;
 					}));
 				} else if (equalsIgnoreCase(field.key, "NewbieStart")) {
@@ -154,34 +158,71 @@ namespace rme::sec {
 		return out;
 	}
 
-	std::string updateMapMarks(std::string_view text, const std::vector<MapMark>& marks) {
-		std::string out;
-		out.reserve(text.size());
-		bool marks_written = false;
-		size_t pos = 0;
-		while (pos < text.size()) {
-			size_t end = text.find('\n', pos);
-			end = end == std::string_view::npos ? text.size() : end + 1;
-			const std::string_view line = text.substr(pos, end - pos);
-			pos = end;
+	namespace {
 
-			const size_t key_start = line.find_first_not_of(" \t");
-			const bool is_mark = key_start != std::string_view::npos && line.size() >= key_start + 4 && equalsIgnoreCase(line.substr(key_start, 4), "Mark") && line.find('=') != std::string_view::npos && (line.size() == key_start + 4 || !srv::isAlpha(line[key_start + 4]));
-			if (!is_mark) {
-				out += line;
-				continue;
+		// True for a `key = ...` line (spaces before the key allowed).
+		bool isKeyLine(std::string_view line, std::string_view key) {
+			const size_t start = line.find_first_not_of(" \t");
+			if (start == std::string_view::npos || line.size() < start + key.size() || !equalsIgnoreCase(line.substr(start, key.size()), key)) {
+				return false;
 			}
-			if (!marks_written) {
-				const std::string_view newline = line.ends_with("\r\n") ? "\r\n" : "\n";
-				for (const MapMark& mark : marks) {
-					out += "Mark = (";
-					srv::appendQuoted(out, mark.name);
-					std::format_to(std::back_inserter(out), ",[{},{},{}]){}", mark.position.x, mark.position.y, mark.position.z, newline);
-				}
-				marks_written = true;
-			}
+			const size_t after = start + key.size();
+			return line.find('=') != std::string_view::npos && (line.size() == after || !srv::isAlpha(line[after]));
 		}
-		return out;
+
+		// `text` with its `key` lines replaced by `lines` (each ending in a
+		// newline), written where the first of them was or else at the end.
+		std::string replaceKeyLines(std::string_view text, std::string_view key, std::string_view lines) {
+			std::string out;
+			out.reserve(text.size() + lines.size());
+			bool written = false;
+			size_t pos = 0;
+			while (pos < text.size()) {
+				size_t end = text.find('\n', pos);
+				end = end == std::string_view::npos ? text.size() : end + 1;
+				const std::string_view line = text.substr(pos, end - pos);
+				pos = end;
+				if (!isKeyLine(line, key)) {
+					out += line;
+				} else if (!written) {
+					out += lines;
+					written = true;
+				}
+			}
+			if (!written && !lines.empty()) {
+				if (!out.empty() && !out.ends_with('\n')) {
+					out += newlineOf(text);
+				}
+				out += lines;
+			}
+			return out;
+		}
+
+		void appendMark(std::string& out, const MapMark& mark, std::string_view newline) {
+			out += "Mark = (";
+			srv::appendQuoted(out, mark.name);
+			std::format_to(std::back_inserter(out), ",[{},{},{}]){}", mark.position.x, mark.position.y, mark.position.z, newline);
+		}
+
+		void appendDepot(std::string& out, const MapDepot& depot, std::string_view newline) {
+			std::format_to(std::back_inserter(out), "Depot = ({},", depot.id);
+			srv::appendQuoted(out, depot.name);
+			std::format_to(std::back_inserter(out), ",{}){}", depot.capacity, newline);
+		}
+
+	} // namespace
+
+	std::string updateMapDat(std::string_view text, const std::vector<MapMark>& marks, const std::vector<MapDepot>& depots) {
+		const std::string_view newline = newlineOf(text);
+		std::string mark_lines;
+		for (const MapMark& mark : marks) {
+			appendMark(mark_lines, mark, newline);
+		}
+		std::string depot_lines;
+		for (const MapDepot& depot : depots) {
+			appendDepot(depot_lines, depot, newline);
+		}
+		return replaceKeyLines(replaceKeyLines(text, "Mark", mark_lines), "Depot", depot_lines);
 	}
 
 	std::expected<std::vector<HouseDefinition>, ParseError> readHouses(std::string_view text) {

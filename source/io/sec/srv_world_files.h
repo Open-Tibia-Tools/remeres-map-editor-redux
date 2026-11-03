@@ -25,10 +25,18 @@ namespace rme::sec {
 		AbsolutePosition position;
 	};
 
+	// The third value of every Depot line in the original map.dat.
+	inline constexpr int kDefaultDepotCapacity = 1000;
+
 	// A town: players keep their items in its depot.
 	struct MapDepot {
 		int id = 0;
 		std::string name;
+		// Depot = (0,"Thais",1000): most likely how many items a depot holds;
+		// the editor keeps it as it is.
+		int capacity = kDefaultDepotCapacity;
+
+		bool operator==(const MapDepot&) const = default;
 	};
 
 	// The sectors the server loads (map.dat SectorXMin ... SectorZMax, inclusive).
@@ -78,9 +86,10 @@ namespace rme::sec {
 	// by a blank line, each line ending in `newline` (the file uses CRLF).
 	[[nodiscard]] std::string writeHouses(const std::vector<HouseDefinition>& houses, std::string_view newline);
 
-	// map.dat with its Mark lines replaced by `marks` (written where the first
-	// Mark was); every other line is kept as it is.
-	[[nodiscard]] std::string updateMapMarks(std::string_view text, const std::vector<MapMark>& marks);
+	// map.dat with its Mark and Depot lines replaced by `marks` and `depots`,
+	// each written where the first line of its kind was, or at the end when
+	// there was none; every other line is kept as it is.
+	[[nodiscard]] std::string updateMapDat(std::string_view text, const std::vector<MapMark>& marks, const std::vector<MapDepot>& depots);
 
 } // namespace rme::sec
 

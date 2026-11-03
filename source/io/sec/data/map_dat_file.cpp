@@ -24,6 +24,10 @@ namespace rme::sec::map_dat {
 			return Position(position.x, position.y, position.z);
 		}
 
+		AbsolutePosition toAbsolute(const Position& position) {
+			return AbsolutePosition { .x = position.x, .y = position.y, .z = position.z };
+		}
+
 		// "Port Hope" and the mark "PortHope" name the same place.
 		std::string placeKey(std::string_view name) {
 			std::string key;
@@ -35,26 +39,79 @@ namespace rme::sec::map_dat {
 			return key;
 		}
 
-		// The server has no temple per town; the town's named mark (or the
-		// veteran start) stands in for it.
-		void addTowns(Map& map, const MapInfo& info) {
+		// The mark of the town named `town_name`, if map.dat has one.
+		const MapMark* townMark(const MapInfo& info, std::string_view town_name) {
+			const auto mark = std::ranges::find(info.marks, placeKey(town_name), [](const MapMark& m) { return placeKey(m.name); });
+			return mark != info.marks.end() ? &*mark : nullptr;
+		}
+
+		// A town per depot. The server has no temples: the mark named like
+		// the town stands in for its temple, else the veteran start does.
+		// A town's mark belongs to the town, so it is no waypoint as well.
+		void addTownsAndWaypoints(Map& map, const MapInfo& info) {
+			std::vector<const MapMark*> town_marks;
 			for (const MapDepot& depot : info.depots) {
 				auto town = std::make_unique<Town>(townIdOfDepot(depot.id));
 				town->setName(depot.name);
-				const auto mark = std::ranges::find(info.marks, placeKey(depot.name), [](const MapMark& m) { return placeKey(m.name); });
-				if (mark != info.marks.end()) {
+				if (const MapMark* mark = townMark(info, depot.name)) {
 					town->setTemplePosition(toPosition(mark->position));
+					town_marks.push_back(mark);
 				} else if (info.veteran_start) {
 					town->setTemplePosition(toPosition(*info.veteran_start));
 				}
 				map.towns.addTown(std::move(town));
 			}
+			for (const MapMark& mark : info.marks) {
+				if (std::ranges::find(town_marks, &mark) == town_marks.end()) {
+					map.waypoints.addWaypoint(std::make_unique<Waypoint>(mark.name, toPosition(mark.position)));
+				}
+			}
 		}
 
-		void addWaypoints(Map& map, const MapInfo& info) {
-			for (const MapMark& mark : info.marks) {
-				map.waypoints.addWaypoint(std::make_unique<Waypoint>(mark.name, toPosition(mark.position)));
+		// The towns as depots, keeping each depot's third value.
+		std::vector<MapDepot> depotsOf(const Map& map, const MapInfo& previous) {
+			std::vector<MapDepot> depots;
+			for (const auto& [id, town] : map.towns) {
+				if (!town || id == 0) {
+					continue;
+				}
+				MapDepot depot { .id = depotOfTownId(id), .name = town->getName() };
+				if (const auto it = std::ranges::find(previous.depots, depot.id, &MapDepot::id); it != previous.depots.end()) {
+					depot.capacity = it->capacity;
+				}
+				depots.push_back(std::move(depot));
 			}
+			std::ranges::sort(depots, {}, &MapDepot::id);
+			return depots;
+		}
+
+		// The waypoints and each town's mark at its temple. A town's mark
+		// keeps its name in map.dat; a town without one gets a mark when its
+		// temple is moved off the veteran start, which stood in for it.
+		std::vector<MapMark> marksOf(const Map& map, const MapInfo& previous) {
+			std::vector<MapMark> marks;
+			for (const auto& [id, town] : map.towns) {
+				if (!town) {
+					continue;
+				}
+				const Position& temple = town->getTemplePosition();
+				const AbsolutePosition position = toAbsolute(temple);
+				if (const MapMark* mark = townMark(previous, town->getName())) {
+					marks.push_back(MapMark { .name = mark->name, .position = position });
+				} else if (temple.isValid() && position != previous.veteran_start) {
+					marks.push_back(MapMark { .name = town->getName(), .position = position });
+				}
+			}
+			for (const auto& [key, waypoint] : map.waypoints) {
+				marks.push_back(MapMark { .name = waypoint->name, .position = toAbsolute(waypoint->pos) });
+			}
+			// Known marks keep their place in map.dat.
+			const auto order = [&previous](const MapMark& mark) {
+				const auto it = std::ranges::find(previous.marks, mark.name, &MapMark::name);
+				return std::pair(std::distance(previous.marks.begin(), it), mark.name);
+			};
+			std::ranges::sort(marks, {}, order);
+			return marks;
 		}
 
 	} // namespace
@@ -70,8 +127,7 @@ namespace rme::sec::map_dat {
 			warnings.push_back(std::format("map.dat:{}: {}; no towns or waypoints were loaded.", info.error().line, info.error().message));
 			return std::nullopt;
 		}
-		addTowns(map, *info);
-		addWaypoints(map, *info);
+		addTownsAndWaypoints(map, *info);
 		return std::move(*info);
 	}
 
@@ -79,27 +135,15 @@ namespace rme::sec::map_dat {
 		const std::filesystem::path path = folder.dat() / "map.dat";
 		std::string text;
 		if (!readFile(path, text)) {
-			warnings.push_back("dat/map.dat was not found; waypoints were not saved.");
+			warnings.push_back("dat/map.dat was not found; towns and waypoints were not saved.");
 			return;
 		}
 		const auto info = readMapInfo(text);
 		if (!info) {
-			warnings.push_back("dat/map.dat could not be read; waypoints were not saved.");
+			warnings.push_back("dat/map.dat could not be read; towns and waypoints were not saved.");
 			return;
 		}
-
-		// Known marks keep their place in map.dat.
-		std::vector<MapMark> marks;
-		for (const auto& [key, waypoint] : map.waypoints) {
-			const Position& position = waypoint->pos;
-			marks.push_back(MapMark { .name = waypoint->name, .position = AbsolutePosition { .x = position.x, .y = position.y, .z = position.z } });
-		}
-		const auto order = [&info](const MapMark& mark) {
-			const auto it = std::ranges::find(info->marks, mark.name, &MapMark::name);
-			return std::pair(std::distance(info->marks.begin(), it), mark.name);
-		};
-		std::ranges::sort(marks, {}, order);
-		writer.write(path, updateMapMarks(text, marks));
+		writer.write(path, updateMapDat(text, marksOf(map, *info), depotsOf(map, *info)));
 	}
 
 } // namespace rme::sec::map_dat

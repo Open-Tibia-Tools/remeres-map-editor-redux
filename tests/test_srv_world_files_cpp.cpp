@@ -36,10 +36,10 @@ namespace {
 			"Mark = (\"Thais\",[32369,32215,7])\n"
 			"Mark = (\"Ab'Dendriel\",[32661,31687,7])\n"
 			"Depot = (0,\"Thais\",1000)\n"
-			"Depot = (8,\"Port Hope\",1000)\n");
+			"Depot = (8,\"Port Hope\",500)\n");
 		assert(info.has_value());
 		assert(info->marks.size() == 2 && info->marks[1].name == "Ab'Dendriel" && info->marks[1].position.y == 31687);
-		assert(info->depots.size() == 2 && info->depots[1].id == 8 && info->depots[1].name == "Port Hope");
+		assert(info->depots.size() == 2 && info->depots[1].id == 8 && info->depots[1].name == "Port Hope" && info->depots[1].capacity == 500);
 		assert(info->newbie_start && info->newbie_start->x == 32097);
 		assert(info->veteran_start && info->veteran_start->z == 7);
 
@@ -105,8 +105,14 @@ namespace {
 			"Fields = {[32258,32309,5],[32259,32309,5]}\n");
 
 		const std::string map_dat = "SectorXMin = 996\r\nMark = (\"Thais\",[1,2,3])\r\n# comment\r\nMark = (\"Old\",[4,5,6])\r\nDepot = (0,\"Thais\",1000)\r\n";
-		assert(updateMapMarks(map_dat, { MapMark { .name = "Thais", .position = { 7, 8, 9 } }, MapMark { .name = "New \"Mark\"", .position = { 1, 1, 1 } } }) ==
-			"SectorXMin = 996\r\nMark = (\"Thais\",[7,8,9])\r\nMark = (\"New \\\"Mark\\\"\",[1,1,1])\r\n# comment\r\nDepot = (0,\"Thais\",1000)\r\n");
+		// Marks and depots are written where their first line was; other lines stay.
+		const std::vector<MapDepot> depots { MapDepot { .id = 0, .name = "Thais" }, MapDepot { .id = 1, .name = "Carlin", .capacity = 2000 } };
+		assert(updateMapDat(map_dat, { MapMark { .name = "Thais", .position = { 7, 8, 9 } }, MapMark { .name = "New \"Mark\"", .position = { 1, 1, 1 } } }, depots) ==
+			"SectorXMin = 996\r\nMark = (\"Thais\",[7,8,9])\r\nMark = (\"New \\\"Mark\\\"\",[1,1,1])\r\n# comment\r\nDepot = (0,\"Thais\",1000)\r\nDepot = (1,\"Carlin\",2000)\r\n");
+		// Marks and depots that are gone lose their lines; new ones without a place go at the end.
+		assert(updateMapDat(map_dat, {}, {}) == "SectorXMin = 996\r\n# comment\r\n");
+		assert(updateMapDat("SectorXMin = 996", { MapMark { .name = "A", .position = { 1, 2, 3 } } }, depots) ==
+			"SectorXMin = 996\nMark = (\"A\",[1,2,3])\nDepot = (0,\"Thais\",1000)\nDepot = (1,\"Carlin\",2000)\n");
 
 		// Like the server's loader, commas between fields are optional.
 		const auto no_commas = readHouses("ID = 1\nFields = {[1,2,3] [4,5,6]}\n");
@@ -128,7 +134,7 @@ namespace {
 			assert(reread.has_value() && *reread == *houses);
 		}
 		if (info) {
-			assert(updateMapMarks(map_dat, info->marks) == map_dat);
+			assert(updateMapDat(map_dat, info->marks, info->depots) == map_dat);
 		}
 		for (const auto* error : { info ? nullptr : &info.error(), areas ? nullptr : &areas.error(), houses ? nullptr : &houses.error() }) {
 			if (error) {
