@@ -314,6 +314,10 @@ void MainMenuBar::OnReplaceItems(wxCommandEvent& event) {
 	searchHandler->OnReplaceItems(event);
 }
 
+void MainMenuBar::OnSearchForServerNumberOnMap(wxCommandEvent& event) {
+	searchHandler->OnSearchForServerNumberOnMap(event);
+}
+
 void MainMenuBar::OnSearchForStuffOnMap(wxCommandEvent& event) {
 	searchHandler->OnSearchForStuffOnMap(event);
 }

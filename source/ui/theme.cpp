@@ -144,6 +144,14 @@ wxColour Theme::GetDark(Role role) {
 			return wxColour(153, 50, 204); // Dark Orchid
 		case Role::TooltipBorderText:
 			return wxColour(218, 165, 32); // Goldenrod
+		case Role::ServerMarkerStart:
+			return wxColour(255, 215, 0); // Gold
+		case Role::ServerMarkerDepot:
+			return wxColour(46, 204, 113); // Emerald
+		case Role::ServerMarkerRaid:
+			return wxColour(231, 76, 60); // Red
+		case Role::ServerMarkerScript:
+			return wxColour(171, 130, 255); // Lavender
 		case Role::BrushCategoryGround:
 			return wxColour(85, 230, 85);
 		case Role::BrushCategoryWall:
@@ -248,6 +256,14 @@ wxColour Theme::GetLight(Role role) {
 			return wxColour(153, 50, 204); // Dark Orchid
 		case Role::TooltipBorderText:
 			return wxColour(218, 165, 32); // Goldenrod
+		case Role::ServerMarkerStart:
+			return wxColour(255, 215, 0); // Gold
+		case Role::ServerMarkerDepot:
+			return wxColour(46, 204, 113); // Emerald
+		case Role::ServerMarkerRaid:
+			return wxColour(231, 76, 60); // Red
+		case Role::ServerMarkerScript:
+			return wxColour(171, 130, 255); // Lavender
 		case Role::BrushCategoryGround:
 			return wxColour(30, 155, 40);
 		case Role::BrushCategoryWall:

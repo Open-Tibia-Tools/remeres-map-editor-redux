@@ -11,6 +11,8 @@
 #include "map/map.h"
 #include "map/tile.h"
 #include "game/item.h"
+#include "game/srv_item_attributes.h"
+#include "game/srv_markers.h"
 #include "game/complexitem.h"
 #include "editor/editor.h"
 #include "item_definitions/core/item_definition_store.h"
@@ -36,6 +38,8 @@ namespace {
 		uint8_t doorId = 0;
 		Position destination;
 		bool hasContent = false;
+		std::array<int32_t, rme::srv::kItemAttributes.size()> srv_attributes {};
+		bool hasSrv = false;
 
 		const bool is_complex = item->isComplex();
 		const Door* door = isHouseTile ? item->asDoor() : nullptr;
@@ -51,6 +55,12 @@ namespace {
 			action = item->getActionID();
 			text = item->getText();
 			description = item->getDescription();
+			for (size_t i = 0; i < srv_attributes.size(); ++i) {
+				if (const int32_t* value = item->getIntegerAttribute(rme::srv::key(static_cast<rme::srv::ItemAttribute>(i)))) {
+					srv_attributes[i] = *value;
+					hasSrv = hasSrv || *value != 0;
+				}
+			}
 		}
 
 		if (door && door->isRealDoor()) {
@@ -65,7 +75,7 @@ namespace {
 			hasContent = container->getItemCount() > 0;
 		}
 
-		if (unique == 0 && action == 0 && doorId == 0 && text.empty() && description.empty() && destination.x == 0 && !hasContent) {
+		if (unique == 0 && action == 0 && doorId == 0 && text.empty() && description.empty() && destination.x == 0 && !hasContent && !hasSrv) {
 			return false;
 		}
 
@@ -85,6 +95,7 @@ namespace {
 		data.text = text;
 		data.description = description;
 		data.destination = destination;
+		data.srvAttributes = srv_attributes;
 
 		if (container && zoom <= 1.5f) {
 			data.containerCapacity = static_cast<uint8_t>(container->getVolume());
@@ -218,4 +229,14 @@ void MapOverlayCollector::Collect(
 			}
 		}
 	});
+
+	// 5. Server markers (sector maps); they need no tile
+	if (need_tooltips && !options.ingame && options.show_server_markers && map.server_markers) {
+		for (const rme::srv::Marker& marker : map.server_markers->onFloor(map_z)) {
+			const Position& pos = marker.position;
+			if (pos.x >= bounds.start_x && pos.x <= bounds.end_x && pos.y >= bounds.start_y && pos.y <= bounds.end_y) {
+				out_tooltip_drawer->addServerMarkerTooltip(marker);
+			}
+		}
+	}
 }

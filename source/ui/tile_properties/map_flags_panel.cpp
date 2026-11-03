@@ -11,6 +11,7 @@
 #include "editor/action.h"
 #include "editor/action_queue.h"
 #include "ui/gui.h"
+#include "ui/properties/srv_attribute_fields.h"
 
 MapFlagsPanel::MapFlagsPanel(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY), current_tile(nullptr), current_map(nullptr) {
@@ -21,11 +22,13 @@ MapFlagsPanel::MapFlagsPanel(wxWindow* parent) :
 	chk_nopvp = new wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "No PvP");
 	chk_nologout = new wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "No Logout");
 	chk_pvpzone = new wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "PvP Zone");
+	chk_refresh = new wxCheckBox(sizer->GetStaticBox(), wxID_ANY, "Refresh");
 
 	sizer->Add(chk_pz, wxSizerFlags(0).Left().Border(wxALL, 2));
 	sizer->Add(chk_nopvp, wxSizerFlags(0).Left().Border(wxALL, 2));
 	sizer->Add(chk_nologout, wxSizerFlags(0).Left().Border(wxALL, 2));
 	sizer->Add(chk_pvpzone, wxSizerFlags(0).Left().Border(wxALL, 2));
+	sizer->Add(chk_refresh, wxSizerFlags(0).Left().Border(wxALL, 2));
 
 	SetSizer(sizer);
 
@@ -33,6 +36,7 @@ MapFlagsPanel::MapFlagsPanel(wxWindow* parent) :
 	chk_nopvp->Bind(wxEVT_CHECKBOX, &MapFlagsPanel::OnToggleFlag, this);
 	chk_nologout->Bind(wxEVT_CHECKBOX, &MapFlagsPanel::OnToggleFlag, this);
 	chk_pvpzone->Bind(wxEVT_CHECKBOX, &MapFlagsPanel::OnToggleFlag, this);
+	chk_refresh->Bind(wxEVT_CHECKBOX, &MapFlagsPanel::OnToggleFlag, this);
 }
 
 MapFlagsPanel::~MapFlagsPanel() {
@@ -42,26 +46,38 @@ void MapFlagsPanel::SetTile(Tile* tile, Map* map) {
 	current_tile = tile;
 	current_map = map;
 
+	// Sector maps cannot hold PvP or No-PvP zones.
+	const bool with_pvp = !rme::srv::isSrvClient();
+	if (chk_nopvp->IsShown() != with_pvp) {
+		chk_nopvp->Show(with_pvp);
+		chk_pvpzone->Show(with_pvp);
+		Layout();
+	}
+
 	if (tile) {
 		chk_pz->SetValue(tile->isPZ());
 		chk_nopvp->SetValue(tile->getMapFlags() & TILESTATE_NOPVP);
 		chk_nologout->SetValue(tile->getMapFlags() & TILESTATE_NOLOGOUT);
 		chk_pvpzone->SetValue(tile->getMapFlags() & TILESTATE_PVPZONE);
+		chk_refresh->SetValue(tile->getMapFlags() & TILESTATE_REFRESH);
 
 		chk_pz->Enable(true);
 		chk_nopvp->Enable(true);
 		chk_nologout->Enable(true);
 		chk_pvpzone->Enable(true);
+		chk_refresh->Enable(true);
 	} else {
 		chk_pz->SetValue(false);
 		chk_nopvp->SetValue(false);
 		chk_nologout->SetValue(false);
 		chk_pvpzone->SetValue(false);
+		chk_refresh->SetValue(false);
 
 		chk_pz->Enable(false);
 		chk_nopvp->Enable(false);
 		chk_nologout->Enable(false);
 		chk_pvpzone->Enable(false);
+		chk_refresh->Enable(false);
 	}
 }
 
@@ -94,6 +110,12 @@ void MapFlagsPanel::OnToggleFlag(wxCommandEvent& event) {
 		new_tile->addMapFlags(TILESTATE_PVPZONE);
 	} else {
 		new_tile->unsetMapFlags(TILESTATE_PVPZONE);
+	}
+
+	if (chk_refresh->GetValue()) {
+		new_tile->addMapFlags(TILESTATE_REFRESH);
+	} else {
+		new_tile->unsetMapFlags(TILESTATE_REFRESH);
 	}
 
 	Tile* old_ptr = new_tile.get();

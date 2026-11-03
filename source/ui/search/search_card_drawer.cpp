@@ -188,6 +188,11 @@ void SearchCardDrawer::DrawAttributeTokens(
 			"Pickupable",
 			accent_wx
 		};
+	} else if (child.kind == SearchResultKind::ServerNumber) {
+		tokens[token_count++] = {
+			child.subtitle,
+			aid_wx
+		};
 	}
 
 	if (child.unique_id > 0) {

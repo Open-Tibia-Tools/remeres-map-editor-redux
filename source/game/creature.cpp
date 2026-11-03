@@ -72,6 +72,8 @@ uint16_t Creature::DirName2ID(std::string dir) {
 std::unique_ptr<Creature> Creature::deepCopy() const {
 	std::unique_ptr<Creature> copy = std::make_unique<Creature>(type_name);
 	copy->spawntime = spawntime;
+	copy->amount = amount;
+	copy->home_radius = home_radius;
 	copy->direction = direction;
 	copy->weight = weight;
 	copy->alternatives = alternatives;

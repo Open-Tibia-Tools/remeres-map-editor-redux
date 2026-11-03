@@ -18,6 +18,9 @@
 #ifndef RME_TOOLTIP_DRAWER_H_
 #define RME_TOOLTIP_DRAWER_H_
 
+#include "game/srv_item_attributes.h"
+#include <algorithm>
+#include <array>
 #include "app/definitions.h"
 #include <iostream>
 #include "map/position.h"
@@ -30,6 +33,9 @@
 
 class Item;
 class Waypoint;
+namespace rme::srv {
+	struct Marker;
+}
 struct NVGcontext;
 
 struct ContainerItem {
@@ -44,7 +50,8 @@ enum class TooltipCategory {
 	ITEM, // Dark charcoal - generic item
 	DOOR, // Brown - door with door ID
 	TELEPORT, // Purple - teleporter
-	TEXT // Gold - readable text (signs, books)
+	TEXT, // Gold - readable text (signs, books)
+	SERVER // Server marker of a sector map, coloured by its kind
 };
 
 // Structured tooltip data for card-based rendering
@@ -64,9 +71,14 @@ struct TooltipData {
 	std::string_view text;
 	std::string_view description;
 	Position destination; // For teleports (check if valid via destination.x > 0)
+	// Server item attributes, indexed by rme::srv::ItemAttribute (0 = not set)
+	std::array<int32_t, rme::srv::kItemAttributes.size()> srvAttributes {};
 
 	// Waypoint-specific
 	std::string_view waypointName;
+
+	// Server marker (sector maps): its lines are the tooltip's fields
+	const rme::srv::Marker* serverMarker = nullptr;
 
 	// Container contents
 	std::vector<ContainerItem> containerItems;
@@ -88,7 +100,7 @@ struct TooltipData {
 			category = TooltipCategory::WAYPOINT;
 		} else if (destination.x > 0) {
 			category = TooltipCategory::TELEPORT;
-		} else if (doorId > 0) {
+		} else if (doorId > 0 || hasSrvDoorFields()) {
 			category = TooltipCategory::DOOR;
 		} else if (!text.empty()) {
 			category = TooltipCategory::TEXT;
@@ -99,7 +111,18 @@ struct TooltipData {
 
 	// Check if this tooltip has any visible fields
 	bool hasVisibleFields() const {
-		return !waypointName.empty() || actionId > 0 || uniqueId > 0 || doorId > 0 || !text.empty() || !description.empty() || destination.x > 0 || !containerItems.empty();
+		return serverMarker != nullptr || !waypointName.empty() || actionId > 0 || uniqueId > 0 || doorId > 0 || !text.empty() || !description.empty() || destination.x > 0 || !containerItems.empty() || hasSrvFields();
+	}
+
+	bool hasSrvFields() const {
+		return std::ranges::any_of(srvAttributes, [](int32_t value) { return value != 0; });
+	}
+
+	// Keyhole, level and quest doors
+	bool hasSrvDoorFields() const {
+		using rme::srv::ItemAttribute;
+		const auto has = [this](ItemAttribute attribute) { return srvAttributes[static_cast<size_t>(attribute)] != 0; };
+		return has(ItemAttribute::KeyholeNumber) || has(ItemAttribute::DoorLevel) || has(ItemAttribute::DoorQuestNumber);
 	}
 
 	void clear() {
@@ -116,7 +139,9 @@ struct TooltipData {
 		text = {};
 		description = {};
 		destination = Position();
+		srvAttributes = {};
 		waypointName = {};
+		serverMarker = nullptr;
 		containerItems.clear();
 		containerCapacity = 0;
 	}
@@ -137,6 +162,9 @@ public:
 
 	// Add a waypoint tooltip
 	void addWaypointTooltip(Position pos, std::string_view name);
+
+	// Add the tooltip of a server marker; `marker` must outlive the tooltip
+	void addServerMarkerTooltip(const rme::srv::Marker& marker);
 
 	// Draw all tooltips
 	void draw(NVGcontext* vg, const RenderView& view);
@@ -169,7 +197,7 @@ protected:
 	int getSpriteImage(NVGcontext* vg, uint16_t itemId);
 
 	// Helper to get header color based on category
-	void getHeaderColor(TooltipCategory cat, uint8_t& r, uint8_t& g, uint8_t& b) const;
+	void getHeaderColor(const TooltipData& tooltip, uint8_t& r, uint8_t& g, uint8_t& b) const;
 
 	// Refactored drawing helpers
 	struct LayoutMetrics {

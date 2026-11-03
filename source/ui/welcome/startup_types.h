@@ -28,6 +28,7 @@ enum class StartupCompatibilityStatus {
 	ForceRequired,
 	Forced,
 	MapError,
+	Incompatible, // The map needs another kind of client; Force Load cannot help
 };
 
 struct StartupLoadRequest {

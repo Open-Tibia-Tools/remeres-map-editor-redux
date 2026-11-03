@@ -22,6 +22,7 @@
 #include "ui/icons/sprite_icon_service.h"
 #include "ui/icons/editor_icon_registry.h"
 #include "ui/gui.h"
+#include "ui/properties/srv_attribute_fields.h"
 #include "map/map.h"
 #include "util/image_manager.h"
 #include "ui/map_tab.h"
@@ -602,14 +603,19 @@ std::vector<Brush*> ToolOptionsSurface::GetDefaultTools() const {
 	if (g_brush_manager.pz_brush) {
 		brushes.push_back(g_brush_manager.pz_brush);
 	}
-	if (g_brush_manager.rook_brush) {
+	// Sector maps cannot hold PvP or No-PvP zones.
+	const bool with_pvp = !rme::srv::isSrvClient();
+	if (with_pvp && g_brush_manager.rook_brush) {
 		brushes.push_back(g_brush_manager.rook_brush);
 	}
 	if (g_brush_manager.nolog_brush) {
 		brushes.push_back(g_brush_manager.nolog_brush);
 	}
-	if (g_brush_manager.pvp_brush) {
+	if (with_pvp && g_brush_manager.pvp_brush) {
 		brushes.push_back(g_brush_manager.pvp_brush);
+	}
+	if (g_brush_manager.refresh_brush) {
+		brushes.push_back(g_brush_manager.refresh_brush);
 	}
 	if (g_brush_manager.normal_door_brush) {
 		brushes.push_back(g_brush_manager.normal_door_brush);

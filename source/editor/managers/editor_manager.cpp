@@ -22,6 +22,7 @@
 #include "live/live_tab.h"
 #include "live/live_client.h"
 #include "io/iomap_otbm.h"
+#include "io/iomap_sec.h"
 #include "map/map_initial_position_resolver.h"
 
 #include <chrono>
@@ -207,8 +208,10 @@ bool EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
 			if (success && !editor->map.hasChanged()) {
 				// Report what actually landed on disk, not just that it worked.
 				std::error_code size_ec;
-				const auto file_size = std::filesystem::file_size(std::filesystem::path(editor->map.getFilename()), size_ec);
-				if (size_ec) {
+				const std::filesystem::path saved_path(editor->map.getFilename());
+				// A sector map is a folder; there is no single file size to report.
+				const auto file_size = std::filesystem::is_directory(saved_path, size_ec) ? 0 : std::filesystem::file_size(saved_path, size_ec);
+				if (size_ec || file_size == 0) {
 					g_status.SetStatusText("Map saved successfully.");
 					spdlog::info("Map saved: {} in {:.1f} s", editor->map.getName(), save_seconds);
 				} else {
@@ -300,11 +303,17 @@ void EditorManager::SaveMapAs() {
 		return;
 	}
 
-	wxString wildcard = "OpenTibia Binary Map (*.otbm)|*.otbm|GZIP Compressed Map (*.otbm)|*.otbm";
+	constexpr int kSectorFilter = 2;
+	wxString wildcard = "OpenTibia Binary Map (*.otbm)|*.otbm|GZIP Compressed Map (*.otbm)|*.otbm|Sector map, saves into the chosen folder (*.sec)|*.sec";
 	wxFileDialog dialog(g_gui.root, "Save As...", "", "", wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-	dialog.SetFilterIndex(GetCurrentMap().getCompression() == OtbmCompression::Gzip ? 1 : 0);
+	if (IOMapSec::isSectorTarget(wxstr(GetCurrentMap().getFilename()))) {
+		dialog.SetFilterIndex(kSectorFilter);
+	} else {
+		dialog.SetFilterIndex(GetCurrentMap().getCompression() == OtbmCompression::Gzip ? 1 : 0);
+	}
 
 	if (dialog.ShowModal() == wxID_OK) {
+		const bool sector_map = dialog.GetFilterIndex() == kSectorFilter || IOMapSec::isSectorTarget(dialog.GetPath());
 		const OtbmCompression prev_compression = GetCurrentMap().getCompression();
 		if (dialog.GetFilterIndex() == 1) {
 			GetCurrentMap().setCompression(OtbmCompression::Gzip);
@@ -312,13 +321,18 @@ void EditorManager::SaveMapAs() {
 			GetCurrentMap().setCompression(OtbmCompression::None);
 		}
 
-		if (!SaveCurrentMap(dialog.GetPath(), true)) {
+		// A sector map is saved into the folder of the chosen name.
+		wxFileName target(dialog.GetPath());
+		if (sector_map) {
+			target.SetExt("sec");
+		}
+		if (!SaveCurrentMap(target, true)) {
 			GetCurrentMap().setCompression(prev_compression);
 			return;
 		}
 
 		g_status.UpdateTitle();
-		g_gui.root->AddRecentFile(dialog.GetPath());
+		g_gui.root->AddRecentFile(sector_map ? wxstr(GetCurrentMap().getFilename()) : dialog.GetPath());
 		g_gui.root->UpdateMenubar();
 	}
 }
@@ -360,9 +374,10 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 	}
 
 	std::unique_ptr<Editor> editor;
+	const bool sector_map = IOMapSec::isSectorMap(fileName);
 	try {
 		MapVersion ver;
-		if (!IOMapOTBM::getVersionInfo(fileName, ver)) {
+		if (!sector_map && !IOMapOTBM::getVersionInfo(fileName, ver)) {
 			throw std::runtime_error(std::format("Could not open file \"{}\".\nThis is not a valid OTBM file or it does not exist.", nstr(fileName.GetFullPath())));
 		}
 
@@ -371,6 +386,11 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 			target = ClientVersion::get(load_options.selected_client_id);
 			if (!target) {
 				throw std::runtime_error(std::format("Unsupported client selection: {}", load_options.selected_client_id));
+			}
+		} else if (sector_map) {
+			target = IOMapSec::findClientVersion();
+			if (!target) {
+				throw std::runtime_error("Opening a sector map needs a client version that reads its items from objects.srv (configType dat_srv, such as 7.7-srv).");
 			}
 		} else {
 			target = ClientVersion::getByItemsVersion(ver.items_major, ver.client);
@@ -382,12 +402,25 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 			}
 		}
 
+		// A sector map brings its own item types: the objects.srv of its server.
+		bool reload_items = false;
+		if (sector_map && target->getItemDefinitionMode() == ItemDefinitionMode::DatSrv) {
+			const wxFileName objects = IOMapSec::objectsFile(fileName);
+			if (!objects.FileExists()) {
+				throw std::runtime_error(std::format("objects.srv was not found at \"{}\".\nSector maps are read from an original server's data folder, which holds the map folder and dat/objects.srv.", nstr(objects.GetFullPath())));
+			}
+			if (!target->getObjectsPath().SameAs(objects)) {
+				target->setObjectsPath(objects);
+				reload_items = true;
+			}
+		}
+
 		ClientVersion* current = g_version.getLoadedVersion();
-		if (!current || current->getID() != target->getID()) {
+		if (!current || current->getID() != target->getID() || reload_items) {
 			wxString error;
 			std::vector<std::string> warnings;
 			if (CloseAllEditors()) {
-				if (!g_version.LoadVersion(target->getID(), error, warnings)) {
+				if (!g_version.LoadVersion(target->getID(), error, warnings, reload_items)) {
 					g_status.SetStatusText("Failed to load map.");
 					DialogUtil::PopupDialog("Error", error, wxOK);
 					return false;
@@ -415,6 +448,10 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 	mapTab->GetView()->FitToMap();
 	g_status.UpdateTitle();
 	DialogUtil::ListDialog("Map loader errors", mapTab->GetMap()->getWarnings());
+	if (sector_map) {
+		// The loader adds the server's monsters and NPCs as a Creature palette.
+		g_palettes.ReloadDynamicPalettes();
+	}
 	g_gui.root->DoQueryImportCreatures();
 
 	g_gui.FitViewToMap(mapTab);
@@ -430,8 +467,10 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 	const uint64_t loaded_tiles = mapTab->GetMap()->getTileCount();
 	const double load_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - load_started).count();
 	if (loaded_tiles > 0) {
-		g_status.SetStatusText(std::format("Map loaded: {} ({} tiles) in {:.1f} s.", nstr(fileName.GetFullName()), loaded_tiles, load_seconds));
-		spdlog::info("Map loaded: {} ({} tiles) in {:.1f} s", nstr(fileName.GetFullName()), loaded_tiles, load_seconds);
+		// The map name is the file name, or the folder name for a sector map.
+		const std::string map_name = mapTab->GetMap()->getName();
+		g_status.SetStatusText(std::format("Map loaded: {} ({} tiles) in {:.1f} s.", map_name, loaded_tiles, load_seconds));
+		spdlog::info("Map loaded: {} ({} tiles) in {:.1f} s", map_name, loaded_tiles, load_seconds);
 	} else {
 		std::error_code size_ec;
 		const auto bytes = std::filesystem::file_size(std::filesystem::path(fileName.GetFullPath().utf8_string()), size_ec);

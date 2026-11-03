@@ -53,6 +53,12 @@ public:
 		TooltipBorderTeleport,
 		TooltipBorderText,
 
+		// Server markers on sector maps (see game/srv_markers.h): tile frame, badge and tooltip border
+		ServerMarkerStart,
+		ServerMarkerDepot,
+		ServerMarkerRaid,
+		ServerMarkerScript,
+
 		// Brush Category Colors
 		BrushCategoryGround,
 		BrushCategoryWall,

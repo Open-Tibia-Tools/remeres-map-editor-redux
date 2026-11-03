@@ -7,9 +7,12 @@
 #include "item_definitions/formats/dat/dat_item_parser.h"
 #include "item_definitions/formats/otb/otb_item_parser.h"
 #include "item_definitions/formats/protobuf/protobuf_item_parser.h"
+#include "item_definitions/formats/srv/srv_item_parser.h"
 #include "item_definitions/formats/xml/xml_item_parser.h"
 
+#include <algorithm>
 #include <memory>
+#include <span>
 
 namespace {
 	void seedVersionInfoFromClient(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments) {
@@ -29,7 +32,8 @@ bool ItemDefinitionsLoader::assemble(const ItemDefinitionLoadInput& input, ItemD
 		return false;
 	}
 
-	if (input.xml_path.GetFullPath().IsEmpty() && input.xml_paths.empty()) {
+	const std::span<const ItemDefinitionSourceKind> sources(recipe.sources.data(), recipe.source_count);
+	if (std::ranges::contains(sources, ItemDefinitionSourceKind::Xml) && input.xml_path.GetFullPath().IsEmpty() && input.xml_paths.empty()) {
 		error = "items.xml path is missing.";
 		return false;
 	}
@@ -41,6 +45,7 @@ bool ItemDefinitionsLoader::assemble(const ItemDefinitionLoadInput& input, ItemD
 	DatItemParser dat_parser;
 	OtbItemParser otb_parser;
 	ProtobufItemParser protobuf_parser;
+	SrvItemParser srv_parser;
 	XmlItemParser xml_parser;
 
 	for (size_t i = 0; i < recipe.source_count; ++i) {
@@ -66,8 +71,10 @@ bool ItemDefinitionsLoader::assemble(const ItemDefinitionLoadInput& input, ItemD
 				}
 				break;
 			case ItemDefinitionSourceKind::Srv:
-				error = "Selected item definition mode is not implemented yet.";
-				return false;
+				if (!srv_parser.parse(input, fragments, error, warnings)) {
+					return false;
+				}
+				break;
             default:
 				error = "Invalid item definition mode selected.";
 				return false;

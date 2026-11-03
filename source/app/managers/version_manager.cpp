@@ -132,29 +132,37 @@ bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& wa
 	g_loading.CreateLoadBar("Loading asset files");
 	g_loading.SetLoadDone(0, "Loading canonical asset bundle...");
 
-	const wxString modular_data_path = GetModularDataPath();
-	if (!wxFileName(modular_data_path).DirExists()) {
-		error = "Missing modular client data directory: " + modular_data_path;
-		FailDataLoad();
-		return false;
-	}
+	if (getLoadedVersion()->getItemDefinitionMode() == ItemDefinitionMode::DatSrv) {
+		// A server data folder is self-contained: items come from Tibia.dat and the
+		// server's objects.srv only, nothing is read from the data directory.
+		if (!LoadCanonicalAssets(wxEmptyString, MaterialManifestFiles {}, error, warnings)) {
+			return false;
+		}
+	} else {
+		const wxString modular_data_path = GetModularDataPath();
+		if (!wxFileName(modular_data_path).DirExists()) {
+			error = "Missing modular client data directory: " + modular_data_path;
+			FailDataLoad();
+			return false;
+		}
 
-	const FileName materials_manifest(modular_data_path + "materials.xml");
-	MaterialManifestFiles manifest_files;
-	if (!LoadMaterialManifest(materials_manifest, manifest_files, error)) {
-		return false;
-	}
+		const FileName materials_manifest(modular_data_path + "materials.xml");
+		MaterialManifestFiles manifest_files;
+		if (!LoadMaterialManifest(materials_manifest, manifest_files, error)) {
+			return false;
+		}
 
-	if (!LoadCanonicalAssets(modular_data_path, manifest_files, error, warnings)) {
-		return false;
-	}
+		if (!LoadCanonicalAssets(modular_data_path, manifest_files, error, warnings)) {
+			return false;
+		}
 
-	if (!LoadCreatureFiles(manifest_files, error, warnings)) {
-		return false;
-	}
+		if (!LoadCreatureFiles(manifest_files, error, warnings)) {
+			return false;
+		}
 
-	if (!LoadModularMaterials(materials_manifest, error, warnings)) {
-		return false;
+		if (!LoadModularMaterials(materials_manifest, error, warnings)) {
+			return false;
+		}
 	}
 
 	g_loading.SetLoadDone(70, "Finishing...");
@@ -198,11 +206,15 @@ bool VersionManager::LoadCanonicalAssets(const wxString& modular_data_path, cons
 	asset_request.client_version = getLoadedVersion();
 	asset_request.dat_path = getLoadedVersion()->getMetadataPath();
 	asset_request.spr_path = getLoadedVersion()->getSpritesPath();
-	asset_request.otb_path = wxFileName(modular_data_path + "items.otb");
+	if (asset_request.mode == ItemDefinitionMode::DatSrv) {
+		asset_request.srv_path = getLoadedVersion()->getObjectsPath();
+	} else {
+		asset_request.otb_path = wxFileName(modular_data_path + "items.otb");
+	}
 	asset_request.xml_paths.assign(manifest_files.items.begin(), manifest_files.items.end());
 
 	// Track whether this mode uses OTB
-	last_load_has_otb = (asset_request.mode != ItemDefinitionMode::DatOnly && asset_request.mode != ItemDefinitionMode::ProtobufOnly);
+	last_load_has_otb = (asset_request.mode != ItemDefinitionMode::DatOnly && asset_request.mode != ItemDefinitionMode::ProtobufOnly && asset_request.mode != ItemDefinitionMode::DatSrv);
 
 	AssetBundle bundle;
 	AssetBundleLoader bundle_loader;

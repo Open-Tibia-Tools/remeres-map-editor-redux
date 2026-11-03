@@ -1,10 +1,12 @@
 #ifndef RME_EDITOR_OPERATIONS_SEARCH_QUERY_H_
 #define RME_EDITOR_OPERATIONS_SEARCH_QUERY_H_
 
+#include "game/srv_item_attributes.h"
 #include "map/position.h"
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -48,7 +50,8 @@ enum class SearchResultKind : uint8_t {
 	Writeable,
 	Teleport,
 	Creature,
-	Pickupable
+	Pickupable,
+	ServerNumber // matched a ServerNumberFilter; the subtitle says how
 };
 
 struct SearchContainedItem {
@@ -83,6 +86,15 @@ struct SearchResultGroup {
 	std::vector<SearchResultChildEntry> children;
 };
 
+// Items whose server attribute (sector maps) is `value`, e.g. the quest
+// chests and quest doors of quest 64, and with `include_scripts` the
+// moveuse.dat rules that set or test that quest value.
+struct ServerNumberFilter {
+	std::vector<rme::srv::ItemAttribute> attributes;
+	int32_t value = 0;
+	bool include_scripts = false;
+};
+
 struct SearchQuery {
 	SearchCategory categories = SearchCategory::None;
 	bool on_selection = false;
@@ -91,6 +103,7 @@ struct SearchQuery {
 	std::unordered_set<uint16_t> item_id_set;
 	const Brush* specific_creature_brush = nullptr;
 	std::vector<const Brush*> creature_brushes;
+	std::optional<ServerNumberFilter> server_number;
 	std::string filter_text;
 	std::string query_title;
 	std::function<void(float, std::string_view)> progress_callback = nullptr;

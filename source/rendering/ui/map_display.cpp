@@ -263,6 +263,9 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 	if (options.show_creatures) {
 		drawer->DrawCreatureNames(vg);
 	}
+	if (!options.ingame && options.show_server_markers) {
+		drawer->DrawServerMarkers(vg);
+	}
 	if (!options.ingame && (options.show_waypoints || options.show_towns || options.show_houses || options.show_zones)) {
 		drawer->DrawMarkerLabels(vg);
 	}

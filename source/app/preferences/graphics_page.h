@@ -61,6 +61,9 @@ private:
 	wxColourPickerCtrl* zone_pvp_color_pick = nullptr;
 	wxSpinCtrl* zone_pvp_opacity_spin = nullptr;
 	wxChoice* zone_pvp_blend_choice = nullptr;
+	wxColourPickerCtrl* zone_refresh_color_pick = nullptr;
+	wxSpinCtrl* zone_refresh_opacity_spin = nullptr;
+	wxChoice* zone_refresh_blend_choice = nullptr;
 
 	wxColourPickerCtrl* zone_blocking_color_pick = nullptr;
 	wxSpinCtrl* zone_blocking_opacity_spin = nullptr;

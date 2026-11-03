@@ -104,6 +104,8 @@
 		<item name="Find Pickupable Items" action="SEARCH_ON_MAP_PICKUPABLE" help="Find all pickupable items on map."/>
 		<separator/>
 		<item name="Find Everything" action="SEARCH_ON_MAP_EVERYTHING" help="Find all items with unique ID, action ID, containers, writeables, or teleports on map."/>
+		<separator/>
+		<item name="Find Quest, Key or Level..." action="SEARCH_ON_MAP_SERVER_NUMBER" help="Find the quest chests, quest doors and scripts that use a quest number, the doors and keys with a key number, or the doors of a level (sector maps)."/>
 	</menu>
 	<menu name="Map">
 		<item name="Edit Towns..." hotkey="Ctrl+T" action="EDIT_TOWNS" help="Open towns palette."/>
@@ -187,6 +189,7 @@
 		<item name="Show pathing" hotkey="O" action="SHOW_PATHING" help="Show blocking tiles."/>
 		<item name="Show towns" hotkey="" action="SHOW_TOWNS" help="Show temple positions."/>
 		<item name="Show waypoints" hotkey="Shift+W" action="SHOW_WAYPOINTS" help="Show waypoints."/>
+		<item name="Show server markers" hotkey="" action="SHOW_SERVER_MARKERS" help="Mark the tiles that the server's scripts, depots, raids and start positions use (sector maps)."/>
 		<separator/>
 		<item name="Highlight Items" hotkey="V" action="HIGHLIGHT_ITEMS" help="Highlight tiles with items on them."/>
 		<item name="Highlight Locked Doors" hotkey="U" action="HIGHLIGHT_LOCKED_DOORS" help="Highlight doors that require key to open."/>

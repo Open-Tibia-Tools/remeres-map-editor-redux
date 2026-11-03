@@ -42,6 +42,7 @@
 #include "rendering/drawers/overlays/lua_overlay_drawer.h"
 #include "rendering/drawers/overlays/marker_drawer.h"
 #include "rendering/drawers/overlays/marker_label_drawer.h"
+#include "rendering/drawers/overlays/server_marker_drawer.h"
 #include "rendering/drawers/overlays/preview_drawer.h"
 #include "rendering/drawers/overlays/selection_drawer.h"
 #include "rendering/drawers/overlays/zone_overlay_drawer.h"
@@ -78,6 +79,7 @@ class MapDrawer {
 	ItemDrawer item_drawer;
 	MarkerDrawer marker_drawer;
 	rme::rendering::MarkerLabelDrawer marker_label_drawer;
+	rme::rendering::ServerMarkerDrawer server_marker_drawer;
 	PreviewDrawer preview_drawer;
 	ShadeDrawer shade_drawer;
 	TileRenderer tile_renderer;
@@ -106,6 +108,7 @@ public:
 	void ClearFrameOverlays();
 	void DrawCreatureNames(NVGcontext* vg);
 	void DrawMarkerLabels(NVGcontext* vg);
+	void DrawServerMarkers(NVGcontext* vg);
 	bool hasOverlays();
 
 	void DrawLight();
@@ -176,6 +179,7 @@ private:
 		bool show_tooltips = false;
 		bool show_hooks = false;
 		bool highlight_locked_doors = false;
+		bool show_server_markers = false;
 		uint64_t map_generation = 0;
 		bool valid = false;
 
@@ -186,6 +190,7 @@ private:
 			bool opt_tooltips,
 			bool opt_hooks,
 			bool opt_doors,
+			bool opt_server_markers,
 			uint64_t cur_gen
 		) const noexcept {
 			if (!valid) {
@@ -194,7 +199,7 @@ private:
 			if (floor != cur_floor || zoom != cur_zoom) {
 				return false;
 			}
-			if (show_tooltips != opt_tooltips || show_hooks != opt_hooks || highlight_locked_doors != opt_doors) {
+			if (show_tooltips != opt_tooltips || show_hooks != opt_hooks || highlight_locked_doors != opt_doors || show_server_markers != opt_server_markers) {
 				return false;
 			}
 			if (map_generation != cur_gen) {

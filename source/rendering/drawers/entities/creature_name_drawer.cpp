@@ -136,9 +136,11 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			.dynamic_text = {}
 		});
 
-		// Spawn time badge placed in bottom-right corner of creature tile
+		// Spawn time badge placed in bottom-right corner of creature tile; a sector map
+		// monster home also shows how many it keeps alive ("3x 600s")
 		if (label.creature && !label.creature->isNpc() && label.creature->getSpawnTime() > 0) {
-			std::string formatted = std::format("{}s", label.creature->getSpawnTime());
+			const int amount = label.creature->getAmount();
+			std::string formatted = amount > 1 ? std::format("{}x {}s", amount, label.creature->getSpawnTime()) : std::format("{}s", label.creature->getSpawnTime());
 			auto it_t = s_metrics_cache.find(formatted);
 			float tw = 0.0f;
 			float th = 0.0f;

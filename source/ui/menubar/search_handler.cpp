@@ -4,6 +4,7 @@
 #include "ui/gui.h"
 #include "ui/dialog_util.h"
 #include "ui/find_item_window.h"
+#include "ui/dialogs/server_number_search_dialog.h"
 #include "ui/result_window.h"
 #include "ui/map_window.h"
 #include "ui/map_tab.h"
@@ -146,6 +147,21 @@ void SearchHandler::OnSearchForCreatureOnMap(wxCommandEvent& WXUNUSED(event)) {
 
 void SearchHandler::OnSearchForPickupableOnMap(wxCommandEvent& WXUNUSED(event)) {
 	DispatchSearch(SearchCategory::Pickupable, false, "Find Pickupable (Map)");
+}
+
+void SearchHandler::OnSearchForServerNumberOnMap(wxCommandEvent& WXUNUSED(event)) {
+	if (!g_gui.IsEditorOpen()) {
+		return;
+	}
+
+	ServerNumberSearchDialog dialog(frame);
+	if (dialog.ShowModal() != wxID_OK) {
+		return;
+	}
+	SearchQuery query;
+	query.server_number = dialog.getFilter();
+	query.query_title = dialog.getTitle();
+	SearchResults::ExecuteAndShow(&g_gui.GetCurrentMap(), std::move(query));
 }
 
 // Selection searches

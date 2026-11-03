@@ -12,6 +12,22 @@
 #include "editor/editor.h"
 #include "editor/action.h"
 #include "editor/action_queue.h"
+#include "ui/properties/srv_attribute_fields.h"
+#include "game/spawn.h"
+#include "game/srv_homes.h"
+#include "app/settings.h"
+
+namespace {
+	// Amount only matters for sector map monster homes.
+	bool showsAmount(const Creature& creature) {
+		return !creature.isNpc() && (rme::srv::isSrvClient() || creature.getAmount() != 1);
+	}
+
+	// A sector map monster home: its spawn sits on the creature's tile.
+	bool showsHomeRadius(const Creature& creature, const Tile* tile) {
+		return tile && tile->spawn && !creature.isNpc() && rme::srv::isSrvClient();
+	}
+}
 
 CreaturePropertyPanel::CreaturePropertyPanel(wxWindow* parent) :
 	CustomPropertyPanel(parent), current_creature(nullptr), current_tile(nullptr), current_map(nullptr) {
@@ -25,6 +41,22 @@ CreaturePropertyPanel::CreaturePropertyPanel(wxWindow* parent) :
 	time_sizer->Add(spawntime_spin, wxSizerFlags(1).Expand().Border(wxALL, 5));
 	main_sizer->Add(time_sizer, wxSizerFlags().Expand().Border(wxALL, 5));
 
+	// Amount (sector map monster homes)
+	amount_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Amount");
+	amount_spin = new wxSpinCtrl(amount_sizer->GetStaticBox(), wxID_ANY);
+	amount_spin->SetRange(1, 1000);
+	amount_spin->SetToolTip("How many of this monster the server keeps alive within the spawn radius");
+	amount_sizer->Add(amount_spin, wxSizerFlags(1).Expand().Border(wxALL, 5));
+	main_sizer->Add(amount_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
+
+	// Radius (sector map monster homes): the spawn on the home tile
+	radius_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Radius");
+	radius_spin = new wxSpinCtrl(radius_sizer->GetStaticBox(), wxID_ANY);
+	radius_spin->SetRange(0, 65535);
+	radius_spin->SetToolTip("How far from its home the monster roams and respawns");
+	radius_sizer->Add(radius_spin, wxSizerFlags(1).Expand().Border(wxALL, 5));
+	main_sizer->Add(radius_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
+
 	// Direction
 	dir_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Direction");
 	direction_choice = new wxChoice(dir_sizer->GetStaticBox(), wxID_ANY);
@@ -37,6 +69,8 @@ CreaturePropertyPanel::CreaturePropertyPanel(wxWindow* parent) :
 	SetSizer(main_sizer);
 
 	spawntime_spin->Bind(wxEVT_SPINCTRL, &CreaturePropertyPanel::OnSpawnTimeChange, this);
+	amount_spin->Bind(wxEVT_SPINCTRL, &CreaturePropertyPanel::OnAmountChange, this);
+	radius_spin->Bind(wxEVT_SPINCTRL, &CreaturePropertyPanel::OnRadiusChange, this);
 	direction_choice->Bind(wxEVT_CHOICE, &CreaturePropertyPanel::OnDirectionChange, this);
 }
 
@@ -57,6 +91,13 @@ void CreaturePropertyPanel::SetCreature(Creature* creature, Tile* tile, Map* map
 		GetSizer()->Show(time_sizer, true);
 		GetSizer()->Show(dir_sizer, true);
 		spawntime_spin->SetValue(creature->getSpawnTime());
+		GetSizer()->Show(amount_sizer, showsAmount(*creature));
+		amount_spin->SetValue(creature->getAmount());
+		const bool shows_radius = showsHomeRadius(*creature, tile);
+		GetSizer()->Show(radius_sizer, shows_radius);
+		if (shows_radius) {
+			radius_spin->SetValue(rme::srv::homeRadius(*creature, tile->spawn->getSize(), g_settings.getInteger(Config::MAX_SPAWN_RADIUS)));
+		}
 
 		Direction dir = creature->getDirection();
 		for (size_t i = 0; i < direction_choice->GetCount(); ++i) {
@@ -67,6 +108,8 @@ void CreaturePropertyPanel::SetCreature(Creature* creature, Tile* tile, Map* map
 		}
 	} else {
 		GetSizer()->Show(time_sizer, false);
+		GetSizer()->Show(amount_sizer, false);
+		GetSizer()->Show(radius_sizer, false);
 		GetSizer()->Show(dir_sizer, false);
 	}
 	Layout();
@@ -87,6 +130,48 @@ void CreaturePropertyPanel::OnSpawnTimeChange(wxSpinEvent& event) {
 			std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
 			action->addChange(std::make_unique<Change>(std::move(new_tile)));
 			editor->addAction(std::move(action));
+		}
+	}
+}
+
+void CreaturePropertyPanel::OnAmountChange(wxSpinEvent& event) {
+	if (current_creature && current_tile && current_map) {
+		Editor* editor = g_gui.GetCurrentEditor();
+		if (!editor) {
+			return;
+		}
+
+		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, *current_map);
+		if (new_tile->creature) {
+			new_tile->creature->setAmount(amount_spin->GetValue());
+
+			std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
+			action->addChange(std::make_unique<Change>(std::move(new_tile)));
+			editor->addAction(std::move(action));
+			g_gui.RefreshView();
+		}
+	}
+}
+
+void CreaturePropertyPanel::OnRadiusChange(wxSpinEvent& event) {
+	if (current_creature && current_tile && current_map) {
+		Editor* editor = g_gui.GetCurrentEditor();
+		if (!editor) {
+			return;
+		}
+
+		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, *current_map);
+		if (new_tile->spawn) {
+			// The server's radius stays on the creature; the spawn shows it capped.
+			new_tile->spawn->setSize(rme::srv::spawnSizeFor(radius_spin->GetValue(), g_settings.getInteger(Config::MAX_SPAWN_RADIUS)));
+			if (new_tile->creature) {
+				new_tile->creature->setHomeRadius(radius_spin->GetValue());
+			}
+
+			std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
+			action->addChange(std::make_unique<Change>(std::move(new_tile)));
+			editor->addAction(std::move(action));
+			g_gui.RefreshView();
 		}
 	}
 }

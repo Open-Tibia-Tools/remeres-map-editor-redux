@@ -52,6 +52,9 @@ inline constexpr uint32_t ZONE_FLAG_HOUSE_GROUND    = 1u << 24; // Bit 24: House
 inline constexpr uint32_t ZONE_FLAG_INDICATOR_SHIFT = 25u;
 inline constexpr uint32_t ZONE_FLAG_INDICATOR_MASK  = 0xFu << ZONE_FLAG_INDICATOR_SHIFT;
 
+// Refresh tile stripes, layered over the special zone washes (Bit 29)
+inline constexpr uint32_t ZONE_FLAG_REFRESH         = 1u << 29; // Bit 29: Refresh tile (the server restores its items)
+
 [[nodiscard]] constexpr uint32_t MakeIndicatorZoneFlag(uint8_t indicator_type) noexcept {
 	return static_cast<uint32_t>(indicator_type) << ZONE_FLAG_INDICATOR_SHIFT;
 }

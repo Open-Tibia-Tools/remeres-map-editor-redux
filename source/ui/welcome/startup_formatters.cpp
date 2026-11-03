@@ -27,6 +27,9 @@ wxString formatMapClientVersion(const OTBMStartupPeekResult* info) {
 	if (!info || info->has_error) {
 		return "-";
 	}
+	if (info->is_sector_map) {
+		return "Server (objects.srv)";
+	}
 
 	ClientVersion* matched_client = ClientVersion::getByItemsVersion(info->items_major_version, info->items_minor_version);
 	if (!matched_client) {
@@ -93,6 +96,7 @@ wxColour StartupStatusColour(StartupCompatibilityStatus status) {
 		case StartupCompatibilityStatus::Forced:
 		case StartupCompatibilityStatus::ForceRequired:
 		case StartupCompatibilityStatus::MapError:
+		case StartupCompatibilityStatus::Incompatible:
 			return Theme::Get(Theme::Role::Warning);
 		case StartupCompatibilityStatus::MissingSelection:
 		default:

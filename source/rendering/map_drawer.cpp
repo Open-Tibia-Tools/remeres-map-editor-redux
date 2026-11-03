@@ -30,6 +30,7 @@
 #include "brushes/house/house_exit_brush.h"
 #include "brushes/zone/zone_brush.h"
 #include "game/sprites.h"
+#include "game/srv_markers.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
 #include "rendering/drawers/overlays/map_overlay_collector.h"
@@ -195,6 +196,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		options.zone_nopvp_color,
 		options.zone_nologout_color,
 		options.zone_pvp_color,
+		options.zone_refresh_color,
 		options.zone_blocking_color,
 		options.zone_spawn_color,
 		options.house_active_color,
@@ -338,7 +340,7 @@ void MapDrawer::CollectOverlays() {
 	const ViewBounds current_bounds = view.getBoundsForFloor(map_z);
 	const uint64_t current_generation = editor.map.getChangeTracker().getGeneration();
 
-	if (overlay_cache.isValid(map_z, view.zoom, current_bounds, need_tooltips, need_hooks, need_doors, current_generation)) {
+	if (overlay_cache.isValid(map_z, view.zoom, current_bounds, need_tooltips, need_hooks, need_doors, options.show_server_markers, current_generation)) {
 		return;
 	}
 
@@ -366,6 +368,7 @@ void MapDrawer::CollectOverlays() {
 	overlay_cache.show_tooltips = need_tooltips;
 	overlay_cache.show_hooks = need_hooks;
 	overlay_cache.highlight_locked_doors = need_doors;
+	overlay_cache.show_server_markers = options.show_server_markers;
 	overlay_cache.map_generation = current_generation;
 	overlay_cache.valid = true;
 }
@@ -392,6 +395,10 @@ void MapDrawer::DrawCreatureNames(NVGcontext* vg) {
 	}
 }
 
+void MapDrawer::DrawServerMarkers(NVGcontext* vg) {
+	server_marker_drawer.draw(vg, editor.map, view, options);
+}
+
 void MapDrawer::DrawMarkerLabels(NVGcontext* vg) {
 	if (!options.ingame && (options.show_waypoints || options.show_towns || options.show_houses || options.show_zones) && view.zoom <= 10.0f) {
 		marker_label_drawer.draw(vg, editor.map, view, options);
@@ -401,6 +408,9 @@ void MapDrawer::DrawMarkerLabels(NVGcontext* vg) {
 bool MapDrawer::hasOverlays() {
 	const bool can_read_labels = view.zoom <= 10.0f;
 	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
+		return true;
+	}
+	if (!options.ingame && can_read_labels && options.show_server_markers && editor.map.server_markers && !editor.map.server_markers->empty()) {
 		return true;
 	}
 	if (!options.ingame && can_read_labels &&

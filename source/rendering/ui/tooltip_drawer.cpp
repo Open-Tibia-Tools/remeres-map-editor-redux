@@ -25,7 +25,15 @@
 #include "rendering/core/coordinate_mapper.h"
 #include <wx/wx.h>
 #include "item_definitions/core/item_definition_store.h"
+#include "game/srv_markers.h"
+#include "rendering/drawers/overlays/server_marker_drawer.h"
+#include <algorithm>
+#include <iterator>
 
+namespace {
+	// Server markers can name dozens of rules; the tooltip lists the first ones.
+	constexpr size_t kMaxServerMarkerLines = 8;
+}
 
 TooltipDrawer::TooltipDrawer() {
 }
@@ -88,9 +96,20 @@ void TooltipDrawer::addWaypointTooltip(Position pos, std::string_view name) {
 	commitTooltip();
 }
 
-void TooltipDrawer::getHeaderColor(TooltipCategory cat, uint8_t& r, uint8_t& g, uint8_t& b) const {
+void TooltipDrawer::addServerMarkerTooltip(const rme::srv::Marker& marker) {
+	TooltipData& data = requestTooltipData();
+	data.pos = marker.position;
+	data.category = TooltipCategory::SERVER;
+	data.serverMarker = &marker;
+	commitTooltip();
+}
+
+void TooltipDrawer::getHeaderColor(const TooltipData& tooltip, uint8_t& r, uint8_t& g, uint8_t& b) const {
 	wxColour color;
-	switch (cat) {
+	switch (tooltip.category) {
+		case TooltipCategory::SERVER:
+			color = Theme::Get(rme::rendering::serverMarkerRole(tooltip.serverMarker ? tooltip.serverMarker->kind : rme::srv::MarkerKind::Script));
+			break;
 		case TooltipCategory::WAYPOINT:
 			color = Theme::Get(Theme::Role::TooltipBorderWaypoint);
 			break;
@@ -235,7 +254,20 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 		field.wrappedLines.clear();
 	};
 
-	if (tooltip.category == TooltipCategory::WAYPOINT) {
+	if (tooltip.category == TooltipCategory::SERVER && tooltip.serverMarker) {
+		// One field per line; the kind labels the first line of its group.
+		const auto& lines = tooltip.serverMarker->lines;
+		const size_t shown = std::min(lines.size(), kMaxServerMarkerLines);
+		for (size_t i = 0; i < shown; ++i) {
+			const bool first_of_kind = i == 0 || lines[i - 1].kind != lines[i].kind;
+			addField(first_of_kind ? rme::srv::markerKindLabel(lines[i].kind) : std::string_view {}, lines[i].text, Theme::Role::TooltipBodyText);
+		}
+		if (lines.size() > shown) {
+			const size_t start = storage.size();
+			std::format_to(std::back_inserter(storage), "... and {} more", lines.size() - shown);
+			addField({}, std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipLabel);
+		}
+	} else if (tooltip.category == TooltipCategory::WAYPOINT) {
 		addField("Waypoint", tooltip.waypointName, Theme::Role::TooltipWaypoint);
 	} else {
 
@@ -253,6 +285,13 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 			size_t start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}", tooltip.doorId);
 			addField("Door ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipDoorId);
+		}
+		for (size_t i = 0; i < tooltip.srvAttributes.size(); ++i) {
+			if (tooltip.srvAttributes[i] != 0) {
+				size_t start = storage.size();
+				std::format_to(std::back_inserter(storage), "{}", tooltip.srvAttributes[i]);
+				addField(rme::srv::kItemAttributes[i].label, std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipActionId);
+			}
 		}
 		if (tooltip.destination.x > 0) {
 			size_t start = storage.size();
@@ -417,7 +456,7 @@ void TooltipDrawer::drawBackground(NVGcontext* vg, float x, float y, float width
 
 	// Get border color based on category
 	uint8_t borderR, borderG, borderB;
-	getHeaderColor(tooltip.category, borderR, borderG, borderB);
+	getHeaderColor(tooltip, borderR, borderG, borderB);
 
 	// Main background and full colored border - single path fill & stroke
 	wxColour bgCol = Theme::Get(Theme::Role::TooltipBg);

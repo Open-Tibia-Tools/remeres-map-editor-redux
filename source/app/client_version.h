@@ -454,6 +454,14 @@ public:
 	wxFileName getSpritesPath() const {
 		return sprites_path;
 	}
+	// objects.srv of the original server (DatSrv mode). Set when a sector map is
+	// opened and kept in config.toml, so maps saved from it reopen later.
+	wxFileName getObjectsPath() const {
+		return objects_path;
+	}
+	void setObjectsPath(const wxFileName& path) {
+		objects_path = path;
+	}
 
 private:
 	bool is_dirty = false;
@@ -500,6 +508,7 @@ private:
 	FileName client_path;
 	wxFileName metadata_path;
 	wxFileName sprites_path;
+	wxFileName objects_path;
 	std::string description;
 	ItemDefinitionMode item_definition_mode = ItemDefinitionMode::DatOtb;
 

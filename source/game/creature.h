@@ -18,6 +18,8 @@
 #ifndef RME_CREATURE_H_
 #define RME_CREATURE_H_
 
+#include <algorithm>
+#include <optional>
 #include "game/creatures.h"
 #include <list>
 #include <vector>
@@ -82,6 +84,26 @@ public:
 		this->spawntime = spawntime;
 	}
 
+	// Sector map monster homes keep this many of the creature alive in the
+	// spawn radius; 1 for maps with one creature per spawn tile.
+	int getAmount() const {
+		return amount;
+	}
+	void setAmount(int amount) {
+		this->amount = std::max(1, amount);
+	}
+
+	// The radius of a sector map monster or NPC home as the server has it (0 and
+	// values above the editor's spawn radius limit included); the spawn on
+	// the tile shows it, capped. Unset for creatures that did not come from
+	// a sector map.
+	std::optional<int> getHomeRadius() const {
+		return home_radius;
+	}
+	void setHomeRadius(std::optional<int> radius) {
+		home_radius = radius;
+	}
+
 	Direction getDirection() const {
 		return direction;
 	}
@@ -114,6 +136,8 @@ protected:
 	std::string type_name;
 	Direction direction;
 	int spawntime;
+	int amount = 1;
+	std::optional<int> home_radius;
 	uint32_t weight = 0; // 0 when the spawn file has no weight attribute
 	std::vector<SpawnAlternative> alternatives;
 	bool npc_spawn = false;
