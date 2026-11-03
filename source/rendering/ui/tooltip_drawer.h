@@ -202,6 +202,9 @@ protected:
 	struct FieldLine {
 		std::string_view label;
 		std::string_view value;
+		size_t valOffset = 0;
+		size_t valLength = 0;
+		bool fromStorage = false;
 		uint8_t r = 255;
 		uint8_t g = 255;
 		uint8_t b = 255;

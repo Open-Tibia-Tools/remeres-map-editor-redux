@@ -198,7 +198,6 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 	}
 	const size_t titleLen = storage.size() - titleStart;
 	storage.push_back('\0'); // Null terminator for NanoVG C-string APIs
-	scratch_title = std::string_view(storage.data() + titleStart, titleLen);
 
 	// 2. Format Subtitle
 	const size_t subStart = storage.size();
@@ -211,7 +210,6 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 	}
 	const size_t subLen = storage.size() - subStart;
 	storage.push_back('\0');
-	scratch_subtitle = (subLen > 0) ? std::string_view(storage.data() + subStart, subLen) : std::string_view{};
 
 	if (!tooltip.text.empty()) {
 		sanitized_text.reserve(tooltip.text.size());
@@ -229,13 +227,30 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 		}
 	}
 
-	auto addField = [&](std::string_view label, std::string_view value, Theme::Role colorRole) {
+	auto addStorageField = [&](std::string_view label, size_t start, Theme::Role colorRole) {
+		if (scratch_fields_count >= scratch_fields.size()) {
+			scratch_fields.emplace_back();
+		}
+		FieldLine& field = scratch_fields[scratch_fields_count++];
+		field.label = label;
+		field.valOffset = start;
+		field.valLength = storage.size() - start;
+		field.fromStorage = true;
+		wxColour c = Theme::Get(colorRole);
+		field.r = c.Red();
+		field.g = c.Green();
+		field.b = c.Blue();
+		field.wrappedLines.clear();
+	};
+
+	auto addDirectField = [&](std::string_view label, std::string_view value, Theme::Role colorRole) {
 		if (scratch_fields_count >= scratch_fields.size()) {
 			scratch_fields.emplace_back();
 		}
 		FieldLine& field = scratch_fields[scratch_fields_count++];
 		field.label = label;
 		field.value = value;
+		field.fromStorage = false;
 		wxColour c = Theme::Get(colorRole);
 		field.r = c.Red();
 		field.g = c.Green();
@@ -246,88 +261,88 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 	if (tooltip.category == TooltipCategory::HOUSE) {
 		size_t start = storage.size();
 		std::format_to(std::back_inserter(storage), "{}", tooltip.houseId);
-		addField("House ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipUniqueId);
+		addStorageField("House ID", start, Theme::Role::TooltipUniqueId);
 
 		if (tooltip.doorId > 0) {
 			start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}", tooltip.doorId);
-			addField("Door ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipDoorId);
+			addStorageField("Door ID", start, Theme::Role::TooltipDoorId);
 		}
 
 		if (tooltip.actionId > 0) {
 			start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}", tooltip.actionId);
-			addField("Action ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipActionId);
+			addStorageField("Action ID", start, Theme::Role::TooltipActionId);
 		}
 
 		if (tooltip.uniqueId > 0) {
 			start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}", tooltip.uniqueId);
-			addField("Unique ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipUniqueId);
+			addStorageField("Unique ID", start, Theme::Role::TooltipUniqueId);
 		}
 
 		start = storage.size();
 		std::format_to(std::back_inserter(storage), "{} sqm", tooltip.houseSize);
-		addField("Tile Count", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipDoorId);
+		addStorageField("Tile Count", start, Theme::Role::TooltipDoorId);
 
 		if (tooltip.houseRent > 0) {
 			start = storage.size();
 			AppendNumberWithCommas(tooltip.houseRent, storage);
 			storage.append(" gp");
-			addField("Rent", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTextValue);
+			addStorageField("Rent", start, Theme::Role::TooltipTextValue);
 		}
 
 		if (tooltip.destination.x > 0) {
 			start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}, {}, {}", tooltip.destination.x, tooltip.destination.y, tooltip.destination.z);
-			addField("Destination", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTeleport);
+			addStorageField("Destination", start, Theme::Role::TooltipTeleport);
 		}
 
 		if (!tooltip.description.empty()) {
-			addField("Description", tooltip.description, Theme::Role::TooltipBodyText);
+			addDirectField("Description", tooltip.description, Theme::Role::TooltipBodyText);
 		}
 	} else if (tooltip.category == TooltipCategory::ZONE) {
 		size_t start = storage.size();
 		std::format_to(std::back_inserter(storage), "Area #{}", tooltip.zoneAreaIndex + 1);
-		addField("Area", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTextValue);
+		addStorageField("Area", start, Theme::Role::TooltipTextValue);
 
 		start = storage.size();
 		std::format_to(std::back_inserter(storage), "{} sqm", tooltip.zoneAreaTileCount);
-		addField("Tile Count", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTextValue);
+		addStorageField("Tile Count", start, Theme::Role::TooltipTextValue);
 
 		if (tooltip.zoneAreaCount > 1) {
 			start = storage.size();
 			std::format_to(std::back_inserter(storage), "{} sqm ({} areas)", tooltip.zoneTileCount, tooltip.zoneAreaCount);
-			addField("Total", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTextValue);
+			addStorageField("Total", start, Theme::Role::TooltipTextValue);
 		}
 
 		if (!tooltip.zoneFlags.empty()) {
-			addField("Flags", tooltip.zoneFlags, Theme::Role::TooltipTextValue);
+			addDirectField("Flags", tooltip.zoneFlags, Theme::Role::TooltipTextValue);
 		}
 	} else if (tooltip.category == TooltipCategory::WAYPOINT) {
 		size_t start = storage.size();
 		std::format_to(std::back_inserter(storage), "{}, {}, {}", tooltip.pos.x, tooltip.pos.y, tooltip.pos.z);
-		addField("Position", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTextValue);
+		addStorageField("Position", start, Theme::Role::TooltipTextValue);
 	} else {
 		if (tooltip.houseId > 0) {
 			size_t start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}", tooltip.houseId);
-			addField("House ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipUniqueId);
+			addStorageField("House ID", start, Theme::Role::TooltipUniqueId);
 		}
 		if (tooltip.actionId > 0) {
 			size_t start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}", tooltip.actionId);
-			addField("Action ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipActionId);
+			addStorageField("Action ID", start, Theme::Role::TooltipActionId);
 		}
 		if (tooltip.uniqueId > 0) {
 			size_t start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}", tooltip.uniqueId);
-			addField("Unique ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipUniqueId);
+			addStorageField("Unique ID", start, Theme::Role::TooltipUniqueId);
 		}
 		if (tooltip.doorId > 0) {
 			size_t start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}", tooltip.doorId);
-			addField("Door ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipDoorId);
+			addStorageField("Door ID", start, Theme::Role::TooltipDoorId);
 		}
 		if (tooltip.depotId > 0) {
 			size_t start = storage.size();
@@ -336,26 +351,36 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 			} else {
 				std::format_to(std::back_inserter(storage), "{}", tooltip.depotId);
 			}
-			addField("Depot ID", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipDepotId);
+			addStorageField("Depot ID", start, Theme::Role::TooltipDepotId);
 		}
 		if (tooltip.houseSize > 0) {
 			size_t start = storage.size();
 			std::format_to(std::back_inserter(storage), "{} sqm", tooltip.houseSize);
-			addField("Tile Count", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipDoorId);
+			addStorageField("Tile Count", start, Theme::Role::TooltipDoorId);
 		}
 		if (tooltip.houseRent > 0) {
 			size_t start = storage.size();
 			AppendNumberWithCommas(tooltip.houseRent, storage);
 			storage.append(" gp");
-			addField("Rent", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTextValue);
+			addStorageField("Rent", start, Theme::Role::TooltipTextValue);
 		}
 		if (tooltip.destination.x > 0) {
 			size_t start = storage.size();
 			std::format_to(std::back_inserter(storage), "{}, {}, {}", tooltip.destination.x, tooltip.destination.y, tooltip.destination.z);
-			addField("Destination", std::string_view(storage.data() + start, storage.size() - start), Theme::Role::TooltipTeleport);
+			addStorageField("Destination", start, Theme::Role::TooltipTeleport);
 		}
 		if (!tooltip.description.empty()) {
-			addField("Description", tooltip.description, Theme::Role::TooltipBodyText);
+			addDirectField("Description", tooltip.description, Theme::Role::TooltipBodyText);
+		}
+	}
+
+	// 3. Materialize all views pointing into storage after all appends have completed
+	scratch_title = std::string_view(storage.data() + titleStart, titleLen);
+	scratch_subtitle = (subLen > 0) ? std::string_view(storage.data() + subStart, subLen) : std::string_view{};
+	for (size_t i = 0; i < scratch_fields_count; ++i) {
+		auto& field = scratch_fields[i];
+		if (field.fromStorage) {
+			field.value = std::string_view(storage.data() + field.valOffset, field.valLength);
 		}
 	}
 }
@@ -432,16 +457,34 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 			}
 		} else {
 			NVGtextRow rows[16];
-			int nRows = nvgTextBreakLines(vg, start, end, maxValueWidth, rows, 16);
-			for (int j = 0; j < nRows; j++) {
-				field.wrappedLines.push_back(std::string_view(rows[j].start, rows[j].end - rows[j].start));
-				totalFieldLines++;
-				float lineWidth = lm.valueStartX + rows[j].width + padding * 2.0f;
-				if (lineWidth > actualFieldsMaxWidth) {
-					actualFieldsMaxWidth = lineWidth;
+			constexpr size_t kMaxFieldLines = 8;
+			const char* cur = start;
+			bool fieldTruncated = false;
+
+			while (cur < end && !fieldTruncated) {
+				int nRows = nvgTextBreakLines(vg, cur, end, maxValueWidth, rows, 16);
+				if (nRows == 0) {
+					break;
+				}
+				for (int j = 0; j < nRows; ++j) {
+					if (field.wrappedLines.size() >= kMaxFieldLines) {
+						fieldTruncated = true;
+						break;
+					}
+					field.wrappedLines.push_back(std::string_view(rows[j].start, rows[j].end - rows[j].start));
+					totalFieldLines++;
+					float lineWidth = lm.valueStartX + rows[j].width + padding * 2.0f;
+					if (lineWidth > actualFieldsMaxWidth) {
+						actualFieldsMaxWidth = lineWidth;
+					}
+					cur = rows[j].next;
 				}
 			}
-			if (nRows == 0) {
+
+			if (fieldTruncated) {
+				field.wrappedLines.push_back(std::string_view("[...]"));
+				totalFieldLines++;
+			} else if (field.wrappedLines.empty()) {
 				field.wrappedLines.push_back(field.value);
 				totalFieldLines++;
 			}
