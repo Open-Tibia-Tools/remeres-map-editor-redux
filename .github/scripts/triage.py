@@ -8,7 +8,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 
@@ -56,15 +56,8 @@ LABEL_HINTS: Dict[str, str] = {
     "Area: UI": "wxWidgets GUI, dialogs, palettes, menus, buttons, toolbars, windows, controls, theme, layout, canvas, view, icons, preferences",
 }
 
-
-def get_cache_dir() -> Path:
-    cache_env = os.environ.get("CACHE_DIR")
-    if cache_env:
-        path = Path(cache_env)
-    else:
-        path = Path.home() / ".cache" / "models"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+# Labels that should never be automatically applied by triage
+NON_TRIAGE_LABELS = {"Good First Issue", "Stale"}
 
 
 def fetch_repository_labels(repo) -> Dict[str, str]:
@@ -110,14 +103,8 @@ def build_target_text(title: str, body: str, is_pr: bool, changed_files: List[st
     return f"task: classification | text: {content}"
 
 
-class EmbeddingBackend:
-    """Abstract wrapper for embedding model backends."""
-    def embed(self, texts: List[str]) -> np.ndarray:
-        raise NotImplementedError
-
-
-class TransformersBackend(EmbeddingBackend):
-    """Native Transformers backend using PyTorch CPU (recommended for EmbeddingGemma 2)."""
+class TransformersBackend:
+    """Native Transformers backend using PyTorch CPU for EmbeddingGemma 2."""
     def __init__(self, model_name: str = "google/embeddinggemma-2"):
         import torch
         from transformers import AutoModel, AutoTokenizer
@@ -142,58 +129,14 @@ class TransformersBackend(EmbeddingBackend):
             return normalized.cpu().numpy()
 
 
-class LlamaCppBackend(EmbeddingBackend):
-    """GGUF backend using llama-cpp-python."""
-    def __init__(self, model_path: str):
-        import llama_cpp
-        from llama_cpp import Llama
-
-        cpu_threads = os.cpu_count() or 4
-        pooling_type = getattr(llama_cpp, "LLAMA_POOLING_TYPE_MEAN", 1)
-        print(f"Initializing Llama model from {model_path} with {cpu_threads} CPU threads...")
-        self.llm = Llama(
-            model_path=model_path,
-            embedding=True,
-            pooling_type=pooling_type,
-            n_ctx=4096,
-            n_threads=cpu_threads,
-            verbose=False,
-        )
-
-    def embed(self, texts: List[str]) -> np.ndarray:
-        results = []
-        for text in texts:
-            clean = text.strip() or "Empty"
-            res = self.llm.create_embedding(clean)
-            vec = np.array(res["data"][0]["embedding"], dtype=np.float32)
-            norm = np.linalg.norm(vec)
-            results.append(vec / norm if norm > 0 else vec)
-        return np.array(results)
-
-
-def get_embedding_model() -> EmbeddingBackend:
+def get_embedding_model() -> TransformersBackend:
     """
-    Returns the appropriate embedding backend (Transformers or LlamaCpp).
-    Prefers Transformers for robust embeddinggemma-2 support.
+    Returns the initialized Transformers embedding backend.
     """
-    try:
-        return TransformersBackend("google/embeddinggemma-2")
-    except Exception as e:
-        print(f"Transformers backend unavailable ({e}). Trying GGUF / Llama-cpp fallback...")
-
-    # GGUF Fallback
-    from huggingface_hub import hf_hub_download
-    cache_dir = get_cache_dir()
-    model_filename = "embeddinggemma-2-Q8_0.gguf"
-    model_file = cache_dir / model_filename
-    if not (model_file.is_file() and model_file.stat().st_size > 100_000_000):
-        print(f"Downloading {model_filename} from unsloth/embeddinggemma-2-GGUF...")
-        hf_hub_download(repo_id="unsloth/embeddinggemma-2-GGUF", filename=model_filename, local_dir=str(cache_dir))
-
-    return LlamaCppBackend(str(model_file))
+    return TransformersBackend("google/embeddinggemma-2")
 
 
-def compute_embeddings(backend: EmbeddingBackend, texts: List[str]) -> np.ndarray:
+def compute_embeddings(backend: TransformersBackend, texts: List[str]) -> np.ndarray:
     return backend.embed(texts)
 
 
@@ -258,7 +201,6 @@ def run_inference(
     title: str,
     body: str,
     is_pr: bool,
-    number: int,
     changed_files: List[str],
     available_labels: Dict[str, str],
 ) -> Tuple[List[str], str]:
@@ -273,10 +215,10 @@ def run_inference(
     print("Computing target embedding...")
     target_vec = compute_embeddings(backend, [target_prompt])[0]
 
-    # 2. Compute similarity against all candidate labels
+    # 2. Compute similarity against candidate labels (excluding manual/status labels)
     candidate_names = [
         name for name in available_labels.keys()
-        if not (name.startswith("Status:") or name.startswith("Priority:") or name == "Stale")
+        if not (name.startswith("Status:") or name.startswith("Priority:") or name in NON_TRIAGE_LABELS)
     ]
     label_anchors = [build_label_anchor(name, available_labels.get(name, "")) for name in candidate_names]
 
@@ -413,7 +355,6 @@ def main():
         title=title,
         body=body,
         is_pr=is_pr,
-        number=number,
         changed_files=changed_files,
         available_labels=repo_labels,
     )

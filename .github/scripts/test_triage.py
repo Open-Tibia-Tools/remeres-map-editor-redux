@@ -6,7 +6,7 @@ Evaluates zero-shot semantic embedding classification against real-world RME sce
 
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 # Add parent directory to path to import triage module
 scripts_dir = Path(__file__).resolve().parent
@@ -14,6 +14,7 @@ sys.path.insert(0, str(scripts_dir))
 
 from triage import (
     DEFAULT_LABELS,
+    NON_TRIAGE_LABELS,
     build_label_anchor,
     build_target_text,
     get_embedding_model,
@@ -75,7 +76,7 @@ TEST_SCENARIOS = [
         "is_pr": True,
         "changed_files": ["README.md", "AGENTS.md"],
         "expected_type": "Type: Documentation",
-        "expected_area": None,  # Area may be empty or Documentation
+        "expected_area": None,  # Documentation scenario should not select unrelated areas like Rendering/Brushes
     },
 ]
 
@@ -88,10 +89,10 @@ def run_tests():
     # 1. Initialize embedding backend
     backend = get_embedding_model()
 
-    # 2. Precompute label embeddings
+    # 2. Precompute label embeddings (excluding status, priority, and non-triage labels)
     candidate_labels = [
         k for k in DEFAULT_LABELS.keys()
-        if not (k.startswith("Status:") or k.startswith("Priority:") or k == "Stale")
+        if not (k.startswith("Status:") or k.startswith("Priority:") or k in NON_TRIAGE_LABELS)
     ]
     label_anchors = [build_label_anchor(k, DEFAULT_LABELS.get(k, "")) for k in candidate_labels]
     print(f"Precomputing embeddings for {len(candidate_labels)} candidate labels...")
@@ -117,7 +118,7 @@ def run_tests():
         for idx, lbl_name in enumerate(candidate_labels):
             scores[lbl_name] = float(target_vec @ label_vecs[idx])
 
-        selected, summary_log = select_labels_from_scores(scores)
+        selected, _ = select_labels_from_scores(scores)
         print(f"  Selected Labels: {selected}")
 
         # Check expectations
@@ -125,7 +126,13 @@ def run_tests():
         expected_area = test["expected_area"]
 
         type_match = expected_type is None or expected_type in selected
-        area_match = expected_area is None or expected_area in selected
+
+        if expected_area is None:
+            # For docs, if any area is selected, it must be related (e.g. Build), never unrelated like Rendering or Brushes
+            selected_areas = [lbl for lbl in selected if lbl.startswith("Area:")]
+            area_match = len(selected_areas) == 0 or all(a in ("Area: Build", "Area: Data") for a in selected_areas)
+        else:
+            area_match = expected_area in selected
 
         if type_match and area_match:
             print("  Result: PASSED")
