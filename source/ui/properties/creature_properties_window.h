@@ -10,7 +10,8 @@
 
 class CreaturePropertiesWindow : public ObjectPropertiesWindowBase {
 public:
-	CreaturePropertiesWindow(wxWindow* parent, const Map* map, const Tile* tile, Creature* creature, wxPoint pos = wxDefaultPosition);
+	// `tile` is the copy the dialog edits; a monster home's radius can give it a spawn.
+	CreaturePropertiesWindow(wxWindow* parent, const Map* map, Tile* tile, Creature* creature, wxPoint pos = wxDefaultPosition);
 	virtual ~CreaturePropertiesWindow();
 
 	void OnClickOK(wxCommandEvent&);
@@ -20,7 +21,9 @@ protected:
 	wxSpinCtrl* count_field;
 	wxSpinCtrl* amount_field = nullptr; // sector map monster homes only
 	wxSpinCtrl* radius_field = nullptr; // sector map monster homes only
+	int initial_radius = 0;
 	wxChoice* direction_field;
+	Tile* home_tile;
 };
 
 #endif

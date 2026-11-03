@@ -23,9 +23,9 @@ namespace {
 		return !creature.isNpc() && (rme::srv::isSrvClient() || creature.getAmount() != 1);
 	}
 
-	// A sector map monster home: its spawn sits on the creature's tile.
+	// On a sector map every monster is a monster home with its own radius.
 	bool showsHomeRadius(const Creature& creature, const Tile* tile) {
-		return tile && tile->spawn && !creature.isNpc() && rme::srv::isSrvClient();
+		return tile && !creature.isNpc() && rme::srv::isSrvClient();
 	}
 }
 
@@ -95,8 +95,8 @@ void CreaturePropertyPanel::SetCreature(Creature* creature, Tile* tile, Map* map
 		amount_spin->SetValue(creature->getAmount());
 		const bool shows_radius = showsHomeRadius(*creature, tile);
 		GetSizer()->Show(radius_sizer, shows_radius);
-		if (shows_radius) {
-			radius_spin->SetValue(rme::srv::homeRadius(*creature, tile->spawn->getSize(), g_settings.getInteger(Config::MAX_SPAWN_RADIUS)));
+		if (shows_radius && map) {
+			radius_spin->SetValue(rme::srv::homeRadius(*creature, rme::srv::homeSpawnSize(*map, tile->getPosition()), g_settings.getInteger(Config::MAX_SPAWN_RADIUS)));
 		}
 
 		Direction dir = creature->getDirection();
@@ -161,12 +161,17 @@ void CreaturePropertyPanel::OnRadiusChange(wxSpinEvent& event) {
 		}
 
 		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, *current_map);
-		if (new_tile->spawn) {
-			// The server's radius stays on the creature; the spawn shows it capped.
-			new_tile->spawn->setSize(rme::srv::spawnSizeFor(radius_spin->GetValue(), g_settings.getInteger(Config::MAX_SPAWN_RADIUS)));
-			if (new_tile->creature) {
-				new_tile->creature->setHomeRadius(radius_spin->GetValue());
+		if (new_tile->creature) {
+			// The server's radius stays on the creature; the spawn on its tile
+			// shows it capped. A monster placed inside another spawn's area
+			// gets its own spawn here.
+			const int size = rme::srv::spawnSizeFor(radius_spin->GetValue(), g_settings.getInteger(Config::MAX_SPAWN_RADIUS));
+			if (new_tile->spawn) {
+				new_tile->spawn->setSize(size);
+			} else {
+				new_tile->spawn = std::make_unique<Spawn>(size);
 			}
+			new_tile->creature->setHomeRadius(radius_spin->GetValue());
 
 			std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
 			action->addChange(std::make_unique<Change>(std::move(new_tile)));

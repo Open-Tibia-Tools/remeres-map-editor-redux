@@ -44,15 +44,6 @@ namespace rme::sec::monster_files {
 			return nameMonsterRaces(std::move(races));
 		}
 
-		// The spawn size a creature's home radius is read from: the spawn on its
-		// tile, else the first spawn covering it.
-		int spawnSizeAt(Map& map, Tile& tile) {
-			if (tile.spawn) {
-				return tile.spawn->getSize();
-			}
-			const SpawnList spawns = map.getSpawnList(&tile);
-			return spawns.empty() ? 1 : spawns.front()->getSize();
-		}
 
 
 	} // namespace
@@ -129,7 +120,7 @@ namespace rme::sec::monster_files {
 			homes.push_back(MonsterHome {
 				.race = race->second,
 				.position = AbsolutePosition { .x = tile->getPosition().x, .y = tile->getPosition().y, .z = tile->getPosition().z },
-				.radius = rme::srv::homeRadius(creature, spawnSizeAt(map, *tile), max_radius),
+				.radius = rme::srv::homeRadius(creature, rme::srv::homeSpawnSize(map, tile->getPosition()), max_radius),
 				.amount = creature.getAmount(),
 				.regen = creature.getSpawnTime(),
 			});

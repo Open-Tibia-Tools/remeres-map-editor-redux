@@ -567,6 +567,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ext/pugixml.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/complexitem.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/creature.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/game/srv_homes.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/srv_markers.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/creatures.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/house.cpp

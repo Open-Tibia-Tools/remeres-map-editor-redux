@@ -13,6 +13,9 @@
 
 #include <algorithm>
 
+class Map;
+class Position;
+
 namespace rme::srv {
 
 	// The spawn size that shows a home radius.
@@ -29,6 +32,11 @@ namespace rme::srv {
 		}
 		return spawn_size;
 	}
+
+	// The spawn size a monster's home radius is read from: the spawn on its
+	// tile, else the nearest spawn covering the tile (a monster placed inside
+	// another spawn's area), else 1.
+	[[nodiscard]] int homeSpawnSize(const Map& map, const Position& position);
 
 } // namespace rme::srv
 

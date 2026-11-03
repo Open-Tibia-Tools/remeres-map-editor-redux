@@ -14,10 +14,11 @@
 #include "ui/gui.h"
 #include "util/image_manager.h"
 
-CreaturePropertiesWindow::CreaturePropertiesWindow(wxWindow* win_parent, const Map* map, const Tile* tile_parent, Creature* creature, wxPoint pos) :
+CreaturePropertiesWindow::CreaturePropertiesWindow(wxWindow* win_parent, const Map* map, Tile* tile_parent, Creature* creature, wxPoint pos) :
 	ObjectPropertiesWindowBase(win_parent, "Creature Properties", map, tile_parent, creature, pos),
 	count_field(nullptr),
-	direction_field(nullptr) {
+	direction_field(nullptr),
+	home_tile(tile_parent) {
 	ASSERT(edit_creature);
 
 	Bind(wxEVT_BUTTON, &CreaturePropertiesWindow::OnClickOK, this, wxID_OK);
@@ -45,10 +46,11 @@ CreaturePropertiesWindow::CreaturePropertiesWindow(wxWindow* win_parent, const M
 		subsizer->Add(amount_field, wxSizerFlags(1).Expand());
 	}
 
-	// A sector map monster home: its spawn sits on the creature's tile.
-	if (edit_tile && edit_tile->spawn && !edit_creature->isNpc() && rme::srv::isSrvClient()) {
+	// On a sector map every monster is a monster home with its own radius.
+	if (edit_tile && edit_map && !edit_creature->isNpc() && rme::srv::isSrvClient()) {
 		subsizer->Add(new wxStaticText(static_box, wxID_ANY, "Radius"));
-		const int radius = rme::srv::homeRadius(*edit_creature, edit_tile->spawn->getSize(), g_settings.getInteger(Config::MAX_SPAWN_RADIUS));
+		const int radius = rme::srv::homeRadius(*edit_creature, rme::srv::homeSpawnSize(*edit_map, edit_tile->getPosition()), g_settings.getInteger(Config::MAX_SPAWN_RADIUS));
+		initial_radius = radius;
 		radius_field = new wxSpinCtrl(static_box, wxID_ANY, std::to_string(radius), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 65535, radius);
 		radius_field->SetToolTip("How far from its home the monster roams and respawns");
 		subsizer->Add(radius_field, wxSizerFlags(1).Expand());
@@ -97,9 +99,16 @@ void CreaturePropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	if (amount_field) {
 		edit_creature->setAmount(amount_field->GetValue());
 	}
-	if (radius_field && edit_tile->spawn) {
-		// The server's radius stays on the creature; the spawn shows it capped.
-		edit_tile->spawn->setSize(rme::srv::spawnSizeFor(radius_field->GetValue(), g_settings.getInteger(Config::MAX_SPAWN_RADIUS)));
+	if (radius_field && radius_field->GetValue() != initial_radius) {
+		// The server's radius stays on the creature; the spawn on its tile shows
+		// it capped. A monster placed inside another spawn's area gets its own
+		// spawn here; one whose radius was left alone keeps sharing.
+		const int size = rme::srv::spawnSizeFor(radius_field->GetValue(), g_settings.getInteger(Config::MAX_SPAWN_RADIUS));
+		if (home_tile->spawn) {
+			home_tile->spawn->setSize(size);
+		} else {
+			home_tile->spawn = std::make_unique<Spawn>(size);
+		}
 		edit_creature->setHomeRadius(radius_field->GetValue());
 	}
 
