@@ -106,6 +106,7 @@ void MinimapRenderer::renderVisible(const glm::mat4& projection, int x, int y, i
 	glBindTextureUnit(1, palette_texture_id_->GetID());
 	glBindVertexArray(vao_->GetID());
 
+	GLuint last_bound_texture = 0;
 	for (const auto& page : pages) {
 		const float page_origin_x = static_cast<float>(page.page_x * MinimapCache::PageSize - visible_rect.x);
 		const float page_origin_y = static_cast<float>(page.page_y * MinimapCache::PageSize - visible_rect.y);
@@ -115,7 +116,10 @@ void MinimapRenderer::renderVisible(const glm::mat4& projection, int x, int y, i
 			MinimapCache::PageSize * scale_x,
 			MinimapCache::PageSize * scale_y);
 
-		glBindTextureUnit(0, page.texture_id);
+		if (page.texture_id != last_bound_texture) {
+			glBindTextureUnit(0, page.texture_id);
+			last_bound_texture = page.texture_id;
+		}
 		shader_->SetVec4("uDestRect", dest_rect);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 	}
