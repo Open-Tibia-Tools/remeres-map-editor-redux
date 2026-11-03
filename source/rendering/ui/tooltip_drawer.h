@@ -52,6 +52,7 @@ enum class TooltipCategory {
 	TELEPORT,  // Purple - teleporter
 	TEXT,      // Gold - readable text (signs, books)
 	WAYPOINT,  // Vivid Blue - landmark
+	TOWN,      // Town temple
 	HOUSE,     // Emerald Green / Orange - house / guildhall
 	ZONE,      // Dynamic Zone RGB - zone area
 	SERVER     // Server marker of a sector map (scripts, depots, raids, start positions)
@@ -86,6 +87,9 @@ struct TooltipData {
 
 	// Waypoint-specific
 	std::string waypointName;
+
+	// Town-specific
+	uint32_t townId = 0;
 
 	// House-specific
 	uint32_t houseId = 0;
@@ -180,6 +184,7 @@ struct TooltipData {
 		destination = Position();
 		srvAttributes = {};
 		waypointName.clear();
+		townId = 0;
 
 		houseId = 0;
 		houseRent = 0;

@@ -143,6 +143,7 @@ wxColour Theme::GetDark(Role role) {
 		case Role::TooltipBorderText:
 		case Role::TooltipBorderHouse:
 		case Role::TooltipBorderZone:
+		case Role::TooltipBorderTown:
 			return wxColour(58, 58, 64); // Standardized Charcoal Gray
 		case Role::TooltipWindowBg:
 			return wxColour(24, 26, 30);
@@ -279,6 +280,7 @@ wxColour Theme::GetLight(Role role) {
 		case Role::TooltipBorderText:
 		case Role::TooltipBorderHouse:
 		case Role::TooltipBorderZone:
+		case Role::TooltipBorderTown:
 			return wxColour(80, 80, 88); // Standardized Charcoal Gray (Light)
 		case Role::TooltipWindowBg:
 			return wxColour(235, 236, 240);

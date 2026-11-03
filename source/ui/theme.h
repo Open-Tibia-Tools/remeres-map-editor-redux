@@ -55,6 +55,7 @@ public:
 		TooltipBorderText,
 		TooltipBorderHouse,
 		TooltipBorderZone,
+		TooltipBorderTown,
 
 		// Tooltip Window Chrome & Bevels
 		TooltipWindowBg,

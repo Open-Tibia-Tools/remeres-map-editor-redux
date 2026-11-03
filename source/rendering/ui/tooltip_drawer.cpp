@@ -158,6 +158,9 @@ NVGcolor TooltipDrawer::getHeaderColor(const TooltipData& tooltip) const {
 		case TooltipCategory::WAYPOINT:
 			role = Theme::Role::TooltipBorderWaypoint;
 			break;
+		case TooltipCategory::TOWN:
+			role = Theme::Role::TooltipBorderTown;
+			break;
 		case TooltipCategory::DOOR:
 			role = Theme::Role::TooltipBorderDoor;
 			break;
@@ -394,8 +397,13 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 			std::format_to(std::back_inserter(storage), "... and {} more", lines.size() - shown);
 			addStorageField({}, start, Theme::Role::TooltipLabel);
 		}
-	} else if (tooltip.category == TooltipCategory::WAYPOINT) {
+	} else if (tooltip.category == TooltipCategory::WAYPOINT || tooltip.category == TooltipCategory::TOWN) {
 		size_t start = storage.size();
+		if (tooltip.townId > 0) {
+			std::format_to(std::back_inserter(storage), "{}", tooltip.townId);
+			addStorageField("Town ID", start, Theme::Role::TooltipTextValue);
+			start = storage.size();
+		}
 		std::format_to(std::back_inserter(storage), "{}, {}, {}", tooltip.pos.x, tooltip.pos.y, tooltip.pos.z);
 		addStorageField("Position", start, Theme::Role::TooltipTextValue);
 	} else {
@@ -1109,7 +1117,8 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		// Far-zoom LOD: when zoomed out very far (zoom > 3.0f), cull dense item tooltips
 		// so street signs/blackboards don't flood whole towns. Macro entities (houses, towns, waypoints) stay visible.
 		if (view.zoom > 3.0f && tooltip.category != TooltipCategory::HOUSE &&
-		    tooltip.category != TooltipCategory::ZONE && tooltip.category != TooltipCategory::WAYPOINT) {
+		    tooltip.category != TooltipCategory::ZONE && tooltip.category != TooltipCategory::WAYPOINT &&
+		    tooltip.category != TooltipCategory::TOWN) {
 			continue;
 		}
 
@@ -1140,7 +1149,7 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		// Skip if nothing to show
 		if (scratch_fields_count == 0 && tooltip.containerItems.empty() && tooltip.text.empty() &&
 		    tooltip.category != TooltipCategory::HOUSE && tooltip.category != TooltipCategory::ZONE &&
-		    tooltip.category != TooltipCategory::WAYPOINT) {
+		    tooltip.category != TooltipCategory::WAYPOINT && tooltip.category != TooltipCategory::TOWN) {
 			continue;
 		}
 

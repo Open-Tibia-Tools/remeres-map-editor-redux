@@ -271,7 +271,8 @@ void MapOverlayCollector::Collect(
 					if (town_ptr && town_ptr->getTemplePosition() == pos) {
 						TooltipData& tData = out_tooltip_drawer->requestTooltipData();
 						tData.pos = pos;
-						tData.category = TooltipCategory::WAYPOINT;
+						tData.category = TooltipCategory::TOWN;
+						tData.townId = town_id;
 						tData.itemName = town_ptr->getName();
 						tData.subtitle = "Town Temple";
 						tData.badgeType = rme::rendering::TileIndicatorType::TownTemple;
