@@ -252,6 +252,22 @@ int NanoVGCanvas::GetOrCreateSpriteTexture(NVGcontext* vg, Sprite* sprite) {
 	return tex;
 }
 
+int NanoVGCanvas::GetOrCreateItemTexture(NVGcontext* vg, const Item& item) {
+	if (!item.isFluidContainer() && !item.isSplash()) {
+		return GetOrCreateSpriteTexture(vg, g_gui.gfx.getSprite(item.getClientID()));
+	}
+
+	// Cached per item and liquid; bit 62 keeps the key apart from item IDs and sprite pointers.
+	constexpr uint64_t kLiquidImageKey = uint64_t { 1 } << 62;
+	const uint64_t key = kLiquidImageKey | (static_cast<uint64_t>(item.getSubtype()) << 16) | item.getID();
+	if (const int existing = GetCachedImage(key); existing != 0) {
+		return existing > 0 ? existing : 0;
+	}
+	const int tex = NvgUtils::CreateItemTexture(vg, static_cast<uint16_t>(item.getID()), item.getSubtype());
+	AddCachedImage(key, tex > 0 ? tex : -1);
+	return tex > 0 ? tex : 0;
+}
+
 int NanoVGCanvas::GetOrCreateEditorIconTexture(NVGcontext* vg, int editor_icon_id, SpriteSize size) {
 	EditorIcon* icon = EditorIconRegistry::GetIcon(editor_icon_id);
 	return GetOrCreateEditorIconTexture(vg, icon, size);
