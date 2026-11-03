@@ -17,6 +17,7 @@
 #include "map/tile.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <format>
 
 namespace rme::sec {
