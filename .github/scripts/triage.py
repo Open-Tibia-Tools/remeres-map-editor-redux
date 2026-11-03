@@ -53,7 +53,26 @@ LABEL_HINTS: Dict[str, str] = {
     "Area: Rendering": "OpenGL, GLSL shaders, MapDrawer, chunk cache, NanoVG, textures, lighting, drawing, FPS, graphics, render, tile renderer",
     "Area: Scripts": "Lua API, lua scripts, script engine, extensions, test scripts, bindings, lua_api",
     "Area: Source": "C++ source code architecture, core refactoring, backend, engine, memory management, algorithms",
-    "Area: UI": "wxWidgets GUI, dialogs, palettes, menus, buttons, toolbars, windows, controls, theme, layout, canvas, view, icons, preferences",
+    "Area: UI": "wxWidgets GUI, dialogs, palettes, menus, buttons, toolbars, windows, controls, theme, layout, canvas, view, icons, preferences, statusbar, status bar",
+}
+
+# Directory to Area mapping providing subsystem reinforcement for Pull Requests
+PATH_TO_AREA: Dict[str, str] = {
+    "source/rendering": "Area: Rendering",
+    "source/ui": "Area: UI",
+    "source/palette": "Area: UI",
+    "source/brushes": "Area: Brushes",
+    "brushes": "Area: Brushes",
+    "source/lua": "Area: Scripts",
+    "lua": "Area: Scripts",
+    "lua_tests": "Area: Scripts",
+    "source/io": "Area: I/O",
+    "source/live": "Area: Live Editing",
+    "source/net": "Area: Live Editing",
+    "data": "Area: Data",
+    ".github": "Area: Build",
+    "CMakeLists.txt": "Area: Build",
+    "build_ninja": "Area: Build",
 }
 
 # Labels that should never be automatically applied by triage
@@ -142,8 +161,8 @@ def compute_embeddings(backend: TransformersBackend, texts: List[str]) -> np.nda
 
 def select_labels_from_scores(
     scores: Dict[str, float],
-    type_threshold: float = 0.70,
-    area_threshold: float = 0.75,
+    type_threshold: float = 0.65,
+    area_threshold: float = 0.70,
     area_delta: float = 0.03,
 ) -> Tuple[List[str], str]:
     """
@@ -229,7 +248,16 @@ def run_inference(
     for idx, name in enumerate(candidate_names):
         scores[name] = float(target_vec @ label_vecs[idx])
 
-    # 3. Select labels based on category partitioning and similarity thresholds
+    # 3. Subsystem directory reinforcement for Pull Requests
+    if is_pr and changed_files:
+        boosted_areas = set()
+        for f in changed_files:
+            for prefix, area in PATH_TO_AREA.items():
+                if f.startswith(prefix) and area not in boosted_areas:
+                    scores[area] = scores.get(area, 0.0) + 0.03
+                    boosted_areas.add(area)
+
+    # 4. Select labels based on category partitioning and similarity thresholds
     suggested, summary_log = select_labels_from_scores(scores)
     return suggested, summary_log
 

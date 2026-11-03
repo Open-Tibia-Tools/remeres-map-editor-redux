@@ -15,6 +15,7 @@ sys.path.insert(0, str(scripts_dir))
 from triage import (
     DEFAULT_LABELS,
     NON_TRIAGE_LABELS,
+    PATH_TO_AREA,
     build_label_anchor,
     build_target_text,
     get_embedding_model,
@@ -76,7 +77,38 @@ TEST_SCENARIOS = [
         "is_pr": True,
         "changed_files": ["README.md", "AGENTS.md"],
         "expected_type": "Type: Documentation",
-        "expected_area": None,  # Documentation scenario should not select unrelated areas like Rendering/Brushes
+        "expected_area": None,
+    },
+    {
+        "name": "Fluid Container Bug (PR #1081)",
+        "title": "fix: resolve fluid container recognition, sprite color mapping, and click freeze",
+        "body": "Bug fix: This PR resolves fluid container recognition, sprite color mapping defects, and editor freeze / crash on double-click. Fixes map save data loss in ItemSerializationOTBM.",
+        "is_pr": True,
+        "changed_files": [
+            "source/item_definitions/core/item_definition_resolver.cpp",
+            "source/io/otbm/item_serializer.cpp",
+            "source/ui/properties/splash_properties_window.cpp",
+        ],
+        "expected_type": "Type: Bug",
+        "expected_area": "Area: I/O",
+    },
+    {
+        "name": "Statusbar UI Bug (PR #1082)",
+        "title": "fix(ui): disable statusbar size grip to prevent dark mode assertion failure",
+        "body": "Disables size grip on wxStatusBar to prevent assertion crash when dark mode theme is enabled.",
+        "is_pr": True,
+        "changed_files": ["source/ui/main_frame.cpp"],
+        "expected_type": "Type: Bug",
+        "expected_area": "Area: UI",
+    },
+    {
+        "name": "Sector Map Import Feature (PR #1083)",
+        "title": "feat(io): open and save original server sector maps (.sec)",
+        "body": "Adds support to open and save CipSoft server sector maps (.sec) with coordinate offsets.",
+        "is_pr": True,
+        "changed_files": ["source/io/sec_map.cpp", "source/io/sec_map.h"],
+        "expected_type": "Type: Enhancement",
+        "expected_area": "Area: I/O",
     },
 ]
 
@@ -117,6 +149,15 @@ def run_tests():
         scores: Dict[str, float] = {}
         for idx, lbl_name in enumerate(candidate_labels):
             scores[lbl_name] = float(target_vec @ label_vecs[idx])
+
+        # Apply directory reinforcement if PR files match known subsystem
+        if test["is_pr"] and test["changed_files"]:
+            boosted_areas = set()
+            for f in test["changed_files"]:
+                for prefix, area in PATH_TO_AREA.items():
+                    if f.startswith(prefix) and area not in boosted_areas:
+                        scores[area] = scores.get(area, 0.0) + 0.03
+                        boosted_areas.add(area)
 
         selected, _ = select_labels_from_scores(scores)
         print(f"  Selected Labels: {selected}")
