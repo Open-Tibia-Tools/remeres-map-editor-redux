@@ -1,15 +1,60 @@
 #!/usr/bin/env python3
 """
-AI-powered Issue and PR triage system using local Qwen3.5-0.8B GGUF via llama-cpp-python.
-Runs on GitHub Actions CPU runners with optimized thinking-mode settings and PR file-change context.
+AI-powered Issue and PR triage system using local EmbeddingGemma 2 GGUF via llama-cpp-python.
+Runs on GitHub Actions CPU runners with zero-shot semantic embedding classification.
 """
 
+import json
 import os
 import sys
-import json
-import re
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
+
+
+# Default labels with descriptions used when GitHub API is unavailable
+DEFAULT_LABELS: Dict[str, str] = {
+    "Type: Bug": "Inconsistencies or issues which will cause a problem for users.",
+    "Type: Enhancement": "New feature or request.",
+    "Type: Documentation": "Improvements or additions to documentation (README, wiki, code comments).",
+    "Type: Info": "Further information requested or required.",
+    "Type: Missing Content": "Content not yet implemented or not following accepted standards.",
+    "Area: Brushes": "Changes related to the brush system (ground, wall, doodad, etc.).",
+    "Area: Build": "Changes to CMake, vcpkg, CI/CD, or build configuration.",
+    "Area: Data": "Changes to data files (data/ — materials, clients.xml, menubar.xml).",
+    "Area: I/O": "Changes to map file I/O (OTBM, minimap export, etc.).",
+    "Area: Live Editing": "Changes to the collaborative live editing system.",
+    "Area: Rendering": "Changes to the OpenGL rendering pipeline.",
+    "Area: Scripts": "Changes to Lua scripts, Lua API, automation scripts.",
+    "Area: Source": "Changes to C++ source code in source/.",
+    "Area: UI": "Changes to the wxWidgets GUI (palettes, dialogs, menus, toolbar).",
+    "Good First Issue": "Good for newcomers — issues that are simple and well-scoped for first-time contributors.",
+    "Priority: Critical": "Represents a risk to stable releases.",
+    "Priority: High": "Represent a high impact in key areas of the editor.",
+    "Priority: Medium": "This issue may be impactful and needs some attention.",
+    "Priority: Low": "Minor impact.",
+    "Status: Pending Review": "This PR or Issue requires a review.",
+    "Status: Pending Test": "This PR or Issue requires more testing.",
+}
+
+# Domain keyword hints to enrich semantic embedding anchors
+LABEL_HINTS: Dict[str, str] = {
+    "Type: Bug": "bug, crash, exception, error, regression, broken, failure, defect, freeze, memory leak, glitch, assert",
+    "Type: Enhancement": "feature request, new feature, suggestion, proposal, improvement, enhancement, add option, support for",
+    "Type: Documentation": "documentation, docs, README, guide, comments, wiki, typos, manual, AGENTS.md, instructions",
+    "Type: Info": "question, information requested, clarification, help, inquiry, discussion",
+    "Type: Missing Content": "missing items, missing sprites, missing assets, incomplete content, missing definitions, missing borders",
+    "Area: Brushes": "brush, ground brush, wall, doodad, border, autoborder, terrain, carpet, table, door, eraser, placement",
+    "Area: Build": "CMake, vcpkg, Ninja, compiler, MSVC, Clang, GCC, CI/CD, GitHub Actions, workflows, dependencies, build_ninja",
+    "Area: Data": "materials.xml, clients.xml, menubar.xml, items.otb, appearances, data directory, assets, client version",
+    "Area: I/O": "OTBM, map loading, map saving, file format, minimap export, persistence, compression, serialization, gzip",
+    "Area: Live Editing": "live collaboration, multiplayer editing, socket, server, client, network sync, peer, packet",
+    "Area: Rendering": "OpenGL, GLSL shaders, MapDrawer, chunk cache, NanoVG, textures, lighting, drawing, FPS, graphics, render, tile renderer",
+    "Area: Scripts": "Lua API, lua scripts, script engine, extensions, test scripts, bindings",
+    "Area: Source": "C++ source code architecture, core refactoring, backend, engine, memory management, algorithms",
+    "Area: UI": "wxWidgets GUI, dialogs, palettes, menus, buttons, toolbars, windows, controls, theme, layout, canvas, view, icons",
+}
 
 
 def get_cache_dir() -> Path:
@@ -24,22 +69,22 @@ def get_cache_dir() -> Path:
 
 def download_model() -> str:
     """
-    Downloads or verifies unsloth/Qwen3.5-0.8B-GGUF (Qwen3.5-0.8B-Q4_K_M.gguf)
+    Downloads or verifies unsloth/embeddinggemma-2-GGUF (embeddinggemma-2-Q8_0.gguf)
     in ~/.cache/models using huggingface_hub.
     """
     from huggingface_hub import hf_hub_download
 
     cache_dir = get_cache_dir()
-    model_filename = "Qwen3.5-0.8B-Q4_K_M.gguf"
+    model_filename = "embeddinggemma-2-Q8_0.gguf"
     target_file = cache_dir / model_filename
 
     if target_file.is_file() and target_file.stat().st_size > 100_000_000:
         print(f"Model already cached: {target_file} ({target_file.stat().st_size / (1024 * 1024):.1f} MB)")
         return str(target_file)
 
-    print(f"Downloading {model_filename} from unsloth/Qwen3.5-0.8B-GGUF to {cache_dir}...")
+    print(f"Downloading {model_filename} from unsloth/embeddinggemma-2-GGUF to {cache_dir}...")
     model_path = hf_hub_download(
-        repo_id="unsloth/Qwen3.5-0.8B-GGUF",
+        repo_id="unsloth/embeddinggemma-2-GGUF",
         filename=model_filename,
         local_dir=str(cache_dir),
     )
@@ -61,42 +106,97 @@ def fetch_repository_labels(repo) -> Dict[str, str]:
     return labels_dict
 
 
-def extract_labels_from_output(text: str) -> List[str]:
+def build_label_anchor(name: str, desc: str) -> str:
     """
-    Extracts label list from model output via regex patterns,
-    handling JSON code fences, raw JSON objects, and inline lists.
+    Builds the text for a label embedding anchor with task instruction prefix.
     """
-    # 1. Search for ```json { "labels": [...] } ``` blocks
-    code_blocks = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    for block in code_blocks:
-        try:
-            data = json.loads(block)
-            if isinstance(data, dict) and "labels" in data and isinstance(data["labels"], list):
-                return [str(item) for item in data["labels"]]
-        except Exception:
-            pass
+    parts = [name]
+    if desc:
+        parts.append(desc.strip())
+    if name in LABEL_HINTS:
+        parts.append(f"Keywords: {LABEL_HINTS[name]}")
+    content = ". ".join(parts)
+    return f"task: classification | text: {content}"
 
-    # 2. Search for raw JSON objects with a "labels" key
-    json_objects = re.findall(r"\{[^{}]*\"labels\"\s*:\s*\[[^\]]*\][^{}]*\}", text, re.DOTALL)
-    for obj_str in json_objects:
-        try:
-            data = json.loads(obj_str)
-            if isinstance(data, dict) and "labels" in data and isinstance(data["labels"], list):
-                return [str(item) for item in data["labels"]]
-        except Exception:
-            pass
 
-    # 3. Fallback: match "labels": [ ... ] directly
-    arr_match = re.search(r"\"labels\"\s*:\s*(\[[^\]]*\])", text, re.DOTALL)
-    if arr_match:
-        try:
-            labels_arr = json.loads(arr_match.group(1))
-            if isinstance(labels_arr, list):
-                return [str(item) for item in labels_arr]
-        except Exception:
-            pass
+def build_target_text(title: str, body: str, is_pr: bool, changed_files: List[str]) -> str:
+    """
+    Builds the target text for the issue or pull request with task instruction prefix.
+    """
+    lines = [
+        f"Target: {'Pull Request' if is_pr else 'Issue'}",
+        f"Title: {title.strip()}",
+        f"Description:\n{body[:3000].strip()}",
+    ]
+    if is_pr and changed_files:
+        lines.append("Changed Files (up to 30):\n" + "\n".join(f"- {f}" for f in changed_files[:30]))
 
-    return []
+    content = "\n".join(lines)
+    return f"task: classification | text: {content}"
+
+
+def compute_embedding(llm, text: str) -> np.ndarray:
+    """
+    Computes and L2-normalizes an embedding vector using llama-cpp-python.
+    """
+    clean_text = text.strip() or "Empty"
+    res = llm.create_embedding(clean_text)
+    vec = np.array(res["data"][0]["embedding"], dtype=np.float32)
+    norm = np.linalg.norm(vec)
+    return vec / norm if norm > 0 else vec
+
+
+def select_labels_from_scores(
+    scores: Dict[str, float],
+    type_threshold: float = 0.35,
+    area_threshold: float = 0.38,
+    area_delta: float = 0.08,
+) -> Tuple[List[str], str]:
+    """
+    Selects 1-3 labels from similarity scores using category partitioning:
+    - 1 Type: label (highest score among Type:*, if score >= type_threshold)
+    - 1 to 2 Area: labels (highest score among Area:*, if score >= area_threshold)
+    Returns (selected_labels, summary_log).
+    """
+    log_lines = ["--- Label Similarity Rankings ---"]
+    for lbl, score in sorted(scores.items(), key=lambda x: x[1], reverse=True):
+        log_lines.append(f"  [{score:.3f}] {lbl}")
+
+    selected: List[str] = []
+
+    # 1. Select primary Type: label
+    type_candidates = [(k, v) for k, v in scores.items() if k.startswith("Type:")]
+    if type_candidates:
+        best_type, type_score = max(type_candidates, key=lambda x: x[1])
+        if type_score >= type_threshold:
+            selected.append(best_type)
+            log_lines.append(f"\nSelected Type: '{best_type}' (score: {type_score:.3f} >= {type_threshold})")
+        else:
+            log_lines.append(f"\nSkipped Type: '{best_type}' (score: {type_score:.3f} < threshold {type_threshold})")
+
+    # 2. Select relevant Area: labels
+    area_candidates = sorted(
+        [(k, v) for k, v in scores.items() if k.startswith("Area:")],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+    if area_candidates:
+        best_area, area_score = area_candidates[0]
+        if area_score >= area_threshold:
+            selected.append(best_area)
+            log_lines.append(f"Selected primary Area: '{best_area}' (score: {area_score:.3f} >= {area_threshold})")
+
+            # Check secondary Area label
+            if len(area_candidates) > 1:
+                second_area, second_score = area_candidates[1]
+                if second_score >= area_threshold and (area_score - second_score) <= area_delta:
+                    selected.append(second_area)
+                    log_lines.append(
+                        f"Selected secondary Area: '{second_area}' (score: {second_score:.3f}, delta: {area_score - second_score:.3f} <= {area_delta})"
+                    )
+
+    summary_log = "\n".join(log_lines)
+    return selected, summary_log
 
 
 def run_inference(
@@ -109,64 +209,46 @@ def run_inference(
     available_labels: Dict[str, str],
 ) -> Tuple[List[str], str]:
     """
-    Runs inference using llama-cpp-python with Qwen3.5 thinking mode.
-    Returns (suggested_labels, raw_model_output).
+    Runs zero-shot semantic embedding classification using EmbeddingGemma 2 via llama-cpp-python.
+    Returns (suggested_labels, summary_log).
     """
+    import llama_cpp
     from llama_cpp import Llama
 
     cpu_threads = os.cpu_count() or 4
-    print(f"Initializing Llama model from {model_path} with {cpu_threads} CPU threads...")
+    pooling_type = getattr(llama_cpp, "LLAMA_POOLING_TYPE_MEAN", 1)
+
+    print(f"Initializing EmbeddingGemma 2 from {model_path} with {cpu_threads} CPU threads (mean pooling)...")
     llm = Llama(
         model_path=model_path,
+        embedding=True,
+        pooling_type=pooling_type,
         n_ctx=4096,
         n_threads=cpu_threads,
         verbose=False,
     )
 
-    # Format available labels with descriptions
-    label_lines = []
+    # 1. Compute target text embedding
+    target_prompt = build_target_text(title=title, body=body, is_pr=is_pr, changed_files=changed_files)
+    print("Computing target embedding...")
+    target_vec = compute_embedding(llm, target_prompt)
+
+    # 2. Compute similarity against all candidate labels
+    print(f"Scoring {len(available_labels)} candidate labels...")
+    scores: Dict[str, float] = {}
     for name, desc in available_labels.items():
-        if desc:
-            label_lines.append(f"- {name}: {desc}")
-        else:
-            label_lines.append(f"- {name}")
-    labels_context = "\n".join(label_lines)
+        # Do not auto-triage status or priority labels
+        if name.startswith("Status:") or name.startswith("Priority:") or name == "Stale":
+            continue
 
-    system_prompt = (
-        "You are an automated Issue and Pull Request triage system for Remere's Map Editor (RME).\n"
-        "Your task is to analyze the title, description, and changed files (for Pull Requests), "
-        "and select the most accurate labels strictly from the Allowed Labels list below.\n\n"
-        "Allowed Labels:\n"
-        f"{labels_context}\n\n"
-        "Instructions:\n"
-        "1. First, think step-by-step inside <think>...</think> tags. Analyze the context, what component is touched, "
-        "and determine the matching Type, Area, and/or Priority labels.\n"
-        "2. Only select labels that EXACTLY match one of the Allowed Labels.\n"
-        "3. Select 1 to 4 appropriate labels (e.g. one Type: label, relevant Area: labels).\n"
-        "4. After </think>, output ONLY a valid JSON object in this format:\n"
-        '{"labels": ["label1", "label2"]}\n'
-        "5. Do not include any additional commentary, markdown notes, or text outside the JSON object."
-    )
+        label_anchor = build_label_anchor(name, desc)
+        label_vec = compute_embedding(llm, label_anchor)
+        score = float(np.dot(target_vec, label_vec))
+        scores[name] = score
 
-    user_prompt = f"Target: {'Pull Request' if is_pr else 'Issue'} #{number}\nTitle: {title}\nDescription:\n{body}\n"
-    if is_pr and changed_files:
-        user_prompt += "\nChanged Files (up to 30):\n" + "\n".join(f"- {f}" for f in changed_files)
-
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
-
-    print("Running LLM inference with temperature=0.5, max_tokens=1024...")
-    response = llm.create_chat_completion(
-        messages=messages,
-        temperature=0.5,
-        max_tokens=1024,
-    )
-
-    content = response["choices"][0]["message"]["content"]
-    suggested = extract_labels_from_output(content)
-    return suggested, content
+    # 3. Select labels based on category partitioning and similarity thresholds
+    suggested, summary_log = select_labels_from_scores(scores)
+    return suggested, summary_log
 
 
 def main():
@@ -176,7 +258,7 @@ def main():
     raw_context = os.environ.get("EVENT_CONTEXT", "{}")
     dry_run = os.environ.get("DRY_RUN", "").lower() in ("true", "1", "yes")
 
-    print(f"=== Starting AI Triage System ===")
+    print(f"=== Starting AI Triage System (EmbeddingGemma-2) ===")
     print(f"Event Name: {event_name}")
     print(f"Repository: {repo_name}")
     print(f"Dry Run Mode: {dry_run}")
@@ -241,7 +323,7 @@ def main():
     changed_files: List[str] = []
 
     if token and repo_name:
-        from github import Github, Auth
+        from github import Auth, Github
         try:
             gh = Github(auth=Auth.Token(token))
             gh_repo = gh.get_repo(repo_name)
@@ -269,14 +351,7 @@ def main():
 
     # Fallback to local default labels if API unavailable (e.g. local offline test)
     if not repo_labels:
-        default_labels = [
-            "Type: Bug", "Type: Enhancement", "Type: Documentation", "Type: Info", "Type: Missing Content",
-            "Area: Brushes", "Area: Build", "Area: Data", "Area: I/O", "Area: Live Editing",
-            "Area: Rendering", "Area: Scripts", "Area: Source", "Area: UI",
-            "Priority: Critical", "Priority: High", "Priority: Medium", "Priority: Low",
-            "Status: Pending Review", "Status: Pending Test", "Good First Issue"
-        ]
-        repo_labels = {lbl: "" for lbl in default_labels}
+        repo_labels = dict(DEFAULT_LABELS)
         print(f"Using default fallback label set ({len(repo_labels)} labels).")
 
     # For PRs: fetch changed files (up to 30)
@@ -293,8 +368,8 @@ def main():
     elif is_pr and "changed_files" in event_data:
         changed_files = event_data["changed_files"][:30]
 
-    # 5. Run LLM inference
-    raw_suggested, raw_output = run_inference(
+    # 5. Run semantic embedding inference
+    raw_suggested, summary_log = run_inference(
         model_path=model_path,
         title=title,
         body=body,
@@ -304,12 +379,9 @@ def main():
         available_labels=repo_labels,
     )
 
-    print("\n--- Model Output ---")
-    print(raw_output)
-    print("--------------------\n")
+    print("\n" + summary_log + "\n")
 
     # 6. Filter and strictly validate labels against repository labels
-    # Build case-insensitive lookup
     label_lookup = {k.lower().strip(): k for k in repo_labels.keys()}
     valid_labels_to_apply = []
 
@@ -323,7 +395,7 @@ def main():
             if exact_match not in valid_labels_to_apply:
                 valid_labels_to_apply.append(exact_match)
         else:
-            print(f"Discarding invalid/hallucinated label: '{clean_item}'")
+            print(f"Discarding invalid label: '{clean_item}'")
 
     print(f"Suggested raw labels: {raw_suggested}")
     print(f"Validated labels to apply: {valid_labels_to_apply}")
