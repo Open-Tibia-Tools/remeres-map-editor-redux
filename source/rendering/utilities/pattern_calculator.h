@@ -51,12 +51,14 @@ public:
 		if (it.isSplash() || it.isFluidContainer()) {
 			const uint16_t fluid = item ? item->getSubtype() : 0;
 			patterns.subtype = fluid;
+			const uint8_t client_color = Item::ServerFluidToClientFluidColor(fluid);
 			if (spr->pattern_x > 0) {
-				patterns.x = fluid % spr->pattern_x;
+				patterns.x = (client_color % 4) % spr->pattern_x;
 				if (spr->pattern_y > 0) {
-					patterns.y = (fluid / spr->pattern_x) % spr->pattern_y;
+					patterns.y = (client_color / 4) % spr->pattern_y;
 				}
 			}
+
 		} else if (it.hasFlag(ItemFlag::IsHangable)) {
 			if (tile && tile->hasHookSouth()) {
 				patterns.x = 1;

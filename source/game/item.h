@@ -80,6 +80,31 @@ enum SplashType {
 
 IMPLEMENT_INCREMENT_OP(SplashType)
 
+inline constexpr std::array<SplashType, 22> kValidSplashTypes = {
+	LIQUID_WATER,
+	LIQUID_BLOOD,
+	LIQUID_BEER,
+	LIQUID_SLIME,
+	LIQUID_LEMONADE,
+	LIQUID_MILK,
+	LIQUID_MANAFLUID,
+	LIQUID_INK,
+	LIQUID_WATER2,
+	LIQUID_LIFEFLUID,
+	LIQUID_OIL,
+	LIQUID_SLIME2,
+	LIQUID_URINE,
+	LIQUID_COCONUT_MILK,
+	LIQUID_WINE,
+	LIQUID_MUD,
+	LIQUID_FRUIT_JUICE,
+	LIQUID_LAVA,
+	LIQUID_RUM,
+	LIQUID_SWAMP,
+	LIQUID_TEA,
+	LIQUID_MEAD
+};
+
 class Item : public ItemAttributes {
 public:
 	// Attribute keys
@@ -165,6 +190,35 @@ public:
 	virtual void serializeItemCompact_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f) const;
 
 	// Static conversions
+	static constexpr uint8_t ServerFluidToClientFluidColor(uint16_t server_fluid) {
+		switch (server_fluid) {
+			case LIQUID_NONE:         return 0; // Empty / Transparent
+			case LIQUID_WATER:
+			case LIQUID_WATER2:       return 1; // Blue
+			case LIQUID_MANAFLUID:
+			case LIQUID_WINE:         return 2; // Purple
+			case LIQUID_BEER:
+			case LIQUID_OIL:
+			case LIQUID_MUD:
+			case LIQUID_RUM:
+			case LIQUID_TEA:
+			case LIQUID_MEAD:         return 3; // Brown
+			case LIQUID_SLIME:
+			case LIQUID_SLIME2:
+			case LIQUID_SWAMP:        return 6; // Green
+			case LIQUID_BLOOD:
+			case LIQUID_LIFEFLUID:
+			case LIQUID_LAVA:         return 5; // Red
+			case LIQUID_LEMONADE:
+			case LIQUID_URINE:
+			case LIQUID_FRUIT_JUICE:  return 8; // Yellow
+			case LIQUID_MILK:
+			case LIQUID_COCONUT_MILK: return 9; // White
+			case LIQUID_INK:          return 0;
+			default:                  return static_cast<uint8_t>(server_fluid & 7);
+		}
+	}
+
 	static std::string_view LiquidID2Name(uint16_t id);
 	static uint16_t LiquidName2ID(std::string id);
 

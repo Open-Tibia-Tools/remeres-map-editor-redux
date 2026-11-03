@@ -91,7 +91,7 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 				if (item->isFluidContainer()) {
 					splash_type_choice->Append(wxstr(Item::LiquidID2Name(LIQUID_NONE)), (void*)(intptr_t)(LIQUID_NONE));
 				}
-				for (SplashType splashType = LIQUID_FIRST; splashType != LIQUID_LAST; ++splashType) {
+				for (SplashType splashType : kValidSplashTypes) {
 					splash_type_choice->Append(wxstr(Item::LiquidID2Name(splashType)), (void*)(intptr_t)(splashType));
 				}
 
@@ -223,13 +223,16 @@ void ItemPropertyPanel::OnSplashTypeChange(wxCommandEvent& event) {
 		int index = current_tile->getIndexOf(current_item);
 		if (index != -1) {
 			Item* new_item = new_tile->getItemAt(index);
-			int new_type = (int)(intptr_t)splash_type_choice->GetClientData(splash_type_choice->GetSelection());
-			new_item->setSubtype(new_type);
+			int sel = splash_type_choice->GetSelection();
+			if (sel != wxNOT_FOUND) {
+				int new_type = (int)(intptr_t)splash_type_choice->GetClientData(sel);
+				new_item->setSubtype(new_type);
 
-			std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
-			action->addChange(std::make_unique<Change>(std::move(new_tile)));
-			editor->addAction(std::move(action));
-			g_gui.RefreshView();
+				std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
+				action->addChange(std::make_unique<Change>(std::move(new_tile)));
+				editor->addAction(std::move(action));
+				g_gui.RefreshView();
+			}
 		}
 	}
 }

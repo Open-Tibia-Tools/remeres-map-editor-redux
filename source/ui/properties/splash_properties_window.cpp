@@ -46,7 +46,7 @@ SplashPropertiesWindow::SplashPropertiesWindow(wxWindow* parent, const Map* map,
 		splash_type_field->Append(wxstr(Item::LiquidID2Name(LIQUID_NONE)), reinterpret_cast<void*>(static_cast<intptr_t>(LIQUID_NONE)));
 	}
 
-	for (SplashType splashType = LIQUID_FIRST; splashType != LIQUID_LAST; ++splashType) {
+	for (SplashType splashType : kValidSplashTypes) {
 		splash_type_field->Append(wxstr(Item::LiquidID2Name(splashType)), reinterpret_cast<void*>(static_cast<intptr_t>(splashType)));
 	}
 
@@ -105,7 +105,7 @@ void SplashPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 			return;
 		}
 
-		if (new_type) {
+		if (splash_type_field->GetSelection() != wxNOT_FOUND) {
 			edit_item->setSubtype(new_type);
 		}
 		edit_item->setUniqueID(new_uid);
