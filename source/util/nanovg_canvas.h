@@ -94,7 +94,7 @@ public:
 		return m_nvg.get();
 	}
 
-	int GetOrCreateItemImage(uint16_t itemId);
+	int GetOrCreateItemImage(uint16_t itemId, uint16_t subtype = 0);
 
 	/**
 	 * @brief Gets or creates a cached NanoVG image for a static asset.

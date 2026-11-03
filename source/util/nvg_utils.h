@@ -2,6 +2,7 @@
 #define RME_UTIL_NVG_UTILS_H_
 
 #include "item_definitions/core/item_definition_store.h"
+#include "game/item.h"
 #include "ui/gui.h"
 #include <nanovg.h>
 #include <vector>
@@ -20,24 +21,50 @@ namespace NvgUtils {
 
 	// Creates a composite RGBA buffer from a GameSprite.
 	// Returns a unique_ptr to the buffer, or nullptr on failure.
-	inline std::unique_ptr<uint8_t[]> CreateCompositeRGBA(GameSprite& gs, int& outW, int& outH, std::optional<bool> is_stackable_opt = std::nullopt) {
+	inline std::unique_ptr<uint8_t[]> CreateCompositeRGBA(
+		GameSprite& gs,
+		int& outW,
+		int& outH,
+		std::optional<bool> is_stackable_opt = std::nullopt,
+		std::optional<uint16_t> subtype_opt = std::nullopt,
+		std::optional<ItemDefinitionView> item_def_opt = std::nullopt
+	) {
+		ItemDefinitionView it;
+		if (item_def_opt.has_value()) {
+			it = *item_def_opt;
+		} else if (gs.getId() != 0) {
+			if (const auto sid = g_item_definitions.findByClientId(gs.getId())) {
+				it = g_item_definitions.get(*sid);
+			}
+		}
+
 		bool is_stackable = false;
 		if (is_stackable_opt.has_value()) {
 			is_stackable = *is_stackable_opt;
-		} else if (gs.getId() != 0) {
-			if (const auto sid = g_item_definitions.findByClientId(gs.getId())) {
-				is_stackable = g_item_definitions.get(*sid).hasFlag(ItemFlag::Stackable);
-			}
+		} else if (it) {
+			is_stackable = it.hasFlag(ItemFlag::Stackable);
 		}
+
 		int pattern_x = 0;
-		if (is_stackable && gs.pattern_x >= 3) {
+		int pattern_y = 0;
+
+		if (it && (it.isFluidContainer() || it.isSplash())) {
+			const uint16_t fluid = subtype_opt.value_or(0);
+			const uint8_t pattern_index = Item::ServerFluidToSpritePattern(fluid);
+			if (gs.pattern_x > 0) {
+				pattern_x = pattern_index % gs.pattern_x;
+				if (gs.pattern_y > 0) {
+					pattern_y = (pattern_index / gs.pattern_x) % gs.pattern_y;
+				}
+			}
+		} else if (is_stackable && gs.pattern_x >= 3) {
 			pattern_x = 2;
-		} else if (gs.pattern_x > 1) {
+		} else if (it && it.hasFlag(ItemFlag::IsHangable) && gs.pattern_x > 1) {
 			pattern_x = 1;
 		}
 
-		auto buildComposite = [&](int pat_x) -> std::unique_ptr<uint8_t[]> {
-			const auto metrics = gs.getPlainLayoutMetrics(-1, pat_x, 0, 0, 0);
+		auto buildComposite = [&](int pat_x, int pat_y) -> std::unique_ptr<uint8_t[]> {
+			const auto metrics = gs.getPlainLayoutMetrics(-1, pat_x, pat_y, 0, 0);
 			outW = metrics.total_width;
 			outH = metrics.total_height;
 
@@ -48,7 +75,6 @@ namespace NvgUtils {
 			size_t bufferSize = static_cast<size_t>(outW) * outH * 4;
 			auto composite = std::make_unique<uint8_t[]>(bufferSize);
 			std::fill(composite.get(), composite.get() + bufferSize, 0);
-			int pattern_y = 0;
 			int pattern_z = 0;
 			int frame = 0;
 
@@ -57,7 +83,7 @@ namespace NvgUtils {
 			for (int l = 0; l < gs.layers; ++l) {
 				for (int w = 0; w < gs.width; ++w) {
 					for (int h = 0; h < gs.height; ++h) {
-						int spriteIdx = gs.getIndex(w, h, l, pat_x, pattern_y, pattern_z, frame);
+						int spriteIdx = gs.getIndex(w, h, l, pat_x, pat_y, pattern_z, frame);
 						if (spriteIdx < 0 || (size_t)spriteIdx >= gs.spriteList.size()) {
 							continue;
 						}
@@ -120,17 +146,17 @@ namespace NvgUtils {
 			return composite;
 		};
 
-		auto result = buildComposite(pattern_x);
-		if (!result && pattern_x != 0) {
-			result = buildComposite(0);
+		auto result = buildComposite(pattern_x, pattern_y);
+		if (!result && (pattern_x != 0 || pattern_y != 0)) {
+			result = buildComposite(0, 0);
 		}
 		return result;
 	}
 
-	// Generates RGBA pixel data for a given item ID.
+	// Generates RGBA pixel data for a given item ID and optional subtype (fluid / charges / count).
 	// Returns a texture ID created in the given NanoVG context.
 	// Returns 0 if generation fails.
-	inline int CreateItemTexture(NVGcontext* vg, uint16_t id) {
+	inline int CreateItemTexture(NVGcontext* vg, uint16_t id, uint16_t subtype = 0) {
 		const auto it = g_item_definitions.get(id);
 		GameSprite* gs = it ? dynamic_cast<GameSprite*>(g_gui.gfx.getSprite(it.clientId())) : nullptr;
 		if (!gs) {
@@ -138,7 +164,7 @@ namespace NvgUtils {
 		}
 
 		int w, h;
-		auto composite = CreateCompositeRGBA(*gs, w, h, it.hasFlag(ItemFlag::Stackable));
+		auto composite = CreateCompositeRGBA(*gs, w, h, it.hasFlag(ItemFlag::Stackable), subtype, it);
 		if (!composite) {
 			return 0;
 		}
