@@ -178,6 +178,8 @@ wxColour Theme::GetDark(Role role) {
 			return wxColour(231, 76, 60); // Red
 		case Role::ServerMarkerScript:
 			return wxColour(171, 130, 255); // Lavender
+		case Role::HomeRadius:
+			return wxColour(52, 152, 219); // Sky blue
 		case Role::BrushCategoryGround:
 			return wxColour(85, 230, 85);
 		case Role::BrushCategoryWall:
@@ -316,6 +318,8 @@ wxColour Theme::GetLight(Role role) {
 			return wxColour(231, 76, 60); // Red
 		case Role::ServerMarkerScript:
 			return wxColour(171, 130, 255); // Lavender
+		case Role::HomeRadius:
+			return wxColour(52, 152, 219); // Sky blue
 		case Role::BrushCategoryGround:
 			return wxColour(30, 155, 40);
 		case Role::BrushCategoryWall:

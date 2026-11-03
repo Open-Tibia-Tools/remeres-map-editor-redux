@@ -8,10 +8,9 @@
 
 #include "app/settings.h"
 #include "game/creature.h"
-#include "game/spawn.h"
-#include "game/srv_homes.h"
 #include "io/sec/data/creature_placement.h"
 #include "io/sec/srv_creature_files.h"
+#include "map/map.h"
 #include "map/tile.h"
 #include "util/file_system.h"
 
@@ -40,7 +39,7 @@ namespace rme::sec::npc_files {
 		return types;
 	}
 
-	void save(const std::vector<Tile*>& tiles, const ServerDataFolder& folder, ServerFileWriter& writer, std::vector<std::string>& warnings) {
+	void save(const Map& map, const std::vector<Tile*>& tiles, const ServerDataFolder& folder, ServerFileWriter& writer, std::vector<std::string>& warnings) {
 		struct NpcFile {
 			std::filesystem::path path;
 			std::string text;
@@ -56,7 +55,6 @@ namespace rme::sec::npc_files {
 			}
 		});
 
-		const int max_radius = g_settings.getInteger(Config::MAX_SPAWN_RADIUS);
 		std::map<std::string, size_t> without_file;
 		for (Tile* tile : tiles) {
 			const Creature& creature = *tile->creature;
@@ -66,16 +64,18 @@ namespace rme::sec::npc_files {
 				continue;
 			}
 			file->second.on_map = true;
-			// An NPC stands on its home tile, with its spawn. One without a
-			// spawn was put next to its home at load (the tile was taken),
-			// so its file keeps the home it has.
-			if (!tile->spawn) {
-				continue;
-			}
+			// An NPC stands on its home tile. One whose home tile holds another
+			// creature was put next to it at load, so its file keeps that home.
+			const NpcDefinition& definition = file->second.definition;
 			const Position& position = tile->getPosition();
 			const AbsolutePosition home { .x = position.x, .y = position.y, .z = position.z };
-			const int radius = rme::srv::homeRadius(creature, tile->spawn->getSize(), max_radius);
-			const NpcDefinition& definition = file->second.definition;
+			if (home != definition.home) {
+				const Tile* home_tile = map.getTile(definition.home.x, definition.home.y, definition.home.z);
+				if (home_tile && home_tile->creature) {
+					continue;
+				}
+			}
+			const int radius = creature.getHomeRadius().value_or(definition.radius);
 			if (home != definition.home || radius != definition.radius) {
 				writer.write(file->second.path, updateNpcHome(file->second.text, home, radius));
 			}

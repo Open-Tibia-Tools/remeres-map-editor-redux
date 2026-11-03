@@ -410,12 +410,19 @@ void MapDrawer::DrawServerMarkers(NVGcontext* vg) {
 	server_marker_drawer.draw(vg, editor.map, view, options);
 }
 
+void MapDrawer::DrawHomeRadii(NVGcontext* vg) {
+	home_radius_drawer.draw(vg, editor.map, view, options, editor.selection);
+}
+
 bool MapDrawer::hasOverlays() {
 	const bool can_read_labels = view.zoom <= 10.0f;
 	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
 		return true;
 	}
 	if (!options.ingame && can_read_labels && options.server_marker_kinds != 0 && editor.map.server_markers && !editor.map.server_markers->empty()) {
+		return true;
+	}
+	if (home_radius_drawer.hasHomes(editor.map, view, options, editor.selection)) {
 		return true;
 	}
 	if (!tooltip_drawer.empty() && can_read_labels) {

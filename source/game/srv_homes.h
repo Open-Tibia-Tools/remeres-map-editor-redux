@@ -5,38 +5,24 @@
 #ifndef RME_GAME_SRV_HOMES_H_
 #define RME_GAME_SRV_HOMES_H_
 
-// Radii of sector map monster and NPC homes. The server's radius can be 0 or
-// far above what an editor spawn covers (some homes use 5000), so a home
-// keeps it on its creature while the spawn on the tile shows it capped.
-
-#include "game/creature.h"
+// Monster and NPC homes of sector maps. A sector map has no spawns: each
+// monster on it is a home of its own (one dat/monster.db line), and each NPC
+// has its home in its npc/*.npc file. The creature on the home tile carries
+// the home's radius (Creature::getHomeRadius), amount and respawn time.
 
 #include <algorithm>
 
-class Map;
-class Position;
-
 namespace rme::srv {
 
-	// The spawn size that shows a home radius.
+	// The radius a monster placed in the editor starts with: what 9,266 of
+	// the 9,615 homes of the original monster.db use.
+	inline constexpr int kDefaultMonsterHomeRadius = 50;
+
+	// The OTBM spawn that stands in for a home when a sector map is saved as
+	// OTBM: the server's radius can be 0 or far above the editor's limit.
 	[[nodiscard]] inline int spawnSizeFor(int home_radius, int max_spawn_radius) {
 		return std::clamp(home_radius, 1, std::max(1, max_spawn_radius));
 	}
-
-	// The home's radius: the server's value while the spawn still shows it,
-	// the spawn's size once that was changed.
-	[[nodiscard]] inline int homeRadius(const Creature& creature, int spawn_size, int max_spawn_radius) {
-		const auto home = creature.getHomeRadius();
-		if (home && spawn_size == spawnSizeFor(*home, max_spawn_radius)) {
-			return *home;
-		}
-		return spawn_size;
-	}
-
-	// The spawn size a monster's home radius is read from: the spawn on its
-	// tile, else the nearest spawn covering the tile (a monster placed inside
-	// another spawn's area), else 1.
-	[[nodiscard]] int homeSpawnSize(const Map& map, const Position& position);
 
 } // namespace rme::srv
 

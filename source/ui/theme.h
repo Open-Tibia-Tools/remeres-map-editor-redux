@@ -77,6 +77,8 @@ public:
 		ServerMarkerDepot,
 		ServerMarkerRaid,
 		ServerMarkerScript,
+		// The radius of a sector map monster or NPC home
+		HomeRadius,
 
 		// Brush Category Colors
 		BrushCategoryGround,

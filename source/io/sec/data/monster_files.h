@@ -14,7 +14,6 @@
 #include <string>
 #include <vector>
 
-class Map;
 class Tile;
 class CreatureType;
 
@@ -37,7 +36,7 @@ namespace rme::sec {
 
 		// Writes the monsters on `tiles` to dat/monster.db, when they changed;
 		// creates it once the map has monsters.
-		void save(Map& map, const std::vector<Tile*>& tiles, const ServerDataFolder& folder, ServerFileWriter& writer, std::vector<std::string>& warnings);
+		void save(const std::vector<Tile*>& tiles, const ServerDataFolder& folder, ServerFileWriter& writer, std::vector<std::string>& warnings);
 
 	} // namespace monster_files
 

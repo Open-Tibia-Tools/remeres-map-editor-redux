@@ -6,7 +6,6 @@
 
 #include "io/sec/data/monster_files.h"
 
-#include "app/settings.h"
 #include "game/creature.h"
 #include "game/srv_homes.h"
 #include "io/sec/data/creature_placement.h"
@@ -86,7 +85,7 @@ namespace rme::sec::monster_files {
 		spdlog::info("IOMapSec: placed {} monsters", placed);
 	}
 
-	void save(Map& map, const std::vector<Tile*>& tiles, const ServerDataFolder& folder, ServerFileWriter& writer, std::vector<std::string>& warnings) {
+	void save(const std::vector<Tile*>& tiles, const ServerDataFolder& folder, ServerFileWriter& writer, std::vector<std::string>& warnings) {
 		// Named as loadRaces named them, so each race maps back to itself.
 		std::vector<std::string> ignored;
 		std::unordered_map<std::string, int> races;
@@ -105,7 +104,6 @@ namespace rme::sec::monster_files {
 			return;
 		}
 
-		const int max_radius = g_settings.getInteger(Config::MAX_SPAWN_RADIUS);
 		std::vector<MonsterHome> homes;
 		homes.reserve(tiles.size());
 		std::map<std::string, size_t> unknown;
@@ -119,7 +117,7 @@ namespace rme::sec::monster_files {
 			homes.push_back(MonsterHome {
 				.race = race->second,
 				.position = AbsolutePosition { .x = tile->getPosition().x, .y = tile->getPosition().y, .z = tile->getPosition().z },
-				.radius = rme::srv::homeRadius(creature, rme::srv::homeSpawnSize(map, tile->getPosition()), max_radius),
+				.radius = creature.getHomeRadius().value_or(rme::srv::kDefaultMonsterHomeRadius),
 				.amount = creature.getAmount(),
 				.regen = creature.getSpawnTime(),
 			});

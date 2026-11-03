@@ -260,6 +260,9 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 
 	TextRenderer::BeginFrame(vg, GetSize().x, GetSize().y, GetContentScaleFactor());
 
+	if (!options.ingame && options.show_creatures) {
+		drawer->DrawHomeRadii(vg);
+	}
 	if (options.show_creatures) {
 		drawer->DrawCreatureNames(vg);
 	}

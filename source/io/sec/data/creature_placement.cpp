@@ -6,13 +6,10 @@
 
 #include "io/sec/data/creature_placement.h"
 
-#include "app/settings.h"
 #include "brushes/creature/creature_brush.h"
 #include "game/creature.h"
 #include "game/creatures.h"
 #include "game/materials.h"
-#include "game/spawn.h"
-#include "game/srv_homes.h"
 #include "map/map.h"
 #include "map/tile.h"
 
@@ -24,6 +21,8 @@ namespace rme::sec {
 
 	namespace {
 		constexpr size_t kMaxListedUnplacedHomes = 30;
+		// How far from a taken home tile a free one is looked for, at most.
+		constexpr int kMaxDisplacement = 50;
 	}
 
 	CreatureType* serverCreatureType(const std::string& name, bool is_npc, const CreatureOutfit& look) {
@@ -57,7 +56,7 @@ namespace rme::sec {
 	}
 
 	CreaturePlacer::CreaturePlacer(Map& map) :
-		map_(map), max_radius_(std::max(1, g_settings.getInteger(Config::MAX_SPAWN_RADIUS))) { }
+		map_(map) { }
 
 	size_t CreaturePlacer::place(CreatureType* type, bool is_npc, const AbsolutePosition& home, int radius, int amount, int spawn_time) {
 		const auto wanted = static_cast<size_t>(std::max(0, amount));
@@ -68,26 +67,8 @@ namespace rme::sec {
 			noteUnplaced(type, home, radius, wanted);
 			return 0;
 		}
-		// Spawn coverage is counted per tile in the radius, so a few huge
-		// radii (some homes use 5000) would cost minutes and gigabytes.
-		const int spawn_radius = rme::srv::spawnSizeFor(radius, max_radius_);
-		if (radius > max_radius_) {
-			++capped_radii_;
-		}
 		Tile* center = map_.createTile(home.x, home.y, home.z);
-		if (center->spawn) {
-			if (center->spawn->getSize() < spawn_radius) {
-				// Coverage is counted when a spawn is added, so re-add it at its new size.
-				map_.removeSpawn(center);
-				center->spawn->setSize(spawn_radius);
-				map_.addSpawn(center);
-			}
-		} else {
-			center->spawn = std::make_unique<Spawn>(spawn_radius);
-			map_.addSpawn(center);
-		}
-
-		Tile* tile = center->creature ? findFreeTile(home, spawn_radius) : center;
+		Tile* tile = center->creature ? findFreeTile(home, std::clamp(radius, 1, kMaxDisplacement)) : center;
 		if (!tile) {
 			noteUnplaced(type, home, radius, wanted);
 			return 0;
@@ -111,9 +92,6 @@ namespace rme::sec {
 			if (unplaced_homes_ > unplaced_lines_.size()) {
 				warnings.push_back(std::format("    ... and {} more spawns", unplaced_homes_ - unplaced_lines_.size()));
 			}
-		}
-		if (capped_radii_ > 0) {
-			warnings.push_back(std::format("{} monster homes and NPCs have a radius above the editor's maximum spawn radius ({}); their spawns use {}. Raise max_spawn_radius in config.toml to keep larger radii (most homes use 50).", capped_radii_, max_radius_, max_radius_));
 		}
 	}
 

@@ -41,6 +41,7 @@
 #include "rendering/drawers/overlays/hook_indicator_drawer.h"
 #include "rendering/drawers/overlays/lua_overlay_drawer.h"
 #include "rendering/drawers/overlays/marker_drawer.h"
+#include "rendering/drawers/overlays/home_radius_drawer.h"
 #include "rendering/drawers/overlays/server_marker_drawer.h"
 #include "rendering/drawers/overlays/preview_drawer.h"
 #include "rendering/drawers/overlays/selection_drawer.h"
@@ -78,6 +79,7 @@ class MapDrawer {
 	ItemDrawer item_drawer;
 	MarkerDrawer marker_drawer;
 	rme::rendering::ServerMarkerDrawer server_marker_drawer;
+	rme::rendering::HomeRadiusDrawer home_radius_drawer;
 	PreviewDrawer preview_drawer;
 	ShadeDrawer shade_drawer;
 	TileRenderer tile_renderer;
@@ -106,6 +108,7 @@ public:
 	void ClearFrameOverlays();
 	void DrawCreatureNames(NVGcontext* vg);
 	void DrawServerMarkers(NVGcontext* vg);
+	void DrawHomeRadii(NVGcontext* vg);
 	bool hasOverlays();
 
 	void DrawLight();

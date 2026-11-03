@@ -280,6 +280,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/lua_overlay_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/marker_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/server_marker_drawer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/home_radius_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/preview_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/selection_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/zone_overlay_drawer.h
@@ -567,7 +568,6 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ext/pugixml.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/complexitem.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/creature.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/game/srv_homes.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/srv_markers.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/creatures.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/house.cpp
@@ -724,6 +724,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/lua_overlay_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/marker_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/server_marker_drawer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/home_radius_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/preview_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/selection_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/zone_overlay_drawer.cpp

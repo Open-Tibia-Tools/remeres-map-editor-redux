@@ -6,7 +6,8 @@
 #define RME_IO_SEC_DATA_CREATURE_PLACEMENT_H_
 
 // Puts the server's monster homes (dat/monster.db) and NPCs (npc/*.npc) on
-// the map as spawns, for monster_files.h and npc_files.h.
+// the map, for monster_files.h and npc_files.h: each one is a creature on
+// its home tile carrying the home's radius and amount (see game/srv_homes.h).
 
 #include "io/sec/sec_sector_parser.h"
 #include "io/sec/srv_creature_files.h"
@@ -32,14 +33,13 @@ namespace rme::sec {
 	public:
 		explicit CreaturePlacer(Map& map);
 
-		// A monster home or NPC as one spawn at `home` with the server's radius
-		// (up to the editor's maximum spawn radius), holding one creature that
-		// carries the amount: on the home tile (trap creatures sit inside walls
-		// there), or on the nearest free walkable tile when another creature
-		// already stands on it. Returns `amount` when placed, 0 otherwise.
+		// A monster home or NPC as one creature carrying the home's radius and
+		// amount: on the home tile (trap creatures sit inside walls there), or
+		// on the nearest free walkable tile within its radius when another
+		// creature already stands on it. Returns `amount` when placed, 0 otherwise.
 		size_t place(CreatureType* type, bool is_npc, const AbsolutePosition& home, int radius, int amount, int spawn_time);
 
-		// What could not be placed and which radii were capped.
+		// What could not be placed.
 		void report(std::vector<std::string>& warnings) const;
 
 	private:
@@ -47,8 +47,6 @@ namespace rme::sec {
 		void noteUnplaced(const CreatureType* type, const AbsolutePosition& home, int radius, size_t count);
 
 		Map& map_;
-		const int max_radius_;
-		size_t capped_radii_ = 0;
 		size_t unplaced_ = 0;
 		size_t unplaced_homes_ = 0;
 		std::vector<std::string> unplaced_lines_;

@@ -322,8 +322,8 @@ bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
 	std::vector<std::filesystem::path> created;
 	copyObjectsFile(data, created, warnings);
 	rme::sec::ServerFileWriter files;
-	rme::sec::monster_files::save(map, monsters, data, files, warnings);
-	rme::sec::npc_files::save(npcs, data, files, warnings);
+	rme::sec::monster_files::save(monsters, data, files, warnings);
+	rme::sec::npc_files::save(map, npcs, data, files, warnings);
 	rme::sec::house_files::save(map, data, files, warnings);
 	rme::sec::map_dat::save(map, data, sectorRange(sectors), files, warnings);
 	std::ranges::copy(files.failedFiles(), std::back_inserter(stats.failed_files));

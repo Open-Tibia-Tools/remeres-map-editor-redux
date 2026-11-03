@@ -13,9 +13,7 @@
 #include "editor/action.h"
 #include "editor/action_queue.h"
 #include "ui/properties/srv_attribute_fields.h"
-#include "game/spawn.h"
 #include "game/srv_homes.h"
-#include "app/settings.h"
 
 namespace {
 	// Amount only matters for sector map monster homes.
@@ -23,9 +21,10 @@ namespace {
 		return !creature.isNpc() && (rme::srv::isSrvClient() || creature.getAmount() != 1);
 	}
 
-	// On a sector map every monster is a monster home with its own radius.
-	bool showsHomeRadius(const Creature& creature, const Tile* tile) {
-		return tile && !creature.isNpc() && rme::srv::isSrvClient();
+	// On a sector map every monster is a home with its own radius; an NPC
+	// read from its npc/*.npc file has one too.
+	bool showsHomeRadius(const Creature& creature) {
+		return rme::srv::isSrvClient() && (!creature.isNpc() || creature.getHomeRadius());
 	}
 }
 
@@ -53,7 +52,7 @@ CreaturePropertyPanel::CreaturePropertyPanel(wxWindow* parent) :
 	radius_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Radius");
 	radius_spin = new wxSpinCtrl(radius_sizer->GetStaticBox(), wxID_ANY);
 	radius_spin->SetRange(0, 65535);
-	radius_spin->SetToolTip("How far from its home the monster roams and respawns");
+	radius_spin->SetToolTip("How far from its home the creature roams and respawns");
 	radius_sizer->Add(radius_spin, wxSizerFlags(1).Expand().Border(wxALL, 5));
 	main_sizer->Add(radius_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 
@@ -93,10 +92,10 @@ void CreaturePropertyPanel::SetCreature(Creature* creature, Tile* tile, Map* map
 		spawntime_spin->SetValue(creature->getSpawnTime());
 		GetSizer()->Show(amount_sizer, showsAmount(*creature));
 		amount_spin->SetValue(creature->getAmount());
-		const bool shows_radius = showsHomeRadius(*creature, tile);
+		const bool shows_radius = showsHomeRadius(*creature);
 		GetSizer()->Show(radius_sizer, shows_radius);
-		if (shows_radius && map) {
-			radius_spin->SetValue(rme::srv::homeRadius(*creature, rme::srv::homeSpawnSize(*map, tile->getPosition()), g_settings.getInteger(Config::MAX_SPAWN_RADIUS)));
+		if (shows_radius) {
+			radius_spin->SetValue(creature->getHomeRadius().value_or(rme::srv::kDefaultMonsterHomeRadius));
 		}
 
 		Direction dir = creature->getDirection();
@@ -162,15 +161,6 @@ void CreaturePropertyPanel::OnRadiusChange(wxSpinEvent& event) {
 
 		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, *current_map);
 		if (new_tile->creature) {
-			// The server's radius stays on the creature; the spawn on its tile
-			// shows it capped. A monster placed inside another spawn's area
-			// gets its own spawn here.
-			const int size = rme::srv::spawnSizeFor(radius_spin->GetValue(), g_settings.getInteger(Config::MAX_SPAWN_RADIUS));
-			if (new_tile->spawn) {
-				new_tile->spawn->setSize(size);
-			} else {
-				new_tile->spawn = std::make_unique<Spawn>(size);
-			}
 			new_tile->creature->setHomeRadius(radius_spin->GetValue());
 
 			std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
