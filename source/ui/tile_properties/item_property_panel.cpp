@@ -91,13 +91,24 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 				if (item->isFluidContainer()) {
 					splash_type_choice->Append(wxstr(Item::LiquidID2Name(LIQUID_NONE)), (void*)(intptr_t)(LIQUID_NONE));
 				}
-				for (SplashType splashType = LIQUID_FIRST; splashType != LIQUID_LAST; ++splashType) {
+				for (SplashType splashType : kValidSplashTypes) {
 					splash_type_choice->Append(wxstr(Item::LiquidID2Name(splashType)), (void*)(intptr_t)(splashType));
 				}
 
 				if (item->getSubtype()) {
-					const std::string_view text = Item::LiquidID2Name(item->getSubtype());
-					splash_type_choice->SetStringSelection(wxstr(std::string(text)));
+					int selection = wxNOT_FOUND;
+					for (unsigned int i = 0; i < splash_type_choice->GetCount(); ++i) {
+						if (reinterpret_cast<intptr_t>(splash_type_choice->GetClientData(i)) == static_cast<intptr_t>(item->getSubtype())) {
+							selection = static_cast<int>(i);
+							break;
+						}
+					}
+					if (selection != wxNOT_FOUND) {
+						splash_type_choice->SetSelection(selection);
+					} else {
+						splash_type_choice->Append(wxstr(std::format("Unknown ({})", item->getSubtype())), reinterpret_cast<void*>(static_cast<intptr_t>(item->getSubtype())));
+						splash_type_choice->SetSelection(static_cast<int>(splash_type_choice->GetCount()) - 1);
+					}
 				} else {
 					splash_type_choice->SetSelection(0);
 				}
@@ -223,13 +234,16 @@ void ItemPropertyPanel::OnSplashTypeChange(wxCommandEvent& event) {
 		int index = current_tile->getIndexOf(current_item);
 		if (index != -1) {
 			Item* new_item = new_tile->getItemAt(index);
-			int new_type = (int)(intptr_t)splash_type_choice->GetClientData(splash_type_choice->GetSelection());
-			new_item->setSubtype(new_type);
+			int sel = splash_type_choice->GetSelection();
+			if (sel != wxNOT_FOUND) {
+				int new_type = static_cast<int>(reinterpret_cast<intptr_t>(splash_type_choice->GetClientData(sel)));
+				new_item->setSubtype(new_type);
 
-			std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
-			action->addChange(std::make_unique<Change>(std::move(new_tile)));
-			editor->addAction(std::move(action));
-			g_gui.RefreshView();
+				std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
+				action->addChange(std::make_unique<Change>(std::move(new_tile)));
+				editor->addAction(std::move(action));
+				g_gui.RefreshView();
+			}
 		}
 	}
 }

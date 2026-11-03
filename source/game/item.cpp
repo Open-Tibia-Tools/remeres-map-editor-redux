@@ -397,90 +397,32 @@ BorderType Item::getBorderAlignment() const {
 // Static conversions
 
 std::string_view Item::LiquidID2Name(uint16_t id) {
-	static constexpr std::array<std::string_view, 44> liquid_names = {
-		"None", // LIQUID_NONE (0)
-		"Water", // LIQUID_WATER (1)
-		"Blood", // LIQUID_BLOOD (2)
-		"Beer", // LIQUID_BEER (3)
-		"Slime", // LIQUID_SLIME (4)
-		"Lemonade", // LIQUID_LEMONADE (5)
-		"Milk", // LIQUID_MILK (6)
-		"Manafluid", // LIQUID_MANAFLUID (7)
-		"Ink", // LIQUID_INK (8)
-		"Water", // LIQUID_WATER2 (9)
-		"Lifefluid", // LIQUID_LIFEFLUID (10)
-		"Oil", // LIQUID_OIL (11)
-		"Slime", // LIQUID_SLIME2 (12)
-		"Urine", // LIQUID_URINE (13)
-		"Coconut Milk", // LIQUID_COCONUT_MILK (14)
-		"Wine", // LIQUID_WINE (15)
-		"Unknown", // 16
-		"Unknown", // 17
-		"Unknown", // 18
-		"Mud", // LIQUID_MUD (19)
-		"Unknown", // 20
-		"Fruit Juice", // LIQUID_FRUIT_JUICE (21)
-		"Unknown", // 22
-		"Unknown", // 23
-		"Unknown", // 24
-		"Unknown", // 25
-		"Lava", // LIQUID_LAVA (26)
-		"Rum", // LIQUID_RUM (27)
-		"Swamp", // LIQUID_SWAMP (28)
-		"Unknown", // 29
-		"Unknown", // 30
-		"Unknown", // 31
-		"Unknown", // 32
-		"Unknown", // 33
-		"Unknown", // 34
-		"Tea", // LIQUID_TEA (35)
-		"Unknown", // 36
-		"Unknown", // 37
-		"Unknown", // 38
-		"Unknown", // 39
-		"Unknown", // 40
-		"Unknown", // 41
-		"Unknown", // 42
-		"Mead" // LIQUID_MEAD (43)
-	};
-
-	if (id < liquid_names.size()) {
-		return liquid_names[id];
+	switch (id) {
+		case LIQUID_NONE:         return "None";
+		case LIQUID_WATER:        return "Water";
+		case LIQUID_WATER2:       return "Water (Alternative)";
+		case LIQUID_BLOOD:        return "Blood";
+		case LIQUID_BEER:         return "Beer";
+		case LIQUID_SLIME:        return "Slime";
+		case LIQUID_SLIME2:       return "Slime (Alternative)";
+		case LIQUID_LEMONADE:     return "Lemonade";
+		case LIQUID_MILK:         return "Milk";
+		case LIQUID_MANAFLUID:    return "Manafluid";
+		case LIQUID_INK:          return "Ink";
+		case LIQUID_LIFEFLUID:    return "Lifefluid";
+		case LIQUID_OIL:          return "Oil";
+		case LIQUID_URINE:        return "Urine";
+		case LIQUID_COCONUT_MILK: return "Coconut Milk";
+		case LIQUID_WINE:         return "Wine";
+		case LIQUID_MUD:          return "Mud";
+		case LIQUID_FRUIT_JUICE:  return "Fruit Juice";
+		case LIQUID_LAVA:         return "Lava";
+		case LIQUID_RUM:          return "Rum";
+		case LIQUID_SWAMP:        return "Swamp";
+		case LIQUID_TEA:          return "Tea";
+		case LIQUID_MEAD:         return "Mead";
+		default:                  return "Unknown";
 	}
-	return "Unknown";
-}
-
-uint16_t Item::LiquidName2ID(std::string liquid) {
-	to_lower_str(liquid);
-	static const std::unordered_map<std::string, uint16_t> liquid_map = {
-		{ "none", LIQUID_NONE },
-		{ "water", LIQUID_WATER },
-		{ "blood", LIQUID_BLOOD },
-		{ "beer", LIQUID_BEER },
-		{ "slime", LIQUID_SLIME },
-		{ "lemonade", LIQUID_LEMONADE },
-		{ "milk", LIQUID_MILK },
-		{ "manafluid", LIQUID_MANAFLUID },
-		{ "lifefluid", LIQUID_LIFEFLUID },
-		{ "oil", LIQUID_OIL },
-		{ "urine", LIQUID_URINE },
-		{ "coconut milk", LIQUID_COCONUT_MILK },
-		{ "wine", LIQUID_WINE },
-		{ "mud", LIQUID_MUD },
-		{ "fruit juice", LIQUID_FRUIT_JUICE },
-		{ "lava", LIQUID_LAVA },
-		{ "rum", LIQUID_RUM },
-		{ "swamp", LIQUID_SWAMP },
-		{ "ink", LIQUID_INK },
-		{ "tea", LIQUID_TEA },
-		{ "mead", LIQUID_MEAD }
-	};
-
-	auto it = liquid_map.find(liquid);
-	if (it != liquid_map.end()) {
-		return it->second;
-	}
-	return LIQUID_NONE;
 }
 
 // ============================================================================

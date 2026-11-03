@@ -43,7 +43,7 @@ namespace {
 		return pixel_x >= left && pixel_x < left + width && pixel_y >= top && pixel_y < top + height;
 	}
 
-	PixelTestResult SampleSpriteAlpha(const GameSprite& sprite, size_t index, int pixel_x, int pixel_y) {
+	PixelTestResult SampleSpriteAlpha(const GameSprite& sprite, size_t index, int pixel_x, int pixel_y, int radius = 0) {
 		if (index >= sprite.spriteList.size()) {
 			return PixelTestResult::Unknown;
 		}
@@ -64,11 +64,33 @@ namespace {
 		}
 
 		const size_t offset = (static_cast<size_t>(pixel_y) * dimensions.width + static_cast<size_t>(pixel_x)) * 4;
-		return rgba[offset + 3] > kPixelSelectionAlphaThreshold ? PixelTestResult::Hit : PixelTestResult::Miss;
+		if (rgba[offset + 3] > kPixelSelectionAlphaThreshold) {
+			return PixelTestResult::Hit;
+		}
+
+		if (radius > 0) {
+			for (int r = 1; r <= radius; ++r) {
+				for (int dy = -r; dy <= r; ++dy) {
+					for (int dx = -r; dx <= r; ++dx) {
+						if (std::abs(dx) != r && std::abs(dy) != r) continue;
+						const int nx = pixel_x + dx;
+						const int ny = pixel_y + dy;
+						if (nx >= 0 && nx < dimensions.width && ny >= 0 && ny < dimensions.height) {
+							const size_t noffset = (static_cast<size_t>(ny) * dimensions.width + static_cast<size_t>(nx)) * 4;
+							if (rgba[noffset + 3] > kPixelSelectionAlphaThreshold) {
+								return PixelTestResult::Hit;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return PixelTestResult::Miss;
 	}
 
 	template <typename IndexProvider>
-	PixelTestResult HitTestSpriteParts(const GameSprite& sprite, const SpriteLayoutMetrics& metrics, int base_x, int base_y, int pixel_x, int pixel_y, IndexProvider&& index_provider) {
+	PixelTestResult HitTestSpriteParts(const GameSprite& sprite, const SpriteLayoutMetrics& metrics, int base_x, int base_y, int pixel_x, int pixel_y, IndexProvider&& index_provider, int alpha_radius = 0) {
 		const std::optional<SelectionSpritePart> part = FindSelectionSpritePart(pixel_x, pixel_y, base_x, base_y, metrics);
 		if (!part.has_value()) {
 			return PixelTestResult::Miss;
@@ -77,7 +99,7 @@ namespace {
 		bool unavailable = false;
 		const int layers = std::max<int>(1, sprite.layers);
 		for (int layer = 0; layer < layers; ++layer) {
-			const PixelTestResult result = SampleSpriteAlpha(sprite, index_provider(part->column, part->row, layer), part->local_x, part->local_y);
+			const PixelTestResult result = SampleSpriteAlpha(sprite, index_provider(part->column, part->row, layer), part->local_x, part->local_y, alpha_radius);
 			if (result == PixelTestResult::Hit) {
 				return PixelTestResult::Hit;
 			}
@@ -112,6 +134,7 @@ namespace {
 		const int base_x = -elevation - draw_offset_x;
 		const int base_y = -elevation - draw_offset_y;
 
+		const int alpha_radius = item.isFluidContainer() ? 4 : 0;
 		const PixelTestResult result = HitTestSpriteParts(
 			*sprite,
 			metrics,
@@ -121,7 +144,8 @@ namespace {
 			pixel_y,
 			[&](int cx, int cy, int layer) {
 				return sprite->getIndex(cx, cy, layer, patterns.x, patterns.y, patterns.z, patterns.frame);
-			}
+			},
+			alpha_radius
 		);
 
 		if (result == PixelTestResult::Unknown) {
