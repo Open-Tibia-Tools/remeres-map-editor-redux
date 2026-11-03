@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
 """
-AI-powered Issue and PR triage system using local EmbeddingGemma 2 GGUF via llama-cpp-python.
-Runs on GitHub Actions CPU runners with zero-shot semantic embedding classification.
+AI-powered Issue and PR triage system using EmbeddingGemma 2.
+Runs zero-shot semantic embedding classification on GitHub Actions and local environments.
 """
 
 import json
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
 
 # Default labels with descriptions used when GitHub API is unavailable
 DEFAULT_LABELS: Dict[str, str] = {
-    "Type: Bug": "Inconsistencies or issues which will cause a problem for users.",
-    "Type: Enhancement": "New feature or request.",
+    "Type: Bug": "Inconsistencies, crashes, or issues which will cause a problem for users.",
+    "Type: Enhancement": "New feature or improvement request.",
     "Type: Documentation": "Improvements or additions to documentation (README, wiki, code comments).",
     "Type: Info": "Further information requested or required.",
     "Type: Missing Content": "Content not yet implemented or not following accepted standards.",
-    "Area: Brushes": "Changes related to the brush system (ground, wall, doodad, etc.).",
-    "Area: Build": "Changes to CMake, vcpkg, CI/CD, or build configuration.",
+    "Area: Brushes": "Changes related to the brush system (ground, wall, doodad, border, etc.).",
+    "Area: Build": "Changes to CMake, vcpkg, CI/CD, compiler, or build configuration.",
     "Area: Data": "Changes to data files (data/ — materials, clients.xml, menubar.xml).",
     "Area: I/O": "Changes to map file I/O (OTBM, minimap export, etc.).",
     "Area: Live Editing": "Changes to the collaborative live editing system.",
@@ -40,20 +40,20 @@ DEFAULT_LABELS: Dict[str, str] = {
 
 # Domain keyword hints to enrich semantic embedding anchors
 LABEL_HINTS: Dict[str, str] = {
-    "Type: Bug": "bug, crash, exception, error, regression, broken, failure, defect, freeze, memory leak, glitch, assert",
+    "Type: Bug": "bug report, crash, defect, error, regression, broken, failure, freeze, exception, assertion, fault",
     "Type: Enhancement": "feature request, new feature, suggestion, proposal, improvement, enhancement, add option, support for",
-    "Type: Documentation": "documentation, docs, README, guide, comments, wiki, typos, manual, AGENTS.md, instructions",
-    "Type: Info": "question, information requested, clarification, help, inquiry, discussion",
-    "Type: Missing Content": "missing items, missing sprites, missing assets, incomplete content, missing definitions, missing borders",
+    "Type: Documentation": "documentation, docs, README, guide, comments, wiki, typos, manual, AGENTS.md, instructions, markdown",
+    "Type: Info": "question, information requested, clarification, help, inquiry, discussion, support question",
+    "Type: Missing Content": "missing items, missing sprites, missing assets, content not yet implemented, missing definitions, missing borders",
     "Area: Brushes": "brush, ground brush, wall, doodad, border, autoborder, terrain, carpet, table, door, eraser, placement",
-    "Area: Build": "CMake, vcpkg, Ninja, compiler, MSVC, Clang, GCC, CI/CD, GitHub Actions, workflows, dependencies, build_ninja",
+    "Area: Build": "CMake, vcpkg, Ninja, compiler, MSVC, Clang, GCC, CI/CD, GitHub Actions, workflows, dependencies, build_ninja, compilation",
     "Area: Data": "materials.xml, clients.xml, menubar.xml, items.otb, appearances, data directory, assets, client version",
     "Area: I/O": "OTBM, map loading, map saving, file format, minimap export, persistence, compression, serialization, gzip",
     "Area: Live Editing": "live collaboration, multiplayer editing, socket, server, client, network sync, peer, packet",
     "Area: Rendering": "OpenGL, GLSL shaders, MapDrawer, chunk cache, NanoVG, textures, lighting, drawing, FPS, graphics, render, tile renderer",
-    "Area: Scripts": "Lua API, lua scripts, script engine, extensions, test scripts, bindings",
+    "Area: Scripts": "Lua API, lua scripts, script engine, extensions, test scripts, bindings, lua_api",
     "Area: Source": "C++ source code architecture, core refactoring, backend, engine, memory management, algorithms",
-    "Area: UI": "wxWidgets GUI, dialogs, palettes, menus, buttons, toolbars, windows, controls, theme, layout, canvas, view, icons",
+    "Area: UI": "wxWidgets GUI, dialogs, palettes, menus, buttons, toolbars, windows, controls, theme, layout, canvas, view, icons, preferences",
 }
 
 
@@ -65,31 +65,6 @@ def get_cache_dir() -> Path:
         path = Path.home() / ".cache" / "models"
     path.mkdir(parents=True, exist_ok=True)
     return path
-
-
-def download_model() -> str:
-    """
-    Downloads or verifies unsloth/embeddinggemma-2-GGUF (embeddinggemma-2-Q8_0.gguf)
-    in ~/.cache/models using huggingface_hub.
-    """
-    from huggingface_hub import hf_hub_download
-
-    cache_dir = get_cache_dir()
-    model_filename = "embeddinggemma-2-Q8_0.gguf"
-    target_file = cache_dir / model_filename
-
-    if target_file.is_file() and target_file.stat().st_size > 100_000_000:
-        print(f"Model already cached: {target_file} ({target_file.stat().st_size / (1024 * 1024):.1f} MB)")
-        return str(target_file)
-
-    print(f"Downloading {model_filename} from unsloth/embeddinggemma-2-GGUF to {cache_dir}...")
-    model_path = hf_hub_download(
-        repo_id="unsloth/embeddinggemma-2-GGUF",
-        filename=model_filename,
-        local_dir=str(cache_dir),
-    )
-    print(f"Model downloaded successfully to {model_path}")
-    return model_path
 
 
 def fetch_repository_labels(repo) -> Dict[str, str]:
@@ -135,22 +110,98 @@ def build_target_text(title: str, body: str, is_pr: bool, changed_files: List[st
     return f"task: classification | text: {content}"
 
 
-def compute_embedding(llm, text: str) -> np.ndarray:
+class EmbeddingBackend:
+    """Abstract wrapper for embedding model backends."""
+    def embed(self, texts: List[str]) -> np.ndarray:
+        raise NotImplementedError
+
+
+class TransformersBackend(EmbeddingBackend):
+    """Native Transformers backend using PyTorch CPU (recommended for EmbeddingGemma 2)."""
+    def __init__(self, model_name: str = "google/embeddinggemma-2"):
+        import torch
+        from transformers import AutoModel, AutoTokenizer
+
+        print(f"Loading {model_name} (text-only backbone) via Transformers...")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name, vision_config=None, audio_config=None)
+        self.model.eval()
+        self.torch = torch
+
+    def embed(self, texts: List[str]) -> np.ndarray:
+        import torch.nn.functional as F
+
+        inputs = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=2048)
+        with self.torch.no_grad():
+            outputs = self.model(**inputs)
+            mask = inputs["attention_mask"].unsqueeze(-1).expand(outputs.last_hidden_state.size()).float()
+            sum_embeddings = self.torch.sum(outputs.last_hidden_state * mask, 1)
+            sum_mask = self.torch.clamp(mask.sum(1), min=1e-9)
+            mean_pooled = sum_embeddings / sum_mask
+            normalized = F.normalize(mean_pooled, p=2, dim=1)
+            return normalized.cpu().numpy()
+
+
+class LlamaCppBackend(EmbeddingBackend):
+    """GGUF backend using llama-cpp-python."""
+    def __init__(self, model_path: str):
+        import llama_cpp
+        from llama_cpp import Llama
+
+        cpu_threads = os.cpu_count() or 4
+        pooling_type = getattr(llama_cpp, "LLAMA_POOLING_TYPE_MEAN", 1)
+        print(f"Initializing Llama model from {model_path} with {cpu_threads} CPU threads...")
+        self.llm = Llama(
+            model_path=model_path,
+            embedding=True,
+            pooling_type=pooling_type,
+            n_ctx=4096,
+            n_threads=cpu_threads,
+            verbose=False,
+        )
+
+    def embed(self, texts: List[str]) -> np.ndarray:
+        results = []
+        for text in texts:
+            clean = text.strip() or "Empty"
+            res = self.llm.create_embedding(clean)
+            vec = np.array(res["data"][0]["embedding"], dtype=np.float32)
+            norm = np.linalg.norm(vec)
+            results.append(vec / norm if norm > 0 else vec)
+        return np.array(results)
+
+
+def get_embedding_model() -> EmbeddingBackend:
     """
-    Computes and L2-normalizes an embedding vector using llama-cpp-python.
+    Returns the appropriate embedding backend (Transformers or LlamaCpp).
+    Prefers Transformers for robust embeddinggemma-2 support.
     """
-    clean_text = text.strip() or "Empty"
-    res = llm.create_embedding(clean_text)
-    vec = np.array(res["data"][0]["embedding"], dtype=np.float32)
-    norm = np.linalg.norm(vec)
-    return vec / norm if norm > 0 else vec
+    try:
+        return TransformersBackend("google/embeddinggemma-2")
+    except Exception as e:
+        print(f"Transformers backend unavailable ({e}). Trying GGUF / Llama-cpp fallback...")
+
+    # GGUF Fallback
+    from huggingface_hub import hf_hub_download
+    cache_dir = get_cache_dir()
+    model_filename = "embeddinggemma-2-Q8_0.gguf"
+    model_file = cache_dir / model_filename
+    if not (model_file.is_file() and model_file.stat().st_size > 100_000_000):
+        print(f"Downloading {model_filename} from unsloth/embeddinggemma-2-GGUF...")
+        hf_hub_download(repo_id="unsloth/embeddinggemma-2-GGUF", filename=model_filename, local_dir=str(cache_dir))
+
+    return LlamaCppBackend(str(model_file))
+
+
+def compute_embeddings(backend: EmbeddingBackend, texts: List[str]) -> np.ndarray:
+    return backend.embed(texts)
 
 
 def select_labels_from_scores(
     scores: Dict[str, float],
-    type_threshold: float = 0.35,
-    area_threshold: float = 0.38,
-    area_delta: float = 0.08,
+    type_threshold: float = 0.70,
+    area_threshold: float = 0.75,
+    area_delta: float = 0.03,
 ) -> Tuple[List[str], str]:
     """
     Selects 1-3 labels from similarity scores using category partitioning:
@@ -165,9 +216,13 @@ def select_labels_from_scores(
     selected: List[str] = []
 
     # 1. Select primary Type: label
-    type_candidates = [(k, v) for k, v in scores.items() if k.startswith("Type:")]
+    type_candidates = sorted(
+        [(k, v) for k, v in scores.items() if k.startswith("Type:")],
+        key=lambda x: x[1],
+        reverse=True,
+    )
     if type_candidates:
-        best_type, type_score = max(type_candidates, key=lambda x: x[1])
+        best_type, type_score = type_candidates[0]
         if type_score >= type_threshold:
             selected.append(best_type)
             log_lines.append(f"\nSelected Type: '{best_type}' (score: {type_score:.3f} >= {type_threshold})")
@@ -200,7 +255,6 @@ def select_labels_from_scores(
 
 
 def run_inference(
-    model_path: str,
     title: str,
     body: str,
     is_pr: bool,
@@ -209,42 +263,29 @@ def run_inference(
     available_labels: Dict[str, str],
 ) -> Tuple[List[str], str]:
     """
-    Runs zero-shot semantic embedding classification using EmbeddingGemma 2 via llama-cpp-python.
+    Runs zero-shot semantic embedding classification using EmbeddingGemma 2.
     Returns (suggested_labels, summary_log).
     """
-    import llama_cpp
-    from llama_cpp import Llama
-
-    cpu_threads = os.cpu_count() or 4
-    pooling_type = getattr(llama_cpp, "LLAMA_POOLING_TYPE_MEAN", 1)
-
-    print(f"Initializing EmbeddingGemma 2 from {model_path} with {cpu_threads} CPU threads (mean pooling)...")
-    llm = Llama(
-        model_path=model_path,
-        embedding=True,
-        pooling_type=pooling_type,
-        n_ctx=4096,
-        n_threads=cpu_threads,
-        verbose=False,
-    )
+    backend = get_embedding_model()
 
     # 1. Compute target text embedding
     target_prompt = build_target_text(title=title, body=body, is_pr=is_pr, changed_files=changed_files)
     print("Computing target embedding...")
-    target_vec = compute_embedding(llm, target_prompt)
+    target_vec = compute_embeddings(backend, [target_prompt])[0]
 
     # 2. Compute similarity against all candidate labels
-    print(f"Scoring {len(available_labels)} candidate labels...")
-    scores: Dict[str, float] = {}
-    for name, desc in available_labels.items():
-        # Do not auto-triage status or priority labels
-        if name.startswith("Status:") or name.startswith("Priority:") or name == "Stale":
-            continue
+    candidate_names = [
+        name for name in available_labels.keys()
+        if not (name.startswith("Status:") or name.startswith("Priority:") or name == "Stale")
+    ]
+    label_anchors = [build_label_anchor(name, available_labels.get(name, "")) for name in candidate_names]
 
-        label_anchor = build_label_anchor(name, desc)
-        label_vec = compute_embedding(llm, label_anchor)
-        score = float(np.dot(target_vec, label_vec))
-        scores[name] = score
+    print(f"Scoring {len(candidate_names)} candidate labels...")
+    label_vecs = compute_embeddings(backend, label_anchors)
+
+    scores: Dict[str, float] = {}
+    for idx, name in enumerate(candidate_names):
+        scores[name] = float(target_vec @ label_vecs[idx])
 
     # 3. Select labels based on category partitioning and similarity thresholds
     suggested, summary_log = select_labels_from_scores(scores)
@@ -263,15 +304,14 @@ def main():
     print(f"Repository: {repo_name}")
     print(f"Dry Run Mode: {dry_run}")
 
-    # 1. Download or verify cached model
-    model_path = download_model()
-
-    # 2. Check if this is a push / cache-seed event
+    # 1. Check if this is a push / cache-seed event
     if event_name == "push":
-        print("Push trigger detected on default branch. Model successfully cached. Exiting triage.")
+        print("Push trigger detected on default branch. Pre-warming model cache...")
+        _ = get_embedding_model()
+        print("Model successfully cached. Exiting triage.")
         return 0
 
-    # 3. Parse event context
+    # 2. Parse event context
     try:
         event_data = json.loads(raw_context) if isinstance(raw_context, str) else raw_context
     except Exception as e:
@@ -316,7 +356,7 @@ def main():
             body = event_data["pull_request"].get("body", "") or ""
             is_pr = True
 
-    # 4. Initialize GitHub client and retrieve repo information
+    # 3. Initialize GitHub client and retrieve repo information
     gh = None
     gh_repo = None
     repo_labels: Dict[str, str] = {}
@@ -368,9 +408,8 @@ def main():
     elif is_pr and "changed_files" in event_data:
         changed_files = event_data["changed_files"][:30]
 
-    # 5. Run semantic embedding inference
+    # 4. Run semantic embedding inference
     raw_suggested, summary_log = run_inference(
-        model_path=model_path,
         title=title,
         body=body,
         is_pr=is_pr,
@@ -381,7 +420,7 @@ def main():
 
     print("\n" + summary_log + "\n")
 
-    # 6. Filter and strictly validate labels against repository labels
+    # 5. Filter and strictly validate labels against repository labels
     label_lookup = {k.lower().strip(): k for k in repo_labels.keys()}
     valid_labels_to_apply = []
 
@@ -400,7 +439,7 @@ def main():
     print(f"Suggested raw labels: {raw_suggested}")
     print(f"Validated labels to apply: {valid_labels_to_apply}")
 
-    # 7. Apply labels to Issue or PR
+    # 6. Apply labels to Issue or PR
     if not valid_labels_to_apply:
         print("No valid matching labels found to apply.")
         return 0
