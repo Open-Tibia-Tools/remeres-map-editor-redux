@@ -60,6 +60,12 @@ namespace rme::sec::map_dat {
 				} else if (info.veteran_start) {
 					town->setTemplePosition(toPosition(*info.veteran_start));
 				}
+				// The temple tile counts its towns, which shows the town marker there.
+				if (const Position& temple = town->getTemplePosition(); temple.isValid()) {
+					if (Tile* tile = map.getOrCreateTile(temple); tile && tile->getLocation()) {
+						tile->getLocation()->increaseTownCount();
+					}
+				}
 				map.towns.addTown(std::move(town));
 			}
 			for (const MapMark& mark : info.marks) {
