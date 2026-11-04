@@ -22,6 +22,7 @@
 #include "ui/icons/sprite_icon_service.h"
 #include "ui/icons/editor_icon_registry.h"
 #include "ui/gui.h"
+#include "ui/properties/srv_attribute_fields.h"
 #include "map/map.h"
 #include "util/image_manager.h"
 #include "ui/map_tab.h"
@@ -288,7 +289,9 @@ void ToolOptionsSurface::Clear() {
 void ToolOptionsSurface::EnsureToolButtons() {
 	const Brush* creature_brush = GetSelectedCreatureBrush();
 	const bool creature_mode = IsCreatureToolMode();
-	const int desired_count = creature_mode ? 2 : static_cast<int>(GetDefaultTools().size());
+	// Sector maps have no spawns, so their creature tools leave the spawn brush out.
+	const bool sector_map = rme::srv::isSrvClient();
+	const int desired_count = creature_mode ? (sector_map ? 1 : 2) : static_cast<int>(GetDefaultTools().size());
 
 	if (static_cast<int>(tool_buttons.size()) != desired_count) {
 		RebuildToolButtons();
@@ -296,11 +299,9 @@ void ToolOptionsSurface::EnsureToolButtons() {
 	}
 
 	if (creature_mode) {
-		if (tool_buttons.size() != 2 ||
-			tool_buttons[0].action != ToolButtonAction::SelectCreature ||
+		if (tool_buttons[0].action != ToolButtonAction::SelectCreature ||
 			tool_buttons[0].brush != creature_brush ||
-			tool_buttons[1].action != ToolButtonAction::SelectSpawn ||
-			tool_buttons[1].brush != g_brush_manager.spawn_brush) {
+			(!sector_map && (tool_buttons[1].action != ToolButtonAction::SelectSpawn || tool_buttons[1].brush != g_brush_manager.spawn_brush))) {
 			RebuildToolButtons();
 		}
 		return;
@@ -336,11 +337,13 @@ void ToolOptionsSurface::RebuildToolButtons() {
 			.brush = GetSelectedCreatureBrush(),
 			.asset_path = IMAGE_PLACE_CREATURE,
 		});
-		tool_buttons.push_back(ToolButtonEntry {
-			.action = ToolButtonAction::SelectSpawn,
-			.brush = g_brush_manager.spawn_brush,
-			.asset_path = IMAGE_PLACE_SPAWN,
-		});
+		if (!rme::srv::isSrvClient()) {
+			tool_buttons.push_back(ToolButtonEntry {
+				.action = ToolButtonAction::SelectSpawn,
+				.brush = g_brush_manager.spawn_brush,
+				.asset_path = IMAGE_PLACE_SPAWN,
+			});
+		}
 	} else {
 		for (Brush* brush : GetDefaultTools()) {
 			tool_buttons.push_back(ToolButtonEntry {
@@ -441,12 +444,18 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 		AddWindowToSizer(other_sizer, thickness_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 	}
 	if (show_spawn_controls) {
+		// Sector maps keep only the respawn time: they have no spawns.
+		const bool sector_map = rme::srv::isSrvClient();
 		AddWindowToSizer(other_sizer, spawn_time_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
-		AddWindowToSizer(other_sizer, spawn_size_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+		if (!sector_map) {
+			AddWindowToSizer(other_sizer, spawn_size_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+		}
 		if (show_weight) {
 			AddWindowToSizer(other_sizer, weight_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 		}
-		AddWindowToSizer(other_sizer, place_spawn_with_creature_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+		if (!sector_map) {
+			AddWindowToSizer(other_sizer, place_spawn_with_creature_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
+		}
 	}
 	if (show_preview_border) {
 		AddWindowToSizer(other_sizer, preview_border_checkbox, 0, wxEXPAND | wxALL, FromDIP(6));
@@ -602,14 +611,19 @@ std::vector<Brush*> ToolOptionsSurface::GetDefaultTools() const {
 	if (g_brush_manager.pz_brush) {
 		brushes.push_back(g_brush_manager.pz_brush);
 	}
-	if (g_brush_manager.rook_brush) {
+	// Sector maps have Refresh tiles but no PvP or No-PvP zones; other maps the other way round.
+	const bool sector_map = rme::srv::isSrvClient();
+	if (!sector_map && g_brush_manager.rook_brush) {
 		brushes.push_back(g_brush_manager.rook_brush);
 	}
 	if (g_brush_manager.nolog_brush) {
 		brushes.push_back(g_brush_manager.nolog_brush);
 	}
-	if (g_brush_manager.pvp_brush) {
+	if (!sector_map && g_brush_manager.pvp_brush) {
 		brushes.push_back(g_brush_manager.pvp_brush);
+	}
+	if (sector_map && g_brush_manager.refresh_brush) {
+		brushes.push_back(g_brush_manager.refresh_brush);
 	}
 	if (g_brush_manager.normal_door_brush) {
 		brushes.push_back(g_brush_manager.normal_door_brush);

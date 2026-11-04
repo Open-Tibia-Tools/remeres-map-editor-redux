@@ -50,6 +50,10 @@ namespace LuaAPI {
 				if (c) {
 					c->setSpawnTime(time < 0 ? 0 : time);
 				} }),
+			"amount", sol::property([](Creature* c) -> int { return c ? c->getAmount() : 1; }, [](Creature* c, int amount) {
+				if (c) {
+					c->setAmount(amount);
+				} }),
 			"direction", sol::property([](Creature* c) -> int { return c ? static_cast<int>(c->getDirection()) : 0; }, [](Creature* c, int dir) {
 				if (c && dir >= DIRECTION_FIRST && dir <= DIRECTION_LAST) {
 					c->setDirection(static_cast<Direction>(dir));

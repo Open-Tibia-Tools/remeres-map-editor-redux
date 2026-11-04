@@ -1189,9 +1189,9 @@ transparency = true
 version = 1286
 
 [[clients]]
-configType = 'dat_otb'
+configType = 'dat_srv'
 datSignature = '439D5A33'
-dataDirectory = '770'
+dataDirectory = '770-srv'
 description = 'sample description'
 extended = false
 frameDurations = false
@@ -1200,11 +1200,11 @@ metadataFile = 'Tibia.dat'
 name = '7.7-srv'
 otbId = 0
 otbMajor = 0
-otbmVersions = []
+otbmVersions = [ 4 ]
 sprSignature = '439852BE'
 spritesFile = 'Tibia.spr'
 transparency = false
-version = 77
+version = 770
 
 [[clients]]
 configType = 'dat_only'

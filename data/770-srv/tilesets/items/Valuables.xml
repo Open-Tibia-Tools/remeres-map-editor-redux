@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Valuables">
+    <item fromid="2848" toid="2852" />
+    <item id="3005" />
+    <item id="3010" />
+    <item id="3017" />
+    <item id="3020" />
+    <item id="3023" />
+    <item id="3024" />
+    <item fromid="3026" toid="3043" />
+</tileset>

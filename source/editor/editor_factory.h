@@ -11,8 +11,9 @@ class LiveClient;
 
 class EditorFactory {
 public:
-	// Creates a new empty map, may prompt for version if not set
-	static std::unique_ptr<Editor> CreateEmpty(CopyBuffer& copybuffer);
+	// Creates a new empty map with `version`, or with the latest client version
+	// when none is given; may prompt for version if not set
+	static std::unique_ptr<Editor> CreateEmpty(CopyBuffer& copybuffer, const ClientVersion* version = nullptr);
 
 	// Loads a map from file, handles version checking/switching
 	static std::unique_ptr<Editor> LoadFromFile(CopyBuffer& copybuffer, const FileName& fn, const MapLoadOptions& load_options = {});

@@ -44,10 +44,11 @@ void SetupCallbacks(Editor* editor) {
 	};
 }
 
-std::unique_ptr<Editor> EditorFactory::CreateEmpty(CopyBuffer& copybuffer) {
+std::unique_ptr<Editor> EditorFactory::CreateEmpty(CopyBuffer& copybuffer, const ClientVersion* version) {
 	ClientVersionID defaultVersion = CLIENT_VERSION_NONE;
-	ClientVersion* latest = ClientVersion::getLatestVersion();
-	if (latest) {
+	if (version) {
+		defaultVersion = version->getID();
+	} else if (ClientVersion* latest = ClientVersion::getLatestVersion()) {
 		defaultVersion = latest->getID();
 	}
 

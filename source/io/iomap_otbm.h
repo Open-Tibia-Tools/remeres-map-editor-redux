@@ -90,6 +90,7 @@ struct OTBMStartupPeekResult {
 	bool has_error = false;
 	wxString error_message;
 	bool is_compressed = false;
+	bool is_sector_map = false; // sector map (.sec folder) (IOMapSec), not an OTBM file
 };
 
 #pragma pack()

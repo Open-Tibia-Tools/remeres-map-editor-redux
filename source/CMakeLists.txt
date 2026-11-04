@@ -84,6 +84,10 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/editor/selection_thread.h
     ${CMAKE_CURRENT_LIST_DIR}/ext/pugiconfig.hpp
     ${CMAKE_CURRENT_LIST_DIR}/ext/pugixml.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/game/srv_homes.h
+    ${CMAKE_CURRENT_LIST_DIR}/game/srv_item_attributes.h
+    ${CMAKE_CURRENT_LIST_DIR}/game/srv_liquids.h
+    ${CMAKE_CURRENT_LIST_DIR}/game/srv_markers.h
     ${CMAKE_CURRENT_LIST_DIR}/game/complexitem.h
     ${CMAKE_CURRENT_LIST_DIR}/game/creature.h
     ${CMAKE_CURRENT_LIST_DIR}/game/creatures.h
@@ -114,6 +118,8 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/dat/dat_item_parser.h
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/otb/otb_item_format.h
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/otb/otb_item_parser.h
+    ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/srv/objects_srv_reader.h
+    ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/srv/srv_item_parser.h
 	${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/protobuf/protobuf_item_parser.h
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/xml/xml_item_parser.h
 
@@ -129,6 +135,20 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/io/filehandle.h
     ${CMAKE_CURRENT_LIST_DIR}/io/iomap.h
     ${CMAKE_CURRENT_LIST_DIR}/io/iomap_otbm.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/iomap_sec.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/creature_placement.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/house_files.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/map_dat_file.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/monster_files.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/npc_files.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/server_data_folder.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/server_marker_files.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_creature_files.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_moveuse.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_script_lexer.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_world_files.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/sec_file_io.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/sec_sector_parser.h
     ${CMAKE_CURRENT_LIST_DIR}/io/map_xml_io.h
     ${CMAKE_CURRENT_LIST_DIR}/io/xml_file_loader.h
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/item_serialization_otbm.h
@@ -259,6 +279,8 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/map_overlay_collector.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/lua_overlay_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/marker_drawer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/server_marker_drawer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/home_radius_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/preview_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/selection_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/zone_overlay_drawer.h
@@ -344,6 +366,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/find_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/missing_items_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/map_properties_window.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/map/sector_map_properties_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/import_map_window.h
 
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/export_minimap_window.h
@@ -388,6 +411,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_registry.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_factory.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_layout.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/srv_attribute_fields.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/item_properties_window.h
     ${CMAKE_CURRENT_LIST_DIR}/util/image_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/item_grid_panel.h
@@ -544,6 +568,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ext/pugixml.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/complexitem.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/creature.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/game/srv_markers.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/creatures.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/house.cpp
     ${CMAKE_CURRENT_LIST_DIR}/game/item.cpp
@@ -564,6 +589,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/core/item_definitions_loader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/dat/dat_item_parser.cpp
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/otb/otb_item_parser.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/srv/objects_srv_reader.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/srv/srv_item_parser.cpp
 	${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/protobuf/protobuf_item_parser.cpp
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/xml/xml_item_parser.cpp
 
@@ -579,6 +606,19 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/io/filehandle.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/iomap.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/iomap_otbm.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/iomap_sec.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/iomap_sec_save.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/creature_placement.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/house_files.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/map_dat_file.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/monster_files.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/npc_files.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/server_data_folder.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/data/server_marker_files.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_creature_files.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_moveuse.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/srv_world_files.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/sec/sec_sector_parser.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/map_xml_io.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/xml_file_loader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/item_serialization_otbm.cpp
@@ -683,6 +723,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/map_overlay_collector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/lua_overlay_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/marker_drawer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/server_marker_drawer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/home_radius_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/preview_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/selection_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/zone_overlay_drawer.cpp
@@ -763,6 +805,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/find_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/missing_items_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/map_properties_window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/map/sector_map_properties_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/import_map_window.cpp
 
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/export_minimap_window.cpp
@@ -807,6 +850,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_registry.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_factory.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_layout.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/srv_attribute_fields.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/item_properties_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/positionctrl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/item_grid_panel.cpp

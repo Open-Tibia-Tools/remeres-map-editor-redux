@@ -14,9 +14,11 @@
 #include "editor/selection.h"
 #include "map/map.h"
 #include "io/iomap.h"
+#include "io/iomap_sec.h"
 #include "app/settings.h"
 #include "app/managers/version_manager.h"
 #include "ui/gui.h"
+#include "ui/properties/srv_attribute_fields.h"
 #include "lua/lua_script_manager.h"
 
 #include <fstream>
@@ -27,6 +29,15 @@
 #include <spdlog/spdlog.h>
 
 void EditorPersistence::loadMap(Editor& editor, const FileName& fn, const MapLoadOptions& load_options) {
+	if (IOMapSec::isSectorMap(fn)) {
+		// Sector files carry no version; the caller loaded a matching client.
+		ScopedLoadingBar loadingBar(wxstr(std::format("Loading sector map {}", FileSystem::PathToUtf8(IOMapSec::sectorFolder(fn)))));
+		if (!editor.map.open(std::string(fn.GetFullPath().utf8_str()))) {
+			throw std::runtime_error(nstr(editor.map.getError()));
+		}
+		return;
+	}
+
 	MapVersion ver;
 	if (!IOMapOTBM::getVersionInfo(fn, ver)) {
 		throw std::runtime_error("Could not open file \"" + nstr(fn.GetFullPath()) + "\".\nThis is not a valid OTBM file or it does not exist.");
@@ -57,7 +68,17 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 
 	if (savefile.empty()) {
 		savefile = editor.map.getFilename();
-	} else {
+	}
+	if (IOMapSec::isSectorTarget(wxstr(savefile))) {
+		return saveSectorMap(editor, wxstr(savefile), showdialog);
+	}
+	// Sector maps and OTBM maps do not mix: the client that reads objects.srv saves sector files only.
+	if (rme::srv::isSrvClient()) {
+		DialogUtil::PopupDialog("Error", "Maps opened with a client that reads its items from objects.srv are saved as sector maps only.", wxOK);
+		return false;
+	}
+
+	if (!filename.GetFullPath().empty()) {
 		FileName c1(wxstr(savefile));
 		FileName c2(wxstr(editor.map.getFilename()));
 		save_as = c1 != c2;
@@ -338,6 +359,32 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 		std::remove(backup_waypoint.c_str());
 	}
 
+	editor.map.clearChanges();
+	return true;
+}
+
+bool EditorPersistence::saveSectorMap(Editor& editor, const FileName& target, bool showdialog) {
+	if (showdialog) {
+		g_gui.CreateLoadBar("Saving sector map...", false, "Saving");
+	}
+	IOMapSec saver;
+	const bool success = saver.saveMap(editor.map, target);
+	if (showdialog) {
+		g_gui.DestroyLoadBar();
+	}
+	if (!saver.getWarnings().empty()) {
+		DialogUtil::ListDialog("Save warnings", saver.getWarnings());
+	}
+	if (!success) {
+		DialogUtil::PopupDialog("Error", saver.getError(), wxOK);
+		return false;
+	}
+
+	// The map's file is now the folder it was saved to.
+	const std::filesystem::path folder = IOMapSec::sectorFolder(target);
+	editor.map.filename = FileSystem::PathToUtf8(folder);
+	editor.map.name = FileSystem::PathToUtf8(folder.filename());
+	editor.map.unnamed = false;
 	editor.map.clearChanges();
 	return true;
 }

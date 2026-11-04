@@ -4,8 +4,10 @@
 
 #include "app/main.h"
 #include "ui/properties/creature_properties_window.h"
+#include "ui/properties/srv_attribute_fields.h"
 
 #include "game/creature.h"
+#include "game/srv_homes.h"
 #include "ui/gui.h"
 #include "util/image_manager.h"
 
@@ -19,21 +21,39 @@ CreaturePropertiesWindow::CreaturePropertiesWindow(wxWindow* win_parent, const M
 	Bind(wxEVT_BUTTON, &CreaturePropertiesWindow::OnClickCancel, this, wxID_CANCEL);
 
 	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
-	wxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Creature Properties");
+	wxStaticBoxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Creature Properties");
+	wxWindow* static_box = boxsizer->GetStaticBox();
 
 	wxFlexGridSizer* subsizer = new wxFlexGridSizer(2, 10, 10);
 	subsizer->AddGrowableCol(1);
 
-	subsizer->Add(new wxStaticText(this, wxID_ANY, "Creature "));
-	subsizer->Add(new wxStaticText(this, wxID_ANY, "\"" + wxstr(edit_creature->getName()) + "\""), wxSizerFlags(1).Expand());
+	subsizer->Add(new wxStaticText(static_box, wxID_ANY, "Creature "));
+	subsizer->Add(new wxStaticText(static_box, wxID_ANY, "\"" + wxstr(edit_creature->getName()) + "\""), wxSizerFlags(1).Expand());
 
-	subsizer->Add(new wxStaticText(this, wxID_ANY, "Spawn interval"));
-	count_field = new wxSpinCtrl(this, wxID_ANY, std::to_string(edit_creature->getSpawnTime()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 10, 86400, edit_creature->getSpawnTime());
+	subsizer->Add(new wxStaticText(static_box, wxID_ANY, "Spawn interval"));
+	count_field = new wxSpinCtrl(static_box, wxID_ANY, std::to_string(edit_creature->getSpawnTime()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 10, 86400, edit_creature->getSpawnTime());
 	count_field->SetToolTip("Spawn interval in seconds");
 	subsizer->Add(count_field, wxSizerFlags(1).Expand());
 
-	subsizer->Add(new wxStaticText(this, wxID_ANY, "Direction"));
-	direction_field = new wxChoice(this, wxID_ANY);
+	if (!edit_creature->isNpc() && (rme::srv::isSrvClient() || edit_creature->getAmount() != 1)) {
+		subsizer->Add(new wxStaticText(static_box, wxID_ANY, "Amount"));
+		amount_field = new wxSpinCtrl(static_box, wxID_ANY, std::to_string(edit_creature->getAmount()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 1000, edit_creature->getAmount());
+		amount_field->SetToolTip("How many of this monster the server keeps alive within the spawn radius");
+		subsizer->Add(amount_field, wxSizerFlags(1).Expand());
+	}
+
+	// On a sector map every monster is a home with its own radius; an NPC read
+	// from its npc/*.npc file has one too.
+	if (rme::srv::isSrvClient() && (!edit_creature->isNpc() || edit_creature->getHomeRadius())) {
+		subsizer->Add(new wxStaticText(static_box, wxID_ANY, "Radius"));
+		const int radius = edit_creature->getHomeRadius().value_or(rme::srv::kDefaultMonsterHomeRadius);
+		radius_field = new wxSpinCtrl(static_box, wxID_ANY, std::to_string(radius), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 65535, radius);
+		radius_field->SetToolTip("How far from its home the creature roams and respawns");
+		subsizer->Add(radius_field, wxSizerFlags(1).Expand());
+	}
+
+	subsizer->Add(new wxStaticText(static_box, wxID_ANY, "Direction"));
+	direction_field = new wxChoice(static_box, wxID_ANY);
 	direction_field->SetToolTip("Initial facing direction");
 
 	for (Direction dir = DIRECTION_FIRST; dir <= DIRECTION_LAST; ++dir) {
@@ -72,6 +92,12 @@ CreaturePropertiesWindow::~CreaturePropertiesWindow() {
 void CreaturePropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	int new_spawntime = count_field->GetValue();
 	edit_creature->setSpawnTime(new_spawntime);
+	if (amount_field) {
+		edit_creature->setAmount(amount_field->GetValue());
+	}
+	if (radius_field) {
+		edit_creature->setHomeRadius(radius_field->GetValue());
+	}
 
 	if (direction_field->GetSelection() != wxNOT_FOUND) {
 		int new_dir = static_cast<int>(reinterpret_cast<intptr_t>(direction_field->GetClientData(direction_field->GetSelection())));

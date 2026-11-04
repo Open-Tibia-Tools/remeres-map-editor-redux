@@ -391,6 +391,7 @@ namespace LuaAPI {
 			"isNoPvp", sol::property([](Tile* tile) { return tile && (tile->getMapFlags() & TILESTATE_NOPVP); }),
 			"isNoLogout", sol::property([](Tile* tile) { return tile && (tile->getMapFlags() & TILESTATE_NOLOGOUT); }),
 			"isPvpZone", sol::property([](Tile* tile) { return tile && (tile->getMapFlags() & TILESTATE_PVPZONE); }),
+			"isRefresh", sol::property([](Tile* tile) { return tile && (tile->getMapFlags() & TILESTATE_REFRESH); }),
 
 			// Map flags
 			"mapFlags", sol::property([](Tile* tile) -> uint32_t { return tile ? tile->getMapFlags() : 0; }, [](Tile* tile, uint32_t flags) {

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Walls - Archways">
+    <brush name="mountain wall archway" />
+    <brush name="brick wall archway" />
+    <brush name="framework wall archway" />
+    <brush name="marble archway" />
+    <brush name="ornamented marble archway" />
+    <brush name="marble archway small 1" />
+    <brush name="marble archway small 2" />
+    <brush name="marble archway small 3" />
+    <brush name="cathedral archway" />
+    <brush name="cathedral archway small" />
+    <brush name="ruined cathedral archway" />
+    <brush name="ruined cathedral archway small" />
+    <brush name="banuta archway" />
+    <brush name="banuta archway small" />
+    <brush name="leaf wall archway" />
+</tileset>

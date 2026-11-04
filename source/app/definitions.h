@@ -154,7 +154,7 @@ constexpr int RGBA_COMPONENTS = 4;
 constexpr int ClientMapWidth = 17;
 constexpr int ClientMapHeight = 13;
 
-#define MAP_LOAD_FILE_WILDCARD "OpenTibia Binary Map (*.otbm)|*.otbm"
+#define MAP_LOAD_FILE_WILDCARD "All supported maps (*.otbm;*.sec)|*.otbm;*.sec|OpenTibia Binary Map (*.otbm)|*.otbm|Sector map, loads the whole folder (*.sec)|*.sec"
 #define MAP_SAVE_FILE_WILDCARD "OpenTibia Binary Map (*.otbm)|*.otbm"
 
 // Lights

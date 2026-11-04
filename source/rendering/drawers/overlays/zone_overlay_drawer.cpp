@@ -22,6 +22,13 @@
 
 namespace rme::rendering {
 
+namespace {
+	// Per-tile zone mask: bits 0-3 are the special zones (PZ, No-PvP,
+	// No-Logout, PvP), bit 4 marks a Refresh tile.
+	constexpr uint8_t kZoneBits = 0x0F;
+	constexpr uint8_t kRefreshBit = 0x10;
+}
+
 bool IsTilePathBlocking(const Tile* t) noexcept {
 	if (!t || !t->isBlocking() || !t->ground) {
 		return false;
@@ -106,7 +113,8 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 				((mf & TILESTATE_PROTECTIONZONE) ? 1u : 0u) |
 				((mf & TILESTATE_NOPVP)          ? 2u : 0u) |
 				((mf & TILESTATE_NOLOGOUT)       ? 4u : 0u) |
-				((mf & TILESTATE_PVPZONE)        ? 8u : 0u));
+				((mf & TILESTATE_PVPZONE)        ? 8u : 0u) |
+				((mf & TILESTATE_REFRESH)        ? kRefreshBit : 0u));
 		};
 		auto fetchRow = [&](int ry, std::vector<uint8_t>& row) {
 			row.resize(row_width);
@@ -164,19 +172,25 @@ void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
 				if (zmask & 2u) tile_zone_flags |= ZONE_FLAG_NOPVP;
 				if (zmask & 4u) tile_zone_flags |= ZONE_FLAG_NOLOGOUT;
 				if (zmask & 8u) tile_zone_flags |= ZONE_FLAG_PVPZONE;
+				if (zmask & kRefreshBit) tile_zone_flags |= ZONE_FLAG_REFRESH;
 
-				if (row_prev_[idx] == 0)     tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_N;
-				if (row_next_[idx] == 0)     tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_S;
-				if (row_curr_[idx - 1] == 0) tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_W;
-				if (row_curr_[idx + 1] == 0) tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_E;
+				// Borders and cluster badges outline the special zones only; refresh is plain stripes.
+				const uint8_t zones = zmask & kZoneBits;
+				if (zones != 0) {
+					if ((row_prev_[idx] & kZoneBits) == 0)     tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_N;
+					if ((row_next_[idx] & kZoneBits) == 0)     tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_S;
+					if ((row_curr_[idx - 1] & kZoneBits) == 0) tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_W;
+					if ((row_curr_[idx + 1] & kZoneBits) == 0) tile_zone_flags |= ZONE_FLAG_ZONE_BORDER_E;
 
-				visible_zone_tiles_.push_back({ x, y, zmask });
+					visible_zone_tiles_.push_back({ x, y, zones });
+				}
 
 				bool is_mult = false;
 				if ((zmask & 1u) && options.zone_pz_blend_mode == 1) is_mult = true;
 				if ((zmask & 2u) && options.zone_nopvp_blend_mode == 1) is_mult = true;
 				if ((zmask & 4u) && options.zone_nologout_blend_mode == 1) is_mult = true;
 				if ((zmask & 8u) && options.zone_pvp_blend_mode == 1) is_mult = true;
+				if ((zmask & kRefreshBit) && options.zone_refresh_blend_mode == 1) is_mult = true;
 
 				const float draw_x = static_cast<float>(x * TILE_SIZE + base_screen_x);
 				const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);

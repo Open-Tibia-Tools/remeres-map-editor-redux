@@ -107,38 +107,42 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		const float labelX = screen_x + tile_size_screen * 0.5f;
 		const float labelY = screen_y - 2.0f;
 
-		const char* t_begin = label.name.data();
-		const char* t_end = label.name.data() + label.name.size();
-		std::string_view lookup_key = label.name;
+		if (!label.name.empty()) {
+			const char* t_begin = label.name.data();
+			const char* t_end = label.name.data() + label.name.size();
+			std::string_view lookup_key = label.name;
 
-		// Fast cached text bounds lookup for creature name (zero allocations on hit)
-		auto it = s_metrics_cache.find(lookup_key);
-		float textWidth = 0.0f;
-		float textHeight = 0.0f;
+			// Fast cached text bounds lookup for creature name (zero allocations on hit)
+			auto it = s_metrics_cache.find(lookup_key);
+			float textWidth = 0.0f;
+			float textHeight = 0.0f;
 
-		if (it != s_metrics_cache.end()) {
-			textWidth = it->second.width;
-			textHeight = it->second.height;
-		} else {
-			float textBounds[4];
-			nvgTextBounds(vg, 0, 0, t_begin, t_end, textBounds);
-			textWidth = textBounds[2] - textBounds[0];
-			textHeight = textBounds[3] - textBounds[1];
-			s_metrics_cache.emplace(std::string(lookup_key), CachedMetrics{ textWidth, textHeight });
+			if (it != s_metrics_cache.end()) {
+				textWidth = it->second.width;
+				textHeight = it->second.height;
+			} else {
+				float textBounds[4];
+				nvgTextBounds(vg, 0, 0, t_begin, t_end, textBounds);
+				textWidth = textBounds[2] - textBounds[0];
+				textHeight = textBounds[3] - textBounds[1];
+				s_metrics_cache.emplace(std::string(lookup_key), CachedMetrics{ textWidth, textHeight });
+			}
+
+			visible_labels.push_back(VisibleLabel {
+				.x = labelX,
+				.y = labelY,
+				.width = textWidth,
+				.height = textHeight,
+				.text = lookup_key,
+				.dynamic_text = {}
+			});
 		}
 
-		visible_labels.push_back(VisibleLabel {
-			.x = labelX,
-			.y = labelY,
-			.width = textWidth,
-			.height = textHeight,
-			.text = lookup_key,
-			.dynamic_text = {}
-		});
-
-		// Spawn time badge placed in bottom-right corner of creature tile
+		// Spawn time badge placed in bottom-right corner of creature tile; a sector map
+		// monster home also shows how many it keeps alive ("3x 600s")
 		if (label.creature && !label.creature->isNpc() && label.creature->getSpawnTime() > 0) {
-			std::string formatted = std::format("{}s", label.creature->getSpawnTime());
+			const int amount = label.creature->getAmount();
+			std::string formatted = amount > 1 ? std::format("{}x {}s", amount, label.creature->getSpawnTime()) : std::format("{}s", label.creature->getSpawnTime());
 			auto it_t = s_metrics_cache.find(formatted);
 			float tw = 0.0f;
 			float th = 0.0f;
@@ -183,6 +187,8 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
 	for (const auto& vl : visible_labels) {
 		std::string_view sv = vl.dynamic_text.empty() ? vl.text : std::string_view(vl.dynamic_text);
-		nvgText(vg, vl.x, vl.y - paddingY, sv.data(), sv.data() + sv.size());
+		if (!sv.empty()) {
+			nvgText(vg, vl.x, vl.y - paddingY, sv.data(), sv.data() + sv.size());
+		}
 	}
 }

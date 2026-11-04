@@ -31,6 +31,7 @@
 
 	<menu name="File">
 		<item name="New..." hotkey="Ctrl+N" action="NEW" help="Create a new map."/>
+		<item name="New Sector Map..." action="NEW_SECTOR_MAP" help="Create a new map in the original server's sector format (.sec)."/>
 		<item name="Open..." hotkey="Ctrl+O" action="OPEN" help="Open another map."/>
 		<item name="Save" hotkey="Ctrl+S" action="SAVE" help="Save the current map."/>
 		<item name="Save As..." hotkey="Ctrl+Alt+S" action="SAVE_AS" help="Save the current map as a new file."/>
@@ -104,6 +105,8 @@
 		<item name="Find Pickupable Items" action="SEARCH_ON_MAP_PICKUPABLE" help="Find all pickupable items on map."/>
 		<separator/>
 		<item name="Find Everything" action="SEARCH_ON_MAP_EVERYTHING" help="Find all items with unique ID, action ID, containers, writeables, or teleports on map."/>
+		<separator/>
+		<item name="Find Quests, Keys and Levels" action="SEARCH_ON_MAP_SERVER_NUMBER" help="Find the quest chests, quest doors and scripts, the keys and the doors they open, and the level doors (sector maps)."/>
 	</menu>
 	<menu name="Map">
 		<item name="Edit Towns..." hotkey="Ctrl+T" action="EDIT_TOWNS" help="Open towns palette."/>
@@ -187,6 +190,10 @@
 		<item name="Show pathing" hotkey="O" action="SHOW_PATHING" help="Show blocking tiles."/>
 		<item name="Show towns" hotkey="" action="SHOW_TOWNS" help="Show temple positions."/>
 		<item name="Show waypoints" hotkey="Shift+W" action="SHOW_WAYPOINTS" help="Show waypoints."/>
+		<item name="Show scripts" hotkey="" action="SHOW_SCRIPT_MARKERS" help="Mark the tiles that dat/moveuse.dat rules use, with their rules as tooltips (sector maps)."/>
+		<item name="Show depots" hotkey="" action="SHOW_DEPOT_MARKERS" help="Mark the depot chests and the booth tiles that open them (sector maps)."/>
+		<item name="Show raids" hotkey="" action="SHOW_RAID_MARKERS" help="Mark where the monsters of raids (mon/*.evt) appear (sector maps)."/>
+		<item name="Show start positions" hotkey="" action="SHOW_START_MARKERS" help="Mark the newbie and veteran start positions of dat/map.dat (sector maps)."/>
 		<separator/>
 		<item name="Highlight Items" hotkey="V" action="HIGHLIGHT_ITEMS" help="Highlight tiles with items on them."/>
 		<item name="Highlight Locked Doors" hotkey="U" action="HIGHLIGHT_LOCKED_DOORS" help="Highlight doors that require key to open."/>

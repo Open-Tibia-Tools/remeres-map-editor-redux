@@ -188,6 +188,11 @@ void SearchCardDrawer::DrawAttributeTokens(
 			"Pickupable",
 			accent_wx
 		};
+	} else if (child.kind == SearchResultKind::ServerNumber) {
+		tokens[token_count++] = {
+			child.subtitle,
+			aid_wx
+		};
 	}
 
 	if (child.unique_id > 0) {
@@ -228,6 +233,9 @@ void SearchCardDrawer::DrawAttributeTokens(
 	float cur_x = start_x;
 	for (size_t i = 0; i < token_count; ++i) {
 		const auto& token = tokens[i];
+		if (token.text.empty()) {
+			continue;
+		}
 		nvgFillColor(vg, NvgUtils::ToNvColor(token.color));
 		nvgText(vg, cur_x, y, token.text.data(), token.text.data() + token.text.size());
 

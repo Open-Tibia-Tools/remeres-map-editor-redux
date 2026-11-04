@@ -8,6 +8,7 @@
 #include "app/preferences.h"
 #include "ui/managers/recent_files_manager.h"
 #include "util/image_manager.h"
+#include "ui/properties/srv_attribute_fields.h"
 
 void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<std::string, std::unique_ptr<MenuBar::Action>>& actions) {
 	using namespace MenuBar;
@@ -20,6 +21,7 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	actions[#id]->setting = setting_
 
 	MAKE_ACTION_ICON(NEW, wxITEM_NORMAL, ICON_NEW, OnNew);
+	MAKE_ACTION_ICON(NEW_SECTOR_MAP, wxITEM_NORMAL, ICON_NEW, OnNewSectorMap);
 	MAKE_ACTION_ICON(OPEN, wxITEM_NORMAL, ICON_OPEN, OnOpen);
 	MAKE_ACTION_ICON(SAVE, wxITEM_NORMAL, ICON_SAVE, OnSave);
 	MAKE_ACTION_ICON(SAVE_AS, wxITEM_NORMAL, ICON_SAVE, OnSaveAs);
@@ -44,6 +46,7 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	MAKE_ACTION_ICON(FIND_ITEM, wxITEM_NORMAL, ICON_SEARCH, OnSearchForItem);
 	MAKE_ACTION_ICON(REPLACE_ITEMS, wxITEM_NORMAL, ICON_SYNC, OnReplaceItems);
 	MAKE_ACTION_ICON(SEARCH_ON_MAP_EVERYTHING, wxITEM_NORMAL, ICON_SEARCH, OnSearchForStuffOnMap);
+	MAKE_ACTION_ICON(SEARCH_ON_MAP_SERVER_NUMBER, wxITEM_NORMAL, ICON_SEARCH, OnSearchForServerNumberOnMap);
 	MAKE_ACTION_ICON(SEARCH_ON_MAP_UNIQUE, wxITEM_NORMAL, ICON_SEARCH, OnSearchForUniqueOnMap);
 	MAKE_ACTION_ICON(SEARCH_ON_MAP_ACTION, wxITEM_NORMAL, ICON_SEARCH, OnSearchForActionOnMap);
 	MAKE_ACTION_ICON(SEARCH_ON_MAP_CONTAINER, wxITEM_NORMAL, ICON_SEARCH, OnSearchForContainerOnMap);
@@ -126,6 +129,10 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	MAKE_ACTION_ICON(SHOW_INVALID_TILES, wxITEM_CHECK, ICON_TRIANGLE_EXCLAMATION, OnChangeViewSettings);
 	MAKE_ACTION_ICON(SHOW_INVALID_ZONES, wxITEM_CHECK, ICON_TRIANGLE_EXCLAMATION, OnChangeViewSettings);
 	MAKE_ACTION_ICON(SHOW_WAYPOINTS, wxITEM_CHECK, ICON_FLAG, OnChangeViewSettings);
+	MAKE_ACTION_ICON(SHOW_SCRIPT_MARKERS, wxITEM_CHECK, ICON_SCROLL, OnChangeViewSettings);
+	MAKE_ACTION_ICON(SHOW_DEPOT_MARKERS, wxITEM_CHECK, ICON_BOX_ARCHIVE, OnChangeViewSettings);
+	MAKE_ACTION_ICON(SHOW_RAID_MARKERS, wxITEM_CHECK, ICON_SKULL, OnChangeViewSettings);
+	MAKE_ACTION_ICON(SHOW_START_MARKERS, wxITEM_CHECK, ICON_FLAG_CHECKERED, OnChangeViewSettings);
 	MAKE_ACTION_ICON(SHOW_GRID, wxITEM_CHECK, ICON_BORDER_ALL, OnChangeViewSettings);
 	MAKE_ACTION_ICON(SHOW_CREATURES, wxITEM_CHECK, ICON_DRAGON, OnChangeViewSettings);
 	MAKE_ACTION_ICON(SHOW_SPAWNS, wxITEM_CHECK, ICON_FIRE, OnChangeViewSettings);
@@ -223,7 +230,7 @@ void MenuBarActionManager::UpdateState(MainMenuBar* mb) {
 	mb->EnableItem(CLOSE, is_local);
 	mb->EnableItem(SAVE, is_host);
 	mb->EnableItem(SAVE_AS, is_host);
-	mb->EnableItem(SAVE_AS_GZIP, is_host);
+	mb->EnableItem(SAVE_AS_GZIP, is_host && !rme::srv::isSrvClient()); // sector maps save as sector files only
 	mb->EnableItem(GENERATE_MAP, false);
 
 	mb->EnableItem(IMPORT_MAP, is_local);
@@ -235,6 +242,7 @@ void MenuBarActionManager::UpdateState(MainMenuBar* mb) {
 	mb->EnableItem(FIND_ITEM, is_host);
 	mb->EnableItem(REPLACE_ITEMS, is_local);
 	mb->EnableItem(SEARCH_ON_MAP_EVERYTHING, is_host);
+	mb->EnableItem(SEARCH_ON_MAP_SERVER_NUMBER, is_host);
 	mb->EnableItem(SEARCH_ON_MAP_UNIQUE, is_host);
 	mb->EnableItem(SEARCH_ON_MAP_ACTION, is_host);
 	mb->EnableItem(SEARCH_ON_MAP_CONTAINER, is_host);

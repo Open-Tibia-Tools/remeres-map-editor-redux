@@ -64,6 +64,7 @@ struct DrawingOptions {
 	bool show_invalid_tiles;
 	bool show_invalid_zones;
 	bool show_waypoints;
+	uint8_t server_marker_kinds; // rme::srv::MarkerKindSet: the server marker kinds shown (sector maps)
 	bool ingame;
 	bool is_drawing_mode;
 	bool is_drawing = false;
@@ -117,6 +118,7 @@ struct DrawingOptions {
 	int zone_nopvp_blend_mode = 0;
 	int zone_nologout_blend_mode = 0;
 	int zone_pvp_blend_mode = 0;
+	int zone_refresh_blend_mode = 0;
 	int zone_blocking_blend_mode = 0;
 	int zone_spawn_blend_mode = 1;
 	int house_active_blend_mode = 1;
@@ -126,6 +128,7 @@ struct DrawingOptions {
 	glm::vec4 zone_nopvp_color;
 	glm::vec4 zone_nologout_color;
 	glm::vec4 zone_pvp_color;
+	glm::vec4 zone_refresh_color;
 	glm::vec4 zone_blocking_color;
 	glm::vec4 zone_spawn_color;
 	glm::vec4 house_active_color;

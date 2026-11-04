@@ -13,6 +13,7 @@
 #include "app/definitions.h"
 #include "app/main.h"
 #include "app/preferences.h"
+#include "io/iomap_sec.h"
 #include "ui/theme.h"
 #include "ui/welcome/startup_button.h"
 #include "ui/welcome/startup_card.h"
@@ -170,6 +171,12 @@ void WelcomeDialog::BuildInterface(const wxString& title_text, const wxString& v
 	new_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnNewMap, this);
 	actions_card->GetBodySizer()->Add(new_map_button, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(10)));
 
+	auto* new_sector_map_button = new StartupButton(actions_card, WELCOME_NEW_SECTOR_MAP, "New Sector Map", StartupButtonVariant::Secondary);
+	new_sector_map_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_NEW));
+	new_sector_map_button->SetToolTip("A new map in the original server's sector format (.sec)");
+	new_sector_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnNewSectorMap, this);
+	actions_card->GetBodySizer()->Add(new_sector_map_button, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(10)));
+
 	auto* browse_map_button = new StartupButton(actions_card, wxID_OPEN, "Browse Map", StartupButtonVariant::Secondary);
 	browse_map_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_OPEN));
 	browse_map_button->Bind(wxEVT_BUTTON, &WelcomeDialog::OnBrowseMap, this);
@@ -257,6 +264,10 @@ void WelcomeDialog::OnPreferences(wxCommandEvent& WXUNUSED(event)) {
 void WelcomeDialog::OnNewMap(wxCommandEvent& WXUNUSED(event)) {
 	auto* new_event = new wxCommandEvent(WELCOME_DIALOG_ACTION, wxID_NEW);
 	QueueEvent(new_event);
+}
+
+void WelcomeDialog::OnNewSectorMap(wxCommandEvent& WXUNUSED(event)) {
+	QueueEvent(new wxCommandEvent(WELCOME_DIALOG_ACTION, WELCOME_NEW_SECTOR_MAP));
 }
 
 void WelcomeDialog::OnBrowseMap(wxCommandEvent& WXUNUSED(event)) {
@@ -408,9 +419,12 @@ void WelcomeDialog::AutoSelectMatchingClient() {
 	}
 
 	auto exact_match = std::ranges::find_if(m_configured_clients, [info](const auto& client_entry) {
+		if (info->is_sector_map) {
+			return client_entry.client->getItemDefinitionMode() == ItemDefinitionMode::DatSrv;
+		}
 		return client_entry.client->getOtbMajor() == info->items_major_version && client_entry.client->getOtbId() == info->items_minor_version;
 	});
-	if (exact_match == m_configured_clients.end()) {
+	if (exact_match == m_configured_clients.end() && !info->is_sector_map) {
 		exact_match = std::ranges::find_if(m_configured_clients, [info](const auto& client_entry) {
 			return client_entry.client->getOtbId() == info->items_minor_version;
 		});
@@ -460,6 +474,12 @@ bool WelcomeDialog::AttemptLoad(bool show_message) {
 		}
 		return false;
 	}
+	if (status == StartupCompatibilityStatus::Incompatible) {
+		if (show_message) {
+			DialogUtil::PopupDialog(this, "Client Mismatch", BuildCompatibilityMessage(), wxOK | wxICON_WARNING);
+		}
+		return false;
+	}
 
 	m_pending_load_request = StartupLoadRequest {
 		m_recent_maps[m_selected_map_index].path,
@@ -503,7 +523,9 @@ void WelcomeDialog::EnsurePeeked(const wxString& path) {
 	}
 
 	OTBMStartupPeekResult peek_result;
-	if (!IOMapOTBM::peekStartupInfo(FileName(path), peek_result) && !peek_result.has_error) {
+	const FileName file_name(path);
+	const bool peeked = IOMapSec::isSectorMap(file_name) ? IOMapSec::peekStartupInfo(file_name, peek_result) : IOMapOTBM::peekStartupInfo(file_name, peek_result);
+	if (!peeked && !peek_result.has_error) {
 		peek_result.has_error = true;
 		peek_result.error_message = "Could not read the selected map.";
 	}
@@ -537,6 +559,9 @@ StartupCompatibilityStatus WelcomeDialog::GetCompatibilityStatus() const {
 	if (map_info->has_error) {
 		return StartupCompatibilityStatus::MapError;
 	}
+	if (map_info->is_sector_map) {
+		return client->getItemDefinitionMode() == ItemDefinitionMode::DatSrv ? StartupCompatibilityStatus::Compatible : StartupCompatibilityStatus::Incompatible;
+	}
 
 	const bool matches = client->getOtbMajor() == map_info->items_major_version && client->getOtbId() == map_info->items_minor_version;
 	if (matches) {
@@ -564,7 +589,12 @@ wxString WelcomeDialog::BuildCompatibilityMessage() const {
 
 	switch (GetCompatibilityStatus()) {
 		case StartupCompatibilityStatus::Compatible:
+			if (map_info->is_sector_map) {
+				return "Selected client reads its items from the server's objects.srv. Load is ready.";
+			}
 			return "Selected client matches the map items version. Load is ready.";
+		case StartupCompatibilityStatus::Incompatible:
+			return "Sector maps load with a client whose items come from objects.srv (configType dat_srv, such as 7.7-srv). Select one to continue.";
 		case StartupCompatibilityStatus::Forced:
 			return "Client mismatch is being ignored. The map will load with the selected client assets.";
 		case StartupCompatibilityStatus::ForceRequired:

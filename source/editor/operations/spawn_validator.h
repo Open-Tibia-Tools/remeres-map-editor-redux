@@ -51,7 +51,8 @@ struct SpawnIssue {
 
 class SpawnValidator {
 public:
-	static std::vector<SpawnIssue> ScanMap(const Map& map, const SpawnValidationSettings& settings);
+	// Non-const only because BaseMap has no const tile iteration; it does not modify the map.
+	static std::vector<SpawnIssue> ScanMap(Map& map, const SpawnValidationSettings& settings);
 	static bool RemoveIssue(Editor& editor, const SpawnIssue& issue);
 	static size_t RemoveAllIssues(Editor& editor, std::span<const SpawnIssue> issues);
 };

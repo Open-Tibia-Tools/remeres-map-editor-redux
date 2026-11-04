@@ -30,6 +30,7 @@
 #include "brushes/house/house_exit_brush.h"
 #include "brushes/zone/zone_brush.h"
 #include "game/sprites.h"
+#include "game/srv_markers.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
 #include "rendering/drawers/overlays/map_overlay_collector.h"
@@ -195,6 +196,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		options.zone_nopvp_color,
 		options.zone_nologout_color,
 		options.zone_pvp_color,
+		options.zone_refresh_color,
 		options.zone_blocking_color,
 		options.zone_spawn_color,
 		options.house_active_color,
@@ -327,8 +329,9 @@ void MapDrawer::CollectOverlays() {
 	const bool opt_zones = !options.ingame && options.show_zones;
 	const bool opt_hooks = !options.ingame && options.show_hooks;
 	const bool opt_doors = !options.ingame && options.highlight_locked_doors;
+	const uint8_t opt_server_markers = (!options.ingame && editor.map.server_markers) ? options.server_marker_kinds : 0;
 
-	const bool need_tooltips = opt_tooltips || opt_houses || opt_waypoints || opt_towns || opt_zones;
+	const bool need_tooltips = opt_tooltips || opt_houses || opt_waypoints || opt_towns || opt_zones || opt_server_markers != 0;
 
 	if (!need_tooltips && !opt_doors && !opt_hooks) {
 		if (overlay_cache.valid) {
@@ -344,7 +347,7 @@ void MapDrawer::CollectOverlays() {
 	const ViewBounds current_bounds = view.getBoundsForFloor(map_z);
 	const uint64_t current_generation = editor.map.getChangeTracker().getGeneration();
 
-	if (overlay_cache.isValid(map_z, view.zoom, current_bounds, opt_tooltips, opt_houses, opt_waypoints, opt_towns, opt_zones, opt_hooks, opt_doors, current_generation)) {
+	if (overlay_cache.isValid(map_z, view.zoom, current_bounds, opt_tooltips, opt_houses, opt_waypoints, opt_towns, opt_zones, opt_hooks, opt_doors, opt_server_markers, current_generation)) {
 		return;
 	}
 
@@ -376,6 +379,7 @@ void MapDrawer::CollectOverlays() {
 	overlay_cache.show_zones = opt_zones;
 	overlay_cache.show_hooks = opt_hooks;
 	overlay_cache.highlight_locked_doors = opt_doors;
+	overlay_cache.server_marker_kinds = opt_server_markers;
 	overlay_cache.map_generation = current_generation;
 	overlay_cache.valid = true;
 }
@@ -402,9 +406,23 @@ void MapDrawer::DrawCreatureNames(NVGcontext* vg) {
 	}
 }
 
+void MapDrawer::DrawServerMarkers(NVGcontext* vg) {
+	server_marker_drawer.draw(vg, editor.map, view, options);
+}
+
+void MapDrawer::DrawHomeRadii(NVGcontext* vg) {
+	home_radius_drawer.draw(vg, editor.map, view, options, editor.selection);
+}
+
 bool MapDrawer::hasOverlays() {
 	const bool can_read_labels = view.zoom <= 10.0f;
 	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
+		return true;
+	}
+	if (!options.ingame && can_read_labels && options.server_marker_kinds != 0 && editor.map.server_markers && !editor.map.server_markers->empty()) {
+		return true;
+	}
+	if (home_radius_drawer.hasHomes(editor.map, view, options, editor.selection)) {
 		return true;
 	}
 	if (!tooltip_drawer.empty() && can_read_labels) {

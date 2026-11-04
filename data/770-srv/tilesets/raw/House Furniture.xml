@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="House Furniture">
+    <item id="2025" />
+    <item id="2029" />
+    <item id="2030" />
+    <item fromid="2043" toid="2048" />
+    <item fromid="2059" toid="2061" />
+    <item id="2314" />
+    <item id="2315" />
+    <item id="2316" />
+    <item id="2319" />
+    <item fromid="2358" toid="2361" />
+    <item fromid="2366" toid="2369" />
+    <item fromid="2374" toid="2385" />
+    <item fromid="2431" toid="2434" />
+    <item fromid="2441" toid="2454" />
+    <item id="2469" />
+    <item fromid="2471" toid="2473" />
+    <item fromid="2480" toid="2486" />
+    <item id="2519" />
+    <item id="2523" />
+    <item id="2524" />
+    <item id="2904" />
+    <item id="2934" />
+    <item id="2935" />
+    <item id="2975" />
+    <item id="2976" />
+    <item id="2979" />
+    <item id="2982" />
+    <item id="2986" />
+    <item id="2987" />
+    <item fromid="2997" toid="3000" />
+    <item fromid="3484" toid="3487" />
+    <item fromid="3510" toid="3514" />
+    <item fromid="2346" toid="2353" />
+    <item fromid="2418" toid="2426" />
+    <item fromid="2465" toid="2468" />
+    <item id="5046" />
+    <item id="5055" />
+    <item id="5056" />
+</tileset>
