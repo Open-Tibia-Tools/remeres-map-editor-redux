@@ -133,9 +133,15 @@ bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& wa
 	g_loading.SetLoadDone(0, "Loading canonical asset bundle...");
 
 	if (getLoadedVersion()->getItemDefinitionMode() == ItemDefinitionMode::DatSrv) {
-		// A server data folder is self-contained: items come from Tibia.dat and the
-		// server's objects.srv only, nothing is read from the data directory.
+		// Items come from Tibia.dat and the server's objects.srv only. The data
+		// directory is optional and adds brushes, borders, tilesets and palettes
+		// keyed by objects.srv type ids; creatures come from the server's mon/npc files.
 		if (!LoadCanonicalAssets(wxEmptyString, MaterialManifestFiles {}, error, warnings)) {
+			return false;
+		}
+
+		const FileName materials_manifest(GetModularDataPath() + "materials.xml");
+		if (materials_manifest.FileExists() && !LoadModularMaterials(materials_manifest, error, warnings)) {
 			return false;
 		}
 	} else {

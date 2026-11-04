@@ -1191,7 +1191,7 @@ version = 1286
 [[clients]]
 configType = 'dat_srv'
 datSignature = '439D5A33'
-dataDirectory = '770'
+dataDirectory = '770-srv'
 description = 'sample description'
 extended = false
 frameDurations = false
