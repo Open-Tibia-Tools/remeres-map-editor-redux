@@ -29,6 +29,8 @@
 #include "map/map_search.h"
 #include "ui/managers/recent_files_manager.h"
 #include "ui/map/map_properties_window.h"
+#include "ui/map/sector_map_properties_window.h"
+#include "ui/properties/srv_attribute_fields.h"
 
 #include "ui/about_window.h"
 #include "ui/dat_debug_view.h"
@@ -503,6 +505,17 @@ void MainMenuBar::OnMapCleanInvalidZones(wxCommandEvent& event) {
 }
 
 void MainMenuBar::OnMapProperties(wxCommandEvent& WXUNUSED(event)) {
+	// The 7.7-srv client opens only sector maps, whose properties are read only.
+	if (rme::srv::isSrvClient()) {
+		Editor* editor = g_gui.GetCurrentEditor();
+		if (!editor) {
+			return;
+		}
+		SectorMapPropertiesWindow properties(frame, editor->map);
+		properties.ShowModal();
+		return;
+	}
+
 	wxDialog* properties = new MapPropertiesWindow(
 		frame,
 		static_cast<MapTab*>(g_gui.GetCurrentTab()),
