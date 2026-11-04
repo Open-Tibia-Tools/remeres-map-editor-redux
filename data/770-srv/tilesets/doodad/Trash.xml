@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Trash">
+    <brush name="randomized trash" />
+    <brush name="empty fluid containers" />
+    <brush name="dishes" />
+    <brush name="broken bottles" />
+    <brush name="rotten food" />
+    <brush name="other trash" />
+    <brush name="discarded wood" />
+    <brush name="collected branches" />
+    <brush name="bones" />
+    <brush name="broken furniture" />
+</tileset>

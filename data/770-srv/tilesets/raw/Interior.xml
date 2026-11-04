@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Interior">
+    <item fromid="2302" toid="2313" />
+    <item id="2317" />
+    <item id="2318" />
+    <item fromid="2320" toid="2345" />
+    <item fromid="2354" toid="2357" />
+    <item fromid="2362" toid="2365" />
+    <item fromid="2402" toid="2417" />
+    <item fromid="2427" toid="2430" />
+    <item fromid="2435" toid="2440" />
+    <item fromid="2487" toid="2502" />
+    <item id="2520" />
+    <item id="2521" />
+    <item id="2522" />
+    <item fromid="2525" toid="2542" />
+    <item fromid="2455" toid="2464" />
+    <item fromid="2503" toid="2510" />
+    <item fromid="2587" toid="2595" />
+</tileset>

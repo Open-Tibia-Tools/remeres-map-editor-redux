@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Food">
+    <item fromid="3577" toid="3607" />
+    <item fromid="3723" toid="3732" />
+</tileset>

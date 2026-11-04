@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Amulets and Rings">
+    <item id="3004" />
+    <item fromid="3006" toid="3009" />
+    <item fromid="3012" toid="3016" />
+    <item id="3018" />
+    <item id="3019" />
+    <item id="3021" />
+    <item id="3025" />
+    <item id="3045" />
+    <item fromid="3048" toid="3057" />
+    <item id="3063" />
+    <item fromid="3080" toid="3100" />
+    <item id="3102" />
+    <item id="3245" />
+</tileset>

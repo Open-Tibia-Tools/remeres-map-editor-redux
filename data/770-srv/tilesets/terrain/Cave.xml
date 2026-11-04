@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Cave">
+    <brush name="void" />
+    <brush name="lava" />
+    <brush name="walkable lava" />
+    <brush name="clear water" />
+    <brush name="earth" />
+    <brush name="dirt" />
+    <brush name="light dirt" />
+    <brush name="cave" />
+    <brush name="cave hole" />
+    <brush name="cave ropespot" />
+    <brush name="cave small hole" />
+    <brush name="cave pickhole" />
+</tileset>

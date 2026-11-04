@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Grounds">
+    <item id="100" />
+    <item id="101" />
+    <item id="103" />
+    <item id="104" />
+    <item id="106" />
+    <item id="108" />
+    <item id="109" />
+    <item id="194" />
+    <item id="231" />
+    <item id="280" />
+    <item fromid="351" toid="355" />
+    <item id="368" />
+    <item id="408" />
+    <item id="409" />
+    <item id="410" />
+    <item id="415" />
+    <item id="416" />
+    <item id="417" />
+    <item id="418" />
+    <item id="422" />
+    <item id="423" />
+    <item id="429" />
+    <item id="436" />
+    <item id="454" />
+    <item id="463" />
+    <item id="464" />
+    <item id="622" />
+    <item fromid="727" toid="730" />
+    <item id="799" />
+    <item id="800" />
+    <item fromid="837" toid="840" />
+    <item id="870" />
+    <item id="923" />
+    <item id="936" />
+    <item id="937" />
+    <item id="950" />
+    <item id="952" />
+    <item fromid="1127" toid="1128" />
+    <item id="1771" />
+    <item id="486" />
+    <item fromid="499" toid="528" />
+    <item fromid="537" toid="562" />
+    <item id="1019" />
+    <item id="1020" />
+    <item id="1021" />
+    <item fromid="4394" toid="4410" />
+    <item fromid="4515" toid="4530" />
+    <item id="4555" />
+    <item fromid="4559" toid="4568" />
+    <item id="4584" />
+    <item fromid="4597" toid="4608" />
+    <item fromid="4653" toid="4655" />
+    <item fromid="4680" toid="4701" />
+    <item fromid="4738" toid="4744" />
+    <item fromid="4821" toid="4822" />
+</tileset>

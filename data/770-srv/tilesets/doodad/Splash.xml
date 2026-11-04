@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Splash">
+    <brush name="blood" />
+    <brush name="bloodwall" />
+    <item fromid="2895" toid="2900" />
+</tileset>
