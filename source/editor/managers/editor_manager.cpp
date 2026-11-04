@@ -365,33 +365,45 @@ void EditorManager::SaveMapAs() {
 
 	// Sector maps and OTBM maps do not mix: a map opened with the client that
 	// reads objects.srv saves as sector files only, any other map as OTBM only.
-	const bool sector_map = rme::srv::isSrvClient();
-	const wxString wildcard = sector_map ? "Sector map, saves into the chosen folder (*.sec)|*.sec" : "OpenTibia Binary Map (*.otbm)|*.otbm|GZIP Compressed Map (*.otbm)|*.otbm";
-	wxFileDialog dialog(g_gui.root, "Save As...", "", "", wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-	if (!sector_map) {
-		dialog.SetFilterIndex(GetCurrentMap().getCompression() == OtbmCompression::Gzip ? 1 : 0);
+	if (rme::srv::isSrvClient()) {
+		SaveSectorMapAs();
+		return;
 	}
+
+	wxFileDialog dialog(g_gui.root, "Save As...", "", "", "OpenTibia Binary Map (*.otbm)|*.otbm|GZIP Compressed Map (*.otbm)|*.otbm", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	dialog.SetFilterIndex(GetCurrentMap().getCompression() == OtbmCompression::Gzip ? 1 : 0);
 
 	if (dialog.ShowModal() == wxID_OK) {
 		const OtbmCompression prev_compression = GetCurrentMap().getCompression();
-		if (!sector_map) {
-			GetCurrentMap().setCompression(dialog.GetFilterIndex() == 1 ? OtbmCompression::Gzip : OtbmCompression::None);
-		}
+		GetCurrentMap().setCompression(dialog.GetFilterIndex() == 1 ? OtbmCompression::Gzip : OtbmCompression::None);
 
-		// A sector map is saved into the folder of the chosen name.
-		wxFileName target(dialog.GetPath());
-		if (sector_map) {
-			target.SetExt("sec");
-		}
-		if (!SaveCurrentMap(target, true)) {
+		if (!SaveCurrentMap(dialog.GetPath(), true)) {
 			GetCurrentMap().setCompression(prev_compression);
 			return;
 		}
 
 		g_status.UpdateTitle();
-		g_gui.root->AddRecentFile(sector_map ? wxstr(GetCurrentMap().getFilename()) : dialog.GetPath());
+		g_gui.root->AddRecentFile(dialog.GetPath());
 		g_gui.root->UpdateMenubar();
 	}
+}
+
+void EditorManager::SaveSectorMapAs() {
+	// The sector files name themselves (XXXX-YYYY-ZZ.sec); only their folder is chosen.
+	const Map& map = GetCurrentMap();
+	const wxString start_folder = map.hasFile() ? wxString(IOMapSec::sectorFolder(wxstr(map.getFilename())).wstring()) : wxString();
+	wxDirDialog dialog(g_gui.root, "Choose the map folder to save the sector files into", start_folder, wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
+	if (dialog.ShowModal() != wxID_OK) {
+		return;
+	}
+
+	if (!SaveCurrentMap(FileName(dialog.GetPath()), true)) {
+		return;
+	}
+
+	g_status.UpdateTitle();
+	g_gui.root->AddRecentFile(wxstr(GetCurrentMap().getFilename()));
+	g_gui.root->UpdateMenubar();
 }
 
 void EditorManager::SaveMapAsGzip() {

@@ -64,6 +64,8 @@ public:
 private:
 	// Shows a newly created empty map in a tab of its own.
 	MapTab* ShowNewMap(std::unique_ptr<Editor> editor);
+	// Save As for a sector map: picks the folder the sector files go into.
+	void SaveSectorMapAs();
 };
 
 extern EditorManager g_editors;
