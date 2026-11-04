@@ -106,7 +106,7 @@
 		<separator/>
 		<item name="Find Everything" action="SEARCH_ON_MAP_EVERYTHING" help="Find all items with unique ID, action ID, containers, writeables, or teleports on map."/>
 		<separator/>
-		<item name="Find Quest, Key or Level..." action="SEARCH_ON_MAP_SERVER_NUMBER" help="Find the quest chests, quest doors and scripts that use a quest number, the doors and keys with a key number, or the doors of a level (sector maps)."/>
+		<item name="Find Quests, Keys and Levels" action="SEARCH_ON_MAP_SERVER_NUMBER" help="Find the quest chests, quest doors and scripts, the keys and the doors they open, and the level doors (sector maps)."/>
 	</menu>
 	<menu name="Map">
 		<item name="Edit Towns..." hotkey="Ctrl+T" action="EDIT_TOWNS" help="Open towns palette."/>

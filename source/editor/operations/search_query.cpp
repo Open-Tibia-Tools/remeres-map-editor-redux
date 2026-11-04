@@ -36,7 +36,7 @@ SearchResultGroup& ItemGroup(std::unordered_map<uint32_t, SearchResultGroup>& gr
 	return group;
 }
 
-// An item whose server attribute has the filter's value, e.g. "Quest Chest: 64".
+// An item with one of the filter's server attributes, e.g. "Quest Chest: 64".
 void ExtractServerNumber(
 	Tile* tile,
 	Item* item,
@@ -44,9 +44,10 @@ void ExtractServerNumber(
 	std::unordered_map<uint32_t, SearchResultGroup>& group_map,
 	const Container* parent_container
 ) {
+	const int32_t* value = nullptr;
 	const auto matched = std::ranges::find_if(filter.attributes, [&](rme::srv::ItemAttribute attribute) {
-		const int32_t* value = item->getIntegerAttribute(rme::srv::key(attribute));
-		return value && *value == filter.value;
+		value = item->getIntegerAttribute(rme::srv::key(attribute));
+		return value != nullptr;
 	});
 	if (matched == filter.attributes.end()) {
 		return;
@@ -57,14 +58,14 @@ void ExtractServerNumber(
 	child.formatted_pos = std::format("Position: [{}, {}, {}]", child.position.x, child.position.y, child.position.z);
 	child.kind = SearchResultKind::ServerNumber;
 	child.item_id = item->getID();
-	child.subtitle = std::format("{}: {}", rme::srv::info(*matched).label, filter.value);
+	child.subtitle = std::format("{}: {}", rme::srv::info(*matched).label, *value);
 	if (parent_container != nullptr) {
 		child.subtitle += std::format(", inside {}", parent_container->getName().empty() ? "container" : parent_container->getName());
 	}
 	ItemGroup(group_map, item).children.push_back(std::move(child));
 }
 
-// The tiles whose moveuse.dat rules set or test the quest value.
+// The tiles whose moveuse.dat rules set or test a quest value.
 std::optional<SearchResultGroup> ScriptGroup(const Map& map, const ServerNumberFilter& filter) {
 	if (!filter.include_scripts || !map.server_markers) {
 		return std::nullopt;
@@ -72,18 +73,23 @@ std::optional<SearchResultGroup> ScriptGroup(const Map& map, const ServerNumberF
 	SearchResultGroup group;
 	group.name = "Scripts (moveuse.dat)";
 	for (const rme::srv::Marker& marker : map.server_markers->all()) {
-		const auto matches = [&](const rme::srv::QuestReference& reference) { return reference.quest == filter.value; };
-		const auto first = std::ranges::find_if(marker.quests, matches);
-		if (first == marker.quests.end()) {
-			continue;
+		// One entry per quest the tile's rules use, so filtering by "Quest 64" finds it.
+		for (auto it = marker.quests.begin(); it != marker.quests.end(); ++it) {
+			const auto same_quest = [&](const rme::srv::QuestReference& reference) { return reference.quest == it->quest; };
+			if (std::ranges::any_of(marker.quests.begin(), it, same_quest)) {
+				continue;
+			}
+			const auto count = std::ranges::count_if(marker.quests, same_quest);
+			SearchResultChildEntry child;
+			child.position = marker.position;
+			child.formatted_pos = std::format("Position: [{}, {}, {}]", child.position.x, child.position.y, child.position.z);
+			child.kind = SearchResultKind::ServerNumber;
+			child.subtitle = std::format("Quest {}: {}", it->quest, it->text);
+			if (count > 1) {
+				child.subtitle += std::format(" (+{} more rules)", count - 1);
+			}
+			group.children.push_back(std::move(child));
 		}
-		const auto count = std::ranges::count_if(marker.quests, matches);
-		SearchResultChildEntry child;
-		child.position = marker.position;
-		child.formatted_pos = std::format("Position: [{}, {}, {}]", child.position.x, child.position.y, child.position.z);
-		child.kind = SearchResultKind::ServerNumber;
-		child.subtitle = count > 1 ? std::format("{} (+{} more rules)", first->text, count - 1) : first->text;
-		group.children.push_back(std::move(child));
 	}
 	if (group.children.empty()) {
 		return std::nullopt;

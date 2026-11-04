@@ -4,7 +4,6 @@
 #include "ui/gui.h"
 #include "ui/dialog_util.h"
 #include "ui/find_item_window.h"
-#include "ui/dialogs/server_number_search_dialog.h"
 #include "ui/result_window.h"
 #include "ui/map_window.h"
 #include "ui/map_tab.h"
@@ -154,13 +153,15 @@ void SearchHandler::OnSearchForServerNumberOnMap(wxCommandEvent& WXUNUSED(event)
 		return;
 	}
 
-	ServerNumberSearchDialog dialog(frame);
-	if (dialog.ShowModal() != wxID_OK) {
-		return;
-	}
+	// Like the other Find commands it lists everything; the results filter
+	// narrows it down, e.g. to "Quest Chest: 64" or "Key: 3001".
+	using rme::srv::ItemAttribute;
 	SearchQuery query;
-	query.server_number = dialog.getFilter();
-	query.query_title = dialog.getTitle();
+	query.server_number = ServerNumberFilter {
+		.attributes = { ItemAttribute::ChestQuestNumber, ItemAttribute::DoorQuestNumber, ItemAttribute::KeyNumber, ItemAttribute::KeyholeNumber, ItemAttribute::DoorLevel },
+		.include_scripts = true,
+	};
+	query.query_title = "Find Quests, Keys and Levels (Map)";
 	SearchResults::ExecuteAndShow(&g_gui.GetCurrentMap(), std::move(query));
 }
 

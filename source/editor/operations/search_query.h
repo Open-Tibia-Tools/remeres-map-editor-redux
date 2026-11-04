@@ -86,12 +86,11 @@ struct SearchResultGroup {
 	std::vector<SearchResultChildEntry> children;
 };
 
-// Items whose server attribute (sector maps) is `value`, e.g. the quest
-// chests and quest doors of quest 64, and with `include_scripts` the
-// moveuse.dat rules that set or test that quest value.
+// Items that have one of these server attributes (sector maps), e.g. every
+// quest chest, key and level door, and with `include_scripts` the
+// moveuse.dat rules that set or test a quest value.
 struct ServerNumberFilter {
 	std::vector<rme::srv::ItemAttribute> attributes;
-	int32_t value = 0;
 	bool include_scripts = false;
 };
 
