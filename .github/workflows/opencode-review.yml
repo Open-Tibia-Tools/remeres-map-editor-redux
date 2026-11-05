@@ -8,9 +8,14 @@ on:
       - synchronize
       - ready_for_review
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: false
+        type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -38,4 +43,4 @@ jobs:
         with:
           model: opencode/glm-5.3-flash-free
           use-github-token: true
-          prompt: /review-pr
+          prompt: /review-pr ${{ github.event.pull_request.number || inputs.pr_number }}
