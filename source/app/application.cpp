@@ -479,8 +479,11 @@ void Application::OnUnhandledException() {
 bool Application::ParseCommandLineMap(wxString& fileName) {
 	for (int i = 1; i < argc; ++i) {
 		const wxString arg = argv[i];
-		if (arg == "--test" || arg == "-t" || arg == "--automated" || arg == "--automated-tests" || arg == "--silent") {
+		if (arg == "--test" || arg == "-t" || arg == "--automated" || arg == "--automated-tests") {
 			rme::SetAutomatedTestMode(true);
+			rme::SetWarningsEnabled(false);
+		} else if (arg == "--silent" || arg == "--no-warnings" || arg == "--disable-warnings") {
+			rme::SetWarningsEnabled(false);
 		} else if (arg == "-ws" && i + 1 < argc) {
 			g_settings.setInteger(Config::WELCOME_DIALOG, argv[++i] == "1" ? 1 : 0);
 		} else if (!arg.StartsWith("-")) {

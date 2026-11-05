@@ -21,7 +21,6 @@
 #include "item_definitions/core/item_definition_store.h"
 #include "game/creatures.h"
 #include "game/material_include_resolver.h"
-#include "util/test_mode.h"
 
 #include "ui/gui.h"
 #include "game/materials.h"
@@ -352,24 +351,18 @@ static void loadTilesetItemEntry(pugi::xml_node node, DynamicTilesetDefinition& 
 
 	constexpr uint32_t maxItemId = std::numeric_limits<uint16_t>::max();
 	if (fromId > toId) {
-		if (!rme::ShouldSilenceBrushWarnings()) {
-			warnings.push_back(std::format("tileset_item_references: tileset=\"{}\" inverted_range={}..{}, normalizing", tileset.name, fromId, toId));
-		}
+		warnings.push_back(std::format("tileset_item_references: tileset=\"{}\" inverted_range={}..{}, normalizing", tileset.name, fromId, toId));
 		std::swap(fromId, toId);
 	}
 	if (toId > maxItemId) {
-		if (!rme::ShouldSilenceBrushWarnings()) {
-			warnings.push_back(std::format("tileset_item_references: tileset=\"{}\" invalid_range={}..{}", tileset.name, fromId, toId));
-		}
+		warnings.push_back(std::format("tileset_item_references: tileset=\"{}\" invalid_range={}..{}", tileset.name, fromId, toId));
 		return;
 	}
 
 	for (uint32_t id = fromId; id <= toId; ++id) {
 		const auto definition = g_item_definitions.get(static_cast<ServerItemId>(id));
 		if (!definition) {
-			if (!rme::ShouldSilenceBrushWarnings()) {
-				warnings.push_back(std::format("tileset_item_references: tileset=\"{}\" missing_id={}", tileset.name, id));
-			}
+			warnings.push_back(std::format("tileset_item_references: tileset=\"{}\" missing_id={}", tileset.name, id));
 			continue;
 		}
 		RAWBrush* brush = materials.ensureRawBrush(static_cast<ServerItemId>(id));
@@ -387,9 +380,7 @@ static void loadTilesetCreatureEntry(pugi::xml_node node, DynamicTilesetDefiniti
 	}
 	CreatureType* type = g_creatures[creatureName.as_string()];
 	if (!type) {
-		if (!rme::ShouldSilenceBrushWarnings()) {
-			warnings.push_back(std::format("tileset_creature_references: tileset=\"{}\" creature=\"{}\"", tileset.name, creatureName.as_string()));
-		}
+		warnings.push_back(std::format("tileset_creature_references: tileset=\"{}\" creature=\"{}\"", tileset.name, creatureName.as_string()));
 		return;
 	}
 	CreatureBrush* brush = materials.ensureCreatureBrush(type);

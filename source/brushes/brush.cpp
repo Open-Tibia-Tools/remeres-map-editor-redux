@@ -23,7 +23,6 @@
 #include "brushes/doodad/doodad_brush.h"
 #include "brushes/ground/ground_brush.h"
 #include "brushes/ground/auto_border.h"
-#include "util/test_mode.h"
 #include "brushes/house/house_brush.h"
 #include "brushes/house/house_exit_brush.h"
 #include "brushes/raw/raw_brush.h"
@@ -112,20 +111,15 @@ void Brushes::init() {
 }
 
 bool Brushes::unserializeBrush(pugi::xml_node node, std::vector<std::string>& warnings) {
-	const bool silence = rme::ShouldSilenceBrushWarnings();
 	pugi::xml_attribute attribute;
 	if (!(attribute = node.attribute("name"))) {
-		if (!silence) {
-			warnings.push_back("Brush node without name.");
-		}
+		warnings.push_back("Brush node without name.");
 		return false;
 	}
 
 	const std::string& brushName = attribute.as_string();
 	if (brushName == "all" || brushName == "none") {
-		if (!silence) {
-			warnings.push_back(std::format("Using reserved brushname \"{}\".", brushName));
-		}
+		warnings.push_back(std::format("Using reserved brushname \"{}\".", brushName));
 		return false;
 	}
 
@@ -135,9 +129,7 @@ bool Brushes::unserializeBrush(pugi::xml_node node, std::vector<std::string>& wa
 	if (!brush) {
 		attribute = node.attribute("type");
 		if (!attribute) {
-			if (!silence) {
-				warnings.push_back("Couldn't read brush type");
-			}
+			warnings.push_back("Couldn't read brush type");
 			return false;
 		}
 
@@ -157,9 +149,7 @@ bool Brushes::unserializeBrush(pugi::xml_node node, std::vector<std::string>& wa
 			newBrush = it->second();
 			brush = newBrush.get();
 		} else {
-			if (!silence) {
-				warnings.push_back(std::format("Unknown brush type {}", brushType));
-			}
+			warnings.push_back(std::format("Unknown brush type {}", brushType));
 			return false;
 		}
 
@@ -177,15 +167,13 @@ bool Brushes::unserializeBrush(pugi::xml_node node, std::vector<std::string>& wa
 	std::vector<std::string> subWarnings;
 	brush->load(node, subWarnings);
 
-	if (!subWarnings.empty() && !silence) {
+	if (!subWarnings.empty()) {
 		warnings.push_back((wxString("Errors while loading brush \"") << wxstr(brush->getName()) << "\"").ToStdString());
 		warnings.insert(warnings.end(), subWarnings.begin(), subWarnings.end());
 	}
 
 	if (brush->getName() == "all" || brush->getName() == "none") {
-		if (!silence) {
-			warnings.push_back(std::format("Using reserved brushname '{}'.", brush->getName()));
-		}
+		warnings.push_back(std::format("Using reserved brushname '{}'.", brush->getName()));
 		// newBrush will delete automatically if set
 		return false;
 	}
@@ -193,9 +181,7 @@ bool Brushes::unserializeBrush(pugi::xml_node node, std::vector<std::string>& wa
 	Brush* otherBrush = getBrush(brush->getName());
 	if (otherBrush) {
 		if (otherBrush != brush) {
-			if (!silence) {
-				warnings.push_back(std::format("Duplicate brush name {}. Undefined behaviour may ensue.", brush->getName()));
-			}
+			warnings.push_back(std::format("Duplicate brush name {}. Undefined behaviour may ensue.", brush->getName()));
 		} else {
 			// Don't insert
 			return true;
@@ -209,29 +195,20 @@ bool Brushes::unserializeBrush(pugi::xml_node node, std::vector<std::string>& wa
 }
 
 bool Brushes::unserializeBorder(pugi::xml_node node, std::vector<std::string>& warnings) {
-	const bool silence = rme::ShouldSilenceBrushWarnings();
 	pugi::xml_attribute attribute = node.attribute("id");
 	if (!attribute) {
-		if (!silence) {
-			warnings.push_back("Couldn't read border id node");
-		}
+		warnings.push_back("Couldn't read border id node");
 		return false;
 	}
 
 	uint32_t id = attribute.as_uint();
 	if (borders.contains(id)) {
-		if (!silence) {
-			warnings.push_back(std::format("Border ID {} already exists", id));
-		}
+		warnings.push_back(std::format("Border ID {} already exists", id));
 		return false;
 	}
 
 	auto border = std::make_unique<AutoBorder>(id);
-	std::vector<std::string> borderWarnings;
-	border->load(node, borderWarnings);
-	if (!borderWarnings.empty() && !silence) {
-		warnings.insert(warnings.end(), borderWarnings.begin(), borderWarnings.end());
-	}
+	border->load(node, warnings);
 	borders[id] = std::move(border);
 	return true;
 }

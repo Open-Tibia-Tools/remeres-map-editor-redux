@@ -31,15 +31,33 @@ inline bool IsAutomatedTestMode() {
 	return s_env_test;
 }
 
-inline bool ShouldSilenceBrushWarnings() {
+inline bool& GetWarningsEnabledFlag() {
+	static bool s_warnings_enabled = true;
+	return s_warnings_enabled;
+}
+
+inline void SetWarningsEnabled(bool enabled) {
+	GetWarningsEnabledFlag() = enabled;
+}
+
+inline bool AreWarningsEnabled() {
 	if (IsAutomatedTestMode()) {
-		return true;
+		return false;
 	}
-	static const bool s_env_silent_brushes = []() {
-		return std::getenv("RME_SILENT_BRUSH_WARNINGS") != nullptr ||
-		       std::getenv("RME_SILENT_WARNINGS") != nullptr;
+	if (!GetWarningsEnabledFlag()) {
+		return false;
+	}
+	static const bool s_env_silent = []() {
+		return std::getenv("RME_SILENT_WARNINGS") != nullptr ||
+		       std::getenv("RME_NO_WARNINGS") != nullptr ||
+		       std::getenv("RME_DISABLE_WARNINGS") != nullptr ||
+		       std::getenv("RME_SILENT_BRUSH_WARNINGS") != nullptr;
 	}();
-	return s_env_silent_brushes;
+	return !s_env_silent;
+}
+
+inline bool ShouldSilenceBrushWarnings() {
+	return !AreWarningsEnabled();
 }
 
 } // namespace rme
