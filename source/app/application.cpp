@@ -80,7 +80,9 @@ Application::~Application() {
 }
 
 bool Application::OnInit() {
-	wxSetAssertHandler(RmeAssertHandler);
+	if (rme::IsAutomatedTestMode()) {
+		wxSetAssertHandler(RmeAssertHandler);
+	}
 #ifdef __WINDOWS__
 	timeBeginPeriod(1);
 #endif
@@ -482,6 +484,7 @@ bool Application::ParseCommandLineMap(wxString& fileName) {
 		if (arg == "--test" || arg == "-t" || arg == "--automated" || arg == "--automated-tests") {
 			rme::SetAutomatedTestMode(true);
 			rme::SetWarningsEnabled(false);
+			wxSetAssertHandler(RmeAssertHandler);
 		} else if (arg == "--silent" || arg == "--no-warnings" || arg == "--disable-warnings") {
 			rme::SetWarningsEnabled(false);
 		} else if (arg == "-ws" && i + 1 < argc) {
