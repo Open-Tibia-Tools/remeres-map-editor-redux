@@ -7,6 +7,12 @@ on:
       - reopened
       - synchronize
       - ready_for_review
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
   issue_comment:
     types:
       - created
@@ -23,15 +29,17 @@ concurrency:
 
 jobs:
   review:
-    # Skip fork PRs on pull_request because GitHub withholds repository secrets (OPENCODE_API_KEY) from forks.
-    # Run on:
     # 1. Non-draft same-repo pull_request events
-    # 2. PR comments containing "/opencode review" or "/opencode"
-    # 3. Manual workflow_dispatch
+    # 2. Non-draft fork pull_request_target events (runs with base repo secrets)
+    # 3. PR comments containing "/opencode review" or "/opencode"
+    # 4. Manual workflow_dispatch
     if: >-
       (github.event_name == 'pull_request' &&
        github.event.pull_request.draft == false &&
        github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'pull_request_target' &&
+       github.event.pull_request.draft == false &&
+       github.event.pull_request.head.repo.full_name != github.repository) ||
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request != null &&
        (contains(github.event.comment.body, '/opencode review') ||
@@ -64,7 +72,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-          if [ "$EVENT_NAME" = "pull_request" ]; then
+          if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "pull_request_target" ]; then
             echo "head_sha=$PR_HEAD_SHA" >> "$GITHUB_OUTPUT"
           else
             echo "head_sha=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)" >> "$GITHUB_OUTPUT"
