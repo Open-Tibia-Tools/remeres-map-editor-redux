@@ -102,7 +102,9 @@ jobs:
             "permission": {
               "external_directory": {
                 "*": "deny"
-              }
+              },
+              "bash": "deny",
+              "edit": "deny"
             }
           }
           EOF
