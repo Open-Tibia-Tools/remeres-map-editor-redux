@@ -54,11 +54,58 @@ endif()
 
 find_package(NanoSVG CONFIG QUIET)
 if(NOT TARGET NanoSVG::nanosvg)
+	find_file(NANOSVG_CONFIG_FILE
+		NAMES NanoSVGConfig.cmake nanosvg-config.cmake
+		PATH_SUFFIXES share/nanosvg share/NanoSVG
+	)
+	if(NANOSVG_CONFIG_FILE)
+		get_filename_component(NANOSVG_CONFIG_DIR "${NANOSVG_CONFIG_FILE}" DIRECTORY)
+		find_package(NanoSVG CONFIG QUIET PATHS "${NANOSVG_CONFIG_DIR}" NO_DEFAULT_PATH)
+	endif()
+endif()
+if(NOT TARGET NanoSVG::nanosvg)
 	find_package(nanosvg CONFIG QUIET)
 endif()
 if(NOT TARGET NanoSVG::nanosvg)
 	find_library(NANOSVG_LIB NAMES nanosvg)
 	find_library(NANOSVGRAST_LIB NAMES nanosvgrast)
+endif()
+if(NOT TARGET NanoSVG::nanosvg AND NOT NANOSVG_LIB)
+	# Fallback: if NanoSVG was not found as a CMake package or library, compile from headers
+	find_path(NANOSVG_INCLUDE_DIR NAMES nanosvg/nanosvg.h nanosvg.h)
+	if(NANOSVG_INCLUDE_DIR)
+		message(STATUS "NanoSVG package not found, creating fallback library from headers in ${NANOSVG_INCLUDE_DIR}...")
+		file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/nanosvg_impl.c"
+			"#include <stdio.h>\n"
+			"#include <string.h>\n"
+			"#include <math.h>\n"
+			"#define NANOSVG_IMPLEMENTATION\n"
+			"#if __has_include(<nanosvg/nanosvg.h>)\n"
+			"#include <nanosvg/nanosvg.h>\n"
+			"#else\n"
+			"#include <nanosvg.h>\n"
+			"#endif\n"
+		)
+		file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/nanosvgrast_impl.c"
+			"#include <stdio.h>\n"
+			"#include <string.h>\n"
+			"#include <math.h>\n"
+			"#define NANOSVGRAST_IMPLEMENTATION\n"
+			"#define NANOSVG_ALL_COLOR_KEYWORDS\n"
+			"#if __has_include(<nanosvg/nanosvgrast.h>)\n"
+			"#include <nanosvg/nanosvgrast.h>\n"
+			"#else\n"
+			"#include <nanosvgrast.h>\n"
+			"#endif\n"
+		)
+		add_library(nanosvg_fallback STATIC
+			"${CMAKE_CURRENT_BINARY_DIR}/nanosvg_impl.c"
+			"${CMAKE_CURRENT_BINARY_DIR}/nanosvgrast_impl.c"
+		)
+		target_include_directories(nanosvg_fallback PUBLIC "${NANOSVG_INCLUDE_DIR}")
+		add_library(NanoSVG::nanosvg ALIAS nanosvg_fallback)
+		add_library(NanoSVG::nanosvgrast ALIAS nanosvg_fallback)
+	endif()
 endif()
 if(TARGET NanoSVG::nanosvgrast)
 	list(APPEND wxWidgets_LIBRARIES NanoSVG::nanosvgrast)
