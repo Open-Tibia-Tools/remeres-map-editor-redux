@@ -1,0 +1,23 @@
+name: OpenCode PR Review
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    uses: dceoy/opencode-action/.github/workflows/opencode-review.yml@v0.8.1
+    with:
+      model: opencode/glm-5.3-flash-free
+      use-github-token: true
+    secrets:
+      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
