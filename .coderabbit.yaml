@@ -1,0 +1,197 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+early_access: true
+
+# 1. PERSONA: Uncompromising on Modern C++20/C++23 & AGENTS.md
+tone_instructions: "Senior C++20/C++23 systems and graphics engineer. Uncompromising on modern C++ standards and AGENTS.md invariants. Aggressively flag deprecated C-style patterns, old pre-C++20 idioms, raw pointers, and hot-path allocations. Direct, actionable."
+
+# 2. KNOWLEDGE BASE: Embeds AGENTS.md directly into CodeRabbit's review context
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  learnings:
+    scope: "auto"
+  issues:
+    scope: "auto"
+  pull_requests:
+    scope: "auto"
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - files: "AGENTS.md"
+        applyTo: "**/*"
+      - "README.md"
+      - "BUILDING.md"
+
+reviews:
+  profile: "assertive"
+  poem: false
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  changed_files_summary: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  enable_prompt_for_ai_agents: true
+  abort_on_close: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 10
+
+  auto_approvals:
+    enabled: false
+
+  slop_detection:
+    enabled: true
+    include_all_authors: true
+
+  # Focus review tokens strictly on project code
+  path_filters:
+    - "!data/**"              # Materials, item mappings, menubar configs, version manifests
+    - "!assets/**"            # Application asset directories
+    - "!source/assets/**"     # Embedded UI icons, SVGs, and images
+    - "!**/assets/**"         # Any nested asset directories
+    - "!ext/**"               # Vendored 3rd-party code (pugixml, fast_noise_lite)
+    - "!source/protobuf/**"   # Generated protobuf files
+    - "!build*/**"            # Build artifacts
+    - "!vcpkg_installed/**"   # vcpkg dependencies
+    - "!**/*.png"
+    - "!**/*.jpg"
+    - "!**/*.ico"
+    - "!**/*.spr"
+    - "!**/*.dat"
+    - "!**/*.otb"
+    - "!**/*.otbm"
+    - "!**/*.pyc"
+
+  tools:
+    # Disabled: CodeRabbit runs Clang-Tidy 14 which lacks C++20/C++23 support and would
+    # conflict with modern C++ standards. The AI handles modern C++ gating instead.
+    clang:
+      enabled: false
+    cppcheck:
+      enabled: true           # Detects undefined behavior, buffer overruns, and memory leaks
+    ast-grep:
+      enabled: true
+      essential_rules: true
+    luacheck:
+      enabled: true           # Lints Lua scripting engine and tests
+    ruff:
+      enabled: true           # Lints tools/tibia_data.py and GitHub scripts
+    actionlint:
+      enabled: true           # Lints .github/workflows/*.yml
+    zizmor:
+      enabled: true           # Security scanner for GitHub Actions
+    shellcheck:
+      enabled: true
+    psscriptanalyzer:
+      enabled: true           # Windows/PowerShell build scripts
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    gitleaks:
+      enabled: true           # Detect leaked credentials/tokens
+    trufflehog:
+      enabled: true
+    semgrep:
+      enabled: true
+
+  # 3. PRE-MERGE CHECKS: Deterministic checks based on C++20/C++23 & AGENTS.md
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    title:
+      mode: "warning"
+      requirements: "Prefer conventional commits: 'fix(render): ...', 'feat(palette): ...'."
+    description:
+      mode: "warning"
+    issue_assessment:
+      mode: "warning"
+    custom_checks:
+      - name: "gate-cpp20-cpp23-modernization"
+        mode: "error"
+        instructions: "Strictly reject deprecated C-style and pre-C++20 idioms in touched code: reject C-style casts ((T)var), printf/sprintf/wxString::Format (use std::format), malloc/free, NULL/0 for pointers (use nullptr), C-style arrays (use std::array/std::span), unscoped enums (use enum class), and #define constants (use constexpr)."
+      - name: "agents-md-compliance"
+        mode: "error"
+        instructions: "CRITICAL: Read AGENTS.md in the repository root. Verify that this PR strictly adheres to all project invariants and coding standards defined in AGENTS.md."
+      - name: "no-direct-tile-mutation"
+        mode: "error"
+        instructions: "Verify that input handlers, event callbacks, and canvas controllers do not mutate Tile objects directly. All tile drawing, placement, and bordering must route through DrawOperations (AGENTS.md Hard Rule #1)."
+      - name: "undo-redo-integrity"
+        mode: "error"
+        instructions: "Verify that all user-visible map changes capture old state before mutating and register an Action/Change in ActionQueue (AGENTS.md Hard Rule #2)."
+      - name: "ownership-and-raii"
+        mode: "error"
+        instructions: "Verify no std::shared_ptr is introduced without explicit multi-owner justification in comments. Verify no raw new/delete for owned data. Verify wxWidgets child windows (created with new) are NOT wrapped in std::unique_ptr (owned by parent window)."
+      - name: "render-hotpath-zero-alloc"
+        mode: "error"
+        instructions: "Verify that rendering hot paths (MapDrawer, tile traversal, sprite batching, chunk updates) do not allocate heap memory per frame or per tile (AGENTS.md Hard Rule #8)."
+      - name: "otbm-compatibility"
+        mode: "warning"
+        instructions: "Verify that changes to map I/O or serializers preserve OTBM binary format, attribute IDs, and backward compatibility with standard RME (AGENTS.md Hard Rule #3)."
+      - name: "no-vendored-code-edits"
+        mode: "error"
+        instructions: "Verify that vendored code in ext/ (pugixml, fast_noise_lite) and generated protobuf output are not modified (AGENTS.md Hard Rule #12)."
+
+  # 4. PATH INSTRUCTIONS: Aggressive Modern C++ & Subsystem Rules
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        - CRITICAL: Read and strictly enforce all project invariants and guidelines from AGENTS.md at the repository root.
+        - The rules in AGENTS.md supersede default generic suggestions.
+    - path: "source/**"
+      instructions: |
+        - Enforce modern C++20 and C++23 standards.
+        - Actively flag and reject legacy pre-C++20 idioms:
+            * Replace C-style casts with static_cast, reinterpret_cast, or explicit constructors.
+            * Replace printf, sprintf, snprintf, and wxString::Format with std::format (convert to wxString only at UI boundaries via wxstr()).
+            * Replace sentinel return values (-1, 0xFFFF) with std::optional.
+            * Replace raw C-style arrays (T arr[N]) and pointer arithmetic with std::array or std::span<const T>.
+            * Replace const std::vector<T>& and const std::string& parameters with std::span<const T> and std::string_view for read-only access.
+            * Replace unscoped enums and integer flag masks with enum class.
+            * Replace #define constants with constexpr or consteval.
+            * Replace manual index loops with range-for, ranges, or views (unless in a measured hot path).
+            * Replace raw pointer ownership with std::unique_ptr<T>.
+            * Disallow std::shared_ptr unless multi-owner lifetime is explicitly justified in comments.
+        - Never hardcode client item IDs or assume client version is loaded without checking g_version.IsVersionLoaded().
+        - Reject dead code, commented-out blocks, and leftover debug logging.
+    - path: "source/rendering/**"
+      instructions: |
+        - Performance-critical path (AGENTS.md Hard Rules #7 & #8): zero allocations per frame and per tile. No std::string, std::function, node containers, or dynamic allocations in render/sprite loops.
+        - OpenGL and NanoVG resources must be RAII-owned using existing wrappers.
+        - High-throughput overlays belong in GLSL shaders; remainder in dedicated overlay drawers. Do not add drawing passes to main map drawer.
+    - path: "source/editor/**"
+      instructions: |
+        - AGENTS.md Hard Rule #1: Never mutate tiles directly from input handlers. All drawing must route through DrawOperations.
+        - AGENTS.md Hard Rule #2: Every user-visible map change must be undoable (capture state, route through Action / Change / ActionQueue).
+        - AGENTS.md Hard Rule #4: Never assume a single map: obtain Editor via g_gui.GetCurrentEditor() and always check for nullptr.
+    - path: "source/ui/**"
+      instructions: |
+        - wxWidgets lifetime rule (AGENTS.md Ownership Rules): Child windows created with new are owned by their parent wxWindow. DO NOT wrap child windows in std::unique_ptr (causes double-free crash).
+        - AGENTS.md Hard Rule #5: Never hardcode colors, fonts, or margins: use Theme.
+        - AGENTS.md Hard Rule #6: Item/brush grids must use VirtualItemGrid / VirtualBrushGrid and rme::ui::grid::*.
+    - path: "source/io/**"
+      instructions: |
+        - AGENTS.md Hard Rule #3: Keep OTBM compatible. Never alter on-disk format, attribute meanings, or serialization order without explicit approval.
+    - path: "tools/**"
+      instructions: |
+        - tibia_data.py and related tools must remain zero-dependency Python 3.9+ using standard library only.
+    - path: "lua/**"
+      instructions: |
+        - AGENTS.md Hard Rule #11: Keep Lua API in sync. If public behavior of core types (map, tile, item, brush, selection) changes, verify matching lua_api_* binding and lua_tests/.
+    - path: ".github/workflows/**"
+      instructions: |
+        - Enforce GitHub Actions security: least-privilege permissions, pinned actions, safe secret handling.
+
+chat:
+  auto_reply: true
+  art: false
