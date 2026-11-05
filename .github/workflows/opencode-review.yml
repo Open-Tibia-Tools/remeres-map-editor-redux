@@ -20,13 +20,15 @@ concurrency:
 
 jobs:
   review:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false &&
+       github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
       issues: write
-      id-token: write
 
     steps:
       - name: Checkout repository
@@ -36,7 +38,7 @@ jobs:
           persist-credentials: false
 
       - name: Run OpenCode PR Review
-        uses: dceoy/opencode-action@v0.8.1
+        uses: dceoy/opencode-action@163f9a9cd3d3f497e2847635585419f951371d2f # v0.8.1
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
