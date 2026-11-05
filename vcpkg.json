@@ -17,6 +17,7 @@
     "boost-asio",
     "boost-thread",
     "nanovg",
+    "nanosvg",
     "spdlog",
     "tomlplusplus",
     "lua",
