@@ -23,7 +23,7 @@
 #include <unordered_map>
 
 Creature::Creature(CreatureType* ctype) :
-	direction(SOUTH), spawntime(0), saved(false), selected(false) {
+	direction(SOUTH), spawntime(60), saved(false), selected(false) {
 	if (ctype) {
 		type_name = ctype->name;
 		if (ctype->isNpc) {
@@ -33,7 +33,7 @@ Creature::Creature(CreatureType* ctype) :
 }
 
 Creature::Creature(std::string ctype_name) :
-	type_name(std::move(ctype_name)), direction(SOUTH), spawntime(0), saved(false), selected(false) {
+	type_name(std::move(ctype_name)), direction(SOUTH), spawntime(60), saved(false), selected(false) {
 	////
 }
 

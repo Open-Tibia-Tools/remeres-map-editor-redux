@@ -65,9 +65,7 @@ public:
 	[[nodiscard]] int GetBrushVariation() const {
 		return brush_variation;
 	}
-	[[nodiscard]] int GetSpawnTime() const {
-		return creature_spawntime;
-	}
+	[[nodiscard]] int GetSpawnTime() const;
 
 	// Additional brush parameters
 	void SetSpawnTime(int time) {

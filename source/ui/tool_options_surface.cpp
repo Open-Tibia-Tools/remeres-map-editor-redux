@@ -43,7 +43,7 @@ namespace {
 	constexpr int MAX_AXIS_SIZE = 15;
 	constexpr int MIN_THICKNESS = 1;
 	constexpr int MAX_THICKNESS = 100;
-	constexpr int MIN_SPAWN_TIME = 0;
+	constexpr int MIN_SPAWN_TIME = 1;
 	constexpr int MAX_SPAWN_TIME = 86400;
 	const wxColour MODE_ON_COLOUR(102, 187, 106);
 	const wxColour MODE_OFF_COLOUR(255, 214, 102);
@@ -176,8 +176,9 @@ void ToolOptionsSurface::BuildUi() {
 		wxSP_ARROW_KEYS,
 		MIN_SPAWN_TIME,
 		MAX_SPAWN_TIME,
-		g_settings.getInteger(Config::DEFAULT_SPAWNTIME)
+		std::max(MIN_SPAWN_TIME, g_settings.getInteger(Config::DEFAULT_SPAWNTIME))
 	);
+	g_brush_manager.SetSpawnTime(spawn_time_spin->GetValue());
 	spawn_time_row->Add(spawn_time_spin, wxSizerFlags().CenterVertical());
 	spawn_time_panel->SetSizer(spawn_time_row);
 	other_sizer->Add(spawn_time_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(6)));

@@ -102,7 +102,8 @@ namespace {
 		if (isOtbm5) {
 			creatureNode.append_attribute("z") = z;
 		}
-		creatureNode.append_attribute("spawntime") = creature.spawntime;
+		const int32_t spawntime = creature.spawntime > 0 ? creature.spawntime : std::max(1, g_settings.getInteger(Config::DEFAULT_SPAWNTIME));
+		creatureNode.append_attribute("spawntime") = spawntime;
 		if (creature.direction != NORTH) {
 			creatureNode.append_attribute("direction") = static_cast<int>(creature.direction);
 		}

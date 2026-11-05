@@ -4,6 +4,7 @@
 
 #include "app/main.h"
 
+#include "app/settings.h"
 #include "brushes/managers/brush_manager.h"
 #include "brushes/brush.h"
 #include "brushes/managers/doodad_preview_manager.h"
@@ -68,7 +69,7 @@ BrushManager::BrushManager() :
 	exact_brush_size(true),
 	aspect_ratio_locked(true),
 	brush_variation(0),
-	creature_spawntime(0),
+	creature_spawntime(60),
 	draw_locked_doors(false),
 	use_custom_thickness(false),
 	custom_thickness_mod(0.0),
@@ -432,3 +433,11 @@ void BrushManager::UpdateDoodadPreview() {
 	g_doodad_preview.FillBuffer();
 	g_gui.SetCurrentMapSecondaryMap(g_doodad_preview.GetBufferMap());
 }
+
+int BrushManager::GetSpawnTime() const {
+	if (creature_spawntime <= 0) {
+		return std::max(1, g_settings.getInteger(Config::DEFAULT_SPAWNTIME));
+	}
+	return creature_spawntime;
+}
+

@@ -37,9 +37,9 @@ IMPLEMENT_INCREMENT_OP(Direction)
 // Canary weighted spawns list several monsters on one tile; the server spawns one of them, picked by weight
 struct SpawnAlternative {
 	std::string name;
-	int spawntime;
-	Direction direction;
-	uint32_t weight;
+	int spawntime = 60;
+	Direction direction = NORTH;
+	uint32_t weight = 0;
 };
 
 class Creature {
