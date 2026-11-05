@@ -17,6 +17,8 @@
 #include <wx/file.h>
 #include <wx/filedlg.h>
 #include <wx/stattext.h>
+#include "util/test_mode.h"
+#include <spdlog/spdlog.h>
 
 #include <format>
 #include <span>
@@ -61,6 +63,11 @@ long DialogUtil::PopupDialog(wxWindow* parent, wxString title, wxString text, lo
 		return wxID_ANY;
 	}
 
+	if (rme::IsAutomatedTestMode()) {
+		spdlog::info("[PopupDialog] {}: {}", title.ToStdString(), text.ToStdString());
+		return (style & wxYES) ? wxID_YES : ((style & wxOK) ? wxID_OK : wxID_CANCEL);
+	}
+
 	wxMessageDialog dlg(parent, text, title, style);
 	return dlg.ShowModal();
 }
@@ -75,7 +82,40 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 		return;
 	}
 
-	const std::vector<wxString> lines = SplitDialogItems(param_items);
+	std::vector<std::string> filtered_items;
+	if (rme::ShouldSilenceBrushWarnings()) {
+		for (const auto& item : param_items) {
+			std::string_view sv = item;
+			if (sv.starts_with("tileset_") ||
+			    sv.starts_with("Errors while loading brush") ||
+			    sv.starts_with("Brush node without name") ||
+			    sv.starts_with("Using reserved brushname") ||
+			    sv.starts_with("Duplicate brush name") ||
+			    sv.starts_with("Border ID ") ||
+			    sv.find("carpet brush") != std::string_view::npos ||
+			    sv.find("doodad") != std::string_view::npos ||
+			    sv.find("wall brush") != std::string_view::npos ||
+			    sv.find("already has a brush") != std::string_view::npos) {
+				continue;
+			}
+			filtered_items.push_back(item);
+		}
+	} else {
+		filtered_items = param_items;
+	}
+
+	if (filtered_items.empty()) {
+		return;
+	}
+
+	if (rme::IsAutomatedTestMode()) {
+		for (const auto& item : filtered_items) {
+			spdlog::warn("[ListDialog: {}] {}", title.ToStdString(), item);
+		}
+		return;
+	}
+
+	const std::vector<wxString> lines = SplitDialogItems(filtered_items);
 	if (lines.empty()) {
 		return;
 	}

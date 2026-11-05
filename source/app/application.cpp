@@ -49,6 +49,7 @@
 #include "game/creature.h"
 
 #include "ingame_preview/ingame_preview_manager.h"
+#include "util/test_mode.h"
 
 #include <wx/snglinst.h>
 #include <wx/stdpaths.h>
@@ -62,6 +63,13 @@
 
 wxIMPLEMENT_APP_NO_MAIN(Application);
 
+namespace {
+void RmeAssertHandler(const wxString& file, int line, const wxString& func, const wxString& cond, const wxString& msg) {
+	spdlog::warn("[wxWidgets Assert] {}:{} in {}: assert '{}' failed: {}",
+		file.ToStdString(), line, func.ToStdString(), cond.ToStdString(), msg.ToStdString());
+}
+} // namespace
+
 int main(int argc, char** argv) {
 	return wxEntry(argc, argv);
 }
@@ -72,6 +80,7 @@ Application::~Application() {
 }
 
 bool Application::OnInit() {
+	wxSetAssertHandler(RmeAssertHandler);
 #ifdef __WINDOWS__
 	timeBeginPeriod(1);
 #endif
@@ -468,13 +477,15 @@ void Application::OnUnhandledException() {
 }
 
 bool Application::ParseCommandLineMap(wxString& fileName) {
-	if (argc == 2) {
-		fileName = wxString(argv[1]);
-		return true;
-	} else if (argc == 3) {
-		if (argv[1] == "-ws") {
-			g_settings.setInteger(Config::WELCOME_DIALOG, argv[2] == "1" ? 1 : 0);
+	for (int i = 1; i < argc; ++i) {
+		const wxString arg = argv[i];
+		if (arg == "--test" || arg == "-t" || arg == "--automated" || arg == "--automated-tests" || arg == "--silent") {
+			rme::SetAutomatedTestMode(true);
+		} else if (arg == "-ws" && i + 1 < argc) {
+			g_settings.setInteger(Config::WELCOME_DIALOG, argv[++i] == "1" ? 1 : 0);
+		} else if (!arg.StartsWith("-")) {
+			fileName = arg;
 		}
 	}
-	return false;
+	return !fileName.empty();
 }
