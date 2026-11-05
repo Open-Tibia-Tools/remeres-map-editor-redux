@@ -38,7 +38,7 @@ IMPLEMENT_INCREMENT_OP(Direction)
 struct SpawnAlternative {
 	std::string name;
 	int spawntime = 60;
-	Direction direction = NORTH;
+	Direction direction = SOUTH;
 	uint32_t weight = 0;
 };
 

@@ -104,9 +104,7 @@ namespace {
 		}
 		const int32_t spawntime = creature.spawntime > 0 ? creature.spawntime : std::max(1, g_settings.getInteger(Config::DEFAULT_SPAWNTIME));
 		creatureNode.append_attribute("spawntime") = spawntime;
-		if (creature.direction != NORTH) {
-			creatureNode.append_attribute("direction") = static_cast<int>(creature.direction);
-		}
+		creatureNode.append_attribute("direction") = static_cast<int>(creature.direction);
 		if (isOtbm5 && creature.weight > 0) {
 			creatureNode.append_attribute("weight") = creature.weight;
 		}
@@ -486,10 +484,12 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 				spawntime = std::max(1, g_settings.getInteger(Config::DEFAULT_SPAWNTIME));
 			}
 
-			Direction direction = NORTH;
-			int dir = creatureNode.attribute("direction").as_int(static_cast<int>(NORTH));
-			if (dir >= DIRECTION_FIRST && dir <= DIRECTION_LAST) {
-				direction = static_cast<Direction>(dir);
+			Direction direction = SOUTH;
+			if (auto dirAttr = creatureNode.attribute("direction")) {
+				int dir = dirAttr.as_int(static_cast<int>(SOUTH));
+				if (dir >= DIRECTION_FIRST && dir <= DIRECTION_LAST) {
+					direction = static_cast<Direction>(dir);
+				}
 			}
 
 			Position creaturePosition = spawnPosition;
