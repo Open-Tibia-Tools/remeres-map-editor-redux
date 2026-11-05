@@ -159,6 +159,9 @@ void NanoVGListBox::EnsureVisible(int line) {
 }
 
 void NanoVGListBox::UpdateScrollbar() {
+	if (!HasScrollbar(wxVERTICAL)) {
+		return;
+	}
 	if (m_count == 0) {
 		SetScrollbar(wxVERTICAL, 0, 0, 0);
 		return;
