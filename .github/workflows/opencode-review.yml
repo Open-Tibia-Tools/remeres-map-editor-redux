@@ -54,6 +54,11 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Configure Git identity
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
       - name: Configure OpenCode small model
         run: |
           set -euo pipefail
