@@ -125,7 +125,7 @@ public:
 	}
 
 	uint8_t getDoorID() const;
-	void setDoorID(uint8_t id);
+	void setDoorID(uint8_t door_id);
 
 	DoorType getDoorType() const;
 	bool isRealDoor() const;
@@ -150,8 +150,8 @@ public:
 	uint8_t getDepotID() const {
 		return depotId;
 	}
-	void setDepotID(uint8_t id) {
-		depotId = id;
+	void setDepotID(uint8_t new_id) {
+		depotId = new_id;
 	}
 
 protected:

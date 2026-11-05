@@ -160,12 +160,12 @@ namespace LuaAPI {
 		// Create "json" table
 		sol::table jsonTable = lua.create_table();
 
-		jsonTable.set_function("encode", [](sol::object obj, sol::this_state s) -> std::string {
+		jsonTable.set_function("encode", [](sol::object obj, sol::this_state) -> std::string {
 			nlohmann::json val = luaToJson(obj);
 			return val.dump(); // minified output
 		});
 
-		jsonTable.set_function("encode_pretty", [](sol::object obj, sol::this_state s) -> std::string {
+		jsonTable.set_function("encode_pretty", [](sol::object obj, sol::this_state) -> std::string {
 			nlohmann::json val = luaToJson(obj);
 			return val.dump(4); // pretty-printed with 4-space indent
 		});

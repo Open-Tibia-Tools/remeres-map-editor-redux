@@ -107,7 +107,7 @@ void LiveClient::tryConnect(boost::asio::ip::tcp::resolver::results_type endpoin
 
 	logMessage("Joining server...");
 
-	boost::asio::async_connect(*socket, endpoints, [this](boost::system::error_code error, boost::asio::ip::tcp::endpoint endpoint) -> void {
+	boost::asio::async_connect(*socket, endpoints, [this](boost::system::error_code error, boost::asio::ip::tcp::endpoint) -> void {
 		if (!socket->is_open()) {
 			logMessage("Socket not open after connection attempt.");
 			wxTheApp->CallAfter([this]() {
@@ -210,7 +210,7 @@ void LiveClient::receive(uint32_t packetSize) {
 
 void LiveClient::send(NetworkMessage& message) {
 	memcpy(&message.buffer[0], &message.size, 4);
-	boost::asio::async_write(*socket, boost::asio::buffer(message.buffer, message.size + 4), [this](const boost::system::error_code& error, size_t bytesTransferred) -> void {
+	boost::asio::async_write(*socket, boost::asio::buffer(message.buffer, message.size + 4), [this](const boost::system::error_code& error, size_t) -> void {
 		if (error) {
 			logMessage(wxString() + getHostName() + ": " + error.message());
 		}
@@ -411,7 +411,7 @@ void LiveClient::parseKick(NetworkMessage& message) {
 	DialogUtil::PopupDialog("Disconnected", wxstr(kickMessage), wxOK);
 }
 
-void LiveClient::parseClientAccepted(NetworkMessage& message) {
+void LiveClient::parseClientAccepted(NetworkMessage&) {
 	sendReady();
 }
 

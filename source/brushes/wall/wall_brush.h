@@ -26,7 +26,7 @@ public:
 
 	bool load(pugi::xml_node node, std::vector<std::string>& warnings) override;
 
-	bool canDraw(BaseMap* map, const Position& position) const override {
+	bool canDraw(BaseMap*, const Position&) const override {
 		return true;
 	}
 
@@ -40,7 +40,7 @@ public:
 
 	// If the specified wall item is part of this wall
 	bool hasWall(Item* item);
-	::DoorType getDoorTypeFromID(uint16_t id);
+	::DoorType getDoorTypeFromID(uint16_t door_id);
 	std::optional<BorderType> findAlignmentForItem(ServerItemId item_id) const;
 	std::optional<ServerItemId> findNextWallVariant(ServerItemId item_id) const;
 

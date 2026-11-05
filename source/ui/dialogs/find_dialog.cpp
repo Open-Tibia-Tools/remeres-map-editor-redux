@@ -37,7 +37,7 @@ void KeyForwardingTextCtrl::OnKeyDown(wxKeyEvent& event) {
 // ============================================================================
 // Find Item Dialog (Jump to item)
 
-FindDialog::FindDialog(wxWindow* parent, wxString title) :
+FindDialog::FindDialog(wxWindow*, wxString title) :
 	wxDialog(g_gui.root, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxRESIZE_BORDER | wxCAPTION | wxCLOSE_BOX),
 	idle_input_timer(this),
 	result_brush(nullptr),
@@ -172,7 +172,7 @@ FindBrushDialog::FindBrushDialog(wxWindow* parent, wxString title) :
 
 FindBrushDialog::~FindBrushDialog() = default;
 
-void FindBrushDialog::OnClickListInternal(wxCommandEvent& event) {
+void FindBrushDialog::OnClickListInternal(wxCommandEvent&) {
 	Brush* brush = item_list->GetSelectedBrush();
 	if (brush) {
 		result_brush = brush;
@@ -196,18 +196,18 @@ void FindBrushDialog::OnClickOKInternal() {
 			if (do_search) {
 				const BrushMap& map = g_brushes.getMap();
 				for (const auto& [name, brush_ptr] : map) {
-					const Brush* brush = brush_ptr.get();
-					if (!caseInsensitiveContains(brush->getName(), search_string)) {
+					const Brush* candidateBrush = brush_ptr.get();
+					if (!caseInsensitiveContains(candidateBrush->getName(), search_string)) {
 						continue;
 					}
 
 					// Don't match RAWs now.
-					if (brush->is<RAWBrush>()) {
+					if (candidateBrush->is<RAWBrush>()) {
 						continue;
 					}
 
 					// Found one!
-					result_brush = brush;
+					result_brush = candidateBrush;
 					break;
 				}
 
@@ -433,6 +433,6 @@ void FindDialogListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t n)
 	}
 }
 
-int FindDialogListBox::OnMeasureItem(size_t n) const {
+int FindDialogListBox::OnMeasureItem(size_t) const {
 	return FromDIP(32);
 }

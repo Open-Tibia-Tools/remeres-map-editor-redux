@@ -649,17 +649,17 @@ namespace LuaAPI {
 
 		// Event system: app.events:on("eventName", callback) / app.events:off(id)
 		sol::table events = lua.create_table();
-		events["on"] = [](sol::this_state ts, sol::table self, const std::string& eventName, sol::function callback) -> int {
+		events["on"] = [](sol::this_state ts, sol::table, const std::string& eventName, sol::function callback) -> int {
 			return g_luaScripts.addEventListener(eventName, callback, ts);
 		};
-		events["off"] = [](sol::this_state ts, sol::table self, int listenerId) -> bool {
+		events["off"] = [](sol::this_state, sol::table, int listenerId) -> bool {
 			return g_luaScripts.removeEventListener(listenerId);
 		};
 		app["events"] = events;
 
 		// Properties via metatable (for dynamic properties like 'map' and 'selection')
 		sol::table mt = lua.create_table();
-		mt[sol::meta_function::index] = [](sol::this_state ts, sol::table self, std::string key) -> sol::object {
+		mt[sol::meta_function::index] = [](sol::this_state ts, sol::table, std::string key) -> sol::object {
 			sol::state_view lua(ts);
 
 			if (key == "map") {
@@ -700,7 +700,7 @@ namespace LuaAPI {
 			return sol::nil;
 		};
 
-		mt[sol::meta_function::new_index] = [](sol::this_state ts, sol::table self, std::string key, sol::object value) {
+		mt[sol::meta_function::new_index] = [](sol::this_state, sol::table, std::string key, sol::object value) {
 			if (key == "brushSize") {
 				if (value.is<int>()) {
 					g_gui.SetBrushSize(value.as<int>());
@@ -754,7 +754,7 @@ namespace LuaAPI {
 			}
 			return false;
 		};
-		mapView["removeOverlay"] = [](sol::this_state ts, sol::variadic_args va) -> bool {
+		mapView["removeOverlay"] = [](sol::this_state, sol::variadic_args va) -> bool {
 			if (va.size() == 1 && va[0].is<std::string>()) {
 				return g_luaScripts.removeMapOverlay(va[0].as<std::string>());
 			}
@@ -763,7 +763,7 @@ namespace LuaAPI {
 			}
 			return false;
 		};
-		mapView["setEnabled"] = [](sol::this_state ts, sol::variadic_args va) -> bool {
+		mapView["setEnabled"] = [](sol::this_state, sol::variadic_args va) -> bool {
 			if (va.size() == 2 && va[0].is<std::string>() && va[1].is<bool>()) {
 				return g_luaScripts.setMapOverlayEnabled(va[0].as<std::string>(), va[1].as<bool>());
 			}

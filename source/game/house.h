@@ -79,7 +79,7 @@ public:
 	[[nodiscard]] const FloorSummary& getFloorSummary(int z) const;
 
 	uint8_t getEmptyDoorID() const;
-	Position getDoorPositionByID(uint8_t id) const;
+	Position getDoorPositionByID(uint8_t door_id) const;
 
 private:
 	uint32_t id;

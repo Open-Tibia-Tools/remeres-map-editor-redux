@@ -32,7 +32,14 @@ enum Direction {
 	DIRECTION_LAST = WEST
 };
 
-IMPLEMENT_INCREMENT_OP(Direction)
+inline Direction& operator++(Direction& type) {
+	return (type = static_cast<Direction>(static_cast<int>(type) + 1));
+}
+inline Direction operator++(Direction& type, int) {
+	Direction tmp = type;
+	++type;
+	return tmp;
+}
 
 // Canary weighted spawns list several monsters on one tile; the server spawns one of them, picked by weight
 struct SpawnAlternative {
@@ -78,23 +85,23 @@ public:
 	int getSpawnTime() const {
 		return spawntime;
 	}
-	void setSpawnTime(int spawntime) {
-		this->spawntime = spawntime;
+	void setSpawnTime(int new_spawntime) {
+		spawntime = new_spawntime;
 	}
 
 	Direction getDirection() const {
 		return direction;
 	}
-	void setDirection(Direction direction) {
-		this->direction = direction;
+	void setDirection(Direction new_direction) {
+		direction = new_direction;
 	}
 
 	// Weight and alternatives are preserved across load/save (UI editing to be added)
 	uint32_t getWeight() const {
 		return weight;
 	}
-	void setWeight(uint32_t weight) {
-		this->weight = weight;
+	void setWeight(uint32_t new_weight) {
+		weight = new_weight;
 	}
 	const std::vector<SpawnAlternative>& getAlternatives() const {
 		return alternatives;

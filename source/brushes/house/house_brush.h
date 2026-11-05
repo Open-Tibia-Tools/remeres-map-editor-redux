@@ -33,12 +33,12 @@ public:
 
 
 	// Not used
-	bool load(pugi::xml_node node, std::vector<std::string>& warnings) override {
+	bool load(pugi::xml_node, std::vector<std::string>&) override {
 		return true;
 	}
 
 	// You can always draw house tiles!
-	bool canDraw(BaseMap* map, const Position& position) const override {
+	bool canDraw(BaseMap*, const Position&) const override {
 		return true;
 	}
 	// Draw the shit!

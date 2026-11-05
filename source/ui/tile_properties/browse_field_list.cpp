@@ -125,7 +125,7 @@ void TilePropertiesListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_
 	nvgText(vg, rect.x + 40, rect.y + rect.height / 2.0f, label.c_str(), nullptr);
 }
 
-int TilePropertiesListBox::OnMeasureItem(size_t n) const {
+int TilePropertiesListBox::OnMeasureItem(size_t) const {
 	return FromDIP(32);
 }
 
@@ -235,7 +235,7 @@ void BrowseFieldList::OnItemSelected(wxCommandEvent& event) {
 	event.Skip(); // Let parent handle property panel swap if needed
 }
 
-void BrowseFieldList::OnClickUp(wxCommandEvent& event) {
+void BrowseFieldList::OnClickUp(wxCommandEvent&) {
 	int selection = item_list->GetSelection();
 	if (selection == wxNOT_FOUND || selection <= 0) {
 		return;
@@ -262,7 +262,7 @@ void BrowseFieldList::OnClickUp(wxCommandEvent& event) {
 	}
 }
 
-void BrowseFieldList::OnClickDown(wxCommandEvent& event) {
+void BrowseFieldList::OnClickDown(wxCommandEvent&) {
 	int selection = item_list->GetSelection();
 	if (selection == wxNOT_FOUND) {
 		return;
@@ -288,7 +288,7 @@ void BrowseFieldList::OnClickDown(wxCommandEvent& event) {
 	}
 }
 
-void BrowseFieldList::OnClickDelete(wxCommandEvent& event) {
+void BrowseFieldList::OnClickDelete(wxCommandEvent&) {
 	int selection = item_list->GetSelection();
 	if (selection == wxNOT_FOUND) {
 		return;

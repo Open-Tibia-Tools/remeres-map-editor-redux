@@ -240,8 +240,8 @@ void BrushBottomCardWidget::OnNanoVGPaint(NVGcontext* vg, int width, int height)
 			if (lookId < 0) {
 				texture = GetOrCreateEditorIconTexture(vg, lookId);
 			} else if (lookId > 0) {
-				if (Sprite* sprite = g_gui.gfx.getSprite(lookId)) {
-					texture = GetOrCreateSpriteTexture(vg, sprite);
+				if (Sprite* lookSprite = g_gui.gfx.getSprite(lookId)) {
+					texture = GetOrCreateSpriteTexture(vg, lookSprite);
 				}
 			}
 		}

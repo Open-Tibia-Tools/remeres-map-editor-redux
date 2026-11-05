@@ -122,7 +122,7 @@ void ScriptMenuHandler::RebuildScriptsMenu() {
 				label += "\t" + shortcut;
 			}
 
-			const int menuId = MAIN_FRAME_MENU + SCRIPTS_FIRST + static_cast<int>(scriptIndex);
+			const int menuId = static_cast<int>(MAIN_FRAME_MENU) + SCRIPTS_FIRST + static_cast<int>(scriptIndex);
 			wxMenuItem* item = m_scriptsMenu->AppendCheckItem(
 				menuId,
 				label,
@@ -165,7 +165,7 @@ void ScriptMenuHandler::RebuildShowMenu() {
 		m_showMenu->AppendSeparator();
 		for (size_t showIndex = 0; showIndex < shows.size() && showIndex < maxShowCount; ++showIndex) {
 			const auto& show = shows[showIndex];
-			const int menuId = MAIN_FRAME_MENU + SHOW_CUSTOM_FIRST + static_cast<int>(showIndex);
+			const int menuId = static_cast<int>(MAIN_FRAME_MENU) + SHOW_CUSTOM_FIRST + static_cast<int>(showIndex);
 			wxMenuItem* item = m_showMenu->AppendCheckItem(
 				menuId,
 				wxstr(std::format("Overlay: {}", show.label)),

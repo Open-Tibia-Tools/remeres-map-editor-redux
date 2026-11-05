@@ -85,8 +85,6 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 	const int base_screen_x = -view.view_scroll_x - offset;
 	const int base_screen_y = -view.view_scroll_y - offset;
 
-	bool draw_lights = options.isDrawLight();
-
 	const int max_logical_w = static_cast<int>(view.logical_width);
 	const int max_logical_h = static_cast<int>(view.logical_height);
 	const int min_visible_draw_x = -TILE_SIZE - visibility_margin_pixels;
@@ -256,7 +254,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
 		glDepthMask(GL_TRUE);
-		visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y, const Tile* tile_above) {
+		visitAllVisibleNodes([&](const TileLocation* location, int draw_x, int draw_y, const Tile*) {
 			TileElevationState static_elevation { draw_x, draw_y };
 			tile_renderer->RenderStaticItems(sprite_batch, location, ctx, static_elevation);
 

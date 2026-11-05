@@ -106,7 +106,7 @@ void GridDrawer::DrawNodeLoadingPlaceholder(SpriteBatch& sprite_batch, int nd_ma
 	sprite_batch.drawRect((float)cx, (float)cy, (float)TILE_SIZE * 4, (float)TILE_SIZE * 4, color, atlas);
 }
 
-void GridDrawer::drawRect(SpriteBatch& sprite_batch, int x, int y, int w, int h, const glm::vec4& color, const AtlasManager& atlas, int width) {
+void GridDrawer::drawRect(SpriteBatch& sprite_batch, int x, int y, int w, int h, const glm::vec4& color, const AtlasManager& atlas, int) {
 	sprite_batch.drawRectLines((float)x, (float)y, (float)w, (float)h, color, atlas);
 }
 

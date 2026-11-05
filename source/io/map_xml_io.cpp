@@ -24,7 +24,7 @@
 
 std::pair<std::string, std::string> MapXMLIO::normalizeMapFilePaths(const wxFileName& dir, const std::string& filename) {
 	wxFileName resolved(dir.GetPath(wxPATH_GET_SEPARATOR | wxPATH_GET_VOLUME), wxstr(filename));
-	resolved.Normalize(wxPATH_NORM_ALL, dir.GetPath());
+	resolved.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE, dir.GetPath());
 
 	// Security: Prevent path traversal attacks by ensuring the resolved sidecar path
 	// remains strictly contained within the map directory.
@@ -57,7 +57,7 @@ namespace {
 		CreatureFilter filter;
 	};
 
-	bool loadXMLFile(pugi::xml_document& doc, const std::string& path_utf8, const std::string& path_local) {
+	bool loadXMLFile(pugi::xml_document& doc, const std::string& path_utf8, const std::string&) {
 #if defined(_WIN32)
 		return doc.load_file(wxstr(path_utf8).wc_str());
 #else
@@ -65,7 +65,7 @@ namespace {
 #endif
 	}
 
-	bool saveXMLFile(const pugi::xml_document& doc, const std::string& path_utf8, const std::string& path_local) {
+	bool saveXMLFile(const pugi::xml_document& doc, const std::string& path_utf8, const std::string&) {
 		std::error_code ec;
 #if defined(_WIN32)
 		std::filesystem::create_directories(std::filesystem::path(wxstr(path_utf8).wc_str()).parent_path(), ec);

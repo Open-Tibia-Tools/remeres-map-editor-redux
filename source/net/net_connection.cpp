@@ -46,11 +46,11 @@ std::string NetworkMessage::read<std::string>() {
 
 template <>
 Position NetworkMessage::read<Position>() {
-	Position position;
-	position.x = read<uint16_t>();
-	position.y = read<uint16_t>();
-	position.z = read<uint8_t>();
-	return position;
+	Position pos;
+	pos.x = read<uint16_t>();
+	pos.y = read<uint16_t>();
+	pos.z = read<uint8_t>();
+	return pos;
 }
 
 template <>

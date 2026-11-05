@@ -9,8 +9,13 @@
 
 wxString ScreenshotSaver::GenerateDateString() {
 	time_t t = time(nullptr);
-	struct tm* current_time = localtime(&t);
-	ASSERT(current_time);
+	struct tm current_time_buf{};
+#if defined(_MSC_VER)
+	localtime_s(&current_time_buf, &t);
+#else
+	localtime_r(&t, &current_time_buf);
+#endif
+	struct tm* current_time = &current_time_buf;
 
 	wxString date;
 	date << "screenshot_" << (1900 + current_time->tm_year);

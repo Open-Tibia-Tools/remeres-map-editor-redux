@@ -248,7 +248,7 @@ void BrushSelector::SelectSpawnBrush() {
 	g_gui.RestoreBrushSizeState(sizeState);
 }
 
-void BrushSelector::SelectSmartBrush(Editor& editor, Tile* tile) {
+void BrushSelector::SelectSmartBrush(Editor&, Tile* tile) {
 	if (tile && tile->size() > 0) {
 		// Select visible creature
 		if (tile->creature && g_settings.getInteger(Config::SHOW_CREATURES)) {

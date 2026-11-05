@@ -26,7 +26,6 @@ namespace {
 bool AssetBundleLoader::load(const AssetLoadRequest& request, AssetBundle& bundle, wxString& error, std::vector<std::string>& warnings) const {
 	bundle = {};
 
-	DatItemParser dat_parser;
 	const auto definition_input = ItemDefinitionLoadInput {
 		.mode = request.mode,
 		.dat_path = request.dat_path,

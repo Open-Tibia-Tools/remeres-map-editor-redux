@@ -45,16 +45,16 @@ bool CarpetBrush::load(pugi::xml_node node, std::vector<std::string>& warnings) 
 	return CarpetBrushLoader::load(*this, node, warnings);
 }
 
-bool CarpetBrush::canDraw(BaseMap* map, const Position& position) const {
+bool CarpetBrush::canDraw(BaseMap*, const Position&) const {
 	return true;
 }
 
-void CarpetBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void CarpetBrush::draw(BaseMap* map, Tile* tile, void*) {
 	undraw(map, tile); // Remove old
 	tile->addItem(Item::Create(getRandomCarpet(CARPET_CENTER)));
 }
 
-void CarpetBrush::undraw(BaseMap* map, Tile* tile) {
+void CarpetBrush::undraw(BaseMap*, Tile* tile) {
 	std::erase_if(tile->items, [](const auto& item) {
 		return item->isCarpet() && item->getCarpetBrush() != nullptr;
 	});

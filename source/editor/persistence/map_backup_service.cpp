@@ -13,7 +13,12 @@
 
 std::string MapBackupService::GenerateTimestampString(bool compact) {
 	std::time_t now = std::time(nullptr);
-	std::tm tm_now = *std::localtime(&now);
+	std::tm tm_now{};
+#if defined(_MSC_VER)
+	localtime_s(&tm_now, &now);
+#else
+	localtime_r(&now, &tm_now);
+#endif
 	char time_buf[64];
 	if (compact) {
 		std::strftime(time_buf, sizeof(time_buf), "%Y%m%d_%H%M%S", &tm_now);

@@ -66,16 +66,11 @@
 
 #define ASSETS_NAME "Tibia"
 
-#ifdef __VISUALC__
-	#pragma warning(disable : 4996) // Stupid MSVC complaining 'bout "unsafe" functions
-	#pragma warning(disable : 4800) // Bool conversion warning
-	#pragma warning(disable : 4100) // Unused parameter warning ( I like to name unused stuff... )
-	#pragma warning(disable : 4706) // Assignment within conditional expression
-#endif
-
 #ifndef FORCEINLINE
-	#ifdef __VISUALC__
+	#if defined(_MSC_VER)
 		#define FORCEINLINE __forceinline
+	#elif defined(__GNUC__) || defined(__clang__)
+		#define FORCEINLINE inline __attribute__((always_inline))
 	#else
 		#define FORCEINLINE inline
 	#endif
@@ -98,22 +93,16 @@
 	#endif
 #endif
 
-#ifdef __RELEASE__
-	#ifdef __VISUALC__
-		#define _SCL_SECURE 0
-		#define _SECURE_SCL 0 // They can't even decide on a coherent define interface!
-		#define _HAS_ITERATOR_DEBUGGING 0
-	#endif
-#endif
+
 
 #ifndef _DONT_USE_UPDATER_
-	#if defined __WINDOWS__ && !defined _USE_UPDATER_
+	#if defined _WIN32 && !defined _USE_UPDATER_
 		#define _USE_UPDATER_
 	#endif
 #endif
 
 #ifndef _DONT_USE_PROCESS_COM
-	#if defined __WINDOWS__ && !defined _USE_PROCESS_COM
+	#if defined _WIN32 && !defined _USE_PROCESS_COM
 		#define _USE_PROCESS_COM
 	#endif
 #endif
@@ -179,25 +168,6 @@ struct DrawColor {
 // wxString conversions
 #define nstr(str) (str).ToStdString()
 
-// increment & decrement definitions
-#define IMPLEMENT_INCREMENT_OP(Type)                     \
-	namespace {                                          \
-		Type& operator++(Type& type) {                   \
-			return (type = static_cast<Type>(type + 1)); \
-		}                                                \
-		Type operator++(Type& type, int) {               \
-			return static_cast<Type>((++type) - 1);      \
-		}                                                \
-	}
 
-#define IMPLEMENT_DECREMENT_OP(Type)                     \
-	namespace {                                          \
-		Type& operator--(Type& type) {                   \
-			return (type = static_cast<Type>(type - 1)); \
-		}                                                \
-		Type operator--(Type& type, int) {               \
-			return static_cast<Type>((--type) + 1);      \
-		}                                                \
-	}
 
 #endif

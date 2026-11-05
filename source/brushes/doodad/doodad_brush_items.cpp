@@ -171,7 +171,7 @@ bool DoodadBrushItems::hasCompositeObjects(int variation) const {
 	return ab && ab->composite_chance > 0;
 }
 
-bool DoodadBrushItems::ownsItem(Item* item, const DoodadBrushSettings& brushSettings) const {
+bool DoodadBrushItems::ownsItem(Item* item, const DoodadBrushSettings&) const {
 	if (!item) {
 		return false;
 	}

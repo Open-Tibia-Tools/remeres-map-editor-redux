@@ -36,7 +36,7 @@ bool WelcomeManager::IsWelcomeDialogShown() {
 	return welcomeDialog != nullptr && welcomeDialog->IsShown();
 }
 
-void WelcomeManager::OnWelcomeDialogClosed(wxCloseEvent& event) {
+void WelcomeManager::OnWelcomeDialogClosed(wxCloseEvent&) {
 	welcomeDialog->Destroy();
 	g_gui.root->Close();
 }

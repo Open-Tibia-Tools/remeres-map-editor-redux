@@ -33,12 +33,7 @@ namespace LuaAPI {
 		return result;
 	}
 
-	// Helper: check if string contains another (case-insensitive)
-	static bool containsIgnoreCase(const std::string& haystack, const std::string& needle) {
-		std::string lowerHaystack = toLower(haystack);
-		std::string lowerNeedle = toLower(needle);
-		return lowerHaystack.find(lowerNeedle) != std::string::npos;
-	}
+
 
 	// Optimized helper when needle is already lowercased
 	static bool containsIgnoreCaseOptimized(const std::string& haystack, const std::string& lowerNeedle) {

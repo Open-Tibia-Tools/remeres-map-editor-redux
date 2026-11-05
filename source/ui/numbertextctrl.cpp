@@ -42,7 +42,7 @@ void NumberTextCtrl::OnKillFocus(wxFocusEvent& evt) {
 	evt.Skip();
 }
 
-void NumberTextCtrl::OnTextEnter(wxCommandEvent& evt) {
+void NumberTextCtrl::OnTextEnter(wxCommandEvent&) {
 	CheckRange();
 }
 

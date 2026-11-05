@@ -701,6 +701,6 @@ void Settings::load() {
 	IO(LOAD);
 }
 
-void Settings::save(bool endoftheworld) {
+void Settings::save(bool) {
 	IO(SAVE);
 }

@@ -278,7 +278,7 @@ void VirtualItemGrid::ClearCache() {
 	ClearImageCache();
 }
 
-int VirtualItemGrid::GetOrCreateItemTexture(NVGcontext* vg, uint16_t id) {
+int VirtualItemGrid::GetOrCreateItemTexture(NVGcontext*, uint16_t id) {
 	return GetOrCreateItemImage(id);
 }
 
@@ -295,9 +295,9 @@ wxString VirtualItemGrid::GetItemTooltip(size_t index) const {
 	return GetItemName(index);
 }
 
-void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
-	const wxSize cell = CellSize();
-	int rowHeight = cell.y + m_gridSpacing;
+void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int, int height) {
+	const wxSize cellSize = CellSize();
+	int rowHeight = cellSize.y + m_gridSpacing;
 	int scrollPos = GetScrollPosition();
 
 	size_t count = GetItemCount();
@@ -336,7 +336,6 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 		rme::ui::grid::DrawCellIcon(vg, iconRect, texture, badge);
 
 		if (m_indicatorDogEar) {
-			const bool isLightTheme = (Theme::Get(Theme::Role::Surface).Red() > 128);
 			const NVGcolor stdColor = rme::ui::grid::GetStandardCategoryColor(Theme::Role::BrushCategoryDefaultRaw);
 			rme::ui::grid::DrawDogEarBadge(vg, iconRect, stdColor);
 		}

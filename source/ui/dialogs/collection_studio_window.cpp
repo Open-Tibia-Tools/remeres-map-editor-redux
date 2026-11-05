@@ -374,7 +374,7 @@ void CollectionStudioWindow::UpdateUI() {
 	Layout();
 }
 
-void CollectionStudioWindow::OnSave(const std::string& paletteName, const std::string& name, bool isNew, bool append, bool includeItems, bool includeBrushes) {
+void CollectionStudioWindow::OnSave(const std::string& paletteName, const std::string& name, bool, bool append, bool includeItems, bool includeBrushes) {
 	std::span<const uint16_t> itemsToSave = includeItems ? m_staging.itemIds : std::span<const uint16_t>{};
 	std::span<Brush* const> brushesToSave = includeBrushes ? m_staging.brushes : std::span<Brush* const>{};
 

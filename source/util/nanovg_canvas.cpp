@@ -257,7 +257,7 @@ int NanoVGCanvas::GetOrCreateEditorIconTexture(NVGcontext* vg, int editor_icon_i
 	return GetOrCreateEditorIconTexture(vg, icon, size);
 }
 
-int NanoVGCanvas::GetOrCreateEditorIconTexture(NVGcontext* vg, EditorIcon* icon, SpriteSize size) {
+int NanoVGCanvas::GetOrCreateEditorIconTexture(NVGcontext*, EditorIcon* icon, SpriteSize size) {
 	if (!icon) {
 		return 0;
 	}
@@ -317,7 +317,7 @@ int NanoVGCanvas::GetOrCreateEditorIconTexture(NVGcontext* vg, EditorIcon* icon,
 	return tex;
 }
 
-int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64_t spriteId, std::optional<bool> is_stackable_opt) {
+int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext*, GameSprite* gs, uint64_t spriteId, std::optional<bool> is_stackable_opt) {
 	// Calculate composite size
 	bool is_stackable = false;
 	if (is_stackable_opt.has_value()) {
@@ -413,7 +413,7 @@ int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64
 	return GetOrCreateImage(spriteId, composite.data(), w, h);
 }
 
-int NanoVGCanvas::CreateGenericSpriteTexture(NVGcontext* vg, Sprite* sprite, uint64_t spriteId) {
+int NanoVGCanvas::CreateGenericSpriteTexture(NVGcontext*, Sprite* sprite, uint64_t spriteId) {
 	ImageDimensions sz = sprite->GetSize();
 	int w = sz.width;
 	int h = sz.height;

@@ -245,7 +245,7 @@ wxSize VirtualBrushGrid::DoGetBestClientSize() const {
 	return FromDIP(wxSize(200, 300));
 }
 
-void VirtualBrushGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
+void VirtualBrushGrid::OnNanoVGPaint(NVGcontext* vg, int, int height) {
 	if (m_pendingScrollToSelected) {
 		m_pendingScrollToSelected = false;
 		// First paint after the page became visible: finish the deferred scroll
@@ -306,8 +306,8 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 			if (lookId < 0) {
 				texture = GetOrCreateEditorIconTexture(vg, lookId);
 			} else if (lookId > 0) {
-				if (Sprite* sprite = g_gui.gfx.getSprite(lookId)) {
-					texture = GetOrCreateSpriteTexture(vg, sprite);
+				if (Sprite* lookSprite = g_gui.gfx.getSprite(lookId)) {
+					texture = GetOrCreateSpriteTexture(vg, lookSprite);
 				}
 			}
 		}
@@ -315,7 +315,6 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 	rme::ui::grid::DrawCellIcon(vg, iconRect, texture, badge);
 
 	if (m_indicatorDogEar) {
-		const bool isLightTheme = (Theme::Get(Theme::Role::Surface).Red() > 128);
 		const NVGcolor catNVG = rme::ui::grid::GetStandardCategoryColor(brush);
 		rme::ui::grid::DrawDogEarBadge(vg, iconRect, catNVG);
 	}
@@ -488,7 +487,7 @@ void VirtualBrushGrid::OnMotion(wxMouseEvent& event) {
 	event.Skip();
 }
 
-void VirtualBrushGrid::OnTimer(wxTimerEvent& event) {
+void VirtualBrushGrid::OnTimer(wxTimerEvent&) {
 	float target = (hover_index != -1) ? 1.0f : 0.0f;
 	if (std::abs(hover_anim - target) > INTER_THRESHOLD) {
 		hover_anim += (target - hover_anim) * INTER_FACTOR;

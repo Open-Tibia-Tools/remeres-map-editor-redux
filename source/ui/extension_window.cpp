@@ -65,11 +65,11 @@ void ExtensionsDialog::OnClickLink(wxHtmlLinkEvent& evt) {
 	::wxLaunchDefaultBrowser(evt.GetLinkInfo().GetHref(), wxBROWSER_NEW_WINDOW);
 }
 
-void ExtensionsDialog::OnClickOK(wxCommandEvent& evt) {
+void ExtensionsDialog::OnClickOK(wxCommandEvent&) {
 	EndModal(0);
 }
 
-void ExtensionsDialog::OnClickOpenFolder(wxCommandEvent& evt) {
+void ExtensionsDialog::OnClickOpenFolder(wxCommandEvent&) {
 	wxString cmd, extensionsDir = FileSystem::GetExtensionsDirectory();
 #if defined __WINDOWS__
 	cmd << "explorer";

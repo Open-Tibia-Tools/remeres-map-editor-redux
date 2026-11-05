@@ -52,7 +52,7 @@ void SpawnPropertyPanel::SetSpawn(Spawn* spawn, Tile* tile, Map* map) {
 	GetParent()->Layout();
 }
 
-void SpawnPropertyPanel::OnRadiusChange(wxSpinEvent& event) {
+void SpawnPropertyPanel::OnRadiusChange(wxSpinEvent&) {
 	if (current_spawn && current_tile && current_map) {
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {

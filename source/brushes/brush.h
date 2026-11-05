@@ -122,7 +122,7 @@ public:
 	Brush();
 	virtual ~Brush();
 
-	virtual bool load(pugi::xml_node node, std::vector<std::string>& warnings) {
+	virtual bool load(pugi::xml_node, std::vector<std::string>&) {
 		return true;
 	}
 
@@ -136,7 +136,7 @@ public:
 	}
 
 	virtual std::string getName() const = 0;
-	virtual void setName(const std::string& newName) {
+	virtual void setName(const std::string&) {
 		ASSERT(_MSG("setName attempted on nameless brush!"));
 	}
 
@@ -198,7 +198,7 @@ public:
 		usesCollection = true;
 	}
 
-	virtual void getRelatedItems(std::vector<uint16_t>& items) { }
+	virtual void getRelatedItems(std::vector<uint16_t>&) { }
 
 protected:
 	static uint32_t id_counter;
@@ -215,7 +215,7 @@ public:
 	TerrainBrush();
 	~TerrainBrush() override;
 
-	bool canDraw(BaseMap* map, const Position& position) const override {
+	bool canDraw(BaseMap*, const Position&) const override {
 		return true;
 	}
 

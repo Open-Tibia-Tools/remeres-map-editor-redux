@@ -272,7 +272,7 @@ void MainMenuBar::OnExportMinimap(wxCommandEvent& event) {
 	fileMenuHandler->OnExportMinimap(event);
 }
 
-void MainMenuBar::OnDebugViewDat(wxCommandEvent& event) {
+void MainMenuBar::OnDebugViewDat(wxCommandEvent&) {
 	wxDialog dlg(frame, wxID_ANY, "Debug .dat file", wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
 	new DatDebugView(&dlg);
 	dlg.ShowModal();
@@ -555,11 +555,11 @@ void MainMenuBar::OnChangeFloor(wxCommandEvent& event) {
 	navigationMenuHandler->OnChangeFloor(event);
 }
 
-void MainMenuBar::OnMinimapWindow(wxCommandEvent& event) {
+void MainMenuBar::OnMinimapWindow(wxCommandEvent&) {
 	g_gui.CreateMinimap();
 }
 
-void MainMenuBar::OnToolOptionsWindow(wxCommandEvent& event) {
+void MainMenuBar::OnToolOptionsWindow(wxCommandEvent&) {
 	if (g_gui.tool_options) {
 		wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.tool_options);
 		if (info.IsShown()) {
@@ -571,7 +571,7 @@ void MainMenuBar::OnToolOptionsWindow(wxCommandEvent& event) {
 	}
 }
 
-void MainMenuBar::OnIngamePreviewWindow(wxCommandEvent& event) {
+void MainMenuBar::OnIngamePreviewWindow(wxCommandEvent&) {
 	if (g_preview.IsVisible()) {
 		g_preview.Hide();
 	} else {
@@ -579,7 +579,7 @@ void MainMenuBar::OnIngamePreviewWindow(wxCommandEvent& event) {
 	}
 }
 
-void MainMenuBar::OnBrushItemsWindow(wxCommandEvent& event) {
+void MainMenuBar::OnBrushItemsWindow(wxCommandEvent&) {
 	if (g_gui.brush_items_window) {
 		wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.brush_items_window);
 		if (info.IsShown()) {
@@ -592,7 +592,7 @@ void MainMenuBar::OnBrushItemsWindow(wxCommandEvent& event) {
 	}
 }
 
-void MainMenuBar::OnTilePropertiesWindow(wxCommandEvent& event) {
+void MainMenuBar::OnTilePropertiesWindow(wxCommandEvent&) {
 	if (g_gui.tile_properties_panel) {
 		wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.tile_properties_panel);
 		if (info.IsShown()) {
@@ -638,16 +638,16 @@ void MainMenuBar::OnScriptsManager(wxCommandEvent& event) {
 }
 
 
-void MainMenuBar::OnStartLive(wxCommandEvent& event) {
+void MainMenuBar::OnStartLive(wxCommandEvent&) {
 	LiveDialogs::ShowHostDialog(frame, g_gui.GetCurrentEditor());
 }
 
-void MainMenuBar::OnJoinLive(wxCommandEvent& event) {
+void MainMenuBar::OnJoinLive(wxCommandEvent&) {
 	LiveDialogs::ShowJoinDialog(frame);
 	Update();
 }
 
-void MainMenuBar::OnCloseLive(wxCommandEvent& event) {
+void MainMenuBar::OnCloseLive(wxCommandEvent&) {
 	Editor* editor = g_gui.GetCurrentEditor();
 	if (editor && editor->live_manager.IsLive()) {
 		g_gui.CloseLiveEditors(&editor->live_manager.GetSocket());

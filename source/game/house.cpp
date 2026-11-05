@@ -241,12 +241,12 @@ uint8_t House::getEmptyDoorID() const {
 	return 255;
 }
 
-Position House::getDoorPositionByID(uint8_t id) const {
+Position House::getDoorPositionByID(uint8_t door_id) const {
 	for (const auto& pos : tiles) {
 		if (const Tile* tile = map->getTile(pos)) {
 			for (const auto& item : tile->items) {
 				if (Door* door = dynamic_cast<Door*>(item.get())) {
-					if (door->getDoorID() == id) {
+					if (door->getDoorID() == door_id) {
 						return pos;
 					}
 				}

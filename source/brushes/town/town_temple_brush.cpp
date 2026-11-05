@@ -48,10 +48,10 @@ bool TownTempleBrush::canDraw(BaseMap* map, const Position& position) const {
 	return tile != nullptr && tile->hasGround();
 }
 
-void TownTempleBrush::undraw(BaseMap* map, Tile* tile) {
+void TownTempleBrush::undraw(BaseMap*, Tile*) {
 	ASSERT(false);
 }
 
-void TownTempleBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void TownTempleBrush::draw(BaseMap*, Tile*, void*) {
 	ASSERT(false);
 }

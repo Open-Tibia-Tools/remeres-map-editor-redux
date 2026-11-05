@@ -71,7 +71,7 @@ void ContainerPropertyPanel::OnContainerItemClick(wxCommandEvent& event) {
 	}
 }
 
-void ContainerPropertyPanel::OnContainerItemRightClick(wxContextMenuEvent& event) {
+void ContainerPropertyPanel::OnContainerItemRightClick(wxContextMenuEvent&) {
 	int index = grid_canvas->GetSelectedIndex();
 
 	Container* container = current_item ? dynamic_cast<Container*>(current_item) : nullptr;
@@ -162,8 +162,6 @@ void ContainerPropertyPanel::OnEditItem(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 
-	Item* sub_item = container->getItem(sub_item_index);
-
 	// Create a deep copy of the tile to edit items inside the container
 	std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, *current_map);
 	int container_index = current_tile->getIndexOf(current_item);
@@ -226,8 +224,8 @@ void ContainerPropertyPanel::OnRemoveItem(wxCommandEvent& WXUNUSED(event)) {
 	if (index != -1) {
 		Item* new_item_base = new_tile->getItemAt(index);
 		if (new_item_base && new_item_base->asContainer()) {
-			Container* container = static_cast<Container*>(new_item_base);
-			auto& contents = container->getVector();
+			Container* target_container = static_cast<Container*>(new_item_base);
+			auto& contents = target_container->getVector();
 			// Since we know the index from the grid, let's use it.
 			uint32_t sub_index = sub_item_index;
 			if (sub_index < contents.size()) {

@@ -91,7 +91,7 @@ bool ItemSerializationOTBM::unserializeAttributes(const IOMap& maphandle, Binary
 	return true;
 }
 
-bool ItemSerializationOTBM::readAttribute(const IOMap& maphandle, OTBM_ItemAttribute attr, BinaryNode* stream, Item& item) {
+bool ItemSerializationOTBM::readAttribute(const IOMap&, OTBM_ItemAttribute attr, BinaryNode* stream, Item& item) {
 	switch (attr) {
 		case OTBM_ATTR_COUNT: {
 			uint8_t subtype;
@@ -315,7 +315,7 @@ bool ItemSerializationOTBM::unserializeAttributes(const IOMap& maphandle, FastOT
 	return true;
 }
 
-bool ItemSerializationOTBM::readAttribute(const IOMap& maphandle, OTBM_ItemAttribute attr, FastOTBMStream& stream, Item& item) {
+bool ItemSerializationOTBM::readAttribute(const IOMap&, OTBM_ItemAttribute attr, FastOTBMStream& stream, Item& item) {
 	switch (attr) {
 		case OTBM_ATTR_COUNT: {
 			uint8_t subtype;

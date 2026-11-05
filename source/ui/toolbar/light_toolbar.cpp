@@ -83,7 +83,7 @@ void LightToolBar::OnClientBrightnessSlider(wxCommandEvent& event) {
 	g_gui.RefreshView();
 }
 
-void LightToolBar::OnChooseServerLightColor(wxCommandEvent& event) {
+void LightToolBar::OnChooseServerLightColor(wxCommandEvent&) {
 	LightColorPickerDialog dialog(toolbar, g_gui.GetServerLightColor());
 	if (dialog.ShowModal() != wxID_OK) {
 		return;

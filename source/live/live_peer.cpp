@@ -97,7 +97,7 @@ void LivePeer::receive(uint32_t packetSize) {
 
 void LivePeer::send(NetworkMessage& message) {
 	memcpy(&message.buffer[0], &message.size, 4);
-	boost::asio::async_write(socket, boost::asio::buffer(message.buffer, message.size + 4), [this](const boost::system::error_code& error, size_t bytesTransferred) -> void {
+	boost::asio::async_write(socket, boost::asio::buffer(message.buffer, message.size + 4), [this](const boost::system::error_code& error, size_t) -> void {
 		if (error) {
 			logMessage(wxString() + getHostName() + ": " + error.message());
 		}
@@ -189,9 +189,9 @@ void LivePeer::parseHello(NetworkMessage& message) {
 
 	uint32_t clientVersion = message.read<uint32_t>();
 	std::string nickname = message.read<std::string>();
-	std::string password = message.read<std::string>();
+	std::string client_pass = message.read<std::string>();
 
-	if (server->getPassword() != wxstr(password)) {
+	if (server->getPassword() != wxstr(client_pass)) {
 		log->Message("Client tried to connect, but used the wrong password, connection refused.");
 		close();
 		return;
@@ -201,7 +201,7 @@ void LivePeer::parseHello(NetworkMessage& message) {
 	log->Message(name + " (" + getHostName() + ") connected.");
 
 	NetworkMessage outMessage;
-	if (clientVersion != g_version.GetCurrentVersion().getProtocolID()) {
+	if (clientVersion != static_cast<uint32_t>(g_version.GetCurrentVersion().getProtocolID())) {
 		outMessage.write<uint8_t>(PACKET_CHANGE_CLIENT_VERSION);
 		outMessage.write<uint32_t>(g_version.GetCurrentVersion().getProtocolID());
 	} else {
@@ -210,7 +210,7 @@ void LivePeer::parseHello(NetworkMessage& message) {
 	send(outMessage);
 }
 
-void LivePeer::parseReady(NetworkMessage& message) {
+void LivePeer::parseReady(NetworkMessage&) {
 	if (connected) {
 		close();
 		return;
@@ -292,13 +292,13 @@ void LivePeer::parseReceiveChanges(NetworkMessage& message) {
 	g_gui.UpdateMinimap();
 }
 
-void LivePeer::parseAddHouse(NetworkMessage& message) {
+void LivePeer::parseAddHouse(NetworkMessage&) {
 }
 
-void LivePeer::parseEditHouse(NetworkMessage& message) {
+void LivePeer::parseEditHouse(NetworkMessage&) {
 }
 
-void LivePeer::parseRemoveHouse(NetworkMessage& message) {
+void LivePeer::parseRemoveHouse(NetworkMessage&) {
 }
 
 void LivePeer::parseCursorUpdate(NetworkMessage& message) {

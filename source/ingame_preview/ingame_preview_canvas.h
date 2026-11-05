@@ -29,7 +29,7 @@ namespace IngamePreview {
 		void OnMouseMove(wxMouseEvent& event);
 		void OnKeyDown(wxKeyEvent& event);
 		void OnTimer(wxTimerEvent& event);
-		void OnEraseBackground(wxEraseEvent& event) { }
+		void OnEraseBackground(wxEraseEvent&) { }
 
 		void SetCameraPosition(const Position& pos);
 		void SetZoom(float z);

@@ -548,7 +548,6 @@ void WaypointPalettePanel::OnClickAddWaypoint() {
 
 	auto wp = std::make_unique<Waypoint>();
 	wp->name = name;
-	Waypoint* wp_ptr = wp.get();
 	map_->waypoints.addWaypoint(std::move(wp));
 	map_->doChange();
 

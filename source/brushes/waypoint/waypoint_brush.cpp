@@ -49,12 +49,12 @@ bool WaypointBrush::canDraw(BaseMap* map, const Position& position) const {
 	return map->getTile(position) != nullptr;
 }
 
-void WaypointBrush::undraw(BaseMap* map, Tile* tile) {
+void WaypointBrush::undraw(BaseMap*, Tile*) {
 	// Never called
 	ASSERT(false);
 }
 
-void WaypointBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void WaypointBrush::draw(BaseMap*, Tile*, void*) {
 	// Never called
 	ASSERT(false);
 }

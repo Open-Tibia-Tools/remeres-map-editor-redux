@@ -28,7 +28,7 @@ bool PropertyValidator::validateItemProperties(wxWindow* parent, int uid, int ai
 	return true;
 }
 
-bool PropertyValidator::validateDoorProperties(wxWindow* parent, const Map* map, const Tile* tile, const Door* door, uint8_t door_id) {
+bool PropertyValidator::validateDoorProperties(wxWindow* parent, const Map* map, const Tile* tile, const Door*, uint8_t door_id) {
 	if (g_settings.getInteger(Config::WARN_FOR_DUPLICATE_ID)) {
 		if (tile && tile->isHouseTile()) {
 			const House* house = map->houses.getHouse(tile->getHouseID());

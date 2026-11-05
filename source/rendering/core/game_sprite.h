@@ -74,7 +74,7 @@ public:
 	GameSprite();
 	~GameSprite() override;
 
-	size_t getIndex(int width, int height, int layer, int pattern_x, int pattern_y, int pattern_z, int frame) const;
+	size_t getIndex(int w, int h, int layer, int px, int py, int pz, int frame) const;
 
 	// Phase 2: Get atlas region for texture array rendering
 	const AtlasRegion* getAtlasRegion(int _x, int _y, int _layer, int _subtype, int _pattern_x, int _pattern_y, int _pattern_z, int _frame, bool allow_upload = true);
@@ -91,8 +91,8 @@ public:
 		return cached_draw_offset;
 	}
 	uint8_t getMiniMapColor() const;
-	SpriteLayoutMetrics getPlainLayoutMetrics(int subtype, int pattern_x, int pattern_y, int pattern_z, int frame);
-	SpriteLayoutMetrics getOutfitLayoutMetrics(int dir, int addon, int pattern_z, int frame);
+	SpriteLayoutMetrics getPlainLayoutMetrics(int subtype, int px, int py, int pz, int frame);
+	SpriteLayoutMetrics getOutfitLayoutMetrics(int dir, int addon, int pz, int frame);
 	void invalidateMetricCaches();
 
 	bool hasLight() const noexcept {
@@ -190,7 +190,7 @@ public:
 	}
 
 	// DEBUG: Get the actual image ID that would be rendered for these coordinates
-	uint32_t getSpriteId(int frameIndex, int pattern_x, int pattern_y) const;
+	uint32_t getSpriteId(int frameIndex, int px, int py) const;
 
 	[[nodiscard]] bool isSimpleAndLoaded() const noexcept {
 		return is_simple && !spriteList.empty() && spriteList[0] && spriteList[0]->isGLLoaded;

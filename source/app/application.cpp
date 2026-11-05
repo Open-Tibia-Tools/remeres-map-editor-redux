@@ -333,7 +333,7 @@ bool Application::OnInit() {
 	return true;
 }
 
-void Application::OnEventLoopEnter(wxEventLoopBase* loop) {
+void Application::OnEventLoopEnter(wxEventLoopBase*) {
 
 	// First startup?
 	if (!m_startup) {

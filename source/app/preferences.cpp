@@ -150,7 +150,7 @@ void PreferencesWindow::Apply() {
 	g_settings.save();
 }
 
-void PreferencesWindow::OnClose(wxCloseEvent& event) {
+void PreferencesWindow::OnClose(wxCloseEvent&) {
 	client_version_page->DiscardPendingChanges();
 	if (IsModal()) {
 		EndModal(wxID_CANCEL);

@@ -688,7 +688,7 @@ namespace LuaAPI {
 		// ========================================
 
 		// geo.polygon(vertices, options) -> table of points (outline using Bresenham)
-		geoTable.set_function("polygon", [](sol::table vertices, sol::optional<sol::table> options, sol::this_state s) -> sol::table {
+		geoTable.set_function("polygon", [](sol::table vertices, sol::optional<sol::table>, sol::this_state s) -> sol::table {
 			sol::state_view lua(s);
 			sol::table result = lua.create_table();
 

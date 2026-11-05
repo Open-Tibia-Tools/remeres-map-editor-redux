@@ -82,7 +82,7 @@ public:
 
 private:
 	void OnPaint(wxPaintEvent& event);
-	void OnEraseBackground(wxEraseEvent& event) {
+	void OnEraseBackground(wxEraseEvent&) {
 	}
 	void OnDelayedUpdate(wxTimerEvent& event);
 	void OnSize(wxSizeEvent& event);

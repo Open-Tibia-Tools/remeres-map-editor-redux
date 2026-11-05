@@ -72,7 +72,7 @@ namespace IngamePreview {
 		g_gl_context.UnregisterCanvas(this);
 	}
 
-	void IngamePreviewCanvas::OnPaint(wxPaintEvent& event) {
+	void IngamePreviewCanvas::OnPaint(wxPaintEvent&) {
 		// Validating the paint event prevents infinite paint loops on some platforms
 		wxPaintDC dc(this); // validates the paint event
 
@@ -81,7 +81,7 @@ namespace IngamePreview {
 		}
 	}
 
-	void IngamePreviewCanvas::OnSize(wxSizeEvent& event) {
+	void IngamePreviewCanvas::OnSize(wxSizeEvent&) {
 		Refresh();
 	}
 
@@ -191,7 +191,7 @@ namespace IngamePreview {
 		return std::max(50, std::min(interval, 1000));
 	}
 
-	void IngamePreviewCanvas::OnTimer(wxTimerEvent& event) {
+	void IngamePreviewCanvas::OnTimer(wxTimerEvent&) {
 		UpdateWalk();
 		Refresh();
 	}

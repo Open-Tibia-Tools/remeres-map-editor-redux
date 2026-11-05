@@ -163,7 +163,7 @@ public:
 	void OnWheel(wxMouseEvent& event) {
 		canvas->GetEventHandler()->QueueEvent(event.Clone());
 	}
-	void OnFocus(wxFocusEvent& event) {
+	void OnFocus(wxFocusEvent&) {
 		canvas->SetFocus();
 	}
 

@@ -77,19 +77,19 @@ PaletteMenuHandler::PaletteMenuHandler(MainFrame* frame, MainMenuBar* menubar) :
 PaletteMenuHandler::~PaletteMenuHandler() {
 }
 
-void PaletteMenuHandler::OnNewPalette(wxCommandEvent& event) {
+void PaletteMenuHandler::OnNewPalette(wxCommandEvent&) {
 	g_gui.NewPalette();
 }
 
-void PaletteMenuHandler::OnShowPalette(wxCommandEvent& event) {
+void PaletteMenuHandler::OnShowPalette(wxCommandEvent&) {
 	g_gui.ShowPalette();
 }
 
-void PaletteMenuHandler::OnSelectHousePalette(wxCommandEvent& event) {
+void PaletteMenuHandler::OnSelectHousePalette(wxCommandEvent&) {
 	g_gui.SelectPalettePage("House");
 }
 
-void PaletteMenuHandler::OnSelectWaypointPalette(wxCommandEvent& event) {
+void PaletteMenuHandler::OnSelectWaypointPalette(wxCommandEvent&) {
 	g_gui.SelectPalettePage("Waypoint");
 }
 
@@ -158,7 +158,7 @@ void PaletteMenuHandler::RebuildPaletteMenu() {
 	catalog_menu_ids.clear();
 
 	const bool loaded = g_version.IsVersionLoaded();
-	wxMenuItem* showItem = palette_menu->Append(MAIN_FRAME_MENU + MenuBar::SHOW_PALETTE, "Show Palettes", "Displays the primary palette window.");
+	wxMenuItem* showItem = palette_menu->Append(static_cast<int>(MAIN_FRAME_MENU) + MenuBar::SHOW_PALETTE, "Show Palettes", "Displays the primary palette window.");
 	SetMenuIcon(showItem, ICON_PALETTE);
 	showItem->Enable(loaded);
 
@@ -168,7 +168,7 @@ void PaletteMenuHandler::RebuildPaletteMenu() {
 		if (!palettes.empty()) {
 			palette_menu->AppendSeparator();
 			for (size_t index = 0; index < palettes.size() && index < maxMenuCount; ++index) {
-				const int menuId = MAIN_FRAME_MENU + PALETTE_MENU_FIRST + static_cast<int>(index);
+				const int menuId = static_cast<int>(MAIN_FRAME_MENU) + PALETTE_MENU_FIRST + static_cast<int>(index);
 				const wxString label = wxstr(palettes[index].name);
 				wxMenuItem* item = palette_menu->Append(menuId, label, "Select the " + label + " palette.");
 				SetMenuIcon(item, ICON_PALETTE);
@@ -185,7 +185,7 @@ void PaletteMenuHandler::RebuildPaletteMenu() {
 				if (providers[index].name == "Zone" && !supports_zones) {
 					continue;
 				}
-				const int menuId = MAIN_FRAME_MENU + PALETTE_MENU_FIRST + static_cast<int>(menuSlot);
+				const int menuId = static_cast<int>(MAIN_FRAME_MENU) + PALETTE_MENU_FIRST + static_cast<int>(menuSlot);
 				const std::string providerName(providers[index].name);
 				const wxString label = PaletteLabel(providers[index].name);
 				wxMenuItem* item = palette_menu->Append(menuId, label, wxstr(std::format("Select the {} palette.", providerName)));

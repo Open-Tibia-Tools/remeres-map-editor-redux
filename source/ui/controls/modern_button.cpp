@@ -39,11 +39,11 @@ void ModernButton::DoSetSizeHints(int minW, int minH, int maxW, int maxH, int in
 	wxControl::DoSetSizeHints(minW, minH, maxW, maxH, incW, incH);
 }
 
-void ModernButton::OnEraseBackground(wxEraseEvent& evt) {
+void ModernButton::OnEraseBackground(wxEraseEvent&) {
 	// No-op to prevent flicker
 }
 
-void ModernButton::OnPaint(wxPaintEvent& evt) {
+void ModernButton::OnPaint(wxPaintEvent&) {
 	wxAutoBufferedPaintDC dc(this);
 	wxSize clientSize = GetClientSize();
 
@@ -121,7 +121,7 @@ void ModernButton::OnMouse(wxMouseEvent& evt) {
 	evt.Skip();
 }
 
-void ModernButton::OnTimer(wxTimerEvent& evt) {
+void ModernButton::OnTimer(wxTimerEvent&) {
 	const float SPEED = 0.35f; // Punchier transition
 	m_hoverAlpha += (m_targetHover - m_hoverAlpha) * SPEED;
 	if (std::abs(m_targetHover - m_hoverAlpha) < 0.005f) {

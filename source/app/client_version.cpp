@@ -263,8 +263,8 @@ bool ClientVersion::isDefaultPath() const {
 	wxFileName dataPath = getDataPath();
 
 	// Normalize both to ensure matching comparison and clean strings
-	clientPath.Normalize();
-	dataPath.Normalize();
+	clientPath.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE);
+	dataPath.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE);
 
 	return clientPath.GetFullPath() == dataPath.GetFullPath();
 }
@@ -312,7 +312,7 @@ bool ClientVersion::saveVersions() {
 		config_obj.insert_or_assign("name", version->name);
 		wxFileName cp = version->getClientPath();
 		if (cp.IsOk() && !cp.GetFullPath().IsEmpty()) {
-			cp.Normalize();
+			cp.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE);
 			config_obj.insert_or_assign("clientPath", nstr(cp.GetFullPath()));
 		} else {
 			config_obj.insert_or_assign("clientPath", "");

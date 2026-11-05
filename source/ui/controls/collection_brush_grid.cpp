@@ -258,8 +258,8 @@ void CollectionBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rec
 			if (lookId < 0) {
 				texture = GetOrCreateEditorIconTexture(vg, lookId);
 			} else if (lookId > 0) {
-				if (Sprite* sprite = g_gui.gfx.getSprite(lookId)) {
-					texture = GetOrCreateSpriteTexture(vg, sprite);
+				if (Sprite* lookSprite = g_gui.gfx.getSprite(lookId)) {
+					texture = GetOrCreateSpriteTexture(vg, lookSprite);
 				}
 			}
 		}
@@ -267,7 +267,6 @@ void CollectionBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rec
 	rme::ui::grid::DrawCellIcon(vg, iconRect, texture, badge);
 
 	if (m_indicatorDogEar) {
-		const bool isLightTheme = (Theme::Get(Theme::Role::Surface).Red() > 128);
 		const NVGcolor catNVG = rme::ui::grid::GetStandardCategoryColor(brush);
 		rme::ui::grid::DrawDogEarBadge(vg, iconRect, catNVG);
 	}
@@ -281,7 +280,7 @@ void CollectionBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rec
 	}
 }
 
-void CollectionBrushGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
+void CollectionBrushGrid::OnNanoVGPaint(NVGcontext* vg, int, int height) {
 	int scrollPos = GetScrollPosition();
 	int cellHeight = rme::ui::grid::CellHeight(m_iconSize, m_showLabels);
 	int rowHeight = cellHeight + m_gridSpacing;

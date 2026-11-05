@@ -18,8 +18,8 @@ public:
 	public:
 		virtual ~Listener() { }
 		virtual void OnLibraryItemSelected(uint16_t itemId) = 0;
-		virtual void OnAddItemsAsRules(const std::vector<uint16_t>& itemIds) { }
-		virtual void OnAutoMatchRules(Brush* brush) { }
+		virtual void OnAddItemsAsRules(const std::vector<uint16_t>&) { }
+		virtual void OnAutoMatchRules(Brush*) { }
 	};
 
 	LibraryPanel(wxWindow* parent, Listener* listener, Editor* editor = nullptr);

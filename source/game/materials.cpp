@@ -38,7 +38,7 @@ Materials g_materials;
 namespace {
 	[[nodiscard]] std::string tilesetSourceKey(const FileName& file) {
 		FileName fn = file;
-		fn.Normalize(wxPATH_NORM_ALL);
+		fn.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE);
 		wxString s = fn.GetFullPath();
 		s.Replace("\\", "/");
 		return s.Lower().ToStdString();

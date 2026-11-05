@@ -137,7 +137,6 @@ void BrushManager::SelectBrushInternal(Brush* brush) {
 	}
 	// If we are switching away from a doodad brush, we need to clear the secondary map
 	// Or if the new brush isn't a doodad brush
-	MapTab* mapTab = g_gui.GetCurrentMapTab();
 	if (brush->is<DoodadBrush>()) {
 		UpdateDoodadPreview();
 	} else {

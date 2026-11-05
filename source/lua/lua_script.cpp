@@ -56,7 +56,7 @@ LuaScript::LuaScript(const std::string& filepath) :
 }
 
 // Constructor for directory with manifest.lua
-LuaScript::LuaScript(const std::string& dir, bool isDirectory) :
+LuaScript::LuaScript(const std::string& dir, bool) :
 	directory(dir),
 	enabled(true),
 	autorun(false),

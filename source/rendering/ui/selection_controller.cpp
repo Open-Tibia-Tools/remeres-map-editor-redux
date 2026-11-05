@@ -174,7 +174,7 @@ void SelectionController::HandleClick(const Position& mouse_map_pos, const Selec
 	}
 }
 
-void SelectionController::HandleDrag(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down) {
+void SelectionController::HandleDrag(const Position& mouse_map_pos, bool, bool, bool) {
 	if (g_gui.IsSelectionMode()) {
 		if (canvas->isPasting()) {
 			canvas->RequestLocalRefresh();
@@ -201,7 +201,7 @@ void SelectionController::HandleDrag(const Position& mouse_map_pos, bool shift_d
 	}
 }
 
-void SelectionController::HandleRelease(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down) {
+void SelectionController::HandleRelease(const Position& mouse_map_pos, bool, bool ctrl_down, bool) {
 	int move_x = canvas->last_click_map_x - mouse_map_pos.x;
 	int move_y = canvas->last_click_map_y - mouse_map_pos.y;
 	int move_z = canvas->last_click_map_z - mouse_map_pos.z;
@@ -386,7 +386,7 @@ void SelectionController::ClearSelection() {
 	editor.selection.updateSelectionCount();
 }
 
-void SelectionController::HandlePropertiesClick(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, bool shift_down, bool ctrl_down, bool alt_down) {
+void SelectionController::HandlePropertiesClick(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, bool shift_down, bool ctrl_down, bool) {
 	last_click_pixel = pixel_offset;
 	const bool pixel_mode = SelectionPicker::ActiveMethod() == SelectionMethod::PixelPerfect;
 	const SelectionHit hit = pixel_mode ? PickAt(mouse_map_pos, pixel_offset) : SelectionHit {};
@@ -454,7 +454,7 @@ void SelectionController::HandlePropertiesClick(const Position& mouse_map_pos, c
 	}
 }
 
-void SelectionController::HandlePropertiesRelease(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down) {
+void SelectionController::HandlePropertiesRelease(const Position& mouse_map_pos, bool, bool ctrl_down, bool) {
 	if (g_gui.IsDrawingMode()) {
 		g_gui.SetSelectionMode();
 	}

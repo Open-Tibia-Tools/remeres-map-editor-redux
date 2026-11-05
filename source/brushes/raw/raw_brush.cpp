@@ -65,7 +65,7 @@ std::string RAWBrush::getName() const {
 }
 
 
-void RAWBrush::undraw(BaseMap* map, Tile* tile) {
+void RAWBrush::undraw(BaseMap*, Tile* tile) {
 	if (tile->ground && tile->ground->getID() == item_id) {
 		tile->ground = nullptr;
 	}
@@ -74,7 +74,7 @@ void RAWBrush::undraw(BaseMap* map, Tile* tile) {
 	});
 }
 
-void RAWBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void RAWBrush::draw(BaseMap*, Tile* tile, void* parameter) {
 	const auto definition = g_item_definitions.get(item_id);
 	if (!definition) {
 		return;

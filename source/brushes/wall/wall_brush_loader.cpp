@@ -125,8 +125,8 @@ bool WallBrushLoader::load(WallBrush* brush, WallBrushItems& items, pugi::xml_no
 					g_item_definitions.setAttribute(id, ItemAttributeKey::BorderAlignment, alignment);
 
 					int chance = 1;
-					if (auto attribute = subChildNode.attribute("chance")) {
-						chance = attribute.as_int();
+					if (auto chanceAttr = subChildNode.attribute("chance")) {
+						chance = chanceAttr.as_int();
 					}
 
 					if (chance < 0) {

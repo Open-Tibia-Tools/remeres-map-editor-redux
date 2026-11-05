@@ -305,7 +305,7 @@ void ItemAttributes::serializeAttributeMap(const IOMap& maphandle, NodeFileWrite
 	}
 }
 
-bool ItemAttribute::unserialize(const IOMap& maphandle, BinaryNode* stream) {
+bool ItemAttribute::unserialize(const IOMap&, BinaryNode* stream) {
 	// Read type
 	uint8_t rtype;
 	stream->getU8(rtype);
@@ -365,7 +365,7 @@ bool ItemAttribute::unserialize(const IOMap& maphandle, BinaryNode* stream) {
 	return true;
 }
 
-bool ItemAttribute::unserialize(const IOMap& maphandle, FastOTBMStream& stream) {
+bool ItemAttribute::unserialize(const IOMap&, FastOTBMStream& stream) {
 	uint8_t rtype;
 	if (!stream.getU8(rtype)) {
 		return false;
@@ -422,7 +422,7 @@ bool ItemAttribute::unserialize(const IOMap& maphandle, FastOTBMStream& stream) 
 	return true;
 }
 
-void ItemAttribute::serialize(const IOMap& maphandle, NodeFileWriteHandle& f) const {
+void ItemAttribute::serialize(const IOMap&, NodeFileWriteHandle& f) const {
 	// Write type
 	f.addU8((uint8_t)(type));
 

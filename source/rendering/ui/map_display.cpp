@@ -85,7 +85,7 @@
 #include "brushes/carpet/carpet_brush.h"
 #include "brushes/table/table_brush.h"
 
-MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
+MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int*) :
 	wxGLCanvas(parent, GLContextManager::CanvasAttributes(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS),
 	editor(editor),
 	floor(GROUND_LAYER),
@@ -207,15 +207,15 @@ void MapCanvas::SetZoom(double value) {
 	ZoomController::SetZoom(this, value);
 }
 
-void MapCanvas::GetViewBox(int* view_scroll_x, int* view_scroll_y, int* screensize_x, int* screensize_y) const {
+void MapCanvas::GetViewBox(int* out_view_scroll_x, int* out_view_scroll_y, int* screensize_x, int* screensize_y) const {
 	if (auto mw = GetMapWindow()) {
 		mw->GetViewSize(screensize_x, screensize_y);
-		mw->GetViewStart(view_scroll_x, view_scroll_y);
+		mw->GetViewStart(out_view_scroll_x, out_view_scroll_y);
 	} else {
 		if (screensize_x) *screensize_x = GetSize().x;
 		if (screensize_y) *screensize_y = GetSize().y;
-		if (view_scroll_x) *view_scroll_x = 0;
-		if (view_scroll_y) *view_scroll_y = 0;
+		if (out_view_scroll_x) *out_view_scroll_x = 0;
+		if (out_view_scroll_y) *out_view_scroll_y = 0;
 	}
 }
 
@@ -296,7 +296,7 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 }
 
 
-void MapCanvas::OnPaint(wxPaintEvent& event) {
+void MapCanvas::OnPaint(wxPaintEvent&) {
 	rme::prof::Scope frame_scope(rme::prof::Phase::Frame);
 	wxPaintDC dc(this); // validates the paint event
 	if (m_glContext) {
@@ -682,9 +682,7 @@ void MapCanvas::OnMouseActionRelease(wxMouseEvent& event) {
 	int mouse_map_x, mouse_map_y;
 	ScreenToMap(event.GetX(), event.GetY(), &mouse_map_x, &mouse_map_y);
 
-	int move_x = last_click_map_x - mouse_map_x;
-	int move_y = last_click_map_y - mouse_map_y;
-	int move_z = last_click_map_z - floor;
+	
 
 	if (g_gui.IsSelectionMode()) {
 		if (selection_controller) {
@@ -800,7 +798,7 @@ void MapCanvas::OnWheel(wxMouseEvent& event) {
 	RequestLocalRefresh();
 }
 
-void MapCanvas::OnLoseMouse(wxMouseEvent& event) {
+void MapCanvas::OnLoseMouse(wxMouseEvent&) {
 	RequestLocalRefresh();
 }
 

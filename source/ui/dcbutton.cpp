@@ -142,7 +142,7 @@ wxSize DCButton::DoGetBestClientSize() const {
 	return FromDIP(wxSize(20, 20));
 }
 
-void DCButton::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
+void DCButton::OnNanoVGPaint(NVGcontext* vg, int, int) {
 	if (g_gui.gfx.isUnloaded()) {
 		return;
 	}

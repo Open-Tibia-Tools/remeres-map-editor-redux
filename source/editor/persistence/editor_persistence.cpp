@@ -496,7 +496,7 @@ void EditorPersistence::importHouses(Editor& editor, Map& imported_map, const Po
 	}
 }
 
-void EditorPersistence::importSpawns(Editor& editor, Map& imported_map, const Position& offset, ImportType spawn_import_type, std::map<Position, std::unique_ptr<Spawn>>& spawn_map) {
+void EditorPersistence::importSpawns(Editor&, Map& imported_map, const Position& offset, ImportType spawn_import_type, std::map<Position, std::unique_ptr<Spawn>>& spawn_map) {
 	if (spawn_import_type == IMPORT_DONT) {
 		return;
 	}
@@ -712,6 +712,6 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 
 	return true;
 }
-bool EditorPersistence::importMiniMap(Editor& editor, FileName filename, int import, int import_x_offset, int import_y_offset, int import_z_offset) {
+bool EditorPersistence::importMiniMap(Editor&, FileName, int, int, int, int) {
 	return false;
 }

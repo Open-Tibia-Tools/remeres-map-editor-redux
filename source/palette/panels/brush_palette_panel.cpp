@@ -637,7 +637,7 @@ void BrushPalettePanel::OnSwitchingPage(wxChoicebookEvent& event) {
 	event.Skip();
 }
 
-void BrushPalettePanel::OnPageChanged(wxChoicebookEvent& event) {
+void BrushPalettePanel::OnPageChanged(wxChoicebookEvent&) {
 	if (!choicebook) {
 		return;
 	}

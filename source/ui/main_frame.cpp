@@ -291,7 +291,7 @@ bool MainFrame::DoQueryClose() {
 	return true;
 }
 
-bool MainFrame::DoQuerySaveTileset(bool doclose) {
+bool MainFrame::DoQuerySaveTileset(bool) {
 	return true;
 }
 

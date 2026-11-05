@@ -65,7 +65,7 @@ void MapFlagsPanel::SetTile(Tile* tile, Map* map) {
 	}
 }
 
-void MapFlagsPanel::OnToggleFlag(wxCommandEvent& event) {
+void MapFlagsPanel::OnToggleFlag(wxCommandEvent&) {
 	if (!current_tile || !current_map) {
 		return;
 	}

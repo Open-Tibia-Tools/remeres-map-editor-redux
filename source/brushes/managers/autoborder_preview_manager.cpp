@@ -40,7 +40,6 @@ void AutoborderPreviewManager::Update(Editor& editor, const Position& pos, bool 
 
 	CopyMapArea(editor, pos);
 
-	Brush* brush = g_gui.GetCurrentBrush();
 	PositionVector tilestodraw;
 	PositionVector tilestoborder;
 
@@ -92,7 +91,7 @@ void AutoborderPreviewManager::CopyMapArea(Editor& editor, const Position& pos) 
 	}
 }
 
-void AutoborderPreviewManager::SimulateBrush(Editor& editor, const Position& pos, const std::vector<Position>& tilestodraw, bool alt_pressed) {
+void AutoborderPreviewManager::SimulateBrush(Editor& editor, const Position&, const std::vector<Position>& tilestodraw, bool alt_pressed) {
 	Brush* brush = g_gui.GetCurrentBrush();
 	if (!brush) {
 		return;

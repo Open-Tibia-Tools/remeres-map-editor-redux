@@ -96,11 +96,11 @@ bool CreatureBrush::canDraw(BaseMap* map, const Position& position) const {
 	return false;
 }
 
-void CreatureBrush::undraw(BaseMap* map, Tile* tile) {
+void CreatureBrush::undraw(BaseMap*, Tile* tile) {
 	tile->creature.reset();
 }
 
-void CreatureBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void CreatureBrush::draw(BaseMap* map, Tile* tile, void*) {
 	ASSERT(tile);
 	ASSERT(parameter);
 	draw_creature(map, tile);

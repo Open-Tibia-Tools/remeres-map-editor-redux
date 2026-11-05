@@ -152,7 +152,7 @@ void ContainerPropertiesWindow::OnContainerItemClick(wxCommandEvent& event) {
 	}
 }
 
-void ContainerPropertiesWindow::OnContainerItemRightClick(wxContextMenuEvent& event) {
+void ContainerPropertiesWindow::OnContainerItemRightClick(wxContextMenuEvent&) {
 	if (!grid_canvas || !edit_item) {
 		return;
 	}

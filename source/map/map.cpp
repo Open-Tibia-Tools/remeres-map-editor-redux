@@ -207,13 +207,13 @@ const Map::Zone* Map::findZone(uint16_t id) const {
 	return it != zones.end() ? &*it : nullptr;
 }
 
-const Map::Zone* Map::findZone(std::string_view name) const {
-	const auto it = std::ranges::find(zones, name, &Zone::name);
+const Map::Zone* Map::findZone(std::string_view zone_name) const {
+	const auto it = std::ranges::find(zones, zone_name, &Zone::name);
 	return it != zones.end() ? &*it : nullptr;
 }
 
-uint16_t Map::addZone(std::string name) {
-	if (!supportsZones() || name.empty() || findZone(name)) {
+uint16_t Map::addZone(std::string zone_name) {
+	if (!supportsZones() || zone_name.empty() || findZone(zone_name)) {
 		return 0;
 	}
 	uint16_t id = std::max<uint16_t>(max_assigned_zone_id + 1, 1);
@@ -227,24 +227,24 @@ uint16_t Map::addZone(std::string name) {
 		++id;
 	}
 	max_assigned_zone_id = id;
-	zones.push_back({ std::move(name), id });
+	zones.push_back({ std::move(zone_name), id });
 	doChange();
 	return id;
 }
 
-bool Map::renameZone(uint16_t id, std::string name) {
+bool Map::renameZone(uint16_t id, std::string zone_name) {
 	if (!supportsZones()) {
 		return false;
 	}
-	const Zone* existing = findZone(name);
-	if (name.empty() || (existing && existing->id != id)) {
+	const Zone* existing = findZone(zone_name);
+	if (zone_name.empty() || (existing && existing->id != id)) {
 		return false;
 	}
 	const auto it = std::ranges::find(zones, id, &Zone::id);
 	if (it == zones.end()) {
 		return false;
 	}
-	it->name = std::move(name);
+	it->name = std::move(zone_name);
 	doChange();
 	return true;
 }

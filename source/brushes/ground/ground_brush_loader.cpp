@@ -45,8 +45,8 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 		if (std::ranges::equal(childName, std::string_view("item"), iequal)) {
 			uint16_t itemId = childNode.attribute("id").as_ushort();
 			int32_t chance = 1;
-			if (auto attribute = childNode.attribute("chance")) {
-				chance = attribute.as_int();
+			if (auto chanceAttr = childNode.attribute("chance")) {
+				chance = chanceAttr.as_int();
 			}
 
 			if (chance < 0) {

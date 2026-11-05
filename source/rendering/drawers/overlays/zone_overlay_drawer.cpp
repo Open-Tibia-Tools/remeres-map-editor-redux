@@ -786,8 +786,8 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
                                         int z,
                                         const RenderView& view,
-                                        const Map& map,
-                                        const BaseMap* /*secondary_map*/,
+                                        const Map&,
+                                        const BaseMap*,
                                         const DrawingOptions& options,
                                         const AtlasManager& atlas) {
 	if (options.ingame) {

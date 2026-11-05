@@ -279,7 +279,7 @@ namespace rme::ui::grid {
 		nvgFill(vg);
 	}
 
-	void DrawCellLabel(NVGcontext* vg, const wxRect& cell, const wxString& text, bool selected, LabelCache& cache) {
+	void DrawCellLabel(NVGcontext* vg, const wxRect& cell, const wxString& text, bool, LabelCache& cache) {
 		if (text.IsEmpty()) {
 			return;
 		}

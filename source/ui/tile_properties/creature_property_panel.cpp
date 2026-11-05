@@ -73,7 +73,7 @@ void CreaturePropertyPanel::SetCreature(Creature* creature, Tile* tile, Map* map
 	GetParent()->Layout();
 }
 
-void CreaturePropertyPanel::OnSpawnTimeChange(wxSpinEvent& event) {
+void CreaturePropertyPanel::OnSpawnTimeChange(wxSpinEvent&) {
 	if (current_creature && current_tile && current_map) {
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {
@@ -91,7 +91,7 @@ void CreaturePropertyPanel::OnSpawnTimeChange(wxSpinEvent& event) {
 	}
 }
 
-void CreaturePropertyPanel::OnDirectionChange(wxCommandEvent& event) {
+void CreaturePropertyPanel::OnDirectionChange(wxCommandEvent&) {
 	if (current_creature && current_tile && current_map) {
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {

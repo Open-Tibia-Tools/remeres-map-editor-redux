@@ -386,7 +386,7 @@ void TilesetGridToolbar::OnSearchChanged(wxCommandEvent& event) {
 	}
 }
 
-void TilesetGridToolbar::OnSearchCancel(wxCommandEvent& event) {
+void TilesetGridToolbar::OnSearchCancel(wxCommandEvent&) {
 	OnSearchCancelIfNeeded();
 }
 

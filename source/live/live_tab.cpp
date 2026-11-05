@@ -31,7 +31,7 @@ public:
 		wxGrid(parent, id, pos, size) { }
 	virtual ~myGrid() { }
 
-	void DrawCellHighlight(wxDC& dc, const wxGridCellAttr* attr) {
+	void DrawCellHighlight(wxDC&, const wxGridCellAttr*) {
 		// wxGrid::DrawCellHighlight(dc, attr);
 	}
 
@@ -180,21 +180,21 @@ void LiveLogTab::Chat(const wxString& speaker, const wxString& str) {
 	log->SetCellValue(n, 2, str);
 }
 
-void LiveLogTab::OnChat(wxCommandEvent& evt) {
+void LiveLogTab::OnChat(wxCommandEvent&) {
 }
 
-void LiveLogTab::OnResizeChat(wxSizeEvent& evt) {
+void LiveLogTab::OnResizeChat(wxSizeEvent&) {
 	log->SetColSize(2, log->GetSize().GetWidth() - 160);
 }
 
-void LiveLogTab::OnResizeClientList(wxSizeEvent& evt) {
+void LiveLogTab::OnResizeClientList(wxSizeEvent&) {
 }
 
-void LiveLogTab::OnSelectChatbox(wxFocusEvent& evt) {
+void LiveLogTab::OnSelectChatbox(wxFocusEvent&) {
 	g_hotkeys.DisableHotkeys();
 }
 
-void LiveLogTab::OnDeselectChatbox(wxFocusEvent& evt) {
+void LiveLogTab::OnDeselectChatbox(wxFocusEvent&) {
 	g_hotkeys.EnableHotkeys();
 }
 

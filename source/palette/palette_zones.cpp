@@ -240,7 +240,6 @@ protected:
 		const int dip_7 = FromDIP(7);
 		const int dip_8 = FromDIP(8);
 		const int dip_10 = FromDIP(10);
-		const int dip_12 = FromDIP(12);
 		const int dip_13 = FromDIP(13);
 		const int dip_11 = FromDIP(11);
 		const int dip_24 = FromDIP(24);
@@ -480,7 +479,6 @@ private:
 
 			if (vrow.kind == VisualRowKind::GroupHeader) {
 				// Check if click was on expand chevron
-				const int indent = FromDIP(kTreeIndent);
 				const int dip_20 = FromDIP(20);
 				if (g.clusters.size() > 1 && event.GetX() < dip_20) {
 					g.expanded = !g.expanded;

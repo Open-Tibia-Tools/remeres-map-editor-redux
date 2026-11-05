@@ -77,13 +77,13 @@ void SpawnCreaturePanel::SetTile(Tile* tile) {
 	Layout();
 }
 
-void SpawnCreaturePanel::OnSpawnClick(wxMouseEvent& event) {
+void SpawnCreaturePanel::OnSpawnClick(wxMouseEvent&) {
 	if (on_spawn_selected_cb) {
 		on_spawn_selected_cb();
 	}
 }
 
-void SpawnCreaturePanel::OnCreatureClick(wxMouseEvent& event) {
+void SpawnCreaturePanel::OnCreatureClick(wxMouseEvent&) {
 	if (on_creature_selected_cb) {
 		on_creature_selected_cb();
 	}

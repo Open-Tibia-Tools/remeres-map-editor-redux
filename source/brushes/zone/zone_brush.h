@@ -27,8 +27,8 @@ public:
 		return "Zone Brush";
 	}
 
-	void setZone(uint16_t id) noexcept {
-		zone_id = id;
+	void setZone(uint16_t new_zone_id) noexcept {
+		zone_id = new_zone_id;
 	}
 	[[nodiscard]] uint16_t getZone() const noexcept {
 		return zone_id;

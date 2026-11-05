@@ -36,11 +36,11 @@ bool WallBrush::load(pugi::xml_node node, std::vector<std::string>& warnings) {
 	return WallBrushLoader::load(this, items, node, warnings);
 }
 
-void WallBrush::undraw(BaseMap* map, Tile* tile) {
+void WallBrush::undraw(BaseMap*, Tile* tile) {
 	TileOperations::cleanWalls(tile, this);
 }
 
-void WallBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void WallBrush::draw(BaseMap*, Tile* tile, void* parameter) {
 	ASSERT(tile);
 	bool b = (parameter ? *reinterpret_cast<bool*>(parameter) : false);
 	if (b) {
@@ -73,11 +73,11 @@ void WallBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 	TileOperations::cleanWalls(tile, this);
 
 	// Just find a valid item and place it, the bordering algorithm will change it to the proper shape.
-	uint16_t id = 0;
+	uint16_t item_id = 0;
 	WallBrush* try_brush = this;
 
 	while (true) {
-		if (id != 0) {
+		if (item_id != 0) {
 			break;
 		}
 		if (try_brush == nullptr) {
@@ -85,8 +85,8 @@ void WallBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 		}
 
 		for (int i = 0; i < WallBrushItems::WALL_ALIGNMENT_COUNT; ++i) {
-			id = try_brush->items.getRandomWallId(i);
-			if (id != 0) {
+			item_id = try_brush->items.getRandomWallId(i);
+			if (item_id != 0) {
 				break;
 			}
 		}
@@ -97,7 +97,7 @@ void WallBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 		}
 	}
 
-	TileOperations::addWallItem(tile, Item::Create(id));
+	TileOperations::addWallItem(tile, Item::Create(item_id));
 }
 
 void WallBrush::doWalls(BaseMap* map, Tile* tile) {
@@ -140,8 +140,8 @@ bool WallBrush::hasWall(Item* item) {
 	return false;
 }
 
-::DoorType WallBrush::getDoorTypeFromID(uint16_t id) {
-	return items.getDoorTypeFromID(id);
+::DoorType WallBrush::getDoorTypeFromID(uint16_t door_id) {
+	return items.getDoorTypeFromID(door_id);
 }
 
 std::optional<BorderType> WallBrush::findAlignmentForItem(ServerItemId item_id) const {
@@ -203,7 +203,7 @@ WallDecorationBrush::~WallDecorationBrush() {
 	////
 }
 
-void WallDecorationBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void WallDecorationBrush::draw(BaseMap*, Tile* tile, void*) {
 	ASSERT(tile);
 
 	auto iter = tile->items.begin();
@@ -234,7 +234,7 @@ void WallDecorationBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 
 			// Now we need to figure out if we got an item that mights suffice to place on this tile..
 
-			int id = 0;
+			uint16_t target_id = 0;
 			if (item->isBrushDoor()) {
 				// If it's a door
 				::DoorType doortype = brush->getDoorTypeFromID(item->getID());
@@ -254,7 +254,7 @@ void WallDecorationBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 
 					if (it.hasFlag(ItemFlag::IsOpen) == open) {
 						if (open || dt.locked == prefLocked) {
-							id = dt.id;
+							target_id = dt.id;
 							break;
 						}
 						if (!close_match) {
@@ -266,27 +266,27 @@ void WallDecorationBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 						close_match = true;
 					}
 				}
-				if (id == 0) {
-					id = discarded_id;
-					if (id == 0) {
+				if (target_id == 0) {
+					target_id = discarded_id;
+					if (target_id == 0) {
 						++iter;
 						continue;
 					}
 				}
 			} else {
 				// If it's a normal wall...
-				id = items.getRandomWallId(wall_alignment);
-				if (id == 0) {
+				target_id = items.getRandomWallId(wall_alignment);
+				if (target_id == 0) {
 					// No fitting item, exit
 					++iter;
 					continue;
 				}
 			}
 			// If we found an invalid id we should've already exited the loop
-			ASSERT(id);
+			ASSERT(target_id);
 
 			// Add a matching item above this item.
-			std::unique_ptr<Item> deco_item = Item::Create(id);
+			std::unique_ptr<Item> deco_item = Item::Create(target_id);
 			++iter;
 			iter = tile->items.insert(iter, std::move(deco_item));
 		}

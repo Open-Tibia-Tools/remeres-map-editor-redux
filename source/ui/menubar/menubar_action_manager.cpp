@@ -9,7 +9,7 @@
 #include "ui/managers/recent_files_manager.h"
 #include "util/image_manager.h"
 
-void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<std::string, std::unique_ptr<MenuBar::Action>>& actions) {
+void MenuBarActionManager::RegisterActions(MainMenuBar*, std::unordered_map<std::string, std::unique_ptr<MenuBar::Action>>& actions) {
 	using namespace MenuBar;
 
 #define MAKE_ACTION(id, kind, handler) actions[#id] = std::make_unique<MenuBar::Action>(#id, id, kind, wxCommandEventFunction(&MainMenuBar::handler))

@@ -53,8 +53,8 @@ public:
 		name = newName;
 	}
 
-	void setLookID(int id) {
-		look_id = id;
+	void setLookID(int lookId) {
+		look_id = lookId;
 	}
 
 	bool needBorders() const override {

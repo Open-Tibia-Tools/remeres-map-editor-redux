@@ -55,7 +55,7 @@ public:
 
 	// All events
 	void OnPaint(wxPaintEvent& event);
-	void OnEraseBackground(wxEraseEvent& event) { }
+	void OnEraseBackground(wxEraseEvent&) { }
 	void OnIdle(wxIdleEvent& event);
 
 	void OnMouseMove(wxMouseEvent& event);
@@ -111,7 +111,7 @@ public:
 		return zoom;
 	}
 	virtual void SetZoom(double value);
-	virtual void GetViewBox(int* view_scroll_x, int* view_scroll_y, int* screensize_x, int* screensize_y) const;
+	virtual void GetViewBox(int* out_view_scroll_x, int* out_view_scroll_y, int* screensize_x, int* screensize_y) const;
 
 	Position GetCursorPosition() const;
 	void SetLightVisibilityOrigin(const Position& pos);

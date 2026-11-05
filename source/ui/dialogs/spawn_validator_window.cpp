@@ -56,7 +56,7 @@ void SpawnValidatorWindow::DetachEditor() {
 	editor = nullptr;
 }
 
-void SpawnValidatorWindow::OnClose(wxCloseEvent& event) {
+void SpawnValidatorWindow::OnClose(wxCloseEvent&) {
 	if (auto* owner = wxDynamicCast(GetParent(), MapWindow); owner != nullptr) {
 		owner->ForgetSpawnValidatorDialog();
 	}
@@ -199,18 +199,18 @@ void SpawnValidatorWindow::InitLayout() {
 	};
 	issues_table->SetColumns(std::move(cols));
 
-	issues_table->SetOnSelect([this](int idx, const TableRow& row) {
+	issues_table->SetOnSelect([this](int, const TableRow& row) {
 		selected_issue_id = static_cast<int>(row.id);
 		UpdateButtonStates();
 	});
 
-	issues_table->SetOnActivate([this](int idx, const TableRow& row) {
+	issues_table->SetOnActivate([this](int, const TableRow& row) {
 		selected_issue_id = static_cast<int>(row.id);
 		UpdateButtonStates();
 		OnJumpToSelected();
 	});
 
-	issues_table->SetOnContextMenu([this](int idx, const TableRow* row, const wxPoint& pos) {
+	issues_table->SetOnContextMenu([this](int, const TableRow* row, const wxPoint& pos) {
 		if (!row) {
 			return;
 		}

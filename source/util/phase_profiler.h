@@ -95,7 +95,14 @@ namespace rme::prof {
 	inline State state;
 
 	inline void configureFromEnv() {
+#if defined(_MSC_VER)
+		char* val = nullptr;
+		size_t len = 0;
+		const bool on = (_dupenv_s(&val, &len, "RME_PROFILE") == 0 && val != nullptr);
+		free(val);
+#else
 		const bool on = std::getenv("RME_PROFILE") != nullptr;
+#endif
 		state.enabled.store(on, std::memory_order_relaxed);
 	}
 

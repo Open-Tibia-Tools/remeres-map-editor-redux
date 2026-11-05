@@ -137,7 +137,7 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 	}
 }
 
-void KeyboardHandler::OnKeyUp(MapCanvas* canvas, wxKeyEvent& event) {
+void KeyboardHandler::OnKeyUp(MapCanvas* canvas, wxKeyEvent&) {
 	canvas->keyCode = WXK_NONE;
 }
 

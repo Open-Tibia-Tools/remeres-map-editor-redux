@@ -27,7 +27,7 @@ void OutfitPreviewPanel::SetOutfit(const Outfit& outfit) {
 	Refresh();
 }
 
-void OutfitPreviewPanel::OnPaint(wxPaintEvent& event) {
+void OutfitPreviewPanel::OnPaint(wxPaintEvent&) {
 	wxAutoBufferedPaintDC dc(this);
 	dc.SetBackground(wxBrush(Theme::Get(Theme::Role::Surface)));
 	dc.Clear();
@@ -71,7 +71,7 @@ void OutfitPreviewPanel::OnPaint(wxPaintEvent& event) {
 	}
 }
 
-void OutfitPreviewPanel::OnMouse(wxMouseEvent& event) {
+void OutfitPreviewPanel::OnMouse(wxMouseEvent&) {
 	preview_direction = (preview_direction + 1) % 4;
 	Refresh();
 }

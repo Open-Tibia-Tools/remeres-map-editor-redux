@@ -15,7 +15,7 @@ namespace EditorOperations {
 
 		uint16_t itemId;
 
-		bool operator()(Map& map, Item* item, int64_t removed, int64_t done) {
+		bool operator()(Map& map, Item* item, int64_t, int64_t done) {
 			if (done % PROGRESS_UPDATE_INTERVAL == 0) {
 				g_gui.SetLoadDone(static_cast<uint32_t>(100 * done / map.getTileCount()));
 			}

@@ -64,9 +64,9 @@ void CarpetBorderCalculator::calculate(BaseMap* map, Tile* tile) {
 		}
 
 		uint32_t tileData = 0;
-		for (uint32_t i = 0; i < 8; ++i) {
-			if (neighbours[i]) {
-				tileData |= static_cast<uint32_t>(1) << i;
+		for (uint32_t bitIdx = 0; bitIdx < 8; ++bitIdx) {
+			if (neighbours[bitIdx]) {
+				tileData |= static_cast<uint32_t>(1) << bitIdx;
 			}
 		}
 

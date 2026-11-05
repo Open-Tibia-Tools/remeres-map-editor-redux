@@ -62,7 +62,7 @@ void TeleportPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 	GetParent()->Layout();
 }
 
-void TeleportPropertyPanel::OnDestChange(wxSpinEvent& event) {
+void TeleportPropertyPanel::OnDestChange(wxSpinEvent&) {
 	if (current_item && current_tile && current_map && current_item->asTeleport()) {
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {

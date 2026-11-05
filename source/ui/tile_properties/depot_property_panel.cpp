@@ -70,7 +70,7 @@ void DepotPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 	}
 }
 
-void DepotPropertyPanel::OnDepotIdChange(wxCommandEvent& event) {
+void DepotPropertyPanel::OnDepotIdChange(wxCommandEvent&) {
 	if (current_item && current_tile && current_map) {
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {

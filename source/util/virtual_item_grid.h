@@ -81,7 +81,7 @@ protected:
 	void OnTimer(wxTimerEvent& event);
 
 	// Virtual hooks for interactions
-	virtual void OnItemSelected(int index) { }
+	virtual void OnItemSelected(int) { }
 
 	// Layout
 	void UpdateLayout();

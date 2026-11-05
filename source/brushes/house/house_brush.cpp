@@ -46,7 +46,7 @@ uint32_t HouseBrush::getHouseID() const {
 	return 0;
 }
 
-void HouseBrush::undraw(BaseMap* map, Tile* tile) {
+void HouseBrush::undraw(BaseMap*, Tile* tile) {
 	if (tile->isHouseTile()) {
 		tile->setPZ(false);
 	}
@@ -61,7 +61,7 @@ void HouseBrush::undraw(BaseMap* map, Tile* tile) {
 	}
 }
 
-void HouseBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void HouseBrush::draw(BaseMap* map, Tile* tile, void*) {
 	ASSERT(draw_house);
 	uint32_t old_house_id = tile->getHouseID();
 	tile->setHouse(draw_house);
@@ -86,5 +86,4 @@ void HouseBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 		}
 	}
 	// The tile will automagically be added to the house via the Action functions
-	// draw_house->addTile(tile);
 }

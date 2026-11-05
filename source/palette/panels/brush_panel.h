@@ -31,12 +31,12 @@ public:
 	// Select the brush in the parameter, this only changes the look of the panel
 	virtual bool SelectBrush(const Brush* brush) = 0;
 
-	virtual void SetSort(TilesetSortKey key, TilesetSortDirection dir) { }
+	virtual void SetSort(TilesetSortKey, TilesetSortDirection) { }
 	virtual void ClearSort() { }
-	virtual void SetShowLabels(bool show) { }
-	virtual void SetTileSize(int sizePx) { }
-	virtual void SetDisplayMode(TilesetDisplayMode mode) { }
-	virtual void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr) { }
+	virtual void SetShowLabels(bool) { }
+	virtual void SetTileSize(int) { }
+	virtual void SetDisplayMode(TilesetDisplayMode) { }
+	virtual void SetFilterQuery(const std::string&, const std::vector<Brush*>* = nullptr) { }
 
 protected:
 	const DynamicTilesetDefinition* const tileset;

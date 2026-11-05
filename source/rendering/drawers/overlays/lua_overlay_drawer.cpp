@@ -106,7 +106,7 @@ void LuaOverlayDrawer::refreshCache(const RenderView& view) {
 	cacheValid = true;
 }
 
-void LuaOverlayDrawer::Draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primitive_renderer, const RenderView& view, const DrawingOptions& options, const AtlasManager& atlas) {
+void LuaOverlayDrawer::Draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primitive_renderer, const RenderView& view, const DrawingOptions&, const AtlasManager& atlas) {
 	refreshCache(view);
 
 	for (const auto& cmd : cachedCommands) {
@@ -168,7 +168,7 @@ void LuaOverlayDrawer::Draw(SpriteBatch& sprite_batch, PrimitiveRenderer& primit
 	}
 }
 
-void LuaOverlayDrawer::DrawUI(NVGcontext* vg, const RenderView& view, const DrawingOptions& options) {
+void LuaOverlayDrawer::DrawUI(NVGcontext* vg, const RenderView& view, const DrawingOptions&) {
 	if (!vg) return;
 
 	refreshCache(view);

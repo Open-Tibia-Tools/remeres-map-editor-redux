@@ -110,10 +110,10 @@ void MapTab::VisibilityCheck() {
 
 void MapTab::OnSwitchEditorMode(EditorMode mode) {
 	if (mode == DRAWING_MODE && iref->session.mode != DRAWING_MODE) {
-		Editor* editor = GetEditor();
-		editor->selection.start();
-		editor->selection.clear();
-		editor->selection.finish();
+		Editor* ed = GetEditor();
+		ed->selection.start();
+		ed->selection.clear();
+		ed->selection.finish();
 	}
 
 	iref->session.mode = mode;

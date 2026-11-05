@@ -72,6 +72,8 @@ struct OTBM_HouseTile_coords {
 	uint32_t houseid;
 };
 
+#pragma pack()
+
 struct OTBMStartupPeekResult {
 	wxString map_name;
 	wxString client_version = "Placeholder";
@@ -92,7 +94,6 @@ struct OTBMStartupPeekResult {
 	bool is_compressed = false;
 };
 
-#pragma pack()
 
 class IOMapOTBM : public IOMap {
 public:

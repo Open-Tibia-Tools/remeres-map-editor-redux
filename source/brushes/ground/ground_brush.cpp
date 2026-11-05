@@ -47,14 +47,14 @@ bool GroundBrush::load(pugi::xml_node node, std::vector<std::string>& warnings) 
 	return GroundBrushLoader::load(*this, node, warnings);
 }
 
-void GroundBrush::undraw(BaseMap* map, Tile* tile) {
+void GroundBrush::undraw(BaseMap*, Tile* tile) {
 	ASSERT(tile);
 	if (tile->hasGround() && tile->ground->getGroundBrush() == this) {
 		tile->ground = nullptr;
 	}
 }
 
-void GroundBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void GroundBrush::draw(BaseMap*, Tile* tile, void* parameter) {
 	ASSERT(tile);
 	if (border_items.empty()) {
 		return;
@@ -72,10 +72,10 @@ void GroundBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 		}
 	}
 	int chance = random(1, total_chance);
-	uint16_t id = 0;
+	uint16_t item_id = 0;
 	for (const auto& item_block : border_items) {
 		if (chance < item_block.chance) {
-			id = item_block.id;
+			item_id = item_block.id;
 			break;
 		}
 	}

@@ -22,7 +22,7 @@ public:
 public:
 	bool load(pugi::xml_node node, std::vector<std::string>& warnings) override;
 
-	bool canDraw(BaseMap* map, const Position& position) const override {
+	bool canDraw(BaseMap*, const Position&) const override {
 		return true;
 	}
 	void draw(BaseMap* map, Tile* tile, void* parameter) override;

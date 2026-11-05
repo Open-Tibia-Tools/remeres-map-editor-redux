@@ -48,7 +48,7 @@ void DoorPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 	GetParent()->Layout();
 }
 
-void DoorPropertyPanel::OnDoorIdChange(wxSpinEvent& event) {
+void DoorPropertyPanel::OnDoorIdChange(wxSpinEvent&) {
 	if (current_item && current_tile && current_map && current_item->asDoor()) {
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {

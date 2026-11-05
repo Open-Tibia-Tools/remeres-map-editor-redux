@@ -41,7 +41,7 @@ StandardToolBar::StandardToolBar(wxWindow* parent) {
 	toolbar->AddTool(wxID_COPY, wxEmptyString, copy_bitmap, wxNullBitmap, wxITEM_NORMAL, "Copy (Ctrl+C)", "Copy selection to clipboard", nullptr);
 	toolbar->AddTool(wxID_PASTE, wxEmptyString, paste_bitmap, wxNullBitmap, wxITEM_NORMAL, "Paste (Ctrl+V)", "Paste from clipboard", nullptr);
 	toolbar->AddSeparator();
-	toolbar->AddTool(MAIN_FRAME_MENU + MenuBar::JUMP_TO_BRUSH, wxEmptyString, find_bitmap, wxNullBitmap, wxITEM_NORMAL, "Jump to Brush (J)", "Find brush or item", nullptr);
+	toolbar->AddTool(static_cast<int>(MAIN_FRAME_MENU) + MenuBar::JUMP_TO_BRUSH, wxEmptyString, find_bitmap, wxNullBitmap, wxITEM_NORMAL, "Jump to Brush (J)", "Find brush or item", nullptr);
 	toolbar->Realize();
 
 	toolbar->Bind(wxEVT_TOOL, &StandardToolBar::OnButtonClick, this);

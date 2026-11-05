@@ -101,8 +101,8 @@ std::unique_ptr<Item> Door::deepCopy() const {
 	return copy;
 }
 
-void Door::setDoorID(uint8_t id) {
-	doorId = isRealDoor() ? id : 0;
+void Door::setDoorID(uint8_t door_id) {
+	doorId = isRealDoor() ? door_id : 0;
 }
 
 uint8_t Door::getDoorID() const {

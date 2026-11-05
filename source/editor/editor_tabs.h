@@ -63,7 +63,7 @@ public:
 	virtual wxString GetTitle() const = 0;
 
 	//
-	virtual void OnSwitchEditorMode(EditorMode mode) { }
+	virtual void OnSwitchEditorMode(EditorMode) { }
 };
 
 #endif

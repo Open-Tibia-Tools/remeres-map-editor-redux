@@ -442,10 +442,8 @@ void SelectionOperations::destroySelection(Editor& editor) {
 			std::unique_ptr<Tile> newtile = TileOperations::deepCopy(tile, editor.map);
 
 			auto tile_selection = TileOperations::popSelectedItems(newtile.get());
-			for (auto& item : tile_selection) {
-				++item_count;
-				// Items are deleted when the unique_ptr in tile_selection goes out of scope
-			}
+			item_count += tile_selection.size();
+			// Items are deleted when the unique_ptr in tile_selection goes out of scope
 
 			// Clear zones when deleting selected ground, matching cut and move behavior
 			if ((tile->ground && !newtile->ground) || newtile->empty()) {

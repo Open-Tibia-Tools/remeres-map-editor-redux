@@ -13,7 +13,7 @@ std::vector<FileName> collectXmlFiles(const FileName& directory, bool recursive)
 	result.reserve(files.size());
 	for (const auto& file : files) {
 		FileName fn(file);
-		fn.Normalize(wxPATH_NORM_ALL);
+		fn.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE);
 		result.emplace_back(std::move(fn));
 	}
 	std::ranges::sort(result, [](const FileName& lhs, const FileName& rhs) {
@@ -26,7 +26,7 @@ FileName resolveRelativePath(const FileName& baseFile, const std::string& relati
 	wxString normalized = wxString(relative);
 	normalized.Replace("\\", "/");
 	FileName path(baseFile.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + normalized);
-	path.Normalize(wxPATH_NORM_ALL);
+	path.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE);
 	return path;
 }
 
@@ -37,7 +37,7 @@ FileName resolveRelativeFolder(const FileName& baseFile, const std::string& rela
 		normalized += "/";
 	}
 	FileName path(baseFile.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + normalized);
-	path.Normalize(wxPATH_NORM_ALL);
+	path.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE);
 	return path;
 }
 

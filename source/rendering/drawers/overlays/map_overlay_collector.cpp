@@ -123,9 +123,9 @@ namespace {
 		}
 
 		if (depotId > 0 && editor != nullptr) {
-			auto it = editor->map.towns.find(depotId);
-			if (it != editor->map.towns.end() && it->second) {
-				data.townName = it->second->getName();
+			auto depotTownIt = editor->map.towns.find(depotId);
+			if (depotTownIt != editor->map.towns.end() && depotTownIt->second) {
+				data.townName = depotTownIt->second->getName();
 			}
 		}
 

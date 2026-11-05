@@ -127,65 +127,65 @@ CreatureType* CreatureType::loadFromXML(pugi::xml_node node, std::vector<std::st
 	if (auto attr = getAttr("lookitem")) {
 		ct->outfit.lookItem = attr.as_int();
 	} else if (lookNode) {
-		if (auto attr = lookNode.attribute("item")) {
-			ct->outfit.lookItem = attr.as_int();
-		} else if (auto attr = lookNode.attribute("lookex")) {
-			ct->outfit.lookItem = attr.as_int();
-		} else if (auto attr = lookNode.attribute("typeex")) {
-			ct->outfit.lookItem = attr.as_int();
+		if (auto itemAttr = lookNode.attribute("item")) {
+			ct->outfit.lookItem = itemAttr.as_int();
+		} else if (auto lookexAttr = lookNode.attribute("lookex")) {
+			ct->outfit.lookItem = lookexAttr.as_int();
+		} else if (auto typeexAttr = lookNode.attribute("typeex")) {
+			ct->outfit.lookItem = typeexAttr.as_int();
 		}
 	}
 
 	if (auto attr = getAttr("lookmount")) {
 		ct->outfit.lookMount = attr.as_int();
 	} else if (lookNode) {
-		if (auto attr = lookNode.attribute("mount")) {
-			ct->outfit.lookMount = attr.as_int();
+		if (auto mountAttr = lookNode.attribute("mount")) {
+			ct->outfit.lookMount = mountAttr.as_int();
 		}
 	}
 
 	// Support both lookaddon (singular) and lookaddons (plural)
-	if (auto attr = getAttr("lookaddon")) {
-		ct->outfit.lookAddon = attr.as_int();
-	} else if (auto attr = getAttr("lookaddons")) {
-		ct->outfit.lookAddon = attr.as_int();
+	if (auto addonAttr = getAttr("lookaddon")) {
+		ct->outfit.lookAddon = addonAttr.as_int();
+	} else if (auto addonsAttr = getAttr("lookaddons")) {
+		ct->outfit.lookAddon = addonsAttr.as_int();
 	} else if (lookNode) {
-		if (auto attr = lookNode.attribute("addon")) {
-			ct->outfit.lookAddon = attr.as_int();
-		} else if (auto attr = lookNode.attribute("addons")) {
-			ct->outfit.lookAddon = attr.as_int();
+		if (auto nodeAddonAttr = lookNode.attribute("addon")) {
+			ct->outfit.lookAddon = nodeAddonAttr.as_int();
+		} else if (auto nodeAddonsAttr = lookNode.attribute("addons")) {
+			ct->outfit.lookAddon = nodeAddonsAttr.as_int();
 		}
 	}
 
 	if (auto attr = getAttr("lookhead")) {
 		ct->outfit.lookHead = attr.as_int();
 	} else if (lookNode) {
-		if (auto attr = lookNode.attribute("head")) {
-			ct->outfit.lookHead = attr.as_int();
+		if (auto nodeAttr = lookNode.attribute("head")) {
+			ct->outfit.lookHead = nodeAttr.as_int();
 		}
 	}
 
 	if (auto attr = getAttr("lookbody")) {
 		ct->outfit.lookBody = attr.as_int();
 	} else if (lookNode) {
-		if (auto attr = lookNode.attribute("body")) {
-			ct->outfit.lookBody = attr.as_int();
+		if (auto nodeAttr = lookNode.attribute("body")) {
+			ct->outfit.lookBody = nodeAttr.as_int();
 		}
 	}
 
 	if (auto attr = getAttr("looklegs")) {
 		ct->outfit.lookLegs = attr.as_int();
 	} else if (lookNode) {
-		if (auto attr = lookNode.attribute("legs")) {
-			ct->outfit.lookLegs = attr.as_int();
+		if (auto nodeAttr = lookNode.attribute("legs")) {
+			ct->outfit.lookLegs = nodeAttr.as_int();
 		}
 	}
 
 	if (auto attr = getAttr("lookfeet")) {
 		ct->outfit.lookFeet = attr.as_int();
 	} else if (lookNode) {
-		if (auto attr = lookNode.attribute("feet")) {
-			ct->outfit.lookFeet = attr.as_int();
+		if (auto nodeAttr = lookNode.attribute("feet")) {
+			ct->outfit.lookFeet = nodeAttr.as_int();
 		}
 	}
 

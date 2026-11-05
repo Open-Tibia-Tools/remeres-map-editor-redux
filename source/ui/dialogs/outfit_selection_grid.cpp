@@ -98,7 +98,7 @@ wxSize OutfitSelectionGrid::DoGetBestClientSize() const {
 	return FromDIP(wxSize(430, 300)); // Reasonable default
 }
 
-int OutfitSelectionGrid::GetOrCreateOutfitImage(NVGcontext* vg, int lookType, const Outfit& outfit) {
+int OutfitSelectionGrid::GetOrCreateOutfitImage(NVGcontext*, int lookType, const Outfit& outfit) {
 	uint32_t cache_key = (static_cast<uint32_t>(lookType) << 16) | (outfit.getColorHash() & 0xFFFF);
 
 	int existing = GetCachedImage(cache_key);

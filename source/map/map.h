@@ -162,10 +162,10 @@ public:
 
 	// OTBM 5 zone registry (Canary / Crystal Server); ids stay stable on rename because tiles reference them
 	[[nodiscard]] const Zone* findZone(uint16_t id) const;
-	[[nodiscard]] const Zone* findZone(std::string_view name) const;
+	[[nodiscard]] const Zone* findZone(std::string_view zone_name) const;
 	// Returns the new zone id, or 0 when the name is empty, taken, or no id is left
-	uint16_t addZone(std::string name);
-	bool renameZone(uint16_t id, std::string name);
+	uint16_t addZone(std::string zone_name);
+	bool renameZone(uint16_t id, std::string zone_name);
 	// Removes the zone and strips its id from every tile
 	void removeZone(uint16_t id);
 	[[nodiscard]] const std::vector<Position>& getZoneTilePositions(uint16_t id) const noexcept;

@@ -302,7 +302,7 @@ void OutfitChooserDialog::SelectColor(int color_id) {
 	UpdateColorSelection();
 }
 
-void OutfitChooserDialog::OnAddonChange(wxCommandEvent& event) {
+void OutfitChooserDialog::OnAddonChange(wxCommandEvent&) {
 	int addons = 0;
 	if (addon1->GetValue()) {
 		addons |= 1;
@@ -314,7 +314,7 @@ void OutfitChooserDialog::OnAddonChange(wxCommandEvent& event) {
 	UpdatePreview();
 }
 
-void OutfitChooserDialog::OnSearchOutfit(wxCommandEvent& event) {
+void OutfitChooserDialog::OnSearchOutfit(wxCommandEvent&) {
 	selection_panel->UpdateFilter(outfit_search->GetValue(), colorable_only_check->GetValue());
 }
 
@@ -322,7 +322,7 @@ void OutfitChooserDialog::UpdatePreview() {
 	preview_panel->SetOutfit(current_outfit);
 }
 
-void OutfitChooserDialog::OnOK(wxCommandEvent& event) {
+void OutfitChooserDialog::OnOK(wxCommandEvent&) {
 	current_name = name_ctrl->GetValue();
 	current_speed = speed_ctrl->GetValue();
 
@@ -335,7 +335,7 @@ void OutfitChooserDialog::OnOK(wxCommandEvent& event) {
 	EndModal(wxID_OK);
 }
 
-void OutfitChooserDialog::OnRandomize(wxCommandEvent& event) {
+void OutfitChooserDialog::OnRandomize(wxCommandEvent&) {
 	static std::random_device rd;
 	static std::mt19937 gen(rd());
 	std::uniform_int_distribution<int> distrib(0, TemplateOutfitLookupTableSize - 1);
@@ -347,7 +347,7 @@ void OutfitChooserDialog::OnRandomize(wxCommandEvent& event) {
 	UpdatePreview();
 }
 
-void OutfitChooserDialog::OnAddFavorite(wxCommandEvent& event) {
+void OutfitChooserDialog::OnAddFavorite(wxCommandEvent&) {
 	wxString label = wxGetTextFromUser("Enter a name for this favorite:", "Add to Favorites", "My Outfit");
 	if (label.IsEmpty()) {
 		return;
@@ -378,7 +378,7 @@ void OutfitChooserDialog::ApplyFavorite(const FavoriteItem& item) {
 	UpdatePreview();
 }
 
-void OutfitChooserDialog::OnFavoriteRename(wxCommandEvent& event) {
+void OutfitChooserDialog::OnFavoriteRename(wxCommandEvent&) {
 	int idx = favorites_panel->selected_index;
 	if (idx < 0 || idx >= (int)favorites.size()) {
 		return;
@@ -393,7 +393,7 @@ void OutfitChooserDialog::OnFavoriteRename(wxCommandEvent& event) {
 	}
 }
 
-void OutfitChooserDialog::OnFavoriteEdit(wxCommandEvent& event) {
+void OutfitChooserDialog::OnFavoriteEdit(wxCommandEvent&) {
 	int idx = favorites_panel->selected_index;
 	if (idx < 0 || idx >= (int)favorites.size()) {
 		return;
@@ -410,7 +410,7 @@ void OutfitChooserDialog::OnFavoriteEdit(wxCommandEvent& event) {
 	}
 }
 
-void OutfitChooserDialog::OnFavoriteDelete(wxCommandEvent& event) {
+void OutfitChooserDialog::OnFavoriteDelete(wxCommandEvent&) {
 	int idx = favorites_panel->selected_index;
 	if (idx < 0 || idx >= (int)favorites.size()) {
 		return;

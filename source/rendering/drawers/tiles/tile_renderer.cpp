@@ -35,7 +35,7 @@ TileRenderer::TileRenderer(ItemDrawer* id, SpriteDrawer* sd, CreatureDrawer* cd,
 	item_drawer(id), sprite_drawer(sd), creature_drawer(cd), floor_drawer(fd), marker_drawer(md), creature_name_drawer(cnd), editor(ed) {
 }
 
-void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile* tile_above) const {
+void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile*) const {
 	if (!location) {
 		return;
 	}
@@ -46,9 +46,7 @@ void TileRenderer::RenderStaticTerrain(SpriteBatch& sprite_batch, const TileLoca
 
 	const auto& view = ctx.view;
 	const auto& options = ctx.options;
-	const uint32_t current_house_id = ctx.current_house_id;
 	const auto& position = location->getPosition();
-	const int map_z = position.z;
 
 	ItemDefinitionView ground_it;
 	if (tile->ground) {
@@ -356,6 +354,7 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 		item_params.patterns = &patterns;
 		item_params.red = default_ir;
 		item_params.green = default_ig;
+		item_params.blue = default_ib;
 		const bool is_blocking_item = item->isBlocking() &&
 			!rme::rendering::TechnicalItemRegistry::IsInvisibleWall(item->getID(), it.clientId());
 		item_params.zone_flags = (options.show_blocking && options.extended_pathing_shader && is_blocking_item)
@@ -509,7 +508,7 @@ void TileRenderer::DrawTile(SpriteBatch& sprite_batch, const TileLocation* locat
 	RenderDynamicEntities(sprite_batch, location, ctx, draw_x, draw_y, /*render_creature_sprites=*/true, /*render_markers=*/true);
 }
 
-void TileRenderer::RenderDynamicPasses(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile* tile_above) const {
+void TileRenderer::RenderDynamicPasses(SpriteBatch& sprite_batch, const TileLocation* location, const RenderFrameContext& ctx, int draw_x, int draw_y, const Tile*) const {
 	if (!location) {
 		return;
 	}

@@ -103,7 +103,7 @@ void PaletteCatalog::prepareCreatureImportTargets() {
 	}
 }
 
-PaletteBrushRegistrationResult PaletteCatalog::registerImportedCreatureBrush(Brush* brush, bool isNpc) {
+PaletteBrushRegistrationResult PaletteCatalog::registerImportedCreatureBrush(Brush* brush, bool) {
 	if (!brush) {
 		return PaletteBrushRegistrationResult::TargetUnavailable;
 	}

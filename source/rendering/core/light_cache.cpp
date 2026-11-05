@@ -111,7 +111,7 @@ void LightCache::invalidateAll() noexcept {
 	}
 }
 
-void LightCache::invalidateTile(int32_t x, int32_t y, int32_t z) {
+void LightCache::invalidateTile(int32_t x, int32_t y, int32_t) {
 	const int32_t cx = x >> 4;
 	const int32_t cy = y >> 4;
 	for (int dy = -1; dy <= 1; ++dy) {

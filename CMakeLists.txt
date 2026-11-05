@@ -17,14 +17,14 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MinSizeRel" CACHE ST
 
 # Compiler-specific flags
 if(MSVC)
-	set(CMAKE_CXX_FLAGS                "/W3 /wd4996 /wd4800 /wd4100 /wd4706 /EHsc")
+	set(CMAKE_CXX_FLAGS                "/W4 /EHsc")
 	set(CMAKE_CXX_FLAGS_DEBUG          "/Od /Zi /D__DEBUG__")
 	set(CMAKE_CXX_FLAGS_MINSIZEREL     "/O1 /DNDEBUG")
 	set(CMAKE_CXX_FLAGS_RELEASE        "/O2 /DNDEBUG")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/O2 /DNDEBUG")
 	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 else()
-	set(CMAKE_CXX_FLAGS                "-Wall -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-deprecated-declarations -Wno-overloaded-virtual -Wno-strict-aliasing -Wno-sign-compare -Wno-unused-function -Wunused-result")
+	set(CMAKE_CXX_FLAGS                "-Wall -Wextra -Wunused-result")
 	set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g -D__DEBUG__")
 	set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os -DNDEBUG")
 	set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
@@ -83,6 +83,11 @@ protobuf_generate_cpp(RME_PROTO_SRCS RME_PROTO_HDRS "${RME_APPEARANCES_PROTO}")
 add_library(rme_proto STATIC ${RME_PROTO_SRCS} ${RME_PROTO_HDRS})
 set_target_properties(rme_proto PROPERTIES CXX_STANDARD 17)
 set_target_properties(rme_proto PROPERTIES CXX_STANDARD_REQUIRED ON)
+if(MSVC)
+	target_compile_options(rme_proto PRIVATE /wd4100)
+else()
+	target_compile_options(rme_proto PRIVATE -Wno-unused-parameter)
+endif()
 target_include_directories(rme_proto PUBLIC
 	${Protobuf_INCLUDE_DIRS}
 	${CMAKE_CURRENT_BINARY_DIR}

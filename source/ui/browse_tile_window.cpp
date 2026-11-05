@@ -112,7 +112,7 @@ void BrowseTileListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t n)
 	nvgText(vg, rect.x + 40, rect.y + rect.height / 2.0f, label.c_str(), nullptr);
 }
 
-int BrowseTileListBox::OnMeasureItem(size_t n) const {
+int BrowseTileListBox::OnMeasureItem(size_t) const {
 	return FromDIP(32);
 }
 

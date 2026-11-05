@@ -56,12 +56,12 @@ bool HouseExitBrush::canDraw(BaseMap* map, const Position& position) const {
 	return true;
 }
 
-void HouseExitBrush::undraw(BaseMap* map, Tile* tile) {
+void HouseExitBrush::undraw(BaseMap*, Tile*) {
 	// Never called
 	ASSERT(false);
 }
 
-void HouseExitBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void HouseExitBrush::draw(BaseMap*, Tile*, void*) {
 	// Never called
 	ASSERT(false);
 }

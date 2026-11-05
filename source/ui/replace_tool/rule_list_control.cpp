@@ -68,7 +68,7 @@ void RuleListControl::OnSize(wxSizeEvent& event) {
 	Refresh();
 	event.Skip();
 }
-void RuleListControl::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
+void RuleListControl::OnNanoVGPaint(NVGcontext* vg, int width, int) {
 	const int scrollPos = GetScrollPosition();
 	// Assumption: NanoVGCanvas applies nvgTranslate(0, -scrollPos) automatically.
 	// So we draw items at their absolute Y position.
@@ -201,7 +201,7 @@ void RuleListControl::OnMouse(wxMouseEvent& event) {
 	}
 }
 
-void RuleListControl::OnContextMenu(wxContextMenuEvent& event) {
+void RuleListControl::OnContextMenu(wxContextMenuEvent&) {
 	int menuIdx = m_hoveredIndex;
 	if (menuIdx == -1) {
 		return;

@@ -30,7 +30,7 @@ public:
 	~RAWBrush() override;
 
 
-	bool canDraw(BaseMap* map, const Position& position) const override {
+	bool canDraw(BaseMap*, const Position&) const override {
 		return true;
 	}
 	void draw(BaseMap* map, Tile* tile, void* parameter) override;

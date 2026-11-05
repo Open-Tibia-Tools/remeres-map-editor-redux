@@ -41,8 +41,8 @@ public:
 
 	//
 	void receiveHeader() { }
-	void receive(uint32_t packetSize) { }
-	void send(NetworkMessage& message) { }
+	void receive(uint32_t) { }
+	void send(NetworkMessage&) { }
 
 	//
 	void updateCursor(const Position& position);

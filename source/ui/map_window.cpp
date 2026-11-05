@@ -102,7 +102,7 @@ MapWindow::~MapWindow() {
 	DetachCollectionStudio();
 }
 
-void MapWindow::ShowReplaceItemsDialog(bool selectionOnly) {
+void MapWindow::ShowReplaceItemsDialog(bool) {
 	if (replaceItemsDialog) {
 		return;
 	}
@@ -345,7 +345,7 @@ void MapWindow::OnSize(wxSizeEvent& event) {
 	event.Skip();
 }
 
-void MapWindow::OnScroll(wxScrollEvent& event) {
+void MapWindow::OnScroll(wxScrollEvent&) {
 	SyncTrackedMinimapViewportToCurrentView();
 	g_gui.UpdateMinimap();
 	canvas->RequestLocalRefresh();

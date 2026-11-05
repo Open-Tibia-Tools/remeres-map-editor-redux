@@ -53,7 +53,7 @@ public:
 	void send(NetworkMessage& message);
 
 	//
-	void updateCursor(const Position& position) { }
+	void updateCursor(const Position&) { }
 
 protected:
 	void parseLoginPacket(NetworkMessage message);

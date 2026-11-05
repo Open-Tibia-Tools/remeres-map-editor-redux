@@ -163,7 +163,7 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 	GetParent()->Layout();
 }
 
-void ItemPropertyPanel::OnActionIdChange(wxSpinEvent& event) {
+void ItemPropertyPanel::OnActionIdChange(wxSpinEvent&) {
 	if (current_item && current_tile && current_map) {
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {
@@ -183,7 +183,7 @@ void ItemPropertyPanel::OnActionIdChange(wxSpinEvent& event) {
 	}
 }
 
-void ItemPropertyPanel::OnUniqueIdChange(wxSpinEvent& event) {
+void ItemPropertyPanel::OnUniqueIdChange(wxSpinEvent&) {
 	if (current_item && current_tile && current_map) {
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {
@@ -203,7 +203,7 @@ void ItemPropertyPanel::OnUniqueIdChange(wxSpinEvent& event) {
 	}
 }
 
-void ItemPropertyPanel::OnCountChange(wxSpinEvent& event) {
+void ItemPropertyPanel::OnCountChange(wxSpinEvent&) {
 	if (current_item && current_tile && current_map) {
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {
@@ -223,7 +223,7 @@ void ItemPropertyPanel::OnCountChange(wxSpinEvent& event) {
 	}
 }
 
-void ItemPropertyPanel::OnSplashTypeChange(wxCommandEvent& event) {
+void ItemPropertyPanel::OnSplashTypeChange(wxCommandEvent&) {
 	if (current_item && current_tile && current_map) {
 		Editor* editor = g_gui.GetCurrentEditor();
 		if (!editor) {

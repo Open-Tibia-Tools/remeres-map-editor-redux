@@ -51,7 +51,7 @@ bool DoodadBrush::ownsItem(Item* item) const {
 	return items.ownsItem(item->getID());
 }
 
-void DoodadBrush::undraw(BaseMap* map, Tile* tile) {
+void DoodadBrush::undraw(BaseMap*, Tile* tile) {
 	// Remove all doodad-related
 	std::erase_if(tile->items, [this](const std::unique_ptr<Item>& item) {
 		if (item->getDoodadBrush() != nullptr) {
@@ -78,7 +78,7 @@ void DoodadBrush::undraw(BaseMap* map, Tile* tile) {
 	}
 }
 
-void DoodadBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void DoodadBrush::draw(BaseMap*, Tile* tile, void* parameter) {
 	int variation = 0;
 	if (parameter) {
 		variation = *reinterpret_cast<int*>(parameter);

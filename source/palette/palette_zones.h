@@ -33,7 +33,7 @@ public:
 
 	void SetMap(Map* map);
 
-	void UpdateZone(uint16_t zone_id = 0) {
+	void UpdateZone(uint16_t = 0) {
 		if (IsShown()) {
 			OnUpdate();
 		}

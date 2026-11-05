@@ -41,11 +41,11 @@ int EraserBrush::getLookID() const {
 	return EDITOR_SPRITE_ERASER;
 }
 
-bool EraserBrush::canDraw(BaseMap* map, const Position& position) const {
+bool EraserBrush::canDraw(BaseMap*, const Position&) const {
 	return true;
 }
 
-void EraserBrush::undraw(BaseMap* map, Tile* tile) {
+void EraserBrush::undraw(BaseMap*, Tile* tile) {
 	std::erase_if(tile->items, [](const auto& item) {
 		if (item->isComplex() && g_settings.getInteger(Config::ERASER_LEAVE_UNIQUE)) {
 			return false;
@@ -64,7 +64,7 @@ void EraserBrush::undraw(BaseMap* map, Tile* tile) {
 	}
 }
 
-void EraserBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void EraserBrush::draw(BaseMap*, Tile* tile, void*) {
 	// Draw is undraw, undraw is super-undraw!
 	std::erase_if(tile->items, [](const auto& item) {
 		if ((item->isComplex() || item->isBorder()) && g_settings.getInteger(Config::ERASER_LEAVE_UNIQUE)) {

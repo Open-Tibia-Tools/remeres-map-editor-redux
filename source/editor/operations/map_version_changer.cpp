@@ -20,7 +20,7 @@ struct MapConversionContext {
 	using CreatureMap = std::unordered_map<std::string, CreatureInfo>;
 	CreatureMap creature_types;
 
-	void operator()(Map& map, Tile* tile, long long done) {
+	void operator()(Map&, Tile* tile, long long) {
 		if (tile->creature) {
 			CreatureMap::iterator f = creature_types.find(tile->creature->getName());
 			if (f == creature_types.end()) {

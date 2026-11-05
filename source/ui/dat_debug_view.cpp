@@ -44,8 +44,8 @@ protected:
 DatDebugViewListBox::DatDebugViewListBox(wxWindow* parent, wxWindowID id) :
 	wxVListBox(parent, id, wxDefaultPosition, wxDefaultSize, wxLB_SINGLE) {
 	sprites.reserve(g_gui.gfx.getItemSpriteMaxID());
-	for (int id = 0; id < g_gui.gfx.getItemSpriteMaxID(); ++id) {
-		Sprite* spr = g_gui.gfx.getSprite(id);
+	for (int spriteId = 0; spriteId < g_gui.gfx.getItemSpriteMaxID(); ++spriteId) {
+		Sprite* spr = g_gui.gfx.getSprite(spriteId);
 		if (spr) {
 			sprites.push_back(spr);
 		}
@@ -75,7 +75,7 @@ void DatDebugViewListBox::OnDrawItem(wxDC& dc, const wxRect& rect, size_t n) con
 	dc.DrawText(wxstr(std::format("{}", n)), rect.GetX() + 40, rect.GetY() + 6);
 }
 
-wxCoord DatDebugViewListBox::OnMeasureItem(size_t n) const {
+wxCoord DatDebugViewListBox::OnMeasureItem(size_t) const {
 	return 32;
 }
 
@@ -106,10 +106,10 @@ DatDebugView::~DatDebugView() {
 	////
 }
 
-void DatDebugView::OnTextChange(wxCommandEvent& evt) {
+void DatDebugView::OnTextChange(wxCommandEvent&) {
 	////
 }
 
-void DatDebugView::OnClickList(wxCommandEvent& evt) {
+void DatDebugView::OnClickList(wxCommandEvent&) {
 	////
 }

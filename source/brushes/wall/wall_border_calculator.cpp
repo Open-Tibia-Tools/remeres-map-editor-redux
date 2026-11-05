@@ -176,9 +176,9 @@ void WallBorderCalculator::doWalls(BaseMap* map, Tile* tile) {
 					Item* wall_decoration = it->get();
 					WallBrush* brush = wall_decoration->getWallBrush();
 					if (brush && brush->is<WallDecorationBrush>()) {
-						uint16_t id = brush->items.getRandomWallId(bt);
-						if (id != 0) {
-							std::unique_ptr<Item> new_wall = Item::Create(id);
+						uint16_t deco_id = brush->items.getRandomWallId(bt);
+						if (deco_id != 0) {
+							std::unique_ptr<Item> new_wall = Item::Create(deco_id);
 							if (new_wall) {
 								if (wall_decoration->isSelected()) {
 									new_wall->select();

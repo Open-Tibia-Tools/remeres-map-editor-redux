@@ -51,11 +51,11 @@ bool SpawnBrush::canDraw(BaseMap* map, const Position& position) const {
 	return true;
 }
 
-void SpawnBrush::undraw(BaseMap* map, Tile* tile) {
+void SpawnBrush::undraw(BaseMap*, Tile* tile) {
 	tile->spawn.reset();
 }
 
-void SpawnBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void SpawnBrush::draw(BaseMap*, Tile* tile, void* parameter) {
 	ASSERT(tile);
 	ASSERT(parameter); // Should contain an int which is the size of the new spawn
 	if (tile->spawn == nullptr) {

@@ -16,17 +16,17 @@ NavigationMenuHandler::NavigationMenuHandler(MainFrame* frame, MainMenuBar* menu
 NavigationMenuHandler::~NavigationMenuHandler() {
 }
 
-void NavigationMenuHandler::OnZoomIn(wxCommandEvent& event) {
+void NavigationMenuHandler::OnZoomIn(wxCommandEvent&) {
 	double zoom = g_gui.GetCurrentZoom();
 	g_gui.SetCurrentZoom(zoom - 0.1);
 }
 
-void NavigationMenuHandler::OnZoomOut(wxCommandEvent& event) {
+void NavigationMenuHandler::OnZoomOut(wxCommandEvent&) {
 	double zoom = g_gui.GetCurrentZoom();
 	g_gui.SetCurrentZoom(zoom + 0.1);
 }
 
-void NavigationMenuHandler::OnZoomNormal(wxCommandEvent& event) {
+void NavigationMenuHandler::OnZoomNormal(wxCommandEvent&) {
 	g_gui.SetCurrentZoom(1.0);
 }
 
@@ -92,7 +92,7 @@ void NavigationMenuHandler::OnJumpToItemBrush(wxCommandEvent& WXUNUSED(event)) {
 	}
 }
 
-void NavigationMenuHandler::OnChangeFloor(wxCommandEvent& event) {
+void NavigationMenuHandler::OnChangeFloor(wxCommandEvent&) {
 	// Workaround to stop events from looping
 	if (menubar->checking_programmaticly) {
 		return;

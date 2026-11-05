@@ -118,8 +118,8 @@ void GameSprite::rebuildGeometryCache() const {
 	geometry_cache_dirty = false;
 }
 
-uint32_t GameSprite::getSpriteId(int frameIndex, int pattern_x, int pattern_y) const {
-	auto idx = getIndex(width, height, 0, pattern_x, pattern_y, 0, frameIndex); // Assuming layer, pattern_z are 0 for this context
+uint32_t GameSprite::getSpriteId(int frameIndex, int px, int py) const {
+	auto idx = getIndex(width, height, 0, px, py, 0, frameIndex); // Assuming layer, pattern_z are 0 for this context
 	if (idx >= 0 && static_cast<size_t>(idx) < sprite_ids.size()) {
 		return sprite_ids[idx];
 	}
@@ -133,12 +133,12 @@ uint8_t GameSprite::getMiniMapColor() const {
 	return minimap_color;
 }
 
-GameSprite::SpriteLayoutMetrics GameSprite::getPlainLayoutMetrics(int subtype, int pattern_x, int pattern_y, int pattern_z, int frame) {
+GameSprite::SpriteLayoutMetrics GameSprite::getPlainLayoutMetrics(int subtype, int px, int py, int pz, int frame) {
 	const PlainLayoutCacheKey key {
 		.subtype = subtype,
-		.pattern_x = pattern_x,
-		.pattern_y = pattern_y,
-		.pattern_z = pattern_z,
+		.pattern_x = px,
+		.pattern_y = py,
+		.pattern_z = pz,
 		.frame = frame,
 	};
 
@@ -169,11 +169,11 @@ GameSprite::SpriteLayoutMetrics GameSprite::buildPlainLayoutMetrics(const PlainL
 	return SpriteLayoutCalculator::BuildPlainLayoutMetrics(*this, key);
 }
 
-GameSprite::SpriteLayoutMetrics GameSprite::getOutfitLayoutMetrics(int dir, int addon, int pattern_z, int frame) {
+GameSprite::SpriteLayoutMetrics GameSprite::getOutfitLayoutMetrics(int dir, int addon, int pz, int frame) {
 	const OutfitLayoutCacheKey key {
 		.dir = dir,
 		.addon = addon,
-		.pattern_z = pattern_z,
+		.pattern_z = pz,
 		.frame = frame,
 	};
 
@@ -204,7 +204,7 @@ GameSprite::SpriteLayoutMetrics GameSprite::buildOutfitLayoutMetrics(const Outfi
 	return SpriteLayoutCalculator::BuildOutfitLayoutMetrics(*this, key);
 }
 
-size_t GameSprite::getIndex(int width, int height, int layer, int pattern_x, int pattern_y, int pattern_z, int frame) const {
+size_t GameSprite::getIndex(int, int, int layer, int, int, int, int frame) const {
 	if (is_simple) {
 		return 0;
 	}

@@ -769,7 +769,7 @@ void TooltipDrawer::drawSunkenDivider(NVGcontext* vg, float dx, float dy, float 
 	nvgStroke(vg);
 }
 
-void TooltipDrawer::drawHeader(NVGcontext* vg, float x, float y, float width, const TooltipData& tooltip, const LayoutMetrics& layout, float padding) {
+void TooltipDrawer::drawHeader(NVGcontext* vg, float x, float y, float, const TooltipData& tooltip, const LayoutMetrics&, float padding) {
 	const float slotX = x + padding;
 	const float slotY = y + padding;
 	constexpr float kSlotSize = 32.0f;

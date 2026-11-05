@@ -35,7 +35,7 @@ void OutfitColorPalette::SetSelectedColor(int index) {
 	}
 }
 
-void OutfitColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
+void OutfitColorPalette::OnNanoVGPaint(NVGcontext* vg, int, int) {
 	int cellSize = FromDIP(CELL_SIZE);
 	int padding = FromDIP(PADDING);
 

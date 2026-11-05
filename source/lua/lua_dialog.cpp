@@ -146,7 +146,7 @@ private:
 	bool m_hovered = false;
 	bool m_pressed = false;
 
-	void OnPaint(wxPaintEvent& evt) {
+	void OnPaint(wxPaintEvent&) {
 		wxAutoBufferedPaintDC dc(this);
 
 		// Use provided parent bg or actual parent bg
@@ -217,7 +217,7 @@ private:
 		Refresh();
 		e.Skip();
 	}
-	void OnUp(wxMouseEvent& e) {
+	void OnUp(wxMouseEvent&) {
 		if (m_pressed) {
 			m_pressed = false;
 			Refresh();
@@ -274,12 +274,12 @@ public:
 		wxGLCanvas::Refresh();
 	}
 
-	void GetViewBox(int* view_scroll_x, int* view_scroll_y, int* screensize_x, int* screensize_y) const override {
+	void GetViewBox(int* out_view_scroll_x, int* out_view_scroll_y, int* screensize_x, int* screensize_y) const override {
 		wxSize size = GetClientSize();
 		*screensize_x = size.GetWidth();
 		*screensize_y = size.GetHeight();
-		*view_scroll_x = view_x;
-		*view_scroll_y = view_y;
+		*out_view_scroll_x = view_x;
+		*out_view_scroll_y = view_y;
 	}
 
 	void ScreenToMap(int screen_x, int screen_y, int* map_x, int* map_y) override {
@@ -334,7 +334,7 @@ public:
 	}
 
 	// Disable status bar updates for preview canvases
-	void UpdatePositionStatus(int x = -1, int y = -1) { }
+	void UpdatePositionStatus(int = -1, int = -1) { }
 	void UpdateZoomStatus() { }
 	void Refresh() {
 		wxGLCanvas::Refresh();
@@ -345,27 +345,27 @@ public:
 		cursor_y = event.GetY();
 	}
 
-	void OnWheel(wxMouseEvent& event) {
+	void OnWheel(wxMouseEvent&) {
 		// Do nothing - disabled to prevent confusion and potential issues
 	}
 
-	void OnGainMouse(wxMouseEvent& event) {
+	void OnGainMouse(wxMouseEvent&) {
 		Refresh();
 	}
-	void OnLoseMouse(wxMouseEvent& event) {
+	void OnLoseMouse(wxMouseEvent&) {
 		Refresh();
 	}
-	void OnMouseLeftClick(wxMouseEvent& event) {
+	void OnMouseLeftClick(wxMouseEvent&) {
 		SetFocus();
 	}
-	void OnMouseLeftDoubleClick(wxMouseEvent& event) {
+	void OnMouseLeftDoubleClick(wxMouseEvent&) {
 		SetFocus();
 	}
-	void OnMouseLeftRelease(wxMouseEvent& event) { }
-	void OnMouseRightClick(wxMouseEvent& event) { }
-	void OnMouseRightRelease(wxMouseEvent& event) { }
-	void OnMouseCenterClick(wxMouseEvent& event) { }
-	void OnMouseCenterRelease(wxMouseEvent& event) { }
+	void OnMouseLeftRelease(wxMouseEvent&) { }
+	void OnMouseRightClick(wxMouseEvent&) { }
+	void OnMouseRightRelease(wxMouseEvent&) { }
+	void OnMouseCenterClick(wxMouseEvent&) { }
+	void OnMouseCenterRelease(wxMouseEvent&) { }
 
 	void SetViewSize(int w, int h) {
 		client_w = w;
@@ -1310,7 +1310,7 @@ public:
 		}
 	}
 
-	virtual wxCoord OnMeasureItem(size_t n) const override {
+	virtual wxCoord OnMeasureItem(size_t) const override {
 		return itemHeight;
 	}
 
@@ -2325,9 +2325,9 @@ LuaDialog* LuaDialog::modify(sol::table options) {
 						ctrl->Freeze();
 						ctrl->Clear();
 						sol::table itemsTable = props["items"];
-						for (auto& pair : itemsTable) {
-							if (pair.second.is<sol::table>()) {
-								sol::table itemTable = pair.second;
+						for (auto& itemPair : itemsTable) {
+							if (itemPair.second.is<sol::table>()) {
+								sol::table itemTable = itemPair.second;
 								std::string text = itemTable.get_or(std::string("text"), ""s);
 								int icon = itemTable.get_or(std::string("icon"), 0);
 								std::string tooltip = itemTable.get_or(std::string("tooltip"), ""s);
@@ -2453,9 +2453,9 @@ LuaDialog* LuaDialog::modify(sol::table options) {
 						}
 
 						sol::table itemsTable = props["items"];
-						for (auto& pair : itemsTable) {
-							if (pair.second.is<sol::table>()) {
-								sol::table itemTable = pair.second;
+						for (auto& itemPair : itemsTable) {
+							if (itemPair.second.is<sol::table>()) {
+								sol::table itemTable = itemPair.second;
 								std::string text = itemTable.get_or("text", ""s);
 
 								LuaAPI::LuaImage img;

@@ -286,7 +286,7 @@ void DrawingController::HandleDrag(const Position& mouse_map_pos, bool shift_dow
 	}
 }
 
-void DrawingController::HandleRelease(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down) {
+void DrawingController::HandleRelease(const Position& mouse_map_pos, bool, bool ctrl_down, bool alt_down) {
 	if (dragging_draw) {
 		Brush* brush = g_gui.GetCurrentBrush();
 		if (brush) {
@@ -424,7 +424,7 @@ void DrawingController::HandleRelease(const Position& mouse_map_pos, bool shift_
 	last_draw_pos = Position(-1, -1, -1); // Reset last_draw_pos here as well, or call Reset()
 }
 
-void DrawingController::HandleWheel(int rotation, bool alt_down, bool ctrl_down) {
+void DrawingController::HandleWheel(int rotation, bool alt_down, bool) {
 	if (alt_down) {
 		static double diff = 0.0;
 		diff += rotation;

@@ -168,8 +168,8 @@ void LayoutManager::LoadPerspective() {
 
 			if (info.IsFloatable()) {
 				bool offscreen = true;
-				for (uint32_t index = 0; index < wxDisplay::GetCount(); ++index) {
-					wxDisplay display(index);
+				for (uint32_t displayIdx = 0; displayIdx < wxDisplay::GetCount(); ++displayIdx) {
+					wxDisplay display(displayIdx);
 					wxRect rect = display.GetClientArea();
 					if (rect.Contains(info.floating_pos)) {
 						offscreen = false;

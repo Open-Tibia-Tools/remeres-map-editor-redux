@@ -157,7 +157,7 @@ namespace IngamePreview {
 		// spdlog::default_logger()->flush();
 	}
 
-	void IngamePreviewWindow::OnUpdateTimer(wxTimerEvent& event) {
+	void IngamePreviewWindow::OnUpdateTimer(wxTimerEvent&) {
 		UpdateState();
 	}
 
@@ -191,7 +191,7 @@ namespace IngamePreview {
 		}
 	}
 
-	void IngamePreviewWindow::OnToggleFollow(wxCommandEvent& event) {
+	void IngamePreviewWindow::OnToggleFollow(wxCommandEvent&) {
 		SetFollowSelection(follow_btn->GetValue());
 	}
 
@@ -205,7 +205,7 @@ namespace IngamePreview {
 		follow_btn->SetValue(follow_selection);
 	}
 
-	void IngamePreviewWindow::OnToggleLighting(wxCommandEvent& event) {
+	void IngamePreviewWindow::OnToggleLighting(wxCommandEvent&) {
 		canvas->SetLightingEnabled(lighting_btn->GetValue());
 	}
 
@@ -214,15 +214,15 @@ namespace IngamePreview {
 		server_color_button->SetLabelText(wxEmptyString);
 	}
 
-	void IngamePreviewWindow::OnClientBrightnessSlider(wxCommandEvent& event) {
+	void IngamePreviewWindow::OnClientBrightnessSlider(wxCommandEvent&) {
 		canvas->SetClientBrightness(static_cast<uint8_t>(ambient_slider->GetValue()));
 	}
 
-	void IngamePreviewWindow::OnIntensitySlider(wxCommandEvent& event) {
+	void IngamePreviewWindow::OnIntensitySlider(wxCommandEvent&) {
 		canvas->SetLightIntensity(static_cast<uint8_t>(intensity_slider->GetValue()));
 	}
 
-	void IngamePreviewWindow::OnChooseServerColor(wxCommandEvent& event) {
+	void IngamePreviewWindow::OnChooseServerColor(wxCommandEvent&) {
 		LightColorPickerDialog dialog(this, server_light_color);
 		if (dialog.ShowModal() != wxID_OK) {
 			return;
@@ -233,7 +233,7 @@ namespace IngamePreview {
 		canvas->SetServerLightColor(server_light_color);
 	}
 
-	void IngamePreviewWindow::OnViewportWidthUp(wxCommandEvent& event) {
+	void IngamePreviewWindow::OnViewportWidthUp(wxCommandEvent&) {
 		int w, h;
 		canvas->GetViewportSize(w, h);
 		w++;
@@ -241,7 +241,7 @@ namespace IngamePreview {
 		viewport_x_text->SetValue(std::to_string(w));
 	}
 
-	void IngamePreviewWindow::OnViewportWidthDown(wxCommandEvent& event) {
+	void IngamePreviewWindow::OnViewportWidthDown(wxCommandEvent&) {
 		int w, h;
 		canvas->GetViewportSize(w, h);
 		if (w > 15) {
@@ -251,7 +251,7 @@ namespace IngamePreview {
 		}
 	}
 
-	void IngamePreviewWindow::OnViewportHeightUp(wxCommandEvent& event) {
+	void IngamePreviewWindow::OnViewportHeightUp(wxCommandEvent&) {
 		int w, h;
 		canvas->GetViewportSize(w, h);
 		h++;
@@ -259,7 +259,7 @@ namespace IngamePreview {
 		viewport_y_text->SetValue(std::to_string(h));
 	}
 
-	void IngamePreviewWindow::OnViewportHeightDown(wxCommandEvent& event) {
+	void IngamePreviewWindow::OnViewportHeightDown(wxCommandEvent&) {
 		int w, h;
 		canvas->GetViewportSize(w, h);
 		if (h > 11) {
@@ -269,7 +269,7 @@ namespace IngamePreview {
 		}
 	}
 
-	void IngamePreviewWindow::OnChooseOutfit(wxCommandEvent& event) {
+	void IngamePreviewWindow::OnChooseOutfit(wxCommandEvent&) {
 		OutfitChooserDialog dialog(this, preview_outfit);
 		if (dialog.ShowModal() == wxID_OK) {
 			preview_outfit = dialog.GetOutfit();

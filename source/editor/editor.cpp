@@ -55,7 +55,7 @@ Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version) :
 	map.initializeEmpty();
 }
 
-Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, const FileName& fn, const MapLoadOptions& load_options) :
+Editor::Editor(CopyBuffer& copybuffer, const MapVersion&, const FileName& fn, const MapLoadOptions& load_options) :
 	live_manager(*this),
 	actionQueue(new ActionQueue(*this)),
 	selection(*this),

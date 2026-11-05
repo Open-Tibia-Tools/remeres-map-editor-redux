@@ -125,7 +125,7 @@ void NanoVGListBox::ClearSelection() {
 	Refresh();
 }
 
-void NanoVGListBox::RefreshItem(size_t index) {
+void NanoVGListBox::RefreshItem(size_t) {
 	Refresh(); // Ideally, invalidate only rect, but NanoVG usually redraws full frame
 }
 
@@ -171,9 +171,6 @@ void NanoVGListBox::UpdateScrollbar() {
 
 	int itemHeight = std::max(1, OnMeasureItem(0));
 	int totalHeight = static_cast<int>(m_count) * itemHeight;
-
-	int clientHeight = GetClientSize().y;
-	int pageSize = clientHeight;
 
 	NanoVGCanvas::UpdateScrollbar(totalHeight);
 }
@@ -233,7 +230,7 @@ void NanoVGListBox::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 	}
 }
 
-int NanoVGListBox::HitTest(int x, int y) const {
+int NanoVGListBox::HitTest(int, int y) const {
 	if (m_count == 0) {
 		return -1;
 	}
@@ -290,7 +287,7 @@ void NanoVGListBox::OnMotion(wxMouseEvent& event) {
 	event.Skip();
 }
 
-void NanoVGListBox::OnLeave(wxMouseEvent& event) {
+void NanoVGListBox::OnLeave(wxMouseEvent&) {
 	if (m_hoverIndex != -1) {
 		m_hoverIndex = -1;
 		Refresh();

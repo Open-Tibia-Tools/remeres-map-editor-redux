@@ -832,8 +832,6 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			if (white_pixel) {
 				const float indicator_depth = rme::rendering::calculateTileDepth(x, y, rme::rendering::RenderSublayer::Overlay);
 				if (tile->isHouseExit()) {
-					const HouseExitList* exits = tile->getHouseExits();
-					const uint32_t exit_house_id = (exits && !exits->empty()) ? exits->front() : 1;
 					pushRegionInstance(white_pixel, x * 32, y * 32, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, indicator_depth, MakeTileIndicatorFlag(static_cast<uint8_t>(rme::rendering::TileIndicatorType::HouseEntry)));
 				}
 				if (loc->getTownCount() > 0) {
@@ -1289,9 +1287,9 @@ void ChunkCacheManager::renderFloorItems(
 
 void ChunkCacheManager::prune(
 	int current_floor,
-	int min_cx, int max_cx,
-	int min_cy, int max_cy,
-	bool has_bounds
+	int, int,
+	int, int,
+	bool
 ) {
 	size_t empty_evicted = 0;
 

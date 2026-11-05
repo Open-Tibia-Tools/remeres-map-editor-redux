@@ -63,14 +63,7 @@ namespace LuaAPI {
 	}
 	} // namespace
 
-	// Helper to get the current selection
-	static Selection* getCurrentSelection() {
-		Editor* editor = g_gui.GetCurrentEditor();
-		if (!editor) {
-			return nullptr;
-		}
-		return &editor->selection;
-	}
+
 
 	// Get tiles as a Lua table
 	static sol::table getSelectionTiles(sol::this_state ts, Selection* sel) {

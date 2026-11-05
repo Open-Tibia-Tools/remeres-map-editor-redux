@@ -142,7 +142,6 @@ wxImage ImageManager::TintImage(const wxImage& image, const wxColour& tint) {
 	unsigned char b = tint.Blue();
 
 	unsigned char* data = tinted.GetData();
-	unsigned char* alpha = tinted.GetAlpha();
 	int size = tinted.GetWidth() * tinted.GetHeight();
 
 	std::span<unsigned char> pixels(data, size * 3);
@@ -233,7 +232,7 @@ int ImageManager::CreateNanoVGImageFromWxImage(NVGcontext* vg, const wxImage& im
 	return nvgCreateImageRGBA(vg, w, h, 0, rgba.data());
 }
 
-uint32_t ImageManager::GetGLTexture(std::string_view assetPath) {
+uint32_t ImageManager::GetGLTexture(std::string_view) {
 	// Not implemented yet - usually we can use NanoVG's image as GL texture if we know how it's stored,
 	// or load it via glad.
 	return 0;

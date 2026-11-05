@@ -56,7 +56,7 @@ wxString JoinDialogItems(const std::vector<wxString>& lines) {
 }
 } // namespace
 
-long DialogUtil::PopupDialog(wxWindow* parent, wxString title, wxString text, long style, wxString configsavename, uint32_t configsavevalue) {
+long DialogUtil::PopupDialog(wxWindow* parent, wxString title, wxString text, long style, wxString, uint32_t) {
 	if (text.empty()) {
 		return wxID_ANY;
 	}

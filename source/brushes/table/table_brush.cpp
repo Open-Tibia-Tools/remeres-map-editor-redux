@@ -42,17 +42,17 @@ bool TableBrush::load(pugi::xml_node node, std::vector<std::string>& warnings) {
 	return TableBrushLoader::load(node, *this, items, warnings);
 }
 
-bool TableBrush::canDraw(BaseMap* map, const Position& position) const {
+bool TableBrush::canDraw(BaseMap*, const Position&) const {
 	return true;
 }
 
-void TableBrush::undraw(BaseMap* map, Tile* t) {
+void TableBrush::undraw(BaseMap*, Tile* t) {
 	std::erase_if(t->items, [this](const auto& item) {
 		return item->isTable() && item->getTableBrush() == this;
 	});
 }
 
-void TableBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
+void TableBrush::draw(BaseMap* map, Tile* tile, void*) {
 	undraw(map, tile); // Remove old
 
 	const TableNode& tn = items.getItems(0);

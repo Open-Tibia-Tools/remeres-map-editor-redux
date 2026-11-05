@@ -270,7 +270,7 @@ wxBitmap SpriteIconService::Generate(GameSprite* sprite, SpriteSize size, const 
 	return wxBitmap(image);
 }
 
-void SpriteIconService::DrawTo(EditorIcon* icon, wxDC* dc, SpriteSize sz, int start_x, int start_y, int width, int height) {
+void SpriteIconService::DrawTo(EditorIcon* icon, wxDC* dc, SpriteSize sz, int start_x, int start_y, int, int) {
 	if (!icon || !dc) {
 		return;
 	}

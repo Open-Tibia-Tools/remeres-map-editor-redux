@@ -32,7 +32,7 @@ public:
 
 
 	// Not used
-	bool load(pugi::xml_node node, std::vector<std::string>& warnings) override {
+	bool load(pugi::xml_node, std::vector<std::string>&) override {
 		return true;
 	}
 

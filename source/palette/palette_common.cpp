@@ -110,7 +110,7 @@ void PalettePanel::SelectFirstBrush() {
 	// Do nothing
 }
 
-bool PalettePanel::SelectBrush(const Brush* whatbrush) {
+bool PalettePanel::SelectBrush(const Brush*) {
 	return false;
 }
 
