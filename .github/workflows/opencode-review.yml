@@ -29,7 +29,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      issues: write
 
     steps:
       - name: Checkout repository
@@ -40,15 +39,16 @@ jobs:
 
       - name: Resolve PR Head SHA
         id: pr_info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
         run: |
+          set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
           else
-            SHA=$(gh pr view "${{ inputs.pr_number }}" --json headRefOid --jq .headRefOid)
-            echo "head_sha=$SHA" >> "$GITHUB_OUTPUT"
+            echo "head_sha=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)" >> "$GITHUB_OUTPUT"
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure OpenCode small model
         run: |
