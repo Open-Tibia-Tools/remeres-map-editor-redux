@@ -60,6 +60,7 @@ find_package(Lua REQUIRED)
 find_package(sol2 CONFIG REQUIRED)
 find_package(cpr CONFIG REQUIRED)
 find_package(WebP CONFIG REQUIRED)
+find_package(NanoSVG CONFIG QUIET)
 
 # nanovg: try vcpkg/Conan first, fallback to ext/nanovg
 find_package(nanovg CONFIG QUIET)
@@ -131,6 +132,10 @@ else()
 	target_link_libraries(rme PRIVATE ${wxWidgets_LIBRARIES})
 endif()
 
+if(TARGET NanoSVG::nanosvgrast)
+	target_link_libraries(rme PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,NanoSVG::nanosvgrast,NanoSVG::nanosvg>")
+endif()
+
 # Include directories (for legacy find modules)
 target_include_directories(rme PRIVATE
 	${Boost_INCLUDE_DIRS}
@@ -197,6 +202,10 @@ if(TARGET wxWidgets::wxWidgets)
 	target_link_libraries(test_universal_rotator PRIVATE wxWidgets::wxWidgets)
 else()
 	target_link_libraries(test_universal_rotator PRIVATE ${wxWidgets_LIBRARIES})
+endif()
+
+if(TARGET NanoSVG::nanosvgrast)
+	target_link_libraries(test_universal_rotator PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,NanoSVG::nanosvgrast,NanoSVG::nanosvg>")
 endif()
 
 target_include_directories(test_universal_rotator PRIVATE
