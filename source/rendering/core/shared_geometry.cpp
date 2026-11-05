@@ -4,6 +4,7 @@
 	#include <windows.h>
 #elif defined(__linux__)
 	#include <GL/glx.h>
+	#include <EGL/egl.h>
 #elif defined(__APPLE__)
 	#include <OpenGL/OpenGL.h>
 #endif
@@ -12,7 +13,13 @@ void* GetCurrentGLContext() {
 #ifdef _WIN32
 	return (void*)wglGetCurrentContext();
 #elif defined(__linux__)
-	return (void*)glXGetCurrentContext();
+	if (void* ctx = (void*)glXGetCurrentContext()) {
+		return ctx;
+	}
+	if (void* ctx = (void*)eglGetCurrentContext()) {
+		return ctx;
+	}
+	return nullptr;
 #elif defined(__APPLE__)
 	return (void*)CGLGetCurrentContext();
 #else
@@ -63,6 +70,9 @@ GLuint SharedGeometry::getQuadVBO() {
 	if (auto it = contexts_.find(ctx); it != contexts_.end()) {
 		return it->second.vbo->GetID();
 	}
+	if (!contexts_.empty()) {
+		return contexts_.begin()->second.vbo->GetID();
+	}
 	return 0;
 }
 
@@ -72,6 +82,9 @@ GLuint SharedGeometry::getQuadEBO() {
 	std::lock_guard<std::mutex> lock(mutex_);
 	if (auto it = contexts_.find(ctx); it != contexts_.end()) {
 		return it->second.ebo->GetID();
+	}
+	if (!contexts_.empty()) {
+		return contexts_.begin()->second.ebo->GetID();
 	}
 	return 0;
 }
