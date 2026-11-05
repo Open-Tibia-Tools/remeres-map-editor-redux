@@ -7,6 +7,9 @@ on:
       - reopened
       - synchronize
       - ready_for_review
+  issue_comment:
+    types:
+      - created
   workflow_dispatch:
     inputs:
       pr_number:
@@ -15,32 +18,52 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   review:
-    # Skip fork PRs because GitHub withholds repository secrets (OPENCODE_API_KEY) from forks
+    # Skip fork PRs on pull_request because GitHub withholds repository secrets (OPENCODE_API_KEY) from forks.
+    # Run on:
+    # 1. Non-draft same-repo pull_request events
+    # 2. PR comments containing "/opencode review" or "/opencode"
+    # 3. Manual workflow_dispatch
     if: >-
-      github.event_name != 'pull_request' ||
-      (github.event.pull_request.draft == false &&
-       github.event.pull_request.head.repo.full_name == github.repository)
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.draft == false &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       (contains(github.event.comment.body, '/opencode review') ||
+        contains(github.event.comment.body, '/opencode'))) ||
+      (github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
+      issues: write
 
     steps:
+      - name: Acknowledge comment trigger
+        if: github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          gh api "repos/${GH_REPO}/issues/comments/${COMMENT_ID}/reactions" -f content='eyes' || true
+
       - name: Resolve PR Head SHA
         id: pr_info
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pr_number }}
           EVENT_NAME: ${{ github.event_name }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           if [ "$EVENT_NAME" = "pull_request" ]; then
             echo "head_sha=$PR_HEAD_SHA" >> "$GITHUB_OUTPUT"
           else
@@ -83,15 +106,16 @@ jobs:
         with:
           model: opencode/glm-5.3-flash-free
           use-github-token: true
+          mentions: '/opencode review,/opencode,/oc'
           prompt: |
-            Review pull request #${{ github.event.pull_request.number || inputs.pr_number }} in Remere's Map Editor Redux (C++20/23, wxWidgets, OpenGL/NanoVG) and post ONE review comment formatted like a CodeRabbit review.
+            Review pull request #${{ steps.pr_info.outputs.pr_number }} in Remere's Map Editor Redux (C++20/23, wxWidgets, OpenGL/NanoVG) and post ONE review comment formatted like a CodeRabbit review.
 
             Repository: ${{ github.repository }}
             Reviewed commit (full SHA): ${{ steps.pr_info.outputs.head_sha }}
 
             HOW TO REVIEW
 
-            Read AGENTS.md first; its rules are part of the review criteria. Then read the diff (`gh pr diff ${{ github.event.pull_request.number || inputs.pr_number }}`) and open surrounding code wherever you need context to judge a change.
+            Read AGENTS.md first; its rules are part of the review criteria. Then read the diff (`gh pr diff ${{ steps.pr_info.outputs.pr_number }}`) and open surrounding code wherever you need context to judge a change.
 
             Look for, in priority order:
             1. Bugs: logic errors, undefined behavior, lifetime/ownership mistakes, leaks, broken OTBM compatibility, map changes that bypass undo, unchecked sizes when parsing files.
