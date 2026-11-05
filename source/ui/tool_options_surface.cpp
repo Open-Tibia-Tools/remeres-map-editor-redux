@@ -178,7 +178,7 @@ void ToolOptionsSurface::BuildUi() {
 		MAX_SPAWN_TIME,
 		std::max(MIN_SPAWN_TIME, g_settings.getInteger(Config::DEFAULT_SPAWNTIME))
 	);
-	g_brush_manager.SetSpawnTime(spawn_time_spin->GetValue());
+	g_brush_manager.SetSpawnTime(std::max(MIN_SPAWN_TIME, g_settings.getInteger(Config::DEFAULT_SPAWNTIME)));
 	spawn_time_row->Add(spawn_time_spin, wxSizerFlags().CenterVertical());
 	spawn_time_panel->SetSizer(spawn_time_row);
 	other_sizer->Add(spawn_time_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(6)));

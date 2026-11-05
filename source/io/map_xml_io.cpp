@@ -482,8 +482,8 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 			}
 
 			int32_t spawntime = creatureNode.attribute("spawntime").as_int();
-			if (spawntime == 0) {
-				spawntime = g_settings.getInteger(Config::DEFAULT_SPAWNTIME);
+			if (spawntime <= 0) {
+				spawntime = std::max(1, g_settings.getInteger(Config::DEFAULT_SPAWNTIME));
 			}
 
 			Direction direction = NORTH;
