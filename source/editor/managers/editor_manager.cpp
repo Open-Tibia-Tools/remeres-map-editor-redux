@@ -29,11 +29,32 @@
 #include <chrono>
 #include <filesystem>
 #include <format>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string_view>
 
 EditorManager g_editors;
+
+namespace {
+
+	// Loads `target`, reading its items from `objects` (a server's
+	// objects.srv, for sector maps) when given. The client keeps that path
+	// only when the load succeeds, and callers pass it only once the open
+	// editors are closed, so a cancelled or failed switch changes nothing.
+	bool loadClientVersion(ClientVersion& target, const std::optional<wxFileName>& objects, wxString& error, std::vector<std::string>& warnings) {
+		const wxFileName previous = target.getObjectsPath();
+		if (objects) {
+			target.setObjectsPath(*objects);
+		}
+		if (g_version.LoadVersion(target.getID(), error, warnings, objects.has_value())) {
+			return true;
+		}
+		target.setObjectsPath(previous);
+		return false;
+	}
+
+} // namespace
 
 EditorManager::EditorManager() {
 }
@@ -270,25 +291,24 @@ bool EditorManager::NewSectorMap() {
 	}
 
 	// Its items come from a server's objects.srv; the client keeps the one it last used.
-	bool reload_items = false;
+	std::optional<wxFileName> objects;
 	if (!target->getObjectsPath().FileExists()) {
 		wxFileDialog dialog(g_gui.root, "Choose the server's objects.srv", wxEmptyString, "objects.srv", "objects.srv|objects.srv|All files (*.*)|*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 		if (dialog.ShowModal() != wxID_OK) {
 			return false;
 		}
-		target->setObjectsPath(wxFileName(dialog.GetPath()));
-		reload_items = true;
+		objects = wxFileName(dialog.GetPath());
 	}
 	g_gui.FinishWelcomeDialog();
 
 	ClientVersion* current = g_version.getLoadedVersion();
-	if (!current || current->getID() != target->getID() || reload_items) {
+	if (!current || current->getID() != target->getID() || objects) {
 		if (!CloseAllEditors()) {
 			return false;
 		}
 		wxString error;
 		std::vector<std::string> warnings;
-		if (!g_version.LoadVersion(target->getID(), error, warnings, reload_items)) {
+		if (!loadClientVersion(*target, objects, error, warnings)) {
 			DialogUtil::PopupDialog("Error", error, wxOK);
 			return false;
 		}
@@ -476,24 +496,23 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 		}
 
 		// A sector map brings its own item types: the objects.srv of its server.
-		bool reload_items = false;
+		std::optional<wxFileName> objects;
 		if (sector_map && target->getItemDefinitionMode() == ItemDefinitionMode::DatSrv) {
-			const wxFileName objects = IOMapSec::objectsFile(fileName);
-			if (!objects.FileExists()) {
-				throw std::runtime_error(std::format("objects.srv was not found at \"{}\".\nSector maps are read from an original server's data folder, which holds the map folder and dat/objects.srv.", nstr(objects.GetFullPath())));
+			const wxFileName server_objects = IOMapSec::objectsFile(fileName);
+			if (!server_objects.FileExists()) {
+				throw std::runtime_error(std::format("objects.srv was not found at \"{}\".\nSector maps are read from an original server's data folder, which holds the map folder and dat/objects.srv.", nstr(server_objects.GetFullPath())));
 			}
-			if (!target->getObjectsPath().SameAs(objects)) {
-				target->setObjectsPath(objects);
-				reload_items = true;
+			if (!target->getObjectsPath().SameAs(server_objects)) {
+				objects = server_objects;
 			}
 		}
 
 		ClientVersion* current = g_version.getLoadedVersion();
-		if (!current || current->getID() != target->getID() || reload_items) {
+		if (!current || current->getID() != target->getID() || objects) {
 			wxString error;
 			std::vector<std::string> warnings;
 			if (CloseAllEditors()) {
-				if (!g_version.LoadVersion(target->getID(), error, warnings, reload_items)) {
+				if (!loadClientVersion(*target, objects, error, warnings)) {
 					g_status.SetStatusText("Failed to load map.");
 					DialogUtil::PopupDialog("Error", error, wxOK);
 					return false;
