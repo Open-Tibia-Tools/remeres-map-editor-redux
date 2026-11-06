@@ -9,6 +9,7 @@
 #include "rendering/core/coordinate_mapper.h"
 #include "game/creature.h"
 
+#include <array>
 #include <unordered_map>
 #include <format>
 
@@ -69,6 +70,7 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 			return std::hash<std::string_view>{}(s);
 		}
 	};
+	// Never cleared, so labels can point at its keys.
 	static thread_local std::unordered_map<std::string, CachedMetrics, StringHash, std::equal_to<>> s_metrics_cache;
 
 	struct VisibleLabel {
@@ -77,7 +79,6 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		float width;
 		float height;
 		std::string_view text;
-		std::string dynamic_text;
 	};
 	static thread_local std::vector<VisibleLabel> visible_labels;
 	visible_labels.clear();
@@ -133,8 +134,7 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 				.y = labelY,
 				.width = textWidth,
 				.height = textHeight,
-				.text = lookup_key,
-				.dynamic_text = {}
+				.text = lookup_key
 			});
 		}
 
@@ -142,20 +142,18 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		// monster home also shows how many it keeps alive ("3x 600s")
 		if (label.creature && !label.creature->isNpc() && label.creature->getSpawnTime() > 0) {
 			const int amount = label.creature->getAmount();
-			std::string formatted = amount > 1 ? std::format("{}x {}s", amount, label.creature->getSpawnTime()) : std::format("{}s", label.creature->getSpawnTime());
+			const int spawn_time = label.creature->getSpawnTime();
+			std::array<char, 32> buffer;
+			const auto written = amount > 1 ? std::format_to_n(buffer.data(), buffer.size(), "{}x {}s", amount, spawn_time) : std::format_to_n(buffer.data(), buffer.size(), "{}s", spawn_time);
+			const std::string_view formatted(buffer.data(), written.out);
 			auto it_t = s_metrics_cache.find(formatted);
-			float tw = 0.0f;
-			float th = 0.0f;
-			if (it_t != s_metrics_cache.end()) {
-				tw = it_t->second.width;
-				th = it_t->second.height;
-			} else {
+			if (it_t == s_metrics_cache.end()) {
 				float tb[4];
-				nvgTextBounds(vg, 0, 0, formatted.c_str(), nullptr, tb);
-				tw = tb[2] - tb[0];
-				th = tb[3] - tb[1];
-				s_metrics_cache.emplace(formatted, CachedMetrics{ tw, th });
+				nvgTextBounds(vg, 0, 0, formatted.data(), formatted.data() + formatted.size(), tb);
+				it_t = s_metrics_cache.emplace(std::string(formatted), CachedMetrics { tb[2] - tb[0], tb[3] - tb[1] }).first;
 			}
+			const float tw = it_t->second.width;
+			const float th = it_t->second.height;
 
 			const float timerX = screen_x + tile_size_screen - tw * 0.5f - paddingX - 1.0f;
 			const float timerY = screen_y + tile_size_screen - 1.0f;
@@ -165,8 +163,7 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 				.y = timerY,
 				.width = tw,
 				.height = th,
-				.text = {},
-				.dynamic_text = std::move(formatted)
+				.text = it_t->first
 			});
 		}
 	}
@@ -186,9 +183,8 @@ void CreatureNameDrawer::draw(NVGcontext* vg, const RenderView& view) {
 	// Pass 2: Draw all text labels with single color state
 	nvgFillColor(vg, nvgRGBA(255, 255, 255, 255));
 	for (const auto& vl : visible_labels) {
-		std::string_view sv = vl.dynamic_text.empty() ? vl.text : std::string_view(vl.dynamic_text);
-		if (!sv.empty()) {
-			nvgText(vg, vl.x, vl.y - paddingY, sv.data(), sv.data() + sv.size());
+		if (!vl.text.empty()) {
+			nvgText(vg, vl.x, vl.y - paddingY, vl.text.data(), vl.text.data() + vl.text.size());
 		}
 	}
 }
