@@ -42,8 +42,10 @@
 namespace {
 
 	using rme::sec::InstanceAttribute;
+	using rme::sec::listSectorFiles;
 	using rme::sec::readFile;
 	using rme::sec::ObjectAttribute;
+	using rme::sec::SectorFile;
 	using rme::sec::SectorObject;
 	using rme::sec::SectorTile;
 	using rme::sec::TileFlag;
@@ -56,25 +58,6 @@ namespace {
 
 	bool isSectorFile(const std::filesystem::path& path) {
 		return rme::sec::parseSectorFileName(path.filename().string()).has_value();
-	}
-
-	struct SectorFile {
-		std::filesystem::path path;
-		rme::sec::SectorCoordinates coordinates;
-	};
-
-	std::vector<SectorFile> listSectorFiles(const std::filesystem::path& folder) {
-		std::vector<SectorFile> files;
-		std::error_code ec;
-		for (const auto& entry : std::filesystem::directory_iterator(folder, ec)) {
-			if (!entry.is_regular_file(ec)) {
-				continue;
-			}
-			if (const auto coordinates = rme::sec::parseSectorFileName(entry.path().filename().string())) {
-				files.push_back(SectorFile { .path = entry.path(), .coordinates = *coordinates });
-			}
-		}
-		return files;
 	}
 
 	struct LoadStats {

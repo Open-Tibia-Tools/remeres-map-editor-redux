@@ -7,11 +7,14 @@
 
 // Reading and writing the original server's text files.
 
+#include "io/sec/sec_sector_parser.h"
+
 #include <filesystem>
 #include <fstream>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <vector>
 
 namespace rme::sec {
 
@@ -62,6 +65,26 @@ namespace rme::sec {
 			return WriteResult::Unchanged;
 		}
 		return writeFileAtomically(path, content) ? WriteResult::Written : WriteResult::Failed;
+	}
+
+	struct SectorFile {
+		std::filesystem::path path;
+		SectorCoordinates coordinates;
+	};
+
+	// The sector files (`XXXX-YYYY-ZZ.sec`) in `folder`, in no particular order.
+	[[nodiscard]] inline std::vector<SectorFile> listSectorFiles(const std::filesystem::path& folder) {
+		std::vector<SectorFile> files;
+		std::error_code ec;
+		for (const auto& entry : std::filesystem::directory_iterator(folder, ec)) {
+			if (!entry.is_regular_file(ec)) {
+				continue;
+			}
+			if (const auto coordinates = parseSectorFileName(entry.path().filename().string())) {
+				files.push_back(SectorFile { .path = entry.path(), .coordinates = *coordinates });
+			}
+		}
+		return files;
 	}
 
 	// The line ending a file uses, so a rewritten file keeps it.
