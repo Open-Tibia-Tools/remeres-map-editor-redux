@@ -113,6 +113,8 @@ namespace {
 		assert(updateMapDat(map_dat, {}, {}) == "SectorXMin = 996\r\n# comment\r\n");
 		assert(updateMapDat("SectorXMin = 996", { MapMark { .name = "A", .position = { 1, 2, 3 } } }, depots) ==
 			"SectorXMin = 996\nMark = (\"A\",[1,2,3])\nDepot = (0,\"Thais\",1000)\nDepot = (1,\"Carlin\",2000)\n");
+		// Keys that only start with Mark or Depot are other keys.
+		assert(updateMapDat("Mark2 = 1\nMark_old = 2\nDepots = 3\nMark = (\"Old\",[4,5,6])\n", {}, {}) == "Mark2 = 1\nMark_old = 2\nDepots = 3\n");
 
 		// A new map.dat reads back as written.
 		MapInfo fresh;

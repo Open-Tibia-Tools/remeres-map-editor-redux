@@ -166,8 +166,9 @@ namespace rme::sec {
 			if (start == std::string_view::npos || line.size() < start + key.size() || !equalsIgnoreCase(line.substr(start, key.size()), key)) {
 				return false;
 			}
-			const size_t after = start + key.size();
-			return line.find('=') != std::string_view::npos && (line.size() == after || !srv::isAlpha(line[after]));
+			// The key must be the whole identifier ("Mark", not "Mark2" or "Mark_old").
+			const char next = start + key.size() < line.size() ? line[start + key.size()] : ' ';
+			return line.find('=') != std::string_view::npos && !srv::isAlpha(next) && !srv::isDigit(next) && next != '_';
 		}
 
 		// `text` with its `key` lines replaced by `lines` (each ending in a
