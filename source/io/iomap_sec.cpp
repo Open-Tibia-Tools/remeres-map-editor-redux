@@ -294,7 +294,7 @@ bool IOMapSec::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResult
 		max_sector_y = std::max(max_sector_y, file.coordinates.y);
 	}
 	const auto extent = [](int max_sector) {
-		return static_cast<uint16_t>(std::clamp((max_sector + 1) * rme::sec::kSectorSize, 0, 0xFFFF));
+		return static_cast<uint16_t>(std::clamp<int64_t>((int64_t { max_sector } + 1) * rme::sec::kSectorSize, 0, 0xFFFF));
 	};
 	out_info.width = extent(max_sector_x);
 	out_info.height = extent(max_sector_y);
@@ -340,12 +340,14 @@ bool IOMapSec::loadMap(Map& map, const FileName& identifier) {
 
 		const std::string file_name = FileSystem::PathToUtf8(file.path.filename());
 		const auto [sector_x, sector_y, sector_z] = file.coordinates;
-		const int base_x = sector_x * rme::sec::kSectorSize;
-		const int base_y = sector_y * rme::sec::kSectorSize;
-		if (sector_z < 0 || sector_z >= MAP_LAYERS || base_x < 0 || base_y < 0 || base_x + rme::sec::kSectorSize > MAP_MAX_WIDTH || base_y + rme::sec::kSectorSize > MAP_MAX_HEIGHT) {
+		// The sector numbers come from the file name, so they are checked before multiplying.
+		const auto fits = [](int sector, int map_size) { return sector >= 0 && sector < map_size / rme::sec::kSectorSize; };
+		if (sector_z < 0 || sector_z >= MAP_LAYERS || !fits(sector_x, MAP_MAX_WIDTH) || !fits(sector_y, MAP_MAX_HEIGHT)) {
 			warnings.push_back(std::format("{}: sector is outside the map area, skipped.", file_name));
 			continue;
 		}
+		const int base_x = sector_x * rme::sec::kSectorSize;
+		const int base_y = sector_y * rme::sec::kSectorSize;
 
 		if (!readFile(file.path, text)) {
 			warnings.push_back(std::format("{}: could not be read, skipped.", file_name));
