@@ -129,6 +129,21 @@ namespace rme::sec::house_files {
 			warnings.push_back("dat/houses.dat or dat/houseareas.dat could not be read; houses were not saved.");
 			return;
 		}
+		// Without houseareas.dat no house was loaded, so regenerating
+		// houses.dat now would drop every house in it.
+		if (!has_areas_file && !original->empty()) {
+			warnings.push_back("dat/houseareas.dat is missing, so the houses in dat/houses.dat were not loaded; houses were not saved.");
+			return;
+		}
+
+		// Houses naming an area that houseareas.dat lacks were skipped when
+		// loading; they stay in houses.dat as they are.
+		std::vector<HouseDefinition> definitions;
+		for (const HouseDefinition& definition : *original) {
+			if (!std::ranges::contains(*areas, definition.area, &HouseArea::id) && !map.houses.getHouse(static_cast<uint32_t>(definition.id))) {
+				definitions.push_back(definition);
+			}
+		}
 
 		std::vector<const House*> houses;
 		for (const auto& [id, house] : map.houses) {
@@ -136,7 +151,6 @@ namespace rme::sec::house_files {
 		}
 		std::ranges::sort(houses, {}, &House::getID);
 
-		std::vector<HouseDefinition> definitions;
 		std::vector<HouseArea> new_areas;
 		size_t without_town = 0;
 		for (const House* house : houses) {
@@ -201,6 +215,7 @@ namespace rme::sec::house_files {
 		if (!new_areas.empty()) {
 			writer.write(areas_path, appendHouseAreas(areas_text, new_areas));
 		}
+		std::ranges::stable_sort(definitions, {}, &HouseDefinition::id);
 		// Written only when a house changed; how the file formats them does not count.
 		std::vector<HouseDefinition> previous = *original;
 		std::ranges::sort(previous, {}, &HouseDefinition::id);
