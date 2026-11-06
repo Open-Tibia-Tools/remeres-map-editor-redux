@@ -132,13 +132,17 @@ namespace rme::sec::monster_files {
 		// Written only when the homes changed; their order in the file does not count.
 		const auto key = [](const MonsterHome& h) { return std::tuple(h.position.x, h.position.y, h.position.z, h.race, h.radius, h.amount, h.regen); };
 		if (std::string text; readFile(path, text)) {
-			if (auto previous = readMonsterHomes(text)) {
-				std::vector<MonsterHome> sorted = homes;
-				std::ranges::sort(sorted, {}, key);
-				std::ranges::sort(*previous, {}, key);
-				if (std::ranges::equal(sorted, *previous, {}, key, key)) {
-					return;
-				}
+			auto previous = readMonsterHomes(text);
+			// A file the editor cannot read is never overwritten.
+			if (!previous) {
+				warnings.push_back(std::format("monster.db:{}: {}; monster homes were not saved.", previous.error().line, previous.error().message));
+				return;
+			}
+			std::vector<MonsterHome> sorted = homes;
+			std::ranges::sort(sorted, {}, key);
+			std::ranges::sort(*previous, {}, key);
+			if (std::ranges::equal(sorted, *previous, {}, key, key)) {
+				return;
 			}
 		}
 		writer.write(path, writeMonsterHomes(std::move(homes)));
