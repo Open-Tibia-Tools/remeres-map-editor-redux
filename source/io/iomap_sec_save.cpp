@@ -57,6 +57,7 @@ namespace {
 		size_t sectors_unchanged = 0;
 		std::vector<std::string> failed_files;
 		std::vector<std::string> unreadable_sectors;
+		std::vector<std::string> sectors_without_tiles;
 		size_t invalid_items = 0;
 		size_t unknown_liquids = 0;
 		size_t ot_only_ids = 0; // Action and unique IDs have no place in sector files
@@ -300,6 +301,16 @@ bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
 		}
 	}
 
+	// A sector file no saved sector covers keeps its old tiles: a sector whose
+	// tiles were all removed, or one of another map in a reused folder.
+	// Deleting it could lose work, so it is only reported.
+	for (const rme::sec::SectorFile& file : rme::sec::listSectorFiles(folder)) {
+		const auto [sector_x, sector_y, sector_z] = file.coordinates;
+		if (!sectors.contains(std::tuple(sector_x, sector_y, sector_z))) {
+			stats.sectors_without_tiles.push_back(FileSystem::PathToUtf8(file.path.filename()));
+		}
+	}
+
 	const rme::sec::ServerDataFolder data { .root = data_folder };
 
 	// The server loads only the sectors map.dat names; others are saved but ignored.
@@ -338,6 +349,10 @@ bool IOMapSec::saveMap(Map& map, const FileName& identifier) {
 
 	if (!stats.unreadable_sectors.empty()) {
 		warnings.push_back(std::format("{} sector files could not be read and were not overwritten, starting with {}.", stats.unreadable_sectors.size(), stats.unreadable_sectors.front()));
+	}
+	if (!stats.sectors_without_tiles.empty()) {
+		std::ranges::sort(stats.sectors_without_tiles);
+		warnings.push_back(std::format("{} sector files in the map folder hold sectors where this map has no tiles, starting with {}. They were left as they are; delete them if the server should not load them.", stats.sectors_without_tiles.size(), stats.sectors_without_tiles.front()));
 	}
 	if (stats.invalid_items > 0) {
 		warnings.push_back(std::format("{} items with no type in objects.srv were left out.", stats.invalid_items));
