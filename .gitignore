@@ -97,6 +97,8 @@ gha-creds-*.json
 # RME runtime config & user data
 rme
 rme.cfg
+config.toml
+/assets/
 data/user/
 
 # Tibia asset files (not shipped in repo)
