@@ -191,8 +191,9 @@ void NanoVGCanvas::SetScrollPosition(int pos) {
 	Refresh();
 }
 
-int NanoVGCanvas::GetOrCreateItemImage(uint16_t itemId) {
-	int tex = GetCachedImage(itemId);
+int NanoVGCanvas::GetOrCreateItemImage(uint16_t itemId, uint16_t subtype) {
+	const uint64_t imageKey = (static_cast<uint64_t>(itemId) << 16) | subtype;
+	int tex = GetCachedImage(imageKey);
 	if (tex != 0) {
 		return (tex > 0) ? tex : 0;
 	}
@@ -202,11 +203,11 @@ int NanoVGCanvas::GetOrCreateItemImage(uint16_t itemId) {
 		return 0;
 	}
 
-	tex = NvgUtils::CreateItemTexture(vg, itemId);
+	tex = NvgUtils::CreateItemTexture(vg, itemId, subtype);
 	if (tex > 0) {
-		AddCachedImage(static_cast<uint64_t>(itemId), tex);
+		AddCachedImage(imageKey, tex);
 	} else {
-		AddCachedImage(static_cast<uint64_t>(itemId), -1);
+		AddCachedImage(imageKey, -1);
 	}
 	return (tex > 0) ? tex : 0;
 }

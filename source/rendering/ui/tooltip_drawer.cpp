@@ -152,7 +152,7 @@ NVGcolor TooltipDrawer::getHeaderColor(const TooltipData& tooltip) const {
 	return ThemeNvColor(role);
 }
 
-int TooltipDrawer::getSpriteImage(NVGcontext* vg, uint16_t itemId) {
+int TooltipDrawer::getSpriteImage(NVGcontext* vg, uint16_t itemId, uint16_t subtype) {
 	if (itemId == 0) {
 		return 0;
 	}
@@ -170,13 +170,14 @@ int TooltipDrawer::getSpriteImage(NVGcontext* vg, uint16_t itemId) {
 		lastContext = vg;
 	}
 
-	auto itCache = spriteCache.find(itemId);
+	const uint32_t cacheKey = (static_cast<uint32_t>(itemId) << 16) | subtype;
+	auto itCache = spriteCache.find(cacheKey);
 	if (itCache != spriteCache.end()) {
 		return itCache->second;
 	}
 
-	int image = NvgUtils::CreateItemTexture(vg, itemId);
-	spriteCache[itemId] = image;
+	int image = NvgUtils::CreateItemTexture(vg, itemId, subtype);
+	spriteCache[cacheKey] = image;
 	return image;
 }
 
@@ -730,7 +731,7 @@ void TooltipDrawer::drawSunkenSlot(NVGcontext* vg, float sx, float sy, float siz
 	} else if (tooltip.category == TooltipCategory::ZONE) {
 		rme::rendering::DrawNanoVGCustomIndicatorBadge(vg, sx, sy, size, tooltip.zoneRgb, "zone");
 	} else if (tooltip.itemId > 0) {
-		int img = getSpriteImage(vg, tooltip.itemId);
+		int img = getSpriteImage(vg, tooltip.itemId, tooltip.subtype);
 		if (img > 0) {
 			int imgW = 0;
 			int imgH = 0;
@@ -928,7 +929,7 @@ void TooltipDrawer::drawContainerGrid(NVGcontext* vg, float x, float y, const To
 			nvgText(vg, itemX + 16.0f, itemY + 16.0f, summaryBuf, nullptr);
 		} else if (idx < layout.numContainerItems) {
 			const auto& item = tooltip.containerItems[idx];
-			int img = getSpriteImage(vg, item.id);
+			int img = getSpriteImage(vg, item.id, item.subtype);
 			if (img > 0) {
 				int imgW = 0;
 				int imgH = 0;

@@ -322,16 +322,19 @@ void ContainerGridCanvas::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 					!m_large
 				);
 			} else {
-				Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());
-				if (sprite) {
-					int tex = GetOrCreateSpriteTexture(vg, sprite);
-					if (tex > 0) {
-						NVGpaint imgPaint = nvgImagePattern(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size, 0, tex, 1.0f);
-						nvgBeginPath(vg);
-						nvgRect(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size);
-						nvgFillPaint(vg, imgPaint);
-						nvgFill(vg);
+				int tex = GetOrCreateItemImage(item->getID(), item->getSubtype());
+				if (tex <= 0) {
+					Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());
+					if (sprite) {
+						tex = GetOrCreateSpriteTexture(vg, sprite);
 					}
+				}
+				if (tex > 0) {
+					NVGpaint imgPaint = nvgImagePattern(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size, 0, tex, 1.0f);
+					nvgBeginPath(vg);
+					nvgRect(vg, slot_x + offset_x, slot_y + offset_y, img_size, img_size);
+					nvgFillPaint(vg, imgPaint);
+					nvgFill(vg);
 				}
 			}
 
