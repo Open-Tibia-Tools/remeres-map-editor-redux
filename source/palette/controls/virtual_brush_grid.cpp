@@ -1,3 +1,4 @@
+#include "app/settings.h"
 #include "app/main.h"
 #include "palette/controls/virtual_brush_grid.h"
 #include "palette/palette_window.h"
@@ -5,29 +6,18 @@
 #include "ui/gui.h"
 #include "rendering/core/graphics.h"
 
-#include <glad/glad.h>
-
 #include <nanovg.h>
-#include <nanovg_gl.h>
 
-#include "util/nvg_utils.h"
-#include "ui/theme.h"
 #include "brushes/raw/raw_brush.h"
 #include "brushes/creature/creature_brush.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include "game/creatures.h"
 #include "ui/find_item_window_model.h"
 
 #include <algorithm>
 #include <unordered_set>
 
-#include <spdlog/spdlog.h>
-
 namespace {
-	static constexpr float GROW_FACTOR = 2.0f;
-	static constexpr float SHADOW_ALPHA_BASE = 20.0f;
-	static constexpr float SHADOW_ALPHA_FACTOR = 64.0f;
-	static constexpr float SHADOW_BLUR_BASE = 6.0f;
-	static constexpr float SHADOW_BLUR_FACTOR = 4.0f;
 	static constexpr int TIMER_INTERVAL = 16;
 	static constexpr float INTER_THRESHOLD = 0.01f;
 	static constexpr float INTER_FACTOR = 0.2f;
@@ -64,16 +54,20 @@ VirtualBrushGrid::VirtualBrushGrid(wxWindow* parent, const DynamicTilesetDefinit
 	hover_index(-1),
 	columns(1),
 	item_size(0),
-	padding(4),
 	observed_tileset_size(_tileset ? _tileset->size() : 0),
 	m_display_brushes(),
 	m_animTimer(this) {
 
-	item_size = icon_size_px + 2 * ICON_OFFSET;
+	m_indicatorDogEar = g_settings.getBoolean(Config::PALETTE_INDICATOR_DOGEAR);
+	const int loadedSpacing = g_settings.getInteger(Config::PALETTE_GRID_SPACING);
+	m_gridSpacing = (loadedSpacing == 2 || loadedSpacing == 6) ? loadedSpacing : 4;
+
+	item_size = rme::ui::grid::CellWidth(icon_size_px);
 
 	Bind(wxEVT_LEFT_DOWN, &VirtualBrushGrid::OnMouseDown, this);
 	Bind(wxEVT_MOTION, &VirtualBrushGrid::OnMotion, this);
 	Bind(wxEVT_SIZE, &VirtualBrushGrid::OnSize, this);
+	Bind(wxEVT_SHOW, &VirtualBrushGrid::OnShow, this);
 	Bind(wxEVT_TIMER, &VirtualBrushGrid::OnTimer, this);
 
 	RefreshBrushList();
@@ -85,14 +79,14 @@ VirtualBrushGrid::~VirtualBrushGrid() = default;
 void VirtualBrushGrid::SetDisplayMode(DisplayMode mode) {
 	if (display_mode != mode) {
 		display_mode = mode;
-		m_truncatedLabelCache.clear();
+		m_labelCache.Clear();
 		UpdateLayout();
 		Refresh();
 	}
 }
 
 void VirtualBrushGrid::RefreshBrushList() {
-	m_truncatedLabelCache.clear();
+	m_labelCache.Clear();
 	Brush* selectedBrush = GetSelectedBrush();
 	m_display_brushes.clear();
 
@@ -189,7 +183,7 @@ void VirtualBrushGrid::ClearSort() {
 void VirtualBrushGrid::SetShowLabels(bool show) {
 	if (m_showLabels != show) {
 		m_showLabels = show;
-		m_truncatedLabelCache.clear();
+		m_labelCache.Clear();
 		UpdateLayout();
 		Refresh();
 	}
@@ -199,8 +193,8 @@ void VirtualBrushGrid::SetTileSize(int sizePx) {
 	sizePx = std::clamp(sizePx, 32, 128);
 	if (icon_size_px != sizePx) {
 		icon_size_px = sizePx;
-		item_size = icon_size_px + 2 * ICON_OFFSET;
-		m_truncatedLabelCache.clear();
+		item_size = rme::ui::grid::CellWidth(icon_size_px);
+		m_labelCache.Clear();
 		UpdateLayout();
 		Refresh();
 	}
@@ -230,14 +224,16 @@ void VirtualBrushGrid::UpdateLayout() {
 		width = 200; // Default
 	}
 
+	const int padding = m_gridSpacing;
 	int totalItems = static_cast<int>(m_display_brushes.size());
 	if (display_mode == DisplayMode::List) {
 		columns = 1;
-		int contentHeight = totalItems * LIST_ROW_HEIGHT + padding;
+		int rowHeight = rme::ui::grid::kListRowHeight;
+		int contentHeight = totalItems > 0 ? (padding + totalItems * (rowHeight + padding)) : 0;
 		UpdateScrollbar(contentHeight);
 	} else {
 		int cellWidth = item_size;
-		int cellHeight = item_size + (m_showLabels ? LABEL_HEIGHT : 0);
+		int cellHeight = rme::ui::grid::CellHeight(icon_size_px, m_showLabels);
 		columns = std::max(1, (width - padding) / (cellWidth + padding));
 		int rows = (totalItems + columns - 1) / columns;
 		int contentHeight = rows * (cellHeight + padding) + padding;
@@ -250,6 +246,16 @@ wxSize VirtualBrushGrid::DoGetBestClientSize() const {
 }
 
 void VirtualBrushGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
+	if (m_pendingScrollToSelected) {
+		m_pendingScrollToSelected = false;
+		// First paint after the page became visible: finish the deferred scroll
+		// outside of painting and draw again.
+		CallAfter([this]() {
+			UpdateLayout();
+			EnsureSelectedVisible(); // repaints itself if it scrolls
+		});
+	}
+
 	if (!m_hasOverrideBrushes && observed_tileset_size != (tileset ? tileset->size() : 0)) {
 		observed_tileset_size = tileset ? tileset->size() : 0;
 		RefreshBrushList();
@@ -258,9 +264,11 @@ void VirtualBrushGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 
 	// Calculate visible range
 	int scrollPos = GetScrollPosition();
-	int rowHeight = (display_mode == DisplayMode::List) ? LIST_ROW_HEIGHT : (item_size + (m_showLabels ? LABEL_HEIGHT : 0) + padding);
-	int startRow = scrollPos / rowHeight;
-	int endRow = (scrollPos + height + rowHeight - 1) / rowHeight + 1;
+	int rowStep = (display_mode == DisplayMode::List)
+		? (rme::ui::grid::kListRowHeight + m_gridSpacing)
+		: (rme::ui::grid::CellHeight(icon_size_px, m_showLabels) + m_gridSpacing);
+	int startRow = std::max(0, (scrollPos - m_gridSpacing) / rowStep);
+	int endRow = (scrollPos + height - m_gridSpacing + rowStep - 1) / rowStep + 1;
 
 	int startIdx = startRow * columns;
 	int endIdx = std::min(static_cast<int>(m_display_brushes.size()), endRow * columns);
@@ -272,272 +280,64 @@ void VirtualBrushGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 }
 
 void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) {
-	float x = static_cast<float>(rect.x);
-	float y = static_cast<float>(rect.y);
-	float w = static_cast<float>(rect.width);
-	float h = static_cast<float>(rect.height);
-
-	// Animation scaling
-	if (i == hover_index) {
-		float grow = GROW_FACTOR * hover_anim;
-		x -= grow;
-		y -= grow;
-		w += grow * 2.0f;
-		h += grow * 2.0f;
-	}
-
-	// Shadow / Glow
-	if (i == selected_index) {
-		// Glow for selected
-		NVGpaint shadowPaint = nvgBoxGradient(vg, x, y, w, h, 4.0f, 10.0f, nvgRGBA(100, 150, 255, 128), nvgRGBA(0, 0, 0, 0));
-		nvgBeginPath(vg);
-		nvgRect(vg, x - 10, y - 10, w + 20, h + 20);
-		nvgRoundedRect(vg, x, y, w, h, 4.0f);
-		nvgPathWinding(vg, NVG_HOLE);
-		nvgFillPaint(vg, shadowPaint);
-		nvgFill(vg);
-	} else if (i == hover_index) {
-		// Animated shadow for hover
-		float shadowAlpha = SHADOW_ALPHA_FACTOR * hover_anim + SHADOW_ALPHA_BASE;
-		float shadowBlur = SHADOW_BLUR_BASE + SHADOW_BLUR_FACTOR * hover_anim;
-		NVGpaint shadowPaint = nvgBoxGradient(vg, x, y + 2, w, h, 4.0f, shadowBlur, nvgRGBA(0, 0, 0, static_cast<int>(shadowAlpha)), nvgRGBA(0, 0, 0, 0));
-		nvgBeginPath(vg);
-		nvgRect(vg, x - 10, y - 10, w + 20, h + 20);
-		nvgRoundedRect(vg, x, y, w, h, 4.0f);
-		nvgPathWinding(vg, NVG_HOLE);
-		nvgFillPaint(vg, shadowPaint);
-		nvgFill(vg);
-	}
-
-	// Card background
-	nvgBeginPath(vg);
-	nvgRoundedRect(vg, x, y, w, h, 4.0f);
-
-	if (i == selected_index) {
-		NVGcolor selCol = NvgUtils::ToNvColor(Theme::Get(Theme::Role::Accent));
-		selCol.a = 1.0f; // Force opaque for background
-		nvgFillColor(vg, selCol);
-	} else if (i == hover_index) {
-		nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::CardBaseHover)));
-	} else {
-		// Normal - theme card base
-		nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::CardBase)));
-	}
-	nvgFill(vg);
-
-	// Selection border
-	if (i == selected_index) {
-		nvgBeginPath(vg);
-		nvgRoundedRect(vg, x + 0.5f, y + 0.5f, w - 1.0f, h - 1.0f, 4.0f);
-		nvgStrokeColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::Accent)));
-		nvgStrokeWidth(vg, 2.0f);
-		nvgStroke(vg);
-	}
-
-	// Draw brush sprite
 	Brush* brush = (i < static_cast<int>(m_display_brushes.size())) ? m_display_brushes[i] : nullptr;
-	if (brush) {
-		int tex = 0;
-		if (Sprite* spr = brush->getSprite()) {
-			tex = GetOrCreateSpriteTexture(vg, spr);
+	if (!brush) {
+		return;
+	}
+
+	const bool selected = (i == selected_index);
+	const bool hovered = (i == hover_index);
+	const bool listMode = display_mode == DisplayMode::List;
+
+	const wxRect drawn = rme::ui::grid::DrawCardChrome(vg, rect, selected, hovered, hover_anim, m_showLabels && !listMode);
+
+	const int iconSize = listMode ? rme::ui::grid::kIconSizeBase : icon_size_px;
+	const wxRect iconRect = listMode
+		? wxRect(drawn.x + rme::ui::grid::kIconOffset, drawn.y + rme::ui::grid::kIconOffset, iconSize, iconSize)
+		: rme::ui::grid::IconRect(drawn, iconSize);
+
+	int texture = 0;
+	const auto badge = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(brush);
+	if (badge == rme::rendering::TileIndicatorType::None) {
+		if (Sprite* sprite = brush->getSprite()) {
+			texture = GetOrCreateSpriteTexture(vg, sprite);
 		} else {
-			int look_id = brush->getLookID();
-			if (look_id < 0) {
-				tex = GetOrCreateEditorIconTexture(vg, look_id);
-			} else if (look_id > 0) {
-				spr = g_gui.gfx.getSprite(look_id);
-				tex = spr ? GetOrCreateSpriteTexture(vg, spr) : 0;
-			}
-		}
-		int iconSize = (display_mode == DisplayMode::List) ? GRID_ITEM_SIZE_BASE : (item_size - 2 * ICON_OFFSET);
-		int iconX = (display_mode == DisplayMode::List) ? (rect.x + ICON_OFFSET) : (rect.x + (rect.width - iconSize) / 2);
-		int iconY = rect.y + ICON_OFFSET;
-
-		if (tex > 0) {
-			NVGpaint imgPaint = nvgImagePattern(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 0.0f, tex, 1.0f);
-
-			nvgBeginPath(vg);
-			nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
-			nvgFillPaint(vg, imgPaint);
-			nvgFill(vg);
-		} else {
-			// Placeholder box for entries without sprite (e.g. completely transparent tile or missing sprite)
-			const wxColour textCol = Theme::Get(Theme::Role::Text);
-			nvgBeginPath(vg);
-			nvgRoundedRect(vg, static_cast<float>(iconX), static_cast<float>(iconY), static_cast<float>(iconSize), static_cast<float>(iconSize), 3.0f);
-			nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 12));
-			nvgFill(vg);
-			nvgStrokeColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 40));
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStroke(vg);
-
-			nvgFontSize(vg, static_cast<float>(iconSize) * 0.45f);
-			nvgFontFace(vg, "sans");
-			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-			nvgFillColor(vg, nvgRGBA(textCol.Red(), textCol.Green(), textCol.Blue(), 120));
-			nvgText(vg, iconX + iconSize / 2.0f, iconY + iconSize / 2.0f, "?", nullptr);
-		}
-
-		if (display_mode == DisplayMode::List) {
-			nvgFontSize(vg, 14.0f);
-			nvgFontFace(vg, "sans");
-			nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-			nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::Text)));
-
-			auto it = m_utf8NameCache.find(brush);
-			if (it == m_utf8NameCache.end()) {
-				m_utf8NameCache[brush] = std::string(wxstr(brush->getName()).ToUTF8());
-				it = m_utf8NameCache.find(brush);
-			}
-			nvgText(vg, rect.x + 40, rect.y + rect.height / 2.0f, it->second.c_str(), nullptr);
-		} else if (m_showLabels) {
-			nvgFontSize(vg, 11.0f);
-			nvgFontFace(vg, "sans");
-			nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-			if (i == selected_index) {
-				nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::TextOnAccent)));
-			} else {
-				nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::Text)));
-			}
-
-			auto it = m_truncatedLabelCache.find(brush);
-			if (it == m_truncatedLabelCache.end()) {
-				CachedLabel cachedLabel;
-				wxString wxName = wxstr(brush->getName());
-				auto toUtf8 = [](const wxString& s) -> std::string {
-					return std::string(s.ToUTF8());
-				};
-				std::string utf8Full = toUtf8(wxName);
-				const float maxTextWidth = static_cast<float>(rect.width - 4);
-				float bounds[4];
-				nvgTextBounds(vg, 0, 0, utf8Full.c_str(), nullptr, bounds);
-				float textWidth = bounds[2] - bounds[0];
-
-				if (textWidth <= maxTextWidth) {
-					cachedLabel.line1 = std::move(utf8Full);
-					cachedLabel.line2 = "";
-				} else {
-					wxString wxLine1;
-					wxString wxLine2;
-
-					// Prefer splitting on " - " delimiter (e.g. "3263 - jungle grass")
-					int dashPos = wxName.Find(" - ");
-					if (dashPos != wxNOT_FOUND && dashPos > 0) {
-						wxString prefix = wxName.substr(0, dashPos);
-						std::string utf8Prefix = toUtf8(prefix);
-						nvgTextBounds(vg, 0, 0, utf8Prefix.c_str(), nullptr, bounds);
-						if ((bounds[2] - bounds[0]) <= maxTextWidth) {
-							wxLine1 = prefix;
-							wxLine2 = wxName.substr(dashPos + 3);
-						}
-					}
-
-					if (wxLine1.empty()) {
-						// Split by word boundary (' ', '-') if possible
-						int bestSplit = -1;
-						int len = static_cast<int>(wxName.length());
-						for (int idx = 1; idx < len; ++idx) {
-							wxChar ch = wxName[idx];
-							if (ch == ' ' || ch == '-') {
-								wxString cand1 = wxName.substr(0, (ch == '-') ? (idx + 1) : idx);
-								std::string utf8Cand1 = toUtf8(cand1);
-								nvgTextBounds(vg, 0, 0, utf8Cand1.c_str(), nullptr, bounds);
-								if ((bounds[2] - bounds[0]) <= maxTextWidth) {
-									bestSplit = idx;
-								} else {
-									break;
-								}
-							}
-						}
-
-						if (bestSplit != -1) {
-							wxChar splitChar = wxName[bestSplit];
-							if (splitChar == '-') {
-								wxLine1 = wxName.substr(0, bestSplit + 1);
-								wxLine2 = wxName.substr(bestSplit + 1);
-							} else {
-								wxLine1 = wxName.substr(0, bestSplit);
-								wxLine2 = wxName.substr(bestSplit + 1);
-							}
-						} else {
-							wxString cand1 = wxName;
-							while (cand1.length() > 1) {
-								cand1.RemoveLast();
-								std::string utf8Cand1 = toUtf8(cand1);
-								nvgTextBounds(vg, 0, 0, utf8Cand1.c_str(), nullptr, bounds);
-								if ((bounds[2] - bounds[0]) <= maxTextWidth) {
-									wxLine1 = cand1;
-									wxLine2 = wxName.substr(cand1.length());
-									break;
-								}
-							}
-							if (wxLine1.empty()) {
-								wxLine1 = wxName.substr(0, 1);
-								wxLine2 = wxName.substr(1);
-							}
-						}
-					}
-
-					// Clean up delimiters and whitespace on boundary
-					while (!wxLine1.empty() && (wxLine1.Last() == ' ' || wxLine1.Last() == '-' || wxLine1.Last() == '\t')) {
-						wxLine1.RemoveLast();
-					}
-					while (!wxLine2.empty() && (wxLine2[0] == ' ' || wxLine2[0] == '-' || wxLine2[0] == '\t')) {
-						wxLine2.Remove(0, 1);
-					}
-
-					cachedLabel.line1 = toUtf8(wxLine1);
-
-					if (wxLine2.empty()) {
-						cachedLabel.line2 = "";
-					} else {
-						std::string utf8Line2 = toUtf8(wxLine2);
-						nvgTextBounds(vg, 0, 0, utf8Line2.c_str(), nullptr, bounds);
-						if ((bounds[2] - bounds[0]) <= maxTextWidth) {
-							cachedLabel.line2 = std::move(utf8Line2);
-						} else {
-							cachedLabel.line2 = "...";
-							wxString truncated2 = wxLine2;
-							while (truncated2.length() > 1) {
-								truncated2.RemoveLast();
-								wxString cand2 = truncated2 + "...";
-								std::string utf8Cand2 = toUtf8(cand2);
-								nvgTextBounds(vg, 0, 0, utf8Cand2.c_str(), nullptr, bounds);
-								if ((bounds[2] - bounds[0]) <= maxTextWidth) {
-									cachedLabel.line2 = std::move(utf8Cand2);
-									break;
-								}
-							}
-						}
-					}
+			const int lookId = brush->getLookID();
+			if (lookId < 0) {
+				texture = GetOrCreateEditorIconTexture(vg, lookId);
+			} else if (lookId > 0) {
+				if (Sprite* sprite = g_gui.gfx.getSprite(lookId)) {
+					texture = GetOrCreateSpriteTexture(vg, sprite);
 				}
-				it = m_truncatedLabelCache.emplace(brush, std::move(cachedLabel)).first;
-			}
-
-			const CachedLabel& label = it->second;
-			float labelX = rect.x + rect.width / 2.0f;
-			if (label.line2.empty()) {
-				float labelY = rect.y + item_size + (LABEL_HEIGHT / 2.0f);
-				nvgText(vg, labelX, labelY, label.line1.c_str(), nullptr);
-			} else {
-				float line1Y = rect.y + item_size + 9.0f;
-				float line2Y = rect.y + item_size + 23.0f;
-				nvgText(vg, labelX, line1Y, label.line1.c_str(), nullptr);
-				nvgText(vg, labelX, line2Y, label.line2.c_str(), nullptr);
 			}
 		}
+	}
+	rme::ui::grid::DrawCellIcon(vg, iconRect, texture, badge);
+
+	if (m_indicatorDogEar) {
+		const bool isLightTheme = (Theme::Get(Theme::Role::Surface).Red() > 128);
+		const NVGcolor catNVG = rme::ui::grid::GetStandardCategoryColor(brush);
+		rme::ui::grid::DrawDogEarBadge(vg, iconRect, catNVG);
+	}
+
+	if (listMode) {
+		rme::ui::grid::DrawListLabel(vg, drawn, wxstr(brush->getName()));
+	} else if (m_showLabels) {
+		rme::ui::grid::DrawCellLabel(vg, drawn, wxstr(brush->getName()), selected, m_labelCache);
 	}
 }
 
 wxRect VirtualBrushGrid::GetItemRect(int index) const {
+	const int padding = m_gridSpacing;
 	if (display_mode == DisplayMode::List) {
-		int width = GetClientSize().x - 2 * padding;
-		return wxRect(padding, padding + index * LIST_ROW_HEIGHT, width, LIST_ROW_HEIGHT);
+		int width = std::max(1, GetClientSize().x - 2 * padding);
+		int rowHeight = rme::ui::grid::kListRowHeight;
+		return wxRect(padding, padding + index * (rowHeight + padding), width, rowHeight);
 	} else {
 		int row = index / columns;
 		int col = index % columns;
 		int cellWidth = item_size;
-		int cellHeight = item_size + (m_showLabels ? LABEL_HEIGHT : 0);
+		int cellHeight = rme::ui::grid::CellHeight(icon_size_px, m_showLabels);
 
 		return wxRect(
 			padding + col * (cellWidth + padding),
@@ -549,23 +349,27 @@ wxRect VirtualBrushGrid::GetItemRect(int index) const {
 }
 
 int VirtualBrushGrid::HitTest(int x, int y) const {
+	const int padding = m_gridSpacing;
 	int scrollPos = GetScrollPosition();
 	int realY = y + scrollPos;
 	int realX = x;
 	int totalItems = static_cast<int>(m_display_brushes.size());
 
 	if (display_mode == DisplayMode::List) {
-		int row = (realY - padding) / LIST_ROW_HEIGHT;
+		if (realY < padding) {
+			return -1;
+		}
+		int rowHeight = rme::ui::grid::kListRowHeight;
+		int rowStep = rowHeight + padding;
+		int row = (realY - padding) / rowStep;
+		int offsetInRow = (realY - padding) % rowStep;
 
-		if (row < 0 || row >= totalItems) {
+		if (offsetInRow >= rowHeight || row < 0 || row >= totalItems) {
 			return -1;
 		}
 
-		int index = row;
-		// Check horizontal bounds properly
-		int width = GetClientSize().x - 2 * padding;
 		if (realX >= padding && realX <= GetClientSize().x - padding) {
-			return index;
+			return row;
 		}
 		return -1;
 	} else {
@@ -574,7 +378,7 @@ int VirtualBrushGrid::HitTest(int x, int y) const {
 		}
 
 		int cellWidth = item_size;
-		int cellHeight = item_size + (m_showLabels ? LABEL_HEIGHT : 0);
+		int cellHeight = rme::ui::grid::CellHeight(icon_size_px, m_showLabels);
 
 		int col = (realX - padding) / (cellWidth + padding);
 		int row = (realY - padding) / (cellHeight + padding);
@@ -646,6 +450,8 @@ void VirtualBrushGrid::OnMouseDown(wxMouseEvent& event) {
 
 			g_gui.SelectBrushInternal(m_display_brushes[selected_index]);
 			Refresh();
+		} else if (selected_index >= 0 && selected_index < static_cast<int>(m_display_brushes.size())) {
+			g_gui.FocusCurrentMapCanvas();
 		}
 	}
 }
@@ -697,8 +503,44 @@ void VirtualBrushGrid::OnTimer(wxTimerEvent& event) {
 
 void VirtualBrushGrid::OnSize(wxSizeEvent& event) {
 	UpdateLayout();
+	if (m_pendingScrollToSelected) {
+		EnsureSelectedVisible();
+	}
 	Refresh();
 	event.Skip();
+}
+
+void VirtualBrushGrid::OnShow(wxShowEvent& event) {
+	if (event.IsShown() && m_pendingScrollToSelected) {
+		// Sizers lay the page out after it is shown; scroll once that is done.
+		CallAfter([this]() {
+			UpdateLayout();
+			EnsureSelectedVisible();
+		});
+	}
+	event.Skip();
+}
+
+void VirtualBrushGrid::EnsureSelectedVisible() {
+	if (selected_index < 0 || selected_index >= static_cast<int>(m_display_brushes.size())) {
+		m_pendingScrollToSelected = false;
+		return;
+	}
+
+	const int clientHeight = GetClientSize().y;
+	if (!IsShownOnScreen() || clientHeight <= 0) {
+		m_pendingScrollToSelected = true;
+		return;
+	}
+	m_pendingScrollToSelected = false;
+
+	const wxRect rect = GetItemRect(selected_index);
+	const int scrollPos = GetScrollPosition();
+	if (rect.y < scrollPos) {
+		SetScrollPosition(rect.y - rme::ui::grid::kPadding);
+	} else if (rect.y + rect.height > scrollPos + clientHeight) {
+		SetScrollPosition(rect.y + rect.height - clientHeight + rme::ui::grid::kPadding);
+	}
 }
 
 void VirtualBrushGrid::SelectFirstBrush() {
@@ -720,15 +562,17 @@ bool VirtualBrushGrid::SelectBrush(const Brush* brush) {
 		if (m_display_brushes[i] == brush) {
 			selected_index = static_cast<int>(i);
 
-			// Ensure visible
-			wxRect rect = GetItemRect(selected_index);
-			int scrollPos = GetScrollPosition();
-			int clientHeight = GetClientSize().y;
-
-			if (rect.y < scrollPos) {
-				SetScrollPosition(rect.y - padding);
-			} else if (rect.y + rect.height > scrollPos + clientHeight) {
-				SetScrollPosition(rect.y + rect.height - clientHeight + padding);
+			// The palette page holding this grid may be hidden right now (it is
+			// switched to after the brush is found), so its layout can be stale.
+			UpdateLayout();
+			EnsureSelectedVisible();
+			if (!m_pendingScrollToSelected) {
+				// Re-check once the page switch and its layout have settled.
+				m_pendingScrollToSelected = true;
+				CallAfter([this]() {
+					UpdateLayout();
+					EnsureSelectedVisible();
+				});
 			}
 
 			Refresh();
@@ -738,4 +582,21 @@ bool VirtualBrushGrid::SelectBrush(const Brush* brush) {
 	selected_index = -1;
 	Refresh();
 	return false;
+}
+
+
+void VirtualBrushGrid::SetBrushIndicators(bool dogEar) {
+	if (m_indicatorDogEar != dogEar) {
+		m_indicatorDogEar = dogEar;
+		Refresh();
+	}
+}
+
+void VirtualBrushGrid::SetGridSpacing(int spacingPx) {
+	const int validSpacing = (spacingPx == 2 || spacingPx == 6) ? spacingPx : 4;
+	if (m_gridSpacing != validSpacing) {
+		m_gridSpacing = validSpacing;
+		UpdateLayout();
+		Refresh();
+	}
 }

@@ -18,6 +18,8 @@
 #include "game/sprites.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
+#include "rendering/indicators/technical_item_registry.h"
+#include "rendering/indicators/zone_flags.h"
 
 namespace {
 	GameSprite* resolveSprite(const ItemDefinitionView& definition, const RenderFrameContext* ctx) {
@@ -98,41 +100,33 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	const AtlasManager* atlas = params.ctx ? &params.ctx->atlas : nullptr;
 
-	// Display invisible and invalid items
-	// Ugly hacks. :)
-	if (options.show_tech_items && !options.ingame) {
-		// Red invalid client id
-		if (!it) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, alpha), 0, atlas);
-			return;
+	// Red invalid client id / missing item
+	if (!it) {
+		if (options.show_invalid_tiles && !options.ingame) {
+			const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;
+			if (white_pixel) {
+				const float rf = static_cast<float>(red) / 255.0f;
+				const float gf = static_cast<float>(green) / 255.0f;
+				const float bf = static_cast<float>(blue) / 255.0f;
+				const float af = static_cast<float>(alpha) / 255.0f;
+				const auto invalid_type = (item && item->isGroundTile()) ? rme::rendering::TileIndicatorType::InvalidGround : rme::rendering::TileIndicatorType::InvalidItem;
+				sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y), 32.0f, 32.0f, *white_pixel, rf, gf, bf, af, 0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(invalid_type)), params.depth);
+			}
 		}
+		return;
+	}
 
+	// Display invisible items via technical item shader indicators
+	if (options.show_tech_items && !options.ingame) {
 		const ClientItemId client_id = it.clientId();
 		const ServerItemId server_id = item ? item->getID() : 0;
-
-		// Yellow invisible stairs tile (server 459 / client 469)
-		if (server_id == 459 || client_id == 469) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, green, 0, (alpha * 171) >> 8), 0, atlas);
+		const auto tech_type = rme::rendering::TechnicalItemRegistry::Classify(server_id, client_id);
+		if (tech_type != rme::rendering::TileIndicatorType::None) {
+			const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;
+			if (white_pixel) {
+				sprite_batch.draw(static_cast<float>(draw_x), static_cast<float>(draw_y), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, static_cast<float>(alpha) / 255.0f, 0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(tech_type)), params.depth);
+			}
 			return;
-		}
-
-		// Red invisible walkable tile (server 460 / client 470, 17970, 20028, 34168)
-		if (server_id == 460 || client_id == 470 || client_id == 17970 || client_id == 20028 || client_id == 34168) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(red, 0, 0, (alpha * 171) >> 8), 0, atlas);
-			return;
-		}
-
-		// Cyan invisible wall (server 1548 / client 2187)
-		if (server_id == 1548 || client_id == 2187) {
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x, draw_y, DrawColor(0, green, blue, 80), 0, atlas);
-			return;
-		}
-
-		// primal light
-		if ((it.clientId() >= 39092 && it.clientId() <= 39100) || it.clientId() == 39236 || it.clientId() == 39367 || it.clientId() == 39368) {
-			spr = resolveSprite(SPRITE_LIGHTSOURCE, params.ctx);
-			red = 0;
-			alpha = 180;
 		}
 	}
 
@@ -145,7 +139,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	int screenx = draw_x - draw_offset_x;
 	int screeny = draw_y - draw_offset_y;
 
-	// Set the newd drawing height accordingly
+	// Set the new drawing height accordingly
 	draw_x -= spr->draw_height;
 	draw_y -= spr->draw_height;
 
@@ -153,11 +147,11 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 	if (cached_patterns && spr == original_spr) {
 		patterns = *cached_patterns;
 	} else {
-		const long elapsed_time = params.ctx ? params.ctx->elapsed_time : -1;
+		const std::optional<int64_t> elapsed_time = params.ctx ? std::optional<int64_t>(params.ctx->elapsed_time) : std::nullopt;
 		patterns = PatternCalculator::Calculate(spr, it, item, tile, pos, elapsed_time);
 	}
 
-	int subtype = patterns.subtype;
+	const int subtype = patterns.subtype.value_or(-1);
 	int pattern_x = patterns.x;
 	int pattern_y = patterns.y;
 	int pattern_z = patterns.z;
@@ -165,7 +159,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	const bool is_simple_sprite = (spr->width == 1 && spr->height == 1 && spr->layers == 1);
 
-	if (options.transparent_items && !ephemeral && (!it.isGroundTile() || spr->width > 1 || spr->height > 1) && !it.isSplash() && (!it.hasFlag(ItemFlag::IsBorder) || spr->width > 1 || spr->height > 1)) {
+	if (options.transparent_items && !ephemeral && (!it.isGroundTile() || spr->width > 1 || spr->height > 1) && !it.isSplash() && (!(it.hasFlag(ItemFlag::IsBorder) || (it.hasFlag(ItemFlag::AlwaysOnBottom) && it.attribute(ItemAttributeKey::AlwaysOnTopOrder) == 1)) || spr->width > 1 || spr->height > 1)) {
 		alpha >>= 1;
 	}
 
@@ -179,7 +173,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	if (is_simple_sprite) {
 		const AtlasRegion* region = nullptr;
-		if (spr->is_simple && subtype == -1 && pattern_x == 0 && pattern_y == 0 && pattern_z == 0 && frame == 0) {
+		if (spr->is_simple && !patterns.subtype.has_value() && pattern_x == 0 && pattern_y == 0 && pattern_z == 0 && frame == 0) {
 			region = spr->getCachedDefaultRegion();
 		}
 		if (!region) {
@@ -196,7 +190,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 				}
 			}
 #endif
-			sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx, screeny, region, DrawColor(red, green, blue, alpha));
+			sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx, screeny, region, DrawColor(red, green, blue, alpha), params.house_id, params.zone_flags, params.depth);
 		}
 	} else {
 		const auto composite_metrics = spr->getPlainLayoutMetrics(subtype, pattern_x, pattern_y, pattern_z, frame);
@@ -207,7 +201,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 				for (int cf = 0; cf != spr->layers; cf++) {
 					const AtlasRegion* region = spr->getAtlasRegion(cx, cy, cf, subtype, pattern_x, pattern_y, pattern_z, frame);
 					if (region) {
-						sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx - x_offset, screeny - y_offset, region, DrawColor(red, green, blue, alpha));
+						sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx - x_offset, screeny - y_offset, region, DrawColor(red, green, blue, alpha), params.house_id, params.zone_flags, params.depth);
 					}
 				}
 				y_offset += composite_metrics.row_heights[cy];
@@ -239,71 +233,49 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 		creature_drawer->BlitCreature(sprite_batch, sprite_drawer, draw_x, draw_y, outfit, static_cast<Direction>(podium->getDirection()), CreatureDrawOptions {
 			.color = DrawColor(red, green, blue, alpha),
 			.view = view,
-			.ctx = params.ctx
+			.ctx = params.ctx,
+			.depth = params.depth
 		});
 	}
 
 	// draw light color indicator
 	if (!options.ingame && options.show_light_str) {
-		const SpriteLight& light = item->getLight();
-		if (light.intensity > 0) {
-			const DrawColor lightColor = toDrawColorFrom8Bit(light.color);
-			const int startOffset = std::max<int>(16, 32 - light.intensity);
-			const int sqSize = TILE_SIZE - startOffset;
-
-			// We need to disable texture 2d for BlitSquare. SpriteDrawer::glBlitSquare does NOT disable texture 2d automatically?
-			// SpriteDrawer::glBlitSquare internally uses BatchRenderer::DrawQuad which sets blank texture if needed.
-			// So we don't need manual enable/disable here anymore.
-
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 2, draw_y + startOffset - 2, DrawColor(0, 0, 0, 255), sqSize + 2, atlas);
-			sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 1, draw_y + startOffset - 1, lightColor, sqSize, atlas);
-		}
+		DrawLightStrength(sprite_batch, sprite_drawer, *item, draw_x, draw_y, atlas, params.depth);
 	}
 }
 
-void ItemDrawer::DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, int screenx, int screeny, ServerItemId item_id, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha, const RenderFrameContext* ctx) {
+void ItemDrawer::DrawLightStrength(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, const Item& item, int draw_x, int draw_y, const AtlasManager* atlas, float depth) const {
+	const SpriteLight light = item.getLight();
+	if (light.intensity <= 0) {
+		return;
+	}
+	const DrawColor lightColor = toDrawColorFrom8Bit(light.color);
+	const int startOffset = std::max<int>(16, 32 - light.intensity);
+	const int sqSize = TILE_SIZE - startOffset;
+	sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 2, draw_y + startOffset - 2, DrawColor(0, 0, 0, 255), sqSize + 2, atlas, depth);
+	sprite_drawer->glBlitSquare(sprite_batch, draw_x + startOffset - 1, draw_y + startOffset - 1, lightColor, sqSize, atlas, depth);
+}
+
+void ItemDrawer::DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, int screenx, int screeny, ServerItemId item_id, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha, const RenderFrameContext* ctx, const Tile* tile, const Position& pos) {
 	if (!ctx) {
 		return;
 	}
 	const auto definition = ctx->item_definitions.get(item_id);
-	GameSprite* spr = resolveSprite(definition, ctx);
 	uint16_t cid = definition ? definition.clientId() : 0;
 
-	switch (cid) {
-		// Yellow invisible stairs tile
-		case 469:
-			b = 0;
-			alpha = (alpha * 171) >> 8;
-			spr = resolveSprite(SPRITE_ZONE, ctx);
-			break;
-
-		// Red invisible walkable tile
-		case 470:
-			g = 0;
-			b = 0;
-			alpha = (alpha * 171) >> 8;
-			spr = resolveSprite(SPRITE_ZONE, ctx);
-			break;
-
-		// Cyan invisible wall
-		case 2187:
-			r = 0;
-			alpha = alpha / 3;
-			spr = resolveSprite(SPRITE_ZONE, ctx);
-			break;
-
-		default:
-			break;
+	const auto tech_type = rme::rendering::TechnicalItemRegistry::Classify(item_id, cid);
+	if (tech_type != rme::rendering::TileIndicatorType::None) {
+		const AtlasRegion* white_pixel = ctx->atlas.getWhitePixel();
+		if (white_pixel) {
+			sprite_batch.draw(static_cast<float>(screenx), static_cast<float>(screeny), 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, static_cast<float>(alpha) / 255.0f, 0.0f, rme::rendering::MakeIndicatorZoneFlag(static_cast<uint8_t>(tech_type)));
+		}
+		return;
 	}
 
-	// primal light
-	if (cid >= 39092 && cid <= 39100 || cid == 39236 || cid == 39367 || cid == 39368) {
-		spr = resolveSprite(SPRITE_LIGHTSOURCE, ctx);
-		r = 0;
-		alpha = (alpha * 171) >> 8;
-	}
-
+	GameSprite* spr = resolveSprite(definition, ctx);
 	if (spr) {
-		sprite_drawer->BlitSprite(sprite_batch, screenx, screeny, spr, DrawColor(r, g, b, alpha), ctx);
+		const std::optional<int64_t> elapsed_time = std::optional<int64_t>(ctx->elapsed_time);
+		const SpritePatterns patterns = PatternCalculator::Calculate(spr, definition, nullptr, tile, pos, elapsed_time);
+		sprite_drawer->BlitSprite(sprite_batch, screenx, screeny, spr, DrawColor(r, g, b, alpha), ctx, 0.0f, &patterns);
 	}
 }

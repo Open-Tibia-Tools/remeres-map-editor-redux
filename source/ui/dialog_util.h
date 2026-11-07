@@ -21,6 +21,8 @@ public:
 	static void ShowTextBox(const wxString& title, const wxString& contents) {
 		ShowTextBox(nullptr, title, contents);
 	}
+
+	static void ShowRichToolTip(const wxString& title, const wxString& message, wxWindow* win, const wxRect* rect = nullptr, int icon = wxICON_INFORMATION);
 };
 
 #endif

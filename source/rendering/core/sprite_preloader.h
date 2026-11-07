@@ -33,6 +33,10 @@ public:
 	// Should be called on the main thread.
 	void update();
 
+	// True while tasks, decoded results or in-flight keys remain. A caller that needs sprites
+	// now can use this to drain the queue with a bounded wait instead of drawing holes.
+	[[nodiscard]] bool hasPendingWork() const;
+
 	// Clears all pending tasks and results.
 	// Should be called when GraphicManager is cleared.
 	void clear();
@@ -109,7 +113,7 @@ private:
 	static constexpr size_t MAX_UPLOADS_PER_FRAME = 2048;
 	static constexpr size_t MAX_UPLOAD_BYTES_PER_FRAME = 16ull * 1024ull * 1024ull;
 
-	std::mutex queue_mutex;
+	mutable std::mutex queue_mutex;
 	std::condition_variable cv;
 	bool stopping = false;
 	std::vector<std::jthread> workers;

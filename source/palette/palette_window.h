@@ -24,10 +24,14 @@
 #include <string_view>
 #include <vector>
 
+inline constexpr int PALETTE_HORIZONTAL_LEFT_WIDTH = 220;
+
 class BrushPalettePanel;
 struct HardcodedPaletteProvider;
 class HousePalette;
 class WaypointPalettePanel;
+class ZonePalettePanel;
+class TownPalettePanel;
 
 class PaletteWindow : public wxPanel {
 public:
@@ -41,8 +45,13 @@ public:
 	void InvalidateContents();
 	// (Re)Loads all currently displayed data, called from InvalidateContents implicitly
 	void LoadCurrentContents();
+	void ReloadDynamicPages();
+	void SetBrushIndicators(bool dogEar);
+	void SetGridSpacing(int spacing);
+	bool SelectTilesetInCurrentPalette(std::string_view tilesetName);
 	// Goes to the selected page and selects any brush there
 	void SelectPage(std::string_view paletteName);
+	std::string GetSelectedPageName() const;
 	// The currently selected brush in this palette
 	Brush* GetSelectedBrush() const;
 	Brush* GetSelectedCreatureBrush() const;
@@ -59,12 +68,16 @@ public:
 	// Updates the content of the palette (eg. houses, creatures)
 	virtual void OnUpdate(Map* map);
 
+	[[nodiscard]] wxChoicebook* GetChoicebook() const noexcept { return choicebook; }
+
 	// wxWidgets Event Handlers
 	void OnSwitchingPage(wxChoicebookEvent& event);
 	void OnPageChanged(wxChoicebookEvent& event);
 	// Forward key events to the parent window (The Map Window)
 	void OnKey(wxKeyEvent& event);
 	void OnClose(wxCloseEvent&);
+	void OnSize(wxSizeEvent& event);
+	void SetHorizontalLayout(bool horizontal);
 
 protected:
 	struct HardcodedPage {
@@ -72,11 +85,18 @@ protected:
 		const HardcodedPaletteProvider* provider = nullptr;
 	};
 
-	wxChoicebook* choicebook;
+	wxChoicebook* choicebook = nullptr;
+	wxChoice* m_paletteChoice = nullptr;
+	bool m_isHorizontal = false;
 	std::vector<PalettePanel*> palette_pages;
 	std::vector<HardcodedPage> hardcoded_pages;
 	HousePalette* house_palette;
 	WaypointPalettePanel* waypoint_palette;
+	ZonePalettePanel* zone_palette = nullptr;
+	TownPalettePanel* town_palette = nullptr;
+
+	void updateZonePage(Map* map);
+	void DetachPaletteChoiceFromAnySizer();
 };
 
 #endif

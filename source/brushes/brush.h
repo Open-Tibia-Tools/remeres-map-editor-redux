@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <string>
 #include <memory>
+#include <limits>
 #include <string_view>
 
 // Thanks to a million forward declarations, we don't have to include any files!
@@ -55,8 +56,15 @@ class SpawnBrush;
 class HouseBrush;
 class HouseExitBrush;
 class WaypointBrush;
+class TownTempleBrush;
 class FlagBrush;
 class EraserBrush;
+class ZoneBrush;
+
+enum class BrushCursor {
+	Default,
+	Crosshair,
+};
 
 //=============================================================================
 // Brushes, holds all brushes
@@ -103,6 +111,8 @@ public:
 	FlagBrush* rook_brush = nullptr;
 	FlagBrush* nolog_brush = nullptr;
 	FlagBrush* pvp_brush = nullptr;
+	TownTempleBrush* temple_brush = nullptr;
+	ZoneBrush* zone_brush = nullptr;
 
 	bool unserializeBorder(pugi::xml_node node, std::vector<std::string>& warnings);
 	bool unserializeBrush(pugi::xml_node node, std::vector<std::string>& warnings);
@@ -131,6 +141,8 @@ extern Brushes g_brushes;
 
 class Brush {
 public:
+	static constexpr uint32_t WILDCARD_ID = std::numeric_limits<uint32_t>::max();
+
 	Brush();
 	virtual ~Brush();
 
@@ -172,8 +184,14 @@ public:
 		return false;
 	}
 
+	virtual BrushCursor getCursor() const {
+		return BrushCursor::Default;
+	}
+
 	virtual int32_t getMaxVariation() const {
 		return 0;
+	}
+	virtual void setVariation(int32_t /*variation*/) {
 	}
 
 	template <typename T>

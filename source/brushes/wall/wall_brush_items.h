@@ -11,6 +11,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <unordered_map>
 
 class WallBrushItems {
 public:
@@ -61,6 +62,7 @@ public:
 private:
 	std::array<WallNode, WALL_ALIGNMENT_COUNT> wall_items;
 	std::array<std::vector<DoorItem>, WALL_ALIGNMENT_COUNT> door_items;
+	std::unordered_map<uint16_t, ::DoorType> door_type_map;
 };
 
 #endif

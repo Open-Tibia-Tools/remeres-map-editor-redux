@@ -15,13 +15,14 @@ class SpriteDrawer;
 class CreatureDrawer;
 class SpriteBatch;
 class PrimitiveRenderer;
+struct RenderFrameContext;
 
 class FloorDrawer {
 public:
 	FloorDrawer();
 	~FloorDrawer();
 
-	void draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options, BaseMap& map);
+	void draw(SpriteBatch& sprite_batch, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, const RenderView& view, const DrawingOptions& options, BaseMap& map, const RenderFrameContext* ctx);
 };
 
 #endif

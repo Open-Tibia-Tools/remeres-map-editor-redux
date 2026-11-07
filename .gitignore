@@ -1,7 +1,9 @@
 # ============================================================
 #  Build outputs
 # ============================================================
-/build*/
+/build*
+.wx_docs/
+tools/.wx_docs/
 build.log
 build_script.log
 build_output*.txt
@@ -120,3 +122,14 @@ compile_commands.json
 __pycache__/
 *.py[cod]
 *$py.class
+/tools/crystal_data
+/tools/cd2
+
+# Local agent runtime state (goals, loop logs): contains session ids
+/.opencode/
+linux_build/
+ninja.log
+conanbuild*.sh
+conanrun*.sh
+deactivate_conan*.sh
+CMakeUserPresets.json

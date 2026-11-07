@@ -16,21 +16,21 @@
 const wxString LightToolBar::PANE_NAME = "light_toolbar";
 
 LightToolBar::LightToolBar(wxWindow* parent) {
-	wxSize icon_size = FROM_DIP(parent, wxSize(16, 16));
+	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
 
-	toolbar = newd wxAuiToolBar(parent, TOOLBAR_LIGHT, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_HORZ_TEXT);
+	toolbar = new wxAuiToolBar(parent, TOOLBAR_LIGHT, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_HORZ_TEXT);
 	toolbar->SetToolBitmapSize(icon_size);
 
-	wxStaticText* intensity_label = newd wxStaticText(toolbar, wxID_ANY, "Server Light:");
-	server_light_intensity_slider = newd wxSlider(toolbar, ID_LIGHT_INTENSITY_SLIDER, g_gui.GetLightIntensity(), 0, 255, wxDefaultPosition, parent->FromDIP(wxSize(100, 20)));
+	wxStaticText* intensity_label = new wxStaticText(toolbar, wxID_ANY, "Server Light:");
+	server_light_intensity_slider = new wxSlider(toolbar, ID_LIGHT_INTENSITY_SLIDER, g_gui.GetLightIntensity(), 0, 255, wxDefaultPosition, parent->FromDIP(wxSize(100, 20)));
 	server_light_intensity_slider->SetToolTip("Server Light: world light intensity received from the server");
 
-	wxStaticText* ambient_label = newd wxStaticText(toolbar, wxID_ANY, "Client Light:");
-	client_brightness_slider = newd wxSlider(toolbar, ID_AMBIENT_LIGHT_SLIDER, static_cast<int>(g_gui.GetAmbientLightLevel() * 100.0f), 0, 100, wxDefaultPosition, parent->FromDIP(wxSize(100, 20)));
+	wxStaticText* ambient_label = new wxStaticText(toolbar, wxID_ANY, "Client Light:");
+	client_brightness_slider = new wxSlider(toolbar, ID_AMBIENT_LIGHT_SLIDER, static_cast<int>(g_gui.GetAmbientLightLevel() * 100.0f), 0, 100, wxDefaultPosition, parent->FromDIP(wxSize(100, 20)));
 	client_brightness_slider->SetToolTip("Client Light: minimum ambient light percentage");
 
-	wxStaticText* color_label = newd wxStaticText(toolbar, wxID_ANY, "Server Color:");
-	server_light_color_button = newd wxButton(toolbar, ID_SERVER_LIGHT_COLOR_BUTTON, "", wxDefaultPosition, parent->FromDIP(wxSize(64, 24)));
+	wxStaticText* color_label = new wxStaticText(toolbar, wxID_ANY, "Server Color:");
+	server_light_color_button = new wxButton(toolbar, ID_SERVER_LIGHT_COLOR_BUTTON, "", wxDefaultPosition, parent->FromDIP(wxSize(64, 24)));
 	server_light_color_button->SetToolTip("Server Color: world light color from the Tibia 8-bit palette");
 	UpdateServerLightColorButton();
 
@@ -44,7 +44,7 @@ LightToolBar::LightToolBar(wxWindow* parent) {
 	toolbar->AddControl(server_light_color_button);
 	toolbar->AddSeparator();
 
-	wxBitmap light_bitmap = IMAGE_MANAGER.GetBitmap(ICON_SUNNY, icon_size, wxColour(255, 235, 59));
+	wxBitmapBundle light_bitmap = IMAGE_MANAGER.GetBitmapBundle(ICON_SUNNY, wxColour(255, 235, 59));
 	toolbar->AddTool(ID_LIGHT_TOGGLE, "Toggle Lighting", light_bitmap, "Toggle Lighting", wxITEM_CHECK);
 	toolbar->ToggleTool(ID_LIGHT_TOGGLE, g_settings.getBoolean(Config::SHOW_LIGHTS));
 
@@ -67,8 +67,8 @@ LightToolBar::~LightToolBar() {
 
 void LightToolBar::UpdateServerLightColorButton() {
 	const int color_index = g_gui.GetServerLightColor();
-	server_light_color_button->SetBitmap(CreateLightColorSwatchBitmap(toolbar, color_index, wxSize(24, 16)));
-	server_light_color_button->SetLabel(wxstr(std::format(" {}", color_index)));
+	server_light_color_button->SetBitmap(CreateLightColorSwatchBitmap(toolbar, color_index, toolbar->FromDIP(wxSize(24, 16))));
+	server_light_color_button->SetLabelText(wxstr(std::format(" {}", color_index)));
 }
 
 void LightToolBar::OnServerLightIntensitySlider(wxCommandEvent& event) {

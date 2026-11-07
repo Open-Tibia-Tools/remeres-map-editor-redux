@@ -42,6 +42,9 @@ public:
 		minimap = mw;
 	}
 
+	[[nodiscard]] static wxAuiPaneInfo DefaultPaneInfo();
+	static void NormalizePaneInfo(wxAuiPaneInfo& info);
+
 private:
 	struct InvalidationKey {
 		const Map* map = nullptr;

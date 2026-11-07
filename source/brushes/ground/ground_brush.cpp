@@ -92,29 +92,19 @@ const GroundBrush::BorderBlock* GroundBrush::getBrushTo(GroundBrush* first, Grou
 			if (first->getZ() < second->getZ() && second->hasOuterBorder()) {
 				if (first->hasInnerBorder()) {
 					for (const auto& bb : first->borders) {
-						if (bb->outer) {
-							continue;
-						} else if (bb->to == second->getID() || bb->to == 0xFFFFFFFF) {
+						if (!bb->outer && bb->matches(second->getID())) {
 							return bb.get();
 						}
 					}
 				}
 				for (const auto& bb : second->borders) {
-					if (!bb->outer) {
-						continue;
-					} else if (bb->to == first->getID()) {
-						return bb.get();
-					} else if (bb->to == 0xFFFFFFFF) {
+					if (bb->outer && bb->matches(first->getID())) {
 						return bb.get();
 					}
 				}
 			} else if (first->hasInnerBorder()) {
 				for (const auto& bb : first->borders) {
-					if (bb->outer) {
-						continue;
-					} else if (bb->to == second->getID()) {
-						return bb.get();
-					} else if (bb->to == 0xFFFFFFFF) {
+					if (!bb->outer && bb->matches(second->getID())) {
 						return bb.get();
 					}
 				}

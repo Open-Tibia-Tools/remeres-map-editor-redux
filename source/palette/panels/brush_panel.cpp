@@ -16,14 +16,33 @@ BrushPanel::BrushPanel(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY),
 	tileset(nullptr),
 	brushbox(nullptr),
+	indicator_dogear(g_settings.getBoolean(Config::PALETTE_INDICATOR_DOGEAR)),
+	grid_spacing((g_settings.getInteger(Config::PALETTE_GRID_SPACING) == 2 || g_settings.getInteger(Config::PALETTE_GRID_SPACING) == 6) ? g_settings.getInteger(Config::PALETTE_GRID_SPACING) : 4),
 	loaded(false),
-	list_type(BRUSHLIST_LISTBOX) {
-	sizer = newd wxBoxSizer(wxVERTICAL);
+	list_type(BRUSHLIST_ICONS_32) {
+	sizer = new wxBoxSizer(wxVERTICAL);
 	SetSizerAndFit(sizer);
 }
 
 BrushPanel::~BrushPanel() {
 	////
+}
+
+void BrushPanel::SetDisplayMode(TilesetDisplayMode mode) {
+	if (mode == TilesetDisplayMode::List) {
+		list_type = BRUSHLIST_LISTBOX;
+	} else {
+		if (tile_size_px == 64) {
+			list_type = BRUSHLIST_ICONS_64;
+		} else if (tile_size_px == 128) {
+			list_type = BRUSHLIST_ICONS_128;
+		} else {
+			list_type = BRUSHLIST_ICONS_32;
+		}
+	}
+	if (brushbox) {
+		brushbox->SetDisplayMode(mode);
+	}
 }
 
 void BrushPanel::AssignTileset(const DynamicTilesetDefinition* _tileset) {
@@ -78,11 +97,11 @@ void BrushPanel::LoadContents() {
 		case BRUSHLIST_ICONS_32:
 		case BRUSHLIST_ICONS_64:
 		case BRUSHLIST_ICONS_128:
-			brushbox = newd VirtualBrushGrid(this, tileset, tile_size_px);
+			brushbox = new VirtualBrushGrid(this, tileset, tile_size_px);
 			break;
 		case BRUSHLIST_LISTBOX:
 		case BRUSHLIST_TEXT_LISTBOX: {
-			auto vbg = newd VirtualBrushGrid(this, tileset, tile_size_px);
+			auto vbg = new VirtualBrushGrid(this, tileset, tile_size_px);
 			vbg->SetDisplayMode(VirtualBrushGrid::DisplayMode::List);
 			brushbox = vbg;
 			break;
@@ -100,15 +119,21 @@ void BrushPanel::LoadContents() {
 	}
 	brushbox->SetShowLabels(show_labels);
 	brushbox->SetTileSize(tile_size_px);
+	if (auto* vbg = dynamic_cast<VirtualBrushGrid*>(brushbox)) {
+		vbg->SetBrushIndicators(indicator_dogear);
+		vbg->SetGridSpacing(grid_spacing);
+	}
 	if (!filter_query.empty() || has_override_brushes) {
 		brushbox->SetFilterQuery(filter_query, has_override_brushes ? &override_brushes : nullptr);
 	}
 
 	loaded = true;
-	sizer->Add(brushbox->GetSelfWindow(), 1, wxEXPAND);
+	sizer->Add(brushbox->GetSelfWindow(), wxSizerFlags(1).Expand());
 	Layout();
 	Fit();
-	brushbox->SelectFirstBrush();
+	if (const Brush* current = g_gui.GetCurrentBrush()) {
+		brushbox->SelectBrush(current);
+	}
 }
 
 void BrushPanel::SetSort(TilesetSortKey key, TilesetSortDirection dir) {
@@ -198,3 +223,18 @@ void BrushPanel::OnSwitchOut() {
 	////
 }
 
+
+
+void BrushPanel::SetBrushIndicators(bool dogEar) {
+	indicator_dogear = dogEar;
+	if (auto* vbg = dynamic_cast<VirtualBrushGrid*>(brushbox)) {
+		vbg->SetBrushIndicators(dogEar);
+	}
+}
+
+void BrushPanel::SetGridSpacing(int spacing) {
+	grid_spacing = spacing;
+	if (auto* vbg = dynamic_cast<VirtualBrushGrid*>(brushbox)) {
+		vbg->SetGridSpacing(spacing);
+	}
+}

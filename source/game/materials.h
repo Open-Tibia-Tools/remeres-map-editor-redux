@@ -22,6 +22,8 @@
 #include "game/material_database.h"
 
 class CreatureType;
+class RAWBrush;
+class CreatureBrush;
 
 class Materials {
 public:
@@ -33,6 +35,10 @@ public:
 	const MaterialsExtensionList& getExtensions();
 	MaterialsExtensionList getExtensionsByVersion(const ClientVersionID& version_id);
 
+	RAWBrush* ensureRawBrush(ServerItemId item_id);
+	void ensureAllRawBrushes();
+	CreatureBrush* ensureCreatureBrush(CreatureType* type);
+
 	[[nodiscard]] PaletteCatalog& paletteCatalog() {
 		return database.paletteCatalog();
 	}
@@ -41,12 +47,21 @@ public:
 		return database.paletteCatalog();
 	}
 
+	[[nodiscard]] MaterialDatabase& getDatabase() {
+		return database;
+	}
+
+	[[nodiscard]] const MaterialDatabase& getDatabase() const {
+		return database;
+	}
+
 	[[nodiscard]] PaletteBrushRegistrationResult registerImportedCreature(CreatureType& creature);
 
 	bool loadMaterials(const std::filesystem::path& identifier, std::string& error, std::vector<std::string>& warnings);
 	bool needSave() const {
 		return modified;
 	}
+
 
 	void modify(bool newValue = true) {
 		this->modified = newValue;

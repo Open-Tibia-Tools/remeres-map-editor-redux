@@ -61,6 +61,20 @@ public:
 		return true;
 	}
 
+	const TableBrushItems& getItems() const {
+		return items;
+	}
+
+	[[nodiscard]] uint16_t getPlacementItemId() const {
+		if (items.hasItems(0)) {
+			const auto& tn = items.getItems(0);
+			if (!tn.items.empty()) {
+				return tn.items.front().item_id;
+			}
+		}
+		return 0;
+	}
+
 protected:
 	TableBrushItems items;
 

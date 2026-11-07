@@ -22,11 +22,22 @@ struct MainMapVisibleRect {
 	double height = 0.0;
 };
 
+struct MainMapPixelPosition {
+	int map_x = 0;
+	int map_y = 0;
+	int pixel_x = 0;
+	int pixel_y = 0;
+};
+
 class MainMapViewMath {
 public:
 	static int GetFloorTileOffset(int floor);
 	static int WorldTileToScrollPixel(int tile, int floor);
 	static MainMapVisibleRect GetVisibleRect(const MainMapViewport& viewport);
+	static MainMapPixelPosition ScreenToMapPixel(
+		int screen_x,
+		int screen_y,
+		const MainMapViewport& viewport);
 	static void ScreenToMap(
 		int screen_x,
 		int screen_y,

@@ -12,10 +12,68 @@
 #include "map/map.h"
 #include "map/tile_operations.h"
 #include "brushes/ground/ground_brush.h"
+#include "brushes/wall/wall_brush.h"
+#include "brushes/door/door_brush.h"
 #include "game/creature.h"
+#include "game/item.h"
 #include "app/settings.h"
 
 #include "brushes/doodad/doodad_brush.h"
+
+
+namespace {
+
+	bool RotateSelectedTileContents(Tile& tile, bool clockwise, bool toggle_doors) {
+		bool changed = false;
+
+		if (tile.ground && tile.ground->isSelected() && tile.ground->isRoteable()) {
+			const ServerItemId old_id = tile.ground->getID();
+			if (clockwise) {
+				tile.ground->doRotate();
+			} else {
+				tile.ground->doRotateBackwards();
+			}
+			if (tile.ground->getID() != old_id) {
+				changed = true;
+			}
+		}
+
+		for (const auto& item : tile.items) {
+			if (!item || !item->isSelected()) {
+				continue;
+			}
+
+			const ServerItemId old_id = item->getID();
+			if (item->isBrushDoor()) {
+				if (toggle_doors) {
+					DoorBrush::switchDoor(item.get());
+				}
+			} else if (item->isRoteable()) {
+				if (clockwise) {
+					item->doRotate();
+				} else {
+					item->doRotateBackwards();
+				}
+			}
+
+			if (item->getID() != old_id) {
+				changed = true;
+			}
+		}
+
+		if (tile.creature && tile.creature->isSelected()) {
+			const Direction old_direction = tile.creature->getDirection();
+			const Direction new_direction = static_cast<Direction>((static_cast<int>(old_direction) + (clockwise ? 1 : 3)) % 4);
+			if (new_direction != old_direction) {
+				tile.creature->setDirection(new_direction);
+				changed = true;
+			}
+		}
+
+		return changed;
+	}
+
+}
 
 void SelectionOperations::doSurroundingBorders(DoodadBrush* doodad_brush, PositionList& tilestoborder, Tile* buffer_tile, Tile* new_tile) {
 	if (doodad_brush->doNewBorders() && g_settings.getInteger(Config::USE_AUTOMAGIC)) {
@@ -86,6 +144,36 @@ bool SelectionOperations::randomizeSelection(Editor& editor) {
 	return true;
 }
 
+bool SelectionOperations::rotateSelection(Editor& editor, bool clockwise) {
+	if (editor.selection.empty()) {
+		return false;
+	}
+
+	std::unique_ptr<Action> action = editor.actionQueue->createAction(ACTION_ROTATE);
+	bool changed = false;
+
+	for (Tile* tile : editor.selection) {
+		if (!tile) {
+			continue;
+		}
+
+		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
+		const bool tile_changed = RotateSelectedTileContents(*new_tile, clockwise, true);
+
+		if (tile_changed) {
+			action->addChange(std::make_unique<Change>(std::move(new_tile)));
+			changed = true;
+		}
+	}
+
+	if (!changed) {
+		return false;
+	}
+
+	editor.addAction(std::move(action));
+	return true;
+}
+
 void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 	std::unique_ptr<BatchAction> batchAction = editor.actionQueue->createBatch(ACTION_MOVE); // Our saved action batch, for undo!
 	std::unique_ptr<Action> action;
@@ -95,7 +183,7 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 	bool doborders = false;
 	TileSet tmp_storage;
 
-	// Update the tiles with the newd positions
+	// Update the tiles with the new positions
 	for (Tile* tile : editor.selection) {
 		// First we get the old tile and it's position
 
@@ -108,7 +196,7 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 		// This transfers ownership to the temporary tile
 		auto tile_selection = TileOperations::popSelectedItems(new_src_tile.get());
 		for (auto& item : tile_selection) {
-			// Add the copied item to the newd destination tile,
+			// Add the copied item to the new destination tile,
 			tmp_storage_tile->addItem(std::move(item));
 		}
 		// Move spawns
@@ -126,6 +214,8 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 			new_src_tile->house_id = 0;
 			tmp_storage_tile->setMapFlags(new_src_tile->getMapFlags());
 			new_src_tile->setMapFlags(TILESTATE_NONE);
+			tmp_storage_tile->setZoneIds(new_src_tile->getZoneIds());
+			new_src_tile->setZoneIds({});
 			doborders = true;
 		}
 
@@ -136,7 +226,7 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 	// Commit changes to map
 	batchAction->addAndCommitAction(std::move(action));
 
-	// Remove old borders (and create some newd?)
+	// Remove old borders (and create some new?)
 	if (g_settings.getInteger(Config::USE_AUTOMAGIC) && g_settings.getInteger(Config::BORDERIZE_DRAG) && editor.selection.size() < size_t(g_settings.getInteger(Config::BORDERIZE_DRAG_THRESHOLD))) {
 		action = editor.actionQueue->createAction(batchAction.get());
 		TileList borderize_tiles;
@@ -228,7 +318,7 @@ void SelectionOperations::moveSelection(Editor& editor, Position offset) {
 			} else {
 				new_dest_tile = editor.map.allocator(location);
 			}
-			TileOperations::merge(new_dest_tile.get(), tile);
+			TileOperations::merge(new_dest_tile.get(), tile, &editor.map);
 			// Removing old tile from memory since we merged it
 			delete tile;
 		} else {
@@ -356,6 +446,11 @@ DestroySelectionResult SelectionOperations::destroySelection(Editor& editor) {
 		for (auto& item : tile_selection) {
 			++item_count;
 			// Items are deleted when the unique_ptr in tile_selection goes out of scope
+		}
+
+		// Clear zones when deleting selected ground, matching cut and move behavior
+		if ((tile->ground && !newtile->ground) || newtile->empty()) {
+			newtile->setZoneIds({});
 		}
 
 		if (newtile->creature && newtile->creature->isSelected()) {

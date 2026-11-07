@@ -93,6 +93,7 @@ std::unique_ptr<Editor> EditorFactory::CreateEmpty(CopyBuffer& copybuffer) {
 	MapVersion mapVersion;
 	mapVersion.otbm = g_version.GetCurrentVersion().getPrefferedMapVersionID();
 	mapVersion.client = g_version.GetCurrentVersion().getProtocolID();
+	mapVersion.items_major = g_version.GetCurrentVersion().getOTBVersion().format_version;
 
 	std::unique_ptr<Editor> editor = std::make_unique<Editor>(copybuffer, mapVersion);
 	SetupCallbacks(editor.get());
@@ -107,6 +108,7 @@ std::unique_ptr<Editor> EditorFactory::LoadFromFile(
 	MapVersion mapVersion;
 	mapVersion.otbm = g_version.GetCurrentVersion().getPrefferedMapVersionID();
 	mapVersion.client = g_version.GetCurrentVersion().getProtocolID();
+	mapVersion.items_major = g_version.GetCurrentVersion().getOTBVersion().format_version;
 
 	std::unique_ptr<Editor> editor = std::make_unique<Editor>(copybuffer, mapVersion, fn, load_options, std::move(on_progress));
 	SetupCallbacks(editor.get());
@@ -117,6 +119,7 @@ std::unique_ptr<Editor> EditorFactory::JoinLive(CopyBuffer& copybuffer, std::uni
 	MapVersion mapVersion;
 	mapVersion.otbm = g_version.GetCurrentVersion().getPrefferedMapVersionID();
 	mapVersion.client = g_version.GetCurrentVersion().getProtocolID();
+	mapVersion.items_major = g_version.GetCurrentVersion().getOTBVersion().format_version;
 
 	std::unique_ptr<Editor> editor = std::make_unique<Editor>(copybuffer, mapVersion, std::move(client));
 	SetupCallbacks(editor.get());

@@ -36,11 +36,12 @@ public:
 	Map& GetCurrentMap();
 	int GetOpenMapCount();
 	bool ShouldSave();
-	void SaveCurrentMap(FileName filename, bool showdialog);
+	bool SaveCurrentMap(FileName filename, bool showdialog);
 	bool NewMap();
 	void OpenMap();
 	void SaveMap();
 	void SaveMapAs();
+	void SaveMapAsGzip();
 	bool LoadMap(const FileName& fileName, const MapLoadOptions& load_options = {});
 
 	// Edit operations

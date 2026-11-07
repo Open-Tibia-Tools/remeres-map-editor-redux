@@ -24,7 +24,10 @@
 #include "ui/gui.h"
 #include "editor/hotkey_manager.h"
 #include "editor/editor.h"
+#include "editor/operations/selection_operations.h"
 #include "brushes/brush.h"
+#include "brushes/town/town_temple_brush.h"
+#include "rendering/ui/popup_action_handler.h"
 
 void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 	switch (event.GetKeyCode()) {
@@ -91,7 +94,11 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 		case 'Z':
 		case 'x':
 		case 'X': {
-			HandleBrushVariation(canvas, event.GetKeyCode());
+			if (event.ControlDown() || event.AltDown()) {
+				event.Skip();
+				break;
+			}
+			HandleRotationOrVariation(canvas, event.GetKeyCode());
 			break;
 		}
 		case 'q':
@@ -115,6 +122,19 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 		case 'd':
 		case 'D': {
 			canvas->keyCode = WXK_CONTROL_D;
+			break;
+		}
+		case WXK_ESCAPE: {
+			if (g_gui.GetCurrentBrush() && g_gui.GetCurrentBrush()->is<TownTempleBrush>()) {
+				auto* temple_brush = g_gui.GetCurrentBrush()->as<TownTempleBrush>();
+				if (temple_brush && temple_brush->hasPlacementCallback()) {
+					temple_brush->invokeCancelCallback();
+				}
+				g_gui.SelectPreviousBrush();
+				g_gui.SetStatusText("Temple placement cancelled.");
+				break;
+			}
+			event.Skip();
 			break;
 		}
 		default: {
@@ -155,19 +175,58 @@ void KeyboardHandler::HandleBrushSizeChange(MapCanvas* canvas, int keycode) {
 }
 
 void KeyboardHandler::HandleBrushVariation(MapCanvas* canvas, int keycode) {
+	Brush* brush = g_gui.GetCurrentBrush();
+	if (!brush || brush->getMaxVariation() <= 0) {
+		return;
+	}
+
 	int nv = g_gui.GetBrushVariation();
 	if (keycode == 'z' || keycode == 'Z') {
-		--nv;
+		if (brush->is<DoodadBrush>()) {
+			nv = std::max(0, nv - 1);
+		} else {
+			--nv;
 		if (nv < 0) {
-			nv = std::max(0, (g_gui.GetCurrentBrush() ? g_gui.GetCurrentBrush()->getMaxVariation() - 1 : 0));
+			nv = brush->getMaxVariation() - 1;
+		}
 		}
 	} else {
-		++nv;
-		if (nv >= (g_gui.GetCurrentBrush() ? g_gui.GetCurrentBrush()->getMaxVariation() : 0)) {
-			nv = 0;
+		if (brush->is<DoodadBrush>()) {
+			++nv;
+		} else {
+			++nv;
+			if (nv >= brush->getMaxVariation()) {
+				nv = 0;
+			}
 		}
 	}
 	g_gui.SetBrushVariation(nv);
+	canvas->RequestLocalRefresh();
+}
+
+void KeyboardHandler::HandleRotationOrVariation(MapCanvas* canvas, int keycode) {
+	const bool backwards = (keycode == 'z' || keycode == 'Z');
+	const bool clockwise = !backwards;
+
+	if (SelectionOperations::rotateSelection(canvas->editor, clockwise)) {
+		canvas->RequestLocalRefresh();
+		return;
+	}
+
+	if (!canvas->editor.selection.empty()) {
+		canvas->RequestLocalRefresh();
+		return;
+	}
+
+	if (g_gui.IsDrawingMode()) {
+		Brush* brush = g_gui.GetCurrentBrush();
+		if (brush && brush->getMaxVariation() > 0) {
+			HandleBrushVariation(canvas, keycode);
+			return;
+		}
+	}
+
+	PopupActionHandler::RotateItemAt(canvas->editor, canvas->GetCursorPosition(), backwards);
 	canvas->RequestLocalRefresh();
 }
 
@@ -199,7 +258,7 @@ void KeyboardHandler::HandleHotkeys(MapCanvas* canvas, wxKeyEvent& event) {
 			g_gui.SetSelectionMode();
 			static_cast<MapWindow*>(canvas->GetParent())->SetScreenCenterPosition(hk.GetPosition());
 
-			g_gui.SetStatusText("Used hotkey " + i2ws(index));
+			g_gui.SetStatusText("Used hotkey " + std::to_string(index));
 			canvas->RequestLocalRefresh();
 		} else if (hk.IsBrush()) {
 			g_gui.SetDrawingMode();
@@ -216,10 +275,10 @@ void KeyboardHandler::HandleHotkeys(MapCanvas* canvas, wxKeyEvent& event) {
 				return;
 			}
 
-			g_gui.SetStatusText("Used hotkey " + i2ws(index));
+			g_gui.SetStatusText("Used hotkey " + std::to_string(index));
 			canvas->RequestLocalRefresh();
 		} else {
-			g_gui.SetStatusText("Unassigned hotkey " + i2ws(index));
+			g_gui.SetStatusText("Unassigned hotkey " + std::to_string(index));
 		}
 	}
 }

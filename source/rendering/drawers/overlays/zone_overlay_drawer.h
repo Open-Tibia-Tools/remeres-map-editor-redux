@@ -1,0 +1,176 @@
+#ifndef RME_RENDERING_DRAWERS_OVERLAYS_ZONE_OVERLAY_DRAWER_H_
+#define RME_RENDERING_DRAWERS_OVERLAYS_ZONE_OVERLAY_DRAWER_H_
+
+#include "rendering/indicators/zone_cluster_finder.h"
+
+class SpriteBatch;
+struct RenderView;
+class Map;
+class BaseMap;
+struct DrawingOptions;
+class AtlasManager;
+class Tile;
+
+namespace rme::rendering {
+
+/**
+ * @brief Editor-wide LOD policy cutoff: beyond 10x zoom-out (zoom <= 10%, view.zoom > 10.0f),
+ *        all zone overlays, text labels, and dynamic entities are culled.
+ */
+inline constexpr float kZoomLODCutoff = 10.0f;
+
+/**
+ * @brief Spawn detail LOD threshold: beyond ~15% zoom (view.zoom > 6.67f),
+ *        individual 1px/2px borders and center flame badges become subpixel and illegible.
+ *        In this range, spawns are rendered with simplified, high-throughput area fill quads.
+ */
+inline constexpr float kSpawnLODDetailThreshold = 1.0f / 0.15f; // ~6.6667f
+
+/**
+ * @brief Default fallback coarse radius for spawn AABB culling.
+ */
+inline constexpr int kMaxCoarseRadius = 128;
+
+/**
+ * @brief Dedicated OpenGL Overlay Drawer for:
+ *        - Special Zones (PZ, No-PvP, No-Logout, PvP Zone) with 1px outer connected borders
+ *        - Pathing / Blocking (red wash + 1px outer connected borders)
+ *        - Spawns (bounding boxes + center badges)
+ *
+ * Ground washes are rendered in pass 3/4, while cluster and spawn badges are rendered in
+ * pass 7 on top of dynamic entities and static structures.
+ */
+class ZoneOverlayDrawer {
+public:
+	ZoneOverlayDrawer() = default;
+	~ZoneOverlayDrawer() = default;
+
+	void drawFloor(SpriteBatch& sprite_batch,
+	               int z,
+	               const RenderView& view,
+	               const Map& map,
+	               const BaseMap* secondary_map,
+	               const DrawingOptions& options,
+	               const AtlasManager& atlas);
+
+	void drawFloorBlocking(SpriteBatch& sprite_batch,
+	                       int z,
+	                       const RenderView& view,
+	                       const Map& map,
+	                       const BaseMap* secondary_map,
+	                       const DrawingOptions& options,
+	                       const AtlasManager& atlas);
+
+	void drawFloorHouses(SpriteBatch& sprite_batch,
+	                     int z,
+	                     const RenderView& view,
+	                     const Map& map,
+	                     const BaseMap* secondary_map,
+	                     const DrawingOptions& options,
+	                     const AtlasManager& atlas);
+
+	// OTBM 5 zones (Canary / Crystal Server): translucent fill colored per zone id plus outer borders; the zone brush's id is emphasized
+	void drawFloorZones(SpriteBatch& sprite_batch,
+	                    int z,
+	                    const RenderView& view,
+	                    const Map& map,
+	                    const BaseMap* secondary_map,
+	                    const DrawingOptions& options,
+	                    const AtlasManager& atlas);
+
+	void drawFloorHighlightItems(SpriteBatch& sprite_batch,
+	                             int z,
+	                             const RenderView& view,
+	                             const Map& map,
+	                             const BaseMap* secondary_map,
+	                             const DrawingOptions& options,
+	                             const AtlasManager& atlas);
+
+	void drawFloorBadges(SpriteBatch& sprite_batch,
+	                     int z,
+	                     const RenderView& view,
+	                     const Map& map,
+	                     const BaseMap* secondary_map,
+	                     const DrawingOptions& options,
+	                     const AtlasManager& atlas);
+
+	void drawFloorWaypoints(SpriteBatch& sprite_batch,
+	                       int z,
+	                       const RenderView& view,
+	                       const Map& map,
+	                       const DrawingOptions& options,
+	                       const AtlasManager& atlas);
+
+private:
+	ZoneClusterFinder cluster_finder_;
+
+	struct PendingZoneQuad {
+		float x = 0.0f;
+		float y = 0.0f;
+		uint32_t flags = 0;
+		float depth = 0.0f;
+	};
+
+	struct PendingSpawnQuad {
+		float x = 0.0f;
+		float y = 0.0f;
+		float w = 0.0f;
+		float h = 0.0f;
+		float alpha = 0.0f;
+		uint32_t flags = 0;
+		float depth = 0.0f;
+	};
+
+	struct PendingBorderQuad {
+		float x = 0.0f;
+		float y = 0.0f;
+		uint32_t flags = 0;
+		float depth = 0.0f;
+	};
+
+	struct PendingHighlightQuad {
+		float x = 0.0f;
+		float y = 0.0f;
+		uint32_t flags = 0;
+		float depth = 0.0f;
+	};
+
+	// Contiguous reusable buffers across render frames (DOD): 1 byte per tile (4-bit zone mask)
+	// instead of a 16-byte pointer+bools struct.
+	std::vector<uint8_t> row_prev_;
+	std::vector<uint8_t> row_curr_;
+	std::vector<uint8_t> row_next_;
+	std::vector<VisibleZoneTile> visible_zone_tiles_;
+	std::vector<PendingZoneQuad> alpha_zone_quads_;
+	std::vector<PendingZoneQuad> mult_zone_quads_;
+	std::vector<PendingZoneQuad> border_zone_quads_;
+
+	std::vector<PendingSpawnQuad> alpha_spawn_quads_;
+	std::vector<PendingSpawnQuad> mult_spawn_quads_;
+	std::vector<PendingSpawnQuad> spawn_borders_;
+	std::vector<PendingSpawnQuad> spawn_badges_;
+
+	std::vector<uint8_t> blocking_row_prev_;
+	std::vector<uint8_t> blocking_row_curr_;
+	std::vector<uint8_t> blocking_row_next_;
+	std::vector<PendingBorderQuad> blocking_border_quads_;
+
+	std::vector<uint32_t> house_row_prev_;
+	std::vector<uint32_t> house_row_curr_;
+	std::vector<uint32_t> house_row_next_;
+	std::vector<PendingBorderQuad> house_border_quads_;
+
+	struct ZoneRowCell {
+		uint16_t primary = 0;
+		uint16_t secondary = 0;
+	};
+	std::vector<ZoneRowCell> zone_row_prev_;
+	std::vector<ZoneRowCell> zone_row_curr_;
+	std::vector<ZoneRowCell> zone_row_next_;
+
+	std::vector<PendingHighlightQuad> highlight_quads_;
+};
+
+} // namespace rme::rendering
+
+#endif // RME_RENDERING_DRAWERS_OVERLAYS_ZONE_OVERLAY_DRAWER_H_

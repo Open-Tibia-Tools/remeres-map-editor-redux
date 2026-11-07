@@ -1,3 +1,4 @@
+#include "ui/dialog_util.h"
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -13,23 +14,22 @@
 const wxString PositionToolBar::PANE_NAME = "position_toolbar";
 
 PositionToolBar::PositionToolBar(wxWindow* parent) {
-	wxSize icon_size = FROM_DIP(parent, wxSize(16, 16));
-	wxBitmap go_bitmap = IMAGE_MANAGER.GetBitmap(ICON_LOCATION_ARROW, icon_size);
+	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
 
-	toolbar = newd wxAuiToolBar(parent, TOOLBAR_POSITION, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_HORZ_TEXT);
+	toolbar = new wxAuiToolBar(parent, TOOLBAR_POSITION, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE | wxAUI_TB_HORZ_TEXT);
 	toolbar->SetToolBitmapSize(icon_size);
 
-	x_control = newd NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_WIDTH, wxTE_PROCESS_ENTER, "X", wxDefaultPosition, FROM_DIP(parent, wxSize(60, 20)));
+	x_control = new NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_WIDTH, wxTE_PROCESS_ENTER, "X", wxDefaultPosition, parent->FromDIP(wxSize(60, 20)));
 	x_control->SetToolTip("X Coordinate");
 
-	y_control = newd NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_HEIGHT, wxTE_PROCESS_ENTER, "Y", wxDefaultPosition, FROM_DIP(parent, wxSize(60, 20)));
+	y_control = new NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_HEIGHT, wxTE_PROCESS_ENTER, "Y", wxDefaultPosition, parent->FromDIP(wxSize(60, 20)));
 	y_control->SetToolTip("Y Coordinate");
 
-	z_control = newd NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_LAYER, wxTE_PROCESS_ENTER, "Z", wxDefaultPosition, FROM_DIP(parent, wxSize(35, 20)));
+	z_control = new NumberTextCtrl(toolbar, wxID_ANY, 0, 0, MAP_MAX_LAYER, wxTE_PROCESS_ENTER, "Z", wxDefaultPosition, parent->FromDIP(wxSize(35, 20)));
 	z_control->SetToolTip("Z Coordinate");
 
-	go_button = newd wxButton(toolbar, TOOLBAR_POSITION_GO, wxEmptyString, wxDefaultPosition, parent->FromDIP(wxSize(22, 20)));
-	go_button->SetBitmap(go_bitmap);
+	go_button = new wxButton(toolbar, TOOLBAR_POSITION_GO, wxEmptyString, wxDefaultPosition, parent->FromDIP(wxSize(22, 20)));
+	go_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_LOCATION_ARROW));
 	go_button->SetToolTip("Go To Position");
 
 	toolbar->AddControl(x_control);
@@ -82,6 +82,8 @@ void PositionToolBar::OnGoClick(wxCommandEvent& event) {
 		Position pos(x_control->GetIntValue(), y_control->GetIntValue(), z_control->GetIntValue());
 		if (pos.isValid()) {
 			g_gui.SetScreenCenterPosition(pos);
+		} else {
+			DialogUtil::ShowRichToolTip("Invalid Coordinates", "Coordinates are out of bounds for the current map.", go_button, nullptr, wxICON_WARNING);
 		}
 	}
 }
@@ -101,6 +103,8 @@ void PositionToolBar::OnKeyUp(wxKeyEvent& event) {
 		Position pos(x_control->GetIntValue(), y_control->GetIntValue(), z_control->GetIntValue());
 		if (pos.isValid()) {
 			g_gui.SetScreenCenterPosition(pos);
+		} else {
+			DialogUtil::ShowRichToolTip("Invalid Coordinates", "Coordinates are out of bounds for the current map.", go_button, nullptr, wxICON_WARNING);
 		}
 	}
 	event.Skip();

@@ -38,6 +38,8 @@ protected:
 
 	wxStaticBoxSizer* text_sizer;
 	wxTextCtrl* text_ctrl;
+	wxStaticText* item_info_label = nullptr;
 };
+
 
 #endif

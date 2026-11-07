@@ -4,6 +4,7 @@
 #include "brushes/creature/creature_brush.h"
 #include "brushes/raw/raw_brush.h"
 #include "game/creatures.h"
+#include "game/materials.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "rendering/core/game_sprite.h"
 #include "ui/gui.h"
@@ -366,7 +367,7 @@ namespace {
 		if (sprite && sprite->hasLight()) {
 			mask |= advancedFinderBit(AdvancedFinderVisualFilter::HasLight);
 		}
-		if (sprite && (sprite->animator != nullptr || sprite->frames > 1)) {
+		if (sprite && (sprite->isAnimated() || sprite->frames > 1)) {
 			mask |= advancedFinderBit(AdvancedFinderVisualFilter::Animation);
 		}
 		if (definition.attribute(ItemAttributeKey::AlwaysOnTopOrder) > 0) {
@@ -414,6 +415,18 @@ AdvancedFinderPersistedState LoadAdvancedFinderPersistedState() {
 		std::max(680, g_settings.getInteger(Config::ADVANCED_ITEM_FINDER_WINDOW_HEIGHT))
 	);
 
+	state.view_mode = g_settings.getInteger(Config::ADVANCED_ITEM_FINDER_VIEW_MODE);
+	state.icon_size = g_settings.getInteger(Config::ADVANCED_ITEM_FINDER_ICON_SIZE);
+	if (state.icon_size != 64 && state.icon_size != 128) {
+		state.icon_size = 32;
+	}
+	state.grid_spacing = g_settings.getInteger(Config::ADVANCED_ITEM_FINDER_GRID_SPACING);
+	if (state.grid_spacing != 2 && state.grid_spacing != 6) {
+		state.grid_spacing = 4;
+	}
+	state.indicator_dogear = (g_settings.getInteger(Config::ADVANCED_ITEM_FINDER_INDICATOR_DOGEAR) != 0);
+	state.show_labels = (g_settings.getInteger(Config::ADVANCED_ITEM_FINDER_SHOW_LABELS) != 0);
+
 	return state;
 }
 
@@ -434,6 +447,11 @@ void SaveAdvancedFinderPersistedState(const AdvancedFinderPersistedState& state)
 	if (state.size.IsFullySpecified()) {
 		g_settings.setInteger(Config::ADVANCED_ITEM_FINDER_WINDOW_WIDTH, state.size.GetWidth());
 		g_settings.setInteger(Config::ADVANCED_ITEM_FINDER_WINDOW_HEIGHT, state.size.GetHeight());
+		g_settings.setInteger(Config::ADVANCED_ITEM_FINDER_VIEW_MODE, state.view_mode);
+		g_settings.setInteger(Config::ADVANCED_ITEM_FINDER_ICON_SIZE, state.icon_size);
+		g_settings.setInteger(Config::ADVANCED_ITEM_FINDER_GRID_SPACING, state.grid_spacing);
+		g_settings.setInteger(Config::ADVANCED_ITEM_FINDER_INDICATOR_DOGEAR, state.indicator_dogear ? 1 : 0);
+		g_settings.setInteger(Config::ADVANCED_ITEM_FINDER_SHOW_LABELS, state.show_labels ? 1 : 0);
 	}
 }
 
@@ -442,12 +460,18 @@ std::vector<AdvancedFinderCatalogRow> BuildAdvancedFinderCatalog(bool include_cr
 	catalog.reserve(g_item_definitions.allIds().size() + (include_creatures ? 256 : 0));
 
 	for (const ServerItemId id : g_item_definitions.allIds()) {
+		if (id < 100) {
+			continue;
+		}
 		const auto definition = g_item_definitions.get(id);
 		if (!definition) {
 			continue;
 		}
 
 		RAWBrush* raw_brush = definition.editorData().raw_brush;
+		if (raw_brush == nullptr) {
+			raw_brush = g_materials.ensureRawBrush(id);
+		}
 		if (raw_brush == nullptr) {
 			continue;
 		}
@@ -468,9 +492,10 @@ std::vector<AdvancedFinderCatalogRow> BuildAdvancedFinderCatalog(bool include_cr
 		if (row.server_id != 0) {
 			row.search_terms.push_back(std::to_string(row.server_id));
 		}
-		if (row.client_id != 0) {
+		if (row.client_id != 0 && row.client_id != row.server_id) {
 			row.search_terms.push_back(std::to_string(row.client_id));
 		}
+
 		row.type_mask = buildTypeMask(definition);
 		row.property_mask = buildPropertyMask(definition);
 		row.interaction_mask = buildInteractionMask(definition);
@@ -615,11 +640,12 @@ std::vector<Brush*> FilterBrushesWithAdvancedFinder(const std::vector<Brush*>& b
 		} else {
 			row.kind = AdvancedFinderCatalogKind::Item;
 			row.label = brush->getName();
-			row.server_id = static_cast<ServerItemId>(brush->getID());
+			row.server_id = 0;
 			if (brush->getLookID() != 0) {
 				row.client_id = static_cast<ClientItemId>(brush->getLookID());
 			}
 		}
+
 
 		row.lower_label = as_lower_str(row.label);
 		row.name_tokens = tokenizeLower(row.lower_label);

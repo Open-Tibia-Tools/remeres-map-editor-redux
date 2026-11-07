@@ -476,7 +476,6 @@ class ConverterFrame(wx.Frame):
             return
 
         path = Path(raw_val)
-        self.source_path = path
         info = inspect_source_path(path)
 
         if not info["is_valid"]:
@@ -486,6 +485,12 @@ class ConverterFrame(wx.Frame):
             self.choice_inspect_version.Clear()
             self._clear_views()
             return
+
+        resolved_str = str(info.get("resolved_path", path))
+        resolved_path = Path(resolved_str)
+        self.source_path = resolved_path
+        if resolved_path != path:
+            self.txt_source.ChangeValue(resolved_str)
 
         self.is_single_version = bool(info["is_single_version"])
         self.discovered_versions = list(info["versions"])  # type: ignore[arg-type]
@@ -596,19 +601,23 @@ class ConverterFrame(wx.Frame):
             # Describe role
             name = f["name"].lower()
             role = "Data file"
-            if name == "materials.xml":
+            if name.endswith("materials.xml"):
                 role = "Main Manifest (includes)"
-            elif name in ("items.xml", "items2.xml"):
+            elif "items.xml" in name or "items2.xml" in name:
                 role = "Item Registry"
-            elif name == "creatures.xml":
+            elif "creatures.xml" in name:
                 role = "Creature Registry"
-            elif name == "items.otb":
+            elif "monsters.xml" in name:
+                role = "Monster Registry"
+            elif "npcs.xml" in name:
+                role = "NPC Registry"
+            elif name.endswith("items.otb"):
                 role = "OTB Binary Items"
-            elif name == "tilesets.xml":
+            elif "tileset" in name:
                 role = "Tileset Wrappers"
             elif "palette" in name:
                 role = "Legacy Palette"
-            elif name in ("grounds.xml", "walls.xml", "doodads.xml", "borders.xml"):
+            elif any(k in name for k in ("grounds", "walls", "doodads", "borders", "brush")):
                 role = "Brushes & Borders"
             self.list_before_files.SetItem(idx, 2, role)
 
@@ -619,9 +628,11 @@ class ConverterFrame(wx.Frame):
         ) or "  • None (clean XML parsing)"
 
         metaitems_str = ", ".join(str(m) for m in details["metaitems"]) or "None"  # type: ignore[union-attr]
+        layout = details.get("structure_layout", "Standard Legacy Flat Layout")
 
         stats = [
             f"Version Folder: {details['version']}",
+            f"Layout Style: {layout}",
             f"Files Present: {len(details['files'])} file(s)",  # type: ignore[arg-type]
             f"Included Manifest Files: {len(details['include_files'])} file(s)",  # type: ignore[arg-type]
             f"Metaitems: {metaitems_str}",

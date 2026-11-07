@@ -53,6 +53,10 @@
 #include <wx/snglinst.h>
 #include <wx/stdpaths.h>
 #include <spdlog/spdlog.h>
+#ifdef __WINDOWS__
+#include <timeapi.h>
+#pragma comment(lib, "winmm.lib")
+#endif
 #include <chrono>
 #include <thread>
 
@@ -68,6 +72,9 @@ Application::~Application() {
 }
 
 bool Application::OnInit() {
+#ifdef __WINDOWS__
+	timeBeginPeriod(1);
+#endif
 #if defined __DEBUG_MODE__ && defined __WINDOWS__
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
@@ -146,7 +153,7 @@ bool Application::OnInit() {
 
 
 #ifdef _USE_PROCESS_COM
-	m_single_instance_checker = newd wxSingleInstanceChecker; // Instance checker has to stay alive throughout the applications lifetime
+	m_single_instance_checker = new wxSingleInstanceChecker; // Instance checker has to stay alive throughout the applications lifetime
 	if (g_settings.getInteger(Config::ONLY_ONE_INSTANCE) && m_single_instance_checker->IsAnotherRunning()) {
 		RMEProcessClient client;
 		wxLogNull nolog; // Prevent wxWidgets popup dialog on connection failure
@@ -173,11 +180,11 @@ bool Application::OnInit() {
 			// Recreate the instance checker so this instance holds exclusive ownership.
 			spdlog::warn("Another instance was reported running but IPC connection failed. Reacquiring instance checker.");
 			wxDELETE(m_single_instance_checker);
-			m_single_instance_checker = newd wxSingleInstanceChecker;
+			m_single_instance_checker = new wxSingleInstanceChecker;
 		}
 	}
 	// We act as server then
-	m_proc_server = newd RMEProcessServer();
+	m_proc_server = new RMEProcessServer();
 	if (!m_proc_server->Create("rme_host")) {
 		wxLogWarning("Could not register IPC service!");
 	}
@@ -202,7 +209,7 @@ bool Application::OnInit() {
 	m_file_to_open = wxEmptyString;
 	ParseCommandLineMap(m_file_to_open);
 
-	g_gui.root = newd MainFrame(__W_RME_APPLICATION_NAME__, wxDefaultPosition, wxSize(700, 500));
+	g_gui.root = new MainFrame(__W_RME_APPLICATION_NAME__, wxDefaultPosition, wxWindow::FromDIP(wxSize(700, 500), nullptr));
 	SetTopWindow(g_gui.root);
 	g_gui.SetTitle("");
 
@@ -263,11 +270,15 @@ bool Application::OnInit() {
 	if (std::filesystem::exists(save_failed_file)) {
 		std::ifstream f(save_failed_file, std::ios::in);
 
-		std::string backup_otbm, backup_house, backup_spawn;
+		std::string backup_otbm, backup_house, backup_spawn, backup_monster, backup_npc, backup_zone, backup_waypoint;
 
 		getline(f, backup_otbm);
 		getline(f, backup_house);
 		getline(f, backup_spawn);
+		getline(f, backup_monster);
+		getline(f, backup_npc);
+		getline(f, backup_zone);
+		getline(f, backup_waypoint);
 
 		// Remove the file
 		f.close();
@@ -275,31 +286,40 @@ bool Application::OnInit() {
 
 		// Query file retrieval if possible
 		if (!backup_otbm.empty()) {
+			wxString files_msg = wxstr(backup_otbm);
+			if (!backup_house.empty()) files_msg << "\n" << wxstr(backup_house);
+			if (!backup_spawn.empty()) files_msg << "\n" << wxstr(backup_spawn);
+			if (!backup_monster.empty()) files_msg << "\n" << wxstr(backup_monster);
+			if (!backup_npc.empty()) files_msg << "\n" << wxstr(backup_npc);
+			if (!backup_zone.empty()) files_msg << "\n" << wxstr(backup_zone);
+			if (!backup_waypoint.empty()) files_msg << "\n" << wxstr(backup_waypoint);
+
 			long ret = DialogUtil::PopupDialog(
 				"Editor Crashed",
 				wxString(
 					"IMPORTANT! THE EDITOR CRASHED WHILE SAVING!\n\n"
 					"Do you want to recover the lost map? (it will be opened immediately):\n"
-				) << wxstr(backup_otbm)
-				  << "\n"
-				  << wxstr(backup_house) << "\n"
-				  << wxstr(backup_spawn) << "\n",
+				) << files_msg,
 				wxYES | wxNO
 			);
 
 			if (ret == wxID_YES) {
 				// Recover if the user so wishes
-				std::remove(backup_otbm.substr(0, backup_otbm.size() - 1).c_str());
-				std::rename(backup_otbm.c_str(), backup_otbm.substr(0, backup_otbm.size() - 1).c_str());
+				auto restoreFile = [](const std::string& path) {
+					if (!path.empty() && path.back() == '~') {
+						std::string target = path.substr(0, path.size() - 1);
+						std::remove(target.c_str());
+						std::rename(path.c_str(), target.c_str());
+					}
+				};
 
-				if (!backup_house.empty()) {
-					std::remove(backup_house.substr(0, backup_house.size() - 1).c_str());
-					std::rename(backup_house.c_str(), backup_house.substr(0, backup_house.size() - 1).c_str());
-				}
-				if (!backup_spawn.empty()) {
-					std::remove(backup_spawn.substr(0, backup_spawn.size() - 1).c_str());
-					std::rename(backup_spawn.c_str(), backup_spawn.substr(0, backup_spawn.size() - 1).c_str());
-				}
+				restoreFile(backup_otbm);
+				restoreFile(backup_house);
+				restoreFile(backup_spawn);
+				restoreFile(backup_monster);
+				restoreFile(backup_npc);
+				restoreFile(backup_zone);
+				restoreFile(backup_waypoint);
 
 				// Load the map
 				g_gui.LoadMap(FileName(backup_otbm.substr(0, backup_otbm.size() - 1)));
@@ -376,7 +396,7 @@ void Application::Unload() {
 #endif
 
 	g_gui.CloseAllEditors();
-	g_version.UnloadVersion();
+	g_version.UnloadVersion(true);
 	g_hotkeys.SaveHotkeys();
 	g_gui.root->SaveRecentFiles();
 	ClientVersion::saveVersions();
@@ -391,6 +411,9 @@ void Application::Unload() {
 }
 
 int Application::OnExit() {
+#ifdef __WINDOWS__
+	timeEndPeriod(1);
+#endif
 	// Shutdown Lua scripting system
 	g_luaScripts.shutdown();
 

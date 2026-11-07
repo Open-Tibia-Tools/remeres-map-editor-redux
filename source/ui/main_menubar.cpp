@@ -22,17 +22,19 @@
 #include "ui/gui.h"
 #include "ui/tool_options_window.h"
 #include "ui/tile_properties/tile_properties_panel.h"
+#include "ui/brush_items/brush_items_window.h"
+#include "ui/managers/search_manager.h"
 
 #include "map/map_statistics.h"
 #include "map/map_search.h"
 #include "ui/managers/recent_files_manager.h"
-#include "ui/map/towns_window.h"
 #include "ui/map/map_properties_window.h"
 
 #include "ui/about_window.h"
 #include "ui/dat_debug_view.h"
 #include "ui/menubar_loader.h"
 #include "ui/map_statistics_dialog.h"
+#include "rendering/core/floor_visibility_mode.h"
 #include "ui/live_dialogs.h"
 
 #include "ui/extension_window.h"
@@ -71,13 +73,13 @@ MainMenuBar::MainMenuBar(MainFrame* frame) :
 	fileMenuHandler = new FileMenuHandler(frame, this);
 	navigationMenuHandler = new NavigationMenuHandler(frame, this);
 	paletteMenuHandler = new PaletteMenuHandler(frame, this);
-	scriptMenuHandler = newd ScriptMenuHandler(frame);
+	scriptMenuHandler = new ScriptMenuHandler(frame);
 
 	MenuBarActionManager::RegisterActions(this, actions);
 
 	// Don't use a custom deleter that deletes us back!
 	// MainFrame owns MainMenuBar via std::unique_ptr.
-	menubar = newd wxMenuBar();
+	menubar = new wxMenuBar();
 	frame->SetMenuBar(menubar);
 
 	// Tie all events to this handler!
@@ -130,6 +132,7 @@ void MainMenuBar::CheckItem(MenuBar::ActionID id, bool enable) {
 	checking_programmaticly = false;
 }
 
+
 bool MainMenuBar::IsItemChecked(MenuBar::ActionID id) const {
 	auto fi = items.find(id);
 	if (fi == items.end()) {
@@ -153,6 +156,7 @@ void MainMenuBar::Update() {
 
 	paletteMenuHandler->RefreshPaletteMenu();
 	MenuBarActionManager::UpdateState(this);
+	UpdateFloorMenu();
 }
 
 void MainMenuBar::LoadValues() {
@@ -170,6 +174,12 @@ void MainMenuBar::UpdateFloorMenu() {
 			CheckItem(MenuBar::ActionID(MenuBar::FLOOR_0 + g_gui.GetCurrentFloor()), true);
 		}
 	}
+
+	const bool show_all_floors = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
+	const auto floor_visibility_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
+	CheckItem(MenuBar::SHOW_ALL_FLOORS, show_all_floors);
+	CheckItem(MenuBar::SHOW_ALL_FLOORS_CLIENT, show_all_floors && floor_visibility_mode == FloorVisibilityMode::ClientVisible);
+	CheckItem(MenuBar::SHOW_ALL_FLOORS_ALL, show_all_floors && floor_visibility_mode == FloorVisibilityMode::AllVisible);
 }
 
 bool MainMenuBar::Load(const FileName& path, std::vector<std::string>& warnings, wxString& error) {
@@ -212,6 +222,10 @@ void MainMenuBar::OnSave(wxCommandEvent& event) {
 
 void MainMenuBar::OnSaveAs(wxCommandEvent& event) {
 	fileMenuHandler->OnSaveAs(event);
+}
+
+void MainMenuBar::OnSaveAsGzip(wxCommandEvent& event) {
+	fileMenuHandler->OnSaveAsGzip(event);
 }
 
 void MainMenuBar::OnPreferences(wxCommandEvent& event) {
@@ -320,6 +334,18 @@ void MainMenuBar::OnSearchForWriteableOnMap(wxCommandEvent& event) {
 	searchHandler->OnSearchForWriteableOnMap(event);
 }
 
+void MainMenuBar::OnSearchForTeleportOnMap(wxCommandEvent& event) {
+	searchHandler->OnSearchForTeleportOnMap(event);
+}
+
+void MainMenuBar::OnSearchForCreatureOnMap(wxCommandEvent& event) {
+	searchHandler->OnSearchForCreatureOnMap(event);
+}
+
+void MainMenuBar::OnSearchForPickupableOnMap(wxCommandEvent& event) {
+	searchHandler->OnSearchForPickupableOnMap(event);
+}
+
 void MainMenuBar::OnSearchForStuffOnSelection(wxCommandEvent& event) {
 	searchHandler->OnSearchForStuffOnSelection(event);
 }
@@ -340,6 +366,18 @@ void MainMenuBar::OnSearchForWriteableOnSelection(wxCommandEvent& event) {
 	searchHandler->OnSearchForWriteableOnSelection(event);
 }
 
+void MainMenuBar::OnSearchForTeleportOnSelection(wxCommandEvent& event) {
+	searchHandler->OnSearchForTeleportOnSelection(event);
+}
+
+void MainMenuBar::OnSearchForCreatureOnSelection(wxCommandEvent& event) {
+	searchHandler->OnSearchForCreatureOnSelection(event);
+}
+
+void MainMenuBar::OnSearchForPickupableOnSelection(wxCommandEvent& event) {
+	searchHandler->OnSearchForPickupableOnSelection(event);
+}
+
 void MainMenuBar::OnSearchForItemOnSelection(wxCommandEvent& event) {
 	searchHandler->OnSearchForItemOnSelection(event);
 }
@@ -354,6 +392,10 @@ void MainMenuBar::OnRemoveItemOnSelection(wxCommandEvent& event) {
 
 void MainMenuBar::OnSelectionTypeChange(wxCommandEvent& event) {
 	viewSettingsHandler->OnSelectionTypeChange(event);
+}
+
+void MainMenuBar::OnSelectionMethodChange(wxCommandEvent& event) {
+	viewSettingsHandler->OnSelectionMethodChange(event);
 }
 
 void MainMenuBar::OnCopy(wxCommandEvent& WXUNUSED(event)) {
@@ -425,11 +467,7 @@ void MainMenuBar::OnMapCleanHouseItems(wxCommandEvent& event) {
 }
 
 void MainMenuBar::OnMapEditTowns(wxCommandEvent& WXUNUSED(event)) {
-	if (g_gui.GetCurrentEditor()) {
-		wxDialog* town_dialog = newd EditTownsDialog(frame, *g_gui.GetCurrentEditor());
-		town_dialog->ShowModal();
-		town_dialog->Destroy();
-	}
+	g_gui.SelectPalettePage("Town");
 }
 
 void MainMenuBar::OnMapEditItems(wxCommandEvent& WXUNUSED(event)) {
@@ -444,6 +482,10 @@ void MainMenuBar::OnMapStatistics(wxCommandEvent& WXUNUSED(event)) {
 	MapStatisticsDialog::Show(frame);
 }
 
+void MainMenuBar::OnMapValidateSpawns(wxCommandEvent& event) {
+	mapActionsHandler->OnMapValidateSpawns(event);
+}
+
 void MainMenuBar::OnMapCleanup(wxCommandEvent& event) {
 	mapActionsHandler->OnMapCleanup(event);
 }
@@ -453,7 +495,7 @@ void MainMenuBar::OnMapCleanInvalidZones(wxCommandEvent& event) {
 }
 
 void MainMenuBar::OnMapProperties(wxCommandEvent& WXUNUSED(event)) {
-	wxDialog* properties = newd MapPropertiesWindow(
+	wxDialog* properties = new MapPropertiesWindow(
 		frame,
 		static_cast<MapTab*>(g_gui.GetCurrentTab()),
 		*g_gui.GetCurrentEditor()
@@ -530,7 +572,24 @@ void MainMenuBar::OnToolOptionsWindow(wxCommandEvent& event) {
 }
 
 void MainMenuBar::OnIngamePreviewWindow(wxCommandEvent& event) {
-	g_preview.Create();
+	if (g_preview.IsVisible()) {
+		g_preview.Hide();
+	} else {
+		g_preview.Create();
+	}
+}
+
+void MainMenuBar::OnBrushItemsWindow(wxCommandEvent& event) {
+	if (g_gui.brush_items_window) {
+		wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.brush_items_window);
+		if (info.IsShown()) {
+			info.Hide();
+		} else {
+			info.Show();
+			g_gui.brush_items_window->SetActiveBrush(g_gui.GetCurrentBrush());
+		}
+		g_gui.aui_manager->Update();
+	}
 }
 
 void MainMenuBar::OnTilePropertiesWindow(wxCommandEvent& event) {
@@ -543,6 +602,11 @@ void MainMenuBar::OnTilePropertiesWindow(wxCommandEvent& event) {
 		}
 		g_gui.aui_manager->Update();
 	}
+}
+
+
+void MainMenuBar::OnSearchResultsWindow(wxCommandEvent& WXUNUSED(event)) {
+	g_search.ShowSearchWindow();
 }
 
 void MainMenuBar::OnNewPalette(wxCommandEvent& event) {

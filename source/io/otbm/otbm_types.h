@@ -44,8 +44,9 @@ enum OTBM_ItemAttribute : uint8_t {
 	OTBM_ATTR_SLEEPSTART = 21,
 	OTBM_ATTR_CHARGES = 22,
 
-	// Canary RME (parse without loading only)
+	// Canary / CrystalServer RME (parse without loading only)
 	OTBM_ATTR_EXT_SPAWN_NPC_FILE = 23,
+	OTBM_ATTR_EXT_ZONE_FILE = 24,
 
 	OTBM_ATTR_PODIUMOUTFIT = 40,
 	OTBM_ATTR_TIER = 41,
@@ -69,6 +70,9 @@ enum OTBM_NodeTypes_t : uint8_t {
 	OTBM_HOUSETILE = 14,
 	OTBM_WAYPOINTS = 15,
 	OTBM_WAYPOINT = 16,
+	// OTBM 5 format (Canary / Crystal Server): u16 count, followed by count * u16 zone id.
+	// NOTE: Classic TFS 1.x / OTBM 1-4 does NOT support this node; incompatible with TFS custom zone systems.
+	OTBM_TILE_ZONE = 19,
 };
 
 enum class OTBMWriteResult {

@@ -1,9 +1,43 @@
 #include "ui/theme.h"
+#include "brushes/brush.h"
+#include "brushes/ground/ground_brush.h"
+#include "brushes/wall/wall_brush.h"
+#include "brushes/doodad/doodad_brush.h"
+#include "brushes/door/door_brush.h"
+#include "brushes/border/optional_border_brush.h"
+#include "brushes/table/table_brush.h"
+#include "brushes/carpet/carpet_brush.h"
 
 Theme::Type Theme::current_type = Theme::Type::System;
 
 void Theme::setType(Theme::Type type) {
 	current_type = type;
+
+	if (wxTheApp) {
+#if wxCHECK_VERSION(3, 3, 0)
+		switch (type) {
+			case Type::Dark:
+				wxTheApp->SetAppearance(wxApp::Appearance::Dark);
+#ifdef __WXMSW__
+				wxTheApp->MSWEnableDarkMode(wxApp::DarkMode_Always);
+#endif
+				break;
+			case Type::Light:
+				wxTheApp->SetAppearance(wxApp::Appearance::Light);
+				break;
+			case Type::System:
+			default:
+				wxTheApp->SetAppearance(wxApp::Appearance::System);
+#ifdef __WXMSW__
+				wxTheApp->MSWEnableDarkMode(wxApp::DarkMode_Auto);
+#endif
+				break;
+		}
+#endif
+		if (wxWindow* top = wxTheApp->GetTopWindow()) {
+			top->Refresh();
+		}
+	}
 }
 
 Theme::Type Theme::getType() {
@@ -90,26 +124,66 @@ wxColour Theme::GetDark(Role role) {
 			return wxColour(100, 149, 237); // Cornflower Blue
 		case Role::TooltipDoorId:
 			return wxColour(0, 139, 139); // Dark Cyan
+		case Role::TooltipDepotId:
+			return wxColour(0, 206, 209); // Cyan
 		case Role::TooltipTextValue:
 			return wxColour(255, 215, 0); // Gold
 		case Role::TooltipTeleport:
 			return wxColour(186, 85, 211); // Medium Orchid
 		case Role::TooltipWaypoint:
-			return wxColour(50, 205, 50); // Lime Green
+			return wxColour(0, 160, 255); // Vivid Blue
 		case Role::TooltipBodyText:
 			return wxColour(220, 220, 220); // Light Gray
 		case Role::TooltipCountText:
 			return wxColour(200, 200, 200); // Light Gray
 		case Role::TooltipBorderWaypoint:
-			return wxColour(50, 205, 50); // Lime Green
 		case Role::TooltipBorderItem:
-			return wxColour(58, 58, 64); // Charcoal
 		case Role::TooltipBorderDoor:
-			return wxColour(139, 69, 19); // Saddle Brown
 		case Role::TooltipBorderTeleport:
-			return wxColour(153, 50, 204); // Dark Orchid
 		case Role::TooltipBorderText:
-			return wxColour(218, 165, 32); // Goldenrod
+		case Role::TooltipBorderHouse:
+		case Role::TooltipBorderZone:
+			return wxColour(58, 58, 64); // Standardized Charcoal Gray
+		case Role::TooltipWindowBg:
+			return wxColour(24, 26, 30);
+		case Role::TooltipWindowOutline:
+			return wxColour(13, 14, 16);
+		case Role::TooltipWindowBevelLight:
+			return wxColour(48, 52, 60);
+		case Role::TooltipWindowBevelDark:
+			return wxColour(14, 15, 17);
+		case Role::TooltipSlotBg:
+			return wxColour(18, 20, 24);
+		case Role::TooltipSlotBevelLight:
+			return wxColour(52, 56, 64);
+		case Role::TooltipSlotBevelDark:
+			return wxColour(14, 15, 17);
+		case Role::TooltipDividerLight:
+			return wxColour(46, 50, 58);
+		case Role::TooltipDividerDark:
+			return wxColour(14, 15, 17);
+		case Role::TooltipTextWellBg:
+			return wxColour(16, 17, 20);
+		case Role::TooltipTitleText:
+			return wxColour(255, 255, 255);
+		case Role::TooltipSubtitleText:
+			return wxColour(160, 165, 175);
+		case Role::BrushCategoryGround:
+			return wxColour(85, 230, 85);
+		case Role::BrushCategoryWall:
+			return wxColour(180, 185, 230);
+		case Role::BrushCategoryWallDecoration:
+			return wxColour(95, 175, 255);
+		case Role::BrushCategoryDoor:
+			return wxColour(255, 175, 55);
+		case Role::BrushCategoryDoodad:
+			return wxColour(255, 225, 45);
+		case Role::BrushCategoryTable:
+			return wxColour(225, 145, 70);
+		case Role::BrushCategoryCarpet:
+			return wxColour(225, 90, 235);
+		case Role::BrushCategoryDefaultRaw:
+			return wxColour(150, 155, 165);
 		default:
 			return *wxWHITE;
 	}
@@ -178,6 +252,8 @@ wxColour Theme::GetLight(Role role) {
 			return wxColour(30, 80, 180); // Dark Blue
 		case Role::TooltipDoorId:
 			return wxColour(0, 100, 100); // Teal
+		case Role::TooltipDepotId:
+			return wxColour(0, 130, 130); // Deep Teal
 		case Role::TooltipTextValue:
 			return wxColour(50, 50, 50); // Near Black
 		case Role::TooltipTeleport:
@@ -189,16 +265,82 @@ wxColour Theme::GetLight(Role role) {
 		case Role::TooltipCountText:
 			return wxColour(60, 60, 60); // Dark Gray
 		case Role::TooltipBorderWaypoint:
-			return wxColour(50, 205, 50); // Lime Green
 		case Role::TooltipBorderItem:
-			return wxColour(58, 58, 64); // Charcoal
 		case Role::TooltipBorderDoor:
-			return wxColour(139, 69, 19); // Saddle Brown
 		case Role::TooltipBorderTeleport:
-			return wxColour(153, 50, 204); // Dark Orchid
 		case Role::TooltipBorderText:
-			return wxColour(218, 165, 32); // Goldenrod
+		case Role::TooltipBorderHouse:
+		case Role::TooltipBorderZone:
+			return wxColour(80, 80, 88); // Standardized Charcoal Gray (Light)
+		case Role::TooltipWindowBg:
+			return wxColour(235, 236, 240);
+		case Role::TooltipWindowOutline:
+			return wxColour(120, 122, 130);
+		case Role::TooltipWindowBevelLight:
+			return wxColour(255, 255, 255);
+		case Role::TooltipWindowBevelDark:
+			return wxColour(170, 172, 180);
+		case Role::TooltipSlotBg:
+			return wxColour(215, 216, 222);
+		case Role::TooltipSlotBevelLight:
+			return wxColour(255, 255, 255);
+		case Role::TooltipSlotBevelDark:
+			return wxColour(160, 162, 170);
+		case Role::TooltipDividerLight:
+			return wxColour(255, 255, 255);
+		case Role::TooltipDividerDark:
+			return wxColour(170, 172, 180);
+		case Role::TooltipTextWellBg:
+			return wxColour(225, 226, 230);
+		case Role::TooltipTitleText:
+			return wxColour(20, 20, 24);
+		case Role::TooltipSubtitleText:
+			return wxColour(90, 95, 105);
+		case Role::BrushCategoryGround:
+			return wxColour(30, 155, 40);
+		case Role::BrushCategoryWall:
+			return wxColour(110, 115, 165);
+		case Role::BrushCategoryWallDecoration:
+			return wxColour(30, 125, 235);
+		case Role::BrushCategoryDoor:
+			return wxColour(215, 100, 10);
+		case Role::BrushCategoryDoodad:
+			return wxColour(185, 125, 0);
+		case Role::BrushCategoryTable:
+			return wxColour(165, 95, 30);
+		case Role::BrushCategoryCarpet:
+			return wxColour(175, 40, 195);
+		case Role::BrushCategoryDefaultRaw:
+			return wxColour(120, 125, 135);
 		default:
 			return *wxBLACK;
 	}
+}
+
+Theme::Role Theme::GetBrushCategoryRole(const Brush* brush) {
+	if (!brush) {
+		return Role::BrushCategoryDefaultRaw;
+	}
+	if (brush->is<GroundBrush>() || brush->is<OptionalBorderBrush>()) {
+		return Role::BrushCategoryGround;
+	}
+	if (brush->is<WallDecorationBrush>()) {
+		return Role::BrushCategoryWallDecoration;
+	}
+	if (brush->is<WallBrush>()) {
+		return Role::BrushCategoryWall;
+	}
+	if (brush->is<DoorBrush>()) {
+		return Role::BrushCategoryDoor;
+	}
+	if (brush->is<DoodadBrush>()) {
+		return Role::BrushCategoryDoodad;
+	}
+	if (brush->is<TableBrush>()) {
+		return Role::BrushCategoryTable;
+	}
+	if (brush->is<CarpetBrush>()) {
+		return Role::BrushCategoryCarpet;
+	}
+	return Role::BrushCategoryDefaultRaw;
 }

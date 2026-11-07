@@ -9,7 +9,7 @@
 #include <algorithm>
 
 bool MapConverter::convert(Map& map, MapVersion to) {
-	if (map.mapVersion.client == to.client) {
+	if (map.mapVersion.client == to.client && map.mapVersion.items_major == to.items_major) {
 		// Only OTBM version differs
 		// No changes necessary
 		map.mapVersion = to;

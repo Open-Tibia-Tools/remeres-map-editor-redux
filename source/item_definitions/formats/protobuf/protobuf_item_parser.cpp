@@ -12,16 +12,6 @@
 namespace {
 	using namespace canary::protobuf::appearances;
 
-	constexpr uint64_t flagMask(ItemFlag flag) {
-		return uint64_t { 1 } << static_cast<uint8_t>(flag);
-	}
-
-	void setMappedFlag(uint64_t& flags, bool enabled, ItemFlag flag) {
-		if (enabled) {
-			flags |= flagMask(flag);
-		}
-	}
-
 	const FrameGroup* selectFrameGroup(const Appearance& appearance) {
 		const FrameGroup* fallback = nullptr;
 		for (const auto& frame_group : appearance.frame_group()) {
@@ -153,7 +143,6 @@ namespace {
 			fragment.flags |= flagMask(ItemFlag::AlwaysOnBottom);
 		}
 		if (flags.clip()) {
-			fragment.flags |= flagMask(ItemFlag::IsBorder);
 			fragment.always_on_top_order = 1;
 		} else if (flags.bottom()) {
 			fragment.always_on_top_order = 2;
@@ -256,8 +245,16 @@ namespace {
 
 		DatAnimationInfo animation_info;
 		animation_info.asynchronous = !animation.synchronized();
-		animation_info.loop_count = static_cast<int>(animation.loop_count());
-		animation_info.start_frame = static_cast<int8_t>(animation.default_start_phase());
+		if (animation.has_loop_type() && animation.loop_type() == ANIMATION_LOOP_TYPE_PINGPONG) {
+			animation_info.loop_count = -1;
+		} else {
+			animation_info.loop_count = static_cast<int>(animation.loop_count());
+		}
+		if (animation.random_start_phase()) {
+			animation_info.start_frame = 255;
+		} else {
+			animation_info.start_frame = static_cast<int16_t>(animation.default_start_phase());
+		}
 		animation_info.frame_durations.reserve(animation.sprite_phase_size());
 		for (const auto& phase : animation.sprite_phase()) {
 			animation_info.frame_durations.push_back(DatAnimationFrameDuration {

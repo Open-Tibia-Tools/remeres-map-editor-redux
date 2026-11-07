@@ -17,6 +17,7 @@
 
 #include "app/main.h"
 #include "lua_dialog.h"
+#include "ui/dialog_util.h"
 #include "lua_api_image.h"
 #include "ui/gui.h"
 #include "item_definitions/core/item_definition_store.h"
@@ -105,6 +106,11 @@ public:
 	CustomButton(wxWindow* parent, wxWindowID id, const wxString& label, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0) :
 		wxControl(parent, id, pos, size, style | wxBORDER_NONE), m_label(label) {
 		SetBackgroundStyle(wxBG_STYLE_PAINT);
+		Bind(wxEVT_PAINT, &CustomButton::OnPaint, this);
+		Bind(wxEVT_ENTER_WINDOW, &CustomButton::OnEnter, this);
+		Bind(wxEVT_LEAVE_WINDOW, &CustomButton::OnLeave, this);
+		Bind(wxEVT_LEFT_DOWN, &CustomButton::OnDown, this);
+		Bind(wxEVT_LEFT_UP, &CustomButton::OnUp, this);
 	}
 
 	void SetHoverColors(const wxColour& bg, const wxColour& fg) {
@@ -220,16 +226,7 @@ private:
 		}
 	}
 
-	DECLARE_EVENT_TABLE()
 };
-
-BEGIN_EVENT_TABLE(CustomButton, wxControl)
-EVT_PAINT(CustomButton::OnPaint)
-EVT_ENTER_WINDOW(CustomButton::OnEnter)
-EVT_LEAVE_WINDOW(CustomButton::OnLeave)
-EVT_LEFT_DOWN(CustomButton::OnDown)
-EVT_LEFT_UP(CustomButton::OnUp)
-END_EVENT_TABLE()
 
 // Specialized Canvas for Lua Dialogs
 // Specialized Canvas for Lua Dialogs
@@ -437,32 +434,14 @@ private:
 	int client_w = ClientMapWidth;
 	int client_h = ClientMapHeight;
 
-	DECLARE_EVENT_TABLE()
 };
-
-BEGIN_EVENT_TABLE(MapPreviewCanvas, MapCanvas)
-EVT_MOTION(MapPreviewCanvas::OnMouseMove)
-EVT_MOUSEWHEEL(MapPreviewCanvas::OnWheel)
-EVT_ENTER_WINDOW(MapPreviewCanvas::OnGainMouse)
-EVT_LEAVE_WINDOW(MapPreviewCanvas::OnLoseMouse)
-EVT_LEFT_DOWN(MapPreviewCanvas::OnMouseLeftClick)
-EVT_LEFT_UP(MapPreviewCanvas::OnMouseLeftRelease)
-EVT_RIGHT_DOWN(MapPreviewCanvas::OnMouseRightClick)
-EVT_RIGHT_UP(MapPreviewCanvas::OnMouseRightRelease)
-EVT_MIDDLE_DOWN(MapPreviewCanvas::OnMouseCenterClick)
-EVT_MIDDLE_UP(MapPreviewCanvas::OnMouseCenterRelease)
-EVT_PAINT(MapCanvas::OnPaint)
-END_EVENT_TABLE()
-
-BEGIN_EVENT_TABLE(LuaDialog, wxDialog)
-EVT_CLOSE(LuaDialog::OnClose)
-END_EVENT_TABLE()
 
 LuaDialog::LuaDialog(const std::string& title, sol::this_state ts) :
 	wxDialog(g_gui.root, wxID_ANY, wxString(title), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
 	lua(ts) {
 	SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 	SetForegroundColour(Theme::Get(Theme::Role::Text));
+	Bind(wxEVT_CLOSE_WINDOW, &LuaDialog::OnClose, this);
 	createLayout();
 }
 
@@ -473,6 +452,7 @@ LuaDialog::LuaDialog(sol::table options, sol::this_state ts) :
 
 	SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 	SetForegroundColour(Theme::Get(Theme::Role::Text));
+	Bind(wxEVT_CLOSE_WINDOW, &LuaDialog::OnClose, this);
 
 	reqWidth = options.get_or(std::string("width"), -1);
 	reqHeight = options.get_or(std::string("height"), -1);
@@ -506,7 +486,7 @@ LuaDialog::LuaDialog(sol::table options, sol::this_state ts) :
 		if (reqWidth != -1 || reqHeight != -1) {
 			info.BestSize(wxSize(reqWidth != -1 ? reqWidth : 300, reqHeight != -1 ? reqHeight : 200));
 		} else {
-			info.BestSize(wxSize(300, 200));
+			info.BestSize(FromDIP(wxSize(300, 200)));
 		}
 
 		info.Dockable(true).Floatable(true);
@@ -554,7 +534,7 @@ void LuaDialog::createLayout() {
 void LuaDialog::ensureRowSizer() {
 	if (!currentRowSizer) {
 		currentRowSizer = new wxBoxSizer(wxHORIZONTAL);
-		getSizerForWidget()->Add(currentRowSizer, 0, wxEXPAND | wxALL, 5);
+		getSizerForWidget()->Add(currentRowSizer, wxSizerFlags().Expand().Border(wxALL, 5));
 	}
 }
 
@@ -592,7 +572,7 @@ LuaDialog* LuaDialog::wrap(sol::table options) {
 	currentRowSizer = nullptr;
 
 	wxBoxSizer* sizer = new wxBoxSizer(options.get_or(std::string("orient"), "horizontal"s) == "horizontal" ? wxHORIZONTAL : wxVERTICAL);
-	getSizerForWidget()->Add(sizer, 1, wxEXPAND | wxALL, 0);
+	getSizerForWidget()->Add(sizer, wxSizerFlags(1).Expand().Border(wxALL, 0));
 	sizerStack.push(sizer);
 
 	return this;
@@ -747,7 +727,7 @@ LuaDialog* LuaDialog::mapCanvas(sol::table options) {
 
 	Editor* editor = g_gui.GetCurrentEditor();
 	if (!editor) {
-		wxMessageBox("You must have a map open to use the Map Canvas widget.", "Error", wxOK | wxICON_ERROR);
+		DialogUtil::PopupDialog("Error", "You must have a map open to use the Map Canvas widget.", wxOK | wxICON_ERROR);
 		return this;
 	}
 
@@ -756,14 +736,14 @@ LuaDialog* LuaDialog::mapCanvas(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	// Create the canvas
 	MapPreviewCanvas* canvas = new MapPreviewCanvas(getParentForWidget(), *editor);
 
 	// Smaller default size to keep the window compact
-	canvas->SetMinSize(wxSize(200, 150));
+	canvas->SetMinSize(FromDIP(wxSize(200, 150)));
 
 	// Default to center of map start
 	canvas->SetPosition(1000, 1000, 7);
@@ -792,7 +772,7 @@ LuaDialog* LuaDialog::input(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	wxTextCtrl* input = new wxTextCtrl(getParentForWidget(), wxID_ANY, wxString(text), wxDefaultPosition, wxSize(150, -1));
@@ -844,7 +824,7 @@ LuaDialog* LuaDialog::number(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	wxSpinCtrlDouble* spin = new wxSpinCtrlDouble(getParentForWidget(), wxID_ANY, "", wxDefaultPosition, wxSize(100, -1), wxSP_ARROW_KEYS, minVal, maxVal, value, decimals == 0 ? 1 : std::pow(0.1, decimals));
@@ -881,7 +861,7 @@ LuaDialog* LuaDialog::slider(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	wxSlider* slider = new wxSlider(getParentForWidget(), wxID_ANY, value, minVal, maxVal, wxDefaultPosition, wxSize(150, -1));
@@ -988,7 +968,7 @@ LuaDialog* LuaDialog::combobox(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	wxChoice* choice = new wxChoice(getParentForWidget(), wxID_ANY, wxDefaultPosition, wxSize(150, -1), choices);
@@ -1123,7 +1103,7 @@ LuaDialog* LuaDialog::color(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	wxColourPickerCtrl* picker = new wxColourPickerCtrl(getParentForWidget(), wxID_ANY, defaultColor);
@@ -1520,7 +1500,7 @@ LuaDialog* LuaDialog::list(sol::table options) {
 		try {
 			listLeftClick(this, info);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 		event.Skip();
 	});
@@ -1555,7 +1535,7 @@ LuaDialog* LuaDialog::list(sol::table options) {
 		try {
 			listRightClick(this, info);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 		event.Skip();
 	});
@@ -1819,7 +1799,7 @@ LuaDialog* LuaDialog::tab(sol::table options) {
 	if (!currentNotebook) {
 		wxWindow* parent = dockPanel ? static_cast<wxWindow*>(dockPanel) : static_cast<wxWindow*>(this);
 		currentNotebook = new wxNotebook(parent, wxID_ANY);
-		mainSizer->Add(currentNotebook, 1, wxEXPAND | wxALL, 5);
+		mainSizer->Add(currentNotebook, wxSizerFlags(1).Expand().Border(wxALL, 5));
 		activeNotebook = currentNotebook;
 		tabInfos.clear();
 		notebookEventsBound = false;
@@ -1985,7 +1965,7 @@ void LuaDialog::handleTabButtonClick(int index) {
 	try {
 		onclick(this, info);
 	} catch (const sol::error& e) {
-		wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+		DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 	}
 }
 
@@ -2021,7 +2001,7 @@ void LuaDialog::popupContextMenu(const sol::function& callback, sol::table info,
 	try {
 		result = callback(this, info);
 	} catch (const sol::error& e) {
-		wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+		DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		return;
 	}
 
@@ -2081,7 +2061,7 @@ void LuaDialog::popupContextMenu(const sol::function& callback, sol::table info,
 		try {
 			it->second(this, info);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 	});
 
@@ -2193,7 +2173,7 @@ void LuaDialog::close() {
 			try {
 				oncloseCallback();
 			} catch (const sol::error& e) {
-				wxMessageBox(wxString("Script error in onclose: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+				DialogUtil::PopupDialog("Lua Error", wxString("Script error in onclose: ") + e.what(), wxOK | wxICON_ERROR);
 			}
 		}
 		return;
@@ -2209,7 +2189,7 @@ void LuaDialog::close() {
 		try {
 			oncloseCallback();
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error in onclose: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error in onclose: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 	}
 }
@@ -2229,7 +2209,7 @@ void LuaDialog::OnClose(wxCloseEvent& event) {
 		try {
 			oncloseCallback();
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error in onclose: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error in onclose: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 	}
 
@@ -2295,7 +2275,7 @@ LuaDialog* LuaDialog::modify(sol::table options) {
 				} else if (widget.type == "label") {
 					wxStaticText* ctrl = static_cast<wxStaticText*>(widget.widget);
 					if (props["text"].valid()) {
-						ctrl->SetLabel(wxString(props.get_or(std::string("text"), ""s)));
+						ctrl->SetLabelText(wxString(props.get_or(std::string("text"), ""s)));
 					}
 				} else if (widget.type == "combobox") {
 					wxChoice* ctrl = static_cast<wxChoice*>(widget.widget);
@@ -2602,11 +2582,11 @@ LuaDialog* LuaDialog::grid(sol::table options) {
 
 	if (!labelText.empty()) {
 		wxStaticText* label = new wxStaticText(getParentForWidget(), wxID_ANY, wxString(labelText));
-		currentRowSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+		currentRowSizer->Add(label, wxSizerFlags().CenterVertical().Border(wxRIGHT, 5));
 	}
 
 	// Use LuaGridCtrl in Icon mode for grid view
-	LuaGridCtrl* grid = new LuaGridCtrl(getParentForWidget(), wxID_ANY, wxDefaultPosition, wxSize(300, 200), wxLC_ICON | wxLC_AUTOARRANGE | wxLC_SINGLE_SEL);
+	LuaGridCtrl* grid = new LuaGridCtrl(getParentForWidget(), wxID_ANY, wxDefaultPosition, FromDIP(wxSize(300, 200)), wxLC_ICON | wxLC_AUTOARRANGE | wxLC_SINGLE_SEL);
 
 	// Create an image list
 	wxImageList* imageList = new wxImageList(iconWidth, iconHeight, true);
@@ -2742,7 +2722,7 @@ LuaDialog* LuaDialog::grid(sol::table options) {
 		try {
 			gridLeftClick(this, info);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 		event.Skip();
 	});
@@ -2774,7 +2754,7 @@ LuaDialog* LuaDialog::grid(sol::table options) {
 		try {
 			gridRightClick(this, info);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 		event.Skip();
 	});
@@ -3143,7 +3123,7 @@ void LuaDialog::onWidgetChange(const std::string& id) {
 		try {
 			onchange(this);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 	}
 }
@@ -3165,7 +3145,7 @@ void LuaDialog::onButtonClick(const std::string& id) {
 		try {
 			onclick(this);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 		return; // onclick handles closing if needed
 	}
@@ -3193,7 +3173,7 @@ void LuaDialog::onWidgetDoubleClick(const std::string& id) {
 		try {
 			ondoubleclick(this);
 		} catch (const sol::error& e) {
-			wxMessageBox(wxString("Script error: ") + e.what(), "Lua Error", wxOK | wxICON_ERROR);
+			DialogUtil::PopupDialog("Lua Error", wxString("Script error: ") + e.what(), wxOK | wxICON_ERROR);
 		}
 	}
 }

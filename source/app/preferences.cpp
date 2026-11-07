@@ -24,7 +24,7 @@
 #include "util/image_manager.h"
 
 PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelected) :
-	wxDialog(parent, wxID_ANY, "Preferences", wxDefaultPosition, wxSize(980, 720), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER) {
+	wxDialog(parent, wxID_ANY, "Preferences", wxDefaultPosition, parent ? parent->FromDIP(wxSize(980, 720)) : wxSize(980, 720), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER) {
 	SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 	SetMinSize(wxSize(FromDIP(860), FromDIP(640)));
 
@@ -33,25 +33,29 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 	book = new wxListbook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBK_LEFT);
 	book->SetBackgroundColour(Theme::Get(Theme::Role::PanelBackground));
 
-	auto* image_list = new wxImageList(18, 18);
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_GEAR, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_PEN_TO_SQUARE, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_IMAGE, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_WINDOW_MAXIMIZE, wxSize(18, 18)));
-	image_list->Add(IMAGE_MANAGER.GetBitmap(ICON_GAMEPAD, wxSize(18, 18)));
-	book->AssignImageList(image_list);
+	const wxVector<wxBitmapBundle> images = {
+		IMAGE_MANAGER.GetBitmapBundle(ICON_GEAR),
+		IMAGE_MANAGER.GetBitmapBundle(ICON_PEN_TO_SQUARE),
+		IMAGE_MANAGER.GetBitmapBundle(ICON_IMAGE),
+		IMAGE_MANAGER.GetBitmapBundle(ICON_WINDOW_MAXIMIZE),
+		IMAGE_MANAGER.GetBitmapBundle(ICON_GAMEPAD),
+		IMAGE_MANAGER.GetBitmapBundle(ICON_SERVER)
+	};
+	book->SetImages(images);
 
 	general_page = new GeneralPage(book);
 	editor_page = new EditorPage(book);
 	graphics_page = new GraphicsPage(book);
 	interface_page = new InterfacePage(book);
 	client_version_page = new ClientVersionPage(book);
+	map_compatibility_page = new MapCompatibilityPage(book);
 
 	book->AddPage(general_page, "General", false, 0);
 	book->AddPage(editor_page, "Editor", false, 1);
 	book->AddPage(graphics_page, "Graphics", false, 2);
 	book->AddPage(interface_page, "Interface", false, 3);
 	book->AddPage(client_version_page, "Client Version", false, 4);
+	book->AddPage(map_compatibility_page, "Compatibility", false, 5);
 	book->SetSelection(clientVersionSelected ? 4 : 0);
 
 	if (auto* list_view = book->GetListView()) {
@@ -61,24 +65,24 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 		list_view->SetColumnWidth(0, FromDIP(150));
 	}
 
-	sizer->Add(book, 1, wxEXPAND | wxALL, FromDIP(10));
+	sizer->Add(book, wxSizerFlags(1).Expand().DoubleBorder(wxALL));
 
 	auto* footer_sizer = new wxBoxSizer(wxHORIZONTAL);
 	footer_sizer->AddStretchSpacer();
 
 	auto* ok_button = new wxButton(this, wxID_OK, "OK");
-	ok_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
-	footer_sizer->Add(ok_button, 0, wxRIGHT, FromDIP(8));
+	ok_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
+	footer_sizer->Add(ok_button, wxSizerFlags().DoubleBorder(wxRIGHT));
 
 	auto* cancel_button = new wxButton(this, wxID_CANCEL, "Cancel");
-	cancel_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
-	footer_sizer->Add(cancel_button, 0, wxRIGHT, FromDIP(8));
+	cancel_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
+	footer_sizer->Add(cancel_button, wxSizerFlags().DoubleBorder(wxRIGHT));
 
 	auto* apply_button = new wxButton(this, wxID_APPLY, "Apply");
-	apply_button->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_SYNC, wxSize(16, 16)));
+	apply_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_SYNC));
 	footer_sizer->Add(apply_button, 0);
 
-	sizer->Add(footer_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	sizer->Add(footer_sizer, wxSizerFlags().Expand().DoubleBorder(wxLEFT | wxRIGHT | wxBOTTOM));
 	SetSizer(sizer);
 
 	const int width = g_settings.getInteger(Config::PREFERENCES_WINDOW_WIDTH);
@@ -95,7 +99,7 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 	Bind(wxEVT_CLOSE_WINDOW, &PreferencesWindow::OnClose, this);
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_GEAR, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 
@@ -112,12 +116,20 @@ void PreferencesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 	Apply();
-	EndModal(wxID_OK);
+	if (IsModal()) {
+		EndModal(wxID_OK);
+	} else {
+		Destroy();
+	}
 }
 
 void PreferencesWindow::OnClickCancel(wxCommandEvent& WXUNUSED(event)) {
 	client_version_page->DiscardPendingChanges();
-	EndModal(wxID_CANCEL);
+	if (IsModal()) {
+		EndModal(wxID_CANCEL);
+	} else {
+		Destroy();
+	}
 }
 
 void PreferencesWindow::OnClickApply(wxCommandEvent& WXUNUSED(event)) {
@@ -133,16 +145,77 @@ void PreferencesWindow::Apply() {
 	graphics_page->Apply();
 	interface_page->Apply();
 	client_version_page->Apply();
+	map_compatibility_page->Apply();
 
 	g_settings.save();
 }
 
 void PreferencesWindow::OnClose(wxCloseEvent& event) {
-	if (!IsModal()) {
-		event.Skip();
-		return;
-	}
-
 	client_version_page->DiscardPendingChanges();
-	EndModal(wxID_CANCEL);
+	if (IsModal()) {
+		EndModal(wxID_CANCEL);
+	} else {
+		Destroy();
+	}
+}
+
+
+// ============================================================================
+// Modern wxPreferencesEditor Implementation
+// ============================================================================
+
+namespace {
+	class GeneralPrefPage : public PreferencesPageAdapter {
+	public:
+		GeneralPrefPage() : PreferencesPageAdapter("General", IMAGE_MANAGER.GetBitmapBundle(ICON_GEAR)) {}
+		wxWindow* CreateWindow(wxWindow* parent) override {
+			return new GeneralPage(parent);
+		}
+	};
+
+	class EditorPrefPage : public PreferencesPageAdapter {
+	public:
+		EditorPrefPage() : PreferencesPageAdapter("Editor", IMAGE_MANAGER.GetBitmapBundle(ICON_PEN_TO_SQUARE)) {}
+		wxWindow* CreateWindow(wxWindow* parent) override {
+			return new EditorPage(parent);
+		}
+	};
+
+	class GraphicsPrefPage : public PreferencesPageAdapter {
+	public:
+		GraphicsPrefPage() : PreferencesPageAdapter("Graphics", IMAGE_MANAGER.GetBitmapBundle(ICON_IMAGE)) {}
+		wxWindow* CreateWindow(wxWindow* parent) override {
+			return new GraphicsPage(parent);
+		}
+	};
+
+	class InterfacePrefPage : public PreferencesPageAdapter {
+	public:
+		InterfacePrefPage() : PreferencesPageAdapter("Interface", IMAGE_MANAGER.GetBitmapBundle(ICON_WINDOW_MAXIMIZE)) {}
+		wxWindow* CreateWindow(wxWindow* parent) override {
+			return new InterfacePage(parent);
+		}
+	};
+}
+
+RMEPreferencesEditor::RMEPreferencesEditor(const wxString& title)
+	: m_editor(std::make_unique<wxPreferencesEditor>(title)) {
+	m_editor->AddPage(new GeneralPrefPage());
+	m_editor->AddPage(new EditorPrefPage());
+	m_editor->AddPage(new GraphicsPrefPage());
+	m_editor->AddPage(new InterfacePrefPage());
+}
+
+RMEPreferencesEditor::~RMEPreferencesEditor() = default;
+
+void RMEPreferencesEditor::Show(wxWindow* parent) {
+	if (m_editor) {
+		m_editor->Show(parent);
+	}
+}
+
+void RMEPreferencesEditor::Dismiss() {
+	if (m_editor) {
+		m_editor->Dismiss();
+	}
 }

@@ -28,7 +28,6 @@
 #include "rendering/core/render_interaction_state.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/sprite_batch.h"
-#include "rendering/drawers/cursors/brush_cursor_drawer.h"
 #include "rendering/drawers/cursors/drag_shadow_drawer.h"
 #include "rendering/drawers/cursors/live_cursor_drawer.h"
 #include "rendering/drawers/entities/creature_drawer.h"
@@ -44,6 +43,7 @@
 #include "rendering/drawers/overlays/marker_drawer.h"
 #include "rendering/drawers/overlays/preview_drawer.h"
 #include "rendering/drawers/overlays/selection_drawer.h"
+#include "rendering/drawers/overlays/zone_overlay_drawer.h"
 #include "rendering/drawers/tiles/floor_drawer.h"
 #include "rendering/drawers/tiles/shade_drawer.h"
 #include "rendering/drawers/tiles/tile_renderer.h"
@@ -65,8 +65,8 @@ class MapDrawer {
 	GridDrawer grid_drawer;
 	LiveCursorDrawer live_cursor_drawer;
 	SelectionDrawer selection_drawer;
-	BrushCursorDrawer brush_cursor_drawer;
 	BrushOverlayDrawer brush_overlay_drawer;
+	rme::rendering::ZoneOverlayDrawer zone_overlay_drawer;
 	DragShadowDrawer drag_shadow_drawer;
 	FloorDrawer floor_drawer;
 	SpriteDrawer sprite_drawer;
@@ -144,6 +144,19 @@ public:
 	const ChunkCacheManager& getChunkCacheManager() const {
 		return chunk_cache_manager;
 	}
+	// Whether the last frame drew something that animates, i.e. whether the editor still
+	// needs to repaint on the animation timer.
+	[[nodiscard]] bool HasVisibleAnimation() const {
+		return chunk_cache_manager.hasVisibleAnimation();
+	}
+	// Average duration of the shortest animation frame on screen; 0 when nothing animates.
+	[[nodiscard]] uint32_t VisibleAnimationStepMs() const {
+		return chunk_cache_manager.visibleAnimationStepMs();
+	}
+	// Whether the last frame drew chunks that were still waiting for sprites.
+	[[nodiscard]] bool HasIncompleteChunks() const {
+		return chunk_cache_manager.hasIncompleteChunks();
+	}
 	const RenderView& getView() const {
 		return view;
 	}
@@ -158,6 +171,10 @@ private:
 		float zoom = -1.0f;
 		ViewBounds bounds{};
 		bool show_tooltips = false;
+		bool show_houses = false;
+		bool show_waypoints = false;
+		bool show_towns = false;
+		bool show_zones = false;
 		bool show_hooks = false;
 		bool highlight_locked_doors = false;
 		uint64_t map_generation = 0;
@@ -168,6 +185,10 @@ private:
 			float cur_zoom,
 			const ViewBounds& cur_bounds,
 			bool opt_tooltips,
+			bool opt_houses,
+			bool opt_waypoints,
+			bool opt_towns,
+			bool opt_zones,
 			bool opt_hooks,
 			bool opt_doors,
 			uint64_t cur_gen
@@ -178,7 +199,9 @@ private:
 			if (floor != cur_floor || zoom != cur_zoom) {
 				return false;
 			}
-			if (show_tooltips != opt_tooltips || show_hooks != opt_hooks || highlight_locked_doors != opt_doors) {
+			if (show_tooltips != opt_tooltips || show_houses != opt_houses ||
+			    show_waypoints != opt_waypoints || show_towns != opt_towns ||
+			    show_zones != opt_zones || show_hooks != opt_hooks || highlight_locked_doors != opt_doors) {
 				return false;
 			}
 			if (map_generation != cur_gen) {
@@ -196,7 +219,7 @@ private:
 		}
 	};
 
-	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client);
+	void DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, const BaseMap* secondary_map = nullptr);
 	void CollectOverlays();
 	bool renderers_initialized = false;
 	OverlayCacheState overlay_cache;

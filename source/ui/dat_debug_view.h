@@ -19,6 +19,7 @@
 #define RME_DAT_DEBUG_VIEW_H_
 
 class DatDebugViewListBox;
+class PaletteSearchCtrl;
 
 class DatDebugView : public wxPanel {
 public:
@@ -30,7 +31,7 @@ public:
 
 protected:
 	DatDebugViewListBox* item_list;
-	wxTextCtrl* search_field;
+	PaletteSearchCtrl* search_field;
 
 };
 

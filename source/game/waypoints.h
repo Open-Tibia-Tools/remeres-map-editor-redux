@@ -46,6 +46,7 @@ public:
 	Waypoint* getWaypoint(TileLocation* location);
 	const Waypoint* getWaypoint(const TileLocation* location) const;
 	void removeWaypoint(std::string name);
+	bool renameWaypoint(const std::string& old_name, const std::string& new_name);
 
 	WaypointMap waypoints;
 

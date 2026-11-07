@@ -191,8 +191,6 @@ private:
 	// Event handlers
 	void OnClose(wxCloseEvent& event);
 
-	DECLARE_EVENT_TABLE()
-
 	int reqWidth = -1;
 	int reqHeight = -1;
 	int reqX = -1;

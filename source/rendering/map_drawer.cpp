@@ -19,6 +19,7 @@
 #include <chrono>
 #include <cmath>
 #include <spdlog/spdlog.h>
+#include <glad/glad.h>
 
 #include "rendering/map_drawer.h"
 #include "rendering/core/hardware_profile.h"
@@ -27,17 +28,19 @@
 #include "brushes/brush.h"
 #include "brushes/house/house_brush.h"
 #include "brushes/house/house_exit_brush.h"
+#include "brushes/zone/zone_brush.h"
 #include "game/sprites.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/render_frame_context.h"
 #include "rendering/drawers/overlays/map_overlay_collector.h"
 #include "rendering/io/screen_capture.h"
 #include "rendering/core/gl_resources.h"
+#include "rendering/shaders/sprite_batch_shader.h"
 
 MapDrawer::MapDrawer(Editor& editor) :
 	editor(editor),
 	tile_renderer(&item_drawer, &sprite_drawer, &creature_drawer, &creature_name_drawer, &floor_drawer, &marker_drawer, &editor),
-	map_layer_drawer(&tile_renderer, &grid_drawer, editor.map),
+	map_layer_drawer(&tile_renderer, &grid_drawer, &zone_overlay_drawer, editor.map),
 	lua_overlay_drawer(editor) {
 
 	options.Update();
@@ -59,25 +62,17 @@ MapDrawer::~MapDrawer() {
 
 void MapDrawer::SetupVars(const ViewportParameters& vp) {
 	options.current_house_id = 0;
+	options.current_zone_id = 0;
 	Brush* brush = g_brush_manager.GetCurrentBrush();
 	if (brush) {
 		if (brush->is<HouseBrush>()) {
 			options.current_house_id = brush->as<HouseBrush>()->getHouseID();
 		} else if (brush->is<HouseExitBrush>()) {
 			options.current_house_id = brush->as<HouseExitBrush>()->getHouseID();
+		} else if (brush->is<ZoneBrush>()) {
+			options.current_zone_id = brush->as<ZoneBrush>()->getZone();
 		}
 	}
-
-	// Calculate pulse for house highlighting
-	// Period is 1 second (1000ms)
-	// Range is [0.0, 1.0]
-	// Using a sine wave for smooth transition
-	// (sin(t) + 1) / 2
-	const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-		std::chrono::steady_clock::now().time_since_epoch()
-	).count();
-	const double speed = 0.005;
-	options.highlight_pulse = static_cast<float>((std::sin(static_cast<double>(now_ms) * speed) + 1.0) * 0.5);
 
 	view.Setup(vp, options, &editor.map);
 }
@@ -91,6 +86,7 @@ void MapDrawer::SetupGL() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendEquation(GL_FUNC_ADD);
+	glEnable(GL_MULTISAMPLE);
 
 	// Ensure renderers are initialized
 	if (!renderers_initialized) {
@@ -164,6 +160,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		return;
 	}
 	auto* atlas = g_graphics.getAtlasManager();
+	atlas->setSmoothing(options.anti_aliasing);
 
 	const RenderFrameContext ctx {
 		*atlas,
@@ -177,6 +174,34 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 
 	// Begin Batches
 	sprite_batch.begin(view.projectionMatrix, *atlas);
+	rme::rendering::shaders::SetSpriteBatchOverlayUniforms(
+		*sprite_batch.getShader(),
+		static_cast<uint32_t>(options.current_house_id),
+		options.show_houses,
+		options.show_spawns,
+		options.show_towns,
+		options.show_waypoints,
+		options.show_tech_items && !options.ingame,
+		options.show_blocking,
+		options.show_special_tiles,
+		options.show_invalid_tiles && !options.ingame,
+		options.show_invalid_zones && !options.ingame,
+		options.highlight_items && !options.ingame,
+		options.show_zone_borders,
+		options.house_active_blend_mode,
+		options.house_inactive_blend_mode,
+		options.zone_border_color,
+		options.zone_pz_color,
+		options.zone_nopvp_color,
+		options.zone_nologout_color,
+		options.zone_pvp_color,
+		options.zone_blocking_color,
+		options.zone_spawn_color,
+		options.house_active_color,
+		options.house_inactive_color,
+		options.extended_pathing_shader,
+		options.zone_blocking_blend_mode
+	);
 	primitive_renderer.setProjectionMatrix(view.projectionMatrix);
 
 	DrawBackground();
@@ -197,10 +222,14 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	// Resume Batch for Overlays
 	sprite_batch.begin(view.projectionMatrix, *atlas);
 
+	// View > Ghost higher floors (Ctrl+L): the floor above, translucent, on top
+	// of the map. This call was lost in the OpenGL 4.5 renderer rewrite.
+	floor_drawer.draw(sprite_batch, &item_drawer, &sprite_drawer, &creature_drawer, view, options, editor.map, &ctx);
+
 	drag_shadow_drawer.draw(sprite_batch, editor, interaction.drag_start_position, &item_drawer, &sprite_drawer, &creature_drawer, view, options, &ctx);
 
 	live_cursor_drawer.draw(sprite_batch, view, editor, options, *atlas);
-	brush_overlay_drawer.draw(sprite_batch, primitive_renderer, &brush_cursor_drawer, interaction.brush_drag_state, &item_drawer, &sprite_drawer, &creature_drawer, view, options, editor, *atlas, ctx);
+	brush_overlay_drawer.draw(sprite_batch, interaction.brush_drag_state, &item_drawer, &sprite_drawer, &creature_drawer, view, options, editor, *atlas, ctx);
 	selection_drawer.draw(primitive_renderer, view, options);
 
 	if (options.show_grid) {
@@ -231,6 +260,8 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx, const InteractionRenderSt
 	BaseMap* secondary_map = (!options.ingame) ? interaction.secondary_map : nullptr;
 
 	for (int map_z = view.start_z; map_z >= view.superend_z; map_z--) {
+		glClear(GL_DEPTH_BUFFER_BIT);
+
 		RenderView floor_view = view;
 		const ViewBounds floor_bounds = view.getBoundsForFloor(map_z);
 		floor_view.start_x = floor_bounds.start_x;
@@ -253,7 +284,7 @@ void MapDrawer::DrawMap(const RenderFrameContext& ctx, const InteractionRenderSt
 		}
 
 		if (view.draw_all_visited_floors || map_z >= view.end_z) {
-			DrawMapLayer(sprite_batch, floor_ctx, map_z, live_client);
+			DrawMapLayer(sprite_batch, floor_ctx, map_z, live_client, secondary_map);
 		}
 
 		if (secondary_map) {
@@ -272,7 +303,7 @@ void MapDrawer::DrawGrid(const ViewBounds& bounds, const AtlasManager& atlas) {
 }
 
 void MapDrawer::DrawTooltips(NVGcontext* vg) {
-	if (options.show_tooltips && !tooltip_drawer.empty() && view.zoom <= 10.0f) {
+	if (!tooltip_drawer.empty() && view.zoom <= 10.0f) {
 		tooltip_drawer.draw(vg, view);
 	}
 }
@@ -289,11 +320,17 @@ void MapDrawer::CollectOverlays() {
 		return;
 	}
 
-	const bool need_tooltips = options.show_tooltips;
-	const bool need_hooks = !options.ingame && options.show_hooks;
-	const bool need_doors = !options.ingame && options.highlight_locked_doors;
+	const bool opt_tooltips = options.show_tooltips;
+	const bool opt_houses = !options.ingame && options.show_houses;
+	const bool opt_waypoints = !options.ingame && options.show_waypoints;
+	const bool opt_towns = !options.ingame && options.show_towns;
+	const bool opt_zones = !options.ingame && options.show_zones;
+	const bool opt_hooks = !options.ingame && options.show_hooks;
+	const bool opt_doors = !options.ingame && options.highlight_locked_doors;
 
-	if (!need_tooltips && !need_doors && !need_hooks) {
+	const bool need_tooltips = opt_tooltips || opt_houses || opt_waypoints || opt_towns || opt_zones;
+
+	if (!need_tooltips && !opt_doors && !opt_hooks) {
 		if (overlay_cache.valid) {
 			tooltip_drawer.clear();
 			hook_indicator_drawer.clear();
@@ -307,7 +344,7 @@ void MapDrawer::CollectOverlays() {
 	const ViewBounds current_bounds = view.getBoundsForFloor(map_z);
 	const uint64_t current_generation = editor.map.getChangeTracker().getGeneration();
 
-	if (overlay_cache.isValid(map_z, view.zoom, current_bounds, need_tooltips, need_hooks, need_doors, current_generation)) {
+	if (overlay_cache.isValid(map_z, view.zoom, current_bounds, opt_tooltips, opt_houses, opt_waypoints, opt_towns, opt_zones, opt_hooks, opt_doors, current_generation)) {
 		return;
 	}
 
@@ -325,16 +362,20 @@ void MapDrawer::CollectOverlays() {
 		options,
 		&editor,
 		need_tooltips ? &tooltip_drawer : nullptr,
-		need_doors ? &door_indicator_drawer : nullptr,
-		need_hooks ? &hook_indicator_drawer : nullptr
+		opt_doors ? &door_indicator_drawer : nullptr,
+		opt_hooks ? &hook_indicator_drawer : nullptr
 	);
 
 	overlay_cache.floor = map_z;
 	overlay_cache.zoom = view.zoom;
 	overlay_cache.bounds = collect_bounds;
-	overlay_cache.show_tooltips = need_tooltips;
-	overlay_cache.show_hooks = need_hooks;
-	overlay_cache.highlight_locked_doors = need_doors;
+	overlay_cache.show_tooltips = opt_tooltips;
+	overlay_cache.show_houses = opt_houses;
+	overlay_cache.show_waypoints = opt_waypoints;
+	overlay_cache.show_towns = opt_towns;
+	overlay_cache.show_zones = opt_zones;
+	overlay_cache.show_hooks = opt_hooks;
+	overlay_cache.highlight_locked_doors = opt_doors;
 	overlay_cache.map_generation = current_generation;
 	overlay_cache.valid = true;
 }
@@ -366,7 +407,7 @@ bool MapDrawer::hasOverlays() {
 	if (options.show_creatures && !creature_name_drawer.empty() && can_read_labels) {
 		return true;
 	}
-	if (options.show_tooltips && !tooltip_drawer.empty() && can_read_labels) {
+	if (!tooltip_drawer.empty() && can_read_labels) {
 		return true;
 	}
 	if (options.show_hooks && !hook_indicator_drawer.empty() && can_read_labels) {
@@ -381,9 +422,9 @@ bool MapDrawer::hasOverlays() {
 	return false;
 }
 
-void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client) {
+void MapDrawer::DrawMapLayer(SpriteBatch& batch, const RenderFrameContext& floor_ctx, int map_z, bool live_client, const BaseMap* secondary_map) {
 	LiveClient* live_client_service = live_client ? editor.live_manager.GetClient() : nullptr;
-	map_layer_drawer.Draw(batch, map_z, live_client_service, floor_ctx, &chunk_cache_manager);
+	map_layer_drawer.Draw(batch, map_z, live_client_service, floor_ctx, &chunk_cache_manager, secondary_map);
 }
 
 void MapDrawer::DrawLight() {

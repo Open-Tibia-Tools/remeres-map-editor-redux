@@ -6,7 +6,8 @@
 #include "brushes/ground/ground_brush.h"
 #include <array>
 
-namespace {
+// Unique namespace: unity builds concatenate this with the other *_brush_arrays.cpp files.
+namespace ground_brush_arrays {
 	// Short aliases for bitmasking in the generator
 	enum {
 		N = TILE_NORTH,
@@ -113,6 +114,6 @@ namespace {
 void GroundBrush::init() {
 	// Copy generated table into the static member
 	for (int i = 0; i < 256; ++i) {
-		GroundBrush::border_types[i] = ground_border_table[i];
+		GroundBrush::border_types[i] = ground_brush_arrays::ground_border_table[i];
 	}
 }

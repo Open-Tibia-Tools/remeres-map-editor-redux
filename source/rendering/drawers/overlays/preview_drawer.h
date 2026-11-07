@@ -4,6 +4,7 @@
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
 #include <cstdint>
+#include <vector>
 
 class Editor;
 class ItemDrawer;
@@ -22,6 +23,14 @@ public:
 	~PreviewDrawer();
 
 	void draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* secondary_map, const RenderView& view, int map_z, const DrawingOptions& options, Editor& editor, ItemDrawer* item_drawer, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, uint32_t current_house_id, Brush* current_brush, const RenderFrameContext* ctx = nullptr);
+
+private:
+	struct PreviewZoneQuad {
+		float x;
+		float y;
+		uint32_t flags;
+	};
+	std::vector<PreviewZoneQuad> mult_zone_quads_;
 };
 
 #endif

@@ -134,6 +134,8 @@ namespace LuaAPI {
 			"height", sol::property(&Map::getHeight),
 			"houseFilename", sol::property(&Map::getHouseFilename),
 			"spawnFilename", sol::property(&Map::getSpawnFilename),
+			"monsterFilename", sol::property(&Map::getMonsterFilename),
+			"npcFilename", sol::property(&Map::getNpcFilename),
 			"hasFile", sol::property(&Map::hasFile),
 			"hasChanged", sol::property(&Map::hasChanged),
 			"tileCount", sol::property([](Map* map) -> uint64_t {

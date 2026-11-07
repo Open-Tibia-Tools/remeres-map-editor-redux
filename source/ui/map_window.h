@@ -22,10 +22,20 @@
 #include "map/position.h"
 #include "rendering/ui/minimap_viewport.h"
 class ReplaceToolWindow;
+class SpawnValidatorWindow;
+class CollectionStudioWindow;
 #include <memory>
 
 struct ReplaceToolWindowDeleter {
 	inline void operator()(ReplaceToolWindow* w);
+};
+
+struct SpawnValidatorWindowDeleter {
+	inline void operator()(SpawnValidatorWindow* w);
+};
+
+struct CollectionStudioWindowDeleter {
+	inline void operator()(CollectionStudioWindow* w);
 };
 
 class MapCanvas;
@@ -94,11 +104,23 @@ public:
 	void ShowReplaceItemsDialog(bool selectionOnly);
 	void ShowAdvancedReplaceForSelection(const std::vector<uint16_t>& ids);
 	void CloseReplaceItemsDialog();
-	void OnReplaceItemsDialogClose(wxCloseEvent& event);
+	void DetachReplaceItemsDialog();
+	/** The dialog decided to close; drop the pointer without destroying it. */
+	void ForgetReplaceItemsDialog();
+
+	void ShowSpawnValidatorDialog();
+	void CloseSpawnValidatorDialog();
+	void DetachSpawnValidatorDialog();
+	void ForgetSpawnValidatorDialog();
+
+	void ShowCollectionStudio(Editor* editor);
+	void CloseCollectionStudio();
+	void DetachCollectionStudio();
+	void ForgetCollectionStudio();
 
 protected:
 	// For internal use, call to resize the scrollbars with
-	// the newd dimensions of *this* window
+	// the new dimensions of *this* window
 	void UpdateScrollbars(int nx, int ny);
 	void UpdateDialogs(bool show);
 
@@ -111,6 +133,8 @@ protected:
 
 private:
 	std::unique_ptr<ReplaceToolWindow, ReplaceToolWindowDeleter> replaceItemsDialog;
+	std::unique_ptr<SpawnValidatorWindow, SpawnValidatorWindowDeleter> spawnValidatorDialog;
+	std::unique_ptr<CollectionStudioWindow, CollectionStudioWindowDeleter> m_collectionStudioDialog;
 	MinimapViewportState minimap_viewport_state;
 	Position previous_position;
 
@@ -134,10 +158,10 @@ public:
 	~MapScrollBar() override { }
 
 	void OnKey(wxKeyEvent& event) {
-		canvas->GetEventHandler()->AddPendingEvent(event);
+		canvas->GetEventHandler()->QueueEvent(event.Clone());
 	}
 	void OnWheel(wxMouseEvent& event) {
-		canvas->GetEventHandler()->AddPendingEvent(event);
+		canvas->GetEventHandler()->QueueEvent(event.Clone());
 	}
 	void OnFocus(wxFocusEvent& event) {
 		canvas->SetFocus();

@@ -32,6 +32,7 @@ namespace MenuBar {
 		OPEN,
 		SAVE,
 		SAVE_AS,
+		SAVE_AS_GZIP,
 		GENERATE_MAP,
 		CLOSE,
 		IMPORT_MAP,
@@ -52,11 +53,17 @@ namespace MenuBar {
 		SEARCH_ON_MAP_ACTION,
 		SEARCH_ON_MAP_CONTAINER,
 		SEARCH_ON_MAP_WRITEABLE,
+		SEARCH_ON_MAP_TELEPORT,
+		SEARCH_ON_MAP_CREATURE,
+		SEARCH_ON_MAP_PICKUPABLE,
 		SEARCH_ON_SELECTION_EVERYTHING,
 		SEARCH_ON_SELECTION_UNIQUE,
 		SEARCH_ON_SELECTION_ACTION,
 		SEARCH_ON_SELECTION_CONTAINER,
 		SEARCH_ON_SELECTION_WRITEABLE,
+		SEARCH_ON_SELECTION_TELEPORT,
+		SEARCH_ON_SELECTION_CREATURE,
+		SEARCH_ON_SELECTION_PICKUPABLE,
 		SEARCH_ON_SELECTION_ITEM,
 		REPLACE_ON_SELECTION_ITEMS,
 		REMOVE_ON_SELECTION_ITEM,
@@ -64,6 +71,8 @@ namespace MenuBar {
 		SELECT_MODE_CURRENT,
 		SELECT_MODE_LOWER,
 		SELECT_MODE_VISIBLE,
+		SELECT_METHOD_STANDARD,
+		SELECT_METHOD_PIXEL_PERFECT,
 		AUTOMAGIC,
 		BORDERIZE_SELECTION,
 		BORDERIZE_MAP,
@@ -88,10 +97,12 @@ namespace MenuBar {
 		MAP_CLEAN_HOUSE_ITEMS,
 		MAP_PROPERTIES,
 		MAP_STATISTICS,
+		MAP_VALIDATE_SPAWNS,
 		VIEW_TOOLBARS_BRUSHES,
 		VIEW_TOOLBARS_POSITION,
 		VIEW_TOOLBARS_SIZES,
 		VIEW_TOOLBARS_STANDARD,
+		VIEW_TOOLBARS_LIGHT,
 		NEW_VIEW,
 		TOGGLE_FULLSCREEN,
 		ZOOM_IN,
@@ -99,6 +110,8 @@ namespace MenuBar {
 		ZOOM_NORMAL,
 		SHOW_SHADE,
 		SHOW_ALL_FLOORS,
+		SHOW_ALL_FLOORS_CLIENT,
+		SHOW_ALL_FLOORS_ALL,
 		GHOST_ITEMS,
 		GHOST_HIGHER_FLOORS,
 		HIGHLIGHT_ITEMS,
@@ -119,6 +132,7 @@ namespace MenuBar {
 		SHOW_ONLY_COLORS,
 		SHOW_ONLY_MODIFIED,
 		SHOW_HOUSES,
+		SHOW_ZONES,
 		SHOW_PATHING,
 		SHOW_TOOLTIPS,
 		SHOW_PREVIEW,
@@ -126,10 +140,13 @@ namespace MenuBar {
 		SHOW_TOWNS,
 		ALWAYS_SHOW_ZONES,
 		EXT_HOUSE_SHADER,
+		EXT_PATHING_SHADER,
 		WIN_MINIMAP,
 		WIN_TOOL_OPTIONS,
 		WIN_INGAME_PREVIEW,
+		WIN_BRUSH_ITEMS,
 		WIN_TILE_PROPERTIES,
+		WIN_SEARCH_RESULTS,
 		NEW_PALETTE,
 		SHOW_PALETTE,
 		SELECT_HOUSE,
@@ -199,6 +216,7 @@ public:
 	void OnOpen(wxCommandEvent& event);
 	void OnSave(wxCommandEvent& event);
 	void OnSaveAs(wxCommandEvent& event);
+	void OnSaveAsGzip(wxCommandEvent& event);
 	void OnClose(wxCommandEvent& event);
 	void OnQuit(wxCommandEvent& event);
 	void OnGenerateMap(wxCommandEvent& event);
@@ -226,16 +244,23 @@ public:
 	void OnSearchForActionOnMap(wxCommandEvent& event);
 	void OnSearchForContainerOnMap(wxCommandEvent& event);
 	void OnSearchForWriteableOnMap(wxCommandEvent& event);
+	void OnSearchForTeleportOnMap(wxCommandEvent& event);
+	void OnSearchForCreatureOnMap(wxCommandEvent& event);
+	void OnSearchForPickupableOnMap(wxCommandEvent& event);
 	void OnSearchForStuffOnSelection(wxCommandEvent& event);
 	void OnSearchForUniqueOnSelection(wxCommandEvent& event);
 	void OnSearchForActionOnSelection(wxCommandEvent& event);
 	void OnSearchForContainerOnSelection(wxCommandEvent& event);
 	void OnSearchForWriteableOnSelection(wxCommandEvent& event);
+	void OnSearchForTeleportOnSelection(wxCommandEvent& event);
+	void OnSearchForCreatureOnSelection(wxCommandEvent& event);
+	void OnSearchForPickupableOnSelection(wxCommandEvent& event);
 	void OnSearchForItemOnSelection(wxCommandEvent& event);
 	void OnReplaceItemsOnSelection(wxCommandEvent& event);
 	void OnRemoveItemOnSelection(wxCommandEvent& event);
 
 	void OnSelectionTypeChange(wxCommandEvent& event);
+	void OnSelectionMethodChange(wxCommandEvent& event);
 
 	void OnCopy(wxCommandEvent& event);
 	void OnCut(wxCommandEvent& event);
@@ -264,6 +289,7 @@ public:
 	void OnMapEditMonsters(wxCommandEvent& event);
 
 	void OnMapStatistics(wxCommandEvent& event);
+	void OnMapValidateSpawns(wxCommandEvent& event);
 	void OnMapCleanup(wxCommandEvent& event);
 	void OnMapCleanInvalidZones(wxCommandEvent& event);
 	void OnMapProperties(wxCommandEvent& event);
@@ -284,7 +310,9 @@ public:
 	void OnMinimapWindow(wxCommandEvent& event);
 	void OnToolOptionsWindow(wxCommandEvent& event);
 	void OnIngamePreviewWindow(wxCommandEvent& event);
+	void OnBrushItemsWindow(wxCommandEvent& event);
 	void OnTilePropertiesWindow(wxCommandEvent& event);
+	void OnSearchResultsWindow(wxCommandEvent& event);
 	void OnNewPalette(wxCommandEvent& event);
 	void OnShowPalette(wxCommandEvent& event);
 	void OnSelectHousePalette(wxCommandEvent& event);

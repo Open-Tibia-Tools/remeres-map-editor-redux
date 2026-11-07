@@ -17,6 +17,12 @@ class Item;
 using DoodadItemVector = std::vector<std::unique_ptr<Item>>;
 using CompositeTileList = std::vector<std::pair<Position, DoodadItemVector>>;
 
+struct DoodadVariant {
+	const Item* single_item = nullptr;
+	const CompositeTileList* composite = nullptr;
+	int alternative_index = 0;
+};
+
 struct DoodadBrushSettings {
 	bool on_blocking = false;
 	bool on_duplicate = false;

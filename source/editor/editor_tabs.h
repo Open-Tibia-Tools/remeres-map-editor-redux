@@ -43,6 +43,7 @@ public:
 	// Events
 	void OnAllowNotebookDND(wxAuiNotebookEvent& evt);
 	void OnNotebookPageClose(wxAuiNotebookEvent& evt);
+	void OnNotebookPageClosed(wxAuiNotebookEvent& evt);
 	void OnNotebookPageChanged(wxAuiNotebookEvent& evt);
 	void OnSwitchEditorMode(EditorMode mode);
 

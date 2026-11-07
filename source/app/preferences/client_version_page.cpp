@@ -1,4 +1,6 @@
 #include "app/preferences/client_version_page.h"
+#include "ui/dialog_util.h"
+#include <format>
 
 #include <algorithm>
 #include <array>
@@ -143,7 +145,7 @@ ClientVersionPage::ClientVersionPage(wxWindow* parent) : PreferencesPage(parent)
 		"Verify DAT and SPR signatures so mismatched client folders are caught early.",
 		check_sigs_chkbox
 	);
-	left_sizer->Add(defaults_section, 0, wxEXPAND | wxALL, FromDIP(10));
+	left_sizer->Add(defaults_section, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
 
 	auto* library_section = new PreferencesSectionPanel(
 		left_panel,
@@ -154,27 +156,27 @@ ClientVersionPage::ClientVersionPage(wxWindow* parent) : PreferencesPage(parent)
 	client_search_ctrl->ShowSearchButton(true);
 	client_search_ctrl->ShowCancelButton(true);
 	client_search_ctrl->SetDescriptiveText("Search by name, version, or OTB id");
-	library_section->GetBodySizer()->Add(client_search_ctrl, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
+	library_section->GetBodySizer()->Add(client_search_ctrl, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(10)));
 	last_search_text = client_search_ctrl->GetValue();
 
 	client_tree_ctrl = new wxTreeCtrl(library_section, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTR_HIDE_ROOT | wxTR_HAS_BUTTONS | wxTR_SINGLE | wxTR_LINES_AT_ROOT);
 	client_tree_ctrl->SetBackgroundColour(Theme::Get(Theme::Role::Background));
 	client_tree_ctrl->SetForegroundColour(Theme::Get(Theme::Role::Text));
-	library_section->GetBodySizer()->Add(client_tree_ctrl, 1, wxEXPAND | wxBOTTOM, FromDIP(10));
+	library_section->GetBodySizer()->Add(client_tree_ctrl, wxSizerFlags(1).Expand().Border(wxBOTTOM, FromDIP(10)));
 
 	auto* action_sizer = new wxBoxSizer(wxHORIZONTAL);
 	add_client_btn = new wxButton(library_section, wxID_ANY, "Add");
 	add_client_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
-	action_sizer->Add(add_client_btn, 0, wxRIGHT, FromDIP(8));
+	action_sizer->Add(add_client_btn, wxSizerFlags().Border(wxRIGHT, FromDIP(8)));
 	duplicate_client_btn = new wxButton(library_section, wxID_ANY, "Duplicate");
 	duplicate_client_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_COPY));
-	action_sizer->Add(duplicate_client_btn, 0, wxRIGHT, FromDIP(8));
+	action_sizer->Add(duplicate_client_btn, wxSizerFlags().Border(wxRIGHT, FromDIP(8)));
 	delete_client_btn = new wxButton(library_section, wxID_ANY, "Remove");
 	delete_client_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	action_sizer->Add(delete_client_btn, 0);
 	action_sizer->AddStretchSpacer();
-	library_section->GetBodySizer()->Add(action_sizer, 0, wxEXPAND);
-	left_sizer->Add(library_section, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+	library_section->GetBodySizer()->Add(action_sizer, wxSizerFlags().Expand());
+	left_sizer->Add(library_section, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
 	left_panel->SetSizer(left_sizer);
 
 	auto* right_panel = new wxPanel(client_splitter, wxID_ANY);
@@ -192,13 +194,9 @@ ClientVersionPage::ClientVersionPage(wxWindow* parent) : PreferencesPage(parent)
 		"Choose a Client Version",
 		"Select a version from the list on the left to edit identity, files, compatibility, and feature flags."
 	);
-	empty_section->GetBodySizer()->Add(
-		PreferencesLayout::CreateBodyText(empty_section, "The selected client will appear here as one focused editing workspace.", false),
-		0,
-		wxEXPAND
-	);
+	empty_section->GetBodySizer()->Add(PreferencesLayout::CreateBodyText(empty_section, "The selected client will appear here as one focused editing workspace.", false), wxSizerFlags().Expand());
 	empty_sizer->AddStretchSpacer();
-	empty_sizer->Add(empty_section, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
+	empty_sizer->Add(empty_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT, FromDIP(10)));
 	empty_sizer->AddStretchSpacer();
 	empty_panel->SetSizer(empty_sizer);
 	detail_book->AddPage(empty_panel, "Empty");
@@ -215,14 +213,14 @@ ClientVersionPage::ClientVersionPage(wxWindow* parent) : PreferencesPage(parent)
 	auto* summary_row = new wxBoxSizer(wxHORIZONTAL);
 	summary_name_label = PreferencesLayout::CreateBodyText(details_section, "", true);
 	summary_name_label->SetFont(Theme::GetFont(14, true));
-	summary_row->Add(summary_name_label, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
+	summary_row->Add(summary_name_label, wxSizerFlags(1).CenterVertical().Border(wxRIGHT, FromDIP(10)));
 	summary_dirty_label = PreferencesLayout::CreateBodyText(details_section, "", true);
-	summary_row->Add(summary_dirty_label, 0, wxALIGN_CENTER_VERTICAL);
-	details_section->GetBodySizer()->Add(summary_row, 0, wxEXPAND | wxBOTTOM, FromDIP(12));
+	summary_row->Add(summary_dirty_label, wxSizerFlags().CenterVertical());
+	details_section->GetBodySizer()->Add(summary_row, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(12)));
 
 	auto* top_separator = new wxPanel(details_section, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(1)));
 	top_separator->SetBackgroundColour(Theme::Get(Theme::Role::Border));
-	details_section->GetBodySizer()->Add(top_separator, 0, wxEXPAND | wxBOTTOM, FromDIP(12));
+	details_section->GetBodySizer()->Add(top_separator, wxSizerFlags().Expand().Border(wxBOTTOM, FromDIP(12)));
 
 	client_prop_grid = new wxPropertyGrid(
 		details_section,
@@ -242,19 +240,19 @@ ClientVersionPage::ClientVersionPage(wxWindow* parent) : PreferencesPage(parent)
 	client_prop_grid->SetSelectionBackgroundColour(Theme::Get(Theme::Role::Accent));
 	client_prop_grid->SetSelectionTextColour(*wxWHITE);
 	client_prop_grid->SetMinSize(wxSize(-1, FromDIP(420)));
-	details_section->GetBodySizer()->Add(client_prop_grid, 1, wxEXPAND);
+	details_section->GetBodySizer()->Add(client_prop_grid, wxSizerFlags(1).Expand());
 
-	editor_sizer->Add(details_section, 1, wxEXPAND | wxALL, FromDIP(10));
+	editor_sizer->Add(details_section, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(10)));
 	editor_panel->SetSizer(editor_sizer);
 	detail_book->AddPage(editor_panel, "Editor");
 
-	right_sizer->Add(detail_book, 1, wxEXPAND);
+	right_sizer->Add(detail_book, wxSizerFlags(1).Expand());
 	right_panel->SetSizer(right_sizer);
 
 	client_splitter->SplitVertically(left_panel, right_panel, FromDIP(350));
 	client_splitter->SetSashGravity(0.28);
 	client_splitter->SetMinimumPaneSize(FromDIP(240));
-	main_sizer->Add(client_splitter, 1, wxEXPAND | wxALL, FromDIP(5));
+	main_sizer->Add(client_splitter, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
 
 	SetSizer(main_sizer);
 
@@ -345,7 +343,7 @@ void ClientVersionPage::PopulateClientTree() {
 			return lhs->getName() < rhs->getName();
 		});
 
-		auto group = client_tree_ctrl->AppendItem(root, wxString::Format("%d.x (%zu)", major_version, versions.size()));
+		auto group = client_tree_ctrl->AppendItem(root, wxstr(std::format("{}.x ({})", major_version, versions.size())));
 		for (auto* version : versions) {
 			auto item = client_tree_ctrl->AppendItem(group, wxstr(version->getName()), -1, -1, new TreeItemData(version));
 			if (!first_item.IsOk()) {
@@ -424,17 +422,17 @@ ClientVersion* ClientVersionPage::GetSelectedClient() {
 
 void ClientVersionPage::RefreshSummary() {
 	if (!active_client) {
-		summary_name_label->SetLabel("");
-		summary_dirty_label->SetLabel("");
+		summary_name_label->SetLabelText("");
+		summary_dirty_label->SetLabelText("");
 		return;
 	}
 
-	summary_name_label->SetLabel(wxstr(active_client->getName()));
+	summary_name_label->SetLabelText(wxstr(active_client->getName()));
 	if (active_client->isDirty()) {
-		summary_dirty_label->SetLabel("Unsaved changes");
+		summary_dirty_label->SetLabelText("Unsaved changes");
 		summary_dirty_label->SetForegroundColour(Theme::Get(Theme::Role::Warning));
 	} else {
-		summary_dirty_label->SetLabel("Saved");
+		summary_dirty_label->SetLabelText("Saved");
 		summary_dirty_label->SetForegroundColour(Theme::Get(Theme::Role::Success));
 	}
 	summary_name_label->GetParent()->Layout();
@@ -488,15 +486,15 @@ void ClientVersionPage::RefreshClientEditor() {
 		if (!otbm_versions_text.IsEmpty()) {
 			otbm_versions_text += ", ";
 		}
-		otbm_versions_text += wxString::Format("%d", static_cast<int>(version_id) + 1);
+		otbm_versions_text += wxstr(std::format("{}", static_cast<int>(version_id) + 1));
 	}
 	auto* otbm_property = client_prop_grid->Append(new wxStringProperty("Supported OTBM Versions", "otbmVersions", otbm_versions_text));
 	otbm_property->SetHelpString("Comma-separated list of supported OTBM versions, usually 1 through 4.");
 
 	client_prop_grid->Append(new wxPropertyCategory("Signatures"));
-	auto* dat_signature_property = client_prop_grid->Append(new wxStringProperty("DAT Signature", "datSignature", wxString::Format("%X", active_client->getDatSignature())));
+	auto* dat_signature_property = client_prop_grid->Append(new wxStringProperty("DAT Signature", "datSignature", wxstr(std::format("{:X}", active_client->getDatSignature()))));
 	dat_signature_property->SetHelpString("Expected DAT signature written in hexadecimal.");
-	auto* spr_signature_property = client_prop_grid->Append(new wxStringProperty("SPR Signature", "sprSignature", wxString::Format("%X", active_client->getSprSignature())));
+	auto* spr_signature_property = client_prop_grid->Append(new wxStringProperty("SPR Signature", "sprSignature", wxstr(std::format("{:X}", active_client->getSprSignature()))));
 	spr_signature_property->SetHelpString("Expected SPR signature written in hexadecimal.");
 
 	client_prop_grid->Append(new wxPropertyCategory("Features"));
@@ -519,13 +517,13 @@ bool ClientVersionPage::ResolvePendingChanges(ClientVersion* client) {
 		return true;
 	}
 
-	const int result = wxMessageBox(
-		"Save changes to " + wxstr(client->getName()) + "?",
+	const int result = DialogUtil::PopupDialog(
+		this,
 		"Unsaved Changes",
-		wxYES_NO | wxCANCEL | wxICON_QUESTION,
-		this
+		"Save changes to " + wxstr(client->getName()) + "?",
+		wxYES_NO | wxCANCEL | wxICON_QUESTION
 	);
-	if (result == wxYES) {
+	if (result == wxID_YES) {
 		return true;
 	}
 	if (result == wxNO) {
@@ -728,11 +726,11 @@ void ClientVersionPage::SyncClientPropertiesToGrid(const ClientVersion& client) 
 		if (!otbm_versions_text.IsEmpty()) {
 			otbm_versions_text += ", ";
 		}
-		otbm_versions_text += wxString::Format("%d", static_cast<int>(version_id) + 1);
+		otbm_versions_text += wxstr(std::format("{}", static_cast<int>(version_id) + 1));
 	}
 	UpdateGridProperty(client_prop_grid, "otbmVersions", otbm_versions_text);
-	UpdateGridProperty(client_prop_grid, "datSignature", wxString::Format("%X", client.getDatSignature()));
-	UpdateGridProperty(client_prop_grid, "sprSignature", wxString::Format("%X", client.getSprSignature()));
+	UpdateGridProperty(client_prop_grid, "datSignature", wxstr(std::format("{:X}", client.getDatSignature())));
+	UpdateGridProperty(client_prop_grid, "sprSignature", wxstr(std::format("{:X}", client.getSprSignature())));
 	UpdateGridProperty(client_prop_grid, "transparency", client.isTransparent());
 	UpdateGridProperty(client_prop_grid, "extended", client.isExtended());
 	UpdateGridProperty(client_prop_grid, "frameDurations", client.hasFrameDurations());
@@ -947,7 +945,7 @@ void ClientVersionPage::OnPropertyChanged(wxPropertyGridEvent& event) {
 		wxStringTokenizer tokenizer(value.As<wxString>(), ", ");
 		while (tokenizer.HasMoreTokens()) {
 			long version = 0;
-			if (tokenizer.GetNextToken().ToLong(&version) && version >= 1 && version <= 4) {
+			if (tokenizer.GetNextToken().ToLong(&version) && version >= 1 && version <= 5) {
 				client->getMapVersionsSupported().push_back(static_cast<MapVersionID>(version - 1));
 			}
 		}
@@ -959,7 +957,7 @@ void ClientVersionPage::OnPropertyChanged(wxPropertyGridEvent& event) {
 		if (result.ec == std::errc() && result.ptr == end) {
 			client->setDatSignature(signature);
 		} else {
-			prop->SetValue(wxString::Format("%X", client->getDatSignature()));
+			prop->SetValue(wxstr(std::format("{:X}", client->getDatSignature())));
 		}
 	} else if (prop_name == "sprSignature") {
 		uint32_t signature = 0;
@@ -969,7 +967,7 @@ void ClientVersionPage::OnPropertyChanged(wxPropertyGridEvent& event) {
 		if (result.ec == std::errc() && result.ptr == end) {
 			client->setSprSignature(signature);
 		} else {
-			prop->SetValue(wxString::Format("%X", client->getSprSignature()));
+			prop->SetValue(wxstr(std::format("{:X}", client->getSprSignature())));
 		}
 	} else if (prop_name == "transparency") {
 		client->setTransparent(value.As<bool>());
@@ -1031,7 +1029,7 @@ void ClientVersionPage::OnDeleteClient(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 
-	if (wxMessageBox("Are you sure you want to delete " + wxstr(client->getName()) + "?", "Confirm Delete", wxYES_NO | wxICON_WARNING, this) != wxYES) {
+	if (DialogUtil::PopupDialog(this, "Confirm Delete", "Are you sure you want to delete " + wxstr(client->getName()) + "?", wxYES_NO | wxICON_WARNING) != wxID_YES) {
 		return;
 	}
 
@@ -1055,7 +1053,7 @@ bool ClientVersionPage::ValidateData() {
 			continue;
 		}
 		if (!client->isValid()) {
-			wxMessageBox("Client '" + wxstr(client->getName()) + "' has invalid data. The name cannot be empty.", "Invalid Client Data", wxOK | wxICON_ERROR, this);
+			DialogUtil::PopupDialog(this, "Invalid Client Data", "Client '" + wxstr(client->getName()) + "' has invalid data. The name cannot be empty.", wxOK | wxICON_ERROR);
 			SelectClient(client);
 			active_client = client;
 			RefreshClientEditor();
@@ -1063,7 +1061,7 @@ bool ClientVersionPage::ValidateData() {
 		}
 
 		if (const auto [_, inserted] = names.insert(client->getName()); !inserted) {
-			wxMessageBox("Client '" + wxstr(client->getName()) + "' has a duplicate name. Rename one of them before saving.", "Duplicate Client Name", wxOK | wxICON_ERROR, this);
+			DialogUtil::PopupDialog(this, "Duplicate Client Name", "Client '" + wxstr(client->getName()) + "' has a duplicate name. Rename one of them before saving.", wxOK | wxICON_ERROR);
 			SelectClient(client);
 			active_client = client;
 			RefreshClientEditor();
@@ -1140,7 +1138,7 @@ void ClientVersionPage::Apply() {
 		PopulateClientTree();
 		active_client = GetSelectedClient();
 		RefreshClientEditor();
-		wxMessageBox("Failed to save client versions. Check the log for details.", "Save Error", wxOK | wxICON_ERROR, this);
+		DialogUtil::PopupDialog(this, "Save Error", "Failed to save client versions. Check the log for details.", wxOK | wxICON_ERROR);
 	}
 }
 

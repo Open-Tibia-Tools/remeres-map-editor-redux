@@ -9,10 +9,6 @@
 #include <utility>
 
 namespace {
-	constexpr uint64_t flagMask(ItemFlag flag) {
-		return uint64_t { 1 } << static_cast<uint8_t>(flag);
-	}
-
 	constexpr bool isTooltipType(ItemTypes_t type) {
 		switch (type) {
 			case ITEM_TYPE_DEPOT:
@@ -162,6 +158,12 @@ bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input,
 		// We add it to the rows so the editor recognizes the ID.
 		dat_ids_referenced_by_otb.insert(effective_client_id);
 		row.flags |= dat_it->second.flags & ~flagMask(ItemFlag::Moveable);
+		if (row.group == ITEM_GROUP_NONE && dat_it->second.group != ITEM_GROUP_NONE) {
+			row.group = dat_it->second.group;
+		}
+		if (row.type == ITEM_TYPE_NONE && dat_it->second.type != ITEM_TYPE_NONE) {
+			row.type = dat_it->second.type;
+		}
 		row.passive_metadata_json = dat_it->second.passive_metadata_json;
 
 		if (xml_it != fragments.xml.end()) {
@@ -189,6 +191,15 @@ bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input,
 			}
 		}
 
+		// Pre-index OTB client IDs to avoid O(N * M) linear scans inside the XML validation loop
+		std::unordered_set<ClientItemId> otb_client_ids;
+		otb_client_ids.reserve(fragments.otb.size());
+		for (const auto& [sid, otb] : fragments.otb) {
+			if (otb.client_id != 0) {
+				otb_client_ids.insert(otb.client_id);
+			}
+		}
+
 		// Collect XML entries that reference non-existent OTB server IDs
 		for (const auto& [server_id, xml] : fragments.xml) {
 			// Skip server-side fluid types and special items (IDs < 100)
@@ -200,13 +211,8 @@ bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input,
 				continue;
 			}
 			// If XML entry has a client_id override that maps to an existing OTB entry, it's valid
-			if (xml.client_id.has_value()) {
-				bool foundInOtb = std::ranges::any_of(fragments.otb, [&](const auto& p) {
-					return p.second.client_id == xml.client_id.value();
-				});
-				if (foundInOtb) {
-					continue;
-				}
+			if (xml.client_id.has_value() && otb_client_ids.contains(xml.client_id.value())) {
+				continue;
 			}
 			missingReport->xml_no_otb.push_back({
 				.server_id = server_id,

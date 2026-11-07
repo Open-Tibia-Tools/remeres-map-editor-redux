@@ -103,6 +103,7 @@ public: // Functions
 	void draw(Brush* brush, const PositionVector& todraw, PositionVector& toborder, bool alt, int brush_size = 1);
 	void undraw(Brush* brush, const PositionVector& posvec, bool alt, int brush_size = 1);
 	void undraw(Brush* brush, const PositionVector& todraw, PositionVector& toborder, bool alt, int brush_size = 1);
+	void drawGroundHoleToFloorBelow(Brush* brush, const PositionVector& todraw, const PositionVector& toborder);
 
 protected:
 	void drawInternal(Brush* brush, const Position offset, bool alt, bool dodraw, int brush_size);

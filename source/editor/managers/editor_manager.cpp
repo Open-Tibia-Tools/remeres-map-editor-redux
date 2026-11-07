@@ -22,7 +22,11 @@
 #include "live/live_tab.h"
 #include "live/live_client.h"
 #include "io/iomap_otbm.h"
+#include "map/map_initial_position_resolver.h"
 
+#include <chrono>
+#include <filesystem>
+#include <format>
 #include <set>
 #include <sstream>
 
@@ -57,7 +61,17 @@ bool EditorManager::IsEditorOpen() const {
 void EditorManager::CloseCurrentEditor() {
 	spdlog::info("EditorManager::CloseCurrentEditor - Closing current tab");
 	g_palettes.RefreshPalettes();
-	g_gui.tabbook->DeleteTab(g_gui.tabbook->GetSelection());
+
+	{
+		// Destroying the tab frees the whole map and its GL resources, which
+		// can take a moment on large maps; tell the user what is happening.
+		ScopedInfoBar closing("Closing map...");
+		g_gui.tabbook->DeleteTab(g_gui.tabbook->GetSelection());
+	}
+
+	// wxAuiNotebook does not emit PAGE_CLOSED when the close event was vetoed
+	// and the page was deleted here, so report the result from this path too.
+	g_status.SetStatusText("Map closed.");
 	g_gui.root->UpdateMenubar();
 	spdlog::info("EditorManager::CloseCurrentEditor - Closed current tab");
 }
@@ -133,7 +147,7 @@ bool EditorManager::CloseAllEditors() {
 void EditorManager::NewMapView() {
 	MapTab* mapTab = GetCurrentMapTab();
 	if (mapTab) {
-		auto* newMapTab = newd MapTab(mapTab);
+		auto* newMapTab = new MapTab(mapTab);
 		newMapTab->OnSwitchEditorMode(mapTab->GetMode());
 
 		g_status.SetStatusText("Created new view");
@@ -176,7 +190,7 @@ bool EditorManager::ShouldSave() {
 	return false;
 }
 
-void EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
+bool EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
 	MapTab* mapTab = GetCurrentMapTab();
 	if (mapTab) {
 		Editor* editor = mapTab->GetEditor();
@@ -193,30 +207,52 @@ void EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
 				g_gui.SetLoadDone(percent, msg.empty() ? wxString() : wxstr(std::string(msg)));
 			} : EditorPersistence::ProgressCallback{};
 
+			const auto save_started = std::chrono::steady_clock::now();
 			auto result = EditorPersistence::saveMap(*editor, fileName, progress);
+			const double save_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - save_started).count();
 
 			if (showdialog) {
 				g_gui.DestroyLoadBar();
 			}
 
+			const bool success = result.success;
 			if (!result.success) {
 				DialogUtil::PopupDialog("Error", result.error_message, wxOK);
-			} else {
-				g_status.SetStatusText("Map saved successfully.");
+			} else if (!editor->map.hasChanged()) {
+				// Report what actually landed on disk, not just that it worked.
+				std::error_code size_ec;
+				const auto file_size = std::filesystem::file_size(std::filesystem::path(editor->map.getFilename()), size_ec);
+				if (size_ec) {
+					g_status.SetStatusText("Map saved successfully.");
+					spdlog::info("Map saved: {} in {:.1f} s", editor->map.getName(), save_seconds);
+				} else {
+					const double megabytes = static_cast<double>(file_size) / (1024.0 * 1024.0);
+					g_status.SetStatusText(std::format("Map saved: {} ({:.1f} MB) in {:.1f} s.", editor->map.getName(), megabytes, save_seconds));
+					spdlog::info("Map saved: {} ({:.1f} MB) in {:.1f} s", editor->map.getName(), megabytes, save_seconds);
+				}
 			}
 
-			const std::string& path = editor->map.getFilename();
-			const Position& position = mapTab->GetScreenCenterPosition();
-			std::ostringstream stream;
-			stream << position;
-			g_settings.setString(Config::RECENT_EDITED_MAP_PATH, path);
-			g_settings.setString(Config::RECENT_EDITED_MAP_POSITION, stream.str());
+			if (success) {
+				const std::string& path = editor->map.getFilename();
+				const Position& position = mapTab->GetScreenCenterPosition();
+				std::ostringstream stream;
+				stream << position;
+				g_settings.setString(Config::RECENT_EDITED_MAP_PATH, path);
+				g_settings.setString(Config::RECENT_EDITED_MAP_POSITION, stream.str());
+			}
+
+			g_status.UpdateTitle();
+			if (success) {
+				// A cancelled or failed save left the document untouched; skip
+				// the full frame/canvas repaint and the menubar refresh.
+				g_gui.root->UpdateMenubar();
+				g_gui.root->Refresh();
+			}
+			return success;
 		}
 	}
 
-	g_status.UpdateTitle();
-	g_gui.root->UpdateMenubar();
-	g_gui.root->Refresh();
+	return false;
 }
 
 bool EditorManager::NewMap() {
@@ -231,7 +267,7 @@ bool EditorManager::NewMap() {
 		return false;
 	}
 
-	auto* mapTab = newd MapTab(g_gui.tabbook, editor.release());
+	auto* mapTab = new MapTab(g_gui.tabbook, editor.release());
 	mapTab->OnSwitchEditorMode(SELECTION_MODE);
 	mapTab->GetMap()->clearChanges();
 	mapTab->GetView()->ResetMinimapViewportToCurrentView();
@@ -278,11 +314,46 @@ void EditorManager::SaveMapAs() {
 		return;
 	}
 
-	wxString wildcard = MAP_SAVE_FILE_WILDCARD;
+	wxString wildcard = "OpenTibia Binary Map (*.otbm)|*.otbm|GZIP Compressed Map (*.otbm)|*.otbm";
 	wxFileDialog dialog(g_gui.root, "Save As...", "", "", wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	dialog.SetFilterIndex(GetCurrentMap().getCompression() == OtbmCompression::Gzip ? 1 : 0);
 
 	if (dialog.ShowModal() == wxID_OK) {
-		SaveCurrentMap(dialog.GetPath().ToStdWstring(), true);
+		const OtbmCompression prev_compression = GetCurrentMap().getCompression();
+		if (dialog.GetFilterIndex() == 1) {
+			GetCurrentMap().setCompression(OtbmCompression::Gzip);
+		} else if (dialog.GetFilterIndex() == 0) {
+			GetCurrentMap().setCompression(OtbmCompression::None);
+		}
+
+		if (!SaveCurrentMap(dialog.GetPath().ToStdWstring(), true)) {
+			GetCurrentMap().setCompression(prev_compression);
+			return;
+		}
+
+		g_status.UpdateTitle();
+		g_gui.root->AddRecentFile(dialog.GetPath().ToStdWstring());
+		g_gui.root->UpdateMenubar();
+	}
+}
+
+void EditorManager::SaveMapAsGzip() {
+	if (!IsEditorOpen()) {
+		return;
+	}
+
+	wxString wildcard = "GZIP Compressed Map (*.otbm)|*.otbm";
+	wxFileDialog dialog(g_gui.root, "Save as GZIP...", "", "", wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+
+	if (dialog.ShowModal() == wxID_OK) {
+		const OtbmCompression prev_compression = GetCurrentMap().getCompression();
+		GetCurrentMap().setCompression(OtbmCompression::Gzip);
+
+		if (!SaveCurrentMap(dialog.GetPath().ToStdWstring(), true)) {
+			GetCurrentMap().setCompression(prev_compression);
+			return;
+		}
+
 		g_status.UpdateTitle();
 		g_gui.root->AddRecentFile(dialog.GetPath().ToStdWstring());
 		g_gui.root->UpdateMenubar();
@@ -291,6 +362,7 @@ void EditorManager::SaveMapAs() {
 
 bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load_options) {
 	spdlog::info("EditorManager::LoadMap - Loading map: {}", fileName.string());
+	const auto load_started = std::chrono::steady_clock::now();
 	g_status.SetStatusText("Loading map...");
 	if (g_gui.root) {
 		g_gui.root->Update();
@@ -315,7 +387,10 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 				throw std::runtime_error(std::format("Unsupported client selection: {}", load_options.selected_client_id));
 			}
 		} else {
-			target = ClientVersion::getBestMatch(ver.client);
+			target = ClientVersion::getByItemsVersion(ver.items_major, ver.client);
+			if (!target) {
+				target = ClientVersion::getBestMatch(ver.client);
+			}
 			if (!target) {
 				throw std::runtime_error(std::format("Unsupported client version (OtbId: {})", static_cast<int>(ver.client)));
 			}
@@ -351,7 +426,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 		return false;
 	}
 
-	auto* mapTab = newd MapTab(g_gui.tabbook, editor.release());
+	auto* mapTab = new MapTab(g_gui.tabbook, editor.release());
 	mapTab->OnSwitchEditorMode(SELECTION_MODE);
 
 	g_gui.root->AddRecentFile(fileName);
@@ -364,22 +439,29 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 	g_gui.FitViewToMap(mapTab);
 	g_gui.root->UpdateMenubar();
 
-	std::string path = g_settings.getString(Config::RECENT_EDITED_MAP_PATH);
-	if (!path.empty()) {
-		FileName file(path);
-		if (file == fileName) {
-			std::istringstream stream(g_settings.getString(Config::RECENT_EDITED_MAP_POSITION));
-			Position position;
-			stream >> position;
-			mapTab->SetScreenCenterPosition(position);
-		}
-	}
+	const Position initial_pos = MapInitialPositionResolver::Resolve(*mapTab->GetMap(), fileName.string());
+	mapTab->SetScreenCenterPosition(initial_pos);
 
 	mapTab->GetView()->ResetMinimapViewportToCurrentView();
 	g_minimap.InvalidateAll(*mapTab->GetMap());
 	g_gui.UpdateMinimap(true);
 
-	g_status.SetStatusText("Map loaded successfully.");
+	const uint64_t loaded_tiles = mapTab->GetMap()->getTileCount();
+	const double load_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - load_started).count();
+	if (loaded_tiles > 0) {
+		g_status.SetStatusText(std::format("Map loaded: {} ({} tiles) in {:.1f} s.", fileName.filename().string(), loaded_tiles, load_seconds));
+		spdlog::info("Map loaded: {} ({} tiles) in {:.1f} s", fileName.filename().string(), loaded_tiles, load_seconds);
+	} else {
+		std::error_code size_ec;
+		const auto bytes = std::filesystem::file_size(fileName, size_ec);
+		if (size_ec) {
+			g_status.SetStatusText("Map loaded successfully.");
+		} else {
+			const double megabytes = static_cast<double>(bytes) / (1024.0 * 1024.0);
+			g_status.SetStatusText(std::format("Map loaded: {} ({:.1f} MB) in {:.1f} s.", fileName.filename().string(), megabytes, load_seconds));
+			spdlog::info("Map loaded: {} ({:.1f} MB) in {:.1f} s", fileName.filename().string(), megabytes, load_seconds);
+		}
+	}
 	return true;
 }
 
@@ -476,6 +558,8 @@ bool EditorManager::DoUndo() {
 		}
 		g_status.SetStatusText("Undo action");
 		g_gui.UpdateMinimap();
+		g_gui.UpdateZonePalette(0);
+		g_gui.UpdateHousePalette(0);
 		g_gui.root->UpdateMenubar();
 		g_gui.root->Refresh();
 		return true;
@@ -492,6 +576,8 @@ bool EditorManager::DoRedo() {
 		}
 		g_status.SetStatusText("Redo action");
 		g_gui.UpdateMinimap();
+		g_gui.UpdateZonePalette(0);
+		g_gui.UpdateHousePalette(0);
 		g_gui.root->UpdateMenubar();
 		g_gui.root->Refresh();
 		return true;

@@ -20,6 +20,7 @@
 
 #include "item_definitions/core/item_definition_store.h"
 #include <memory>
+#include <optional>
 #include <string_view>
 #include "io/iomap_otbm.h"
 #include "io/otbm/invalid_otbm_content.h"
@@ -71,13 +72,41 @@ enum SplashType {
 	LIQUID_RUM = 27,
 	LIQUID_SWAMP = 28,
 	LIQUID_TEA = 35,
-	LIQUID_MEAD = 43,
-
-	LIQUID_FIRST = LIQUID_WATER,
-	LIQUID_LAST = LIQUID_MEAD
+	LIQUID_MEAD = 43
 };
 
-IMPLEMENT_INCREMENT_OP(SplashType)
+inline constexpr std::array<SplashType, 22> kValidSplashTypes = {
+	// Blue
+	LIQUID_WATER,
+	LIQUID_WATER2,
+	// Red
+	LIQUID_BLOOD,
+	LIQUID_LIFEFLUID,
+	LIQUID_LAVA,
+	// Brown
+	LIQUID_BEER,
+	LIQUID_MEAD,
+	LIQUID_MUD,
+	LIQUID_OIL,
+	LIQUID_RUM,
+	LIQUID_TEA,
+	// Green
+	LIQUID_SLIME,
+	LIQUID_SLIME2,
+	LIQUID_SWAMP,
+	// Yellow
+	LIQUID_FRUIT_JUICE,
+	LIQUID_LEMONADE,
+	LIQUID_URINE,
+	// White
+	LIQUID_COCONUT_MILK,
+	LIQUID_MILK,
+	// Purple
+	LIQUID_MANAFLUID,
+	LIQUID_WINE,
+	// Other
+	LIQUID_INK,
+};
 
 class Item : public ItemAttributes {
 public:
@@ -89,7 +118,7 @@ public:
 	inline static const std::string ATTR_TIER = "tier";
 
 	// Factory member to create item of right type based on type
-	static std::unique_ptr<Item> Create(ServerItemId _type, uint16_t _subtype = 0xFFFF);
+	static std::unique_ptr<Item> Create(ServerItemId _type, std::optional<uint16_t> _subtype = std::nullopt);
 	static std::unique_ptr<Item> Create(pugi::xml_node);
 	static std::unique_ptr<Item> Create_OTBM(const IOMap& maphandle, BinaryNode* stream);
 
@@ -164,8 +193,36 @@ public:
 	virtual void serializeItemCompact_OTBM(const IOMap& maphandle, NodeFileWriteHandle& f) const;
 
 	// Static conversions
+	static constexpr uint8_t ServerFluidToSpritePattern(uint16_t server_fluid) {
+		switch (server_fluid) {
+			case LIQUID_NONE:         return 0; // Empty / Transparent (Index 0)
+			case LIQUID_WATER:
+			case LIQUID_WATER2:       return 1; // Blue (Index 1)
+			case LIQUID_BLOOD:
+			case LIQUID_LIFEFLUID:
+			case LIQUID_LAVA:         return 2; // Red (Index 2)
+			case LIQUID_BEER:
+			case LIQUID_OIL:
+			case LIQUID_MUD:
+			case LIQUID_RUM:
+			case LIQUID_TEA:
+			case LIQUID_MEAD:         return 3; // Brown (Index 3)
+			case LIQUID_SLIME:
+			case LIQUID_SLIME2:
+			case LIQUID_SWAMP:        return 4; // Green (Index 4)
+			case LIQUID_LEMONADE:
+			case LIQUID_URINE:
+			case LIQUID_FRUIT_JUICE:  return 5; // Yellow (Index 5)
+			case LIQUID_MILK:
+			case LIQUID_COCONUT_MILK: return 6; // White (Index 6)
+			case LIQUID_MANAFLUID:
+			case LIQUID_WINE:         return 7; // Purple (Index 7)
+			case LIQUID_INK:          return 0;
+			default:                  return static_cast<uint8_t>(server_fluid & 7);
+		}
+	}
+
 	static std::string_view LiquidID2Name(uint16_t id);
-	static uint16_t LiquidName2ID(std::string id);
 
 	// IDs
 	[[nodiscard]] ServerItemId getID() const {
@@ -332,19 +389,55 @@ public:
 		return getDefinition().hasFlag(ItemFlag::IsHangable);
 	}
 	bool isRoteable() const {
-		const auto definition = getDefinition();
-		return definition.hasFlag(ItemFlag::Rotatable) && definition.attribute(ItemAttributeKey::RotateTo) != 0;
+		// RotateTo is authoritative. Some item datasets expose a rotation
+		// target without setting the Rotatable dat flag.
+		return getDefinition().attribute(ItemAttributeKey::RotateTo) != 0;
 	}
 	void doRotate() {
 		if (isRoteable()) {
-			id = static_cast<uint16_t>(getDefinition().attribute(ItemAttributeKey::RotateTo));
+			id = static_cast<ServerItemId>(getDefinition().attribute(ItemAttributeKey::RotateTo));
+		}
+	}
+	void doRotateBackwards() {
+		if (!isRoteable()) {
+			return;
+		}
+
+		const ServerItemId target_id = id;
+		ServerItemId current = static_cast<ServerItemId>(getDefinition().attribute(ItemAttributeKey::RotateTo));
+		ServerItemId previous = target_id;
+
+		for (int steps = 0; steps < 16; ++steps) {
+			if (current == 0 || current == target_id) {
+				break;
+			}
+
+			const auto definition = g_item_definitions.get(current);
+			const auto next = static_cast<ServerItemId>(definition.attribute(ItemAttributeKey::RotateTo));
+			if (next == 0) {
+				break;
+			}
+
+			previous = current;
+			current = next;
+		}
+
+		if (current == target_id && previous != target_id) {
+			id = previous;
 		}
 	}
 	bool hasCharges() const {
 		return getDefinition().attribute(ItemAttributeKey::Charges) != 0;
 	}
+	// Border item of a border brush (borders.xml). Auto-bordering only ever
+	// removes or replaces these, so hand-placed edges survive re-bordering.
 	bool isBorder() const {
-		return getDefinition().hasFlag(ItemFlag::IsBorder) || (isAlwaysOnBottom() && getTopOrder() == 1);
+		return getDefinition().hasFlag(ItemFlag::IsBorder);
+	}
+	// Drawn in the ground-border render layer: brush borders plus every other
+	// "clip" item (always-on-bottom, top order 1) such as hand-placed edges.
+	bool isBorderLayer() const {
+		return isBorder() || (isAlwaysOnBottom() && getTopOrder() == 1);
 	}
 	bool isOptionalBorder() const {
 		return getDefinition().hasFlag(ItemFlag::IsOptionalBorder);

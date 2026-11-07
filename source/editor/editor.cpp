@@ -43,7 +43,7 @@
 
 Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version) :
 	live_manager(*this),
-	actionQueue(newd ActionQueue(*this)),
+	actionQueue(new ActionQueue(*this)),
 	selection(*this),
 	copybuffer(copybuffer),
 	replace_brush(nullptr) {
@@ -54,7 +54,7 @@ Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version) :
 
 Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, const std::filesystem::path& fn, const MapLoadOptions& load_options, EditorPersistence::ProgressCallback on_progress) :
 	live_manager(*this),
-	actionQueue(newd ActionQueue(*this)),
+	actionQueue(new ActionQueue(*this)),
 	selection(*this),
 	copybuffer(copybuffer),
 	replace_brush(nullptr) {
@@ -64,7 +64,7 @@ Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, const std::fil
 
 Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, std::unique_ptr<LiveClient> client) :
 	live_manager(*this, std::move(client)),
-	actionQueue(newd NetworkedActionQueue(*this)),
+	actionQueue(new NetworkedActionQueue(*this)),
 	selection(*this),
 	copybuffer(copybuffer),
 	replace_brush(nullptr) {
@@ -149,6 +149,10 @@ void Editor::drawInternal(Brush* brush, const PositionVector& tilestodraw, bool 
 
 void Editor::drawInternal(Brush* brush, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw, int brush_size) {
 	DrawOperations::draw(*this, brush, tilestodraw, tilestoborder, alt, dodraw, brush_size);
+}
+
+void Editor::drawGroundHoleToFloorBelow(Brush* brush, const PositionVector& tilestodraw, const PositionVector& tilestoborder) {
+	DrawOperations::drawGroundHoleToFloorBelow(*this, brush, tilestodraw, tilestoborder);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

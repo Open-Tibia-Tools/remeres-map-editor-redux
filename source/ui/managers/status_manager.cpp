@@ -9,10 +9,30 @@
 
 StatusManager g_status;
 
-void StatusManager::SetStatusText(std::string_view text, int field) {
+void StatusManager::SetStatusText(const wxString& text, int field, int duration_ms) {
+	if (g_gui.root) {
+		g_gui.root->SetStatusText(text, field);
+	}
+	if (field == 1 && duration_ms > 0) {
+		message_expiry_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(duration_ms);
+	}
+}
+
+void StatusManager::SetStatusText(std::string_view text, int field, int duration_ms) {
 	if (g_gui.root) {
 		g_gui.root->SetStatusText(wxString::FromUTF8(text.data(), text.size()), field);
 	}
+	if (field == 1 && duration_ms > 0) {
+		message_expiry_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(duration_ms);
+	}
+}
+
+void StatusManager::SetStatusText(const char* text, int field, int duration_ms) {
+	SetStatusText(std::string_view(text ? text : ""), field, duration_ms);
+}
+
+bool StatusManager::HasActiveMessage() const {
+	return std::chrono::steady_clock::now() < message_expiry_;
 }
 
 void StatusManager::SetTitle(const wxString& title) {
@@ -22,13 +42,13 @@ void StatusManager::SetTitle(const wxString& title) {
 
 #ifdef NIGHTLY_BUILD
 	#ifdef SVN_BUILD
-		#define TITLE_APPEND (wxString(" (Nightly Build #") << i2ws(SVN_BUILD) << ")")
+		#define TITLE_APPEND (wxString(" (Nightly Build #") << std::to_string(SVN_BUILD) << ")")
 	#else
 		#define TITLE_APPEND (wxString(" (Nightly Build)"))
 	#endif
 #else
 	#ifdef SVN_BUILD
-		#define TITLE_APPEND (wxString(" (Build #") << i2ws(SVN_BUILD) << ")")
+		#define TITLE_APPEND (wxString(" (Build #") << std::to_string(SVN_BUILD) << ")")
 	#else
 		#define TITLE_APPEND (wxString(""))
 	#endif

@@ -6,7 +6,8 @@
 #include "brushes/table/table_brush.h"
 #include <array>
 
-namespace {
+// Unique namespace: unity builds concatenate this with the other *_brush_arrays.cpp files.
+namespace table_brush_arrays {
 	// Bitmapping: N=2, W=8, E=16, S=64 (consistent with TILE_ enums)
 	enum {
 		N = TILE_NORTH,
@@ -45,6 +46,6 @@ namespace {
 
 void TableBrush::init() {
 	for (int i = 0; i < 256; ++i) {
-		TableBrush::table_types[i] = table_type_table[i];
+		TableBrush::table_types[i] = table_brush_arrays::table_type_table[i];
 	}
 }

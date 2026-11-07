@@ -24,14 +24,17 @@
 #include <unordered_map>
 
 Creature::Creature(CreatureType* ctype) :
-	direction(SOUTH), spawntime(0), saved(false), selected(false) {
+	direction(SOUTH), spawntime(60), saved(false), selected(false) {
 	if (ctype) {
 		type_name = ctype->name;
+		if (ctype->isNpc) {
+			npc_spawn = true;
+		}
 	}
 }
 
 Creature::Creature(std::string ctype_name) :
-	type_name(std::move(ctype_name)), direction(SOUTH), spawntime(0), saved(false), selected(false) {
+	type_name(std::move(ctype_name)), direction(SOUTH), spawntime(60), saved(false), selected(false) {
 	////
 }
 
@@ -71,6 +74,9 @@ std::unique_ptr<Creature> Creature::deepCopy() const {
 	std::unique_ptr<Creature> copy = std::make_unique<Creature>(type_name);
 	copy->spawntime = spawntime;
 	copy->direction = direction;
+	copy->weight = weight;
+	copy->alternatives = alternatives;
+	copy->npc_spawn = npc_spawn;
 	copy->selected = selected;
 	copy->saved = saved;
 	return copy;

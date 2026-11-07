@@ -16,27 +16,27 @@
 TeleportPropertyPanel::TeleportPropertyPanel(wxWindow* parent) :
 	ItemPropertyPanel(parent) {
 
-	dest_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Destination");
-	wxFlexGridSizer* dest_grid = newd wxFlexGridSizer(3, 2, FROM_DIP(this, 5), FROM_DIP(this, 5));
+	dest_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Destination");
+	wxFlexGridSizer* dest_grid = new wxFlexGridSizer(3, 2, FromDIP(5), FromDIP(5));
 	dest_grid->AddGrowableCol(1);
 
-	dest_grid->Add(newd wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "X:"), 0, wxALIGN_CENTER_VERTICAL);
-	x_spin = newd wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
+	dest_grid->Add(new wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "X:"), wxSizerFlags().CenterVertical());
+	x_spin = new wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
 	x_spin->SetRange(0, 65535);
-	dest_grid->Add(x_spin, 1, wxEXPAND);
+	dest_grid->Add(x_spin, wxSizerFlags(1).Expand());
 
-	dest_grid->Add(newd wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "Y:"), 0, wxALIGN_CENTER_VERTICAL);
-	y_spin = newd wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
+	dest_grid->Add(new wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "Y:"), wxSizerFlags().CenterVertical());
+	y_spin = new wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
 	y_spin->SetRange(0, 65535);
-	dest_grid->Add(y_spin, 1, wxEXPAND);
+	dest_grid->Add(y_spin, wxSizerFlags(1).Expand());
 
-	dest_grid->Add(newd wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "Z:"), 0, wxALIGN_CENTER_VERTICAL);
-	z_spin = newd wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
+	dest_grid->Add(new wxStaticText(dest_sizer->GetStaticBox(), wxID_ANY, "Z:"), wxSizerFlags().CenterVertical());
+	z_spin = new wxSpinCtrl(dest_sizer->GetStaticBox(), wxID_ANY);
 	z_spin->SetRange(0, 15);
-	dest_grid->Add(z_spin, 1, wxEXPAND);
+	dest_grid->Add(z_spin, wxSizerFlags(1).Expand());
 
-	dest_sizer->Add(dest_grid, 1, wxEXPAND | wxALL, FROM_DIP(this, 5));
-	GetSizer()->Add(dest_sizer, 0, wxEXPAND | wxALL, FROM_DIP(this, 5));
+	dest_sizer->Add(dest_grid, wxSizerFlags(1).Expand().Border(wxALL, FromDIP(5)));
+	GetSizer()->Add(dest_sizer, wxSizerFlags().Expand().Border(wxALL, FromDIP(5)));
 
 	x_spin->Bind(wxEVT_SPINCTRL, &TeleportPropertyPanel::OnDestChange, this);
 	y_spin->Bind(wxEVT_SPINCTRL, &TeleportPropertyPanel::OnDestChange, this);

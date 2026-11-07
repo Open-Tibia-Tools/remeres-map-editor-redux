@@ -191,13 +191,13 @@ void LivePeer::parseHello(NetworkMessage& message) {
 	std::string nickname = message.read<std::string>();
 	std::string password = message.read<std::string>();
 
-	if (server->getPassword() != wxString(password.c_str(), wxConvUTF8)) {
+	if (server->getPassword() != wxstr(password)) {
 		log->Message("Client tried to connect, but used the wrong password, connection refused.");
 		close();
 		return;
 	}
 
-	name = wxString(nickname.c_str(), wxConvUTF8);
+	name = wxstr(nickname);
 	log->Message(name + " (" + getHostName() + ") connected.");
 
 	NetworkMessage outMessage;

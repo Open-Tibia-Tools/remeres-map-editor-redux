@@ -366,14 +366,15 @@ void LuaScriptManager::collectMapOverlayCommands(const MapViewInfo& view, std::v
 }
 
 void LuaScriptManager::registerOverlayFunctions(sol::table& ctx, std::shared_ptr<std::vector<MapOverlayCommand>>& out, const MapViewInfo& view) {
-	auto getOptsTable = [](sol::variadic_args va) -> sol::table {
+	ctx["__is_rme_overlay_ctx"] = true;
+
+	const void* ctx_ptr = ctx.pointer();
+	auto getOptsTable = [ctx_ptr](sol::variadic_args va) -> sol::table {
 		for (size_t i = 0; i < va.size(); ++i) {
 			if (va[i].is<sol::table>()) {
 				sol::table t = va[i].as<sol::table>();
-				// Skip the ctx table (it has 'view', 'rect', 'line', 'text' fields)
-				if (t["view"].valid() && t["rect"].valid()) {
-					// We check if it looks like the context table we just created
-					// Simple heuristic: if it has 'view' and 'rect' (which are functions), it's probably the context
+				// Skip the context table itself (when called as ctx:rect(...) instead of ctx.rect(...))
+				if (t.pointer() == ctx_ptr || t["__is_rme_overlay_ctx"].get_or(false)) {
 					continue;
 				}
 				return t;

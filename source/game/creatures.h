@@ -41,7 +41,7 @@ public:
 	CreatureDatabase();
 	~CreatureDatabase();
 
-	void clear();
+	void clear(bool standard_only = false);
 
 	CreatureType* operator[](const std::string& name);
 	CreatureType* addMissingCreatureType(const std::string& name, bool isNpc);
@@ -78,7 +78,7 @@ public:
 
 	static void preserve_assign_creature_fields(CreatureType* dest, const CreatureType& src);
 
-	static CreatureType* loadFromXML(pugi::xml_node node, std::vector<std::string>& warnings);
+	static CreatureType* loadFromXML(pugi::xml_node node, std::vector<std::string>& warnings, std::string_view fallbackType = "");
 	static CreatureType* loadFromOTXML(const std::filesystem::path& filename, pugi::xml_document& node, std::vector<std::string>& warnings);
 };
 

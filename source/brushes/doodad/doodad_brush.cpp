@@ -122,3 +122,34 @@ bool DoodadBrush::hasSingleObjects(int variation) const {
 bool DoodadBrush::hasCompositeObjects(int variation) const {
 	return items.hasCompositeObjects(variation);
 }
+uint16_t DoodadBrush::getPlacementItemId(int variation) const {
+	if (items.getTotalVariants() > 0) {
+		const auto variant = items.getVariant(variation);
+		if (variant.single_item) {
+			return variant.single_item->getID();
+		}
+		if (variant.composite && !variant.composite->empty()) {
+			for (const auto& tile_pair : *variant.composite) {
+				if (!tile_pair.second.empty() && tile_pair.second.front()) {
+					return tile_pair.second.front()->getID();
+				}
+			}
+		}
+	}
+
+	const auto& alts = items.getAlternatives();
+	if (variation >= 0 && variation < static_cast<int>(alts.size())) {
+		const auto& alt = alts[variation];
+		if (!alt->single_items.empty() && alt->single_items.front().item) {
+			return alt->single_items.front().item->getID();
+		}
+		if (!alt->composite_items.empty()) {
+			for (const auto& tile_pair : alt->composite_items.front().items) {
+				if (!tile_pair.second.empty() && tile_pair.second.front()) {
+					return tile_pair.second.front()->getID();
+				}
+			}
+		}
+	}
+	return 0;
+}

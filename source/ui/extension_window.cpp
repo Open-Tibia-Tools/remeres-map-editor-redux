@@ -27,23 +27,23 @@
 extern Materials g_materials;
 
 ExtensionsDialog::ExtensionsDialog(wxWindow* parent) :
-	wxDialog(parent, wxID_ANY, "Extensions", wxDefaultPosition, wxSize(600, 500), wxRESIZE_BORDER | wxCAPTION) {
+	wxDialog(parent, wxID_ANY, "Extensions", wxDefaultPosition, parent ? parent->FromDIP(wxSize(600, 500)) : wxSize(600, 500), wxRESIZE_BORDER | wxCAPTION) {
 	wxBoxSizer* topSizer = new wxBoxSizer(wxVERTICAL);
 
-	wxHtmlWindow* htmlWindow = new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition, wxSize(550, 400));
+	wxHtmlWindow* htmlWindow = new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(550, 400)));
 	htmlWindow->SetPage(HTML());
 	topSizer->Add(htmlWindow, wxSizerFlags(1).DoubleBorder().Expand());
 
-	wxSizer* buttonSizer = newd wxBoxSizer(wxHORIZONTAL);
-	auto okBtn = newd wxButton(this, wxID_OK, "OK");
-	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	wxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
+	auto okBtn = new wxButton(this, wxID_OK, "OK");
+	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Close window");
 	buttonSizer->Add(okBtn, wxSizerFlags(1).Center());
-	auto openBtn = newd wxButton(this, EXTENSIONS_OPEN_FOLDER_BUTTON, "Open Extensions Folder");
-	openBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_FOLDER_OPEN, wxSize(16, 16)));
+	auto openBtn = new wxButton(this, EXTENSIONS_OPEN_FOLDER_BUTTON, "Open Extensions Folder");
+	openBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_FOLDER_OPEN));
 	openBtn->SetToolTip("Open the extensions directory in file explorer");
 	buttonSizer->Add(openBtn, wxSizerFlags(1).Center());
-	topSizer->Add(buttonSizer, 0, wxCENTER | wxLEFT | wxRIGHT | wxBOTTOM, 20);
+	topSizer->Add(buttonSizer, wxSizerFlags().Center().Border(wxLEFT | wxRIGHT | wxBOTTOM, 20));
 
 	SetSizerAndFit(topSizer);
 	Centre(wxBOTH);
@@ -53,7 +53,7 @@ ExtensionsDialog::ExtensionsDialog(wxWindow* parent) :
 	openBtn->Bind(wxEVT_BUTTON, &ExtensionsDialog::OnClickOpenFolder, this);
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_PUZZLE_PIECE, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_PUZZLE_PIECE, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 

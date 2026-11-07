@@ -24,6 +24,11 @@ void WaypointSerializationOTBM::readWaypoints(Map& map, FastOTBMNode& mapNode) {
 			return;
 		}
 
+		if (name.empty() || x == 0 || y == 0) {
+			spdlog::warn("Discarding malformed waypoint '{}'", name);
+			return;
+		}
+
 		Waypoint wp;
 		wp.name = std::move(name);
 		wp.pos = { x, y, z };
@@ -33,7 +38,8 @@ void WaypointSerializationOTBM::readWaypoints(Map& map, FastOTBMNode& mapNode) {
 }
 
 OTBMWriteResult WaypointSerializationOTBM::writeWaypoints(const Map& map, NodeFileWriteHandle& f, MapVersion mapVersion) {
-	if (map.waypoints.begin() == map.waypoints.end()) {
+	// OTBM 5 loaders require the WAYPOINTS node even when it is empty.
+	if (map.waypoints.begin() == map.waypoints.end() && mapVersion.otbm != MAP_OTBM_5) {
 		return OTBMWriteResult::Success;
 	}
 

@@ -1,8 +1,11 @@
 #include "ui/find_item_window_views.h"
 
 #include "brushes/creature/creature_brush.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include "ui/gui.h"
 #include "ui/theme.h"
+#include "util/grid_cell_renderer.h"
+#include "util/nvg_utils.h"
 
 #include <glad/glad.h>
 #include <nanovg.h>
@@ -11,10 +14,6 @@
 #include <string_view>
 
 namespace {
-	NVGcolor toColor(const wxColour& colour) {
-		return nvgRGBA(colour.Red(), colour.Green(), colour.Blue(), colour.Alpha());
-	}
-
 	[[nodiscard]] std::string hoverSummary(const AdvancedFinderCatalogRow& row) {
 		if (row.isCreature()) {
 			return "SID: -   CID: -   " + row.label;
@@ -52,19 +51,19 @@ void AdvancedFinderResultsView::OnNanoVGPaint(NVGcontext* vg, int width, int hei
 
 		nvgBeginPath(vg);
 		nvgRect(vg, 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(header_height));
-		nvgFillColor(vg, toColor(header_fill));
+		nvgFillColor(vg, NvgUtils::ToNvColor(header_fill));
 		nvgFill(vg);
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, 0.0f, static_cast<float>(header_height));
 		nvgLineTo(vg, static_cast<float>(width), static_cast<float>(header_height));
 		nvgStrokeWidth(vg, 1.0f);
-		nvgStrokeColor(vg, toColor(border));
+		nvgStrokeColor(vg, NvgUtils::ToNvColor(border));
 		nvgStroke(vg);
 
 		nvgFontFace(vg, "sans");
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgFontSize(vg, 12.0f);
-		nvgFillColor(vg, toColor(text));
+		nvgFillColor(vg, NvgUtils::ToNvColor(text));
 		nvgText(vg, 14.0f, y_center, "Image", nullptr);
 		nvgText(vg, column_image + 12.0f, y_center, "SID", nullptr);
 		nvgText(vg, column_image + column_sid + 12.0f, y_center, "CID", nullptr);
@@ -112,23 +111,23 @@ int AdvancedFinderResultsView::listHeaderHeight() const {
 }
 
 int AdvancedFinderResultsView::listItemHeight() const {
-	return FromDIP(48);
+	return list_item_height_ > 0 ? list_item_height_ : (FromDIP(40) + grid_spacing_);
 }
 
 int AdvancedFinderResultsView::gridCardWidth() const {
-	return FromDIP(40);
+	return rme::ui::grid::CellWidth(icon_size_);
 }
 
 int AdvancedFinderResultsView::gridCardHeight() const {
-	return FromDIP(40);
+	return rme::ui::grid::CellHeight(icon_size_, show_labels_);
 }
 
 int AdvancedFinderResultsView::gridPadding() const {
-	return FromDIP(8);
+	return grid_spacing_;
 }
 
 int AdvancedFinderResultsView::gridGap() const {
-	return FromDIP(4);
+	return grid_spacing_;
 }
 
 void AdvancedFinderResultsView::drawEmptyState(NVGcontext* vg, int width, int height) const {
@@ -138,7 +137,7 @@ void AdvancedFinderResultsView::drawEmptyState(NVGcontext* vg, int width, int he
 
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
-	nvgFillColor(vg, toColor(surface));
+	nvgFillColor(vg, NvgUtils::ToNvColor(surface));
 	nvgFill(vg);
 
 	nvgFontFace(vg, "sans");
@@ -148,28 +147,34 @@ void AdvancedFinderResultsView::drawEmptyState(NVGcontext* vg, int width, int he
 	const char* secondary = secondary_message_.empty() ? "Try a different query or filters." : secondary_message_.c_str();
 
 	nvgFontSize(vg, 15.0f);
-	nvgFillColor(vg, toColor(title));
+	nvgFillColor(vg, NvgUtils::ToNvColor(title));
 	nvgText(vg, 18.0f, height * 0.42f, primary, nullptr);
 
 	nvgFontSize(vg, 12.0f);
-	nvgFillColor(vg, toColor(body));
+	nvgFillColor(vg, NvgUtils::ToNvColor(body));
 	nvgText(vg, 18.0f, height * 0.52f, secondary, nullptr);
 }
 
-void AdvancedFinderResultsView::drawSpriteBadge(NVGcontext* vg, const wxRect& rect, Sprite* sprite) const {
-	if (sprite == nullptr) {
-		return;
+void AdvancedFinderResultsView::drawRowBadge(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row) const {
+	auto tech = rme::rendering::TileIndicatorType::None;
+	if (row.isItem()) {
+		tech = rme::rendering::TechnicalItemRegistry::Classify(
+			row.server_id,
+			row.client_id
+		);
+	}
+	const Brush* b = row.brush ? row.brush : static_cast<Brush*>(row.raw_brush);
+	if (tech == rme::rendering::TileIndicatorType::None && b) {
+		tech = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(b);
 	}
 
-	// Mutates only the internal texture cache; drawing semantics stay const.
-	if (const int texture = const_cast<AdvancedFinderResultsView*>(this)->GetOrCreateSpriteTexture(vg, sprite); texture > 0) {
-		const float radius = 8.0f;
-		NVGpaint paint = nvgImagePattern(vg, rect.x, rect.y, rect.width, rect.height, 0.0f, texture, 1.0f);
-		nvgBeginPath(vg);
-		nvgRoundedRect(vg, rect.x, rect.y, rect.width, rect.height, radius);
-		nvgFillPaint(vg, paint);
-		nvgFill(vg);
+	int texture = 0;
+	if (tech == rme::rendering::TileIndicatorType::None) {
+		if (Sprite* sprite = spriteForRow(row)) {
+			texture = const_cast<AdvancedFinderResultsView*>(this)->GetOrCreateSpriteTexture(vg, sprite);
+		}
 	}
+	rme::ui::grid::DrawCellIcon(vg, rect, texture, tech);
 }
 
 void AdvancedFinderResultsView::drawListRow(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row, bool selected, bool hovered) const {
@@ -187,21 +192,21 @@ void AdvancedFinderResultsView::drawListRow(NVGcontext* vg, const wxRect& rect, 
 
 	nvgBeginPath(vg);
 	nvgRect(vg, rect.x, rect.y, rect.width, rect.height);
-	nvgFillColor(vg, toColor(fill_colour));
+	nvgFillColor(vg, NvgUtils::ToNvColor(fill_colour));
 	nvgFill(vg);
 	nvgStrokeWidth(vg, 1.0f);
-	nvgStrokeColor(vg, toColor(border));
+	nvgStrokeColor(vg, NvgUtils::ToNvColor(border));
 	nvgStroke(vg);
 
 	const int icon_well = FromDIP(36);
 	const int icon_size = FromDIP(32);
 	const wxRect icon_background(rect.x + 8, rect.y + 6, FromDIP(40), rect.height - 12);
 	nvgBeginPath(vg);
-	nvgRoundedRect(vg, icon_background.x, icon_background.y, icon_background.width, icon_background.height, 6.0f);
-	nvgFillColor(vg, toColor(icon_fill));
+	nvgRect(vg, icon_background.x, icon_background.y, icon_background.width, icon_background.height);
+	nvgFillColor(vg, NvgUtils::ToNvColor(icon_fill));
 	nvgFill(vg);
 	nvgStrokeWidth(vg, 1.0f);
-	nvgStrokeColor(vg, toColor(icon_border));
+	nvgStrokeColor(vg, NvgUtils::ToNvColor(icon_border));
 	nvgStroke(vg);
 
 	const wxRect icon_rect(
@@ -211,12 +216,20 @@ void AdvancedFinderResultsView::drawListRow(NVGcontext* vg, const wxRect& rect, 
 		icon_well
 	);
 	const wxRect sprite_rect(icon_rect.x + (icon_rect.width - icon_size) / 2, icon_rect.y + (icon_rect.height - icon_size) / 2, icon_size, icon_size);
-	drawSpriteBadge(vg, sprite_rect, spriteForRow(row));
+	drawRowBadge(vg, sprite_rect, row);
+
+	if (indicator_dogear_) {
+		const bool isLightTheme = (Theme::Get(Theme::Role::Surface).Red() > 128);
+		const Brush* b = row.brush ? row.brush : static_cast<Brush*>(row.raw_brush);
+		const NVGcolor catColor = b ? rme::ui::grid::GetStandardCategoryColor(b)
+		                            : rme::ui::grid::GetStandardCategoryColor(Theme::Role::BrushCategoryDefaultRaw);
+		rme::ui::grid::DrawDogEarBadge(vg, sprite_rect, catColor);
+	}
 
 	nvgFontFace(vg, "sans");
 	nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 	nvgFontSize(vg, 13.0f);
-	nvgFillColor(vg, toColor(text));
+	nvgFillColor(vg, NvgUtils::ToNvColor(text));
 
 	const float text_y = static_cast<float>(rect.y + rect.height * 0.5f);
 	nvgSave(vg);
@@ -234,31 +247,27 @@ void AdvancedFinderResultsView::drawListRow(NVGcontext* vg, const wxRect& rect, 
 	nvgMoveTo(vg, column_image + column_sid + column_cid, rect.y);
 	nvgLineTo(vg, column_image + column_sid + column_cid, rect.y + rect.height);
 	nvgStrokeWidth(vg, 1.0f);
-	nvgStrokeColor(vg, toColor(border));
+	nvgStrokeColor(vg, NvgUtils::ToNvColor(border));
 	nvgStroke(vg);
 }
 
 void AdvancedFinderResultsView::drawGridCard(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row, bool selected, bool hovered) const {
-	const wxColour border = Theme::Get(Theme::Role::CardBorder);
-	const wxColour hover_fill = Theme::Get(Theme::Role::CardBaseHover);
-	const wxColour selected_fill = Theme::Get(Theme::Role::Accent);
-	const wxColour surface = Theme::Get(Theme::Role::RaisedSurface);
+	rme::ui::grid::DrawCardChrome(vg, rect, selected, hovered, 0.0f, show_labels_);
 
-	nvgBeginPath(vg);
-	nvgRoundedRect(vg, rect.x, rect.y, rect.width, rect.height, 4.0f);
-	nvgFillColor(vg, toColor(selected ? selected_fill : (hovered ? hover_fill : surface)));
-	nvgFill(vg);
-	nvgStrokeWidth(vg, 1.0f);
-	nvgStrokeColor(vg, toColor(selected ? Theme::Get(Theme::Role::AccentHover) : border));
-	nvgStroke(vg);
+	const wxRect sprite_rect = rme::ui::grid::IconRect(rect, icon_size_);
+	drawRowBadge(vg, sprite_rect, row);
 
-	const wxRect sprite_rect(
-		rect.x + (rect.width - FromDIP(32)) / 2,
-		rect.y + (rect.height - FromDIP(32)) / 2,
-		FromDIP(32),
-		FromDIP(32)
-	);
-	drawSpriteBadge(vg, sprite_rect, spriteForRow(row));
+	if (indicator_dogear_) {
+		const bool isLightTheme = (Theme::Get(Theme::Role::Surface).Red() > 128);
+		const Brush* b = row.brush ? row.brush : static_cast<Brush*>(row.raw_brush);
+		const NVGcolor catColor = b ? rme::ui::grid::GetStandardCategoryColor(b)
+		                            : rme::ui::grid::GetStandardCategoryColor(Theme::Role::BrushCategoryDefaultRaw);
+		rme::ui::grid::DrawDogEarBadge(vg, sprite_rect, catColor);
+	}
+
+	if (show_labels_) {
+		rme::ui::grid::DrawCellLabel(vg, rect, wxstr(row.label), selected, const_cast<AdvancedFinderResultsView*>(this)->label_cache_);
+	}
 }
 
 void AdvancedFinderResultsView::drawGridHoverInfo(NVGcontext* vg, int width, int height, int scroll_pos) const {
@@ -290,16 +299,16 @@ void AdvancedFinderResultsView::drawGridHoverInfo(NVGcontext* vg, int width, int
 	);
 
 	nvgBeginPath(vg);
-	nvgRoundedRect(vg, panel_x, panel_y, panel_width, panel_height, 6.0f);
-	nvgFillColor(vg, toColor(panel));
+	nvgRect(vg, panel_x, panel_y, panel_width, panel_height);
+	nvgFillColor(vg, NvgUtils::ToNvColor(panel));
 	nvgFill(vg);
 	nvgStrokeWidth(vg, 1.0f);
-	nvgStrokeColor(vg, toColor(border));
+	nvgStrokeColor(vg, NvgUtils::ToNvColor(border));
 	nvgStroke(vg);
 
 	nvgSave(vg);
 	nvgScissor(vg, panel_x + FromDIP(9), panel_y, panel_width - FromDIP(18), panel_height);
-	nvgFillColor(vg, toColor(text));
+	nvgFillColor(vg, NvgUtils::ToNvColor(text));
 	nvgText(vg, panel_x + FromDIP(9), panel_y + panel_height * 0.5f, summary.c_str(), nullptr);
 	nvgRestore(vg);
 }

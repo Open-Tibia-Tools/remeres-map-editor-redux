@@ -8,6 +8,7 @@
 #include "app/definitions.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "map/position.h"
+#include <cstdint>
 
 // Forward declarations
 class SpriteDrawer;
@@ -20,6 +21,7 @@ struct RenderFrameContext;
 
 struct DrawingOptions;
 class SpriteBatch;
+class AtlasManager;
 struct SpritePatterns;
 
 struct BlitItemParams {
@@ -35,6 +37,9 @@ struct BlitItemParams {
 	int green = 255;
 	int blue = 255;
 	int alpha = 255;
+	float house_id = 0.0f;
+	uint32_t zone_flags = 0;
+	float depth = 0.0f;
 	const RenderView* view = nullptr;
 	const RenderFrameContext* ctx = nullptr;
 
@@ -49,7 +54,11 @@ public:
 
 	void BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, CreatureDrawer* creature_drawer, int& draw_x, int& draw_y, const BlitItemParams& params);
 
-	void DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, int screenx, int screeny, ServerItemId item_id, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha, const RenderFrameContext* ctx = nullptr);
+	void DrawRawBrush(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, int screenx, int screeny, ServerItemId item_id, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha, const RenderFrameContext* ctx = nullptr, const Tile* tile = nullptr, const Position& pos = Position());
+
+	// "Show Light Strength" indicator: a square in the tile's bottom-right corner
+	// in the light's colour, larger for stronger lights. No-op for items without light.
+	void DrawLightStrength(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer, const Item& item, int draw_x, int draw_y, const AtlasManager* atlas, float depth) const;
 };
 
 #endif

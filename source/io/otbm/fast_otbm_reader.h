@@ -1,13 +1,12 @@
 #ifndef RME_FAST_OTBM_READER_H_
 #define RME_FAST_OTBM_READER_H_
 
+#include <bit>
 #include <cstdint>
 #include <cstring>
-#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <concepts>
 #include "io/otbm/otbm_types.h"
 #include "io/otbm/invalid_otbm_content.h"
 
@@ -67,8 +66,14 @@ public:
 			p[0] != OTBM_ESCAPE_CHAR && p[1] != OTBM_ESCAPE_CHAR &&
 			p[0] != OTBM_NODE_START && p[0] != OTBM_NODE_END &&
 			p[1] != OTBM_NODE_START && p[1] != OTBM_NODE_END) {
-			std::memcpy(&out, p, sizeof(uint16_t));
+			uint16_t val;
+			std::memcpy(&val, p, sizeof(uint16_t));
 			p += 2;
+			if constexpr (std::endian::native == std::endian::little) {
+				out = val;
+			} else {
+				out = static_cast<uint16_t>((val >> 8) | (val << 8));
+			}
 			return true;
 		}
 		uint8_t b0, b1;
@@ -87,8 +92,17 @@ public:
 			p[1] != OTBM_NODE_START && p[1] != OTBM_NODE_END &&
 			p[2] != OTBM_NODE_START && p[2] != OTBM_NODE_END &&
 			p[3] != OTBM_NODE_START && p[3] != OTBM_NODE_END) {
-			std::memcpy(&out, p, sizeof(uint32_t));
+			uint32_t val;
+			std::memcpy(&val, p, sizeof(uint32_t));
 			p += 4;
+			if constexpr (std::endian::native == std::endian::little) {
+				out = val;
+			} else {
+				out = ((val & 0x000000FFu) << 24) |
+				      ((val & 0x0000FF00u) << 8)  |
+				      ((val & 0x00FF0000u) >> 8)  |
+				      ((val & 0xFF000000u) >> 24);
+			}
 			return true;
 		}
 		uint8_t b0, b1, b2, b3;

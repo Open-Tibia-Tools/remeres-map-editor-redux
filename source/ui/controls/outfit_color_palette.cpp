@@ -36,8 +36,8 @@ void OutfitColorPalette::SetSelectedColor(int index) {
 }
 
 void OutfitColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
-	int cellSize = FROM_DIP(this, CELL_SIZE);
-	int padding = FROM_DIP(this, PADDING);
+	int cellSize = FromDIP(CELL_SIZE);
+	int padding = FromDIP(PADDING);
 
 	for (int i = 0; i < static_cast<int>(TemplateOutfitLookupTableSize); ++i) {
 		int row = i / COLS;
@@ -56,7 +56,7 @@ void OutfitColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 
 		// Highlight
 		if (i == m_selectedIndex) {
-			float strokeWidth = std::max(1.0f, static_cast<float>(FROM_DIP(this, 2)));
+			float strokeWidth = std::max(1.0f, static_cast<float>(FromDIP(2)));
 			float offset = strokeWidth / 2.0f + 0.5f; // Push out slightly
 
 			nvgBeginPath(vg);
@@ -65,7 +65,7 @@ void OutfitColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 			nvgStrokeWidth(vg, strokeWidth);
 			nvgStroke(vg);
 		} else if (i == m_hoverIndex) {
-			float strokeWidth = std::max(1.0f, static_cast<float>(FROM_DIP(this, 1)));
+			float strokeWidth = std::max(1.0f, static_cast<float>(FromDIP(1)));
 			float offset = strokeWidth / 2.0f;
 
 			nvgBeginPath(vg);
@@ -78,14 +78,14 @@ void OutfitColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 }
 
 wxSize OutfitColorPalette::DoGetBestClientSize() const {
-	int cellSize = FROM_DIP(this, CELL_SIZE);
-	int padding = FROM_DIP(this, PADDING);
+	int cellSize = FromDIP(CELL_SIZE);
+	int padding = FromDIP(PADDING);
 	return wxSize(COLS * (cellSize + padding) + padding, ROWS * (cellSize + padding) + padding);
 }
 
 int OutfitColorPalette::HitTest(int x, int y) const {
-	int cellSize = FROM_DIP(this, CELL_SIZE);
-	int padding = FROM_DIP(this, PADDING);
+	int cellSize = FromDIP(CELL_SIZE);
+	int padding = FromDIP(PADDING);
 
 	if (x < padding || y < padding) {
 		return -1;
@@ -146,21 +146,21 @@ LightColorPickerDialog::LightColorPickerDialog(wxWindow* parent, int current_col
 	auto* main_sizer = new wxBoxSizer(wxVERTICAL);
 
 	auto* title = new wxStaticText(this, wxID_ANY, "Choose the server light palette index used by OTClient.");
-	main_sizer->Add(title, 0, wxALL, 10);
+	main_sizer->Add(title, wxSizerFlags().Border(wxALL, 10));
 
 	palette_ = new LightColorPalette(this);
 	palette_->SetSelectedColor(selected_color_);
 	palette_->Bind(wxEVT_BUTTON, &LightColorPickerDialog::OnPaletteSelection, this);
-	main_sizer->Add(palette_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 10);
+	main_sizer->Add(palette_, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
 
 	auto* preview_sizer = new wxBoxSizer(wxHORIZONTAL);
-	preview_bitmap_ = new wxStaticBitmap(this, wxID_ANY, CreateLightColorSwatchBitmap(this, selected_color_, wxSize(48, 48)));
+	preview_bitmap_ = new wxStaticBitmap(this, wxID_ANY, CreateLightColorSwatchBitmap(this, selected_color_, FromDIP(wxSize(48, 48))));
 	selection_label_ = new wxStaticText(this, wxID_ANY, wxEmptyString);
-	preview_sizer->Add(preview_bitmap_, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 10);
-	preview_sizer->Add(selection_label_, 0, wxALIGN_CENTER_VERTICAL);
-	main_sizer->Add(preview_sizer, 0, wxLEFT | wxRIGHT | wxBOTTOM, 10);
+	preview_sizer->Add(preview_bitmap_, wxSizerFlags().CenterVertical().Border(wxRIGHT, 10));
+	preview_sizer->Add(selection_label_, wxSizerFlags().CenterVertical());
+	main_sizer->Add(preview_sizer, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
 
-	main_sizer->Add(CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
+	main_sizer->Add(CreateSeparatedButtonSizer(wxOK | wxCANCEL), wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 10));
 
 	SetSizerAndFit(main_sizer);
 	UpdateSelection(selected_color_);
@@ -173,11 +173,11 @@ void LightColorPickerDialog::UpdateSelection(int color_index) {
 		palette_->SetSelectedColor(selected_color_);
 	}
 	if (preview_bitmap_) {
-		preview_bitmap_->SetBitmap(CreateLightColorSwatchBitmap(this, selected_color_, wxSize(48, 48)));
+		preview_bitmap_->SetBitmap(CreateLightColorSwatchBitmap(this, selected_color_, FromDIP(wxSize(48, 48))));
 	}
 	if (selection_label_) {
 		const wxColor color = colorFromEightBit(selected_color_);
-		selection_label_->SetLabel(wxstr(std::format("Index {} | RGB({}, {}, {})", selected_color_, color.Red(), color.Green(), color.Blue())));
+		selection_label_->SetLabelText(wxstr(std::format("Index {} | RGB({}, {}, {})", selected_color_, color.Red(), color.Green(), color.Blue())));
 	}
 }
 
@@ -216,8 +216,8 @@ void LightColorPalette::SetSelectedColor(int index) {
 }
 
 void LightColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
-	const float cell_size = static_cast<float>(FROM_DIP(this, CELL_SIZE));
-	const float padding = static_cast<float>(FROM_DIP(this, PADDING));
+	const float cell_size = static_cast<float>(FromDIP(CELL_SIZE));
+	const float padding = static_cast<float>(FromDIP(PADDING));
 
 	nvgBeginPath(vg);
 	nvgRect(vg, 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
@@ -244,7 +244,7 @@ void LightColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 		nvgStroke(vg);
 
 		if (index == selected_index_) {
-			const float stroke_width = std::max(1.0f, static_cast<float>(FROM_DIP(this, 2)));
+			const float stroke_width = std::max(1.0f, static_cast<float>(FromDIP(2)));
 			const float offset = stroke_width / 2.0f + 0.5f;
 
 			nvgBeginPath(vg);
@@ -253,7 +253,7 @@ void LightColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 			nvgStrokeWidth(vg, stroke_width);
 			nvgStroke(vg);
 		} else if (index == hover_index_) {
-			const float stroke_width = std::max(1.0f, static_cast<float>(FROM_DIP(this, 1)));
+			const float stroke_width = std::max(1.0f, static_cast<float>(FromDIP(1)));
 			const float offset = stroke_width / 2.0f;
 
 			nvgBeginPath(vg);
@@ -266,8 +266,8 @@ void LightColorPalette::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 }
 
 wxSize LightColorPalette::DoGetBestClientSize() const {
-	const int cell_size = FROM_DIP(this, CELL_SIZE);
-	const int padding = FROM_DIP(this, PADDING);
+	const int cell_size = FromDIP(CELL_SIZE);
+	const int padding = FromDIP(PADDING);
 	return {
 		COLS * (cell_size + padding) + padding,
 		ROWS * (cell_size + padding) + padding
@@ -275,8 +275,8 @@ wxSize LightColorPalette::DoGetBestClientSize() const {
 }
 
 int LightColorPalette::HitTest(int x, int y) const {
-	const int cell_size = FROM_DIP(this, CELL_SIZE);
-	const int padding = FROM_DIP(this, PADDING);
+	const int cell_size = FromDIP(CELL_SIZE);
+	const int padding = FromDIP(PADDING);
 	if (x < padding || y < padding) {
 		return -1;
 	}

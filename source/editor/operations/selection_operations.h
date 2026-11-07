@@ -20,6 +20,7 @@ public:
 	static DestroySelectionResult destroySelection(Editor& editor);
 	static bool borderizeSelection(Editor& editor);
 	static bool randomizeSelection(Editor& editor);
+	static bool rotateSelection(Editor& editor, bool clockwise);
 
 	// Helper functions used by Editor::drawInternal
 	static void removeDuplicateWalls(Tile* buffer_tile, Tile* new_tile);

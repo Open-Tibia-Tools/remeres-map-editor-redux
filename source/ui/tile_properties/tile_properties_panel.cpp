@@ -1,3 +1,4 @@
+#include <wx/collheaderctrl.h>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -28,17 +29,20 @@ TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	current_tile(nullptr),
 	current_map(nullptr) {
 
-	splitter = newd wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_LIVE_UPDATE | wxSP_3D);
+	splitter = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_LIVE_UPDATE | wxSP_3D);
 
-	left_panel = newd wxPanel(splitter);
-	left_sizer = newd wxBoxSizer(wxVERTICAL);
-	browse_field_list = newd BrowseFieldList(left_panel);
+	left_panel = new wxPanel(splitter);
+	left_sizer = new wxBoxSizer(wxVERTICAL);
+	browse_field_list = new BrowseFieldList(left_panel);
 	browse_field_list->SetOnItemSelectedCallback([this](Item* item) {
 		OnItemSelected(item);
 	});
 	left_sizer->Add(browse_field_list, wxSizerFlags(1).Expand().Border(wxALL, 2));
 
-	spawn_creature_panel = newd SpawnCreaturePanel(left_panel);
+	spawn_creature_header = new wxCollapsibleHeaderCtrl(left_panel, wxID_ANY, "Spawn & Creature");
+	left_sizer->Add(spawn_creature_header, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT | wxTOP, 2));
+
+	spawn_creature_panel = new SpawnCreaturePanel(left_panel);
 	spawn_creature_panel->SetOnSpawnSelectedCallback([this]() {
 		OnSpawnSelected();
 	});
@@ -47,46 +51,59 @@ TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	});
 	left_sizer->Add(spawn_creature_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
+	spawn_creature_header->Bind(wxEVT_COLLAPSIBLEHEADER_CHANGED, [this](wxCommandEvent&) {
+		spawn_creature_panel->Show(!spawn_creature_header->IsCollapsed());
+		left_panel->Layout();
+	});
+
 	left_panel->SetSizer(left_sizer);
 
-	right_panel = newd wxPanel(splitter);
-	right_sizer = newd wxBoxSizer(wxVERTICAL);
+	right_panel = new wxPanel(splitter);
+	right_sizer = new wxBoxSizer(wxVERTICAL);
 
-	map_flags_panel = newd MapFlagsPanel(right_panel);
+	map_flags_header = new wxCollapsibleHeaderCtrl(right_panel, wxID_ANY, "Map Flags");
+	right_sizer->Add(map_flags_header, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT | wxTOP, 2));
+
+	map_flags_panel = new MapFlagsPanel(right_panel);
 	right_sizer->Add(map_flags_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
-	item_property_panel = newd ItemPropertyPanel(right_panel);
+	map_flags_header->Bind(wxEVT_COLLAPSIBLEHEADER_CHANGED, [this](wxCommandEvent&) {
+		map_flags_panel->Show(!map_flags_header->IsCollapsed());
+		right_panel->Layout();
+	});
+
+	item_property_panel = new ItemPropertyPanel(right_panel);
 	right_sizer->Add(item_property_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
-	container_property_panel = newd ContainerPropertyPanel(right_panel);
+	container_property_panel = new ContainerPropertyPanel(right_panel);
 	right_sizer->Add(container_property_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
-	depot_property_panel = newd DepotPropertyPanel(right_panel);
+	depot_property_panel = new DepotPropertyPanel(right_panel);
 	right_sizer->Add(depot_property_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
-	teleport_property_panel = newd TeleportPropertyPanel(right_panel);
+	teleport_property_panel = new TeleportPropertyPanel(right_panel);
 	right_sizer->Add(teleport_property_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
-	door_property_panel = newd DoorPropertyPanel(right_panel);
+	door_property_panel = new DoorPropertyPanel(right_panel);
 	right_sizer->Add(door_property_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
-	spawn_property_panel = newd SpawnPropertyPanel(right_panel);
+	spawn_property_panel = new SpawnPropertyPanel(right_panel);
 	right_sizer->Add(spawn_property_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
-	creature_property_panel = newd CreaturePropertyPanel(right_panel);
+	creature_property_panel = new CreaturePropertyPanel(right_panel);
 	right_sizer->Add(creature_property_panel, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
-	placeholder_text = newd wxStaticText(right_panel, wxID_ANY, "Select an item to view properties");
+	placeholder_text = new wxStaticText(right_panel, wxID_ANY, "Select an item to view properties");
 	right_sizer->Add(placeholder_text, wxSizerFlags(1).Center().Border(wxALL, 10));
 	right_panel->SetSizer(right_sizer);
 
-	splitter->SplitVertically(left_panel, right_panel, FROM_DIP(this, 250));
-	splitter->SetMinimumPaneSize(FROM_DIP(this, 150));
+	splitter->SplitVertically(left_panel, right_panel, FromDIP(250));
+	splitter->SetMinimumPaneSize(FromDIP(150));
 
 	HideAllPropertyPanels();
 	placeholder_text->Show();
 
-	wxBoxSizer* main_sizer = newd wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
 	main_sizer->Add(splitter, wxSizerFlags(1).Expand());
 	SetSizer(main_sizer);
 }

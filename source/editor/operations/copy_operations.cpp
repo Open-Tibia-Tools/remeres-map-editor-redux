@@ -14,7 +14,9 @@
 #include "editor/action_queue.h"
 #include "app/settings.h"
 
+#include <algorithm>
 #include <format>
+#include <limits>
 
 CopyResult CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 	if (editor.selection.empty()) {
@@ -26,7 +28,8 @@ CopyResult CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 
 	int tile_count = 0;
 	int item_count = 0;
-	buffer.copyPos = Position(0xFFFF, 0xFFFF, floor);
+	int min_x = std::numeric_limits<int>::max();
+	int min_y = std::numeric_limits<int>::max();
 
 	for (Tile* tile : editor.selection) {
 		++tile_count;
@@ -36,6 +39,7 @@ CopyResult CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 		if (tile->ground && tile->ground->isSelected()) {
 			copied_tile->house_id = tile->house_id;
 			copied_tile->setMapFlags(tile->getMapFlags());
+			copied_tile->setZoneIds(tile->getZoneIds());
 		}
 
 		auto tile_selection = TileOperations::getSelectedItems(tile);
@@ -53,15 +57,11 @@ CopyResult CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 			copied_tile->spawn = tile->spawn->deepCopy();
 		}
 
-		if (copied_tile->getX() < buffer.copyPos.x) {
-			buffer.copyPos.x = copied_tile->getX();
-		}
-
-		if (copied_tile->getY() < buffer.copyPos.y) {
-			buffer.copyPos.y = copied_tile->getY();
-		}
+		min_x = std::min(min_x, copied_tile->getX());
+		min_y = std::min(min_y, copied_tile->getY());
 	}
 
+	buffer.copyPos = Position(min_x, min_y, floor);
 	return {
 		.tile_count = tile_count,
 		.item_count = item_count,
@@ -79,7 +79,8 @@ CopyResult CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 
 	int tile_count = 0;
 	int item_count = 0;
-	buffer.copyPos = Position(0xFFFF, 0xFFFF, floor);
+	int min_x = std::numeric_limits<int>::max();
+	int min_y = std::numeric_limits<int>::max();
 
 	std::unique_ptr<BatchAction> batch = editor.actionQueue->createBatch(ACTION_CUT_TILES);
 	std::unique_ptr<Action> action = editor.actionQueue->createAction(batch.get());
@@ -97,6 +98,8 @@ CopyResult CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 			newtile->house_id = 0;
 			copied_tile->setMapFlags(tile->getMapFlags());
 			newtile->setMapFlags(TILESTATE_NONE);
+			copied_tile->setZoneIds(newtile->getZoneIds());
+			newtile->setZoneIds({});
 		}
 
 		auto tile_selection = TileOperations::popSelectedItems(newtile.get());
@@ -115,13 +118,8 @@ CopyResult CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 			copied_tile->spawn = std::move(newtile->spawn);
 		}
 
-		if (copied_tile->getX() < buffer.copyPos.x) {
-			buffer.copyPos.x = copied_tile->getX();
-		}
-
-		if (copied_tile->getY() < buffer.copyPos.y) {
-			buffer.copyPos.y = copied_tile->getY();
-		}
+		min_x = std::min(min_x, copied_tile->getX());
+		min_y = std::min(min_y, copied_tile->getY());
 
 		if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
 			for (int y = -1; y <= 1; y++) {
@@ -132,6 +130,8 @@ CopyResult CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 		}
 		action->addChange(std::make_unique<Change>(std::move(newtile)));
 	}
+
+	buffer.copyPos = Position(min_x, min_y, floor);
 
 	batch->addAndCommitAction(std::move(action));
 
@@ -185,6 +185,9 @@ void CopyOperations::paste(Editor& editor, CopyBuffer& buffer, const Position& t
 
 		TileLocation* dest_location = editor.map.createTileL(pos);
 		std::unique_ptr<Tile> copy_tile = TileOperations::deepCopy(buffer_tile, editor.map);
+		if (!editor.map.supportsZones() && copy_tile->hasZones()) {
+			copy_tile->setZoneIds({});
+		}
 		Tile* old_dest_tile = dest_location->get();
 		std::unique_ptr<Tile> new_dest_tile_ptr;
 		copy_tile->setLocation(dest_location);
@@ -196,7 +199,7 @@ void CopyOperations::paste(Editor& editor, CopyBuffer& buffer, const Position& t
 				new_dest_tile_ptr = editor.map.allocator(dest_location);
 			}
 			// copy_tile may be partially moved-from after the merge call
-			TileOperations::merge(new_dest_tile_ptr.get(), copy_tile.get());
+			TileOperations::merge(new_dest_tile_ptr.get(), copy_tile.get(), &editor.map);
 		} else {
 			// If the copied tile has ground, replace target tile
 			new_dest_tile_ptr = std::move(copy_tile);

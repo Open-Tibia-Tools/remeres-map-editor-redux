@@ -4,6 +4,8 @@
 #include <wx/wx.h>
 #include <wx/settings.h>
 
+class Brush;
+
 class Theme {
 public:
 	enum class Role {
@@ -39,6 +41,7 @@ public:
 		TooltipActionId, // Action ID value
 		TooltipUniqueId, // Unique ID value
 		TooltipDoorId, // Door ID value
+		TooltipDepotId, // Depot ID value
 		TooltipTextValue, // Readable text (signs, books)
 		TooltipTeleport, // Teleport destination
 		TooltipWaypoint, // Waypoint name
@@ -49,7 +52,33 @@ public:
 		TooltipBorderItem,
 		TooltipBorderDoor,
 		TooltipBorderTeleport,
-		TooltipBorderText
+		TooltipBorderText,
+		TooltipBorderHouse,
+		TooltipBorderZone,
+
+		// Tooltip Window Chrome & Bevels
+		TooltipWindowBg,
+		TooltipWindowOutline,
+		TooltipWindowBevelLight,
+		TooltipWindowBevelDark,
+		TooltipSlotBg,
+		TooltipSlotBevelLight,
+		TooltipSlotBevelDark,
+		TooltipDividerLight,
+		TooltipDividerDark,
+		TooltipTextWellBg,
+		TooltipTitleText,
+		TooltipSubtitleText,
+
+		// Brush Category Colors
+		BrushCategoryGround,
+		BrushCategoryWall,
+		BrushCategoryWallDecoration,
+		BrushCategoryDoor,
+		BrushCategoryDoodad,
+		BrushCategoryTable,
+		BrushCategoryCarpet,
+		BrushCategoryDefaultRaw
 	};
 
 	enum class Type {
@@ -62,6 +91,10 @@ public:
 	static Type getType();
 
 	static wxColour Get(Role role);
+	static Role GetBrushCategoryRole(const Brush* brush);
+	static wxColour GetBrushColour(const Brush* brush) {
+		return Get(GetBrushCategoryRole(brush));
+	}
 
 	static int Grid(int units) {
 		return wxWindow::FromDIP(units * 4, nullptr);

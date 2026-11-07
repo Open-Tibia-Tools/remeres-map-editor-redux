@@ -137,7 +137,7 @@ void ClipboardHandler::copyServerId(const Selection& selection) {
 		const Item* item = selected_items.front();
 
 		wxTextDataObject* obj = new wxTextDataObject();
-		obj->SetText(i2ws(item->getID()));
+		obj->SetText(std::to_string(item->getID()));
 		wxTheClipboard->SetData(obj);
 
 		wxTheClipboard->Close();
@@ -155,7 +155,7 @@ void ClipboardHandler::copyClientId(const Selection& selection) {
 		const Item* item = selected_items.front();
 
 		wxTextDataObject* obj = new wxTextDataObject();
-		obj->SetText(i2ws(item->getClientID()));
+		obj->SetText(std::to_string(item->getClientID()));
 		wxTheClipboard->SetData(obj);
 
 		wxTheClipboard->Close();

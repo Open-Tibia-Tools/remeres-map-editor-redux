@@ -147,6 +147,35 @@ void LightDrawer::updateViewportTexture(
 	tex_height_ = tex_h;
 }
 
+void LightDrawer::uploadDirtyChunks(
+	const RenderView& view,
+	const BaseMap& map,
+	GraphicManager& gfx,
+	const rme::lighting::LightConfig& config
+) {
+	size_t uploaded = 0;
+	glBindTexture(GL_TEXTURE_2D, texture_->GetID());
+	for (int cy = last_min_cy_; cy <= last_max_cy_; ++cy) {
+		for (int cx = last_min_cx_; cx <= last_max_cx_; ++cx) {
+			if (!cache_.needsBake(cx, cy, view.floor)) {
+				continue;
+			}
+			const rme::lighting::CachedLightChunk& chunk = cache_.getOrBakeChunk(
+				cx, cy, view.floor, map,
+				view.start_z, view.superend_z,
+				config, gfx, current_frame_
+			);
+			glTexSubImage2D(GL_TEXTURE_2D, 0,
+				(cx - last_min_cx_) * rme::lighting::CHUNK_SIZE, (cy - last_min_cy_) * rme::lighting::CHUNK_SIZE,
+				rme::lighting::CHUNK_SIZE, rme::lighting::CHUNK_SIZE,
+				GL_RGBA, GL_UNSIGNED_BYTE, chunk.pixels.data());
+			++uploaded;
+		}
+	}
+	glBindTexture(GL_TEXTURE_2D, 0);
+	spdlog::info("[LightDrawer] Partial lightmap upload: {} chunk(s) re-baked", uploaded);
+}
+
 void LightDrawer::render(
 	const RenderView& view,
 	const BaseMap& map,
@@ -212,6 +241,10 @@ void LightDrawer::render(
 		last_floor_ = view.floor;
 		last_config_ = config;
 		force_texture_rebuild_ = false;
+		has_dirty_chunks_ = false;
+	} else if (has_dirty_chunks_) {
+		uploadDirtyChunks(view, map, gfx, config);
+		has_dirty_chunks_ = false;
 	}
 
 	if (!texture_ || tex_width_ <= 0 || tex_height_ <= 0 || gpu_tex_width_ <= 0 || gpu_tex_height_ <= 0) {

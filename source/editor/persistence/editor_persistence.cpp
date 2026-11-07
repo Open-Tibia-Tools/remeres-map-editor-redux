@@ -22,8 +22,11 @@ void EditorPersistence::loadMap(Editor& editor, const std::filesystem::path& fn,
 		throw std::runtime_error("Could not open file \"" + fn.string() + "\".\nThis is not a valid OTBM file or it does not exist.");
 	}
 
-	if (g_version.GetCurrentVersion().getProtocolID() != ver.client && !load_options.force_client_mismatch) {
-		throw std::runtime_error(std::format("Client version mismatch. Expected protocol {} but got protocol {}", ver.client, g_version.GetCurrentVersion().getProtocolID()));
+	const auto loaded_major = static_cast<uint32_t>(g_version.GetCurrentVersion().getOTBVersion().format_version);
+	const bool mismatch = (g_version.GetCurrentVersion().getProtocolID() != ver.client) ||
+		(ver.items_major != 0 && loaded_major != 0 && loaded_major != ver.items_major);
+	if (mismatch && !load_options.force_client_mismatch) {
+		throw std::runtime_error(std::format("Client version mismatch. Expected protocol {} (OTB major {}) but got protocol {} (OTB major {})", ver.client, ver.items_major, g_version.GetCurrentVersion().getProtocolID(), loaded_major));
 	}
 
 	editor.map.open(fn.string(), on_progress);
@@ -36,14 +39,28 @@ SaveResult EditorPersistence::saveMap(Editor& editor, const std::filesystem::pat
 
 	if (save_path.empty()) {
 		save_path = editor.map.getFilename();
+	} else {
 		save_as = (save_path != std::filesystem::path(editor.map.getFilename()));
 	}
+
+	const std::string prev_filename = editor.map.getFilename();
+	const std::string prev_name = editor.map.getName();
+	const bool prev_unnamed = editor.map.unnamed;
+	const std::string prev_spawn = editor.map.getSpawnFilename();
+	const std::string prev_monster = editor.map.getMonsterFilename();
+	const std::string prev_npc = editor.map.getNpcFilename();
+	const std::string prev_house = editor.map.getHouseFilename();
+	const std::string prev_zone = editor.map.getZoneFilename();
+	const std::string prev_waypoint = editor.map.getWaypointFilename();
 
 	// If not named yet, propagate the file name to the auxilliary files
 	if (editor.map.unnamed) {
 		std::string stem = save_path.stem().string();
 		editor.map.setSpawnFilename(stem + "-spawn.xml");
+		editor.map.setMonsterFilename(stem + "-monster.xml");
+		editor.map.setNpcFilename(stem + "-npc.xml");
 		editor.map.setHouseFilename(stem + "-house.xml");
+		editor.map.setZoneFilename(stem + "-zones.xml");
 		editor.map.setWaypointFilename(stem + "-waypoint.xml");
 		editor.map.unnamed = false;
 	}
@@ -54,38 +71,66 @@ SaveResult EditorPersistence::saveMap(Editor& editor, const std::filesystem::pat
 	std::filesystem::path backup_otbm;
 	std::filesystem::path backup_house;
 	std::filesystem::path backup_spawn;
+	std::filesystem::path backup_monster;
+	std::filesystem::path backup_npc;
+	std::filesystem::path backup_zone;
 	std::filesystem::path backup_waypoint;
+
+	auto createBackup = [](const std::filesystem::path& sourcePath, const std::filesystem::path& backupPath) {
+		std::error_code ec;
+		std::filesystem::remove(backupPath, ec);
+		std::filesystem::rename(sourcePath, backupPath, ec);
+		if (ec) {
+			spdlog::warn("EditorPersistence: Failed to create backup '{}' -> '{}': {}", sourcePath.string(), backupPath.string(), ec.message());
+		}
+	};
 
 	std::error_code ec;
 	if (std::filesystem::exists(save_path, ec)) {
 		backup_otbm = parent_dir / (base_stem + ".otbm~");
-		std::filesystem::remove(backup_otbm, ec);
-		std::filesystem::rename(save_path, backup_otbm, ec);
+		createBackup(save_path, backup_otbm);
 	}
 
 	std::filesystem::path house_path = parent_dir / editor.map.getHouseFilename();
 	if (std::filesystem::exists(house_path, ec)) {
-		backup_house = parent_dir / (std::filesystem::path(editor.map.getHouseFilename()).stem().string() + ".xml~");
-		std::filesystem::remove(backup_house, ec);
-		std::filesystem::rename(house_path, backup_house, ec);
+		backup_house = parent_dir / (house_path.stem().string() + ".xml~");
+		createBackup(house_path, backup_house);
 	}
 
-	std::filesystem::path spawn_path = parent_dir / editor.map.getSpawnFilename();
-	if (std::filesystem::exists(spawn_path, ec)) {
-		backup_spawn = parent_dir / (std::filesystem::path(editor.map.getSpawnFilename()).stem().string() + ".xml~");
-		std::filesystem::remove(backup_spawn, ec);
-		std::filesystem::rename(spawn_path, backup_spawn, ec);
+	if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+		std::filesystem::path monster_path = parent_dir / editor.map.getMonsterFilename();
+		if (std::filesystem::exists(monster_path, ec)) {
+			backup_monster = parent_dir / (monster_path.stem().string() + ".xml~");
+			createBackup(monster_path, backup_monster);
+		}
+
+		std::filesystem::path npc_path = parent_dir / editor.map.getNpcFilename();
+		if (std::filesystem::exists(npc_path, ec)) {
+			backup_npc = parent_dir / (npc_path.stem().string() + ".xml~");
+			createBackup(npc_path, backup_npc);
+		}
+
+		std::filesystem::path zone_path = parent_dir / editor.map.getZoneFilename();
+		if (std::filesystem::exists(zone_path, ec)) {
+			backup_zone = parent_dir / (zone_path.stem().string() + ".xml~");
+			createBackup(zone_path, backup_zone);
+		}
+	} else {
+		std::filesystem::path spawn_path = parent_dir / editor.map.getSpawnFilename();
+		if (std::filesystem::exists(spawn_path, ec)) {
+			backup_spawn = parent_dir / (spawn_path.stem().string() + ".xml~");
+			createBackup(spawn_path, backup_spawn);
+		}
 	}
 
 	std::filesystem::path waypoint_path = parent_dir / editor.map.getWaypointFilename();
 	if (std::filesystem::exists(waypoint_path, ec)) {
-		backup_waypoint = parent_dir / (std::filesystem::path(editor.map.getWaypointFilename()).stem().string() + ".xml~");
-		std::filesystem::remove(backup_waypoint, ec);
-		std::filesystem::rename(waypoint_path, backup_waypoint, ec);
+		backup_waypoint = parent_dir / (waypoint_path.stem().string() + ".xml~");
+		createBackup(waypoint_path, backup_waypoint);
 	}
 
 	// Save the map
-	MapBackupService::WriteCrashMarker({backup_otbm.string(), backup_house.string(), backup_spawn.string(), backup_waypoint.string()});
+	MapBackupService::WriteCrashMarker({backup_otbm.string(), backup_house.string(), backup_spawn.string(), backup_monster.string(), backup_npc.string(), backup_zone.string(), backup_waypoint.string()});
 
 	{
 		editor.map.filename = save_path.string();
@@ -98,22 +143,68 @@ SaveResult EditorPersistence::saveMap(Editor& editor, const std::filesystem::pat
 		bool success = mapsaver.saveMap(editor.map, save_path);
 
 		if (!success) {
-			// Restore temporary backup files
-			if (!backup_otbm.empty()) {
-				std::filesystem::rename(backup_otbm, save_path, ec);
+			std::vector<std::string> failed_restores;
+			auto restoreBackup = [&failed_restores](const std::filesystem::path& backupPath, const std::filesystem::path& targetPath) {
+				if (backupPath.empty()) {
+					if (!targetPath.empty()) {
+						std::error_code ec;
+						std::filesystem::remove(targetPath, ec);
+					}
+					return;
+				}
+				std::error_code ec;
+				std::filesystem::remove(targetPath, ec);
+				std::filesystem::rename(backupPath, targetPath, ec);
+				if (ec) {
+					spdlog::error("EditorPersistence: Failed to restore backup '{}' -> '{}': {}", backupPath.string(), targetPath.string(), ec.message());
+					failed_restores.push_back(backupPath.string());
+				}
+			};
+
+			restoreBackup(backup_otbm, save_path);
+			if (!editor.map.getHouseFilename().empty()) {
+				restoreBackup(backup_house, parent_dir / editor.map.getHouseFilename());
 			}
-			if (!backup_house.empty()) {
-				std::filesystem::rename(backup_house, house_path, ec);
+			if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+				if (!editor.map.getMonsterFilename().empty()) {
+					restoreBackup(backup_monster, parent_dir / editor.map.getMonsterFilename());
+				}
+				if (!editor.map.getNpcFilename().empty()) {
+					restoreBackup(backup_npc, parent_dir / editor.map.getNpcFilename());
+				}
+				if (!editor.map.getZoneFilename().empty()) {
+					restoreBackup(backup_zone, parent_dir / editor.map.getZoneFilename());
+				}
+			} else {
+				if (!editor.map.getSpawnFilename().empty()) {
+					restoreBackup(backup_spawn, parent_dir / editor.map.getSpawnFilename());
+				}
 			}
-			if (!backup_spawn.empty()) {
-				std::filesystem::rename(backup_spawn, spawn_path, ec);
-			}
-			if (!backup_waypoint.empty()) {
-				std::filesystem::rename(backup_waypoint, waypoint_path, ec);
+			if (!editor.map.getWaypointFilename().empty()) {
+				restoreBackup(backup_waypoint, parent_dir / editor.map.getWaypointFilename());
 			}
 
-			MapBackupService::ClearCrashMarker();
-			result.error_message = "Could not save, unable to open target for writing.";
+			bool keep_recovery_info = false;
+			if (!failed_restores.empty()) {
+				keep_recovery_info = true;
+				result.error_message = "The save could not be rolled back completely. Previous data is kept in backup files (~).";
+			} else {
+				result.error_message = "Could not save, unable to open target for writing.";
+			}
+
+			if (!keep_recovery_info) {
+				MapBackupService::ClearCrashMarker();
+			}
+
+			editor.map.filename = prev_filename;
+			editor.map.name = prev_name;
+			editor.map.unnamed = prev_unnamed;
+			editor.map.setSpawnFilename(prev_spawn);
+			editor.map.setMonsterFilename(prev_monster);
+			editor.map.setNpcFilename(prev_npc);
+			editor.map.setHouseFilename(prev_house);
+			editor.map.setZoneFilename(prev_zone);
+			editor.map.setWaypointFilename(prev_waypoint);
 			return result;
 		}
 
@@ -133,6 +224,15 @@ SaveResult EditorPersistence::saveMap(Editor& editor, const std::filesystem::pat
 		if (!backup_spawn.empty()) {
 			std::filesystem::rename(backup_spawn, parent_dir / (std::filesystem::path(editor.map.getSpawnFilename()).stem().string() + "." + date_str + ".xml"), ec);
 		}
+		if (!backup_monster.empty()) {
+			std::filesystem::rename(backup_monster, parent_dir / (std::filesystem::path(editor.map.getMonsterFilename()).stem().string() + "." + date_str + ".xml"), ec);
+		}
+		if (!backup_npc.empty()) {
+			std::filesystem::rename(backup_npc, parent_dir / (std::filesystem::path(editor.map.getNpcFilename()).stem().string() + "." + date_str + ".xml"), ec);
+		}
+		if (!backup_zone.empty()) {
+			std::filesystem::rename(backup_zone, parent_dir / (std::filesystem::path(editor.map.getZoneFilename()).stem().string() + "." + date_str + ".xml"), ec);
+		}
 		if (!backup_waypoint.empty()) {
 			std::filesystem::rename(backup_waypoint, parent_dir / (std::filesystem::path(editor.map.getWaypointFilename()).stem().string() + "." + date_str + ".xml"), ec);
 		}
@@ -140,6 +240,9 @@ SaveResult EditorPersistence::saveMap(Editor& editor, const std::filesystem::pat
 		std::filesystem::remove(backup_otbm, ec);
 		std::filesystem::remove(backup_house, ec);
 		std::filesystem::remove(backup_spawn, ec);
+		std::filesystem::remove(backup_monster, ec);
+		std::filesystem::remove(backup_npc, ec);
+		std::filesystem::remove(backup_zone, ec);
 		std::filesystem::remove(backup_waypoint, ec);
 	}
 
@@ -264,7 +367,7 @@ void EditorPersistence::importHouses(Editor& editor, Map& imported_map, const Po
 							current_house->setExit(&editor.map, newexit);
 						}
 					} else {
-						// Conflict! Find a newd id and replace old
+						// Conflict! Find a new id and replace old
 						uint32_t new_id = editor.map.houses.getEmptyID();
 						house_id_map[imported_house->getID()] = new_id;
 						imported_house->setID(new_id);
@@ -274,7 +377,7 @@ void EditorPersistence::importHouses(Editor& editor, Map& imported_map, const Po
 				break;
 			}
 			case IMPORT_INSERT: {
-				// Find a newd id and replace old
+				// Find a new id and replace old
 				uint32_t new_id = editor.map.houses.getEmptyID();
 				house_id_map[imported_house->getID()] = new_id;
 				imported_house->setID(new_id);
@@ -371,6 +474,21 @@ MapImportResult EditorPersistence::importMap(
 	importTowns(editor, imported_map, offset, options.house_import_type, town_id_map);
 	importHouses(editor, imported_map, offset, options.house_import_type, town_id_map, house_id_map);
 
+	std::unordered_map<uint16_t, uint16_t> zone_id_map;
+	if (editor.map.getVersion().otbm == MAP_OTBM_5 && imported_map.getVersion().otbm == MAP_OTBM_5) {
+		zone_id_map.reserve(imported_map.zones.size());
+		for (const auto& imported_zone : imported_map.zones) {
+			if (const auto* existing = editor.map.findZone(imported_zone.name)) {
+				zone_id_map[imported_zone.id] = existing->id;
+			} else {
+				const uint16_t new_id = editor.map.addZone(imported_zone.name);
+				if (new_id != 0) {
+					zone_id_map[imported_zone.id] = new_id;
+				}
+			}
+		}
+	}
+
 	std::map<Position, std::unique_ptr<Spawn>> spawn_map;
 	importSpawns(editor, imported_map, offset, options.spawn_import_type, spawn_map);
 
@@ -439,6 +557,23 @@ MapImportResult EditorPersistence::importMap(
 
 		import_tile->spawn.reset();
 
+		if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+			if (import_tile->hasZones()) {
+				std::vector<uint16_t> remapped_zones;
+				for (const uint16_t zid : import_tile->getZoneIds()) {
+					if (auto it = zone_id_map.find(zid); it != zone_id_map.end()) {
+						remapped_zones.push_back(it->second);
+					}
+				}
+				std::sort(remapped_zones.begin(), remapped_zones.end());
+				const auto last = std::unique(remapped_zones.begin(), remapped_zones.end());
+				remapped_zones.erase(last, remapped_zones.end());
+				import_tile->setZoneIds(remapped_zones);
+			}
+		} else if (import_tile->hasZones()) {
+			import_tile->setZoneIds({});
+		}
+
 		(void)editor.map.setTile(new_pos, std::move(moved_tile));
 	}
 
@@ -455,6 +590,10 @@ MapImportResult EditorPersistence::importMap(
 		tile->spawn = std::move(spawn_entry.second);
 
 		editor.map.addSpawn(tile);
+	}
+
+	if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+		editor.map.rebuildZoneIndex();
 	}
 
 	editor.map.setWidth(newsize_x);

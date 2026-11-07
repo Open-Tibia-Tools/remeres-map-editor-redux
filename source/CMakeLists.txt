@@ -18,6 +18,8 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/brushes/carpet/carpet_brush_loader.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/carpet/carpet_border_calculator.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/creature/creature_brush.h
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/creature/monster_brush.h
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/creature/npc_brush.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/doodad/doodad_brush.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/doodad/doodad_brush_items.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/doodad/doodad_brush_loader.h
@@ -41,6 +43,8 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/brushes/wall/wall_brush_items.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/wall/wall_brush_loader.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/waypoint/waypoint_brush.h
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/zone/zone_brush.h
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/town/town_temple_brush.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/action.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/action_queue.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/copybuffer.h
@@ -52,6 +56,8 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/selection_operations.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/map_version_changer.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/unreachable_cleaner.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/spawn_validator.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/search_query.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/editor_persistence.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_backup_service.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_load_options.h
@@ -105,9 +111,12 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/tile_serialization_otbm.h
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/town_serialization_otbm.h
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/fast_otbm_reader.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/compression/gzip_stream.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/compression/gzip_node_file_write_handle.h
     ${CMAKE_CURRENT_LIST_DIR}/io/templates.h
     ${CMAKE_CURRENT_LIST_DIR}/map/basemap.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/map_storage_format.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_allocator.h
     ${CMAKE_CURRENT_LIST_DIR}/map/operations/map_processor.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_region.h
@@ -115,12 +124,14 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/map/map_statistics.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_converter.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_spawn_manager.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/map_initial_position_resolver.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/zone_index.h
     ${CMAKE_CURRENT_LIST_DIR}/map/position.h
     ${CMAKE_CURRENT_LIST_DIR}/map/spatial_hash_grid.h
     ${CMAKE_CURRENT_LIST_DIR}/map/spatial_change_tracker.h
     ${CMAKE_CURRENT_LIST_DIR}/map/tile.h
     ${CMAKE_CURRENT_LIST_DIR}/map/tile_operations.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/animator.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_animation.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/atlas_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_cache_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_view_math.h
@@ -147,6 +158,7 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colors.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/pixel_buffer_object.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/primitive_renderer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_depth.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_interaction_state.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_timer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_view.h
@@ -161,8 +173,18 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sync_handle.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/text_renderer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_atlas.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_garbage_collector.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/brush_cursor_drawer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/house_shader.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/pathing_shader.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/indicator_shader.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/zone_shader.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/highlight_items_shader.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/chunk_shader.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/sprite_batch_shader.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/technical_item_registry.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/indicator_drawing_utils.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/zone_flags.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/zone_cluster_finder.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/zone_colors.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/drag_shadow_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/entities/creature_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/entities/creature_name_drawer.h
@@ -175,6 +197,7 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/marker_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/preview_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/selection_drawer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/zone_overlay_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/floor_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/shade_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_color_calculator.h
@@ -182,7 +205,6 @@ set(rme_core_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/fps_counter.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/tile_describer.h
-    ${CMAKE_CURRENT_LIST_DIR}/util/common.h
     ${CMAKE_CURRENT_LIST_DIR}/util/json.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/clean_operations.h
@@ -219,6 +241,8 @@ set(rme_core_SRC
     ${CMAKE_CURRENT_LIST_DIR}/brushes/carpet/carpet_brush_loader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/brushes/carpet/carpet_border_calculator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/brushes/creature/creature_brush.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/creature/monster_brush.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/creature/npc_brush.cpp
     ${CMAKE_CURRENT_LIST_DIR}/brushes/doodad/doodad_brush.cpp
     ${CMAKE_CURRENT_LIST_DIR}/brushes/doodad/doodad_brush_items.cpp
     ${CMAKE_CURRENT_LIST_DIR}/brushes/doodad/doodad_brush_loader.cpp
@@ -245,6 +269,8 @@ set(rme_core_SRC
     ${CMAKE_CURRENT_LIST_DIR}/brushes/wall/wall_brush_loader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/brushes/wall/wall_brush_arrays.cpp
     ${CMAKE_CURRENT_LIST_DIR}/brushes/waypoint/waypoint_brush.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/zone/zone_brush.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/town/town_temple_brush.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/action.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/action_queue.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/copybuffer.cpp
@@ -254,6 +280,7 @@ set(rme_core_SRC
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/selection_operations.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/map_version_changer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/unreachable_cleaner.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/spawn_validator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/editor_persistence.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_backup_service.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/minimap_exporter.cpp
@@ -297,6 +324,8 @@ set(rme_core_SRC
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/tile_serialization_otbm.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/town_serialization_otbm.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/fast_otbm_reader.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/compression/gzip_stream.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/compression/gzip_node_file_write_handle.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/basemap.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/map.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/operations/map_processor.cpp
@@ -305,10 +334,12 @@ set(rme_core_SRC
     ${CMAKE_CURRENT_LIST_DIR}/map/map_statistics.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/map_converter.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/map_spawn_manager.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/map/map_initial_position_resolver.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/map/zone_index.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/tile.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/tile_operations.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/spatial_change_tracker.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/animator.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_animation.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/atlas_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_cache_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_view_math.cpp
@@ -342,8 +373,6 @@ set(rme_core_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_batch.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/text_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_atlas.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_garbage_collector.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/brush_cursor_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/drag_shadow_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/entities/creature_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/entities/creature_name_drawer.cpp
@@ -356,6 +385,9 @@ set(rme_core_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/marker_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/preview_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/selection_drawer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/zone_overlay_drawer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/technical_item_registry.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/indicators/zone_cluster_finder.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/floor_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/shade_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/tile_color_calculator.cpp
@@ -379,13 +411,13 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/graphics_page.h
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/interface_page.h
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/client_version_page.h
+    ${CMAKE_CURRENT_LIST_DIR}/app/preferences/map_compatibility_page.h
     ${CMAKE_CURRENT_LIST_DIR}/app/updater.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/hotkey_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/util/image_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/wx_common.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor_factory.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor_tabs.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/animation_timer.h
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/ingame_preview_renderer.h
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/ingame_preview_canvas.h
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/ingame_preview_window.h
@@ -403,13 +435,19 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/live/live_tab.h
     ${CMAKE_CURRENT_LIST_DIR}/net/net_connection.h
     ${CMAKE_CURRENT_LIST_DIR}/net/process_com.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/all_items/all_items_palette.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_common.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/hardcoded_palette_registry.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_waypoints.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/palette_zones.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/house/house_palette.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/house/edit_house_dialog.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/town/town_palette.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/town/edit_town_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_window.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/controls/virtual_brush_grid.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/controls/tileset_grid_toolbar.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/controls/palette_search_ctrl.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_palette_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon.h
@@ -436,6 +474,8 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/popup_action_handler.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/screenshot_controller.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/selection_controller.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/selection_geometry.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/selection_picker.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/tooltip_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/zoom_controller.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/icons/sprite_icon_service.h
@@ -443,8 +483,17 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/browse_tile_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/item_buttons.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/outfit_color_palette.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/floor_below_offset_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/goto_position_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/spawn_validator_window.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/collection_extractor_service.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/collection_xml_service.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/managers/collection_palette_sync.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/controls/collection_item_grid.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/controls/collection_brush_grid.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/collection_options_panel.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/collection_studio_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/object_properties_base.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/property_validator.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/attribute_service.h
@@ -480,7 +529,6 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/find_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/missing_items_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/map_properties_window.h
-    ${CMAKE_CURRENT_LIST_DIR}/ui/map/towns_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/import_map_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/export_minimap_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/gui.h
@@ -522,20 +570,27 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_registry.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_factory.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_layout.h
-    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/old_properties_window.h
-    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/properties_window.h
-    ${CMAKE_CURRENT_LIST_DIR}/util/image_manager.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/item_properties_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/item_grid_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/library_panel.h
-    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_card_renderer.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/map_item_collector.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/brush_auto_matcher.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_model.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_builder_layout.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_builder_renderer.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_chance_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_builder_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/card_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/replace_tool_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/replacement_engine.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_list_control.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_manager.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/suggestion_filter_mode.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/visual_similarity_service.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/result_window.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_card_drawer.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_card_layout.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_result_model.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_button.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_card.h
@@ -548,9 +603,14 @@ set(rme_ui_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/menubar_loader.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_surface.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/brush_items/brush_items_window.h
+    ${CMAKE_CURRENT_LIST_DIR}/util/grid_view_options.h
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_canvas.h
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_listbox.h
+    ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_table_ctrl.h
+    ${CMAKE_CURRENT_LIST_DIR}/util/phase_profiler.h
     ${CMAKE_CURRENT_LIST_DIR}/util/virtual_item_grid.h
+    ${CMAKE_CURRENT_LIST_DIR}/util/grid_cell_renderer.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/map_session.h
     ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api.h
     ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_image.h
@@ -575,13 +635,14 @@ set(rme_ui_SRC
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/graphics_page.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/interface_page.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/client_version_page.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/app/preferences/map_compatibility_page.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/updater.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/managers/version_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/hotkey_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor_factory.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor_tabs.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/animation_timer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/search_query.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/ingame_preview_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/ingame_preview_canvas.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/ingame_preview_window.cpp
@@ -598,13 +659,19 @@ set(rme_ui_SRC
     ${CMAKE_CURRENT_LIST_DIR}/live/live_tab.cpp
     ${CMAKE_CURRENT_LIST_DIR}/net/net_connection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/net/process_com.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/all_items/all_items_palette.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_common.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/hardcoded_palette_registry.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_waypoints.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/palette_zones.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/house/house_palette.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/house/edit_house_dialog.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/town/town_palette.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/town/edit_town_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/controls/virtual_brush_grid.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/controls/tileset_grid_toolbar.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/controls/palette_search_ctrl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_palette_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon.cpp
@@ -631,16 +698,18 @@ set(rme_ui_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/popup_action_handler.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/screenshot_controller.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/selection_controller.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/selection_picker.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/tooltip_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/zoom_controller.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/icon_renderer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/icon_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/icons/sprite_icon_service.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/about_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/browse_tile_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/outfit_color_palette.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/floor_below_offset_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/goto_position_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/spawn_validator_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/object_properties_base.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/property_validator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/attribute_service.cpp
@@ -676,7 +745,6 @@ set(rme_ui_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/find_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/missing_items_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/map_properties_window.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ui/map/towns_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/import_map_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/map/export_minimap_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/gui.cpp
@@ -718,20 +786,33 @@ set(rme_ui_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_registry.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_factory.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/toolbar/toolbar_layout.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/old_properties_window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/item_properties_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/positionctrl.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ui/properties/properties_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/item_grid_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/library_panel.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_card_renderer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/map_item_collector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/card_panel.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/brush_auto_matcher.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_model.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_builder_layout.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_builder_renderer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_chance_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_builder_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/replace_tool_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/replacement_engine.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_list_control.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/rule_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/replace_tool/visual_similarity_service.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/collection_extractor_service.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/io/collection_xml_service.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/managers/collection_palette_sync.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/controls/collection_item_grid.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/controls/collection_brush_grid.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/collection_options_panel.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/collection_studio_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/result_window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_card_drawer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/search/search_result_model.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/theme.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_button.cpp
@@ -745,9 +826,12 @@ set(rme_ui_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/wx_common.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_canvas.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_listbox.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/util/nanovg_table_ctrl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/virtual_item_grid.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/util/grid_cell_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_surface.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/brush_items/brush_items_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/image_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lua/lua_api_algo.cpp

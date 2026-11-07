@@ -14,6 +14,7 @@ class Map;
 class BrowseFieldList;
 class SpawnCreaturePanel;
 class MapFlagsPanel;
+class wxCollapsibleHeaderCtrl;
 class ItemPropertyPanel;
 class ContainerPropertyPanel;
 class DepotPropertyPanel;
@@ -43,7 +44,9 @@ protected:
 	wxBoxSizer* right_sizer;
 
 	BrowseFieldList* browse_field_list;
+	wxCollapsibleHeaderCtrl* spawn_creature_header = nullptr;
 	SpawnCreaturePanel* spawn_creature_panel;
+	wxCollapsibleHeaderCtrl* map_flags_header = nullptr;
 	MapFlagsPanel* map_flags_panel;
 	ItemPropertyPanel* item_property_panel;
 	ContainerPropertyPanel* container_property_panel;

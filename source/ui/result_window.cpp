@@ -1,473 +1,433 @@
 #include "app/main.h"
-
 #include "ui/result_window.h"
 
 #include "ui/gui.h"
 #include "ui/theme.h"
+#include "ui/search/search_card_layout.h"
+#include "ui/search/search_card_drawer.h"
+#include "ui/search/search_result_model.h"
 #include "util/image_manager.h"
 #include "util/nanovg_canvas.h"
+#include "util/grid_cell_renderer.h"
+#include "palette/controls/tileset_grid_toolbar.h"
+#include "editor/editor.h"
+#include "editor/operations/search_query.h"
+#include "item_definitions/core/item_definition_store.h"
 
-#include <nanovg.h>
-
+#include <wx/aui/auibar.h>
 #include <algorithm>
-#include <limits>
-
-#include <wx/file.h>
-#include <wx/filedlg.h>
-#include <wx/stattext.h>
+#include <format>
 
 namespace {
-	[[nodiscard]] NVGcolor toColor(const wxColour& colour) {
-		return nvgRGBA(colour.Red(), colour.Green(), colour.Blue(), colour.Alpha());
-	}
 
-	constexpr int kEmptyStateInset = 18;
-}
+enum CustomToolID {
+	TOOL_EXPAND_ALL = wxID_HIGHEST + 8001,
+	TOOL_COLLAPSE_ALL
+};
 
-class SearchResultWindow::ResultCanvas final : public NanoVGCanvas {
+} // namespace
+
+// ============================================================================
+// SearchResultCanvas
+// ============================================================================
+
+class SearchResultWindow::SearchResultCanvas final : public NanoVGCanvas {
 public:
-	explicit ResultCanvas(SearchResultWindow* parent) :
-		NanoVGCanvas(parent, wxID_ANY, wxVSCROLL | wxWANTS_CHARS),
-		owner_(parent) {
+	explicit SearchResultCanvas(wxWindow* parent) :
+		NanoVGCanvas(parent, wxID_ANY, wxVSCROLL | wxWANTS_CHARS) {
 		SetBackgroundColour(Theme::Get(Theme::Role::Surface));
-		SetScrollStep(rowHeight());
 
-		Bind(wxEVT_SIZE, &ResultCanvas::onSize, this);
-		Bind(wxEVT_LEFT_DOWN, &ResultCanvas::onMouseDown, this);
-		Bind(wxEVT_LEFT_DCLICK, &ResultCanvas::onLeftDoubleClick, this);
-		Bind(wxEVT_MOTION, &ResultCanvas::onMouseMove, this);
-		Bind(wxEVT_LEAVE_WINDOW, &ResultCanvas::onMouseLeave, this);
-		Bind(wxEVT_KEY_DOWN, &ResultCanvas::onKeyDown, this);
+		Bind(wxEVT_SIZE, &SearchResultCanvas::OnSize, this);
+		Bind(wxEVT_LEFT_DOWN, &SearchResultCanvas::OnMouseDown, this);
+		Bind(wxEVT_LEFT_DCLICK, &SearchResultCanvas::OnLeftDClick, this);
+		Bind(wxEVT_MOTION, &SearchResultCanvas::OnMouseMove, this);
+		Bind(wxEVT_LEAVE_WINDOW, &SearchResultCanvas::OnMouseLeave, this);
+		Bind(wxEVT_KEY_DOWN, &SearchResultCanvas::OnKeyDown, this);
 	}
 
-	void RefreshContent() {
-		const int content_height = static_cast<int>(owner_->rows_.size()) * rowHeight();
-		UpdateScrollbar(content_height);
-		if (selected_index_ >= static_cast<int>(owner_->rows_.size())) {
-			selected_index_ = owner_->rows_.empty() ? -1 : static_cast<int>(owner_->rows_.size()) - 1;
-		}
+	void SetGroups(std::vector<SearchResultGroup> groups) {
+		m_model.SetGroups(std::move(groups));
+		UpdateScrollbar(m_model.GetTotalContentHeight());
 		Refresh();
 	}
 
-	void ClearSelection() {
-		selected_index_ = -1;
-		hover_index_ = -1;
-		SetScrollPosition(0);
-		RefreshContent();
-	}
-
-	void SetSelection(int index, bool ensure_visible, bool activate) {
-		if (owner_->rows_.empty()) {
-			selected_index_ = -1;
-			RefreshContent();
-			return;
-		}
-
-		index = std::clamp(index, 0, static_cast<int>(owner_->rows_.size()) - 1);
-		selected_index_ = index;
-		if (ensure_visible) {
-			EnsureSelectionVisible();
-		}
+	void ExpandAll() {
+		m_model.ExpandAll();
+		UpdateScrollbar(m_model.GetTotalContentHeight());
 		Refresh();
-
-		if (activate) {
-			owner_->activateRow(index);
-		}
 	}
 
-	void EnsureSelectionVisible() {
-		if (selected_index_ < 0 || selected_index_ >= static_cast<int>(owner_->rows_.size())) {
-			return;
-		}
-
-		const wxRect rect = rowRect(selected_index_);
-		const int scroll_pos = GetScrollPosition();
-		const int view_height = GetClientSize().y;
-
-		if (rect.y < scroll_pos) {
-			SetScrollPosition(rect.y);
-		} else if (rect.GetBottom() > scroll_pos + view_height) {
-			SetScrollPosition(rect.GetBottom() - view_height);
-		}
+	void CollapseAll() {
+		m_model.CollapseAll();
+		UpdateScrollbar(m_model.GetTotalContentHeight());
+		Refresh();
 	}
+
+	void SetFilter(const std::string& query) {
+		m_model.SetFilter(query);
+		UpdateScrollbar(m_model.GetTotalContentHeight());
+		Refresh();
+	}
+
+	void SortGroups(TilesetSortKey key, TilesetSortDirection dir) {
+		m_model.Sort(key, dir);
+		UpdateScrollbar(m_model.GetTotalContentHeight());
+		Refresh();
+	}
+
+	void SortGroupsByDefault() {
+		m_model.SortByDefault();
+		UpdateScrollbar(m_model.GetTotalContentHeight());
+		Refresh();
+	}
+
+	[[nodiscard]] size_t GetTotalGroupCount() const { return m_model.GetTotalGroupCount(); }
+	[[nodiscard]] size_t GetTotalMatchCount() const { return m_model.GetTotalMatchCount(); }
 
 protected:
 	void OnNanoVGPaint(NVGcontext* vg, int width, int height) override {
-		const wxColour surface = Theme::Get(Theme::Role::Surface);
-		nvgBeginPath(vg);
-		nvgRect(vg, 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
-		nvgFillColor(vg, toColor(surface));
-		nvgFill(vg);
+		const int scroll_pos = GetScrollPosition();
+		const auto& visible_rows = m_model.GetVisibleRows();
 
-		if (owner_->rows_.empty()) {
-			drawEmptyState(vg, width, height);
+		if (visible_rows.empty()) {
+			rme::ui::search::SearchCardDrawer::DrawEmptyState(vg, width, height, scroll_pos, g_gui.IsEditorOpen());
 			return;
 		}
 
-		const int scroll_pos = GetScrollPosition();
-		const int row_height = rowHeight();
-		const int start_index = std::max(0, scroll_pos / row_height);
-		const int end_index = std::min(
-			static_cast<int>(owner_->rows_.size()),
-			(scroll_pos + height + row_height - 1) / row_height + 1
-		);
+		const int indent = FromDIP(rme::ui::search::kTreeIndent);
+		const int padding = rme::ui::grid::kPadding;
+		const int visible_top = scroll_pos;
+		const int visible_bottom = scroll_pos + height;
 
-		for (int index = start_index; index < end_index; ++index) {
-			drawRow(vg, width, rowRect(index), owner_->rows_[static_cast<size_t>(index)], index == selected_index_, index == hover_index_);
+		for (size_t i = 0; i < visible_rows.size(); ++i) {
+			const auto& vrow = visible_rows[i];
+			if (vrow.y + vrow.height < visible_top || vrow.y > visible_bottom) {
+				continue;
+			}
+
+			const bool is_group = (vrow.kind == rme::ui::search::RowKind::GroupHeader);
+			const int card_x = is_group ? padding : padding + indent;
+			const int card_w = is_group ? width - padding * 2 : width - padding * 2 - indent;
+			const wxRect card_rect(card_x, vrow.y, std::max(1, card_w), vrow.height);
+
+			const bool is_hovered = (static_cast<int>(i) == m_model.GetHoverRow());
+
+			if (is_group) {
+				const auto& group = m_model.GetGroups()[vrow.group_index];
+				const bool is_selected = (static_cast<int>(vrow.group_index) == m_model.GetSelectedGroup() && m_model.GetSelectedChild() == -1);
+				rme::ui::search::SearchCardDrawer::DrawGroupHeader(vg, this, card_rect, group, vrow.group_index, is_selected, is_hovered);
+			} else {
+				const auto& group = m_model.GetGroups()[vrow.group_index];
+				const auto& child = group.children[vrow.child_index];
+				const bool is_selected = (static_cast<int>(vrow.group_index) == m_model.GetSelectedGroup() && static_cast<int>(vrow.child_index) == m_model.GetSelectedChild());
+
+				if (vrow.kind == rme::ui::search::RowKind::Container) {
+					rme::ui::search::SearchCardDrawer::DrawContainerCard(vg, this, card_rect, child, vrow.child_index, group.children.size(), is_selected, is_hovered);
+				} else {
+					rme::ui::search::SearchCardDrawer::DrawChildCard(vg, this, card_rect, child, vrow.child_index, group.children.size(), is_selected, is_hovered);
+				}
+			}
 		}
 	}
 
 private:
-	void onSize(wxSizeEvent& event) {
-		RefreshContent();
+	void OnSize(wxSizeEvent& event) {
+		m_model.RebuildVisibleRows();
+		UpdateScrollbar(m_model.GetTotalContentHeight());
+		Refresh();
 		event.Skip();
 	}
 
-	void onMouseDown(wxMouseEvent& event) {
-		if (const int index = hitTest(event.GetX(), event.GetY()); index >= 0) {
-			SetSelection(index, false, true);
-		}
+	void OnMouseDown(wxMouseEvent& event) {
 		SetFocus();
-	}
-
-	void onLeftDoubleClick(wxMouseEvent& event) {
-		onMouseDown(event);
-	}
-
-	void onMouseMove(wxMouseEvent& event) {
-		const int index = hitTest(event.GetX(), event.GetY());
-		if (index != hover_index_) {
-			hover_index_ = index;
-			Refresh();
-		}
-		event.Skip();
-	}
-
-	void onMouseLeave(wxMouseEvent& event) {
-		if (hover_index_ != -1) {
-			hover_index_ = -1;
-			Refresh();
-		}
-		event.Skip();
-	}
-
-	void onKeyDown(wxKeyEvent& event) {
-		if (owner_->rows_.empty()) {
-			event.Skip();
+		const int content_y = event.GetY() + GetScrollPosition();
+		const int hit = m_model.HitTest(content_y);
+		if (hit < 0 || hit >= static_cast<int>(m_model.GetVisibleRows().size())) {
 			return;
 		}
 
-		int next_index = selected_index_ >= 0 ? selected_index_ : 0;
-		switch (event.GetKeyCode()) {
-			case WXK_UP:
-				next_index -= 1;
-				break;
-			case WXK_DOWN:
-				next_index += 1;
-				break;
-			case WXK_PAGEUP:
-				next_index -= std::max(1, GetClientSize().y / std::max(1, rowHeight()));
-				break;
-			case WXK_PAGEDOWN:
-				next_index += std::max(1, GetClientSize().y / std::max(1, rowHeight()));
-				break;
-			case WXK_HOME:
-				next_index = 0;
-				break;
-			case WXK_END:
-				next_index = static_cast<int>(owner_->rows_.size()) - 1;
-				break;
-			case WXK_RETURN:
-			case WXK_NUMPAD_ENTER:
-				if (selected_index_ >= 0) {
-					owner_->activateRow(selected_index_);
+		const auto& vrow = m_model.GetVisibleRows()[hit];
+		if (vrow.kind == rme::ui::search::RowKind::GroupHeader) {
+			m_model.ToggleGroupExpanded(vrow.group_index);
+			m_model.SetSelected(static_cast<int>(vrow.group_index), -1);
+			UpdateScrollbar(m_model.GetTotalContentHeight());
+			Refresh();
+		} else {
+			m_model.SetSelected(static_cast<int>(vrow.group_index), static_cast<int>(vrow.child_index));
+			Refresh();
+
+			const auto& group = m_model.GetGroups()[vrow.group_index];
+			const auto& child = group.children[vrow.child_index];
+			if (g_gui.IsEditorOpen()) {
+				g_gui.SetScreenCenterPosition(child.position);
+			}
+		}
+	}
+
+	void OnLeftDClick(wxMouseEvent& event) {
+		OnMouseDown(event);
+	}
+
+	void OnMouseMove(wxMouseEvent& event) {
+		const int content_y = event.GetY() + GetScrollPosition();
+		const int hit = m_model.HitTest(content_y);
+		if (hit != m_model.GetHoverRow()) {
+			m_model.SetHoverRow(hit);
+			Refresh();
+		}
+		HandleMouseHover(event.GetX(), event.GetY());
+	}
+
+	void OnMouseLeave(wxMouseEvent& WXUNUSED(event)) {
+		if (m_model.GetHoverRow() != -1) {
+			m_model.SetHoverRow(-1);
+			Refresh();
+		}
+		SetToolTip("");
+	}
+
+	void HandleMouseHover(int mouse_x, int mouse_y) {
+		const int content_y = mouse_y + GetScrollPosition();
+		const int hit = m_model.HitTest(content_y);
+		if (hit < 0 || hit >= static_cast<int>(m_model.GetVisibleRows().size())) {
+			SetToolTip("");
+			return;
+		}
+
+		const auto& vrow = m_model.GetVisibleRows()[hit];
+		const auto& group = m_model.GetGroups()[vrow.group_index];
+
+		if (vrow.kind == rme::ui::search::RowKind::GroupHeader) {
+			SetToolTip(wxstr(std::format("{} ({} {})", group.name, group.children.size(), group.children.size() == 1 ? "match" : "matches")));
+			return;
+		}
+
+		const auto& child = group.children[vrow.child_index];
+
+		if (vrow.kind == rme::ui::search::RowKind::Container) {
+			const int indent = FromDIP(rme::ui::search::kTreeIndent);
+			const int padding = rme::ui::grid::kPadding;
+			const int card_x = padding + indent;
+			const int card_w = std::max(1, GetClientSize().x - padding * 2 - indent);
+			const wxRect card_rect(card_x, vrow.y, card_w, vrow.height);
+
+			const auto geo = rme::ui::search::CardGeometry::ForContainer(card_rect, group.children.size(), this);
+
+			// Check if mouse is over main container 32x32 icon on the left
+			if (geo.GetMainIconRect().Contains(mouse_x, content_y)) {
+				const auto def = g_item_definitions.get(child.item_id);
+				const std::string item_name = def ? std::string(def.name()) : group.name;
+				SetToolTip(wxstr(item_name));
+				return;
+			}
+
+			// Check if mouse is over Row 1 (contained items)
+			if (content_y >= geo.container_icons_y && content_y < geo.container_icons_y + geo.icon_sz && mouse_x >= geo.content_x) {
+				if (child.container_items.empty()) {
+					if (mouse_x < geo.content_x + geo.icon_sz) {
+						SetToolTip("Empty container");
+						return;
+					}
+				} else {
+					for (size_t i = 0; i < child.container_items.size(); ++i) {
+						if (geo.GetContainedSlotRect(i).Contains(mouse_x, content_y)) {
+							const auto& item_entry = child.container_items[i];
+							const auto def = g_item_definitions.get(item_entry.item_id);
+							const std::string item_name = def ? std::string(def.name()) : std::format("Item #{}", item_entry.item_id);
+							if (item_entry.count > 1) {
+								SetToolTip(wxstr(std::format("{}x {}", item_entry.count, item_name)));
+							} else {
+								SetToolTip(wxstr(item_name));
+							}
+							return;
+						}
+					}
 				}
-				return;
-			default:
-				event.Skip();
-				return;
+			}
 		}
 
-		SetSelection(next_index, true, false);
-	}
-
-	[[nodiscard]] int hitTest(int x, int y) const {
-		if (owner_->rows_.empty()) {
-			return -1;
+		// Tooltips for specific child types
+		const std::string child_prefix = std::format("#{}: ", vrow.child_index + 1);
+		if (child.kind == SearchResultKind::Teleport) {
+			SetToolTip(wxstr(std::format("{}Teleport to [{}, {}, {}] | Pos: [{}, {}, {}]",
+				child_prefix,
+				child.teleport_destination.x, child.teleport_destination.y, child.teleport_destination.z,
+				child.position.x, child.position.y, child.position.z)));
+		} else if (child.kind == SearchResultKind::Creature) {
+			SetToolTip(wxstr(std::format("{}{} | Pos: [{}, {}, {}]", child_prefix, child.subtitle, child.position.x, child.position.y, child.position.z)));
+		} else if (child.unique_id > 0 && child.action_id > 0) {
+			SetToolTip(wxstr(std::format("{}UID: {} | AID: {} | Pos: [{}, {}, {}]", child_prefix, child.unique_id, child.action_id, child.position.x, child.position.y, child.position.z)));
+		} else if (child.unique_id > 0) {
+			SetToolTip(wxstr(std::format("{}UID: {} | Pos: [{}, {}, {}]", child_prefix, child.unique_id, child.position.x, child.position.y, child.position.z)));
+		} else if (child.action_id > 0) {
+			SetToolTip(wxstr(std::format("{}AID: {} | Pos: [{}, {}, {}]", child_prefix, child.action_id, child.position.x, child.position.y, child.position.z)));
+		} else if (!child.text.empty()) {
+			SetToolTip(wxstr(std::format("{}\"{}\" | Pos: [{}, {}, {}]", child_prefix, child.text, child.position.x, child.position.y, child.position.z)));
+		} else {
+			SetToolTip(wxstr(std::format("{}Pos: [{}, {}, {}]", child_prefix, child.position.x, child.position.y, child.position.z)));
 		}
-
-		const int content_y = y + GetScrollPosition();
-		const int index = content_y / std::max(1, rowHeight());
-		if (index < 0 || index >= static_cast<int>(owner_->rows_.size())) {
-			return -1;
-		}
-
-		return index;
 	}
 
-	[[nodiscard]] wxRect rowRect(int index) const {
-		return wxRect(0, index * rowHeight(), GetClientSize().x, rowHeight());
+	void OnKeyDown(wxKeyEvent& event) {
+		event.Skip();
 	}
 
-	[[nodiscard]] int rowHeight() const {
-		return FromDIP(36);
-	}
-
-	[[nodiscard]] int leftInset() const {
-		return FromDIP(10);
-	}
-
-	[[nodiscard]] int indexWidth() const {
-		return FromDIP(68);
-	}
-
-	void drawEmptyState(NVGcontext* vg, int width, int height) const {
-		nvgFontFace(vg, "sans");
-		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-
-		nvgFontSize(vg, 14.0f);
-		nvgFillColor(vg, toColor(Theme::Get(Theme::Role::TextSubtle)));
-		nvgText(vg, static_cast<float>(FromDIP(kEmptyStateInset)), height * 0.45f, "No search results", nullptr);
-
-		nvgFontSize(vg, 12.0f);
-		nvgFillColor(vg, toColor(Theme::Get(Theme::Role::TextSubtle)));
-		nvgText(vg, static_cast<float>(FromDIP(kEmptyStateInset)), height * 0.54f, "Run a map search to populate this list.", nullptr);
-	}
-
-	void drawRow(NVGcontext* vg, int width, const wxRect& rect, const SearchResultRow& row, bool selected, bool hovered) const {
-		const wxColour row_fill = Theme::Get(Theme::Role::Surface);
-		const wxColour hover_fill = Theme::Get(Theme::Role::CardBaseHover);
-		const wxColour selected_fill = Theme::Get(Theme::Role::Accent);
-		const wxColour separator = Theme::Get(Theme::Role::Border);
-		const wxColour name_text = selected ? Theme::Get(Theme::Role::TextOnAccent) : Theme::Get(Theme::Role::Text);
-		const wxColour meta_text = selected ? Theme::Get(Theme::Role::TextOnAccent) : Theme::Get(Theme::Role::TextSubtle);
-
-		const wxColour fill = selected ? selected_fill : (hovered ? hover_fill : row_fill);
-		nvgBeginPath(vg);
-		nvgRect(vg, static_cast<float>(rect.x), static_cast<float>(rect.y), static_cast<float>(rect.width), static_cast<float>(rect.height));
-		nvgFillColor(vg, toColor(fill));
-		nvgFill(vg);
-
-		if (selected) {
-			nvgBeginPath(vg);
-			nvgRect(vg, 0.0f, static_cast<float>(rect.y), static_cast<float>(FromDIP(3)), static_cast<float>(rect.height));
-			nvgFillColor(vg, toColor(Theme::Get(Theme::Role::AccentHover)));
-			nvgFill(vg);
-		}
-
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, 0.0f, static_cast<float>(rect.GetBottom()));
-		nvgLineTo(vg, static_cast<float>(width), static_cast<float>(rect.GetBottom()));
-		nvgStrokeWidth(vg, 1.0f);
-		nvgStrokeColor(vg, toColor(separator));
-		nvgStroke(vg);
-
-		nvgFontFace(vg, "sans");
-		const float left = static_cast<float>(leftInset());
-		const float index_width = static_cast<float>(indexWidth());
-		const float text_left = left + index_width;
-		const float text_width = static_cast<float>(width) - text_left - left;
-		const float name_y = static_cast<float>(rect.y + FromDIP(12));
-		const float coords_y = static_cast<float>(rect.y + rect.height - FromDIP(10));
-
-		nvgFillColor(vg, toColor(meta_text));
-		nvgFontSize(vg, 11.0f);
-		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgText(vg, left, static_cast<float>(rect.y + rect.height / 2), wxString::Format("#%u", row.index).utf8_str(), nullptr);
-
-		nvgFillColor(vg, toColor(name_text));
-		nvgFontSize(vg, 12.0f);
-		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgSave(vg);
-		nvgScissor(vg, text_left, static_cast<float>(rect.y), text_width, static_cast<float>(rect.height));
-		nvgText(vg, text_left, name_y, row.name.utf8_str(), nullptr);
-		nvgRestore(vg);
-
-		const wxString coords = wxString::Format("[%d, %d, %d]", row.position.x, row.position.y, row.position.z);
-		nvgFillColor(vg, toColor(meta_text));
-		nvgFontSize(vg, 10.0f);
-		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgSave(vg);
-		nvgScissor(vg, text_left, static_cast<float>(rect.y), text_width, static_cast<float>(rect.height));
-		nvgText(vg, text_left, coords_y, coords.utf8_str(), nullptr);
-		nvgRestore(vg);
-	}
-
-	SearchResultWindow* owner_ = nullptr;
-	int selected_index_ = -1;
-	int hover_index_ = -1;
+	rme::ui::search::SearchResultModel m_model;
 };
+
+// ============================================================================
+// SearchResultWindow
+// ============================================================================
 
 SearchResultWindow::SearchResultWindow(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY) {
-	auto* root_sizer = newd wxBoxSizer(wxVERTICAL);
+	auto* root_sizer = new wxBoxSizer(wxVERTICAL);
 
-	result_list = newd ResultCanvas(this);
-	root_sizer->Add(result_list, wxSizerFlags(1).Expand());
+	// 1. Universal TilesetGridToolbar (sorting, search box, stacked layout)
+	TilesetGridToolbar::Actions actions;
+	actions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
+		OnSort(key, dir);
+	};
+	actions.clear_sort = [this]() {
+		OnClearSort();
+	};
+	actions.filter = [this](const std::string& query) {
+		ApplyFilter(query);
+	};
+	actions.filter_cleared = [this]() {
+		ApplyFilter("");
+	};
 
-	auto* footer_sizer = newd wxBoxSizer(wxVERTICAL);
-	summary_label = newd wxStaticText(this, wxID_ANY, "Results: 0");
-	footer_sizer->Add(summary_label, wxSizerFlags(0).Expand());
+	m_gridToolbar = new TilesetGridToolbar(this, std::move(actions), TilesetGridToolbar::Part_Sort | TilesetGridToolbar::Part_Search);
+	m_gridToolbar->SetStacked(true);
 
-	auto* action_sizer = newd wxBoxSizer(wxHORIZONTAL);
+	// Add custom actions to the AUI toolbar: Expand All, Collapse All
+	if (auto* aui = m_gridToolbar->GetToolBar()) {
+		const wxColour icon_color = Theme::Get(Theme::Role::Text);
 
-	previous_page_button_ = newd wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	previous_page_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_ARROW_LEFT));
-	action_sizer->Add(previous_page_button_, wxSizerFlags(0).CenterVertical().Border(wxRIGHT, FromDIP(6)));
+		aui->AddTool(TOOL_EXPAND_ALL, wxEmptyString,
+			IMAGE_MANAGER.GetBitmapBundle(ICON_ANGLES_DOWN, icon_color),
+			"Expand all item sub-trees");
+		aui->AddTool(TOOL_COLLAPSE_ALL, wxEmptyString,
+			IMAGE_MANAGER.GetBitmapBundle(ICON_ANGLES_RIGHT, icon_color),
+			"Collapse all item sub-trees");
 
-	next_page_button_ = newd wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	next_page_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_ARROW_RIGHT));
-	action_sizer->Add(next_page_button_, wxSizerFlags(0).CenterVertical().Border(wxRIGHT, FromDIP(12)));
+		aui->Realize();
 
-	export_button_ = newd wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	export_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_FILE_EXPORT));
-	export_button_->SetToolTip("Export current page");
-	action_sizer->Add(export_button_, wxSizerFlags(0).CenterVertical().Border(wxRIGHT, FromDIP(6)));
+		aui->Bind(wxEVT_TOOL, [this](wxCommandEvent& event) {
+			switch (event.GetId()) {
+				case TOOL_EXPAND_ALL:
+					ExpandAll();
+					break;
+				case TOOL_COLLAPSE_ALL:
+					CollapseAll();
+					break;
+				default:
+					event.Skip();
+					break;
+			}
+		});
+	}
 
-	clear_button_ = newd wxButton(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	clear_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_TRASH_CAN));
-	clear_button_->SetToolTip("Clear results");
-	action_sizer->Add(clear_button_, wxSizerFlags(0).CenterVertical());
+	root_sizer->Add(m_gridToolbar, 0, wxEXPAND);
 
-	footer_sizer->Add(action_sizer, wxSizerFlags(0).Expand().Top());
+	// 2. Hierarchical NanoVG Search Canvas
+	m_canvas = new SearchResultCanvas(this);
+	root_sizer->Add(m_canvas, 1, wxEXPAND);
 
-	root_sizer->Add(footer_sizer, wxSizerFlags(0).Expand().DoubleBorder());
-	SetSizerAndFit(root_sizer);
+	// 3. Status summary bar at bottom
+	auto* status_panel = new wxPanel(this, wxID_ANY);
+	status_panel->SetBackgroundColour(Theme::Get(Theme::Role::FooterSurface));
+	auto* status_sizer = new wxBoxSizer(wxHORIZONTAL);
+	m_summaryLabel = new wxStaticText(status_panel, wxID_ANY, "Ready");
+	m_summaryLabel->SetForegroundColour(Theme::Get(Theme::Role::TextSubtle));
+	m_summaryLabel->SetFont(m_summaryLabel->GetFont().Bold());
+	status_sizer->Add(m_summaryLabel, 1, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(4));
+	status_panel->SetSizer(status_sizer);
 
-	previous_page_button_->Bind(wxEVT_BUTTON, &SearchResultWindow::OnClickPreviousPage, this);
-	next_page_button_->Bind(wxEVT_BUTTON, &SearchResultWindow::OnClickNextPage, this);
-	export_button_->Bind(wxEVT_BUTTON, &SearchResultWindow::OnClickExport, this);
-	clear_button_->Bind(wxEVT_BUTTON, &SearchResultWindow::OnClickClear, this);
+	root_sizer->Add(status_panel, 0, wxEXPAND);
 
-	updateSummary();
+	SetSizer(root_sizer);
+	Layout();
 }
 
 SearchResultWindow::~SearchResultWindow() = default;
 
+void SearchResultWindow::SetSearchResults(std::vector<SearchResultGroup> groups, SearchQuery query) {
+	m_current_query = std::move(query);
+	if (m_canvas) {
+		m_canvas->SetGroups(std::move(groups));
+		if (m_hasSort) {
+			m_canvas->SortGroups(m_sortKey, m_sortDir);
+		} else {
+			m_canvas->SortGroupsByDefault();
+		}
+	}
+	UpdateSummary();
+}
+
 void SearchResultWindow::Clear() {
-	rows_.clear();
-	total_count_ = 0;
-	page_offset_ = 0;
-	page_limit_ = 0;
-	page_loader_ = {};
-
-	if (result_list != nullptr) {
-		result_list->ClearSelection();
+	if (m_canvas) {
+		m_canvas->SetGroups({});
 	}
-	updateSummary();
+	UpdateSummary();
 }
 
-void SearchResultWindow::SetResults(std::vector<SearchResultRow> rows, uint32_t total_count, uint32_t page_offset, uint32_t page_limit, std::function<void(uint32_t)> page_loader) {
-	rows_ = std::move(rows);
-	total_count_ = total_count == 0 ? static_cast<uint32_t>(rows_.size()) : total_count;
-	page_offset_ = page_offset;
-	page_limit_ = page_limit == 0 ? static_cast<uint32_t>(rows_.size()) : page_limit;
-	page_loader_ = std::move(page_loader);
-
-	if (result_list != nullptr) {
-		result_list->RefreshContent();
-	}
-	focusFirstResult();
-	updateSummary();
-}
-
-void SearchResultWindow::activateRow(int index) {
-	if (index < 0 || index >= static_cast<int>(rows_.size())) {
+void SearchResultWindow::RefreshCurrentSearch() {
+	if (!g_gui.IsEditorOpen()) {
+		Clear();
 		return;
 	}
 
-	g_gui.SetScreenCenterPosition(rows_[static_cast<size_t>(index)].position);
+	auto results = SearchEngine::Execute(g_gui.GetCurrentMap(), m_current_query);
+	SetSearchResults(std::move(results), m_current_query);
 }
 
-void SearchResultWindow::OnClickExport(wxCommandEvent& WXUNUSED(event)) {
-	wxFileDialog dialog(this, "Save file...", "", "", "Text Documents (*.txt) | *.txt", wxFD_SAVE);
-	if (dialog.ShowModal() != wxID_OK) {
-		return;
+void SearchResultWindow::ApplyFilter(const std::string& query) {
+	if (m_canvas) {
+		m_canvas->SetFilter(query);
 	}
-
-	wxFile file(dialog.GetPath(), wxFile::write);
-	if (!file.IsOpened()) {
-		return;
-	}
-
-	g_gui.CreateLoadBar("Exporting search result...");
-	file.Write("Generated by Remere's Map Editor " + __RME_VERSION__);
-	file.Write("\n=============================================\n\n");
-
-	const size_t count = rows_.size();
-	for (size_t i = 0; i < count; ++i) {
-		const SearchResultRow& row = rows_[i];
-		file.Write(wxString::Format("%u\t%s\t%d\t%d\t%d\n", row.index, row.name, row.position.x, row.position.y, row.position.z));
-		const auto from = static_cast<int32_t>(std::min<size_t>(i, static_cast<size_t>(std::numeric_limits<int32_t>::max())));
-		const auto to = static_cast<int32_t>(std::min<size_t>(count, static_cast<size_t>(std::numeric_limits<int32_t>::max())));
-		g_gui.SetLoadScale(from, to);
-	}
-
-	file.Close();
-	g_gui.DestroyLoadBar();
+	UpdateSummary();
 }
 
-void SearchResultWindow::OnClickClear(wxCommandEvent& WXUNUSED(event)) {
-	Clear();
+void SearchResultWindow::ExpandAll() {
+	if (m_canvas) {
+		m_canvas->ExpandAll();
+	}
 }
 
-void SearchResultWindow::OnClickPreviousPage(wxCommandEvent& WXUNUSED(event)) {
-	if (!page_loader_ || page_limit_ == 0 || page_offset_ == 0) {
-		return;
+void SearchResultWindow::CollapseAll() {
+	if (m_canvas) {
+		m_canvas->CollapseAll();
 	}
-
-	const uint32_t new_offset = (page_offset_ > page_limit_) ? (page_offset_ - page_limit_) : 0;
-	page_loader_(new_offset);
 }
 
-void SearchResultWindow::OnClickNextPage(wxCommandEvent& WXUNUSED(event)) {
-	if (!page_loader_ || page_limit_ == 0) {
-		return;
+void SearchResultWindow::OnSort(TilesetSortKey key, TilesetSortDirection dir) {
+	m_hasSort = true;
+	m_sortKey = key;
+	m_sortDir = dir;
+	if (m_canvas) {
+		m_canvas->SortGroups(key, dir);
 	}
-
-	const uint32_t current_end = page_offset_ + static_cast<uint32_t>(rows_.size());
-	if (current_end >= total_count_) {
-		return;
-	}
-
-	page_loader_(page_offset_ + page_limit_);
+	UpdateSummary();
 }
 
-void SearchResultWindow::updateSummary() {
-	if (summary_label == nullptr) {
-		return;
+void SearchResultWindow::OnClearSort() {
+	m_hasSort = false;
+	if (m_canvas) {
+		m_canvas->SortGroupsByDefault();
 	}
-
-	if (rows_.empty() || total_count_ == 0) {
-		summary_label->SetLabel("Results: 0");
-	} else {
-		const uint32_t first_visible = std::min(total_count_, page_offset_ + 1);
-		const uint32_t last_visible = std::min(total_count_, page_offset_ + static_cast<uint32_t>(rows_.size()));
-		summary_label->SetLabel(wxString::Format("Results: %u | %u-%u", total_count_, first_visible, last_visible));
-	}
-
-	if (previous_page_button_ != nullptr) {
-		previous_page_button_->Enable(page_loader_ && page_offset_ > 0);
-	}
-	if (next_page_button_ != nullptr) {
-		const uint32_t current_end = page_offset_ + static_cast<uint32_t>(rows_.size());
-		next_page_button_->Enable(page_loader_ && current_end < total_count_);
-	}
-	if (export_button_ != nullptr) {
-		export_button_->Enable(!rows_.empty());
-	}
-	if (clear_button_ != nullptr) {
-		clear_button_->Enable(!rows_.empty());
-	}
-
-	summary_label->SetMinSize(summary_label->GetBestSize());
-	Layout();
+	UpdateSummary();
 }
 
-void SearchResultWindow::focusFirstResult() {
-	if (result_list == nullptr || rows_.empty()) {
+void SearchResultWindow::UpdateSummary() {
+	if (!m_summaryLabel || !m_canvas) {
 		return;
 	}
 
-	result_list->SetSelection(0, true, false);
+	const size_t groups = m_canvas->GetTotalGroupCount();
+	const size_t matches = m_canvas->GetTotalMatchCount();
+	const std::string title = m_current_query.query_title.empty() ? "Results" : m_current_query.query_title;
+
+	m_summaryLabel->SetLabel(wxstr(std::format("{}: {} groups | {} matches", title, groups, matches)));
 }

@@ -5,6 +5,7 @@
 
 #include <wx/event.h>
 #include <wx/menu.h>
+#include <wx/menuitem.h>
 
 #include <string>
 #include <string_view>

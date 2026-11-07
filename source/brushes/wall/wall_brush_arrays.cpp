@@ -6,7 +6,8 @@
 #include "brushes/wall/wall_brush.h"
 #include <array>
 
-namespace {
+// Unique namespace: unity builds concatenate this with the other *_brush_arrays.cpp files.
+namespace wall_brush_arrays {
 	// Bitmapping: N=1, W=2, E=4, S=8 (consistent with WALLTILE_ enums)
 	enum {
 		N = WALLTILE_NORTH,
@@ -62,7 +63,7 @@ namespace {
 
 void WallBrush::init() {
 	for (int i = 0; i < 16; ++i) {
-		WallBrush::full_border_types[i] = full_border_table[i];
-		WallBrush::half_border_types[i] = half_border_table[i];
+		WallBrush::full_border_types[i] = wall_brush_arrays::full_border_table[i];
+		WallBrush::half_border_types[i] = wall_brush_arrays::half_border_table[i];
 	}
 }

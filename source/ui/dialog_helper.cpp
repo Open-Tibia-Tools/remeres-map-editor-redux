@@ -19,8 +19,27 @@
 #include "ui/properties/writable_properties_window.h"
 #include "ui/properties/splash_properties_window.h"
 #include "ui/properties/depot_properties_window.h"
-#include "ui/properties/old_properties_window.h"
-#include "ui/properties/properties_window.h"
+#include "ui/properties/item_properties_window.h"
+
+wxDialog* DialogHelper::CreateItemPropertiesDialog(wxWindow* parent, const Map* map, const Tile* tile, Item* item, wxPoint pos) {
+	if (!item) {
+		return nullptr;
+	}
+
+	if (dynamic_cast<Container*>(item)) {
+		return new ContainerPropertiesWindow(parent, map, tile, item, pos);
+	} else if (dynamic_cast<Podium*>(item)) {
+		return new PodiumPropertiesWindow(parent, map, tile, item, pos);
+	} else if (item->canHoldText() || item->canHoldDescription()) {
+		return new WritablePropertiesWindow(parent, map, tile, item, pos);
+	} else if (item->isSplash() || item->isFluidContainer()) {
+		return new SplashPropertiesWindow(parent, map, tile, item, pos);
+	} else if (dynamic_cast<Depot*>(item)) {
+		return new DepotPropertiesWindow(parent, map, tile, item, pos);
+	} else {
+		return new ItemPropertiesWindow(parent, map, tile, item, pos);
+	}
+}
 
 void DialogHelper::OpenProperties(Editor& editor, Tile* tile) {
 	if (!tile) {
@@ -31,9 +50,9 @@ void DialogHelper::OpenProperties(Editor& editor, Tile* tile) {
 	wxDialog* w = nullptr;
 
 	if (new_tile->spawn && g_settings.getInteger(Config::SHOW_SPAWNS)) {
-		w = newd SpawnPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), new_tile->spawn.get());
+		w = new SpawnPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), new_tile->spawn.get());
 	} else if (new_tile->creature && g_settings.getInteger(Config::SHOW_CREATURES)) {
-		w = newd CreaturePropertiesWindow(g_gui.root, &editor.map, new_tile.get(), new_tile->creature.get());
+		w = new CreaturePropertiesWindow(g_gui.root, &editor.map, new_tile.get(), new_tile->creature.get());
 	} else {
 		ItemVector selected_items = TileOperations::getSelectedItems(new_tile.get());
 		Item* item = nullptr;
@@ -50,29 +69,13 @@ void DialogHelper::OpenProperties(Editor& editor, Tile* tile) {
 		}
 
 		if (item) {
-			if (dynamic_cast<Container*>(item)) {
-				w = newd ContainerPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-			} else if (dynamic_cast<Podium*>(item)) {
-				w = newd PodiumPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-			} else if (editor.map.getVersion().otbm < MAP_OTBM_4) {
-				if (item->canHoldText() || item->canHoldDescription()) {
-					w = newd WritablePropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-				} else if (item->isSplash() || item->isFluidContainer()) {
-					w = newd SplashPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-				} else if (dynamic_cast<Depot*>(item)) {
-					w = newd DepotPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-				} else {
-					w = newd OldPropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-				}
-			} else {
-				w = newd PropertiesWindow(g_gui.root, &editor.map, new_tile.get(), item);
-			}
+			w = CreateItemPropertiesDialog(g_gui.root, &editor.map, new_tile.get(), item);
 		}
 	}
 
 	if (w) {
 		int ret = w->ShowModal();
-		if (ret != 0) {
+		if (ret != 0 && ret != wxID_CANCEL) {
 			std::unique_ptr<Action> action = editor.actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
 			action->addChange(std::make_unique<Change>(std::move(new_tile)));
 			editor.addAction(std::move(action));

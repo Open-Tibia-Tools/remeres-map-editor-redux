@@ -16,7 +16,7 @@ public:
 	VersionManager();
 	~VersionManager();
 
-	void UnloadVersion();
+	void UnloadVersion(bool full_clear = false);
 	bool LoadVersion(ClientVersionID ver, std::string& error, std::vector<std::string>& warnings, bool force = false);
 
 	// The current version loaded (returns CLIENT_VERSION_NONE if no version is loaded)
@@ -42,16 +42,18 @@ public:
 		return last_load_has_otb;
 	}
 
+	[[nodiscard]] std::filesystem::path GetModularDataPath() const;
+
 private:
 	bool PromptForClientPaths(ClientVersion* version);
 	bool LoadDataFiles(std::string& error, std::vector<std::string>& warnings);
-	[[nodiscard]] std::filesystem::path GetModularDataPath() const;
 	void FailDataLoad();
 	bool LoadMaterialManifest(const std::filesystem::path& materials_manifest, MaterialManifestFiles& manifest_files, std::string& error);
 	bool LoadCanonicalAssets(const std::filesystem::path& modular_data_path, const MaterialManifestFiles& manifest_files, std::string& error, std::vector<std::string>& warnings);
 	void AppendMissingItemWarnings(std::vector<std::string>& warnings) const;
 	bool LoadCreatureFiles(const MaterialManifestFiles& manifest_files, std::string& error, std::vector<std::string>& warnings);
 	bool LoadModularMaterials(const std::filesystem::path& materials_manifest, std::string& error, std::vector<std::string>& warnings);
+	void RegisterCreaturesFromOpenMaps();
 
 	ClientVersionID loaded_version;
 	MissingItemReport last_missing_items;

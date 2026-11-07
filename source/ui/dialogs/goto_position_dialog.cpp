@@ -20,22 +20,22 @@ GotoPositionDialog::GotoPositionDialog(wxWindow* parent, Editor& editor) :
 	Map& map = editor.map;
 
 	// create topsizer
-	wxSizer* sizer = newd wxBoxSizer(wxVERTICAL);
+	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 
-	posctrl = newd PositionCtrl(this, "Destination", map.getWidth() / 2, map.getHeight() / 2, GROUND_LAYER, map.getWidth(), map.getHeight());
-	sizer->Add(posctrl, 0, wxTOP | wxLEFT | wxRIGHT, 20);
+	posctrl = new PositionCtrl(this, "Destination", map.getWidth() / 2, map.getHeight() / 2, GROUND_LAYER, map.getWidth(), map.getHeight());
+	sizer->Add(posctrl, wxSizerFlags().Border(wxTOP | wxLEFT | wxRIGHT, 20));
 
 	// OK/Cancel buttons
-	wxSizer* tmpsizer = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(this, wxID_OK, "OK");
-	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	wxSizer* tmpsizer = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
+	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Go to position");
 	tmpsizer->Add(okBtn, wxSizerFlags(1).Center());
-	wxButton* cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
-	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
+	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancelBtn->SetToolTip("Close this window");
 	tmpsizer->Add(cancelBtn, wxSizerFlags(1).Center());
-	sizer->Add(tmpsizer, 0, wxALL | wxCENTER, 20); // Border to top too
+	sizer->Add(tmpsizer, wxSizerFlags().Center().Border(wxALL, 20)); // Border to top too
 
 	SetSizerAndFit(sizer);
 	Centre(wxBOTH);
@@ -44,7 +44,7 @@ GotoPositionDialog::GotoPositionDialog(wxWindow* parent, Editor& editor) :
 	cancelBtn->Bind(wxEVT_BUTTON, &GotoPositionDialog::OnClickCancel, this);
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_LOCATION, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_LOCATION, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 

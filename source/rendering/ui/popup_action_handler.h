@@ -19,6 +19,7 @@
 #define RME_POPUP_ACTION_HANDLER_H_
 
 class Editor;
+class Position;
 class Tile;
 
 /**
@@ -29,7 +30,8 @@ class Tile;
  */
 class PopupActionHandler {
 public:
-	static void RotateItem(Editor& editor);
+	static void RotateItem(Editor& editor, bool backwards = false);
+	static void RotateItemAt(Editor& editor, const Position& pos, bool backwards = false);
 	static void GotoDestination(Editor& editor);
 	static void SwitchDoor(Editor& editor);
 	static void BrowseTile(Editor& editor, int cursor_x, int cursor_y);

@@ -79,7 +79,7 @@ void MainToolBar::HideAll(bool update) {
 
 	wxAuiPaneInfoArray& panes = manager->GetAllPanes();
 	for (int i = 0, count = panes.GetCount(); i < count; ++i) {
-		if (!panes.Item(i).IsToolbar()) {
+		if (panes.Item(i).IsToolbar()) {
 			panes.Item(i).Hide();
 		}
 	}

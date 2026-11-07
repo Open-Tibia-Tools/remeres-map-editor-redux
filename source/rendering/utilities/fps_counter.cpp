@@ -39,6 +39,12 @@ bool FPSCounter::HasChanged() const {
 	return fps_changed;
 }
 
+bool FPSCounter::ConsumeChanged() {
+	const bool changed = fps_changed;
+	fps_changed = false;
+	return changed;
+}
+
 int FPSCounter::GetFPS() const {
 	return current_fps;
 }

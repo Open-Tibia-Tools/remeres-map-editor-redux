@@ -11,7 +11,7 @@ void GridDrawer::DrawGrid(SpriteBatch& sprite_batch, const RenderView& view, con
 		return;
 	}
 
-	glm::vec4 color(0.0f, 0.0f, 0.0f, 0.50f); // Subtle dark overlay
+	constexpr glm::vec4 color(60.0f / 255.0f, 60.0f / 255.0f, 60.0f / 255.0f, 100.0f / 255.0f);
 
 	// Use zoom as line thickness so lines are always ~1 screen pixel
 	const float line_thickness = view.zoom;

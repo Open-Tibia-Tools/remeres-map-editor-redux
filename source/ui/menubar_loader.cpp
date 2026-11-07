@@ -67,7 +67,7 @@ wxObject* MenuBarLoader::LoadItem(pugi::xml_node node, wxMenu* parent, MainMenuB
 		std::string name = attribute.as_string();
 		std::replace(name.begin(), name.end(), '$', '&');
 
-		wxMenu* menu = newd wxMenu;
+		wxMenu* menu = new wxMenu;
 		if ((attribute = node.attribute("special")) && std::string(attribute.as_string()) == "RECENT_FILES") {
 			recentFilesManager.UseMenu(menu);
 		} else if ((attribute = node.attribute("special")) && std::string(attribute.as_string()) == "PALETTE") {
@@ -141,7 +141,7 @@ wxObject* MenuBarLoader::LoadItem(pugi::xml_node node, wxMenu* parent, MainMenuB
 			act.kind // Kind of item
 		);
 		if (!act.icon.empty()) {
-			tmp->SetBitmap(IMAGE_MANAGER.GetBitmap(act.icon, wxSize(16, 16)));
+			tmp->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(act.icon));
 		}
 		items[MenuBar::ActionID(act.id)].push_back(tmp);
 		return tmp;

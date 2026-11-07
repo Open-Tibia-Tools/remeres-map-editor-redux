@@ -13,12 +13,17 @@
 #include "ui/extension_window.h"
 #include "game/creatures.h"
 #include "app/managers/version_manager.h"
+#include "ui/brush_items/brush_items_window.h"
 
 FileMenuHandler::FileMenuHandler(MainFrame* frame, MainMenuBar* menubar) :
 	frame(frame), menubar(menubar) {
 }
 
-FileMenuHandler::~FileMenuHandler() = default;
+FileMenuHandler::~FileMenuHandler() {
+	if (preferences_dialog_) {
+		preferences_dialog_->Destroy();
+	}
+}
 
 void FileMenuHandler::OnNew(wxCommandEvent& WXUNUSED(event)) {
 	g_gui.NewMap();
@@ -36,6 +41,10 @@ void FileMenuHandler::OnSaveAs(wxCommandEvent& WXUNUSED(event)) {
 	g_gui.SaveMapAs();
 }
 
+void FileMenuHandler::OnSaveAsGzip(wxCommandEvent& WXUNUSED(event)) {
+	g_gui.SaveMapAsGzip();
+}
+
 void FileMenuHandler::OnClose(wxCommandEvent& WXUNUSED(event)) {
 	frame->DoQuerySave(true); // It closes the editor too
 }
@@ -50,7 +59,7 @@ void FileMenuHandler::OnGenerateMap(wxCommandEvent& WXUNUSED(event)) {
 
 void FileMenuHandler::OnImportMap(wxCommandEvent& WXUNUSED(event)) {
 	ASSERT(g_gui.GetCurrentEditor());
-	wxDialog* importmap = newd ImportMapWindow(frame, *g_gui.GetCurrentEditor());
+	wxDialog* importmap = new ImportMapWindow(frame, *g_gui.GetCurrentEditor());
 	importmap->ShowModal();
 	importmap->Destroy();
 }
@@ -67,7 +76,7 @@ void FileMenuHandler::OnImportMonsterData(wxCommandEvent& WXUNUSED(event)) {
 			if (ok) {
 				DialogUtil::ListDialog("Monster loader errors", warnings);
 			} else {
-				wxMessageBox(wxstr(std::format("Error OT data file \"{}\".\n{}", paths[i].ToStdString(), error)), "Error", wxOK | wxICON_INFORMATION, g_gui.root);
+				DialogUtil::PopupDialog(g_gui.root, "Error", wxstr(std::format("Error OT data file \"{}\".\n{}", paths[i].ToStdString(), error)), wxOK | wxICON_INFORMATION);
 			}
 		}
 	}
@@ -86,6 +95,9 @@ void FileMenuHandler::OnExportMinimap(wxCommandEvent& WXUNUSED(event)) {
 }
 
 void FileMenuHandler::OnReloadDataFiles(wxCommandEvent& WXUNUSED(event)) {
+	if (g_gui.brush_items_window) {
+		g_gui.brush_items_window->SetActiveBrush(nullptr);
+	}
 	std::string error;
 	std::vector<std::string> warnings;
 	g_version.LoadVersion(g_version.GetCurrentVersionID(), error, warnings, true);
@@ -96,17 +108,21 @@ void FileMenuHandler::OnReloadDataFiles(wxCommandEvent& WXUNUSED(event)) {
 void FileMenuHandler::OnMissingItemsReport(wxCommandEvent& WXUNUSED(event)) {
 	const auto& missing = g_version.getLastMissingItems();
 	if (missing.missing_in_dat.empty() && missing.missing_in_otb.empty() && missing.xml_no_otb.empty() && missing.otb_no_xml.empty()) {
-		wxMessageBox("No missing item definitions were detected for the current client version.",
-		             "Missing Items Report", wxOK | wxICON_INFORMATION, g_gui.root);
+		DialogUtil::PopupDialog(g_gui.root, "Missing Items Report",
+		             "No missing item definitions were detected for the current client version.", wxOK | wxICON_INFORMATION);
 		return;
 	}
 	MissingItemsDialog::Show(g_gui.root, missing, g_version.lastLoadHasOtb());
 }
 
 void FileMenuHandler::OnPreferences(wxCommandEvent& WXUNUSED(event)) {
-	PreferencesWindow dialog(frame);
-	dialog.ShowModal();
-	dialog.Destroy();
+	if (preferences_dialog_) {
+		preferences_dialog_->Raise();
+		preferences_dialog_->SetFocus();
+		return;
+	}
+	preferences_dialog_ = new PreferencesWindow(frame);
+	preferences_dialog_->Show();
 }
 
 void FileMenuHandler::OnListExtensions(wxCommandEvent& WXUNUSED(event)) {

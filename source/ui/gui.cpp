@@ -47,10 +47,13 @@
 #include "rendering/ui/minimap_window.h"
 #include "palette/palette_window.h"
 #include "palette/house/house_palette.h"
+#include "palette/palette_zones.h"
 #include "rendering/ui/map_display.h"
+#include "rendering/map_drawer.h"
 #include "app/application.h"
 #include "ui/welcome_dialog.h"
 #include "ui/tool_options_window.h"
+#include "ui/brush_items/brush_items_window.h"
 
 #include "live/live_client.h"
 #include "live/live_tab.h"
@@ -101,8 +104,11 @@ GUI::GUI() :
 	tabbook(nullptr),
 	root(nullptr),
 	house_palette(nullptr),
+	zone_palette(nullptr),
+	town_palette(nullptr),
 	tool_options(nullptr),
 	tile_properties_panel(nullptr),
+	brush_items_window(nullptr),
 	pasting(false),
 	disabled_counter(0),
 	hotkeys_enabled(true) {
@@ -122,13 +128,20 @@ GUI::~GUI() {
 void GUI::AddPendingCanvasEvent(wxEvent& event) {
 	MapTab* mapTab = GetCurrentMapTab();
 	if (mapTab) {
-		mapTab->GetCanvas()->GetEventHandler()->AddPendingEvent(event);
+		mapTab->GetCanvas()->GetEventHandler()->QueueEvent(event.Clone());
 	}
 }
 
 void GUI::UpdateMenus() {
-	wxCommandEvent evt(EVT_UPDATE_MENUS);
-	g_gui.root->AddPendingEvent(evt);
+	if (root) {
+		root->CallAfter([]() {
+			if (g_gui.root) {
+				g_gui.root->UpdateMenubar();
+				g_gui.UpdateMinimap(true);
+				g_gui.UpdateTitle();
+			}
+		});
+	}
 }
 
 void GUI::ShowToolbar(ToolBarID id, bool show) {
@@ -203,6 +216,9 @@ void GUI::SetCurrentMapSecondaryMap(BaseMap* secondary_map) {
 }
 
 void GUI::RefreshView(bool immediate) {
+	if (!tabbook) {
+		return;
+	}
 	MapTab* current_map_tab = GetCurrentMapTab();
 	for (int i = 0; i < tabbook->GetTabCount(); ++i) {
 		auto* editor_tab = tabbook->GetTab(i);
@@ -236,6 +252,7 @@ void GUI::SyncCurrentMapCanvasPreviewState() {
 			|| (map_tab->GetMode() == DRAWING_MODE && GetCurrentBrush() != nullptr)
 			|| map_tab->GetSession()->secondary_map != nullptr;
 		map_tab->GetCanvas()->SetHoverPreviewActive(hover_preview_active);
+		map_tab->GetCanvas()->UpdateCursor();
 	}
 }
 
@@ -325,6 +342,21 @@ void GUI::SetCurrentZoom(double zoom) {
 
 // Search Results moved to SearchManager
 
+void GUI::ReleaseAllChunkCaches() {
+	if (!tabbook) {
+		return;
+	}
+	for (int index = 0; index < tabbook->GetTabCount(); ++index) {
+		if (auto* tab = dynamic_cast<MapTab*>(tabbook->GetTab(index))) {
+			if (auto* canvas = tab->GetCanvas()) {
+				if (canvas->drawer) {
+					canvas->drawer->getChunkCacheManager().invalidateAll();
+				}
+			}
+		}
+	}
+}
+
 void GUI::FitViewToMap() {
 	for (int index = 0; index < tabbook->GetTabCount(); ++index) {
 		if (auto* tab = dynamic_cast<MapTab*>(tabbook->GetTab(index))) {
@@ -348,12 +380,24 @@ void GUI::FillDoodadPreviewBuffer() {
 	SyncCurrentMapCanvasPreviewState();
 }
 
+void GUI::FocusCurrentMapCanvas() {
+	if (MapTab* map_tab = GetCurrentMapTab()) {
+		if (auto* canvas = map_tab->GetCanvas()) {
+			canvas->SetFocus();
+		}
+	}
+}
+
 void GUI::SelectBrush() {
 	g_brush_manager.SelectBrush();
 	if (tool_options) {
 		tool_options->SetActiveBrush(GetCurrentBrush());
 	}
+	if (brush_items_window) {
+		brush_items_window->SetActiveBrush(GetCurrentBrush());
+	}
 	SyncCurrentMapCanvasPreviewState();
+	FocusCurrentMapCanvas();
 	emitBrushChangeIfNeeded(*this);
 }
 bool GUI::SelectBrush(const Brush* brush) {
@@ -361,7 +405,11 @@ bool GUI::SelectBrush(const Brush* brush) {
 	if (tool_options) {
 		tool_options->SetActiveBrush(GetCurrentBrush());
 	}
+	if (brush_items_window) {
+		brush_items_window->SetActiveBrush(GetCurrentBrush());
+	}
 	SyncCurrentMapCanvasPreviewState();
+	FocusCurrentMapCanvas();
 	emitBrushChangeIfNeeded(*this);
 	return changed;
 }
@@ -370,7 +418,11 @@ void GUI::SelectPreviousBrush() {
 	if (tool_options) {
 		tool_options->SetActiveBrush(GetCurrentBrush());
 	}
+	if (brush_items_window) {
+		brush_items_window->SetActiveBrush(GetCurrentBrush());
+	}
 	SyncCurrentMapCanvasPreviewState();
+	FocusCurrentMapCanvas();
 	emitBrushChangeIfNeeded(*this);
 }
 void GUI::SelectBrushInternal(Brush* brush) {
@@ -378,7 +430,11 @@ void GUI::SelectBrushInternal(Brush* brush) {
 	if (tool_options) {
 		tool_options->SetActiveBrush(GetCurrentBrush());
 	}
+	if (brush_items_window) {
+		brush_items_window->SetActiveBrush(GetCurrentBrush());
+	}
 	SyncCurrentMapCanvasPreviewState();
+	FocusCurrentMapCanvas();
 	emitBrushChangeIfNeeded(*this);
 }
 Brush* GUI::GetCurrentBrush() const {
@@ -420,6 +476,12 @@ void GUI::SetSpawnTime(int time) {
 	if (tool_options) {
 		tool_options->ReloadSettings();
 	}
+}
+int GUI::GetDefaultCreatureWeight() const {
+	return g_brush_manager.GetDefaultCreatureWeight();
+}
+void GUI::SetDefaultCreatureWeight(int weight) {
+	g_brush_manager.SetDefaultCreatureWeight(weight);
 }
 void GUI::SetLightIntensity(int v) {
 	g_brush_manager.SetLightIntensity(std::clamp(v, 0, 255));
@@ -600,6 +662,9 @@ void GUI::SaveMap() {
 void GUI::SaveMapAs() {
 	g_editors.SaveMapAs();
 }
+void GUI::SaveMapAsGzip() {
+	g_editors.SaveMapAsGzip();
+}
 bool GUI::LoadMap(const FileName& fileName, const MapLoadOptions& load_options) {
 	return g_editors.LoadMap(fileName, load_options);
 }
@@ -613,11 +678,11 @@ int GUI::GetOpenMapCount() {
 bool GUI::ShouldSave() {
 	return g_editors.ShouldSave();
 }
-void GUI::SaveCurrentMap(FileName filename, bool showdialog) {
-	g_editors.SaveCurrentMap(filename, showdialog);
+bool GUI::SaveCurrentMap(FileName filename, bool showdialog) {
+	return g_editors.SaveCurrentMap(filename, showdialog);
 }
-void GUI::SaveCurrentMap(bool showdialog) {
-	g_editors.SaveCurrentMap(FileName(""), showdialog);
+bool GUI::SaveCurrentMap(bool showdialog) {
+	return g_editors.SaveCurrentMap(FileName(""), showdialog);
 }
 
 PaletteWindow* GUI::NewPalette() {
@@ -628,6 +693,9 @@ void GUI::ActivatePalette(PaletteWindow* p) {
 	if (p && tool_options) {
 		tool_options->SetActiveBrush(GetCurrentBrush());
 	}
+	if (p && brush_items_window) {
+		brush_items_window->SetActiveBrush(GetCurrentBrush());
+	}
 }
 void GUI::RebuildPalettes() {
 	g_palettes.RebuildPalettes();
@@ -636,6 +704,20 @@ void GUI::RefreshPalettes(Map* m, bool usedfault) {
 	g_palettes.RefreshPalettes(m, usedfault);
 	if (house_palette) {
 		house_palette->SetMap(m ? m : (usedfault ? (IsEditorOpen() ? &GetCurrentMap() : nullptr) : nullptr));
+	}
+}
+void GUI::UpdateZonePalette(uint16_t zone_id) {
+	if (zone_palette) {
+		if (zone_id != 0) {
+			zone_palette->UpdateZone(zone_id);
+		} else {
+			zone_palette->UpdateTileCounts();
+		}
+	}
+}
+void GUI::UpdateHousePalette(uint32_t house_id) {
+	if (house_palette) {
+		house_palette->UpdateHouseSize(house_id);
 	}
 }
 void GUI::RefreshOtherPalettes(PaletteWindow* p) {
@@ -667,4 +749,16 @@ void SetWindowToolTip(wxWindow* a, const wxString& tip) {
 void SetWindowToolTip(wxWindow* a, wxWindow* b, const wxString& tip) {
 	a->SetToolTip(tip);
 	b->SetToolTip(tip);
+}
+
+void GUI::StartBusyAnimation() {
+	if (root) {
+		root->StartBusyAnimation();
+	}
+}
+
+void GUI::StopBusyAnimation() {
+	if (root) {
+		root->StopBusyAnimation();
+	}
 }

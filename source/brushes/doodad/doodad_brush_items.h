@@ -66,6 +66,11 @@ public:
 	// Randomization
 
 	Item* getRandomSingleItem(int variation) const;
+	Item* getRandomSingleItem(int variation, int roll) const;
+	const CompositeTileList& getComposite(int variation, int roll) const;
+
+	[[nodiscard]] int getTotalVariants() const;
+	[[nodiscard]] DoodadVariant getVariant(int index) const;
 
 private:
 	std::vector<std::unique_ptr<AlternativeBlock>> alternatives;

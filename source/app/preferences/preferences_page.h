@@ -4,6 +4,25 @@
 #include <wx/panel.h>
 #include <wx/scrolwin.h>
 #include <wx/sizer.h>
+#include <wx/preferences.h>
+
+/**
+ * Adapter allowing RME PreferencesPage implementations to plug directly into
+ * wxWidgets modern wxPreferencesEditor architecture.
+ */
+class PreferencesPageAdapter : public wxPreferencesPage {
+public:
+	PreferencesPageAdapter(const wxString& name, const wxBitmapBundle& icon = wxBitmapBundle())
+		: m_name(name), m_icon(icon) {}
+
+	wxString GetName() const override { return m_name; }
+	wxBitmapBundle GetIcon() const override { return m_icon; }
+
+private:
+	wxString m_name;
+	wxBitmapBundle m_icon;
+};
+
 
 #include "ui/theme.h"
 
@@ -31,7 +50,7 @@ public:
 		m_page_sizer = new wxBoxSizer(wxVERTICAL);
 		m_scrolled_window->SetSizer(m_page_sizer);
 
-		root_sizer->Add(m_scrolled_window, 1, wxEXPAND);
+		root_sizer->Add(m_scrolled_window, wxSizerFlags(1).Expand());
 		SetSizer(root_sizer);
 	}
 

@@ -20,15 +20,15 @@ StartupCardPanel::StartupCardPanel(wxWindow* parent, const wxString& title, bool
 		m_title_label->SetFont(Theme::GetFont(9, true));
 		m_title_label->SetForegroundColour(Theme::Get(Theme::Role::Text));
 		m_title_label->SetBackgroundColour(GetBackgroundColour());
-		root_sizer->Add(m_title_label, 0, wxLEFT | wxRIGHT, body_padding);
+		root_sizer->Add(m_title_label, wxSizerFlags().Border(wxLEFT | wxRIGHT, body_padding));
 
 		auto* separator = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(1)));
 		separator->SetBackgroundColour(Theme::Get(Theme::Role::Border));
-		root_sizer->Add(separator, 0, wxEXPAND | wxALL, body_padding);
+		root_sizer->Add(separator, wxSizerFlags().Expand().Border(wxALL, body_padding));
 	}
 
 	m_body_sizer = new wxBoxSizer(wxVERTICAL);
-	root_sizer->Add(m_body_sizer, 1, wxEXPAND | (m_title.empty() ? wxALL : (wxLEFT | wxRIGHT | wxBOTTOM)), body_padding);
+	root_sizer->Add(m_body_sizer, wxSizerFlags(1).Expand().Border(m_title.empty() ? wxALL : (wxLEFT | wxRIGHT | wxBOTTOM), body_padding));
 
 	SetSizer(root_sizer);
 	Bind(wxEVT_PAINT, &StartupCardPanel::OnPaint, this);
