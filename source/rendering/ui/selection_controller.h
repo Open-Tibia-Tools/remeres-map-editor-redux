@@ -8,6 +8,7 @@
 #include <wx/event.h>
 #include <vector>
 #include "map/position.h"
+#include "rendering/ui/selection_picker.h"
 
 class MapCanvas;
 class Editor;
@@ -19,10 +20,10 @@ public:
 	SelectionController(MapCanvas* canvas, Editor& editor);
 	~SelectionController();
 
-	void HandleClick(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down);
+	void HandleClick(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, bool shift_down, bool ctrl_down, bool alt_down);
 	void HandleDrag(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down);
 	void HandleRelease(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down);
-	void HandlePropertiesClick(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down);
+	void HandlePropertiesClick(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, bool shift_down, bool ctrl_down, bool alt_down);
 	void HandlePropertiesRelease(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down);
 	void HandleDoubleClick(const Position& mouse_map_pos);
 
@@ -45,9 +46,15 @@ public:
 	void Reset() {
 		dragging = false;
 		boundbox_selection = false;
+		last_click_pixel = {};
 	}
 
 private:
+	[[nodiscard]] Tile* FindSelectedTileUnderCursor(const Position& mouse_map_pos) const;
+	[[nodiscard]] SelectionHit PickAt(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset) const;
+	[[nodiscard]] bool IsHitSelected(const SelectionHit& hit) const;
+	void ApplyHit(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, const SelectionHit& hit, bool toggle);
+	void ClearSelection();
 	void ExecuteBoundboxSelection(const Position& start_pos, const Position& end_pos, int floor);
 
 	MapCanvas* canvas;
@@ -57,6 +64,7 @@ private:
 	bool boundbox_selection;
 
 	Position drag_start_pos;
+	SelectionPixelOffset last_click_pixel;
 };
 
 #endif

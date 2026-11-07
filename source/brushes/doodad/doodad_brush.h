@@ -71,8 +71,27 @@ public:
 		return settings.look_id;
 	}
 	int getMaxVariation() const override {
-		return items.getAlternatives().size();
+		return 1000000;
 	}
+	int getVariation() const {
+		return current_variation;
+	}
+	void setVariation(int32_t variation) override {
+		current_variation = std::max(0, variation);
+	}
+	[[nodiscard]] int getTotalVariants() const {
+		return items.getTotalVariants();
+	}
+	[[nodiscard]] DoodadVariant getVariant(int index) const {
+		return items.getVariant(index);
+	}
+	[[nodiscard]] Item* getRandomSingleItem(int variation, int roll) const {
+		return items.getRandomSingleItem(variation, roll);
+	}
+	[[nodiscard]] const CompositeTileList& getComposite(int variation, int roll) const {
+		return items.getComposite(variation, roll);
+	}
+	[[nodiscard]] uint16_t getPlacementItemId(int variation) const;
 	std::string getName() const override {
 		return name;
 	}
@@ -84,6 +103,7 @@ protected:
 	std::string name;
 	DoodadBrushSettings settings;
 	DoodadBrushItems items;
+	int32_t current_variation = 0;
 };
 
 #endif

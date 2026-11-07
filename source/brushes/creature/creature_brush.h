@@ -19,6 +19,7 @@
 #define RME_CREATURE_BRUSH_H
 
 #include "brushes/brush.h"
+#include "game/creature.h"
 
 class Sprite;
 
@@ -33,7 +34,7 @@ public:
 
 	bool canDraw(BaseMap* map, const Position& position) const override;
 	void draw(BaseMap* map, Tile* tile, void* parameter) override;
-	void draw_creature(BaseMap* map, Tile* tile);
+	virtual void draw_creature(BaseMap* map, Tile* tile);
 	void undraw(BaseMap* map, Tile* tile) override;
 
 	CreatureType* getType() const {
@@ -53,13 +54,25 @@ public:
 		return true;
 	}
 
+	int32_t getMaxVariation() const override {
+		return 4;
+	}
+	void setVariation(int32_t variation) override;
+	int32_t getVariation() const;
+	Direction getDirection() const {
+		return current_direction;
+	}
+	void setDirection(Direction direction) {
+		current_direction = direction;
+	}
+
+	static void setDefaultSpawnTime(int time) { default_spawn_time = time; }
+	static int getDefaultSpawnTime() { return default_spawn_time; }
+
 protected:
 	CreatureType* creature_type;
 	mutable std::unique_ptr<Sprite> creature_sprite_wrapper;
-
-public:
-	static void setDefaultSpawnTime(int time) { default_spawn_time = time; }
-	static int getDefaultSpawnTime() { return default_spawn_time; }
+	Direction current_direction = SOUTH;
 
 private:
 	static inline int default_spawn_time = 60;

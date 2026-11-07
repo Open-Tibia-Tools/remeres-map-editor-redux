@@ -25,6 +25,7 @@
 #include <wx/splitter.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
+#include <wx/stc/stc.h>
 
 #include <optional>
 #include <string>
@@ -77,7 +78,7 @@ private:
 	wxAuiToolBar* output_toolbar = nullptr;
 	wxDataViewListCtrl* script_list = nullptr;
 	wxStaticText* selection_summary = nullptr;
-	wxTextCtrl* console_output = nullptr;
+	wxStyledTextCtrl* console_output = nullptr;
 	wxIcon file_script_icon;
 	wxIcon package_script_icon;
 	std::string selected_script_id;

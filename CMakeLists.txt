@@ -5,6 +5,8 @@ project(rme)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# No C++20 modules are used; skip the per-file dependency scan step.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set(CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -19,7 +21,7 @@ if(MSVC)
 	set(CMAKE_CXX_FLAGS_DEBUG          "/Od /Zi /D__DEBUG__")
 	set(CMAKE_CXX_FLAGS_MINSIZEREL     "/O1 /DNDEBUG")
 	set(CMAKE_CXX_FLAGS_RELEASE        "/O2 /DNDEBUG")
-	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/O2 /Zi /DNDEBUG")
+	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/O2 /DNDEBUG")
 	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 else()
 	set(CMAKE_CXX_FLAGS                "-Wall -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-deprecated-declarations -Wno-overloaded-virtual -Wno-strict-aliasing -Wno-sign-compare -Wno-unused-function -Wunused-result")
@@ -39,7 +41,7 @@ if(WIN32)
 endif()
 find_package(Boost 1.34.0 COMPONENTS thread system REQUIRED)
 
-find_package(wxWidgets 3.3 COMPONENTS html aui gl adv core net base propgrid REQUIRED)
+find_package(wxWidgets 3.3 COMPONENTS html aui gl adv core net base propgrid stc REQUIRED)
 
 
 find_package(ZLIB REQUIRED)
@@ -76,6 +78,7 @@ include(source/CMakeLists.txt)
 
 set(RME_APPEARANCES_PROTO "${CMAKE_CURRENT_SOURCE_DIR}/source/protobuf/appearances.proto")
 protobuf_generate_cpp(RME_PROTO_SRCS RME_PROTO_HDRS "${RME_APPEARANCES_PROTO}")
+set_source_files_properties(${RME_PROTO_SRCS} PROPERTIES COMPILE_OPTIONS "/std:c++17")
 
 # Core static library - ZERO wxWidgets include directories or libraries
 add_library(rme_core STATIC ${rme_core_H} ${rme_core_SRC} ${RME_PROTO_SRCS} ${RME_PROTO_HDRS})
@@ -128,11 +131,13 @@ else()
 endif()
 
 # Main executable (UI layer)
+# Removed WIN32 to enable Console subsystem for persistent debugging logs
 add_executable(rme ${rme_ui_H} ${rme_ui_SRC})
 
 set_target_properties(rme PROPERTIES CXX_STANDARD 23)
 set_target_properties(rme PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_compile_definitions(rme PRIVATE WXWIN_COMPATIBILITY_3_3 NANOVG_GL3)
+target_precompile_headers(rme PRIVATE source/app/main.h)
 
 target_include_directories(rme PRIVATE
 	${LUA_INCLUDE_DIR}
@@ -157,12 +162,20 @@ else()
 	target_link_libraries(rme PRIVATE ${wxWidgets_LIBRARIES})
 endif()
 
+# Defines NANOVG_GL3_IMPLEMENTATION, which must not leak into a unity batch
+set_source_files_properties(source/util/nanovg_canvas.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+if(MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")
+	target_compile_options(rme PRIVATE /MP)
+endif()
+if(MSVC AND CMAKE_UNITY_BUILD)
+	target_compile_options(rme PRIVATE /bigobj)
+endif()
 # Copy assets to build directory
 add_custom_command(TARGET rme POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
 	"${CMAKE_CURRENT_SOURCE_DIR}/source/assets"
 	"$<TARGET_FILE_DIR:rme>/assets"
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
 	"${CMAKE_CURRENT_SOURCE_DIR}/data"
 	"$<TARGET_FILE_DIR:rme>/data"
 	COMMENT "Copying assets to output directory..."
@@ -170,5 +183,39 @@ add_custom_command(TARGET rme POST_BUILD
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT "rme")
 
+# --- Unit test for universal rotator ---
+set(TEST_ROTATOR_SRC ${rme_ui_SRC})
+list(REMOVE_ITEM TEST_ROTATOR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/source/app/application.cpp")
 
+add_executable(test_universal_rotator ${rme_H} ${TEST_ROTATOR_SRC} tests/test_universal_rotator.cpp)
+target_link_libraries(test_universal_rotator PRIVATE rme_core)
+set_target_properties(test_universal_rotator PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_universal_rotator PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_compile_definitions(test_universal_rotator PRIVATE WXWIN_COMPATIBILITY_3_3 NANOVG_GL3)
+target_precompile_headers(test_universal_rotator PRIVATE source/app/main.h)
 
+if(TARGET wxWidgets::wxWidgets)
+	target_link_libraries(test_universal_rotator PRIVATE wxWidgets::wxWidgets)
+else()
+	target_link_libraries(test_universal_rotator PRIVATE ${wxWidgets_LIBRARIES})
+endif()
+
+target_include_directories(test_universal_rotator PRIVATE
+	${CMAKE_CURRENT_BINARY_DIR}
+	${LUA_INCLUDE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/source
+)
+
+if(TARGET Boost::boost)
+	target_link_libraries(test_universal_rotator PRIVATE Boost::thread)
+endif()
+
+target_link_libraries(test_universal_rotator PRIVATE
+	nanovg::nanovg
+	sol2::sol2
+	cpr::cpr
+	${LUA_LIBRARIES}
+)
+
+enable_testing()
+add_test(NAME test_universal_rotator COMMAND test_universal_rotator)

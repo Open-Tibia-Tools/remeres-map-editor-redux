@@ -18,9 +18,16 @@
 #include "brushes/managers/brush_manager.h"
 #include "ui/managers/loading_manager.h"
 #include "ui/tool_options_window.h"
+#include "ui/brush_items/brush_items_window.h"
 #include "item_definitions/core/asset_bundle_loader.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "app/settings.h"
+#include "ui/map_tab.h"
+#include "editor/editor.h"
+#include "map/map.h"
+#include "map/tile.h"
+#include "game/creature.h"
+#include <set>
 
 #include <format>
 #include <ranges>
@@ -184,12 +191,21 @@ bool VersionManager::LoadDataFiles(std::string& error, std::vector<std::string>&
 
 	g_loading.SetLoadDone(70, "Finishing...");
 	g_brushes.init();
+	g_materials.ensureAllRawBrushes();
+
+	RegisterCreaturesFromOpenMaps();
+
+	g_gui.ReleaseAllChunkCaches();
+	g_palettes.ReloadDynamicPalettes();
 
 	g_loading.DestroyLoadBar();
 	return true;
 }
 
 std::filesystem::path VersionManager::GetModularDataPath() const {
+	if (!getLoadedVersion()) {
+		return {};
+	}
 	return FileSystem::GetDataDirectory() / getLoadedVersion()->getDataDirectory();
 }
 
@@ -303,11 +319,48 @@ bool VersionManager::LoadModularMaterials(const std::filesystem::path& materials
 	return true;
 }
 
-void VersionManager::UnloadVersion() {
+void VersionManager::RegisterCreaturesFromOpenMaps() {
+	if (!g_gui.tabbook) {
+		return;
+	}
+
+	std::set<Map*> visited_maps;
+	for (int i = 0; i < g_gui.tabbook->GetTabCount(); ++i) {
+		auto* tab = dynamic_cast<MapTab*>(g_gui.tabbook->GetTab(i));
+		if (!tab || !tab->GetEditor()) {
+			continue;
+		}
+		Map* map = &tab->GetEditor()->map;
+		if (!visited_maps.insert(map).second) {
+			continue;
+		}
+
+		for (const auto& tile_loc : map->tiles()) {
+			const Tile* tile = tile_loc.get();
+			if (tile && tile->creature) {
+				const std::string& name = tile->creature->getName();
+				if (!name.empty() && g_creatures[name] == nullptr) {
+					g_creatures.addMissingCreatureType(name, tile->creature->isNpc());
+				}
+				for (const auto& alt : tile->creature->getAlternatives()) {
+					if (!alt.name.empty() && g_creatures[alt.name] == nullptr) {
+						g_creatures.addMissingCreatureType(alt.name, false);
+					}
+				}
+			}
+		}
+	}
+}
+
+void VersionManager::UnloadVersion(bool full_clear) {
 	UnnamedRenderingLock();
+	g_gui.ReleaseAllChunkCaches();
 	g_gui.gfx.clear();
 	if (g_gui.tool_options) {
 		g_gui.tool_options->Clear();
+	}
+	if (g_gui.brush_items_window) {
+		g_gui.brush_items_window->SetActiveBrush(nullptr);
 	}
 	g_brush_manager.Clear();
 
@@ -320,7 +373,7 @@ void VersionManager::UnloadVersion() {
 		// FileName cdb = getLoadedVersion()->getLocalDataPath();
 		// cdb.SetFullName("creatures.xml");
 		// g_creatures.saveToXML(cdb); // Disabled to prevent dual source of truth
-		g_creatures.clear();
+		g_creatures.clear(!full_clear);
 
 		loaded_version = CLIENT_VERSION_NONE;
 	}

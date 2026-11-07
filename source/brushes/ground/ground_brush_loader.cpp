@@ -12,11 +12,6 @@
 
 extern Brushes g_brushes;
 
-// Helper for C++20 case-insensitive comparison (zero allocation)
-static const auto iequal = [](char a, char b) {
-	return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
-};
-
 bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vector<std::string>& warnings) {
 	pugi::xml_attribute attribute;
 	if ((attribute = node.attribute("lookid"))) {
@@ -181,7 +176,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 			if ((attribute = childNode.attribute("to"))) {
 				const std::string_view value = attribute.as_string();
 				if (value == "all") {
-					borderBlock->to = 0xFFFFFFFF;
+					borderBlock->to = Brush::WILDCARD_ID;
 				} else if (value == "none") {
 					borderBlock->to = 0;
 				} else {
@@ -194,7 +189,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 					borderBlock->to = tobrush->getID();
 				}
 			} else {
-				borderBlock->to = 0xFFFFFFFF;
+				borderBlock->to = Brush::WILDCARD_ID;
 			}
 
 			if ((attribute = childNode.attribute("super")) && attribute.as_bool()) {
@@ -379,7 +374,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 			const std::string_view name = childNode.attribute("name").as_string();
 			if (!name.empty()) {
 				if (name == "all") {
-					brush.friends.push_back(0xFFFFFFFF);
+					brush.friends.push_back(Brush::WILDCARD_ID);
 				} else {
 					Brush* otherBrush = g_brushes.getBrush(name);
 					if (otherBrush) {
@@ -394,7 +389,7 @@ bool GroundBrushLoader::load(GroundBrush& brush, pugi::xml_node node, std::vecto
 			const std::string_view name = childNode.attribute("name").as_string();
 			if (!name.empty()) {
 				if (name == "all") {
-					brush.friends.push_back(0xFFFFFFFF);
+					brush.friends.push_back(Brush::WILDCARD_ID);
 				} else {
 					Brush* otherBrush = g_brushes.getBrush(name);
 					if (otherBrush) {

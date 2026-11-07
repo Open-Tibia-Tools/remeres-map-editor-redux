@@ -1,15 +1,23 @@
 #ifndef RME_RULE_BUILDER_PANEL_H_
 #define RME_RULE_BUILDER_PANEL_H_
 
-#include "ui/replace_tool/rule_manager.h"
+#include "app/main.h"
 #include "util/nanovg_canvas.h"
+#include "util/grid_cell_renderer.h"
+#include "ui/replace_tool/rule_model.h"
+#include "ui/replace_tool/rule_builder_layout.h"
+#include "ui/replace_tool/rule_builder_renderer.h"
+
 #include <wx/wx.h>
-#include <wx/control.h>
 #include <wx/dnd.h>
 #include <vector>
-#include <string>
-#include <cstdint>
 
+class Brush;
+
+/**
+ * Controller canvas for the replacement rules table.
+ * Coordinates RuleModel, RuleBuilderLayout, and RuleBuilderRenderer.
+ */
 class RuleBuilderPanel : public NanoVGCanvas {
 public:
 	class Listener {
@@ -21,33 +29,13 @@ public:
 		virtual void OnRuleItemSelected(uint16_t itemId) = 0;
 	};
 
-	// Hit testing results (Public for renderer access)
-	struct HitResult {
-		enum Type {
-			None,
-			Source, // The source item icon
-			Target, // A specific target item icon
-			AddTarget, // The [+] ghost slot at the end of targets
-			NewRule, // The large "Drop New Rule" area
-			ClearRules,
-			SaveRule,
-			DeleteRule, // The 'X' on the rule card
-			DeleteTarget, // The 'X' overlay on a specific target
-		};
-		Type type = None;
-		int ruleIndex = -1;
-		int targetIndex = -1;
-	};
-
 	RuleBuilderPanel(wxWindow* parent, Listener* listener);
-	virtual ~RuleBuilderPanel();
-	HitResult HitTest(int x, int y) const;
-	void DistributeProbabilities(int ruleIndex);
+	~RuleBuilderPanel() override;
 
-	// Drop Target
 	class ItemDropTarget : public wxTextDropTarget {
 	public:
-		ItemDropTarget(RuleBuilderPanel* panel);
+		explicit ItemDropTarget(RuleBuilderPanel* panel);
+
 		bool OnDropText(wxCoord x, wxCoord y, const wxString& data) override;
 		wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult def) override;
 		void OnLeave() override;
@@ -57,33 +45,89 @@ public:
 	};
 
 	void Clear();
-	void SetRules(const std::vector<ReplacementRule>& rules);
-	std::vector<ReplacementRule> GetRules() const;
+	void SetRules(const std::vector<RuleGroup>& rules);
+	std::vector<RuleGroup> GetRules() const;
 
-	// Visual Layout
-	int GetRuleHeight(int index, int width) const;
-	int GetRuleY(int index, int width) const;
-	void LayoutRules();
+	void AddRuleWithSource(uint16_t itemId);
+	bool AddRuleIfNewSource(uint16_t itemId);
+	void AddRulesWithSources(const std::vector<uint16_t>& itemIds);
+	size_t AutoMatchUnmatchedRules(Brush* targetBrush);
+
+	void SetShowLabels(bool show);
+	bool GetShowLabels() const {
+		return m_showLabels;
+	}
+	void SetIconSize(int sizePx);
+	int GetIconSize() const {
+		return m_iconSize;
+	}
+
+	bool CanUndo() const {
+		return m_model.CanUndo();
+	}
+	bool CanRedo() const {
+		return m_model.CanRedo();
+	}
+	void Undo();
+	void Redo();
 
 protected:
-	virtual void OnNanoVGPaint(NVGcontext* vg, int width, int height) override;
-	virtual wxSize DoGetBestClientSize() const override;
-
-	void OnSize(wxSizeEvent& event);
-	void OnMouse(wxMouseEvent& event);
+	void OnNanoVGPaint(NVGcontext* vg, int width, int height) override;
+	wxSize DoGetBestClientSize() const override;
 
 private:
-	std::vector<ReplacementRule> m_rules;
-	wxSize m_lastSize;
-	Listener* m_listener;
+	friend class ItemDropTarget;
 
-	// Drag feedback
-	HitResult m_dragHover;
-	bool m_isExternalDrag = false;
+	void LayoutRows();
+	wxRect DropZoneRect() const;
+	rme::replace_tool::Hit HitTest(int x, int y) const;
+	uint16_t SelectedItemId() const;
 
-	// Layout Cache
-	mutable std::vector<int> m_ruleYCache;
-	mutable int m_totalHeight = 0;
+	void NotifyRulesChanged();
+	void NotifyCellSelected();
+
+	void ApplyDrop(int x, int y, const std::vector<uint16_t>& itemIds);
+	bool ApplyRuleMove(int x, int y, const wxString& payload);
+	void UpdateDragHover(int x, int y);
+	void ClearDragHover();
+
+	void OpenChanceEditor(int row);
+	void RemoveSelectedCell();
+	void DuplicateSelectedRow();
+
+	// Event Handlers
+	void OnLeftDown(wxMouseEvent& event);
+	void OnLeftUp(wxMouseEvent& event);
+	void OnLeftDoubleClick(wxMouseEvent& event);
+	void OnMotion(wxMouseEvent& event);
+	void OnLeave(wxMouseEvent& event);
+	void OnContextMenu(wxContextMenuEvent& event);
+	void OnKeyDown(wxKeyEvent& event);
+	void OnSize(wxSizeEvent& event);
+
+	rme::replace_tool::RuleModel m_model;
+	std::vector<rme::replace_tool::RowLayout> m_layouts;
+	Listener* m_listener = nullptr;
+
+	rme::replace_tool::SelectionState m_selection;
+	rme::replace_tool::Hit m_hover;
+	rme::replace_tool::Hit m_dragHover;
+	bool m_externalDrag = false;
+
+	struct CellRef {
+		int row = -1;
+		bool source = false;
+		int index = -1;
+	};
+	CellRef m_pressCell;
+	wxPoint m_pressPoint;
+	bool m_internalDrag = false;
+
+	bool m_showLabels = false;
+	int m_iconSize = rme::ui::grid::kIconSizeBase;
+	rme::ui::grid::LabelCache m_labelCache;
+	int m_rowsBottom = 0;
+	int m_totalHeight = 0;
 };
 
 #endif

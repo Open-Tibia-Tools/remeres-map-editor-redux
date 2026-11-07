@@ -10,6 +10,7 @@
 
 class Brush;
 class wxBitmapToggleButton;
+class wxBitmapButton;
 class wxSlider;
 class wxGridSizer;
 class wxSpinCtrl;
@@ -51,9 +52,12 @@ private:
 	[[nodiscard]] bool IsCreatureToolMode() const;
 	[[nodiscard]] bool HasBrushSizeControls() const;
 	[[nodiscard]] bool HasThicknessControl() const;
+	[[nodiscard]] bool HasRandomizeDoodadsControl() const;
 	[[nodiscard]] bool HasPreviewBorderControl() const;
+	[[nodiscard]] bool HasDrawOnFloorBelowControl() const;
 	[[nodiscard]] bool HasLockDoorsControl() const;
 	[[nodiscard]] bool HasSpawnControls() const;
+	[[nodiscard]] bool HasWeightControl() const;
 	[[nodiscard]] Brush* GetSelectedCreatureBrush() const;
 	[[nodiscard]] std::vector<Brush*> GetDefaultTools() const;
 	[[nodiscard]] wxBitmap CreateToolBitmap(const ToolButtonEntry& entry) const;
@@ -66,11 +70,15 @@ private:
 	void OnExactToggled(wxCommandEvent& event);
 	void OnAspectToggled(wxCommandEvent& event);
 	void OnPreviewBorderToggled(wxCommandEvent& event);
+	void OnDrawOnFloorBelowToggled(wxCommandEvent& event);
+	void OnDrawOnFloorBelowConfigClicked(wxCommandEvent& event);
 	void OnLockDoorsToggled(wxCommandEvent& event);
 	void OnThicknessChanged(wxCommandEvent& event);
+	void OnRandomizeDoodadsToggled(wxCommandEvent& event);
 	void OnPlaceSpawnWithCreatureToggled(wxCommandEvent& event);
 	void OnSpawnTimeChanged(wxSpinEvent& event);
 	void OnSpawnSizeChanged(wxSpinEvent& event);
+	void OnWeightChanged(wxSpinEvent& event);
 
 	Brush* active_brush = nullptr;
 	bool mutating_ui = false;
@@ -82,6 +90,7 @@ private:
 	wxStaticBoxSizer* other_sizer = nullptr;
 	wxPanel* thickness_panel = nullptr;
 	wxPanel* spawn_time_panel = nullptr;
+	wxPanel* weight_panel = nullptr;
 	wxCheckBox* place_spawn_with_creature_checkbox = nullptr;
 	wxPanel* spawn_size_panel = nullptr;
 
@@ -92,7 +101,11 @@ private:
 	wxBitmapToggleButton* exact_button = nullptr;
 	wxBitmapToggleButton* aspect_button = nullptr;
 	wxCheckBox* preview_border_checkbox = nullptr;
+	wxPanel* draw_below_panel = nullptr;
+	wxCheckBox* draw_on_floor_below_checkbox = nullptr;
+	wxBitmapButton* draw_on_floor_below_config_button = nullptr;
 	wxCheckBox* lock_doors_checkbox = nullptr;
+	wxCheckBox* randomize_doodads_checkbox = nullptr;
 	wxStaticText* thickness_label = nullptr;
 	wxSlider* thickness_slider = nullptr;
 	wxStaticText* thickness_value = nullptr;
@@ -100,6 +113,8 @@ private:
 	wxSpinCtrl* spawn_time_spin = nullptr;
 	wxStaticText* spawn_size_label = nullptr;
 	wxSpinCtrl* spawn_size_spin = nullptr;
+	wxStaticText* weight_label = nullptr;
+	wxSpinCtrl* weight_spin = nullptr;
 
 	std::vector<ToolButtonEntry> tool_buttons;
 };

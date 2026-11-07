@@ -184,6 +184,16 @@ enum class ItemFlag : uint8_t {
 	Count,
 };
 
+[[nodiscard]] constexpr uint64_t flagMask(ItemFlag flag) {
+	return uint64_t { 1 } << static_cast<uint8_t>(flag);
+}
+
+constexpr void setMappedFlag(uint64_t& flags, bool enabled, ItemFlag flag) {
+	if (enabled) {
+		flags |= flagMask(flag);
+	}
+}
+
 enum class ItemAttributeKey : uint8_t {
 	Volume,
 	MaxTextLen,

@@ -28,6 +28,12 @@ class Tile;
 
 class Spawn {
 public:
+	// Partitioned spawn file origins this spawn was loaded from; spawns created in the editor have none
+	enum Kind : uint8_t {
+		MONSTERS = 1,
+		NPCS = 2,
+	};
+
 	Spawn(int size = 3) :
 		size(0), selected(false) {
 		setSize(size);
@@ -37,7 +43,24 @@ public:
 	std::unique_ptr<Spawn> deepCopy() {
 		std::unique_ptr<Spawn> copy = std::make_unique<Spawn>(size);
 		copy->selected = selected;
+		copy->kinds = kinds;
+		copy->npc_size = npc_size;
 		return copy;
+	}
+
+	uint8_t getKinds() const {
+		return kinds;
+	}
+	void addKind(Kind kind) {
+		kinds |= kind;
+	}
+
+	// Radius of an NPC spawn centered on the same tile as a monster spawn; preserved across load/save
+	int getNpcSize() const {
+		return npc_size;
+	}
+	void setNpcSize(int newsize) {
+		npc_size = newsize;
 	}
 
 	bool isSelected() const {
@@ -68,6 +91,8 @@ public:
 
 protected:
 	int size;
+	int npc_size = 0;
+	uint8_t kinds = 0;
 	bool selected;
 };
 
@@ -99,6 +124,22 @@ public:
 	}
 	SpawnPositionList::iterator find(Position& pos) {
 		return spawns.find(pos);
+	}
+	SpawnPositionList::const_iterator find(const Position& pos) const {
+		return spawns.find(pos);
+	}
+	SpawnPositionList::iterator lower_bound(const Position& pos) {
+		return spawns.lower_bound(pos);
+	}
+	SpawnPositionList::const_iterator lower_bound(const Position& pos) const {
+		return spawns.lower_bound(pos);
+	}
+
+	[[nodiscard]] bool empty() const noexcept {
+		return spawns.empty();
+	}
+	[[nodiscard]] size_t size() const noexcept {
+		return spawns.size();
 	}
 
 private:

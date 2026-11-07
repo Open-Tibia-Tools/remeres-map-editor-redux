@@ -28,7 +28,6 @@ GameSprite::GameSprite() :
 	pattern_z(0),
 	frames(0),
 	numsprites(0),
-	animator(nullptr),
 	draw_height(0),
 	drawoffset_x(0),
 	drawoffset_y(0),
@@ -42,13 +41,6 @@ ImageDimensions GameSprite::GetSize() const {
 	return getCompositePixelSize();
 }
 
-void GameSprite::invalidateCache(const AtlasRegion* region) {
-	if (cached_default_region == region) {
-		cached_default_region = nullptr;
-		cached_generation_id = 0;
-		cached_sprite_id = 0;
-	}
-}
 
 void GameSprite::invalidateMetricCaches() {
 	geometry_cache_dirty = true;
@@ -60,11 +52,6 @@ void GameSprite::ColorizeTemplatePixels(uint8_t* dest, const uint8_t* mask, size
 	OutfitColorizer::ColorizeTemplatePixels(dest, mask, pixelCount, lookHead, lookBody, lookLegs, lookFeet, destHasAlpha);
 }
 
-void GameSprite::clean(time_t time, int longevity) {
-	for (auto& iter : instanced_templates) {
-		iter->clean(time, longevity);
-	}
-}
 
 int GameSprite::getDrawHeight() const {
 	return draw_height;
@@ -235,7 +222,7 @@ size_t GameSprite::getIndex(int width, int height, int layer, int pattern_x, int
 	return idx;
 }
 
-const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _layer, int _count, int _pattern_x, int _pattern_y, int _pattern_z, int _frame) {
+const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _layer, int _count, int _pattern_x, int _pattern_y, int _pattern_z, int _frame, bool allow_upload) {
 	if (numsprites == 0) {
 		return nullptr;
 	}
@@ -255,7 +242,7 @@ const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _layer, int _c
 			}
 
 			// Cache miss or staleness suspected: Use the getter to ensure self-healing check runs
-			const AtlasRegion* valid_region = spriteList[0]->getAtlasRegion();
+			const AtlasRegion* valid_region = spriteList[0]->getAtlasRegion(allow_upload);
 			if (valid_region && spriteList[0]->isGLLoaded) {
 				cached_default_region = valid_region;
 				cached_generation_id = spriteList[0]->generation_id;
@@ -271,10 +258,10 @@ const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _layer, int _c
 	}
 
 	uint32_t v;
-	if (_count >= 0 && height <= 1 && width <= 1) {
-		v = _count;
+	if (_count >= 0 && height <= 1 && width <= 1 && layers <= 1 && frames <= 1 && pattern_x <= 1 && pattern_y <= 1 && pattern_z <= 1) {
+		v = static_cast<uint32_t>(_count);
 	} else {
-		v = ((((((_frame)*pattern_y + _pattern_y) * pattern_x + _pattern_x) * layers + _layer) * height + _y) * width + _x);
+		v = static_cast<uint32_t>(getIndex(_x, _y, _layer, _pattern_x, _pattern_y, _pattern_z, _frame));
 	}
 	if (v >= numsprites) {
 		if (numsprites == 1) {
@@ -285,7 +272,7 @@ const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _layer, int _c
 	}
 
 	if (spriteList[v]) {
-		return spriteList[v]->getAtlasRegion();
+		return spriteList[v]->getAtlasRegion(allow_upload);
 	}
 	return nullptr;
 }
@@ -310,13 +297,21 @@ TemplateImage* GameSprite::getTemplateImage(int sprite_index, const Outfit& outf
 		return it->get();
 	}
 
+	// Cap LRU entries per sprite to prevent unbounded memory growth in extreme sessions
+	constexpr size_t MAX_CACHED_TEMPLATES = 64;
+	if (instanced_templates.size() >= MAX_CACHED_TEMPLATES) {
+		// Dropping the least recently used template triggers TemplateImage::~TemplateImage(),
+		// which cleanly frees its atlas slot via AtlasManager::removeSprite(texture_id).
+		instanced_templates.pop_back();
+	}
+
 	auto img = std::make_unique<TemplateImage>(this, sprite_index, outfit);
 	TemplateImage* ptr = img.get();
-	instanced_templates.push_back(std::move(img));
+	instanced_templates.insert(instanced_templates.begin(), std::move(img));
 	return ptr;
 }
 
-const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _dir, int _addon, int _pattern_z, const Outfit& _outfit, int _frame) {
+const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _dir, int _addon, int _pattern_z, const Outfit& _outfit, int _frame, bool allow_upload) {
 	if (numsprites == 0) {
 		return nullptr;
 	}
@@ -331,10 +326,10 @@ const AtlasRegion* GameSprite::getAtlasRegion(int _x, int _y, int _dir, int _add
 	}
 	if (layers > 1) { // Template
 		TemplateImage* img = getTemplateImage(v, _outfit);
-		return img->getAtlasRegion();
+		return img->getAtlasRegion(allow_upload);
 	}
 	if (spriteList[v]) {
-		return spriteList[v]->getAtlasRegion();
+		return spriteList[v]->getAtlasRegion(allow_upload);
 	}
 	return nullptr;
 }

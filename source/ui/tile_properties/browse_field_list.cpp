@@ -14,6 +14,7 @@
 #include "util/image_manager.h"
 #include "util/nanovg_listbox.h"
 #include "rendering/core/graphics.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include <glad/glad.h>
 #include <nanovg.h>
 #include <format>
@@ -41,7 +42,7 @@ protected:
 
 TilePropertiesListBox::TilePropertiesListBox(wxWindow* parent, wxWindowID id) :
 	NanoVGListBox(parent, id, wxLB_SINGLE), current_tile(nullptr) {
-	SetMinSize(FromDIP(wxSize(200, 180)));
+	SetMinSize(FromDIP(wxSize(220, 180)));
 }
 
 TilePropertiesListBox::~TilePropertiesListBox() {
@@ -83,16 +84,28 @@ void TilePropertiesListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_
 	}
 	Item* item = items[n];
 
-	Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());
-	if (sprite) {
-		int tex = GetOrCreateSpriteTexture(vg, sprite);
-		if (tex > 0) {
-			int icon_size = 32;
-			NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
-			nvgBeginPath(vg);
-			nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
-			nvgFillPaint(vg, imgPaint);
-			nvgFill(vg);
+	const auto tech = rme::rendering::TechnicalItemRegistry::Classify(item->getID(), item->getClientID());
+	if (tech != rme::rendering::TileIndicatorType::None) {
+		const int icon_size = 32;
+		rme::rendering::DrawNanoVGIndicatorBadge(
+			vg,
+			tech,
+			static_cast<float>(rect.x),
+			static_cast<float>(rect.y),
+			static_cast<float>(icon_size)
+		);
+	} else {
+		Sprite* sprite = g_gui.gfx.getSprite(item->getClientID());
+		if (sprite) {
+			int tex = GetOrCreateSpriteTexture(vg, sprite);
+			if (tex > 0) {
+				int icon_size = 32;
+				NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
+				nvgBeginPath(vg);
+				nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
+				nvgFillPaint(vg, imgPaint);
+				nvgFill(vg);
+			}
 		}
 	}
 
@@ -104,7 +117,7 @@ void TilePropertiesListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_
 		nvgFillColor(vg, nvgRGBA(textColour.Red(), textColour.Green(), textColour.Blue(), 255));
 	}
 
-	std::string label = std::format("{} - {}", item->getID(), item->getName());
+	const std::string label = std::format("{} - {}", item->getID(), item->getName());
 
 	nvgFontSize(vg, 12.0f);
 	nvgFontFace(vg, "sans");
@@ -128,20 +141,20 @@ Item* TilePropertiesListBox::GetItem(size_t index) const {
 BrowseFieldList::BrowseFieldList(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY), current_tile(nullptr), current_map(nullptr) {
 
-	wxStaticBoxSizer* main_sizer = newd wxStaticBoxSizer(wxVERTICAL, this, "Items");
+	wxStaticBoxSizer* main_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Items");
 
 	// Toolbar
-	wxBoxSizer* toolbar_sizer = newd wxBoxSizer(wxHORIZONTAL);
-	btn_up = newd wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	btn_up->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_ARROW_UP, wxSize(16, 16)));
+	wxBoxSizer* toolbar_sizer = new wxBoxSizer(wxHORIZONTAL);
+	btn_up = new wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	btn_up->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_ARROW_UP));
 	btn_up->SetToolTip("Move item up in stack");
 
-	btn_down = newd wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	btn_down->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_ARROW_DOWN, wxSize(16, 16)));
+	btn_down = new wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	btn_down->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_ARROW_DOWN));
 	btn_down->SetToolTip("Move item down in stack");
 
-	btn_delete = newd wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-	btn_delete->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_TRASH_CAN, wxSize(16, 16)));
+	btn_delete = new wxButton(main_sizer->GetStaticBox(), wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	btn_delete->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_TRASH_CAN));
 	btn_delete->SetToolTip("Delete item");
 
 	toolbar_sizer->Add(btn_up, wxSizerFlags(0).Border(wxRIGHT, 2));
@@ -152,7 +165,7 @@ BrowseFieldList::BrowseFieldList(wxWindow* parent) :
 	main_sizer->Add(toolbar_sizer, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
 	// Listbox
-	item_list = newd TilePropertiesListBox(main_sizer->GetStaticBox(), wxID_ANY);
+	item_list = new TilePropertiesListBox(main_sizer->GetStaticBox(), wxID_ANY);
 	main_sizer->Add(item_list, wxSizerFlags(1).Expand());
 
 	SetSizer(main_sizer);

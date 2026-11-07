@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <string>
 
+
 class FileSystem {
 public:
 	static std::filesystem::path GetExecDirectory();
@@ -18,6 +19,10 @@ public:
 
 	static void DiscoverDataDirectory(const std::string& existentFile);
 	static std::filesystem::path GetFoundDataDirectory();
+
+	[[nodiscard]] static std::filesystem::path GetConfigSavePath();
+	[[nodiscard]] static std::filesystem::path GetConfigFilePath();
+	[[nodiscard]] static std::string PathToUtf8(const std::filesystem::path& path);
 
 private:
 	static std::filesystem::path m_dataDirectory;

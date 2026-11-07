@@ -43,6 +43,8 @@ public:
 	std::string getName() const override;
 	ServerItemId getItemID() const;
 
+	void getRelatedItems(std::vector<uint16_t>& items) override;
+
 protected:
 	ServerItemId item_id = 0;
 };

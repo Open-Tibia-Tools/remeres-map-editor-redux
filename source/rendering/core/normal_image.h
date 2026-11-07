@@ -12,7 +12,7 @@ public:
 		return true;
 	}
 
-	const AtlasRegion* getAtlasRegion();
+	const AtlasRegion* getAtlasRegion(bool allow_upload = true);
 
 	// We use the sprite id as key
 	uint32_t id;
@@ -22,7 +22,6 @@ public:
 	uint16_t pixel_width = TextureAtlas::BASE_SLOT_SIZE;
 	uint16_t pixel_height = TextureAtlas::BASE_SLOT_SIZE;
 
-	void clean(time_t time, int longevity) override;
 
 	std::unique_ptr<uint8_t[]> getRGBData() override;
 	std::unique_ptr<uint8_t[]> getRGBAData() override;

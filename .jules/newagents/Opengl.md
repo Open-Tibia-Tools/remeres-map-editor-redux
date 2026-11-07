@@ -119,7 +119,7 @@ Scan the rendering code for issues you haven't fixed yet — excessive draw call
 - **`rendering/core/sprite_batch.h`** — SpriteBatch with MDI + RingBuffer. 100k sprites × 64 bytes = 6.4MB. Verify end-of-frame fence sync works correctly.
 - **`rendering/core/gl_resources.h`** (5.5KB) — RAII wrappers for GL objects (`GLVertexArray`, `GLBuffer`, `GLFramebuffer`, `GLTextureResource`). Verify all `glGen*`/`glDelete*` are wrapped.
 - **`rendering/core/gl_scoped_state.h`** (6.8KB) — Scoped GL state (`ScopedGLCapability`, `ScopedGLBlend`). Check for state leaks outside scoped blocks.
-- **`rendering/core/texture_garbage_collector.cpp`** (3.9KB) — Texture GC. Verify it runs asynchronously, not blocking render.
+- **`rendering/core/texture_atlas.h`** (4.6KB) — Texture array atlas with SpriteAtlasLUT indirection. Chunks and sprites stay resident.
 - **`rendering/core/sync_handle.h`** (2.8KB) — Fence sync for ring buffer. Verify no `glFinish()` or `glClientWaitSync` with `GL_SYNC_FLUSH_COMMANDS_BIT` in hot paths.
 - **`rendering/drawers/tiles/`** (8 files) — Tile rendering files. Check for per-tile texture binds or state changes.
 - **`rendering/core/light_buffer.h`** + `LightDrawer` — Lights disappear on large viewports (2000x2000). Known issue area.

@@ -11,6 +11,7 @@
 #include "game/item.h"
 #include <array>
 #include <algorithm>
+#include <initializer_list>
 
 void GroundBorderCalculator::calculate(BaseMap* map, Tile* tile) {
 	static const auto extractGroundBrushFromTile = [](BaseMap* map, int x, int y, int z) -> GroundBrush* {
@@ -325,9 +326,14 @@ void GroundBorderCalculator::calculate(BaseMap* map, Tile* tile) {
 				} };
 
 				if (auto it = std::ranges::find_if(diagonal_map, [direction](const auto& d) { return d.diagonal == direction; }); it != diagonal_map.end()) {
-					if (borderCluster.border->tiles[it->h1] != 0 && borderCluster.border->tiles[it->h2] != 0) {
-						TileOperations::addBorderItem(tile, Item::Create(borderCluster.border->tiles[it->h1]));
-						TileOperations::addBorderItem(tile, Item::Create(borderCluster.border->tiles[it->h2]));
+					// A border without this diagonal falls back to its two straight
+					// pieces, each one if defined (classic RME behaviour). Borders that
+					// only define e/s, like the mountain wall, still get a piece at their
+					// ne/sw ends instead of nothing.
+					for (const BorderType side : { it->h1, it->h2 }) {
+						if (borderCluster.border->tiles[side] != 0) {
+							TileOperations::addBorderItem(tile, Item::Create(borderCluster.border->tiles[side]));
+						}
 					}
 				}
 			}

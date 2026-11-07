@@ -3,6 +3,7 @@
 
 #include "app/main.h"
 #include "util/nanovg_canvas.h"
+#include "util/grid_cell_renderer.h"
 #include "palette/panels/brush_panel.h"
 
 /**
@@ -23,7 +24,6 @@ public:
 	 */
 	VirtualBrushGrid(wxWindow* parent, const DynamicTilesetDefinition* _tileset, int iconSizePx);
 	~VirtualBrushGrid() override;
-
 	wxWindow* GetSelfWindow() override {
 		return this;
 	}
@@ -33,17 +33,11 @@ public:
 	Brush* GetSelectedBrush() const override;
 	bool SelectBrush(const Brush* brush) override;
 
-	enum class DisplayMode {
-		Grid,
-		List
-	};
+	using DisplayMode = TilesetDisplayMode;
 
-	static constexpr int LIST_ROW_HEIGHT = 36;
-	static constexpr int GRID_PADDING = 4;
-	static constexpr int GRID_ITEM_SIZE_BASE = 32;
-	static constexpr int ICON_OFFSET = 2;
-
-	void SetDisplayMode(DisplayMode mode);
+	// Cell metrics live in util/grid_cell_renderer.h so every grid that shows
+	// tiles agrees on them.
+	void SetDisplayMode(DisplayMode mode) override;
 
 	// Toolbar support
 	void SetSort(TilesetSortKey key, TilesetSortDirection dir) override;
@@ -51,8 +45,10 @@ public:
 	void SetShowLabels(bool show) override;
 	void SetTileSize(int sizePx) override;
 	void SetFilterQuery(const std::string& query, const std::vector<Brush*>* overrideSource = nullptr) override;
-
-	static constexpr int LABEL_HEIGHT = 32;
+	void SetBrushIndicators(bool dogEar);
+	void SetGridSpacing(int spacingPx);
+	bool GetIndicatorDogEar() const { return m_indicatorDogEar; }
+	int GetGridSpacing() const { return m_gridSpacing; }
 
 protected:
 	/**
@@ -69,9 +65,15 @@ protected:
 	void OnMouseDown(wxMouseEvent& event);
 	void OnMotion(wxMouseEvent& event);
 	void OnSize(wxSizeEvent& event);
+	void OnShow(wxShowEvent& event);
 
 	// Internal helpers
 	void UpdateLayout();
+	// Scrolls the selected brush into view. When the grid is not on screen yet
+	// (its palette page is still being switched to) its size is not final, so
+	// the scroll is kept pending and redone once it is shown and sized.
+	void EnsureSelectedVisible();
+	bool m_pendingScrollToSelected = false;
 	void RefreshBrushList();
 	void ApplySort();
 	int HitTest(int x, int y) const;
@@ -84,7 +86,6 @@ protected:
 	int hover_index;
 	int columns;
 	int item_size;
-	int padding;
 	size_t observed_tileset_size;
 
 	std::vector<Brush*> m_display_brushes;
@@ -95,14 +96,11 @@ protected:
 	std::string m_filterQuery;
 	std::vector<Brush*> m_overrideBrushes;
 	bool m_hasOverrideBrushes = false;
+	bool m_indicatorDogEar = false;
+	int m_gridSpacing = rme::ui::grid::kPadding;
 
-	// Optimization: UTF8 name cache and truncated label cache
-	struct CachedLabel {
-		std::string line1;
-		std::string line2;
-	};
-	mutable std::unordered_map<const Brush*, std::string> m_utf8NameCache;
-	mutable std::unordered_map<const Brush*, CachedLabel> m_truncatedLabelCache;
+	// Optimization: wrapped label cache shared with the item grids.
+	rme::ui::grid::LabelCache m_labelCache;
 
 	// Animation state
 	wxTimer m_animTimer;

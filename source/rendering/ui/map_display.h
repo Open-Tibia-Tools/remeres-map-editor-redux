@@ -21,10 +21,10 @@
 #include "editor/action.h"
 #include "map/tile.h"
 #include "game/creature.h"
+#include "rendering/core/map_view_math.h"
 #include "rendering/utilities/fps_counter.h"
 
 #include "ui/map_popup_menu.h"
-#include "rendering/ui/animation_timer.h"
 #include "rendering/core/graphics.h"
 #include <chrono>
 #include <memory>
@@ -83,10 +83,11 @@ public:
 
 	void RequestLocalRefresh(bool immediate = false);
 	void RequestSharedMapRefresh(bool immediate = false);
-	void RequestAnimationRepaint();
 	void SetHoverPreviewActive(bool active);
 
 	virtual void ScreenToMap(int screen_x, int screen_y, int* map_x, int* map_y);
+	virtual void ScreenToMap(int screen_x, int screen_y, int custom_floor, int* map_x, int* map_y);
+	MainMapPixelPosition ScreenToMapPixel(int screen_x, int screen_y) const;
 	void MouseToMap(int* map_x, int* map_y) {
 		ScreenToMap(cursor_x, cursor_y, map_x, map_y);
 	}
@@ -100,6 +101,7 @@ public:
 	virtual void UpdatePositionStatus(int x = -1, int y = -1);
 	virtual void UpdateZoomStatus();
 	void SyncCursorHoverState();
+	void UpdateCursor();
 
 	virtual void ChangeFloor(int new_floor);
 	int GetFloor() const {
@@ -118,15 +120,6 @@ public:
 
 	void TakeScreenshot(wxFileName path, wxString format);
 
-	enum {
-		BLOCK_SIZE = 100
-	};
-
-	inline int getFillIndex(int x, int y) const {
-		return x + BLOCK_SIZE * y;
-	}
-
-	static bool processed[BLOCK_SIZE * BLOCK_SIZE];
 	Editor& editor;
 	std::unique_ptr<MapDrawer> drawer;
 	int keyCode;
@@ -165,9 +158,7 @@ public:
 
 	uint32_t current_house_id;
 
-	wxStopWatch refresh_watch;
 	std::unique_ptr<MapPopupMenu> popup_menu;
-	std::unique_ptr<AnimationTimer> animation_timer;
 
 	FPSCounter fps_counter;
 
@@ -180,18 +171,14 @@ public:
 
 private:
 	bool IsAnimationEnabled() const;
-	int GetAnimationRefreshIntervalMs() const noexcept;
 	void QueueNativeRefresh(bool immediate);
 	void EnsureNanoVG();
 	void DrawOverlays(NVGcontext* vg, const DrawingOptions& options);
-	void PerformGarbageCollection();
 
 	MapWindow* GetMapWindow() const;
 	BaseMap* GetSecondaryMap() const;
 	bool renderer_initialized = false;
-	long m_last_gc_time = 0;
 	bool hover_preview_active_ = false;
-	std::chrono::steady_clock::time_point last_animation_refresh_time_{};
 };
 
 #endif

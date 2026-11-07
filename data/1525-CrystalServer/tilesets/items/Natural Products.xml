@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Natural Products">
+    <item id="181" />
+    <item id="211" />
+    <item fromid="5676" toid="5677" />
+    <item fromid="15637" toid="15638" />
+    <item fromid="18609" toid="18614" />
+</tileset>

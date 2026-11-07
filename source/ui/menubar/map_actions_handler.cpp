@@ -8,6 +8,8 @@
 #include "editor/operations/unreachable_cleaner.h"
 #include "editor/persistence/map_backup_service.h"
 #include "ui/dialogs/remove_unreachable_dialog.h"
+#include "ui/map_tab.h"
+#include "ui/map_window.h"
 #include "map/map.h"
 #include "editor/action_queue.h"
 
@@ -280,5 +282,17 @@ void MapActionsHandler::OnMapCleanInvalidZones(wxCommandEvent& WXUNUSED(event)) 
 		});
 		g_gui.DestroyLoadBar();
 		g_gui.RefreshView();
+	}
+}
+
+void MapActionsHandler::OnMapValidateSpawns(wxCommandEvent& WXUNUSED(event)) {
+	if (!g_gui.IsEditorOpen()) {
+		return;
+	}
+
+	if (MapTab* tab = g_gui.GetCurrentMapTab()) {
+		if (MapWindow* window = tab->GetView()) {
+			window->ShowSpawnValidatorDialog();
+		}
 	}
 }

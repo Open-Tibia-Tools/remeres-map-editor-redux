@@ -22,6 +22,7 @@
 #include "map/position.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <cctype>
 #include <cmath>
 #include <iomanip>
 #include <string>
@@ -45,6 +46,7 @@ std::string f2s(double i);
 int s2i(const std::string& s);
 double s2f(const std::string& s);
 
+
 // replaces all instances of sought in str with replacement
 void replaceString(std::string& str, std::string_view sought, std::string_view replacement);
 // Removes all characters in t from source (from either start or beginning of the string)
@@ -53,8 +55,12 @@ void trim_left(std::string& source, std::string_view t);
 // Converts the argument to lower/uppercase
 void to_lower_str(std::string& source);
 void to_upper_str(std::string& source);
-std::string as_lower_str(const std::string& other);
+std::string as_lower_str(std::string_view other);
 std::string as_upper_str(const std::string& other);
+// Case-insensitive char predicate, e.g. std::ranges::equal(a, b, iequal)
+inline constexpr auto iequal = [](char a, char b) {
+	return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+};
 
 // isFalseString returns true if the string is either "0", "false", "no", "not" or blank
 // isTrueString returns the opposite value of isFalseString
@@ -70,6 +76,18 @@ int random(int low, int high);
 std::wstring string2wstring(const std::string& utf8string);
 std::string wstring2string(const std::wstring& widestring);
 
+// Formats an integer with thousand separators (e.g. 1000 -> "1,000", 100000000 -> "100,000,000")
+template <std::integral T>
+inline std::string format_thousands_separator(T value, char separator = ',') {
+	std::string s = std::to_string(value);
+	int insert_pos = static_cast<int>(s.length()) - 3;
+	const int min_pos = (value < 0) ? 1 : 0;
+	while (insert_pos > min_pos) {
+		s.insert(insert_pos, 1, separator);
+		insert_pos -= 3;
+	}
+	return s;
+}
 // Standard math functions are now used via <cmath> and <algorithm>
 // std::abs, std::min, std::max should be used instead.
 

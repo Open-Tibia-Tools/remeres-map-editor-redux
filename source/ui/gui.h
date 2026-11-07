@@ -25,6 +25,8 @@
 #include "ui/managers/welcome_manager.h"
 #include "ui/managers/gl_context_manager.h"
 
+#include <wx/utils.h>
+
 class BaseMap;
 class Map;
 
@@ -47,16 +49,18 @@ class LiveClient;
 class SearchResultWindow;
 class MinimapWindow;
 class PaletteWindow;
-class OldPropertiesWindow;
-class EditTownsDialog;
+class ItemPropertiesWindow;
 class ItemButton;
 class HousePalette;
+class ZonePalettePanel;
+class TownPalettePanel;
 
 class LiveSocket;
 
 class SidebarWindow;
 class ToolOptionsWindow;
 class TilePropertiesPanel;
+class BrushItemsWindow;
 
 wxDECLARE_EVENT(EVT_UPDATE_MENUS, wxCommandEvent);
 
@@ -100,11 +104,20 @@ public:
 		g_layout.LoadPerspective();
 	}
 
-	void CreateLoadBar(wxString message, bool canCancel = false) {
-		g_loading.CreateLoadBar(message, canCancel);
+	void CreateLoadBar(wxString message, bool canCancel = false, const wxString& title = "Loading") {
+		g_loading.CreateLoadBar(message, canCancel, title);
 	}
 	void SetLoadScale(int32_t from, int32_t to) {
 		g_loading.SetLoadScale(from, to);
+	}
+	void SetLoadText(const wxString& message) {
+		g_loading.SetLoadText(message);
+	}
+	bool PollCancellation() {
+		return g_loading.PollCancellation();
+	}
+	bool WasLoadCancelled() const {
+		return g_loading.WasCancelled();
 	}
 	bool SetLoadDone(int32_t done, const wxString& newMessage = "") {
 		return g_loading.SetLoadDone(done, newMessage);
@@ -130,6 +143,9 @@ public:
 	bool IsLoading() const {
 		return g_loading.IsLoading();
 	}
+
+	void StartBusyAnimation();
+	void StopBusyAnimation();
 
 	void UpdateMenubar();
 
@@ -166,10 +182,10 @@ public:
 		g_status.SetStatusText(text);
 	}
 	void SetStatusText(const std::string& text) {
-		g_status.SetStatusText(text);
+		g_status.SetStatusText(std::string_view(text));
 	}
 	void SetStatusText(const wxString& text) {
-		g_status.SetStatusText(text.ToStdString());
+		g_status.SetStatusText(text);
 	}
 
 	// Get the current GL context
@@ -243,6 +259,9 @@ public:
 	// Additional brush parameters
 	void SetSpawnTime(int time);
 
+	int GetDefaultCreatureWeight() const;
+	void SetDefaultCreatureWeight(int weight);
+
 	void SetLightIntensity(int v);
 	int GetLightIntensity() const;
 
@@ -274,7 +293,9 @@ public:
 	void SetCurrentMapSecondaryMap(BaseMap* secondary_map);
 	// Refresh the view canvas
 	void RefreshView(bool immediate = false);
+	void ReleaseAllChunkCaches();
 	void SyncCurrentMapCanvasPreviewState();
+	void FocusCurrentMapCanvas();
 	// Fit all/specified current map view to map dimensions
 	void FitViewToMap();
 	void FitViewToMap(MapTab* mt);
@@ -317,12 +338,13 @@ public:
 	Map& GetCurrentMap();
 	int GetOpenMapCount();
 	bool ShouldSave();
-	void SaveCurrentMap(FileName filename, bool showdialog);
-	void SaveCurrentMap(bool showdialog = true);
+	bool SaveCurrentMap(FileName filename, bool showdialog);
+	bool SaveCurrentMap(bool showdialog = true);
 	bool NewMap();
 	void OpenMap();
 	void SaveMap();
 	void SaveMapAs();
+	void SaveMapAsGzip();
 	bool LoadMap(const FileName& fileName, const MapLoadOptions& load_options = {});
 
 protected:
@@ -334,7 +356,7 @@ protected:
 	// Palette Interface
 	//=========================================================================
 public:
-	// Spawn a newd palette
+	// Spawn a new palette
 	PaletteWindow* NewPalette();
 	// Bring this palette to the front (as the 'active' palette)
 	void ActivatePalette(PaletteWindow* p);
@@ -342,6 +364,8 @@ public:
 	void RebuildPalettes();
 	// Refresh only updates the content (such as house/waypoint list)
 	void RefreshPalettes(Map* m = nullptr, bool usedfault = true);
+	void UpdateZonePalette(uint16_t zone_id = 0);
+	void UpdateHousePalette(uint32_t house_id = 0);
 	// Won't refresh the palette in the parameter
 	void RefreshOtherPalettes(PaletteWindow* p);
 	// If no palette is shown, this displays the primary palette
@@ -371,9 +395,12 @@ public:
 	GraphicManager& gfx = g_graphics;
 
 	HousePalette* house_palette;
+	ZonePalettePanel* zone_palette;
+	TownPalettePanel* town_palette;
 
 	ToolOptionsWindow* tool_options;
 	TilePropertiesPanel* tile_properties_panel;
+	BrushItemsWindow* brush_items_window;
 
 	bool pasting;
 
@@ -381,8 +408,6 @@ public:
 	bool hotkeys_enabled;
 
 protected:
-	wxWindowDisabler* winDisabler;
-
 	int disabled_counter;
 
 	std::mutex pending_live_clients_mutex;
@@ -406,8 +431,10 @@ public:
 		release();
 	}
 	void release() {
-		g_gui.EnableRendering();
-		acquired = false;
+		if (acquired) {
+			acquired = false;
+			g_gui.EnableRendering();
+		}
 	}
 };
 
@@ -418,8 +445,8 @@ public:
  */
 class ScopedLoadingBar {
 public:
-	ScopedLoadingBar(wxString message, bool canCancel = false) {
-		g_loading.CreateLoadBar(message, canCancel);
+	ScopedLoadingBar(wxString message, bool canCancel = false, const wxString& title = "Loading") {
+		g_loading.CreateLoadBar(message, canCancel, title);
 	}
 	~ScopedLoadingBar() {
 		g_loading.DestroyLoadBar();
@@ -429,9 +456,44 @@ public:
 		g_loading.SetLoadDone(done, newmessage);
 	}
 
+	void SetLoadText(const wxString& message) {
+		g_loading.SetLoadText(message);
+	}
+
+	bool WasLoadCancelled() const {
+		return g_loading.WasCancelled();
+	}
+
 	void SetLoadScale(int32_t from, int32_t to) {
 		g_loading.SetLoadScale(from, to);
 	}
+
+	ScopedLoadingBar(const ScopedLoadingBar&) = delete;
+	ScopedLoadingBar& operator=(const ScopedLoadingBar&) = delete;
+};
+
+/**
+ * RAII wrapper for the informational, app-modal operation dialog used by
+ * operations without measurable progress, such as closing a map or shutting the
+ * editor down. It is the same kind of dialog as the progress bar (owned by the
+ * editor window, centred on it, app-modal so the editor cannot be used nor
+ * dragged around), only without a gauge.
+ */
+class ScopedInfoBar {
+public:
+	explicit ScopedInfoBar(const wxString& message, const wxString& title = "Closing") {
+		g_loading.CreateInfoBar(message, title);
+	}
+	~ScopedInfoBar() {
+		g_loading.DestroyLoadBar();
+	}
+
+	void SetText(const wxString& message) {
+		g_loading.SetLoadText(message);
+	}
+
+	ScopedInfoBar(const ScopedInfoBar&) = delete;
+	ScopedInfoBar& operator=(const ScopedInfoBar&) = delete;
 };
 
 #define UnnamedRenderingLock() RenderingLock __unnamed_rendering_lock_##__LINE__

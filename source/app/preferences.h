@@ -28,6 +28,22 @@
 #include "app/preferences/general_page.h"
 #include "app/preferences/graphics_page.h"
 #include "app/preferences/interface_page.h"
+#include "app/preferences/map_compatibility_page.h"
+
+#include <wx/preferences.h>
+#include <memory>
+
+class RMEPreferencesEditor {
+public:
+	explicit RMEPreferencesEditor(const wxString& title = "Preferences");
+	~RMEPreferencesEditor();
+
+	void Show(wxWindow* parent);
+	void Dismiss();
+
+private:
+	std::unique_ptr<wxPreferencesEditor> m_editor;
+};
 
 class PreferencesWindow : public wxDialog {
 public:
@@ -49,6 +65,7 @@ protected:
 	GraphicsPage* graphics_page = nullptr;
 	InterfacePage* interface_page = nullptr;
 	ClientVersionPage* client_version_page = nullptr;
+	MapCompatibilityPage* map_compatibility_page = nullptr;
 };
 
 #endif

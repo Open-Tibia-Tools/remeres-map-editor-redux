@@ -10,12 +10,6 @@
 #include <string_view>
 #include <charconv>
 #include <algorithm>
-#include <cctype>
-
-// Helper for C++20 case-insensitive comparison (zero allocation)
-static const auto iequal = [](char a, char b) {
-	return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
-};
 
 bool CarpetBrushLoader::load(CarpetBrush& brush, pugi::xml_node node, std::vector<std::string>& warnings) {
 	pugi::xml_attribute attribute;

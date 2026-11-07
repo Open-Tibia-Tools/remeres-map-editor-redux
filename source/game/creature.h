@@ -34,6 +34,14 @@ enum Direction {
 
 IMPLEMENT_INCREMENT_OP(Direction)
 
+// Canary weighted spawns list several monsters on one tile; the server spawns one of them, picked by weight
+struct SpawnAlternative {
+	std::string name;
+	int spawntime = 60;
+	Direction direction = SOUTH;
+	uint32_t weight = 0;
+};
+
 class Creature {
 public:
 	Creature(CreatureType* ctype);
@@ -81,10 +89,34 @@ public:
 		this->direction = direction;
 	}
 
+	// Weight and alternatives are preserved across load/save (UI editing to be added)
+	uint32_t getWeight() const {
+		return weight;
+	}
+	void setWeight(uint32_t weight) {
+		this->weight = weight;
+	}
+	const std::vector<SpawnAlternative>& getAlternatives() const {
+		return alternatives;
+	}
+	std::vector<SpawnAlternative>& getAlternatives() {
+		return alternatives;
+	}
+	void addAlternative(SpawnAlternative alternative) {
+		alternatives.push_back(std::move(alternative));
+	}
+	// In partitioned spawn files (OTBM 5), NPC files can spawn NPCs that share their name with a monster type
+	void markAsNpcSpawn() {
+		npc_spawn = true;
+	}
+
 protected:
 	std::string type_name;
 	Direction direction;
 	int spawntime;
+	uint32_t weight = 0; // 0 when the spawn file has no weight attribute
+	std::vector<SpawnAlternative> alternatives;
+	bool npc_spawn = false;
 	bool saved;
 	bool selected;
 };
@@ -102,6 +134,9 @@ inline bool Creature::isSaved() {
 }
 
 inline bool Creature::isNpc() const {
+	if (npc_spawn) {
+		return true;
+	}
 	CreatureType* type = g_creatures[type_name];
 	if (type) {
 		return type->isNpc;
@@ -110,12 +145,11 @@ inline bool Creature::isNpc() const {
 }
 
 inline const std::string& Creature::getName() const {
-	static const std::string empty_string;
 	CreatureType* type = g_creatures[type_name];
 	if (type) {
 		return type->name;
 	}
-	return empty_string;
+	return type_name;
 }
 inline CreatureBrush* Creature::getBrush() const {
 	CreatureType* type = g_creatures[type_name];

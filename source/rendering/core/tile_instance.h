@@ -7,6 +7,17 @@
 
 #include <cstdint>
 
+inline constexpr float TILE_INSTANCE_FLAG_TEXTURE     = 0.0f;
+inline constexpr float TILE_INSTANCE_FLAG_SOLID_COLOR = 1.0f;
+inline constexpr float TILE_INSTANCE_FLAG_BLOCKING    = 2.0f;
+inline constexpr float TILE_INSTANCE_FLAG_IS_GROUND   = 4.0f;
+inline constexpr float MakeTileIndicatorFlag(uint8_t indicator_type) {
+	return static_cast<float>(static_cast<uint32_t>(indicator_type) << 4);
+}
+inline constexpr uint8_t GetTileIndicatorType(float flags) {
+	return static_cast<uint8_t>((static_cast<uint32_t>(flags + 0.5f) >> 4) & 0x0Fu);
+}
+
 /**
  * TileInstance represents a single sprite instance in a chunk buffer.
  * Decoupled from atlas texture coordinates via sprite_id indirection (SpriteAtlasLUT).
@@ -24,7 +35,8 @@ struct alignas(16) TileInstance {
 	float g = 1.0f;          // Byte 28-31: Green tint [0.0, 1.0]
 	float b = 1.0f;          // Byte 32-35: Blue tint [0.0, 1.0]
 	float a = 1.0f;          // Byte 36-39: Alpha [0.0, 1.0]
-	float _pad[2] = {0.0f, 0.0f}; // Byte 40-47: Align to 48 bytes (multiple of 16)
+	float house_id = 0.0f;   // Byte 40-43: House ID for overlay shader (Location 6)
+	float depth = 0.0f;      // Byte 44-47: Normalized depth [0.0, 1.0] (Location 7)
 };
 
 static_assert(sizeof(TileInstance) == 48, "TileInstance must be exactly 48 bytes");

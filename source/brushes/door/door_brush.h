@@ -29,8 +29,14 @@ public:
 	static void setLocked(bool locked) { pref_locked = locked; }
 	static bool isLocked() { return pref_locked; }
 
+	void getRelatedItems(std::vector<uint16_t>& items) override;
+
+	[[nodiscard]] uint16_t getDoorItemId(BaseMap* map, const Position& pos) const;
+	[[nodiscard]] uint16_t getFallbackDoorItemId() const;
+
 protected:
 	DoorType doortype;
+	mutable uint16_t cached_fallback_id = 0;
 
 private:
 	static inline bool pref_locked = false;

@@ -44,6 +44,9 @@ public:
 	Spawn* getSpawnBeingEdited();
 
 protected:
+	// Item classification/tier exists from items version 3.60 onward
+	[[nodiscard]] static bool supportsClassificationTiers();
+
 	const Map* edit_map;
 	const Tile* edit_tile;
 	Item* edit_item;

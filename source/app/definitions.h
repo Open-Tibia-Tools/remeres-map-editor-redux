@@ -79,14 +79,18 @@ _Ret_bytecap_(_Size) inline void* __CRTDECL operator new[](size_t _Size, const c
 
 // #define __PRERELEASE__ 1
 
+#define __RME_STR(x) #x
+#define __RME_XSTR(x) __RME_STR(x)
+#define __RME_VERSION_STRING__ __RME_XSTR(__RME_VERSION_MAJOR__) "." __RME_XSTR(__RME_VERSION_MINOR__) "." __RME_XSTR(__RME_SUBVERSION__)
+
 #ifdef __EXPERIMENTAL__
-	#define __RME_VERSION__ std::string("4.1.2 BETA")
+	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__ " BETA")
 #elif __SNAPSHOT__
-	#define __RME_VERSION__ std::string("4.1.2 - SNAPSHOT")
+	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__ " - SNAPSHOT")
 #elif __PRERELEASE__
-	#define __RME_VERSION__ std::string("4.1.2 (Pre-release)")
+	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__ " (Pre-release)")
 #else
-	#define __RME_VERSION__ std::string("4.1.2")
+	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__)
 #endif
 // OS
 
@@ -169,6 +173,10 @@ constexpr int PAINTERS_ALGORITHM_SAFETY_MARGIN_PIXELS = TILE_SIZE * 6;
 // The default size of sprites
 #define SPRITE_PIXELS 32
 #define SPRITE_PIXELS_SIZE SPRITE_PIXELS* SPRITE_PIXELS
+
+// Bytes per pixel in RGB / RGBA buffers
+constexpr int RGB_COMPONENTS = 3;
+constexpr int RGBA_COMPONENTS = 4;
 
 // The sea layer
 #define GROUND_LAYER 7

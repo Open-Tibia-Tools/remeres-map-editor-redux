@@ -22,20 +22,22 @@
 
 PositionCtrl::PositionCtrl(wxWindow* parent, const wxString& label, int x, int y, int z, int maxx /*= MAP_MAX_WIDTH*/, int maxy /*= MAP_MAX_HEIGHT*/, int maxz /*= MAP_MAX_LAYER*/) :
 	wxStaticBoxSizer(wxHORIZONTAL, parent, label) {
-	x_field = newd NumberTextCtrl(GetStaticBox(), wxID_ANY, x, 0, maxx, wxTE_PROCESS_ENTER, "X", wxDefaultPosition, wxSize(60, 20));
+	const wxSize xySize = parent ? parent->FromDIP(wxSize(60, 20)) : wxSize(60, 20);
+	const wxSize zSize = parent ? parent->FromDIP(wxSize(35, 20)) : wxSize(35, 20);
+	x_field = new NumberTextCtrl(GetStaticBox(), wxID_ANY, x, 0, maxx, wxTE_PROCESS_ENTER, "X", wxDefaultPosition, xySize);
 	x_field->SetToolTip("X Coordinate");
 	x_field->Bind(wxEVT_TEXT_PASTE, &PositionCtrl::OnClipboardText, this);
-	Add(x_field, 2, wxEXPAND | wxLEFT | wxBOTTOM, 5);
+	Add(x_field, wxSizerFlags(2).Expand().Border(wxLEFT | wxBOTTOM, 5));
 
-	y_field = newd NumberTextCtrl(GetStaticBox(), wxID_ANY, y, 0, maxy, wxTE_PROCESS_ENTER, "Y", wxDefaultPosition, wxSize(60, 20));
+	y_field = new NumberTextCtrl(GetStaticBox(), wxID_ANY, y, 0, maxy, wxTE_PROCESS_ENTER, "Y", wxDefaultPosition, xySize);
 	y_field->SetToolTip("Y Coordinate");
 	y_field->Bind(wxEVT_TEXT_PASTE, &PositionCtrl::OnClipboardText, this);
-	Add(y_field, 2, wxEXPAND | wxLEFT | wxBOTTOM, 5);
+	Add(y_field, wxSizerFlags(2).Expand().Border(wxLEFT | wxBOTTOM, 5));
 
-	z_field = newd NumberTextCtrl(GetStaticBox(), wxID_ANY, z, 0, maxz, wxTE_PROCESS_ENTER, "Z", wxDefaultPosition, wxSize(35, 20));
+	z_field = new NumberTextCtrl(GetStaticBox(), wxID_ANY, z, 0, maxz, wxTE_PROCESS_ENTER, "Z", wxDefaultPosition, zSize);
 	z_field->SetToolTip("Z Coordinate (Layer)");
 	z_field->Bind(wxEVT_TEXT_PASTE, &PositionCtrl::OnClipboardText, this);
-	Add(z_field, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+	Add(z_field, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 
 	maxWidth = maxx;
 	maxHeight = maxy;

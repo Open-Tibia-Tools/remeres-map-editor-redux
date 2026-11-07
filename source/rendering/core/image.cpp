@@ -3,17 +3,9 @@
 #include <ranges>
 
 Image::Image() :
-	isGLLoaded(false),
-	lastaccess(0) {
+	isGLLoaded(false) {
 }
 
-void Image::visit() const {
-	lastaccess.store(static_cast<int64_t>(g_graphics.getCachedTime()), std::memory_order_relaxed);
-}
-
-void Image::clean(time_t time, int longevity) {
-	// Base implementation does nothing
-}
 
 const AtlasRegion* Image::EnsureAtlasSprite(uint32_t sprite_id, std::unique_ptr<uint8_t[]> preloaded_data, std::optional<ImageDimensions> dimensions) {
 	if (g_graphics.ensureAtlasManager()) {
@@ -53,7 +45,6 @@ const AtlasRegion* Image::EnsureAtlasSprite(uint32_t sprite_id, std::unique_ptr<
 			}
 
 			// Fallback: Create a magenta texture to distinguish failure from garbage
-			constexpr int RGBA_COMPONENTS = 4;
 			rgba = std::make_unique<uint8_t[]>(image_dimensions.pixelCount() * RGBA_COMPONENTS);
 			std::span<uint8_t> buffer(rgba.get(), image_dimensions.pixelCount() * RGBA_COMPONENTS);
 			for (size_t i : std::views::iota(size_t { 0 }, image_dimensions.pixelCount())) {
@@ -69,11 +60,7 @@ const AtlasRegion* Image::EnsureAtlasSprite(uint32_t sprite_id, std::unique_ptr<
 		region = atlas_mgr->addSprite(sprite_id, rgba.get(), image_dimensions.width, image_dimensions.height);
 
 		if (region) {
-			if (!isGLLoaded) {
-				isGLLoaded = true;
-				g_graphics.resident_images.push_back(this); // Add to resident set
-			}
-			g_graphics.collector.NotifyTextureLoaded();
+			isGLLoaded = true;
 			return region;
 		} else {
 			spdlog::warn("Atlas addSprite failed for sprite_id={}", sprite_id);

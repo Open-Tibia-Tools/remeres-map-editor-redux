@@ -4,12 +4,13 @@
 
 #include "app/main.h"
 #include "ui/properties/object_properties_base.h"
+#include "item_definitions/core/item_definition_store.h"
 
 // ============================================================================
 // Object properties base
 
 ObjectPropertiesWindowBase::ObjectPropertiesWindowBase(wxWindow* parent, wxString title, const Map* map, const Tile* tile, Item* item, wxPoint position /* = wxDefaultPosition */) :
-	wxDialog(parent, wxID_ANY, title, position, wxSize(600, 400), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER),
+	wxDialog(parent, wxID_ANY, title, position, parent ? parent->FromDIP(wxSize(600, 400)) : wxSize(600, 400), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER),
 	edit_map(map),
 	edit_tile(tile),
 	edit_item(item),
@@ -19,7 +20,7 @@ ObjectPropertiesWindowBase::ObjectPropertiesWindowBase(wxWindow* parent, wxStrin
 }
 
 ObjectPropertiesWindowBase::ObjectPropertiesWindowBase(wxWindow* parent, wxString title, const Map* map, const Tile* tile, Creature* creature, wxPoint position /* = wxDefaultPosition */) :
-	wxDialog(parent, wxID_ANY, title, position, wxSize(600, 400), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER),
+	wxDialog(parent, wxID_ANY, title, position, parent ? parent->FromDIP(wxSize(600, 400)) : wxSize(600, 400), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER),
 	edit_map(map),
 	edit_tile(tile),
 	edit_item(nullptr),
@@ -29,7 +30,7 @@ ObjectPropertiesWindowBase::ObjectPropertiesWindowBase(wxWindow* parent, wxStrin
 }
 
 ObjectPropertiesWindowBase::ObjectPropertiesWindowBase(wxWindow* parent, wxString title, const Map* map, const Tile* tile, Spawn* spawn, wxPoint position /* = wxDefaultPosition */) :
-	wxDialog(parent, wxID_ANY, title, position, wxSize(600, 400), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER),
+	wxDialog(parent, wxID_ANY, title, position, parent ? parent->FromDIP(wxSize(600, 400)) : wxSize(600, 400), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER),
 	edit_map(map),
 	edit_tile(tile),
 	edit_item(nullptr),
@@ -39,7 +40,7 @@ ObjectPropertiesWindowBase::ObjectPropertiesWindowBase(wxWindow* parent, wxStrin
 }
 
 ObjectPropertiesWindowBase::ObjectPropertiesWindowBase(wxWindow* parent, wxString title, wxPoint position /* = wxDefaultPosition */) :
-	wxDialog(parent, wxID_ANY, title, position, wxSize(600, 400), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER) {
+	wxDialog(parent, wxID_ANY, title, position, parent ? parent->FromDIP(wxSize(600, 400)) : wxSize(600, 400), wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER) {
 	////
 }
 
@@ -53,4 +54,8 @@ Creature* ObjectPropertiesWindowBase::getCreatureBeingEdited() {
 
 Spawn* ObjectPropertiesWindowBase::getSpawnBeingEdited() {
 	return edit_spawn;
+}
+
+bool ObjectPropertiesWindowBase::supportsClassificationTiers() {
+	return g_item_definitions.MajorVersion > 3 || (g_item_definitions.MajorVersion == 3 && g_item_definitions.MinorVersion >= 60);
 }

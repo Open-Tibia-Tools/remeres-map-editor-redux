@@ -22,6 +22,7 @@ public:
 	}
 	int getLookID() const override;
 	std::string getName() const override;
+	[[nodiscard]] uint32_t getFlag() const noexcept { return flag; }
 
 protected:
 	uint32_t flag;

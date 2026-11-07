@@ -57,7 +57,7 @@ void SpawnBrush::undraw(BaseMap* map, Tile* tile) {
 
 void SpawnBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 	ASSERT(tile);
-	ASSERT(parameter); // Should contain an int which is the size of the newd spawn
+	ASSERT(parameter); // Should contain an int which is the size of the new spawn
 	if (tile->spawn == nullptr) {
 		tile->spawn = std::make_unique<Spawn>(std::max(1, *(int*)parameter));
 	}

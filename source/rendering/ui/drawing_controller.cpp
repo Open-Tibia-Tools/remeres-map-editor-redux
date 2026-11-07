@@ -28,6 +28,16 @@
 #include "brushes/wall/wall_brush.h"
 #include "brushes/waypoint/waypoint_brush.h"
 #include "brushes/door/door_brush.h"
+#include "brushes/zone/zone_brush.h"
+#include "brushes/town/town_temple_brush.h"
+
+namespace {
+
+[[nodiscard]] inline bool shouldDrawGroundBelow(bool ctrl_down, bool alt_down, const Brush* brush) {
+	return !ctrl_down && !alt_down && brush && brush->is<GroundBrush>() && g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW);
+}
+
+} // namespace
 
 DrawingController::DrawingController(MapCanvas* canvas, Editor& editor) :
 	canvas(canvas),
@@ -46,7 +56,8 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 	int brush_size = g_gui.GetBrushSize();
 	if (brush) {
 		const BrushFootprint footprint = g_gui.GetBrushFootprint();
-		if (shift_down && brush->canDrag()) {
+		const bool draw_below = shouldDrawGroundBelow(ctrl_down, alt_down, brush);
+		if (shift_down && brush->canDrag() && !draw_below) {
 			dragging_draw = true;
 		} else {
 			if (footprint.isSingleTile() && !brush->oneSizeFitsAll()) {
@@ -115,7 +126,7 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 					}
 				} else {
 					bool will_show_spawn = false;
-					if (brush->is<SpawnBrush>() || brush->is<CreatureBrush>()) {
+					if (brush->is<SpawnBrush>()) {
 						if (!g_settings.getBoolean(Config::SHOW_SPAWNS)) {
 							Tile* tile = editor.map.getTile(mouse_map_pos);
 							if (!tile || !tile->spawn) {
@@ -155,11 +166,13 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 
 					if (!fill && ctrl_down) {
 						editor.undraw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
+					} else if (draw_below) {
+						editor.drawGroundHoleToFloorBelow(brush, tilestodraw, tilestoborder);
 					} else {
 						editor.draw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 					}
 				} else if (brush->oneSizeFitsAll()) {
-					if (brush->is<HouseExitBrush>() || brush->is<WaypointBrush>()) {
+					if (brush->is<HouseExitBrush>() || brush->is<WaypointBrush>() || brush->is<TownTempleBrush>()) {
 						editor.draw(brush, mouse_map_pos, alt_down, brush_size);
 					} else {
 						PositionVector tilestodraw;
@@ -183,7 +196,9 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 				}
 			}
 			// Change the doodad layout brush
-			g_gui.FillDoodadPreviewBuffer();
+			if (g_settings.getBoolean(Config::RANDOMIZE_DOODADS)) {
+				g_gui.FillDoodadPreviewBuffer();
+			}
 		}
 	}
 }
@@ -230,8 +245,11 @@ void DrawingController::HandleDrag(const Position& mouse_map_pos, bool shift_dow
 
 			BrushUtility::GetTilesToDraw(&editor.map, brush, g_gui.GetBrushFootprint(), mouse_map_pos.x, mouse_map_pos.y, mouse_map_pos.z, &tilestodraw, &tilestoborder);
 
+			const bool draw_below = shouldDrawGroundBelow(ctrl_down, alt_down, brush);
 			if (ctrl_down) {
 				editor.undraw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
+			} else if (draw_below) {
+				editor.drawGroundHoleToFloorBelow(brush, tilestodraw, tilestoborder);
 			} else {
 				editor.draw(brush, tilestodraw, tilestoborder, alt_down, brush_size);
 			}
@@ -255,8 +273,10 @@ void DrawingController::HandleDrag(const Position& mouse_map_pos, bool shift_dow
 			}
 		}
 
-		// Create newd doodad layout (does nothing if a non-doodad brush is selected)
-		g_gui.FillDoodadPreviewBuffer();
+		// Create new doodad layout (does nothing if a non-doodad brush is selected)
+		if (g_settings.getBoolean(Config::RANDOMIZE_DOODADS)) {
+			g_gui.FillDoodadPreviewBuffer();
+		}
 
 		canvas->RequestLocalRefresh();
 	} else if (dragging_draw) {
@@ -382,6 +402,21 @@ void DrawingController::HandleRelease(const Position& mouse_map_pos, bool shift_
 				}
 			}
 		}
+	}
+
+	Brush* brush = g_gui.GetCurrentBrush();
+	if (brush && brush->is<ZoneBrush>()) {
+		g_gui.UpdateZonePalette(static_cast<ZoneBrush*>(brush)->getZone());
+	} else if (brush && (brush->is<HouseBrush>() || brush->is<HouseExitBrush>())) {
+		uint32_t house_id = 0;
+		if (auto* hb = dynamic_cast<HouseBrush*>(brush)) {
+			house_id = hb->getHouseID();
+		} else if (auto* heb = dynamic_cast<HouseExitBrush*>(brush)) {
+			house_id = heb->getHouseID();
+		}
+		g_gui.UpdateHousePalette(house_id);
+	} else if (brush && brush->is<TownTempleBrush>()) {
+		g_gui.RefreshPalettes();
 	}
 
 	editor.actionQueue->resetTimer();

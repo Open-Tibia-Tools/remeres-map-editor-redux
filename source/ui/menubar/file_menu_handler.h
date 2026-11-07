@@ -2,9 +2,11 @@
 #define RME_UI_MENUBAR_FILE_MENU_HANDLER_H
 
 #include <wx/wx.h>
+#include <wx/weakref.h>
 
 class MainFrame;
 class MainMenuBar;
+class PreferencesWindow;
 
 class FileMenuHandler : public wxEvtHandler {
 public:
@@ -15,6 +17,7 @@ public:
 	void OnOpen(wxCommandEvent& event);
 	void OnSave(wxCommandEvent& event);
 	void OnSaveAs(wxCommandEvent& event);
+	void OnSaveAsGzip(wxCommandEvent& event);
 	void OnClose(wxCommandEvent& event);
 	void OnQuit(wxCommandEvent& event);
 	void OnGenerateMap(wxCommandEvent& event);
@@ -35,6 +38,7 @@ public:
 protected:
 	MainFrame* frame;
 	MainMenuBar* menubar;
+	wxWeakRef<PreferencesWindow> preferences_dialog_;
 };
 
 #endif

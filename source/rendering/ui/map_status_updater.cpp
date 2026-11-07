@@ -23,6 +23,7 @@
 #include "map/tile.h"
 #include "live/live_server.h"
 #include "rendering/utilities/tile_describer.h"
+#include "ui/managers/status_manager.h"
 #include "app/settings.h"
 
 void MapStatusUpdater::Update(Editor& editor, int map_x, int map_y, int map_z) {
@@ -30,14 +31,17 @@ void MapStatusUpdater::Update(Editor& editor, int map_x, int map_y, int map_z) {
 	ss << "x: " << map_x << " y:" << map_y << " z:" << map_z;
 	g_gui.root->SetStatusText(ss, 2);
 
-	ss = "";
 	Tile* tile = editor.map.getTile(map_x, map_y, map_z);
+	if (tile && editor.live_manager.IsLive()) {
+		editor.live_manager.GetSocket().updateCursor(Position(map_x, map_y, map_z));
+	}
+
+	if (g_status.HasActiveMessage()) {
+		return;
+	}
+
 	if (tile) {
 		ss = wxstr(TileDescriber::GetDescription(tile, g_settings.getInteger(Config::SHOW_SPAWNS), g_settings.getInteger(Config::SHOW_CREATURES)));
-
-		if (editor.live_manager.IsLive()) {
-			editor.live_manager.GetSocket().updateCursor(Position(map_x, map_y, map_z));
-		}
 		g_gui.root->SetStatusText(ss, 1);
 	} else {
 		g_gui.root->SetStatusText("Nothing", 1);

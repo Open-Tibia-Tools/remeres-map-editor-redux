@@ -139,7 +139,7 @@ protected:
 	 * @return NanoVG image handle, or 0 on failure
 	 */
 	int GetOrCreateImage(uint64_t id, const uint8_t* data, int width, int height);
-	int CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64_t spriteId);
+	int CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64_t spriteId, std::optional<bool> is_stackable_opt = std::nullopt);
 	int CreateGenericSpriteTexture(NVGcontext* vg, Sprite* sprite, uint64_t spriteId);
 
 	/**

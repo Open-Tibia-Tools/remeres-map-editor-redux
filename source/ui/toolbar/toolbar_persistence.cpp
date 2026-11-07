@@ -16,45 +16,27 @@ void ToolbarPersistence::LoadPerspective(wxAuiManager* manager, MainToolBar* mai
 		return;
 	}
 
-	if (g_settings.getBoolean(Config::SHOW_TOOLBAR_STANDARD)) {
-		std::string info = g_settings.getString(Config::TOOLBAR_STANDARD_LAYOUT);
-		if (!info.empty()) {
-			manager->LoadPaneInfo(wxString(info), mainToolbar->GetPane(TOOLBAR_STANDARD));
+	auto loadToolbar = [&](ToolBarID id, uint32_t showKey, uint32_t layoutKey) {
+		wxAuiPaneInfo& pane = mainToolbar->GetPane(id);
+		if (!pane.IsOk()) {
+			return;
 		}
-		mainToolbar->GetPane(TOOLBAR_STANDARD).Show();
-	} else {
-		mainToolbar->GetPane(TOOLBAR_STANDARD).Hide();
-	}
+		if (g_settings.getBoolean(showKey)) {
+			std::string info = g_settings.getString(layoutKey);
+			if (!info.empty()) {
+				manager->LoadPaneInfo(wxString(info), pane);
+			}
+			pane.Show();
+		} else {
+			pane.Hide();
+		}
+	};
 
-	if (g_settings.getBoolean(Config::SHOW_TOOLBAR_BRUSHES)) {
-		std::string info = g_settings.getString(Config::TOOLBAR_BRUSHES_LAYOUT);
-		if (!info.empty()) {
-			manager->LoadPaneInfo(wxString(info), mainToolbar->GetPane(TOOLBAR_BRUSHES));
-		}
-		mainToolbar->GetPane(TOOLBAR_BRUSHES).Show();
-	} else {
-		mainToolbar->GetPane(TOOLBAR_BRUSHES).Hide();
-	}
-
-	if (g_settings.getBoolean(Config::SHOW_TOOLBAR_POSITION)) {
-		std::string info = g_settings.getString(Config::TOOLBAR_POSITION_LAYOUT);
-		if (!info.empty()) {
-			manager->LoadPaneInfo(wxString(info), mainToolbar->GetPane(TOOLBAR_POSITION));
-		}
-		mainToolbar->GetPane(TOOLBAR_POSITION).Show();
-	} else {
-		mainToolbar->GetPane(TOOLBAR_POSITION).Hide();
-	}
-
-	if (g_settings.getBoolean(Config::SHOW_TOOLBAR_SIZES)) {
-		std::string info = g_settings.getString(Config::TOOLBAR_SIZES_LAYOUT);
-		if (!info.empty()) {
-			manager->LoadPaneInfo(wxString(info), mainToolbar->GetPane(TOOLBAR_SIZES));
-		}
-		mainToolbar->GetPane(TOOLBAR_SIZES).Show();
-	} else {
-		mainToolbar->GetPane(TOOLBAR_SIZES).Hide();
-	}
+	loadToolbar(TOOLBAR_STANDARD, Config::SHOW_TOOLBAR_STANDARD, Config::TOOLBAR_STANDARD_LAYOUT);
+	loadToolbar(TOOLBAR_BRUSHES, Config::SHOW_TOOLBAR_BRUSHES, Config::TOOLBAR_BRUSHES_LAYOUT);
+	loadToolbar(TOOLBAR_POSITION, Config::SHOW_TOOLBAR_POSITION, Config::TOOLBAR_POSITION_LAYOUT);
+	loadToolbar(TOOLBAR_SIZES, Config::SHOW_TOOLBAR_SIZES, Config::TOOLBAR_SIZES_LAYOUT);
+	loadToolbar(TOOLBAR_LIGHT, Config::SHOW_TOOLBAR_LIGHT, Config::TOOLBAR_LIGHT_LAYOUT);
 
 	manager->Update();
 }
@@ -64,23 +46,22 @@ void ToolbarPersistence::SavePerspective(wxAuiManager* manager, MainToolBar* mai
 		return;
 	}
 
-	if (g_settings.getBoolean(Config::SHOW_TOOLBAR_STANDARD)) {
-		wxString info = manager->SavePaneInfo(mainToolbar->GetPane(TOOLBAR_STANDARD));
-		g_settings.setString(Config::TOOLBAR_STANDARD_LAYOUT, info.ToStdString());
-	}
+	auto saveToolbar = [&](ToolBarID id, uint32_t showKey, uint32_t layoutKey) {
+		wxAuiPaneInfo& pane = mainToolbar->GetPane(id);
+		if (!pane.IsOk()) {
+			return;
+		}
+		bool isShown = pane.IsShown();
+		g_settings.setInteger(showKey, isShown ? 1 : 0);
+		if (isShown) {
+			wxString info = manager->SavePaneInfo(pane);
+			g_settings.setString(layoutKey, info.ToStdString());
+		}
+	};
 
-	if (g_settings.getBoolean(Config::SHOW_TOOLBAR_BRUSHES)) {
-		wxString info = manager->SavePaneInfo(mainToolbar->GetPane(TOOLBAR_BRUSHES));
-		g_settings.setString(Config::TOOLBAR_BRUSHES_LAYOUT, info.ToStdString());
-	}
-
-	if (g_settings.getBoolean(Config::SHOW_TOOLBAR_POSITION)) {
-		wxString info = manager->SavePaneInfo(mainToolbar->GetPane(TOOLBAR_POSITION));
-		g_settings.setString(Config::TOOLBAR_POSITION_LAYOUT, info.ToStdString());
-	}
-
-	if (g_settings.getBoolean(Config::SHOW_TOOLBAR_SIZES)) {
-		wxString info = manager->SavePaneInfo(mainToolbar->GetPane(TOOLBAR_SIZES));
-		g_settings.setString(Config::TOOLBAR_SIZES_LAYOUT, info.ToStdString());
-	}
+	saveToolbar(TOOLBAR_STANDARD, Config::SHOW_TOOLBAR_STANDARD, Config::TOOLBAR_STANDARD_LAYOUT);
+	saveToolbar(TOOLBAR_BRUSHES, Config::SHOW_TOOLBAR_BRUSHES, Config::TOOLBAR_BRUSHES_LAYOUT);
+	saveToolbar(TOOLBAR_POSITION, Config::SHOW_TOOLBAR_POSITION, Config::TOOLBAR_POSITION_LAYOUT);
+	saveToolbar(TOOLBAR_SIZES, Config::SHOW_TOOLBAR_SIZES, Config::TOOLBAR_SIZES_LAYOUT);
+	saveToolbar(TOOLBAR_LIGHT, Config::SHOW_TOOLBAR_LIGHT, Config::TOOLBAR_LIGHT_LAYOUT);
 }

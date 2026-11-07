@@ -7,14 +7,13 @@
 #include "rendering/core/graphics.h"
 #include "rendering/core/normal_image.h"
 #include "rendering/core/sprite_archive.h"
+#include "util/phase_profiler.h"
 
 #include <algorithm>
 #include <cassert>
 #include <span>
 
 namespace {
-	constexpr size_t RGBA_COMPONENTS = 4;
-
 	[[nodiscard]] size_t resultByteSize(const ImageDimensions& dimensions) {
 		return dimensions.pixelCount() * RGBA_COMPONENTS;
 	}
@@ -139,26 +138,35 @@ void SpritePreloader::preload(GameSprite* spr, int pattern_x, int pattern_y, int
 	const int max_cx = std::min<int>(spr->width, GameSprite::MAX_SPRITE_PARTS);
 	const int max_cy = std::min<int>(spr->height, GameSprite::MAX_SPRITE_PARTS);
 
-	for (int cx = 0; cx < max_cx; ++cx) {
-		for (int cy = 0; cy < max_cy; ++cy) {
-			for (int cf = 0; cf < spr->layers; ++cf) {
-				int idx = spr->getIndex(cx, cy, cf, pattern_x, pattern_y, pattern_z, frame);
+	// Animated sprites get their whole cycle queued, not just the frame that asked for them.
+	// Otherwise, as soon as the animation advances to a frame that has not been loaded yet, the
+	// bake finds the sprite missing and (on its non-blocking path) leaves water, torches and other
+	// animated tiles undrawn for a moment - which is what made the water and its borders flash.
+	const int frame_count = spr->isAnimated() ? std::max(1, static_cast<int>(spr->frames)) : 1;
+	const int first_frame = frame_count > 1 ? 0 : frame;
 
-				if (idx >= static_cast<int>(spr->numsprites)) {
-					if (spr->numsprites == 1) {
-						idx = 0;
-					} else {
-						idx %= spr->numsprites;
+	for (int cycle_frame = first_frame; cycle_frame < (frame_count > 1 ? frame_count : frame + 1); ++cycle_frame) {
+		for (int cx = 0; cx < max_cx; ++cx) {
+			for (int cy = 0; cy < max_cy; ++cy) {
+				for (int cf = 0; cf < spr->layers; ++cf) {
+					int idx = spr->getIndex(cx, cy, cf, pattern_x, pattern_y, pattern_z, cycle_frame);
+
+					if (idx >= static_cast<int>(spr->numsprites)) {
+						if (spr->numsprites == 1) {
+							idx = 0;
+						} else {
+							idx %= spr->numsprites;
+						}
 					}
-				}
 
-				if (idx < 0 || static_cast<size_t>(idx) >= spr->spriteList.size()) {
-					continue;
-				}
+					if (idx < 0 || static_cast<size_t>(idx) >= spr->spriteList.size()) {
+						continue;
+					}
 
-				NormalImage* img = spr->spriteList[idx];
-				if (img && !img->isGLLoaded && !img->is_preloading) {
-					ids_to_enqueue.push_back({ img, { archive.get(), img->id }, img->generation_id });
+					NormalImage* img = spr->spriteList[idx];
+					if (img && !img->isGLLoaded && !img->is_preloading) {
+						ids_to_enqueue.push_back({ img, { archive.get(), img->id }, img->generation_id });
+					}
 				}
 			}
 		}
@@ -229,6 +237,8 @@ void SpritePreloader::workerLoop(std::stop_token stop_token) {
 void SpritePreloader::update() {
 	// CRITICAL: This method MUST only be called from the main GUI/OpenGL thread.
 	assert(isMainThread());
+
+	rme::prof::Scope apply_scope(rme::prof::Phase::AtlasApply);
 
 	// Move results to a local queue under lock to minimize holding time.
 	std::queue<Result> results;
@@ -313,6 +323,11 @@ void SpritePreloader::update() {
 		}
 	}
 	cv.notify_all();
+}
+
+bool SpritePreloader::hasPendingWork() const {
+	std::lock_guard<std::mutex> lock(queue_mutex);
+	return !task_queue.empty() || !result_queue.empty() || !pending_ids.empty();
 }
 
 namespace rme {

@@ -10,10 +10,6 @@
 #include <limits>
 
 namespace {
-	constexpr uint64_t flagMask(ItemFlag flag) {
-		return uint64_t { 1 } << static_cast<uint8_t>(flag);
-	}
-
 	constexpr uint8_t remapFlag(uint8_t flag, DatFormat format) {
 		if (format >= DAT_FORMAT_1010) {
 			if (flag == 16) {
@@ -64,7 +60,7 @@ namespace {
 
 		switch (flag) {
 			case DatFlagGroundBorder:
-				fragment.flags |= flagMask(ItemFlag::AlwaysOnBottom) | flagMask(ItemFlag::IsBorder);
+				fragment.flags |= flagMask(ItemFlag::AlwaysOnBottom);
 				fragment.always_on_top_order = 1;
 				return true;
 			case DatFlagOnBottom:
@@ -256,11 +252,16 @@ namespace {
 
 		auto animation = DatAnimationInfo {};
 		if (catalog.has_frame_durations) {
-			uint8_t async = 0;
-			if (!file.getByte(async) || !file.get32(animation.loop_count) || !file.getSByte(animation.start_frame)) {
+			uint8_t animation_mode = 0;
+			int8_t start = 0;
+			if (!file.getByte(animation_mode) || !file.get32(animation.loop_count) || !file.getSByte(start)) {
 				return false;
 			}
-			animation.asynchronous = async == 1;
+			// In Tibia DAT format (ObjectBuilder / OTClient metadata standard):
+			// animationMode 0 = Asynchronous (per-tile independent phase / random timing, e.g. torches, fire fields)
+			// animationMode 1 = Synchronous (global clock synchronized across map, e.g. sea shore water waves, fluids)
+			animation.asynchronous = (animation_mode == 0);
+			animation.start_frame = static_cast<int16_t>(start);
 			animation.frame_durations.reserve(frames);
 			for (uint8_t frame_index = 0; frame_index < frames; ++frame_index) {
 				DatAnimationFrameDuration duration;
@@ -496,10 +497,14 @@ bool DatItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatCatalo
 		return false;
 	}
 
-	catalog.entries.clear();
-	catalog.entries.resize(static_cast<size_t>(catalog.lastEntryId()) + 1);
+	const uint32_t last_id = (input.max_entries > 0)
+		? std::min(catalog.lastEntryId(), 100u + static_cast<uint32_t>(input.max_entries))
+		: catalog.lastEntryId();
 
-	for (uint32_t client_id = 100; client_id <= catalog.lastEntryId(); ++client_id) {
+	catalog.entries.clear();
+	catalog.entries.resize(static_cast<size_t>(last_id) + 1);
+
+	for (uint32_t client_id = 100; client_id <= last_id; ++client_id) {
 		auto& entry = catalog.entries[client_id];
 		entry = {};
 		entry.client_id = client_id;

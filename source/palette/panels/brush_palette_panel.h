@@ -5,30 +5,12 @@
 #include "palette/panels/brush_panel.h"
 #include "app/settings.h"
 
-#include <wx/aui/auibar.h>
 #include <unordered_map>
 
-class wxSearchCtrl;
+class TilesetGridToolbar;
 
 class BrushPalettePanel : public PalettePanel {
 public:
-	enum ToolID {
-		TOOL_SORT_AZ = wxID_HIGHEST + 6001,
-		TOOL_SORT_ZA,
-		TOOL_TOGGLE_LABELS,
-		TOOL_CHANGE_SIZE,
-		TOOL_FILTER_ALL,
-	};
-
-	enum MenuID {
-		MENU_SORT_BY_ID = wxID_HIGHEST + 6011,
-		MENU_SORT_BY_NAME,
-		MENU_SORT_DEFAULT,
-		MENU_SIZE_32,
-		MENU_SIZE_64,
-		MENU_SIZE_128,
-	};
-
 	BrushPalettePanel(wxWindow* parent, const DynamicPaletteDefinition& palette, wxWindowID id = wxID_ANY);
 	~BrushPalettePanel() override;
 
@@ -65,19 +47,24 @@ public:
 	void ClearSort();
 	void SetShowLabels(bool show);
 	void SetTileSize(int sizePx);
+	void SetDisplayMode(TilesetDisplayMode mode);
+	void SetBrushIndicators(bool dogEar);
+	void SetGridSpacing(int spacing);
 	void ApplyTheme();
+	void SetHorizontalLayout(bool horizontal);
+	void AttachPaletteChoice(wxChoice* paletteChoice);
+	void DetachPaletteChoice();
 
 	// Search and filter operations
 	void ResetFilter();
 	bool JumpToTilesetAndBrush(std::string_view tilesetName, const Brush* brush);
+	bool SelectTileset(std::string_view tilesetName);
+	void ReloadPages();
 
 protected:
-	void OnToolClick(wxCommandEvent& event);
-	void OnSortButtonClick(TilesetSortDirection dir, int toolId);
-	void OnSizeButtonClick(int toolId);
-	void OnSearchText(wxCommandEvent& event);
-	void OnSearchCancel(wxCommandEvent& event);
 	void ApplyFilter();
+	/** Commits the current search: persists the filter and selects the first match. */
+	void CommitFilter();
 
 	static void EnsureDefaultsLoaded();
 	void LoadPaletteFilters();
@@ -86,9 +73,10 @@ protected:
 	std::string palette_name;
 	const DynamicPaletteDefinition* m_paletteDef;
 	wxChoicebook* choicebook;
-	wxAuiToolBar* toolbar;
-	wxSearchCtrl* m_searchCtrl;
-	wxAuiToolBar* m_searchToolbar;
+	TilesetGridToolbar* gridToolbar = nullptr;
+	wxStaticBoxSizer* ts_sizer = nullptr;
+	wxChoice* m_attachedPaletteChoice = nullptr;
+	bool m_isHorizontal = false;
 	std::string m_filterQuery;
 	bool m_filterAll;
 
@@ -97,6 +85,12 @@ protected:
 	bool m_hasSort;
 	bool m_showLabels;
 	int m_tileSize;
+	bool m_isListMode = false;
+	bool m_indicatorDogEar = false;
+	int m_gridSpacing = 4;
+
+	static bool s_defaultIndicatorDogEar;
+	static int s_defaultGridSpacing;
 
 	static TilesetSortKey s_defaultSortKey;
 	static TilesetSortDirection s_defaultSortDir;
@@ -104,6 +98,7 @@ protected:
 	static bool s_defaultShowLabels;
 	static int s_defaultTileSize;
 	static bool s_defaultFilterAll;
+	static bool s_defaultIsListMode;
 	static bool s_defaultsLoaded;
 
 	// No size_panel, it was unused

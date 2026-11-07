@@ -84,10 +84,14 @@ struct OTBMStartupPeekResult {
 	uint32_t items_minor_version = 0;
 	std::string house_xml_file;
 	std::string spawn_xml_file;
+	std::string monster_xml_file;
+	std::string npc_xml_file;
+	std::string zone_xml_file;
 	std::string description;
 	std::filesystem::file_time_type modified_time{};
 	bool has_error = false;
 	std::string error_message;
+	bool is_compressed = false;
 };
 
 class IOMapOTBM : public IOMap {
@@ -116,7 +120,7 @@ protected:
 
 	bool saveMap(Map& map, NodeFileWriteHandle& handle);
 
-	void writeTileData(const Map& map, NodeFileWriteHandle& f);
+	bool writeTileData(const Map& map, NodeFileWriteHandle& f);
 	void writeTowns(const Map& map, NodeFileWriteHandle& f);
 	WriteResult writeWaypoints(const Map& map, NodeFileWriteHandle& f, MapVersion mapVersion);
 };

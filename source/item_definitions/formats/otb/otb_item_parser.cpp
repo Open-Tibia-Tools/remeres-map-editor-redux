@@ -8,18 +8,9 @@
 #include <limits>
 
 namespace {
-	constexpr uint64_t flagMask(ItemFlag flag) {
-		return uint64_t { 1 } << static_cast<uint8_t>(flag);
-	}
 	constexpr uint16_t kOtbVersionFieldBytes = static_cast<uint16_t>(sizeof(uint32_t) * 3);
 	constexpr uint16_t kOtbVersionTailBytes = 128;
 	constexpr uint16_t kExpectedOtbVersionHeaderLength = kOtbVersionFieldBytes + kOtbVersionTailBytes;
-
-	void setMappedFlag(uint64_t& target, bool value, ItemFlag flag) {
-		if (value) {
-			target |= flagMask(flag);
-		}
-	}
 
 	template <typename T>
 	bool readFixedPayload(BinaryNode* node, uint16_t length, T& value) {

@@ -4,16 +4,19 @@
 
 #include "app/main.h"
 
+#include "app/settings.h"
 #include "brushes/managers/brush_manager.h"
 #include "brushes/brush.h"
 #include "brushes/door/door_brush.h"
 #include "brushes/creature/creature_brush.h"
 #include "brushes/managers/doodad_preview_manager.h"
 #include "brushes/spawn/spawn_brush.h"
+#include "brushes/creature/creature_brush.h"
 #include "ui/managers/status_manager.h"
 #include "palette/managers/palette_manager.h"
 #include "palette/palette_window.h"
 #include "palette/house/house_palette.h"
+#include "brushes/town/town_temple_brush.h"
 #include "map/map.h"
 #include "map/basemap.h"
 #include "ui/gui.h"
@@ -22,6 +25,21 @@
 #include "rendering/core/drawing_options.h"
 #include <algorithm>
 #include <array>
+
+namespace {
+
+	int32_t NormalizeVariation(const Brush* brush, int32_t variation) {
+		if (brush && brush->is<DoodadBrush>()) {
+			return std::max(0, variation);
+		}
+		const int32_t max_variation = brush ? brush->getMaxVariation() : 0;
+		if (max_variation <= 1) {
+			return 0;
+		}
+		return std::clamp<int32_t>(variation, 0, max_variation - 1);
+	}
+
+}
 
 BrushManager g_brush_manager;
 
@@ -34,7 +52,7 @@ BrushManager::BrushManager() :
 	exact_brush_size(true),
 	aspect_ratio_locked(true),
 	brush_variation(0),
-	creature_spawntime(0),
+	creature_spawntime(60),
 	draw_locked_doors(false),
 	use_custom_thickness(false),
 	custom_thickness_mod(0.0),
@@ -74,6 +92,12 @@ bool BrushManager::SelectBrush(const Brush* whatbrush) {
 }
 
 void BrushManager::SelectBrushInternal(Brush* brush) {
+	if (current_brush && current_brush != brush) {
+		if (auto* tb = current_brush->as<TownTempleBrush>()) {
+			tb->invokeCancelCallback();
+		}
+	}
+
 	if (current_brush != brush && brush) {
 		previous_brush = current_brush;
 	}
@@ -85,7 +109,15 @@ void BrushManager::SelectBrushInternal(Brush* brush) {
 
 	g_status.SetStatusText(std::format("Selected brush: {}", brush->getName()));
 
-	brush_variation = std::min(brush_variation, brush->getMaxVariation());
+	if (const auto* creature = brush->as<CreatureBrush>()) {
+		// Creature brushes keep their own facing direction, defaulting to SOUTH.
+		brush_variation = creature->getVariation();
+	} else if (const auto* doodad = brush->as<DoodadBrush>()) {
+		brush_variation = doodad->getVariation();
+	} else {
+		brush_variation = NormalizeVariation(brush, brush_variation);
+		brush->setVariation(brush_variation);
+	}
 	// If we are switching away from a doodad brush, we need to clear the secondary map
 	// Or if the new brush isn't a doodad brush
 	MapTab* mapTab = g_gui.GetCurrentMapTab();
@@ -128,6 +160,8 @@ void BrushManager::Clear() {
 	rook_brush = nullptr;
 	nolog_brush = nullptr;
 	pvp_brush = nullptr;
+	zone_brush = nullptr;
+	temple_brush = nullptr;
 }
 
 BrushShape BrushManager::GetBrushShape() const {
@@ -243,9 +277,18 @@ void BrushManager::SetBrushAspectRatioLocked(bool locked) {
 }
 
 void BrushManager::SetBrushVariation(int nz) {
-	if (nz != brush_variation && current_brush && current_brush->is<DoodadBrush>()) {
-		brush_variation = nz;
+	if (!current_brush) {
+		brush_variation = 0;
+		return;
+	}
+
+	brush_variation = NormalizeVariation(current_brush, nz);
+	current_brush->setVariation(brush_variation);
+
+	if (current_brush->is<DoodadBrush>()) {
 		UpdateDoodadPreview();
+	} else if (current_brush->is<CreatureBrush>()) {
+		g_gui.RefreshView();
 	}
 }
 
@@ -338,8 +381,11 @@ void BrushManager::IncreaseBrushSize(bool wrap) {
 }
 
 void BrushManager::NotifyBrushSizeChanged() {
-	for (auto& palette : g_palettes.palettes) {
-		palette->OnUpdateBrushSize(brush_shape, GetBrushSizeLegacy());
+	const std::vector<PaletteWindow*> palettes_copy(g_palettes.palettes.begin(), g_palettes.palettes.end());
+	for (auto* palette : palettes_copy) {
+		if (palette) {
+			palette->OnUpdateBrushSize(brush_shape, GetBrushSizeLegacy());
+		}
 	}
 
 	if (g_gui.root && g_gui.root->GetAuiToolBar()) {
@@ -365,6 +411,10 @@ void BrushManager::SetSpawnTime(int time) {
 void BrushManager::FillDoodadPreviewBuffer() {
 	if (!current_brush || !current_brush->is<DoodadBrush>()) {
 		return;
+	}
+	if (g_settings.getBoolean(Config::RANDOMIZE_DOODADS)) {
+		brush_variation = random(0, 1000000);
+		current_brush->setVariation(brush_variation);
 	}
 	g_doodad_preview.FillBuffer(
 		current_brush->as<DoodadBrush>(),
@@ -397,4 +447,11 @@ void DrawingOptions::UpdateIfNeeded() {
 	if (dirty_) {
 		Update();
 	}
+}
+
+int BrushManager::GetSpawnTime() const {
+	if (creature_spawntime <= 0) {
+		return std::max(1, g_settings.getInteger(Config::DEFAULT_SPAWNTIME));
+	}
+	return creature_spawntime;
 }

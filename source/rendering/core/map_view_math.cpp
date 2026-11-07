@@ -33,27 +33,46 @@ MainMapVisibleRect MainMapViewMath::GetVisibleRect(const MainMapViewport& viewpo
 	};
 }
 
-void MainMapViewMath::ScreenToMap(int screen_x, int screen_y, const MainMapViewport& viewport, int* map_x, int* map_y) {
+MainMapPixelPosition MainMapViewMath::ScreenToMapPixel(int screen_x, int screen_y, const MainMapViewport& viewport) {
 	const int scaled_x = static_cast<int>(screen_x * viewport.scale_factor);
 	const int scaled_y = static_cast<int>(screen_y * viewport.scale_factor);
 
 	// Negative screen coordinates can appear when callers project or test positions just outside the
 	// visible viewport. Keep the negative branch paired with MapToScreen() so both conversions stay
 	// symmetric across zero instead of applying zoom on one side of the boundary but not the other.
-	if (scaled_x < 0) {
-		*map_x = (viewport.view_scroll_x + scaled_x) / TILE_SIZE;
-	} else {
-		*map_x = static_cast<int>(viewport.view_scroll_x + (scaled_x * viewport.zoom)) / TILE_SIZE;
+	const int raw_x = (scaled_x < 0)
+		? (viewport.view_scroll_x + scaled_x)
+		: static_cast<int>(viewport.view_scroll_x + (scaled_x * viewport.zoom));
+	const int raw_y = (scaled_y < 0)
+		? (viewport.view_scroll_y + scaled_y)
+		: static_cast<int>(viewport.view_scroll_y + (scaled_y * viewport.zoom));
+
+	int tile_x = raw_x / TILE_SIZE;
+	int tile_y = raw_y / TILE_SIZE;
+	int pixel_x = raw_x - tile_x * TILE_SIZE;
+	int pixel_y = raw_y - tile_y * TILE_SIZE;
+
+	if (pixel_x < 0) {
+		pixel_x += TILE_SIZE;
+		--tile_x;
+	}
+	if (pixel_y < 0) {
+		pixel_y += TILE_SIZE;
+		--tile_y;
 	}
 
-	if (scaled_y < 0) {
-		*map_y = (viewport.view_scroll_y + scaled_y) / TILE_SIZE;
-	} else {
-		*map_y = static_cast<int>(viewport.view_scroll_y + (scaled_y * viewport.zoom)) / TILE_SIZE;
-	}
+	return {
+		.map_x = tile_x + GetFloorTileOffset(viewport.floor),
+		.map_y = tile_y + GetFloorTileOffset(viewport.floor),
+		.pixel_x = pixel_x,
+		.pixel_y = pixel_y,
+	};
+}
 
-	*map_x += GetFloorTileOffset(viewport.floor);
-	*map_y += GetFloorTileOffset(viewport.floor);
+void MainMapViewMath::ScreenToMap(int screen_x, int screen_y, const MainMapViewport& viewport, int* map_x, int* map_y) {
+	const MainMapPixelPosition position = ScreenToMapPixel(screen_x, screen_y, viewport);
+	*map_x = position.map_x;
+	*map_y = position.map_y;
 }
 
 void MainMapViewMath::MapToScreen(int map_x, int map_y, int map_z, const MainMapViewport& viewport, int* screen_x, int* screen_y) {

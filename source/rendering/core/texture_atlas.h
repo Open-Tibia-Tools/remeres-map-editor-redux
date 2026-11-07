@@ -89,6 +89,13 @@ public:
 	void unbind(uint32_t slot = 0) const;
 
 	/**
+	 * Smooth (linear) filtering for zoomed views, used by the
+	 * "Enable anti-aliasing" option. Safe against atlas bleeding because
+	 * the shaders clamp texture coordinates to the sprite's UV bounds.
+	 */
+	void setSmoothing(bool smooth);
+
+	/**
 	 * Get layer count.
 	 */
 	int getLayerCount() const noexcept {
@@ -158,6 +165,9 @@ private:
 	size_t small_search_hint_ = 0;
 	size_t large_search_hint_ = 0;
 	std::vector<uint8_t> occupancy_;
+	bool smooth_ = false;
+
+	void applyFilter(GLuint texture) const;
 	std::vector<FreeSlot> free_slots_;
 };
 

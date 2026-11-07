@@ -51,27 +51,28 @@ void Selection::recalculateBounds() const {
 		return;
 	}
 
-	Position minPos(0x10000, 0x10000, 0x10);
-	Position maxPos(0, 0, 0);
-
 	if (tiles.empty()) {
-		minPos = Position(0, 0, 0);
-		maxPos = Position(0, 0, 0);
+		cached_min = Position(0, 0, 0);
+		cached_max = Position(0, 0, 0);
 	} else {
-		std::ranges::for_each(tiles, [&](Tile* tile) {
-			const Position& pos = tile->getPosition();
-			minPos.x = std::min(minPos.x, pos.x);
-			minPos.y = std::min(minPos.y, pos.y);
-			minPos.z = std::min(minPos.z, pos.z);
+		Position minPos(0x10000, 0x10000, 0x10);
+		Position maxPos(0, 0, 0);
 
-			maxPos.x = std::max(maxPos.x, pos.x);
-			maxPos.y = std::max(maxPos.y, pos.y);
-			maxPos.z = std::max(maxPos.z, pos.z);
-		});
+		for (const Tile* tile : tiles) {
+			const Position& pos = tile->getPosition();
+			if (pos.x < minPos.x) minPos.x = pos.x;
+			if (pos.y < minPos.y) minPos.y = pos.y;
+			if (pos.z < minPos.z) minPos.z = pos.z;
+
+			if (pos.x > maxPos.x) maxPos.x = pos.x;
+			if (pos.y > maxPos.y) maxPos.y = pos.y;
+			if (pos.z > maxPos.z) maxPos.z = pos.z;
+		}
+
+		cached_min = minPos;
+		cached_max = maxPos;
 	}
 
-	cached_min = minPos;
-	cached_max = maxPos;
 	bounds_dirty = false;
 }
 
@@ -100,7 +101,7 @@ void Selection::add(Tile* tile, Item* item) {
 		item->deselect();
 
 		if (g_settings.getInteger(Config::BORDER_IS_GROUND)) {
-			if (item->isBorder()) {
+			if (item->isBorderLayer()) {
 				TileOperations::selectGround(new_tile.get());
 			}
 		}
@@ -109,7 +110,7 @@ void Selection::add(Tile* tile, Item* item) {
 	} else {
 		item->select();
 		if (g_settings.getInteger(Config::BORDER_IS_GROUND)) {
-			if (item->isBorder()) {
+			if (item->isBorderLayer()) {
 				TileOperations::selectGround(tile);
 			}
 		}
@@ -187,14 +188,14 @@ void Selection::remove(Tile* tile, Item* item) {
 		if (tmp) {
 			item->select();
 		}
-		if (item->isBorder() && g_settings.getInteger(Config::BORDER_IS_GROUND)) {
+		if (item->isBorderLayer() && g_settings.getInteger(Config::BORDER_IS_GROUND)) {
 			TileOperations::deselectGround(new_tile.get());
 		}
 
 		subsession->addChange(std::make_unique<Change>(std::move(new_tile)));
 	} else {
 		item->deselect();
-		if (item->isBorder() && g_settings.getInteger(Config::BORDER_IS_GROUND)) {
+		if (item->isBorderLayer() && g_settings.getInteger(Config::BORDER_IS_GROUND)) {
 			TileOperations::deselectGround(tile);
 		} else {
 			TileOperations::updateSelectionState(tile);
@@ -296,7 +297,8 @@ void Selection::flush() {
 		return;
 	}
 
-	const std::vector<Tile*> previousTiles = tiles;
+	const size_t previousTileCount = tiles.size();
+	bool modified = false;
 	bounds_dirty = true;
 
 	if (!pending_removes.empty()) {
@@ -309,6 +311,9 @@ void Selection::flush() {
 		std::vector<Tile*> result;
 		result.reserve(tiles.size());
 		std::ranges::set_difference(tiles, pending_removes, std::back_inserter(result), tilePositionLessThan);
+		if (result.size() != tiles.size()) {
+			modified = true;
+		}
 		tiles = std::move(result);
 	}
 
@@ -319,15 +324,38 @@ void Selection::flush() {
 		});
 		pending_adds.erase(first, last);
 
+		// Pending entries are the tile objects that the action just installed into the map.
+		// If a cached entry has the same position, the pending pointer must replace it;
+		// otherwise the selection cache keeps pointing at the displaced tile.
 		std::vector<Tile*> merged;
 		merged.reserve(tiles.size() + pending_adds.size());
-		std::ranges::set_union(tiles, pending_adds, std::back_inserter(merged), tilePositionLessThan);
+		auto cached = tiles.begin();
+		auto added = pending_adds.begin();
+		while (cached != tiles.end() && added != pending_adds.end()) {
+			if (tilePositionLessThan(*cached, *added)) {
+				merged.push_back(*cached++);
+			} else if (tilePositionLessThan(*added, *cached)) {
+				merged.push_back(*added++);
+				modified = true;
+			} else {
+				if (*cached != *added) {
+					modified = true;
+				}
+				merged.push_back(*added++);
+				++cached;
+			}
+		}
+		if (added != pending_adds.end()) {
+			modified = true;
+		}
+		merged.insert(merged.end(), cached, tiles.end());
+		merged.insert(merged.end(), added, pending_adds.end());
 		tiles = std::move(merged);
 	}
 
 	pending_adds.clear();
 	pending_removes.clear();
-	selectionChanged = selectionChanged || (tiles != previousTiles);
+	selectionChanged = selectionChanged || modified || (tiles.size() != previousTileCount);
 }
 
 void Selection::clear() {
@@ -390,7 +418,7 @@ void Selection::commit() {
 		// Do the action
 		tmp->addAndCommitAction(std::move(subsession));
 
-		// Create a newd action for subsequent selects
+		// Create a new action for subsequent selects
 		subsession = editor.actionQueue->createAction(ACTION_SELECT);
 		session = std::move(tmp);
 	}
@@ -428,9 +456,26 @@ void Selection::finish(SessionFlags flags) {
 	selectionChanged = false;
 }
 
+void Selection::addListener(uintptr_t id, std::function<void(size_t)> callback) {
+	removeListener(id);
+	listeners.push_back({ id, std::move(callback) });
+}
+
+void Selection::removeListener(uintptr_t id) {
+	std::erase_if(listeners, [id](const SelectionListener& l) {
+		return l.id == id;
+	});
+}
+
 void Selection::updateSelectionCount() {
 	if (onSelectionChange) {
 		onSelectionChange(size());
+	}
+	const size_t currentSize = size();
+	for (const auto& listener : listeners) {
+		if (listener.callback) {
+			listener.callback(currentSize);
+		}
 	}
 }
 

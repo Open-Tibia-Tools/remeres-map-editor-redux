@@ -54,6 +54,7 @@ private:
 	static void HandleBrushSizeChange(MapCanvas* canvas, int keycode);
 	static void HandleHotkeys(MapCanvas* canvas, wxKeyEvent& event);
 	static void HandleBrushVariation(MapCanvas* canvas, int keycode);
+	static void HandleRotationOrVariation(MapCanvas* canvas, int keycode);
 };
 
 #endif // RME_KEYBOARD_HANDLER_H_

@@ -69,6 +69,7 @@ std::string ActionQueue::getActionName(size_t index) const {
 		case ACTION_DRAW: return "Draw";
 		case ACTION_SWITCHDOOR: return "Switch Door";
 		case ACTION_ROTATE_ITEM: return "Rotate Item";
+		case ACTION_ROTATE: return "Rotate";
 		case ACTION_REPLACE_ITEMS: return "Replace Items";
 		case ACTION_CHANGE_PROPERTIES: return "Change Properties";
 		case ACTION_LUA_SCRIPT: return "Lua Script";

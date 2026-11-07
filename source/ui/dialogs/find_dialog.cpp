@@ -1,10 +1,12 @@
 #include "ui/dialogs/find_dialog.h"
 
 #include "brushes/brush.h"
+#include "game/materials.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "ui/gui.h"
 #include "ui/theme.h"
 #include "brushes/raw/raw_brush.h"
+#include "rendering/indicators/indicator_drawing_utils.h"
 #include "util/image_manager.h"
 #include <glad/glad.h>
 #include <nanovg.h>
@@ -26,7 +28,7 @@ static bool caseInsensitiveContains(std::string_view haystack, std::string_view 
 
 void KeyForwardingTextCtrl::OnKeyDown(wxKeyEvent& event) {
 	if (event.GetKeyCode() == WXK_UP || event.GetKeyCode() == WXK_DOWN || event.GetKeyCode() == WXK_PAGEDOWN || event.GetKeyCode() == WXK_PAGEUP) {
-		GetParent()->GetEventHandler()->AddPendingEvent(event);
+		GetParent()->GetEventHandler()->QueueEvent(event.Clone());
 	} else {
 		event.Skip();
 	}
@@ -40,26 +42,26 @@ FindDialog::FindDialog(wxWindow* parent, wxString title) :
 	idle_input_timer(this),
 	result_brush(nullptr),
 	result_id(0) {
-	wxSizer* sizer = newd wxBoxSizer(wxVERTICAL);
+	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 
-	search_field = newd KeyForwardingTextCtrl(this, JUMP_DIALOG_TEXT, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+	search_field = new KeyForwardingTextCtrl(this, JUMP_DIALOG_TEXT, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 	search_field->SetHint("Type to search...");
 	search_field->SetToolTip("Type at least 2 characters to search for brushes or items.");
 	search_field->SetFocus();
-	sizer->Add(search_field, 0, wxEXPAND);
+	sizer->Add(search_field, wxSizerFlags().Expand());
 
-	item_list = newd FindDialogListBox(this, JUMP_DIALOG_LIST);
-	item_list->SetMinSize(FROM_DIP(item_list, wxSize(470, 400)));
+	item_list = new FindDialogListBox(this, JUMP_DIALOG_LIST);
+	item_list->SetMinSize(item_list->FromDIP(wxSize(470, 400)));
 	item_list->SetToolTip("Double click to select.");
 	sizer->Add(item_list, wxSizerFlags(1).Expand().Border());
 
-	wxSizer* stdsizer = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(this, wxID_OK, "OK");
-	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_CHECK, wxSize(16, 16)));
+	wxSizer* stdsizer = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
+	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Jump to selected item/brush");
 	stdsizer->Add(okBtn, wxSizerFlags(1).Center());
-	wxButton* cancelBtn = newd wxButton(this, wxID_CANCEL, "Cancel");
-	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_XMARK, wxSize(16, 16)));
+	wxButton* cancelBtn = new wxButton(this, wxID_CANCEL, "Cancel");
+	cancelBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
 	cancelBtn->SetToolTip("Close this window");
 	stdsizer->Add(cancelBtn, wxSizerFlags(1).Center());
 	sizer->Add(stdsizer, wxSizerFlags(0).Center().Border());
@@ -79,7 +81,7 @@ FindDialog::FindDialog(wxWindow* parent, wxString title) :
 	// RefreshContents();
 
 	wxIcon icon;
-	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_SEARCH, wxSize(32, 32)));
+	icon.CopyFromBitmap(IMAGE_MANAGER.GetBitmap(ICON_SEARCH, FromDIP(wxSize(32, 32))));
 	SetIcon(icon);
 }
 
@@ -213,12 +215,30 @@ void FindBrushDialog::OnClickOKInternal() {
 				if (!result_brush) {
 					// Then let's search the RAWs
 					for (ServerItemId id : g_item_definitions.allIds()) {
-						RAWBrush* raw_brush = g_item_definitions.editorData(id).raw_brush;
-						if (!raw_brush) {
+						if (id < 100) {
+							continue;
+						}
+						const auto definition = g_item_definitions.get(id);
+						if (!definition) {
 							continue;
 						}
 
-						if (!caseInsensitiveContains(raw_brush->getName(), search_string)) {
+						RAWBrush* raw_brush = definition.editorData().raw_brush;
+						const std::string sid_str = std::to_string(id);
+						const std::string cid_str = definition.clientId() != 0 ? std::to_string(definition.clientId()) : std::string{};
+						const bool matches = (raw_brush && caseInsensitiveContains(raw_brush->getName(), search_string)) ||
+							caseInsensitiveContains(definition.name(), search_string) ||
+							sid_str == search_string ||
+							(!cid_str.empty() && cid_str == search_string);
+
+						if (!matches) {
+							continue;
+						}
+
+						if (!raw_brush) {
+							raw_brush = g_materials.ensureRawBrush(id);
+						}
+						if (!raw_brush) {
 							continue;
 						}
 
@@ -264,12 +284,30 @@ void FindBrushDialog::RefreshContentsInternal() {
 		}
 
 		for (ServerItemId id : g_item_definitions.allIds()) {
-			RAWBrush* raw_brush = g_item_definitions.editorData(id).raw_brush;
-			if (!raw_brush) {
+			if (id < 100) {
+				continue;
+			}
+			const auto definition = g_item_definitions.get(id);
+			if (!definition) {
 				continue;
 			}
 
-			if (!caseInsensitiveContains(raw_brush->getName(), search_string)) {
+			RAWBrush* raw_brush = definition.editorData().raw_brush;
+			const std::string sid_str = std::to_string(id);
+			const std::string cid_str = definition.clientId() != 0 ? std::to_string(definition.clientId()) : std::string{};
+			const bool matches = (raw_brush && caseInsensitiveContains(raw_brush->getName(), search_string)) ||
+				caseInsensitiveContains(definition.name(), search_string) ||
+				sid_str == search_string ||
+				(!cid_str.empty() && cid_str == search_string);
+
+			if (!matches) {
+				continue;
+			}
+
+			if (!raw_brush) {
+				raw_brush = g_materials.ensureRawBrush(id);
+			}
+			if (!raw_brush) {
 				continue;
 			}
 
@@ -353,16 +391,29 @@ void FindDialogListBox::OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t n)
 		nvgText(vg, rect.x + 40, rect.y + rect.height / 2.0f, "Please enter your search string.", nullptr);
 	} else {
 		ASSERT(n < brushlist.size());
-		Sprite* spr = g_gui.gfx.getSprite(brushlist[n]->getLookID());
-		if (spr) {
-			int tex = GetOrCreateSpriteTexture(vg, spr);
-			if (tex > 0) {
-				int icon_size = rect.height;
-				NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
-				nvgBeginPath(vg);
-				nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
-				nvgFillPaint(vg, imgPaint);
-				nvgFill(vg);
+		const Brush* brush = brushlist[n];
+		auto tech = rme::rendering::TechnicalItemRegistry::GetBrushIndicatorType(brush);
+		if (tech != rme::rendering::TileIndicatorType::None) {
+			const int icon_size = rect.height;
+			rme::rendering::DrawNanoVGIndicatorBadge(
+				vg,
+				tech,
+				static_cast<float>(rect.x),
+				static_cast<float>(rect.y),
+				static_cast<float>(icon_size)
+			);
+		} else {
+			Sprite* spr = g_gui.gfx.getSprite(brush->getLookID());
+			if (spr) {
+				int tex = GetOrCreateSpriteTexture(vg, spr);
+				if (tex > 0) {
+					int icon_size = rect.height;
+					NVGpaint imgPaint = nvgImagePattern(vg, rect.x, rect.y, icon_size, icon_size, 0, tex, 1.0f);
+					nvgBeginPath(vg);
+					nvgRect(vg, rect.x, rect.y, icon_size, icon_size);
+					nvgFillPaint(vg, imgPaint);
+					nvgFill(vg);
+				}
 			}
 		}
 

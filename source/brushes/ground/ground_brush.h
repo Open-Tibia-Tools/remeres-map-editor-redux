@@ -26,10 +26,41 @@ class GroundBrush : public TerrainBrush {
 	friend class GroundBrushLoader;
 	friend class GroundBorderCalculator;
 
-protected:
-	struct BorderBlock;
-
 public:
+	struct SpecificCaseBlock {
+		SpecificCaseBlock() :
+			match_group(0), group_match_alignment(BORDER_NONE), to_replace_id(0), with_id(0), delete_all(false), keepBorder(false) { }
+		std::vector<uint16_t> items_to_match;
+		uint32_t match_group;
+		BorderType group_match_alignment;
+		uint16_t to_replace_id;
+		uint16_t with_id;
+		bool delete_all;
+		bool keepBorder;
+	};
+
+	struct BorderBlock {
+		bool outer;
+		bool super;
+		uint32_t to;
+
+		std::unique_ptr<AutoBorder> owned_autoborder;
+		AutoBorder* autoborder;
+		std::vector<std::unique_ptr<SpecificCaseBlock>> specific_cases;
+
+		[[nodiscard]] constexpr bool matches(uint32_t target_id) const noexcept {
+			return to == target_id || to == Brush::WILDCARD_ID;
+		}
+		[[nodiscard]] constexpr bool isWildcard() const noexcept {
+			return to == Brush::WILDCARD_ID;
+		}
+	};
+
+	struct ItemChanceBlock {
+		int chance = 0;
+		uint16_t id = 0;
+	};
+
 	static void init();
 
 	GroundBrush();
@@ -41,6 +72,13 @@ public:
 	void draw(BaseMap* map, Tile* tile, void* parameter) override;
 	void undraw(BaseMap* map, Tile* tile) override;
 	void getRelatedItems(std::vector<uint16_t>& items) override;
+
+	[[nodiscard]] uint16_t getPlacementItemId() const {
+		if (!border_items.empty()) {
+			return border_items.front().id;
+		}
+		return 0;
+	}
 
 	static void doBorders(BaseMap* map, Tile* tile);
 	static const BorderBlock* getBrushTo(GroundBrush* first, GroundBrush* second);
@@ -70,6 +108,15 @@ public:
 	bool hasOptionalBorder() const {
 		return optional_border != nullptr;
 	}
+	const std::vector<ItemChanceBlock>& getBorderItems() const {
+		return border_items;
+	}
+	int getTotalChance() const {
+		return total_chance;
+	}
+	const std::vector<std::unique_ptr<BorderBlock>>& getBorders() const {
+		return borders;
+	}
 
 protected: // Members
 	int32_t z_order;
@@ -81,33 +128,6 @@ protected: // Members
 	AutoBorder* optional_border;
 	bool use_only_optional; // If this is true, there will be no normal border under the gravel
 	bool randomize;
-
-	struct SpecificCaseBlock {
-		SpecificCaseBlock() :
-			match_group(0), group_match_alignment(BORDER_NONE), to_replace_id(0), with_id(0), delete_all(false), keepBorder(false) { }
-		std::vector<uint16_t> items_to_match;
-		uint32_t match_group;
-		BorderType group_match_alignment;
-		uint16_t to_replace_id;
-		uint16_t with_id;
-		bool delete_all;
-		bool keepBorder;
-	};
-
-	struct BorderBlock {
-		bool outer;
-		bool super;
-		uint32_t to;
-
-		std::unique_ptr<AutoBorder> owned_autoborder;
-		AutoBorder* autoborder;
-		std::vector<std::unique_ptr<SpecificCaseBlock>> specific_cases;
-	};
-
-	struct ItemChanceBlock {
-		int chance;
-		uint16_t id;
-	};
 
 	struct BorderCluster {
 		uint32_t alignment;

@@ -51,7 +51,7 @@ void OutfitSelectionGrid::UpdateFilter(const wxString& filter, bool colorable_on
 
 	filtered_outfits.clear();
 	std::ranges::copy_if(all_outfits, std::back_inserter(filtered_outfits), [&](const auto& item) {
-		bool match = filter.IsEmpty() || item.name.Lower().Contains(filter.Lower()) || wxString::Format("%d", item.lookType).Contains(filter);
+		bool match = filter.IsEmpty() || item.name.Lower().Contains(filter.Lower()) || wxstr(std::format("{}", item.lookType)).Contains(filter);
 		if (colorable_only && item.layers < 2) {
 			match = false;
 		}
@@ -95,7 +95,7 @@ void OutfitSelectionGrid::OnSize(wxSizeEvent& event) {
 }
 
 wxSize OutfitSelectionGrid::DoGetBestClientSize() const {
-	return wxSize(430, 300); // Reasonable default
+	return FromDIP(wxSize(430, 300)); // Reasonable default
 }
 
 int OutfitSelectionGrid::GetOrCreateOutfitImage(NVGcontext* vg, int lookType, const Outfit& outfit) {
@@ -177,7 +177,7 @@ void OutfitSelectionGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 
 		// Card background
 		nvgBeginPath(vg);
-		nvgRoundedRect(vg, rect.x, rect.y, rect.width, rect.height, 4.0f);
+		nvgRect(vg, rect.x, rect.y, rect.width, rect.height);
 
 		if (i == selected_index) {
 			nvgFillColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::Selected)));
@@ -190,7 +190,7 @@ void OutfitSelectionGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 
 		// Border
 		nvgBeginPath(vg);
-		nvgRoundedRect(vg, rect.x + 0.5f, rect.y + 0.5f, rect.width - 1.0f, rect.height - 1.0f, 4.0f);
+		nvgRect(vg, rect.x + 0.5f, rect.y + 0.5f, rect.width - 1.0f, rect.height - 1.0f);
 		if (i == selected_index) {
 			nvgStrokeColor(vg, NvgUtils::ToNvColor(Theme::Get(Theme::Role::Accent)));
 			nvgStrokeWidth(vg, 2.0f);
@@ -319,9 +319,9 @@ void OutfitSelectionGrid::OnContextMenu(wxContextMenuEvent& event) {
 	}
 
 	wxMenu menu;
-	menu.Append(OutfitChooserDialog::ID_FAVORITE_RENAME, "Rename...")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN_TO_SQUARE, wxSize(16, 16)));
-	menu.Append(OutfitChooserDialog::ID_FAVORITE_EDIT, "Update with Current")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_SYNC, wxSize(16, 16)));
-	menu.Append(OutfitChooserDialog::ID_FAVORITE_DELETE, "Delete")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_TRASH_CAN, wxSize(16, 16)));
+	menu.Append(OutfitChooserDialog::ID_FAVORITE_RENAME, "Rename...")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN_TO_SQUARE));
+	menu.Append(OutfitChooserDialog::ID_FAVORITE_EDIT, "Update with Current")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_SYNC));
+	menu.Append(OutfitChooserDialog::ID_FAVORITE_DELETE, "Delete")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_TRASH_CAN));
 
 	PopupMenu(&menu);
 }

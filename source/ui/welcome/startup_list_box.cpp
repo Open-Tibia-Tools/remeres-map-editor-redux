@@ -55,13 +55,14 @@ void StartupListBox::OnDrawItem(wxDC& dc, const wxRect& rect, size_t index) cons
 	}
 
 	dc.SetFont(Theme::GetFont(9, true));
-	const wxColour primary_colour = selected ? Theme::Get(Theme::Role::TextOnAccent) : (item.accent_colour.IsOk() ? item.accent_colour : Theme::Get(Theme::Role::Text));
+	const bool isDark = (Theme::Get(Theme::Role::Surface).Red() <= 128);
+	const wxColour primary_colour = selected ? (isDark ? Theme::Get(Theme::Role::TextOnAccent) : Theme::Get(Theme::Role::Text)) : (item.accent_colour.IsOk() ? item.accent_colour : Theme::Get(Theme::Role::Text));
 	dc.SetTextForeground(primary_colour);
 	const wxString primary_text = wxControl::Ellipsize(item.primary_text, dc, wxELLIPSIZE_MIDDLE, available_width);
 	dc.DrawText(primary_text, text_x, rect.y + FromDIP(6));
 
 	dc.SetFont(Theme::GetFont(8, false));
-	dc.SetTextForeground(selected ? Theme::Get(Theme::Role::TextOnAccent) : Theme::Get(Theme::Role::TextSubtle));
+	dc.SetTextForeground(selected ? (isDark ? Theme::Get(Theme::Role::TextOnAccent) : Theme::Get(Theme::Role::TextSubtle)) : Theme::Get(Theme::Role::TextSubtle));
 	const wxString secondary_text = wxControl::Ellipsize(item.secondary_text, dc, wxELLIPSIZE_END, available_width);
 	dc.DrawText(secondary_text, text_x, rect.y + FromDIP(26));
 }
@@ -75,7 +76,7 @@ wxBitmap StartupListBox::GetIconBitmap(const std::string& art_id) const {
 		return cached->second;
 	}
 
-	wxBitmap bitmap = IMAGE_MANAGER.GetBitmap(art_id, wxSize(16, 16));
+	wxBitmap bitmap = IMAGE_MANAGER.GetBitmap(art_id, FromDIP(wxSize(16, 16)));
 	m_icon_cache.emplace(art_id, bitmap);
 	return bitmap;
 }

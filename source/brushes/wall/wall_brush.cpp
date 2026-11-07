@@ -12,6 +12,12 @@
 #include "item_definitions/core/item_definition_store.h"
 #include "map/basemap.h"
 #include "map/tile_operations.h"
+#include "map/tile.h"
+#include "game/item.h"
+
+#include <algorithm>
+#include <iterator>
+#include <vector>
 
 uint32_t WallBrush::full_border_types[16];
 uint32_t WallBrush::half_border_types[16];
@@ -37,44 +43,29 @@ void WallBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 	ASSERT(tile);
 	bool b = (parameter ? *reinterpret_cast<bool*>(parameter) : false);
 	if (b) {
-		// Find a matching wall item on this tile, and shift the id
+		Item* wall_item = nullptr;
 		for (const auto& item : tile->items) {
-			if (item->isWall()) {
-				WallBrush* wb = item->getWallBrush();
-				if (wb == this) {
-					// Ok, shift alignment
-					BorderType alignment = item->getWallAlignment();
-					uint16_t id = 0;
-					WallBrush* try_brush = this;
-					while (true) {
-						if (id != 0) {
-							break;
-						}
-						if (try_brush == nullptr) {
-							return;
-						}
-
-						for (int i = alignment + 1; i != alignment; ++i) {
-							if (i == WallBrushItems::WALL_ALIGNMENT_COUNT) {
-								i = 0;
-							}
-							id = try_brush->items.getRandomWallId(i);
-							if (id != 0) {
-								break;
-							}
-						}
-
-						try_brush = try_brush->redirect_to;
-						if (try_brush == this) {
-							break;
-						}
-					}
-					if (id != 0) {
-						item->setID(id);
-					}
-					return;
-				}
+			if (!item) {
+				continue;
 			}
+			if (item->isBrushDoor()) {
+				DoorBrush::switchDoor(item.get());
+				return;
+			}
+			if (!wall_item && item->isWall()) {
+				wall_item = item.get();
+			}
+		}
+
+		if (wall_item) {
+			WallBrush* wall_brush = wall_item->getWallBrush();
+			if (!wall_brush) {
+				wall_brush = this;
+			}
+			if (const auto next_id = wall_brush->findNextWallVariant(wall_item->getID())) {
+				wall_item->setID(*next_id);
+			}
+			return;
 		}
 	}
 
@@ -150,6 +141,54 @@ bool WallBrush::hasWall(Item* item) {
 
 ::DoorType WallBrush::getDoorTypeFromID(uint16_t id) {
 	return items.getDoorTypeFromID(id);
+}
+
+std::optional<BorderType> WallBrush::findAlignmentForItem(ServerItemId item_id) const {
+	const WallBrush* test_brush = this;
+	do {
+		for (int i = 0; i < WallBrushItems::WALL_ALIGNMENT_COUNT; ++i) {
+			if (test_brush->items.hasWall(static_cast<uint16_t>(item_id), i)) {
+				return static_cast<BorderType>(i);
+			}
+		}
+		test_brush = test_brush->redirect_to;
+	} while (test_brush != this && test_brush != nullptr);
+
+	return std::nullopt;
+}
+
+std::optional<ServerItemId> WallBrush::findNextWallVariant(ServerItemId item_id) const {
+	const auto alignment = findAlignmentForItem(item_id);
+	if (!alignment.has_value()) {
+		return std::nullopt;
+	}
+
+	std::vector<ServerItemId> candidates;
+	const WallBrush* test_brush = this;
+	do {
+		const auto& node = test_brush->items.getWallNode(static_cast<int>(*alignment));
+		for (const auto& wall : node.items) {
+			if (wall.id != 0 && std::find(candidates.begin(), candidates.end(), wall.id) == candidates.end()) {
+				candidates.push_back(wall.id);
+			}
+		}
+		test_brush = test_brush->redirect_to;
+	} while (test_brush != this && test_brush != nullptr);
+
+	if (candidates.size() <= 1) {
+		return std::nullopt;
+	}
+
+	const auto current = std::find(candidates.begin(), candidates.end(), item_id);
+	if (current == candidates.end()) {
+		return candidates.front();
+	}
+
+	auto next = std::next(current);
+	if (next == candidates.end()) {
+		next = candidates.begin();
+	}
+	return *next;
 }
 
 //=============================================================================
@@ -252,3 +291,39 @@ void WallDecorationBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 		++iter;
 	}
 }
+uint16_t WallBrush::getPlacementItemId(const Tile* tile) const {
+	if (tile != nullptr && this->is<WallDecorationBrush>()) {
+		for (const auto& it : tile->items) {
+			if (it->isWall()) {
+				WallBrush* item_brush = it->getWallBrush();
+				if (item_brush && item_brush->is<WallDecorationBrush>()) {
+					continue;
+				}
+				BorderType wall_alignment = it->getWallAlignment();
+				const auto& node = items.getWallNode(wall_alignment);
+				for (const auto& wall : node.items) {
+					if (wall.id != 0) {
+						return wall.id;
+					}
+				}
+			}
+		}
+	}
+	const WallBrush* try_brush = this;
+	while (try_brush != nullptr) {
+		for (int i = 0; i < WallBrushItems::WALL_ALIGNMENT_COUNT; ++i) {
+			const auto& node = try_brush->items.getWallNode(i);
+			for (const auto& wall : node.items) {
+				if (wall.id != 0) {
+					return wall.id;
+				}
+			}
+		}
+		try_brush = try_brush->redirect_to;
+		if (try_brush == this) {
+			break;
+		}
+	}
+	return 0;
+}
+

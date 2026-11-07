@@ -2,6 +2,7 @@
 #include <wx/log.h>
 #include "ui/replace_tool/library_panel.h"
 #include "ui/replace_tool/visual_similarity_service.h"
+#include "ui/replace_tool/map_item_collector.h"
 #include "ui/theme.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "game/item.h"
@@ -12,12 +13,34 @@
 #include "brushes/doodad/doodad_brush.h"
 #include "brushes/table/table_brush.h"
 #include "brushes/carpet/carpet_brush.h"
+#include "editor/editor.h"
+#include "editor/selection.h"
+#include "map/map.h"
+#include "ui/gui.h"
+#include "ui/map_tab.h"
+#include "rendering/ui/map_display.h"
+#include "rendering/core/floor_visibility_mode.h"
+#include "app/settings.h"
+#include "util/image_manager.h"
 #include <wx/splitter.h>
 #include <algorithm>
+#include <set>
 
-LibraryPanel::LibraryPanel(wxWindow* parent, Listener* listener) :
+namespace {
+
+wxButton* MakeIconButton(wxWindow* parent, std::string_view icon, const wxString& tooltip, const wxSize& size) {
+	auto* button = new wxButton(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, size, wxBU_NOTEXT | wxBU_EXACTFIT);
+	button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(icon, Theme::Get(Theme::Role::Text)));
+	button->SetToolTip(tooltip);
+	return button;
+}
+
+} // namespace
+
+LibraryPanel::LibraryPanel(wxWindow* parent, Listener* listener, Editor* editor) :
 	wxPanel(parent, wxID_ANY),
-	m_listener(listener) {
+	m_listener(listener),
+	m_editor(editor) {
 
 	InitLayout();
 
@@ -32,9 +55,24 @@ LibraryPanel::LibraryPanel(wxWindow* parent, Listener* listener) :
 	m_allItemsGrid->SetItems(ids);
 
 	PopulateBrushGrid();
+
+	if (m_editor) {
+		m_editor->selection.addListener(reinterpret_cast<uintptr_t>(this), [this](size_t count) {
+			OnMapSelectionChanged(count);
+		});
+	}
 }
 
-LibraryPanel::~LibraryPanel() { }
+void LibraryPanel::DetachEditor() {
+	if (m_editor) {
+		m_editor->selection.removeListener(reinterpret_cast<uintptr_t>(this));
+		m_editor = nullptr;
+	}
+}
+
+LibraryPanel::~LibraryPanel() {
+	DetachEditor();
+}
 
 void LibraryPanel::InitLayout() {
 	wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
@@ -46,16 +84,42 @@ void LibraryPanel::InitLayout() {
 	wxPanel* itemListPage = new wxPanel(m_notebook);
 	wxBoxSizer* itemListSizer = new wxBoxSizer(wxVERTICAL);
 
-	m_itemSearch = new wxSearchCtrl(itemListPage, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxBORDER_NONE);
-	m_itemSearch->ShowCancelButton(true);
-	m_itemSearch->SetBackgroundColour(Theme::Get(Theme::Role::Background));
-	m_itemSearch->Bind(wxEVT_TEXT, &LibraryPanel::OnSearchChange, this);
-	m_itemSearch->Bind(wxEVT_SEARCHCTRL_SEARCH_BTN, &LibraryPanel::OnSearchChange, this);
-	itemListSizer->Add(m_itemSearch, 0, wxEXPAND | wxALL, padding);
-
 	m_allItemsGrid = new ItemGridPanel(itemListPage, this);
 	m_allItemsGrid->SetDraggable(true);
-	itemListSizer->Add(m_allItemsGrid, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
+	m_allItemsGrid->SetSort(TilesetSortKey::ID, TilesetSortDirection::Ascending);
+
+	TilesetGridToolbar::Actions itemActions;
+	itemActions.filter = [this](const std::string& query) {
+		m_allItemsGrid->SetFilter(wxstr(query));
+	};
+	itemActions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
+		m_allItemsGrid->SetSort(key, dir);
+		m_allItemsGrid->SetFilter(wxstr(m_itemsToolbar->GetFilterQuery()));
+	};
+	itemActions.clear_sort = [this]() {
+		m_allItemsGrid->ClearSort();
+		m_allItemsGrid->SetFilter(wxstr(m_itemsToolbar->GetFilterQuery()));
+	};
+	itemActions.show_labels = [this](bool show) {
+		m_allItemsGrid->SetShowLabels(show);
+	};
+	itemActions.icon_size = [this](int size) {
+		m_allItemsGrid->SetIconSize(size);
+	};
+	itemActions.brush_indicators = [this](bool dogEar) {
+		m_allItemsGrid->SetBrushIndicators(dogEar);
+		m_itemsToolbar->SetIndicatorState(dogEar);
+	};
+	itemActions.grid_spacing = [this](int spacingPx) {
+		m_allItemsGrid->SetGridSpacing(spacingPx);
+		m_itemsToolbar->SetGridSpacing(spacingPx);
+	};
+
+	m_itemsToolbar = new TilesetGridToolbar(itemListPage, std::move(itemActions));
+	m_itemsToolbar->SetState(m_allItemsGrid->GetShowLabels(), m_allItemsGrid->GetIconSize(), m_allItemsGrid->HasSort(), m_allItemsGrid->GetSortKey(), m_allItemsGrid->GetSortDirection(), false);
+	itemListSizer->Add(m_itemsToolbar, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, padding));
+
+	itemListSizer->Add(m_allItemsGrid, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
 
 	itemListPage->SetSizer(itemListSizer);
 	m_notebook->AddPage(itemListPage, "Items");
@@ -69,17 +133,51 @@ void LibraryPanel::InitLayout() {
 	wxPanel* brushesPanel = new wxPanel(brushSplitter);
 	wxBoxSizer* brushesSizer = new wxBoxSizer(wxVERTICAL);
 
-	m_brushSearch = new wxSearchCtrl(brushesPanel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxBORDER_NONE);
-	m_brushSearch->ShowCancelButton(true);
-	m_brushSearch->SetBackgroundColour(Theme::Get(Theme::Role::Background));
-	m_brushSearch->Bind(wxEVT_TEXT, &LibraryPanel::OnBrushSearchChange, this);
-	m_brushSearch->Bind(wxEVT_SEARCHCTRL_SEARCH_BTN, &LibraryPanel::OnBrushSearchChange, this);
-	brushesSizer->Add(m_brushSearch, 0, wxEXPAND | wxALL, 2);
-
 	m_brushGrid = new ItemGridPanel(brushesPanel, this);
-	m_brushGrid->SetShowDetails(false);
-	brushesSizer->Add(new wxStaticText(brushesPanel, wxID_ANY, "Available Brushes"), 0, wxALL, 2);
-	brushesSizer->Add(m_brushGrid, 1, wxEXPAND);
+
+	TilesetGridToolbar::Actions brushActions;
+	brushActions.filter = [this](const std::string&) {
+		PopulateBrushGrid();
+	};
+	brushActions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
+		// The related items are sorted with their brush, so the selection has to
+		// be found again in the new order.
+		const uint16_t selected = m_brushGrid->GetSelectedItemId();
+		m_brushGrid->SetSort(key, dir);
+		m_relatedGrid->SetSort(key, dir);
+		PopulateBrushGrid();
+		RestoreBrushSelection(selected);
+	};
+	brushActions.clear_sort = [this]() {
+		const uint16_t selected = m_brushGrid->GetSelectedItemId();
+		m_brushGrid->ClearSort();
+		m_relatedGrid->ClearSort();
+		PopulateBrushGrid();
+		RestoreBrushSelection(selected);
+	};
+	brushActions.show_labels = [this](bool show) {
+		m_brushGrid->SetShowLabels(show);
+		m_relatedGrid->SetShowLabels(show);
+	};
+	brushActions.icon_size = [this](int size) {
+		m_brushGrid->SetIconSize(size);
+		m_relatedGrid->SetIconSize(size);
+	};
+	brushActions.brush_indicators = [this](bool dogEar) {
+		m_brushGrid->SetBrushIndicators(dogEar);
+		m_relatedGrid->SetBrushIndicators(dogEar);
+		m_brushesToolbar->SetIndicatorState(dogEar);
+	};
+	brushActions.grid_spacing = [this](int spacingPx) {
+		m_brushGrid->SetGridSpacing(spacingPx);
+		m_relatedGrid->SetGridSpacing(spacingPx);
+		m_brushesToolbar->SetGridSpacing(spacingPx);
+	};
+
+	m_brushesToolbar = new TilesetGridToolbar(brushesPanel, std::move(brushActions));
+	m_brushesToolbar->SetState(m_brushGrid->GetShowLabels(), m_brushGrid->GetIconSize(), m_brushGrid->HasSort(), m_brushGrid->GetSortKey(), m_brushGrid->GetSortDirection(), false);
+	brushesSizer->Add(m_brushesToolbar, wxSizerFlags().Expand());
+	brushesSizer->Add(m_brushGrid, wxSizerFlags(1).Expand());
 	brushesPanel->SetSizer(brushesSizer);
 
 	// Bottom: Related Items
@@ -87,19 +185,194 @@ void LibraryPanel::InitLayout() {
 	wxBoxSizer* relatedSizer = new wxBoxSizer(wxVERTICAL);
 	m_relatedGrid = new ItemGridPanel(relatedPanel, this);
 	m_relatedGrid->SetDraggable(true);
-	relatedSizer->Add(new wxStaticText(relatedPanel, wxID_ANY, "Related Items"), 0, wxALL, 2);
-	relatedSizer->Add(m_relatedGrid, 1, wxEXPAND);
+
+	const wxSize iconBtnSize = FromDIP(wxSize(30, 26));
+
+	wxBoxSizer* relatedHeaderSizer = new wxBoxSizer(wxHORIZONTAL);
+	auto* relatedLabel = new wxStaticText(relatedPanel, wxID_ANY, "Related Items");
+	relatedHeaderSizer->Add(relatedLabel, wxSizerFlags(1).CenterVertical().Border(wxLEFT, 2));
+
+	m_fillUnmatchedBtn = MakeIconButton(relatedPanel, ICON_WAND_MAGIC_SPARKLES, "Fill unmatched rules with items from this brush", iconBtnSize);
+	m_fillUnmatchedBtn->Enable(false);
+	m_fillUnmatchedBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+		if (m_currentBrush && m_listener) {
+			m_listener->OnAutoMatchRules(m_currentBrush);
+		}
+	});
+	relatedHeaderSizer->Add(m_fillUnmatchedBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, 2));
+
+	relatedSizer->Add(relatedHeaderSizer, wxSizerFlags().Expand().Border(wxBOTTOM, 2));
+	relatedSizer->Add(m_relatedGrid, wxSizerFlags(1).Expand());
 	relatedPanel->SetSizer(relatedSizer);
 
 	brushSplitter->SplitHorizontally(brushesPanel, relatedPanel);
 	brushSplitter->SetSashGravity(0.5);
-	brushListSizer->Add(brushSplitter, 1, wxEXPAND | wxALL, padding);
+	brushListSizer->Add(brushSplitter, wxSizerFlags(1).Expand().Border(wxALL, padding));
 
 	brushListPage->SetSizer(brushListSizer);
 	m_notebook->AddPage(brushListPage, "Brushes");
 
-	mainSizer->Add(m_notebook, 1, wxEXPAND);
+	// PAGE 3: Viewport
+	wxPanel* viewportPage = new wxPanel(m_notebook);
+	wxBoxSizer* viewportSizer = new wxBoxSizer(wxVERTICAL);
+
+	wxBoxSizer* viewportHeaderSizer = new wxBoxSizer(wxHORIZONTAL);
+	m_refreshViewportBtn = MakeIconButton(viewportPage, ICON_ARROWS_ROTATE, "Refresh viewport items", iconBtnSize);
+	m_refreshViewportBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+		RefreshViewportItems();
+	});
+	viewportHeaderSizer->Add(m_refreshViewportBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
+
+	m_addViewportRulesBtn = MakeIconButton(viewportPage, ICON_PLUS_SQUARE, "Add every item visible in the viewport as a rule", iconBtnSize);
+	m_addViewportRulesBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+		if (!m_viewportInitialized) {
+			RefreshViewportItems();
+		}
+		if (m_listener && m_viewportGrid) {
+			m_listener->OnAddItemsAsRules(m_viewportGrid->GetItems());
+		}
+	});
+	viewportHeaderSizer->Add(m_addViewportRulesBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
+
+	m_viewportGrid = new ItemGridPanel(viewportPage, this);
+	m_viewportGrid->SetDraggable(true);
+
+	TilesetGridToolbar::Actions viewportActions;
+	viewportActions.filter = [this](const std::string& query) {
+		m_viewportGrid->SetFilter(wxstr(query));
+	};
+	viewportActions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
+		m_viewportGrid->SetSort(key, dir);
+		m_viewportGrid->SetFilter(wxstr(m_viewportToolbar->GetFilterQuery()));
+	};
+	viewportActions.clear_sort = [this]() {
+		m_viewportGrid->ClearSort();
+		m_viewportGrid->SetFilter(wxstr(m_viewportToolbar->GetFilterQuery()));
+	};
+	viewportActions.show_labels = [this](bool show) {
+		m_viewportGrid->SetShowLabels(show);
+	};
+	viewportActions.icon_size = [this](int size) {
+		m_viewportGrid->SetIconSize(size);
+	};
+	viewportActions.brush_indicators = [this](bool dogEar) {
+		m_viewportGrid->SetBrushIndicators(dogEar);
+		m_viewportToolbar->SetIndicatorState(dogEar);
+	};
+	viewportActions.grid_spacing = [this](int spacingPx) {
+		m_viewportGrid->SetGridSpacing(spacingPx);
+		m_viewportToolbar->SetGridSpacing(spacingPx);
+	};
+
+	m_viewportToolbar = new TilesetGridToolbar(viewportPage, std::move(viewportActions));
+	m_viewportToolbar->SetState(m_viewportGrid->GetShowLabels(), m_viewportGrid->GetIconSize(), m_viewportGrid->HasSort(), m_viewportGrid->GetSortKey(), m_viewportGrid->GetSortDirection(), false);
+	viewportHeaderSizer->Add(m_viewportToolbar, wxSizerFlags(1).Expand());
+
+	viewportSizer->Add(viewportHeaderSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, padding));
+	viewportSizer->Add(m_viewportGrid, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
+	viewportPage->SetSizer(viewportSizer);
+	m_notebook->AddPage(viewportPage, "Viewport");
+
+	// PAGE 4: Selection
+	wxPanel* selectionPage = new wxPanel(m_notebook);
+	wxBoxSizer* selectionSizer = new wxBoxSizer(wxVERTICAL);
+
+	wxBoxSizer* selectionHeaderSizer = new wxBoxSizer(wxHORIZONTAL);
+	m_addSelectionRulesBtn = MakeIconButton(selectionPage, ICON_PLUS_SQUARE, "Add every selected item as a rule", iconBtnSize);
+	m_addSelectionRulesBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+		RefreshSelectionItems();
+		if (m_listener && m_selectionGrid) {
+			m_listener->OnAddItemsAsRules(m_selectionGrid->GetItems());
+		}
+	});
+	selectionHeaderSizer->Add(m_addSelectionRulesBtn, wxSizerFlags().CenterVertical().Border(wxRIGHT, Theme::Grid(1)));
+
+	m_selectionGrid = new ItemGridPanel(selectionPage, this);
+	m_selectionGrid->SetDraggable(true);
+
+	TilesetGridToolbar::Actions selectionActions;
+	selectionActions.filter = [this](const std::string& query) {
+		m_selectionGrid->SetFilter(wxstr(query));
+	};
+	selectionActions.sort = [this](TilesetSortKey key, TilesetSortDirection dir) {
+		m_selectionGrid->SetSort(key, dir);
+		m_selectionGrid->SetFilter(wxstr(m_selectionToolbar->GetFilterQuery()));
+	};
+	selectionActions.clear_sort = [this]() {
+		m_selectionGrid->ClearSort();
+		m_selectionGrid->SetFilter(wxstr(m_selectionToolbar->GetFilterQuery()));
+	};
+	selectionActions.show_labels = [this](bool show) {
+		m_selectionGrid->SetShowLabels(show);
+	};
+	selectionActions.icon_size = [this](int size) {
+		m_selectionGrid->SetIconSize(size);
+	};
+	selectionActions.brush_indicators = [this](bool dogEar) {
+		m_selectionGrid->SetBrushIndicators(dogEar);
+		m_selectionToolbar->SetIndicatorState(dogEar);
+	};
+	selectionActions.grid_spacing = [this](int spacingPx) {
+		m_selectionGrid->SetGridSpacing(spacingPx);
+		m_selectionToolbar->SetGridSpacing(spacingPx);
+	};
+
+	m_selectionToolbar = new TilesetGridToolbar(selectionPage, std::move(selectionActions));
+	m_selectionToolbar->SetState(m_selectionGrid->GetShowLabels(), m_selectionGrid->GetIconSize(), m_selectionGrid->HasSort(), m_selectionGrid->GetSortKey(), m_selectionGrid->GetSortDirection(), false);
+	selectionHeaderSizer->Add(m_selectionToolbar, wxSizerFlags(1).Expand());
+
+	selectionSizer->Add(selectionHeaderSizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, padding));
+	selectionSizer->Add(m_selectionGrid, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, padding));
+	selectionPage->SetSizer(selectionSizer);
+	m_notebook->AddPage(selectionPage, "Selection");
+
+	m_notebook->Bind(wxEVT_NOTEBOOK_PAGE_CHANGED, &LibraryPanel::OnNotebookPageChanged, this);
+
+	mainSizer->Add(m_notebook, wxSizerFlags(1).Expand());
 	SetSizer(mainSizer);
+}
+
+void LibraryPanel::OnNotebookPageChanged(wxNotebookEvent& event) {
+	const int page = event.GetSelection();
+	if (page == 2) {
+		if (!m_viewportInitialized) {
+			RefreshViewportItems();
+		}
+	} else if (page == 3) {
+		RefreshSelectionItems();
+	}
+	event.Skip();
+}
+
+void LibraryPanel::OnMapSelectionChanged(size_t /*count*/) {
+	if (m_notebook && m_notebook->GetSelection() == 3) {
+		RefreshSelectionItems();
+	}
+}
+
+void LibraryPanel::RefreshViewportItems() {
+	if (!m_editor || !m_viewportGrid) {
+		return;
+	}
+
+	MapTab* activeTab = g_gui.GetCurrentMapTab();
+	const bool isSameEditor = (activeTab && activeTab->GetEditor() == m_editor);
+	m_viewportGrid->SetItems(isSameEditor ? rme::replace_tool::MapItemCollector::CollectViewportItemIds(m_editor, activeTab->GetCanvas()) : std::vector<uint16_t>{});
+	m_viewportInitialized = true;
+	if (m_viewportToolbar) {
+		m_viewportGrid->SetFilter(wxstr(m_viewportToolbar->GetFilterQuery()));
+	}
+}
+
+void LibraryPanel::RefreshSelectionItems() {
+	if (!m_editor || !m_selectionGrid) {
+		return;
+	}
+
+	m_selectionGrid->SetItems(rme::replace_tool::MapItemCollector::CollectSelectionItemIds(m_editor));
+	if (m_selectionToolbar) {
+		m_selectionGrid->SetFilter(wxstr(m_selectionToolbar->GetFilterQuery()));
+	}
 }
 
 void LibraryPanel::OnItemSelected(ItemGridPanel* source, uint16_t itemId) {
@@ -113,15 +386,6 @@ void LibraryPanel::OnItemSelected(ItemGridPanel* source, uint16_t itemId) {
 		m_listener->OnLibraryItemSelected(itemId);
 	}
 }
-
-void LibraryPanel::OnSearchChange(wxCommandEvent&) {
-	m_allItemsGrid->SetFilter(m_itemSearch->GetValue());
-}
-
-void LibraryPanel::OnBrushSearchChange(wxCommandEvent&) {
-	PopulateBrushGrid();
-}
-
 uint16_t LibraryPanel::GetSidFromCid(uint16_t cid) {
 	if (m_cidToSidCache.empty()) {
 		const auto all_ids = g_item_definitions.allIds();
@@ -143,7 +407,7 @@ void LibraryPanel::PopulateBrushGrid() {
 	std::map<uint16_t, wxString> overrides;
 	m_brushLookup.clear();
 
-	wxString query = m_brushSearch->GetValue().Lower();
+	wxString query = m_brushesToolbar ? wxstr(m_brushesToolbar->GetFilterQuery()).Lower() : wxString();
 
 	for (const auto& pair : g_brushes.getMap()) {
 		Brush* brush = pair.second.get();
@@ -174,19 +438,26 @@ void LibraryPanel::PopulateBrushGrid() {
 			}
 		}
 	}
-	m_brushGrid->SetItems(brushIds);
-	m_brushGrid->SetOverrideNames(overrides);
+	m_brushGrid->SetItems(brushIds, std::move(overrides));
 }
 
 void LibraryPanel::PopulateRelatedItems(uint16_t brushLookId) {
 	std::vector<uint16_t> related;
 	auto it = m_brushLookup.find(brushLookId);
 	if (it == m_brushLookup.end()) {
+		m_currentBrush = nullptr;
+		if (m_fillUnmatchedBtn) {
+			m_fillUnmatchedBtn->Enable(false);
+		}
 		m_relatedGrid->SetItems({});
 		return;
 	}
 
 	Brush* brush = it->second;
+	m_currentBrush = brush;
+	if (m_fillUnmatchedBtn) {
+		m_fillUnmatchedBtn->Enable(m_currentBrush != nullptr);
+	}
 	if (!brush) {
 		return;
 	}
@@ -207,4 +478,20 @@ void LibraryPanel::PopulateRelatedItems(uint16_t brushLookId) {
 	related.erase(std::unique(related.begin(), related.end()), related.end());
 
 	m_relatedGrid->SetItems(related);
+}
+
+void LibraryPanel::RestoreBrushSelection(uint16_t brushLookId) {
+	if (brushLookId == 0) {
+		return;
+	}
+
+	for (size_t i = 0; i < m_brushGrid->GetItemCount(); ++i) {
+		if (m_brushGrid->GetItem(i) == brushLookId) {
+			m_brushGrid->SetSelection(static_cast<int>(i));
+			break;
+		}
+	}
+
+	// SetSelection only reports a change, so the related pane is refreshed here.
+	PopulateRelatedItems(brushLookId);
 }

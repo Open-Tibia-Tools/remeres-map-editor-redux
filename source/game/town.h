@@ -69,7 +69,13 @@ public:
 		return towns.size();
 	}
 
+	[[nodiscard]] bool empty() const noexcept {
+		return towns.empty();
+	}
+
 	bool addTown(std::unique_ptr<Town> town);
+	bool changeId(Town* town, uint32_t newID);
+	void removeTown(Town* town);
 	uint32_t getEmptyID();
 
 	Town* getTown(std::string& townname);

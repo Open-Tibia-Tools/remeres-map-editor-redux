@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <functional>
 #include <string_view>
+#include "map/map_storage_format.h"
 #include "map/basemap.h"
 #include "map/tile.h"
 #include "game/town.h"
@@ -28,6 +29,7 @@
 #include "game/spawn.h"
 #include "game/complexitem.h"
 #include "game/waypoints.h"
+#include "map/zone_index.h"
 #include "io/templates.h"
 
 class MapConverter;
@@ -35,6 +37,11 @@ class MapSpawnManager;
 
 class Map : public BaseMap {
 public:
+	struct Zone {
+		std::string name;
+		uint16_t id;
+	};
+
 	// ctor and dtor
 	Map();
 	~Map() override;
@@ -45,6 +52,7 @@ public:
 	void cleanInvalidTiles(ProgressCallback progress_cb = nullptr);
 	void cleanInvalidZones(ProgressCallback progress_cb = nullptr);
 	void convertHouseTiles(uint32_t fromId, uint32_t toId, ProgressCallback progress_cb = nullptr);
+	void updateTownIdForHouses(uint32_t old_town_id, uint32_t new_town_id);
 
 	// Save a bmp image of the minimap
 
@@ -121,6 +129,12 @@ public:
 	std::string getSpawnFilename() const {
 		return spawnfile;
 	}
+	std::string getMonsterFilename() const {
+		return monsterfile;
+	}
+	std::string getNpcFilename() const {
+		return npcfile;
+	}
 
 	// Set some map data
 	void setWidth(int new_width);
@@ -128,11 +142,42 @@ public:
 	void setMapDescription(const std::string& new_description);
 	void setHouseFilename(const std::string& new_housefile);
 	void setSpawnFilename(const std::string& new_spawnfile);
+	void setMonsterFilename(const std::string& new_monsterfile);
+	void setNpcFilename(const std::string& new_npcfile);
 	void setWaypointFilename(const std::string& new_waypointfile);
 
 	std::string getWaypointFilename() const {
 		return waypointfile;
 	}
+	std::string getZoneFilename() const {
+		return zonefile;
+	}
+	void setZoneFilename(const std::string& new_zonefile) {
+		if (zonefile != new_zonefile) {
+			zonefile = new_zonefile;
+			unnamed = false;
+			doChange();
+		}
+	}
+
+	[[nodiscard]] bool supportsZones() const noexcept override {
+		return mapVersion.otbm == MAP_OTBM_5;
+	}
+
+	// OTBM 5 zone registry (Canary / Crystal Server); ids stay stable on rename because tiles reference them
+	[[nodiscard]] const Zone* findZone(uint16_t id) const;
+	[[nodiscard]] const Zone* findZone(std::string_view name) const;
+	// Returns the new zone id, or 0 when the name is empty, taken, or no id is left
+	uint16_t addZone(std::string name);
+	bool renameZone(uint16_t id, std::string name);
+	// Removes the zone and strips its id from every tile
+	void removeZone(uint16_t id);
+	[[nodiscard]] const std::vector<Position>& getZoneTilePositions(uint16_t id) const noexcept;
+	[[nodiscard]] const std::vector<ZoneCluster>& getZoneClusters(uint16_t id, bool recompute_if_dirty = true) const;
+	void addTileToZone(uint16_t id, const Position& pos);
+	void removeTileFromZone(uint16_t id, const Position& pos);
+	void updateTileZones(const Position& pos, std::span<const uint16_t> old_zones, std::span<const uint16_t> new_zones);
+	void rebuildZoneIndex();
 
 	uint64_t getGeneration() const {
 		return generation;
@@ -169,11 +214,18 @@ protected:
 	// Map Width and Height - for info purposes
 	uint16_t width, height;
 
-	std::string spawnfile; // The maps spawnfile
+	std::string spawnfile; // Standard spawnfile (<map>-spawn.xml, for TFS / classic OTBM)
+	std::string monsterfile; // Monster spawnfile (<map>-monster.xml, for OTBM 5)
 	std::string housefile; // The housefile
+	std::string npcfile; // NPC spawnfile (<map>-npc.xml, for OTBM 5)
+	std::string zonefile; // Crystal Server zone names; tiles reference them by id
 	std::string waypointfile; // The waypoints file (stores extended waypoint information such as id, preferred icon and matching town)
 
 public:
+	std::vector<Zone> zones;
+	ZoneIndex zone_index;
+	uint16_t max_assigned_zone_id = 0;
+
 	Towns towns;
 	Houses houses;
 	Spawns spawns;
@@ -181,6 +233,17 @@ public:
 protected:
 	bool has_changed; // If the map has changed
 	bool unnamed; // If the map has yet to receive a name
+	OtbmCompression compression = OtbmCompression::None;
+
+public:
+	[[nodiscard]] OtbmCompression getCompression() const noexcept {
+		return compression;
+	}
+	void setCompression(OtbmCompression format) noexcept {
+		compression = format;
+	}
+
+protected:
 
 	friend class IOMapOTBM;
 	friend class Editor;

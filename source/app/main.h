@@ -28,6 +28,7 @@
 
 #include "app/definitions.h"
 
+
 // Boost libraries
 #include <boost/utility.hpp>
 #include <boost/range/adaptor/reversed.hpp>
@@ -100,10 +101,6 @@ using StringVector = std::vector<std::string>;
 
 #include "app/rme_forward_declarations.h"
 
-#if wxCHECK_VERSION(3, 1, 0)
-	#define FROM_DIP(widget, size) widget->FromDIP(size)
-#else
-	#define FROM_DIP(widget, size) size
-#endif
+
 
 #endif

@@ -6,15 +6,13 @@
 #define RME_HOUSE_PALETTE_H_
 
 #include "palette/palette_common.h"
+#include "palette/controls/tileset_grid_toolbar.h"
+#include "game/house.h"
 
-#include <wx/panel.h>
 #include <wx/choice.h>
-#include <wx/textctrl.h>
-#include <wx/dataview.h>
-#include <wx/bitmap.h>
-#include "brushes/brush.h"
 #include <wx/tglbtn.h>
-#include <wx/timer.h>
+#include <string>
+#include <vector>
 
 class Map;
 class House;
@@ -22,54 +20,52 @@ class Brush;
 
 class HousePalette : public PalettePanel {
 public:
-	HousePalette(wxWindow* parent);
+	explicit HousePalette(wxWindow* parent, wxWindowID id = wxID_ANY);
 	~HousePalette() override;
+
+	wxString GetName() const override;
+
+	void SelectFirstBrush() override;
+	Brush* GetSelectedBrush() const override;
+	int GetSelectedBrushSize() const override;
+	bool SelectBrush(const Brush* whatbrush) override;
+
+	void OnUpdate() override;
+	void OnSwitchIn() override;
+	void OnSwitchOut() override;
 
 	void SetMap(Map* map);
 	void UpdateHouses();
+	void UpdateHouseSize(uint32_t house_id = 0);
 
-	// Palette operations
-	wxString GetName() const override;
-	Brush* GetSelectedBrush() const override;
-	bool SelectBrush(const Brush* whatbrush) override;
-	void OnUpdate() override;
+	void SelectHouseById(uint32_t house_id);
+	House* GetSelectedHouse() const;
+
 	void SelectHouseBrush();
 	void SelectExitBrush();
 
-	// Event handlers
-	void OnTownChange(wxCommandEvent& event);
-	void OnSearchChange(wxCommandEvent& event);
-	void OnHouseSelected(wxDataViewEvent& event);
-	void OnHouseActivated(wxDataViewEvent& event);
+	// Actions
+	void OnTownFilterChange(wxCommandEvent& event);
+	void OnClickAddHouse();
+	void OnClickEditHouse();
+	void OnClickRemoveHouse();
+	void OnGoToExit();
 
-	void OnAddHouse(wxCommandEvent& event);
-	void OnEditHouse(wxCommandEvent& event);
-	void OnRemoveHouse(wxCommandEvent& event);
+private:
+	class HouseCanvas;
 
-	void OnHouseBrushButton(wxCommandEvent& event);
-	void OnSelectExitButton(wxCommandEvent& event);
+	Map* map_ = nullptr;
+	uint32_t selected_house_id_ = 0;
 
-	void OnSearchCharHook(wxKeyEvent& event);
+	wxChoice* town_choice_ = nullptr;
+	TilesetGridToolbar* toolbar_ = nullptr;
+	HouseCanvas* canvas_ = nullptr;
 
-protected:
-	void FilterHouses();
-	House* GetSelectedHouse() const;
-
-	Map* map;
-
-	wxChoice* town_choice;
-	wxTextCtrl* search_ctrl;
-	wxDataViewListCtrl* house_list;
-
-	wxToggleButton* house_brush_button;
-	wxToggleButton* select_exit_button;
-
-	wxButton* add_button;
-	wxButton* edit_button;
-	wxButton* remove_button;
-
-	wxBitmap guild_icon;
-	wxBitmap no_guild_icon;
+	wxButton* add_button_ = nullptr;
+	wxButton* edit_button_ = nullptr;
+	wxButton* remove_button_ = nullptr;
+	wxToggleButton* house_brush_toggle_ = nullptr;
+	wxToggleButton* exit_brush_toggle_ = nullptr;
 };
 
-#endif
+#endif // RME_HOUSE_PALETTE_H_

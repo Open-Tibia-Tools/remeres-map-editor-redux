@@ -12,7 +12,10 @@ namespace IngamePreview {
 		IngamePreviewManager();
 		~IngamePreviewManager();
 
-		void Create();
+		static wxAuiPaneInfo DefaultPaneInfo();
+		static void NormalizePaneInfo(wxAuiPaneInfo& info);
+
+		void Create(bool updateManager = true);
 		void Hide();
 		void Destroy();
 		void Update();

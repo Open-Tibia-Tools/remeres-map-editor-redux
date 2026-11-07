@@ -1,3 +1,4 @@
+#include <wx/toplevel.h>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -24,6 +25,7 @@
 #include <chrono>
 #include <wx/wfstream.h>
 #include <spdlog/spdlog.h>
+#include <wx/timer.h>
 
 #include "ui/gui.h"
 #include "editor/editor.h"
@@ -33,13 +35,13 @@
 #include "map/map.h"
 #include "map/tile.h"
 #include "game/item.h"
-#include "ui/properties/old_properties_window.h"
-#include "ui/properties/properties_window.h"
 #include "palette/palette_window.h"
 #include "rendering/ui/screenshot_controller.h"
 #include "rendering/utilities/tile_describer.h"
 #include "rendering/core/map_view_math.h"
 #include "rendering/ui/map_display.h"
+#include "util/image_manager.h"
+#include <wx/textctrl.h>
 #include "rendering/ui/map_status_updater.h"
 #include "rendering/map_drawer.h"
 #include "rendering/core/text_renderer.h"
@@ -52,7 +54,10 @@
 #include "ui/browse_tile_window.h"
 #include "ui/dialog_helper.h"
 #include "ui/map_tab.h"
-#include "rendering/ui/animation_timer.h"
+#include "rendering/core/sprite_preloader.h"
+#include "util/phase_profiler.h"
+#include <chrono>
+#include <thread>
 #include "ui/map_popup_menu.h"
 #include "brushes/brush_utility.h"
 #include "rendering/ui/clipboard_handler.h"
@@ -63,7 +68,9 @@
 #include "rendering/ui/navigation_controller.h"
 #include "rendering/ui/selection_controller.h"
 #include "rendering/ui/drawing_controller.h"
+#include "editor/operations/selection_operations.h"
 #include "rendering/ui/map_menu_handler.h"
+#include "ui/managers/gl_context_manager.h"
 
 #include "brushes/doodad/doodad_brush.h"
 #include "brushes/house/house_exit_brush.h"
@@ -77,20 +84,8 @@
 #include "brushes/carpet/carpet_brush.h"
 #include "brushes/table/table_brush.h"
 
-bool MapCanvas::processed[] = { 0 };
-
-// Helper to create attributes
-static wxGLAttributes& GetCoreProfileAttributes() {
-	static wxGLAttributes vAttrs = []() {
-		wxGLAttributes a;
-		a.PlatformDefaults().Defaults().RGBA().DoubleBuffer().Depth(24).Stencil(8).EndList();
-		return a;
-	}();
-	return vAttrs;
-}
-
 MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
-	wxGLCanvas(parent, GetCoreProfileAttributes(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS),
+	wxGLCanvas(parent, GLContextManager::CanvasAttributes(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS),
 	editor(editor),
 	floor(GROUND_LAYER),
 	zoom(1.0),
@@ -113,8 +108,12 @@ MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
 	last_click_x(-1),
 	last_click_y(-1),
 	last_mmb_click_x(-1),
-	last_mmb_click_y(-1),
-	m_last_gc_time(0) {
+	last_mmb_click_y(-1) {
+	SetExtraStyle(wxWS_EX_PROCESS_IDLE);
+
+	// Enable the phase profiler when RME_PROFILE is set (see util/phase_profiler.h).
+	rme::prof::configureFromEnv();
+
 	// Context creation must happen on the main/UI thread
 	m_glContext = std::make_unique<wxGLContext>(this, g_gui.GetGLContext(this));
 	if (!m_glContext->IsOK()) {
@@ -123,7 +122,6 @@ MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
 	}
 
 	popup_menu = std::make_unique<MapPopupMenu>(editor);
-	animation_timer = std::make_unique<AnimationTimer>(this);
 	drawer = std::make_unique<MapDrawer>(editor);
 	selection_controller = std::make_unique<SelectionController>(this, editor);
 	drawing_controller = std::make_unique<DrawingController>(this, editor);
@@ -150,6 +148,10 @@ MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
 	Bind(wxEVT_PAINT, &MapCanvas::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, &MapCanvas::OnEraseBackground, this);
 	Bind(wxEVT_IDLE, &MapCanvas::OnIdle, this);
+	Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+		Refresh(false);
+		event.Skip();
+	});
 }
 
 MapCanvas::~MapCanvas() {
@@ -174,18 +176,12 @@ bool MapCanvas::IsAnimationEnabled() const {
 	return g_settings.getBoolean(Config::SHOW_PREVIEW);
 }
 
-int MapCanvas::GetAnimationRefreshIntervalMs() const noexcept {
-	constexpr double far_zoom_threshold = 2.0;
-	constexpr int near_zoom_refresh_interval_ms = 1000 / 60;
-	constexpr int far_zoom_refresh_interval_ms = 1000 / 20;
-	return zoom <= far_zoom_threshold ? near_zoom_refresh_interval_ms : far_zoom_refresh_interval_ms;
-}
-
 void MapCanvas::QueueNativeRefresh(bool immediate) {
 	wxGLCanvas::Refresh();
-	if (immediate || refresh_watch.Time() > g_settings.getInteger(Config::HARD_REFRESH_RATE)) {
-		refresh_watch.Start();
+	if (immediate) {
 		wxGLCanvas::Update();
+	} else {
+		wxWakeUpIdle();
 	}
 }
 
@@ -195,21 +191,6 @@ void MapCanvas::RequestLocalRefresh(bool immediate) {
 
 void MapCanvas::RequestSharedMapRefresh(bool immediate) {
 	g_gui.RefreshView(immediate);
-}
-
-void MapCanvas::RequestAnimationRepaint() {
-	if (!IsAnimationEnabled()) {
-		return;
-	}
-
-	const auto now = std::chrono::steady_clock::now();
-	const auto refresh_interval = std::chrono::milliseconds(GetAnimationRefreshIntervalMs());
-	if (last_animation_refresh_time_ != std::chrono::steady_clock::time_point{} && now - last_animation_refresh_time_ < refresh_interval) {
-		return;
-	}
-
-	last_animation_refresh_time_ = now;
-	RequestLocalRefresh();
 }
 
 void MapCanvas::SetHoverPreviewActive(bool active) {
@@ -281,7 +262,7 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 	if (options.show_creatures) {
 		drawer->DrawCreatureNames(vg);
 	}
-	if (options.show_tooltips) {
+	if (options.show_tooltips || options.show_houses || options.show_waypoints || options.show_towns || options.show_zones) {
 		drawer->DrawTooltips(vg);
 	}
 	if (options.show_hooks) {
@@ -309,20 +290,13 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendEquation(GL_FUNC_ADD);
+	glEnable(GL_MULTISAMPLE);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 }
 
-void MapCanvas::PerformGarbageCollection() {
-	// Clean unused textures once every second
-	// Only run GC if this is the active tab to prevent multiple tabs from fighting over resources
-	long current_time = wxGetLocalTime();
-	if (current_time - m_last_gc_time >= 1 && g_gui.GetCurrentMapTab() == GetParent()) {
-		g_gui.gfx.garbageCollection();
-		m_last_gc_time = current_time;
-	}
-}
 
 void MapCanvas::OnPaint(wxPaintEvent& event) {
+	rme::prof::Scope frame_scope(rme::prof::Phase::Frame);
 	wxPaintDC dc(this); // validates the paint event
 	if (m_glContext) {
 		g_gl_context.EnsureContextCurrent(*m_glContext, this);
@@ -346,15 +320,7 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 		options.dragging = selection_controller->IsDragging();
 		options.boundbox_selection = selection_controller->IsBoundboxSelection();
 		options.is_drawing_mode = g_gui.IsDrawingMode();
-
-		if (options.show_preview) {
-			animation_timer->Start();
-			g_gui.gfx.resumeAnimation();
-		} else {
-			animation_timer->Stop();
-			g_gui.gfx.pauseAnimation();
-			last_animation_refresh_time_ = {};
-		}
+		options.is_drawing = drawing_controller->IsDrawing();
 
 		ViewportParameters vp;
 		MouseToMap(&vp.mouse_map_x, &vp.mouse_map_y);
@@ -399,21 +365,46 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 		drawer->Release();
 
 		// Draw UI (Tooltips, Overlays & HUD) using NanoVG
-		DrawOverlays(m_nvg.get(), options);
+		{
+			rme::prof::Scope nvg_scope(rme::prof::Phase::NanoVg);
+			DrawOverlays(m_nvg.get(), options);
+		}
 
 		drawer->ClearFrameOverlays();
 	}
 
-	SwapBuffers();
-
-	fps_counter.Update();
-	if (g_settings.getBoolean(Config::SHOW_FPS_COUNTER) && fps_counter.HasChanged()) {
-		MapStatusUpdater::UpdateFPS(fps_counter.GetStatusString());
+	{
+		rme::prof::Scope present_scope(rme::prof::Phase::Present);
+		SwapBuffers();
 	}
+
+	// Frame rate safety clamp when VSync is disabled in driver settings
+	fps_counter.LimitFPS(240);
+
+	// Close the frame scope explicitly so its sample is folded into the profiler window
+	// that this frame belongs to; endFrame() runs before the scope's destructor.
+	frame_scope.end();
+	rme::prof::endFrame();
+	fps_counter.Update();
 }
 
 void MapCanvas::OnIdle(wxIdleEvent& event) {
-	PerformGarbageCollection();
+
+	if (IsShownOnScreen() && g_gui.IsRenderingEnabled()) {
+		auto* top = wxDynamicCast(wxGetTopLevelParent(this), wxTopLevelWindow);
+		const bool is_iconized = top && top->IsIconized();
+		if (!is_iconized && IsAnimationEnabled()) {
+			if (drawer && (drawer->HasVisibleAnimation() || drawer->HasIncompleteChunks())) {
+				QueueNativeRefresh(true);
+				event.RequestMore(true);
+			}
+		}
+	}
+
+	if (g_settings.getBoolean(Config::SHOW_FPS_COUNTER) && fps_counter.ConsumeChanged()) {
+		MapStatusUpdater::UpdateFPS(fps_counter.GetStatusString());
+	}
+
 	event.Skip();
 }
 
@@ -422,6 +413,10 @@ void MapCanvas::TakeScreenshot(wxFileName path, wxString format) {
 }
 
 void MapCanvas::ScreenToMap(int screen_x, int screen_y, int* map_x, int* map_y) {
+	ScreenToMap(screen_x, screen_y, floor, map_x, map_y);
+}
+
+void MapCanvas::ScreenToMap(int screen_x, int screen_y, int custom_floor, int* map_x, int* map_y) {
 	int start_x = 0, start_y = 0;
 	if (auto mw = GetMapWindow()) {
 		mw->GetViewStart(&start_x, &start_y);
@@ -434,11 +429,29 @@ void MapCanvas::ScreenToMap(int screen_x, int screen_y, int* map_x, int* map_y) 
 			.view_scroll_x = start_x,
 			.view_scroll_y = start_y,
 			.zoom = zoom,
-			.floor = floor,
+			.floor = custom_floor,
 			.scale_factor = GetContentScaleFactor(),
 		},
 		map_x,
 		map_y);
+}
+
+MainMapPixelPosition MapCanvas::ScreenToMapPixel(int screen_x, int screen_y) const {
+	int start_x = 0, start_y = 0;
+	if (auto mw = GetMapWindow()) {
+		mw->GetViewStart(&start_x, &start_y);
+	}
+
+	return MainMapViewMath::ScreenToMapPixel(
+		screen_x,
+		screen_y,
+		MainMapViewport {
+			.view_scroll_x = start_x,
+			.view_scroll_y = start_y,
+			.zoom = zoom,
+			.floor = floor,
+			.scale_factor = GetContentScaleFactor(),
+		});
 }
 #if 0
 
@@ -494,6 +507,50 @@ void MapCanvas::UpdateZoomStatus() {
 	ZoomController::UpdateStatus(this);
 }
 
+namespace {
+
+wxCursor LoadEditorCursor(std::string_view assetPath, int hotspotX, int hotspotY) {
+	wxBitmap bmp = IMAGE_MANAGER.GetBitmap(assetPath);
+	if (bmp.IsOk()) {
+		wxImage img = bmp.ConvertToImage();
+		if (img.IsOk()) {
+			img.SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_X, hotspotX);
+			img.SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_Y, hotspotY);
+			return wxCursor(img);
+		}
+	}
+	return wxNullCursor;
+}
+
+} // namespace
+
+void MapCanvas::UpdateCursor() {
+	if (!g_gui.IsDrawingMode()) {
+		SetCursor(wxNullCursor);
+		return;
+	}
+
+	Brush* brush = g_gui.GetCurrentBrush();
+	if (!brush) {
+		SetCursor(wxNullCursor);
+		return;
+	}
+
+	if (brush->getCursor() == BrushCursor::Crosshair) {
+		SetCursor(wxCursor(wxCURSOR_CROSS));
+		return;
+	}
+
+	if (brush->is<EraserBrush>()) {
+		static const wxCursor eraserCursor = LoadEditorCursor("cursor/eraser.png", 9, 22);
+		SetCursor(eraserCursor.IsOk() ? eraserCursor : wxNullCursor);
+		return;
+	}
+
+	static const wxCursor penCursor = LoadEditorCursor("cursor/pencil.png", 6, 26);
+	SetCursor(penCursor.IsOk() ? penCursor : wxNullCursor);
+}
+
 void MapCanvas::SyncCursorHoverState() {
 	int mouse_map_x, mouse_map_y;
 	MouseToMap(&mouse_map_x, &mouse_map_y);
@@ -503,6 +560,7 @@ void MapCanvas::SyncCursorHoverState() {
 	last_cursor_map_y = mouse_map_y;
 	last_cursor_map_z = floor;
 
+	UpdateCursor();
 	g_gui.UpdateAutoborderPreview(Position(mouse_map_x, mouse_map_y, floor));
 	UpdatePositionStatus(cursor_x, cursor_y);
 	UpdateZoomStatus();
@@ -556,10 +614,12 @@ void MapCanvas::OnMouseLeftClick(wxMouseEvent& event) {
 }
 
 void MapCanvas::OnMouseLeftDoubleClick(wxMouseEvent& event) {
-	int mouse_map_x, mouse_map_y;
-	ScreenToMap(event.GetX(), event.GetY(), &mouse_map_x, &mouse_map_y);
+	if (!g_gui.IsSelectionMode()) {
+		return;
+	}
+	const MainMapPixelPosition click = ScreenToMapPixel(event.GetX(), event.GetY());
 	if (selection_controller) {
-		selection_controller->HandleDoubleClick(Position(mouse_map_x, mouse_map_y, floor));
+		selection_controller->HandleDoubleClick(Position(click.map_x, click.map_y, floor));
 	}
 }
 
@@ -601,15 +661,16 @@ void MapCanvas::OnMouseActionClick(wxMouseEvent& event) {
 		map_window->ResumeMinimapTrackingToCurrentView();
 	}
 
-	int mouse_map_x, mouse_map_y;
-	ScreenToMap(event.GetX(), event.GetY(), &mouse_map_x, &mouse_map_y);
+	const MainMapPixelPosition click = ScreenToMapPixel(event.GetX(), event.GetY());
+	const int mouse_map_x = click.map_x;
+	const int mouse_map_y = click.map_y;
 
 	if (event.ControlDown() && event.AltDown()) {
 		Tile* tile = editor.map.getTile(mouse_map_x, mouse_map_y, floor);
 		BrushSelector::SelectSmartBrush(editor, tile);
 	} else if (g_gui.IsSelectionMode()) {
 		if (selection_controller) {
-			selection_controller->HandleClick(Position(mouse_map_x, mouse_map_y, floor), event.ShiftDown(), event.ControlDown(), event.AltDown());
+			selection_controller->HandleClick(Position(mouse_map_x, mouse_map_y, floor), SelectionPixelOffset { .x = click.pixel_x, .y = click.pixel_y }, event.ShiftDown(), event.ControlDown(), event.AltDown());
 		}
 	} else if (g_gui.GetCurrentBrush()) { // Drawing mode
 		if (drawing_controller) {
@@ -682,9 +743,9 @@ void MapCanvas::OnMousePropertiesClick(wxMouseEvent& event) {
 		map_window->ResumeMinimapTrackingToCurrentView();
 	}
 
-	int mouse_map_x, mouse_map_y;
-	ScreenToMap(event.GetX(), event.GetY(), &mouse_map_x, &mouse_map_y);
-	Tile* tile = editor.map.getTile(mouse_map_x, mouse_map_y, floor);
+	const MainMapPixelPosition click = ScreenToMapPixel(event.GetX(), event.GetY());
+	const int mouse_map_x = click.map_x;
+	const int mouse_map_y = click.map_y;
 
 	if (g_gui.IsDrawingMode()) {
 		g_gui.SetSelectionMode();
@@ -692,7 +753,6 @@ void MapCanvas::OnMousePropertiesClick(wxMouseEvent& event) {
 
 	last_click_x = int(event.GetX() * zoom);
 	last_click_y = int(event.GetY() * zoom);
-	selection_controller->HandlePropertiesClick(Position(mouse_map_x, mouse_map_y, floor), event.ShiftDown(), event.ControlDown(), event.AltDown());
 
 	int start_x = 0, start_y = 0;
 	if (auto mw = GetMapWindow()) {
@@ -703,6 +763,9 @@ void MapCanvas::OnMousePropertiesClick(wxMouseEvent& event) {
 
 	last_click_map_x = mouse_map_x;
 	last_click_map_y = mouse_map_y;
+	last_click_map_z = floor;
+
+	selection_controller->HandlePropertiesClick(Position(mouse_map_x, mouse_map_y, floor), SelectionPixelOffset { .x = click.pixel_x, .y = click.pixel_y }, event.ShiftDown(), event.ControlDown(), event.AltDown());
 	RequestLocalRefresh();
 }
 
@@ -717,7 +780,21 @@ void MapCanvas::OnMousePropertiesRelease(wxMouseEvent& event) {
 	selection_controller->HandlePropertiesRelease(Position(mouse_map_x, mouse_map_y, floor), event.ShiftDown(), event.ControlDown(), event.AltDown());
 
 	popup_menu->Update();
+
+	// Modal popup menus enter a nested Win32 message loop (TrackPopupMenuEx) where wxWidgets
+	// suppresses wxEVT_IDLE. A scoped timer pumps frame refreshes while the menu is open.
+	wxTimer menu_timer;
+	if (IsAnimationEnabled() && drawer && (drawer->HasVisibleAnimation() || drawer->HasIncompleteChunks())) {
+		menu_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
+			if (IsShownOnScreen() && g_gui.IsRenderingEnabled()) {
+				QueueNativeRefresh(true);
+			}
+		});
+		menu_timer.Start(16);
+	}
+
 	PopupMenu(popup_menu.get());
+	menu_timer.Stop();
 
 	editor.actionQueue->resetTimer();
 	dragging = false;

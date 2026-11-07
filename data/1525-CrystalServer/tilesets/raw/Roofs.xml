@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Roofs">
+    <item fromid="33654" toid="33685" />
+    <item fromid="33692" toid="33706" />
+    <item fromid="5157" toid="5252" />
+    <item fromid="5033" toid="5040" />
+    <item fromid="5043" toid="5045" />
+    <item fromid="5047" toid="5054" />
+    <item id="5403" />
+    <item fromid="9408" toid="9425" />
+    <item id="8218" />
+    <item fromid="8415" toid="8416" />
+    <item fromid="8425" toid="8426" />
+    <item fromid="8484" toid="8488" />
+    <item fromid="8501" toid="8502" />
+    <item fromid="8621" toid="8644" />
+    <item fromid="8844" toid="8851" />
+    <item fromid="16573" toid="16575" />
+    <item fromid="17235" toid="17237" />
+    <item fromid="16581" toid="16582" />
+    <item fromid="16602" toid="16615" />
+    <item id="17339" />
+    <item id="17345" />
+    <item fromid="17578" toid="17597" />
+    <item fromid="17630" toid="17651" />
+    <item fromid="17658" toid="17665" />
+    <item fromid="17801" toid="17806" />
+    <item fromid="19806" toid="19807" />
+    <item id="19738" />
+    <item id="19741" />
+    <item fromid="20794" toid="20887" />
+    <item fromid="22458" toid="22493" />
+    <item fromid="29178" toid="29208" />
+    <item fromid="29210" toid="29249" />
+</tileset>

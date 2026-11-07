@@ -25,11 +25,13 @@ class NodeFileReadHandle;
 class BinaryNode;
 class FastOTBMStream;
 
+#include "app/client_version.h"
+
 class HeaderSerializationOTBM {
 public:
 	static bool getVersionInfo(NodeFileReadHandle& f, MapVersion& out_ver);
 	static bool peekStartupInfo(NodeFileReadHandle& f, OTBMStartupPeekResult& out_info);
-	static bool readMapAttributes(Map& map, FastOTBMStream& stream);
+	static bool readMapAttributes(Map& map, FastOTBMStream& stream, MapVersionID otbmVersion);
 };
 
 #endif

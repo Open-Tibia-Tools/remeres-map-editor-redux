@@ -133,6 +133,11 @@ struct AdvancedFinderPersistedState {
 	AdvancedFinderSelectionKey selection;
 	wxPoint position = wxDefaultPosition;
 	wxSize size = wxDefaultSize;
+	int view_mode = 0;
+	int icon_size = 32;
+	int grid_spacing = 4;
+	bool indicator_dogear = false;
+	bool show_labels = false;
 };
 
 AdvancedFinderPersistedState LoadAdvancedFinderPersistedState();

@@ -3,6 +3,8 @@
 
 #include "ui/find_item_window_model.h"
 #include "util/nanovg_canvas.h"
+#include "util/grid_view_options.h"
+#include "util/grid_cell_renderer.h"
 
 #include <wx/event.h>
 #include <wx/wx.h>
@@ -32,6 +34,20 @@ public:
 	void SetRows(std::vector<const AdvancedFinderCatalogRow*> rows, const AdvancedFinderSelectionKey& preferred_selection);
 	void SetPrompt(std::string primary, std::string secondary);
 	void SetNoMatches(std::string primary, std::string secondary);
+
+	void SetIconSize(int size);
+	void SetGridSpacing(int spacing);
+	void SetBrushIndicators(bool dogEar);
+	void SetShowLabels(bool show);
+	[[nodiscard]] bool GetShowLabels() const { return show_labels_; }
+	void SetSort(TilesetSortKey key, TilesetSortDirection dir);
+	void ClearSort();
+	[[nodiscard]] bool HasSort() const { return has_sort_; }
+	[[nodiscard]] TilesetSortKey GetSortKey() const { return sort_key_; }
+	[[nodiscard]] TilesetSortDirection GetSortDirection() const { return sort_dir_; }
+	[[nodiscard]] int GetIconSize() const { return icon_size_; }
+	[[nodiscard]] int GetGridSpacing() const { return grid_spacing_; }
+	[[nodiscard]] bool GetBrushIndicators() const { return indicator_dogear_; }
 
 	[[nodiscard]] const AdvancedFinderCatalogRow* GetSelectedRow() const;
 	[[nodiscard]] int GetSelectionIndex() const;
@@ -83,13 +99,23 @@ private:
 	void drawListRow(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row, bool selected, bool hovered) const;
 	void drawGridCard(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row, bool selected, bool hovered) const;
 	void drawGridHoverInfo(NVGcontext* vg, int width, int height, int scroll_pos) const;
-	void drawSpriteBadge(NVGcontext* vg, const wxRect& rect, Sprite* sprite) const;
+	void drawRowBadge(NVGcontext* vg, const wxRect& rect, const AdvancedFinderCatalogRow& row) const;
+	void applySort();
 
 	EmptyState empty_state_ = EmptyState::Prompt;
 	std::string primary_message_;
 	std::string secondary_message_;
+	std::vector<const AdvancedFinderCatalogRow*> original_rows_;
 	std::vector<const AdvancedFinderCatalogRow*> rows_;
 	AdvancedFinderResultViewMode mode_ = AdvancedFinderResultViewMode::List;
+	int icon_size_ = 32;
+	int grid_spacing_ = 4;
+	bool indicator_dogear_ = false;
+	bool show_labels_ = false;
+	bool has_sort_ = false;
+	TilesetSortKey sort_key_ = TilesetSortKey::ID;
+	TilesetSortDirection sort_dir_ = TilesetSortDirection::Ascending;
+	rme::ui::grid::LabelCache label_cache_;
 	int selected_index_ = -1;
 	int hover_index_ = -1;
 	int columns_ = 1;

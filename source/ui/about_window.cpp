@@ -55,7 +55,7 @@ AboutWindow::AboutWindow(wxWindow* parent) :
 
 	about << "Using " << wxVERSION_STRING << " interface\n";
 	const char* gl_version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-	about << "OpenGL version " << (gl_version ? wxString(gl_version, wxConvUTF8) : wxString("Unknown")) << "\n";
+	about << "OpenGL version " << (gl_version ? wxstr(reinterpret_cast<const char*>(gl_version)) : wxString("Unknown")) << "\n";
 	about << "\n";
 	about << "This program comes with ABSOLUTELY NO WARRANTY;\n";
 	about << "for details see the LICENSE file.\n";
@@ -65,28 +65,29 @@ AboutWindow::AboutWindow(wxWindow* parent) :
 	about << "Compiled on: " << __TDATE__ << " : " << __TTIME__ << "\n";
 	about << "Compiled with: " << BOOST_COMPILER << "\n";
 
-	topsizer = newd wxBoxSizer(wxVERTICAL);
+	topsizer = new wxBoxSizer(wxVERTICAL);
 
-	topsizer->Add(newd wxStaticText(this, wxID_ANY, about), 1, wxALL, 20);
+	topsizer->Add(new wxStaticText(this, wxID_ANY, about), wxSizerFlags(1).Border(wxALL, 20));
 
-	wxSizer* choicesizer = newd wxBoxSizer(wxHORIZONTAL);
-	wxButton* okBtn = newd wxButton(this, wxID_OK, "OK");
+	wxSizer* choicesizer = new wxBoxSizer(wxHORIZONTAL);
+	wxButton* okBtn = new wxButton(this, wxID_OK, "OK");
 	okBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CHECK));
 	okBtn->SetToolTip("Close this window");
 	choicesizer->Add(okBtn, wxSizerFlags(1).Center());
 
-	wxButton* copyBtn = newd wxButton(this, wxID_COPY, "Copy Version Info");
+	wxButton* copyBtn = new wxButton(this, wxID_COPY, "Copy Version Info");
 	copyBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_COPY));
-	copyBtn->Bind(wxEVT_BUTTON, [about](wxCommandEvent&) {
+	copyBtn->Bind(wxEVT_BUTTON, [about, copyBtn](wxCommandEvent&) {
 		if (wxTheClipboard->Open()) {
 			wxTheClipboard->SetData(new wxTextDataObject(about));
 			wxTheClipboard->Close();
+			DialogUtil::ShowRichToolTip("Copied!", "Version details copied to clipboard.", copyBtn);
 		}
 	});
 	copyBtn->SetToolTip("Copy version information to clipboard");
 	choicesizer->Add(copyBtn, wxSizerFlags(1).Center().Border(wxLEFT, 10));
 
-	wxButton* websiteBtn = newd wxButton(this, wxID_ANY, "Visit Website");
+	wxButton* websiteBtn = new wxButton(this, wxID_ANY, "Visit Website");
 	websiteBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_GLOBE));
 	websiteBtn->Bind(wxEVT_BUTTON, [](wxCommandEvent&) {
 		::wxLaunchDefaultBrowser(__SITE_URL__, wxBROWSER_NEW_WINDOW);
@@ -94,7 +95,7 @@ AboutWindow::AboutWindow(wxWindow* parent) :
 	websiteBtn->SetToolTip("Open the official website in your browser");
 	choicesizer->Add(websiteBtn, wxSizerFlags(1).Center().Border(wxLEFT, 10));
 
-	topsizer->Add(choicesizer, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT | wxBOTTOM, 20);
+	topsizer->Add(choicesizer, wxSizerFlags().Center().Border(wxLEFT | wxRIGHT | wxBOTTOM, 20));
 
 	wxAcceleratorEntry entries[1];
 	entries[0].Set(wxACCEL_NORMAL, WXK_ESCAPE, wxID_CANCEL);

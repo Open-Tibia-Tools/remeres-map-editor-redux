@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Architecture">
+    <brush name="steel bars" />
+    <brush name="steel rebar" />
+    <brush name="pink rebar" />
+    <brush name="dark steel rebar" />
+    <brush name="lattice" />
+    <brush name="rope wall" />
+    <brush name="rod cord" />
+    <brush name="fence" />
+    <brush name="dark fence" />
+    <brush name="krailos spikes1" />
+    <brush name="krailos spikes2" />
+    <brush name="krailos fence" />
+    <item fromid="2152" toid="2153" />
+    <item fromid="2263" toid="2264" />
+    <item id="477" />
+    <item id="2115" />
+    <item fromid="2188" toid="2190" />
+    <brush name="obelisk" />
+    <brush name="light desert pillar1" />
+    <brush name="light desert pillar2" />
+    <brush name="light desert pillar3" />
+    <brush name="light desert pillar4" />
+    <brush name="dark desert pillar1" />
+    <brush name="dark desert pillar2" />
+    <brush name="dark desert pillar3" />
+    <brush name="dark desert pillar4" />
+    <item id="12476" />
+    <item fromid="7708" toid="7710" />
+    <item fromid="2289" toid="2290" />
+    <item id="6972" />
+    <item id="6973" />
+    <item fromid="5025" toid="5032" />
+    <item fromid="8388" toid="8389" />
+    <item id="8518" />
+    <item id="8865" />
+    <item fromid="8870" toid="8877" />
+    <item fromid="9133" toid="9140" />
+    <item fromid="9428" toid="9429" />
+    <item fromid="9428" toid="9429" />
+    <item id="10954" />
+    <item fromid="10975" toid="10976" />
+    <item fromid="11007" toid="11008" />
+    <item id="11047" />
+    <item id="11053" />
+    <item id="11057" />
+    <item id="13106" />
+    <item id="13122" />
+    <item fromid="15484" toid="15487" />
+    <item id="15611" />
+    <item id="16572" />
+    <item fromid="17336" toid="17338" />
+    <item id="17340" />
+    <item fromid="19974" toid="19981" />
+    <item fromid="7507" toid="7514" />
+    <brush name="grey gate" />
+    <brush name="wooden gate" />
+    <brush name="stone gate" />
+    <brush name="zao colored gate" />
+    <item fromid="9783" toid="9784" />
+    <brush name="zao decoration" />
+    <brush name="zao grey gate" />
+    <brush name="zao claw gate" />
+    <brush name="white linen entrance" />
+    <brush name="striped linen entrance" />
+    <brush name="wooden decoration wall" />
+    <brush name="krailos structure1" />
+    <brush name="krailos structure2" />
+    <brush name="krailos structure3" />
+    <brush name="krailos structure4" />
+    <item id="30839" />
+    <item fromid="31131" toid="31133" />
+    <item fromid="31474" toid="31477" />
+    <item id="33182" />
+    <item id="33211" />
+    <item id="33240" />
+    <item id="33264" />
+    <brush name="pillar skull move" />
+    <brush name="ruddy obelisk" />
+    <brush name="ancient sepulchre" />
+    <brush name="earth elf pillar" />
+    <brush name="earth elf portal" />
+    <brush name="snow elf pillar" />
+    <brush name="snow elf portal" />
+    <brush name="library pillar 1" />
+    <brush name="library pillar 2" />
+    <brush name="library pillar 3" />
+    <brush name="library column" />
+    <brush name="new column" />
+    <brush name="column" />
+    <brush name="damaged column" />
+    <brush name="column with grass" />
+    <brush name="damaged grass column" />
+    <brush name="grass column" />
+    <brush name="different column" />
+    <brush name="short wall" />
+    <brush name="short wall grass" />
+    <brush name="stone pillar" />
+    <brush name="stone pillar (grey)" />
+</tileset>

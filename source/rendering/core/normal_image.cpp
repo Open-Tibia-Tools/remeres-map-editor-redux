@@ -5,8 +5,6 @@
 #include <cstring>
 #include <ranges>
 
-constexpr int RGB_COMPONENTS = 3;
-
 namespace {
 	bool loadRgbaFromArchive(uint32_t id, std::unique_ptr<uint8_t[]>& rgba, ImageDimensions& dimensions) {
 		const auto archive = g_graphics.getSpriteArchive();
@@ -41,25 +39,6 @@ void NormalImage::fulfillPreload(std::unique_ptr<uint8_t[]> data) {
 	is_preloading = false;
 }
 
-void NormalImage::clean(time_t time, int longevity) {
-	if (longevity <= 0) {
-		return;
-	}
-	if (isGLLoaded && time - static_cast<time_t>(lastaccess.load(std::memory_order_relaxed)) > longevity) {
-		if (g_graphics.hasAtlasManager()) {
-			g_graphics.getAtlasManager()->removeSprite(id);
-		}
-
-		isGLLoaded = false;
-		atlas_region = nullptr;
-		is_preloading = false;
-
-		// Invalidate any pending preloads for this sprite ID
-		generation_id++;
-
-		g_graphics.collector.NotifyTextureUnloaded();
-	}
-}
 std::unique_ptr<uint8_t[]> NormalImage::getRGBData() {
 	if (id == 0) {
 		const auto dimensions = getDimensions();
@@ -111,7 +90,7 @@ std::unique_ptr<uint8_t[]> NormalImage::getRGBAData() {
 	return rgba;
 }
 
-const AtlasRegion* NormalImage::getAtlasRegion() {
+const AtlasRegion* NormalImage::getAtlasRegion(bool allow_upload) {
 	if (isGLLoaded && atlas_region) {
 		// Self-Healing: Check for stale atlas region pointer (e.g. from memory reuse)
 		// Force reload if Owner is INVALID or DOES NOT MATCH
@@ -120,14 +99,17 @@ const AtlasRegion* NormalImage::getAtlasRegion() {
 			isGLLoaded = false;
 			atlas_region = nullptr;
 		} else {
-			visit();
 			return atlas_region;
 		}
 	}
 
 	if (!isGLLoaded) {
+		if (!allow_upload) {
+			// A bake that must not stall the frame on asset loading reports the sprite as not
+			// ready; the preloader loads it and the chunk is re-baked once it is available.
+			return nullptr;
+		}
 		atlas_region = EnsureAtlasSprite(id);
 	}
-	visit();
 	return atlas_region;
 }

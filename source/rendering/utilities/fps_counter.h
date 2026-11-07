@@ -18,6 +18,9 @@ public:
 	// Returns true if the FPS value changed this frame
 	bool HasChanged() const;
 
+	// Returns true and resets the flag if the FPS value changed
+	bool ConsumeChanged();
+
 	// Get the current FPS
 	int GetFPS() const;
 

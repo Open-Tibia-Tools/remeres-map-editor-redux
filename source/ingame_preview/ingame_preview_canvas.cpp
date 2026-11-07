@@ -15,21 +15,12 @@
 #include <nanovg_gl.h>
 #include "game/complexitem.h"
 #include "ui/managers/minimap_manager.h"
+#include "ui/managers/gl_context_manager.h"
 
 namespace IngamePreview {
 
-	// Re-use core profile attributes from MapCanvas logic
-	static wxGLAttributes& GetPreviewGLAttributes() {
-		static wxGLAttributes vAttrs = []() {
-			wxGLAttributes a;
-			a.PlatformDefaults().Defaults().RGBA().DoubleBuffer().Depth(24).Stencil(8).EndList();
-			return a;
-		}();
-		return vAttrs;
-	}
-
 	IngamePreviewCanvas::IngamePreviewCanvas(wxWindow* parent) :
-		wxGLCanvas(parent, GetPreviewGLAttributes(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS),
+		wxGLCanvas(parent, GLContextManager::CanvasAttributes(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxWANTS_CHARS),
 		last_tile_renderer(nullptr),
 		camera_pos(0, 0, GROUND_LAYER),
 		zoom(1.0f),

@@ -109,20 +109,28 @@ const DoodadBrushItems::AlternativeBlock* DoodadBrushItems::getAlternative(int v
 }
 
 const CompositeTileList& DoodadBrushItems::getComposite(int variation) const {
+	const AlternativeBlock* ab = getAlternative(variation);
+	if (!ab || ab->composite_items.empty() || ab->composite_chance <= 0) {
+		static CompositeTileList empty;
+		return empty;
+	}
+	return getComposite(variation, random(1, ab->composite_chance));
+}
+
+const CompositeTileList& DoodadBrushItems::getComposite(int variation, int roll) const {
 	static CompositeTileList empty;
 	const AlternativeBlock* ab = getAlternative(variation);
 	if (!ab || ab->composite_items.empty()) {
 		return empty;
 	}
 
-	int roll = random(1, ab->composite_chance);
 	for (const auto& cb : ab->composite_items) {
 		if (roll <= cb.chance) {
 			return cb.items;
 		}
 		roll -= cb.chance;
 	}
-	return empty;
+	return ab->composite_items.front().items;
 }
 
 bool DoodadBrushItems::isEmpty(int variation, const DoodadBrushSettings& settings) const {
@@ -176,16 +184,67 @@ bool DoodadBrushItems::ownsItem(uint16_t id) const {
 
 Item* DoodadBrushItems::getRandomSingleItem(int variation) const {
 	const AlternativeBlock* ab = getAlternative(variation);
+	if (!ab || ab->single_items.empty() || ab->single_chance <= 0) {
+		return nullptr;
+	}
+	return getRandomSingleItem(variation, random(1, ab->single_chance));
+}
+
+Item* DoodadBrushItems::getRandomSingleItem(int variation, int roll) const {
+	const AlternativeBlock* ab = getAlternative(variation);
 	if (!ab || ab->single_items.empty()) {
 		return nullptr;
 	}
 
-	int roll = random(1, ab->single_chance);
 	for (const auto& sb : ab->single_items) {
 		if (roll <= sb.chance) {
-			return sb.item.get(); // Return raw pointer for use
+			return sb.item.get();
 		}
 		roll -= sb.chance;
 	}
-	return nullptr;
+	return ab->single_items.front().item.get();
+}
+int DoodadBrushItems::getTotalVariants() const {
+	int total = 0;
+	for (const auto& alt : alternatives) {
+		if (!alt) continue;
+		total += static_cast<int>(alt->single_items.size());
+		total += static_cast<int>(alt->composite_items.size());
+	}
+	return total;
+}
+
+DoodadVariant DoodadBrushItems::getVariant(int index) const {
+	const int total = getTotalVariants();
+	if (total <= 0) {
+		return {};
+	}
+
+	int norm_index = ((index % total) + total) % total;
+	for (size_t alt_idx = 0; alt_idx < alternatives.size(); ++alt_idx) {
+		const auto& alt = alternatives[alt_idx];
+		if (!alt) continue;
+
+		const int num_singles = static_cast<int>(alt->single_items.size());
+		if (norm_index < num_singles) {
+			return DoodadVariant {
+				.single_item = alt->single_items[norm_index].item.get(),
+				.composite = nullptr,
+				.alternative_index = static_cast<int>(alt_idx),
+			};
+		}
+		norm_index -= num_singles;
+
+		const int num_composites = static_cast<int>(alt->composite_items.size());
+		if (norm_index < num_composites) {
+			return DoodadVariant {
+				.single_item = nullptr,
+				.composite = &alt->composite_items[norm_index].items,
+				.alternative_index = static_cast<int>(alt_idx),
+			};
+		}
+		norm_index -= num_composites;
+	}
+
+	return {};
 }

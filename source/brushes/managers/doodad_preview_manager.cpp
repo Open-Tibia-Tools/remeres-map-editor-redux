@@ -11,6 +11,7 @@
 #include <cmath>
 #include <numbers>
 #include <vector>
+#include <random>
 
 DoodadPreviewManager g_doodad_preview;
 
@@ -50,32 +51,37 @@ void DoodadPreviewManager::FillBuffer(
 		}
 	}
 
-	const int area = std::max(1, static_cast<int>(valid_offsets.size()));
-	int object_count = 0;
-	const int object_range = (useCustomThickness ? static_cast<int>(area * customThicknessMod) : brush->getThickness() * area / std::max(1, brush->getThicknessCeiling()));
-	const int final_object_count = std::max(1, object_range + random(object_range));
-
 	Position center_pos(0x8000, 0x8000, 0x8);
 
 	if (!footprint.isSingleTile() && !brush->oneSizeFitsAll()) {
+		const int area = std::max(1, static_cast<int>(valid_offsets.size()));
+		int object_count = 0;
+		const int object_range = (useCustomThickness ? static_cast<int>(area * customThicknessMod) : brush->getThickness() * area / std::max(1, brush->getThicknessCeiling()));
+
+		std::mt19937 seeded_rng(static_cast<uint32_t>(1337u + static_cast<uint32_t>(variation) * 37u));
+		auto next_rand = [&](int min_val, int max_val) -> int {
+			if (min_val >= max_val) return min_val;
+			std::uniform_int_distribution<int> dist(min_val, max_val);
+			return dist(seeded_rng);
+		};
+
+		const int final_object_count = std::max(1, object_range + next_rand(0, object_range));
+
 		while (object_count < final_object_count) {
 			int retries = 0;
 			bool exit = false;
 
-			// Try to place objects 5 times
 			while (retries < 5 && !exit) {
-
-				const Position& offset = valid_offsets[static_cast<size_t>(random(0, area - 1))];
+				const Position& offset = valid_offsets[static_cast<size_t>(next_rand(0, area - 1))];
 				const int xpos = offset.x;
 				const int ypos = offset.y;
 
-				// Decide whether the zone should have a composite or several single objects.
 				bool fail = false;
-				if (random(brush->getTotalChance(variation)) <= brush->getCompositeChance(variation)) {
+				const int total_chance = brush->getTotalChance(variation);
+				const int comp_chance = brush->getCompositeChance(variation);
+				if (total_chance > 0 && next_rand(1, total_chance) <= comp_chance) {
 					// Composite
-					const CompositeTileList& composites = brush->getComposite(variation);
-
-					// Figure out if the placement is valid
+					const CompositeTileList& composites = brush->getComposite(variation, next_rand(1, std::max(1, comp_chance)));
 					for (const auto& composite : composites) {
 						Position pos = center_pos + composite.first + Position(xpos, ypos, 0);
 						if (Tile* tile = doodad_buffer_map->getTile(pos)) {
@@ -90,16 +96,13 @@ void DoodadPreviewManager::FillBuffer(
 						break;
 					}
 
-					// Transfer items to the stack
 					for (const auto& composite : composites) {
 						Position pos = center_pos + composite.first + Position(xpos, ypos, 0);
 						const auto& items = composite.second;
 						Tile* tile = doodad_buffer_map->getTile(pos);
-
 						if (!tile) {
 							tile = doodad_buffer_map->createTile(pos.x, pos.y, pos.z);
 						}
-
 						for (const auto& item : items) {
 							tile->addItem(item->deepCopy());
 						}
@@ -116,8 +119,13 @@ void DoodadPreviewManager::FillBuffer(
 					} else {
 						tile = doodad_buffer_map->createTile(pos.x, pos.y, pos.z);
 					}
-					int var = variation;
-					brush->draw(doodad_buffer_map.get(), tile, &var);
+					const int single_chance = brush->getSingleChance(variation);
+					Item* item = brush->getRandomSingleItem(variation, next_rand(1, std::max(1, single_chance)));
+					if (item) {
+						tile->addItem(item->deepCopy());
+					}
+					exit = true;
+				} else {
 					exit = true;
 				}
 				if (fail) {
@@ -128,26 +136,23 @@ void DoodadPreviewManager::FillBuffer(
 			++object_count;
 		}
 	} else {
-		if (brush->hasCompositeObjects(variation) && random(brush->getTotalChance(variation)) <= brush->getCompositeChance(variation)) {
-			// Composite
-			const CompositeTileList& composites = brush->getComposite(variation);
-
-			// All placement is valid...
-
-			// Transfer items to the buffer
-			for (const auto& composite : composites) {
-				Position pos = center_pos + composite.first;
-				const auto& items = composite.second;
-				Tile* tile = doodad_buffer_map->createTile(pos.x, pos.y, pos.z);
-
-				for (const auto& item : items) {
-					tile->addItem(item->deepCopy());
+		if (brush->getTotalVariants() > 0) {
+			const auto variant = brush->getVariant(variation);
+			if (variant.composite) {
+				for (const auto& composite : *variant.composite) {
+					Position pos = center_pos + composite.first;
+					const auto& items = composite.second;
+					Tile* tile = doodad_buffer_map->createTile(pos.x, pos.y, pos.z);
+					for (const auto& item : items) {
+						if (item) {
+							tile->addItem(item->deepCopy());
+						}
+					}
 				}
+			} else if (variant.single_item) {
+				Tile* tile = doodad_buffer_map->createTile(center_pos.x, center_pos.y, center_pos.z);
+				tile->addItem(variant.single_item->deepCopy());
 			}
-		} else if (brush->hasSingleObjects(variation)) {
-			Tile* tile = doodad_buffer_map->createTile(center_pos.x, center_pos.y, center_pos.z);
-			int var = variation;
-			brush->draw(doodad_buffer_map.get(), tile, &var);
 		}
 	}
 }

@@ -23,8 +23,22 @@
 #include "editor/editor.h"
 #include "rendering/core/map_view_math.h"
 #include "ui/replace_tool/replace_tool_window.h"
+#include "ui/dialogs/spawn_validator_window.h"
+#include "ui/dialogs/collection_studio_window.h"
 
 void ReplaceToolWindowDeleter::operator()(ReplaceToolWindow* w) {
+	if (w) {
+		w->Destroy();
+	}
+}
+
+void SpawnValidatorWindowDeleter::operator()(SpawnValidatorWindow* w) {
+	if (w) {
+		w->Destroy();
+	}
+}
+
+void CollectionStudioWindowDeleter::operator()(CollectionStudioWindow* w) {
 	if (w) {
 		w->Destroy();
 	}
@@ -33,20 +47,21 @@ void ReplaceToolWindowDeleter::operator()(ReplaceToolWindow* w) {
 MapWindow::MapWindow(wxWindow* parent, Editor& editor) :
 	wxPanel(parent, PANE_MAIN),
 	editor(editor),
-	replaceItemsDialog(nullptr) {
+	replaceItemsDialog(nullptr),
+	spawnValidatorDialog(nullptr) {
 	int GL_settings[3];
 	GL_settings[0] = WX_GL_RGBA;
 	GL_settings[1] = WX_GL_DOUBLEBUFFER;
 	GL_settings[2] = 0;
-	canvas = newd MapCanvas(this, editor, GL_settings);
+	canvas = new MapCanvas(this, editor, GL_settings);
 
-	vScroll = newd MapScrollBar(this, MAP_WINDOW_VSCROLL, wxVERTICAL, canvas);
-	hScroll = newd MapScrollBar(this, MAP_WINDOW_HSCROLL, wxHORIZONTAL, canvas);
+	vScroll = new MapScrollBar(this, MAP_WINDOW_VSCROLL, wxVERTICAL, canvas);
+	hScroll = new MapScrollBar(this, MAP_WINDOW_HSCROLL, wxHORIZONTAL, canvas);
 
-	gem = newd DCButton(this, MAP_WINDOW_GEM, wxDefaultPosition, DC_BTN_NORMAL, RENDER_SIZE_16x16, EDITOR_SPRITE_SELECTION_GEM);
+	gem = new DCButton(this, MAP_WINDOW_GEM, wxDefaultPosition, DC_BTN_NORMAL, RENDER_SIZE_16x16, EDITOR_SPRITE_SELECTION_GEM);
 	gem->SetToolTip("Switch between Drawing and Selection mode (Space)");
 
-	wxFlexGridSizer* topsizer = newd wxFlexGridSizer(2, 0, 0);
+	wxFlexGridSizer* topsizer = new wxFlexGridSizer(2, 0, 0);
 
 	topsizer->AddGrowableCol(0);
 	topsizer->AddGrowableRow(0);
@@ -82,7 +97,9 @@ MapWindow::MapWindow(wxWindow* parent, Editor& editor) :
 }
 
 MapWindow::~MapWindow() {
-	////
+	DetachReplaceItemsDialog();
+	DetachSpawnValidatorDialog();
+	DetachCollectionStudio();
 }
 
 void MapWindow::ShowReplaceItemsDialog(bool selectionOnly) {
@@ -91,7 +108,6 @@ void MapWindow::ShowReplaceItemsDialog(bool selectionOnly) {
 	}
 
 	replaceItemsDialog.reset(new ReplaceToolWindow(this, &editor));
-	replaceItemsDialog->Bind(wxEVT_CLOSE_WINDOW, &MapWindow::OnReplaceItemsDialogClose, this);
 	replaceItemsDialog->Show();
 }
 
@@ -103,24 +119,91 @@ void MapWindow::ShowAdvancedReplaceForSelection(const std::vector<uint16_t>& ids
 	}
 
 	replaceItemsDialog.reset(new ReplaceToolWindow(this, &editor));
-	replaceItemsDialog->Bind(wxEVT_CLOSE_WINDOW, &MapWindow::OnReplaceItemsDialogClose, this);
 	replaceItemsDialog->InitializeWithIDs(ids);
 	replaceItemsDialog->Show();
 }
 
 void MapWindow::CloseReplaceItemsDialog() {
 	if (replaceItemsDialog) {
+		replaceItemsDialog->DetachEditor();
 		replaceItemsDialog->Close();
 	}
 }
 
-void MapWindow::OnReplaceItemsDialogClose(wxCloseEvent& event) {
+void MapWindow::DetachReplaceItemsDialog() {
 	if (replaceItemsDialog) {
-		replaceItemsDialog->Unbind(wxEVT_CLOSE_WINDOW, &MapWindow::OnReplaceItemsDialogClose, this);
-		// unique_ptr will call Destroy() via custom deleter
-		replaceItemsDialog.reset();
+		replaceItemsDialog->DetachEditor();
 	}
-	event.Skip();
+}
+
+void MapWindow::ForgetReplaceItemsDialog() {
+	if (replaceItemsDialog) {
+		// The dialog closes itself and may refuse to, so the pointer is only
+		// dropped - without destroying a window that is still open.
+		replaceItemsDialog.release();
+	}
+}
+
+void MapWindow::ShowSpawnValidatorDialog() {
+	if (spawnValidatorDialog) {
+		spawnValidatorDialog->Raise();
+		spawnValidatorDialog->SetFocus();
+		return;
+	}
+
+	spawnValidatorDialog.reset(new SpawnValidatorWindow(this, &editor));
+	spawnValidatorDialog->Show();
+}
+
+void MapWindow::CloseSpawnValidatorDialog() {
+	if (spawnValidatorDialog) {
+		spawnValidatorDialog->DetachEditor();
+		spawnValidatorDialog->Close();
+	}
+}
+
+void MapWindow::DetachSpawnValidatorDialog() {
+	if (spawnValidatorDialog) {
+		spawnValidatorDialog->DetachEditor();
+	}
+}
+
+void MapWindow::ForgetSpawnValidatorDialog() {
+	if (spawnValidatorDialog) {
+		spawnValidatorDialog.release();
+	}
+}
+
+void MapWindow::ShowCollectionStudio(Editor* editorPtr) {
+	if (m_collectionStudioDialog) {
+		m_collectionStudioDialog->AppendFromSelection(editorPtr);
+		m_collectionStudioDialog->Raise();
+		m_collectionStudioDialog->SetFocus();
+		return;
+	}
+
+	m_collectionStudioDialog.reset(new CollectionStudioWindow(this, editorPtr));
+	m_collectionStudioDialog->AppendFromSelection(editorPtr);
+	m_collectionStudioDialog->Show();
+}
+
+void MapWindow::CloseCollectionStudio() {
+	if (m_collectionStudioDialog) {
+		m_collectionStudioDialog->DetachEditor();
+		m_collectionStudioDialog->Close();
+	}
+}
+
+void MapWindow::DetachCollectionStudio() {
+	if (m_collectionStudioDialog) {
+		m_collectionStudioDialog->DetachEditor();
+	}
+}
+
+void MapWindow::ForgetCollectionStudio() {
+	if (m_collectionStudioDialog) {
+		m_collectionStudioDialog.release();
+	}
 }
 
 void MapWindow::SetSize(int x, int y, bool center) {
@@ -147,6 +230,9 @@ void MapWindow::UpdateScrollbars(int nx, int ny) {
 void MapWindow::UpdateDialogs(bool show) {
 	if (replaceItemsDialog) {
 		replaceItemsDialog->Show(show);
+	}
+	if (spawnValidatorDialog) {
+		spawnValidatorDialog->Show(show);
 	}
 }
 
@@ -220,6 +306,8 @@ void MapWindow::SetScreenCenterPosition(const Position& position) {
 
 	Scroll(x, y, true);
 	canvas->ChangeFloor(position.z);
+	canvas->SyncCursorHoverState();
+	canvas->RequestLocalRefresh(true);
 }
 
 void MapWindow::GoToPreviousCenterPosition() {

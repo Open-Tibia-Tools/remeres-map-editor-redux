@@ -17,10 +17,13 @@
 
 #include "app/settings.h"
 #include "app/definitions.h"
+#include "rendering/indicators/technical_item_registry.h"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
 #include <toml++/toml.h>
+
+#include "util/file_system.h"
 
 #include <iostream>
 #include <fstream>
@@ -199,15 +202,53 @@ static std::string toLower(std::string s) {
 	return s;
 }
 
+static void populateDefaultTechnicalItems(toml::table& table) {
+	if (table.contains("technical_items")) {
+		return;
+	}
+
+	const auto defaults = rme::rendering::TechnicalItemRegistry::CreateDefaultTechnicalLists();
+	auto make_category = [](const std::vector<uint32_t>& server_ids, const std::vector<uint32_t>& client_ids) {
+		toml::table cat;
+		toml::array s_arr;
+		for (uint32_t id : server_ids) {
+			s_arr.push_back(static_cast<int64_t>(id));
+		}
+		toml::array c_arr;
+		for (uint32_t id : client_ids) {
+			c_arr.push_back(static_cast<int64_t>(id));
+		}
+		cat.insert_or_assign("server_ids", std::move(s_arr));
+		cat.insert_or_assign("client_ids", std::move(c_arr));
+		return cat;
+	};
+
+	toml::table tech_sec;
+	tech_sec.insert_or_assign("invisible_stairs", make_category(defaults.invisible_stairs.server_ids, defaults.invisible_stairs.client_ids));
+	tech_sec.insert_or_assign("invisible_walkable", make_category(defaults.invisible_walkable.server_ids, defaults.invisible_walkable.client_ids));
+	tech_sec.insert_or_assign("invisible_walls", make_category(defaults.invisible_walls.server_ids, defaults.invisible_walls.client_ids));
+	tech_sec.insert_or_assign("primal_lights", make_category(defaults.primal_lights.server_ids, defaults.primal_lights.client_ids));
+	table.insert_or_assign("technical_items", std::move(tech_sec));
+}
+
 void Settings::IO(IOMode mode) {
 	if (mode == LOAD) {
+		const auto config_path = FileSystem::GetConfigFilePath();
 		try {
-			g_settings_table = toml::parse_file("config.toml");
+			std::ifstream config_file(config_path, std::ios::binary);
+			if (config_file.is_open()) {
+				g_settings_table = toml::parse(config_file, FileSystem::PathToUtf8(config_path));
+				spdlog::info("Loaded settings from {}", FileSystem::PathToUtf8(config_path));
+			}
 		} catch (const toml::parse_error& err) {
-			spdlog::error("Failed to parse config.toml: {}", err.description());
+			spdlog::error("Failed to parse {}: {}", FileSystem::PathToUtf8(config_path), err.description());
 		} catch (const std::exception& err) {
-			spdlog::error("Failed to load config.toml: {}", err.what());
+			spdlog::error("Failed to load {}: {}", FileSystem::PathToUtf8(config_path), err.what());
 		}
+		populateDefaultTechnicalItems(g_settings_table);
+		rme::rendering::TechnicalItemRegistry::Initialize(g_settings_table);
+	} else if (mode == DEFAULT || mode == SAVE) {
+		populateDefaultTechnicalItems(g_settings_table);
 	}
 
 	toml::table* root = &g_settings_table;
@@ -314,6 +355,7 @@ void Settings::IO(IOMode mode) {
 
 	section("View");
 	Bool(TRANSPARENT_FLOORS, false);
+	Int(TRANSPARENT_FLOORS_SHADE, 50);
 	Bool(TRANSPARENT_ITEMS, false);
 	Bool(SHOW_ALL_FLOORS, true);
 	Bool(SHOW_INGAME_BOX, false);
@@ -333,16 +375,21 @@ void Settings::IO(IOMode mode) {
 	Bool(HIGHLIGHT_LOCKED_DOORS, true);
 	Bool(SHOW_CREATURES, true);
 	Bool(SHOW_HOUSES, true);
+	Bool(SHOW_ZONES, true);
 	Bool(SHOW_BLOCKING, false);
 	Bool(SHOW_TOOLTIPS, true);
 	Bool(SHOW_ONLY_TILEFLAGS, false);
 	Bool(SHOW_ONLY_MODIFIED_TILES, false);
 	Bool(SHOW_PREVIEW, true);
 	Bool(SHOW_AUTOBORDER_PREVIEW, false);
+	Bool(DRAW_ON_FLOOR_BELOW, false);
+	Int(DRAW_ON_FLOOR_BELOW_OFFSET_X, -1);
+	Int(DRAW_ON_FLOOR_BELOW_OFFSET_Y, -1);
 	Bool(SHOW_WALL_HOOKS, false);
 	Bool(SHOW_TOWNS, false);
 	Bool(ALWAYS_SHOW_ZONES, true);
 	Bool(EXT_HOUSE_SHADER, true);
+	Bool(EXT_PATHING_SHADER, true);
 	Bool(DRAW_LOCKED_DOOR, false);
 	Bool(SHOW_AS_MINIMAP, false);
 
@@ -369,6 +416,7 @@ void Settings::IO(IOMode mode) {
 	Bool(GROUP_ACTIONS, true);
 	Int(SELECTION_TYPE, SELECT_CURRENT_FLOOR);
 	Bool(COMPENSATED_SELECT, true);
+	Bool(PIXEL_PERFECT_SELECTION, false);
 	Float(SCROLL_SPEED, 3.5f);
 	Float(ZOOM_SPEED, 1.4f);
 	Bool(SWITCH_MOUSEBUTTONS, false);
@@ -396,6 +444,7 @@ void Settings::IO(IOMode mode) {
 	Bool(SHOW_TILESET_EDITOR, false);
 	Bool(USE_OTBM_4_FOR_ALL_MAPS, false);
 	Bool(SAVE_WITH_OTB_MAGIC_NUMBER, false);
+	Int(WAYPOINT_STORAGE_FORMAT, static_cast<int>(Config::WaypointStorageFormat::OTBM));
 	Int(REPLACE_SIZE, 500);
 	Int(COPY_POSITION_FORMAT, 0);
 	String(RECENT_EDITED_MAP_PATH, "");
@@ -408,6 +457,11 @@ void Settings::IO(IOMode mode) {
 	Int(ADVANCED_ITEM_FINDER_SELECTED_KIND, 0);
 	Int(ADVANCED_ITEM_FINDER_SELECTED_SERVER_ID, 0);
 	String(ADVANCED_ITEM_FINDER_SELECTED_CREATURE, "");
+	Int(ADVANCED_ITEM_FINDER_VIEW_MODE, 0);
+	Int(ADVANCED_ITEM_FINDER_ICON_SIZE, 32);
+	Int(ADVANCED_ITEM_FINDER_GRID_SPACING, 4);
+	Int(ADVANCED_ITEM_FINDER_INDICATOR_DOGEAR, 0);
+	Int(ADVANCED_ITEM_FINDER_SHOW_LABELS, 0);
 	Int(SEARCH_RESULTS_LIMIT, 100000);
 
 	section("Graphics");
@@ -437,10 +491,70 @@ void Settings::IO(IOMode mode) {
 	Int(CURSOR_GREEN, 166);
 	Int(CURSOR_BLUE, 0);
 	Int(CURSOR_ALPHA, 128);
+	Int(CURSOR_BLEND_MODE, 0);
 	Int(CURSOR_ALT_RED, 0);
 	Int(CURSOR_ALT_GREEN, 166);
 	Int(CURSOR_ALT_BLUE, 0);
 	Int(CURSOR_ALT_ALPHA, 128);
+	Int(CURSOR_ALT_BLEND_MODE, 0);
+	Bool(CURSOR_SHOW_OUTLINE, true);
+	Int(RANDOMIZE_DOODADS, 0);
+
+	section("Zones");
+	Bool(ZONE_BORDERS_ENABLED, false);
+	Int(ZONE_BORDER_COLOR_R, 13);
+	Int(ZONE_BORDER_COLOR_G, 13);
+	Int(ZONE_BORDER_COLOR_B, 18);
+	Int(ZONE_BORDER_COLOR_A, 250);
+	Int(ZONE_BORDER_BLEND_MODE, 0);
+
+	Int(ZONE_PZ_COLOR_R, 20);
+	Int(ZONE_PZ_COLOR_G, 117);
+	Int(ZONE_PZ_COLOR_B, 255);
+	Int(ZONE_PZ_COLOR_A, 122);
+	Int(ZONE_PZ_BLEND_MODE, 0);
+
+	Int(ZONE_NOPVP_COLOR_R, 0);
+	Int(ZONE_NOPVP_COLOR_G, 219);
+	Int(ZONE_NOPVP_COLOR_B, 92);
+	Int(ZONE_NOPVP_COLOR_A, 117);
+	Int(ZONE_NOPVP_BLEND_MODE, 0);
+
+	Int(ZONE_NOLOGOUT_COLOR_R, 255);
+	Int(ZONE_NOLOGOUT_COLOR_G, 122);
+	Int(ZONE_NOLOGOUT_COLOR_B, 0);
+	Int(ZONE_NOLOGOUT_COLOR_A, 122);
+	Int(ZONE_NOLOGOUT_BLEND_MODE, 0);
+
+	Int(ZONE_PVP_COLOR_R, 245);
+	Int(ZONE_PVP_COLOR_G, 26);
+	Int(ZONE_PVP_COLOR_B, 51);
+	Int(ZONE_PVP_COLOR_A, 122);
+	Int(ZONE_PVP_BLEND_MODE, 0);
+
+	Int(ZONE_BLOCKING_COLOR_R, 0);
+	Int(ZONE_BLOCKING_COLOR_G, 0);
+	Int(ZONE_BLOCKING_COLOR_B, 0);
+	Int(ZONE_BLOCKING_COLOR_A, 89);
+	Int(ZONE_BLOCKING_BLEND_MODE, 0);
+
+	Int(ZONE_SPAWN_COLOR_R, 255);
+	Int(ZONE_SPAWN_COLOR_G, 0);
+	Int(ZONE_SPAWN_COLOR_B, 128);
+	Int(ZONE_SPAWN_COLOR_A, 89);
+	Int(ZONE_SPAWN_BLEND_MODE, 1);
+
+	Int(HOUSE_ACTIVE_COLOR_R, 89);
+	Int(HOUSE_ACTIVE_COLOR_G, 191);
+	Int(HOUSE_ACTIVE_COLOR_B, 13);
+	Int(HOUSE_ACTIVE_COLOR_A, 133);
+	Int(HOUSE_ACTIVE_BLEND_MODE, 1);
+
+	Int(HOUSE_INACTIVE_COLOR_R, 92);
+	Int(HOUSE_INACTIVE_COLOR_G, 56);
+	Int(HOUSE_INACTIVE_COLOR_B, 166);
+	Int(HOUSE_INACTIVE_COLOR_A, 133);
+	Int(HOUSE_INACTIVE_BLEND_MODE, 1);
 
 	section("UI");
 	Bool(USE_LARGE_CONTAINER_ICONS, true);
@@ -463,16 +577,16 @@ void Settings::IO(IOMode mode) {
 	section("Window");
 	String(PALETTE_LAYOUT, "");
 	String(TOOL_OPTIONS_LAYOUT, "");
-	Bool(INGAME_PREVIEW_VISIBLE, false);
+	Bool(INGAME_PREVIEW_VISIBLE, true);
 	String(INGAME_PREVIEW_LAYOUT, "");
 	String(HOUSE_PALETTE_LAYOUT, "");
 	Bool(MINIMAP_VISIBLE, true);
 	String(MINIMAP_LAYOUT, "");
-	Int(WINDOW_HEIGHT, 500);
-	Int(WINDOW_WIDTH, 700);
+	Int(WINDOW_HEIGHT, 1000);
+	Int(WINDOW_WIDTH, 1600);
 	Int(REPLACE_TOOL_WINDOW_WIDTH, 1400);
 	Int(REPLACE_TOOL_WINDOW_HEIGHT, 850);
-	Bool(WINDOW_MAXIMIZED, false);
+	Bool(WINDOW_MAXIMIZED, true);
 	Bool(WELCOME_DIALOG, true);
 	Int(PREFERENCES_WINDOW_WIDTH, 1200);
 	Int(PREFERENCES_WINDOW_HEIGHT, 500);
@@ -481,6 +595,11 @@ void Settings::IO(IOMode mode) {
 	Int(ADVANCED_ITEM_FINDER_WINDOW_Y, -1);
 	Int(ADVANCED_ITEM_FINDER_WINDOW_WIDTH, 1480);
 	Int(ADVANCED_ITEM_FINDER_WINDOW_HEIGHT, 860);
+	String(BRUSH_ITEMS_LAYOUT, "");
+	Bool(BRUSH_ITEMS_SHOW_LABELS, true);
+	Bool(BRUSH_ITEMS_INDICATOR_DOGEAR, true);
+	String(TILE_PROPERTIES_LAYOUT, "");
+	String(SCRIPTS_MANAGER_LAYOUT, "");
 
 	section("Hotkeys");
 	String(NUMERICAL_HOTKEYS, "");
@@ -497,13 +616,15 @@ void Settings::IO(IOMode mode) {
 
 	section("Toolbars");
 	Bool(SHOW_TOOLBAR_STANDARD, true);
-	Bool(SHOW_TOOLBAR_BRUSHES, false);
-	Bool(SHOW_TOOLBAR_POSITION, false);
-	Bool(SHOW_TOOLBAR_SIZES, false);
+	Bool(SHOW_TOOLBAR_BRUSHES, true);
+	Bool(SHOW_TOOLBAR_POSITION, true);
+	Bool(SHOW_TOOLBAR_SIZES, true);
+	Bool(SHOW_TOOLBAR_LIGHT, true);
 	String(TOOLBAR_STANDARD_LAYOUT, "");
 	String(TOOLBAR_BRUSHES_LAYOUT, "");
 	String(TOOLBAR_POSITION_LAYOUT, "");
 	String(TOOLBAR_SIZES_LAYOUT, "");
+	String(TOOLBAR_LIGHT_LAYOUT, "");
 
 	// Missing items report (added at end to preserve enum stability)
 	section("Editor");
@@ -516,8 +637,11 @@ void Settings::IO(IOMode mode) {
 	Bool(PALETTE_HAS_SORT, false);
 	Bool(PALETTE_SHOW_LABELS, false);
 	Int(PALETTE_TILE_SIZE, 32);
+	Bool(PALETTE_INDICATOR_DOGEAR, true);
+	Int(PALETTE_GRID_SPACING, 2);
 	Bool(PALETTE_FILTER_ALL, false);
 	String(PALETTE_FILTER_QUERY, "");
+	String(PALETTE_ACTIVE_PAGE, "Terrain");
 
 	if (mode == LOAD) {
 		const bool hasExplicitTileSize = cur_sec && cur_sec->contains("palette_tile_size");
@@ -545,15 +669,16 @@ void Settings::IO(IOMode mode) {
 			setString(PALETTE_DYNAMIC_STYLE, std::to_string(tileSize) + "x" + std::to_string(tileSize) + " px");
 			cur_sec->insert_or_assign("palette_dynamic_style", getString(PALETTE_DYNAMIC_STYLE));
 		}
-		std::ofstream file("config.toml");
+		const auto config_path = FileSystem::GetConfigSavePath();
+		std::ofstream file(config_path, std::ios::binary);
 		if (file.is_open()) {
 			file << g_settings_table;
 			if (file.fail()) {
-				spdlog::error("Failed to write to config.toml");
+				spdlog::error("Failed to write to {}", FileSystem::PathToUtf8(config_path));
 			}
 			file.close();
 		} else {
-			spdlog::error("Failed to open config.toml for writing");
+			spdlog::error("Failed to open {} for writing", FileSystem::PathToUtf8(config_path));
 		}
 	}
 

@@ -1,3 +1,5 @@
+#include "app/settings.h"
+#include "util/grid_cell_renderer.h"
 #include "ui/find_item_window_views.h"
 
 #include "brushes/creature/creature_brush.h"
@@ -12,6 +14,9 @@ wxDEFINE_EVENT(EVT_ADVANCED_FINDER_RESULT_RIGHT_ACTIVATE, wxCommandEvent);
 AdvancedFinderResultsView::AdvancedFinderResultsView(wxWindow* parent, wxWindowID id) :
 	NanoVGCanvas(parent, id, wxVSCROLL | wxWANTS_CHARS) {
 	SetBackgroundColour(Theme::Get(Theme::Role::Surface));
+	indicator_dogear_ = g_settings.getBoolean(Config::PALETTE_INDICATOR_DOGEAR);
+	const int loadedSpacing = g_settings.getInteger(Config::PALETTE_GRID_SPACING);
+	grid_spacing_ = (loadedSpacing == 2 || loadedSpacing == 6) ? loadedSpacing : 4;
 	bindEvents();
 }
 
@@ -40,10 +45,15 @@ void AdvancedFinderResultsView::SetMode(AdvancedFinderResultViewMode mode) {
 }
 
 void AdvancedFinderResultsView::SetRows(std::vector<const AdvancedFinderCatalogRow*> rows, const AdvancedFinderSelectionKey& preferred_selection) {
-	rows_ = std::move(rows);
+	original_rows_ = std::move(rows);
+	rows_ = original_rows_;
 	empty_state_ = rows_.empty() ? EmptyState::Prompt : EmptyState::Rows;
 	primary_message_.clear();
 	secondary_message_.clear();
+
+	if (has_sort_) {
+		applySort();
+	}
 
 	if (rows_.empty()) {
 		selected_index_ = -1;
@@ -249,14 +259,101 @@ void AdvancedFinderResultsView::onContextMenu(wxContextMenuEvent& event) {
 	event.StopPropagation();
 }
 
+void AdvancedFinderResultsView::SetIconSize(int size) {
+	const int validSize = (size == 64 || size == 128) ? size : 32;
+	if (icon_size_ != validSize) {
+		icon_size_ = validSize;
+		updateLayoutMetrics(cached_width_ > 0 ? cached_width_ : GetClientSize().x);
+		Refresh();
+	}
+}
+
+void AdvancedFinderResultsView::SetGridSpacing(int spacing) {
+	const int validSpacing = (spacing == 2 || spacing == 6) ? spacing : 4;
+	if (grid_spacing_ != validSpacing) {
+		grid_spacing_ = validSpacing;
+		updateLayoutMetrics(cached_width_ > 0 ? cached_width_ : GetClientSize().x);
+		Refresh();
+	}
+}
+
+void AdvancedFinderResultsView::SetBrushIndicators(bool dogEar) {
+	if (indicator_dogear_ != dogEar) {
+		indicator_dogear_ = dogEar;
+		Refresh();
+	}
+}
+
+void AdvancedFinderResultsView::SetShowLabels(bool show) {
+	if (show_labels_ != show) {
+		show_labels_ = show;
+		updateLayoutMetrics(cached_width_ > 0 ? cached_width_ : GetClientSize().x);
+		Refresh();
+	}
+}
+
+void AdvancedFinderResultsView::SetSort(TilesetSortKey key, TilesetSortDirection dir) {
+	has_sort_ = true;
+	sort_key_ = key;
+	sort_dir_ = dir;
+	applySort();
+	EnsureSelectionVisible();
+	refreshNow();
+}
+
+void AdvancedFinderResultsView::ClearSort() {
+	if (has_sort_) {
+		has_sort_ = false;
+		const auto* selected = GetSelectedRow();
+		rows_ = original_rows_;
+		if (selected) {
+			for (size_t i = 0; i < rows_.size(); ++i) {
+				if (rows_[i] == selected) {
+					selected_index_ = static_cast<int>(i);
+					break;
+				}
+			}
+		}
+		EnsureSelectionVisible();
+		refreshNow();
+	}
+}
+
+void AdvancedFinderResultsView::applySort() {
+	if (!has_sort_ || rows_.empty()) {
+		return;
+	}
+	const auto* selected = GetSelectedRow();
+	std::stable_sort(rows_.begin(), rows_.end(), [this](const AdvancedFinderCatalogRow* a, const AdvancedFinderCatalogRow* b) {
+		const int idA = a->server_id > 0 ? a->server_id : a->client_id;
+		const int idB = b->server_id > 0 ? b->server_id : b->client_id;
+		if (sort_key_ == TilesetSortKey::ID) {
+			return sort_dir_ == TilesetSortDirection::Ascending ? (idA < idB) : (idA > idB);
+		} else {
+			if (a->lower_label != b->lower_label) {
+				return sort_dir_ == TilesetSortDirection::Ascending ? (a->lower_label < b->lower_label) : (a->lower_label > b->lower_label);
+			}
+			return idA < idB;
+		}
+	});
+	if (selected) {
+		for (size_t i = 0; i < rows_.size(); ++i) {
+			if (rows_[i] == selected) {
+				selected_index_ = static_cast<int>(i);
+				break;
+			}
+		}
+	}
+}
+
 void AdvancedFinderResultsView::updateLayoutMetrics(int width) {
 	cached_width_ = width;
 	cached_height_ = GetClientSize().y;
-	list_item_height_ = FromDIP(48);
-	padding_ = FromDIP(8);
-	gap_ = FromDIP(4);
-	card_width_ = FromDIP(40);
-	card_height_ = FromDIP(40);
+	padding_ = grid_spacing_;
+	gap_ = grid_spacing_;
+	card_width_ = rme::ui::grid::CellWidth(icon_size_);
+	card_height_ = rme::ui::grid::CellHeight(icon_size_, show_labels_);
+	list_item_height_ = FromDIP(40) + grid_spacing_;
 
 	if (mode_ == AdvancedFinderResultViewMode::Grid) {
 		columns_ = columnsForWidth(width);

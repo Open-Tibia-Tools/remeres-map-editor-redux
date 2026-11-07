@@ -73,7 +73,7 @@ wxString ScreenshotSaver::SaveCapture(const wxFileName& suggestedInfo, const wxS
 
 void ScreenshotSaver::PrepareCapture(int width, int height) {
 	Cleanup();
-	buffer = newd uint8_t[3 * width * height];
+	buffer = new uint8_t[3 * width * height];
 }
 
 void ScreenshotSaver::Cleanup() {

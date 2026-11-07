@@ -30,8 +30,10 @@
 #include "brushes/table/table_brush.h"
 #include "brushes/wall/wall_brush.h"
 #include "brushes/waypoint/waypoint_brush.h"
+#include "brushes/town/town_temple_brush.h"
 
 #include "brushes/flag/flag_brush.h"
+#include "brushes/zone/zone_brush.h"
 #include "brushes/door/door_brush.h"
 #include "brushes/border/optional_border_brush.h"
 
@@ -81,6 +83,8 @@ void Brushes::clear() {
 	rook_brush = nullptr;
 	nolog_brush = nullptr;
 	pvp_brush = nullptr;
+	temple_brush = nullptr;
+	zone_brush = nullptr;
 
 	for (auto& entry : brushes) {
 		entry.second.reset();
@@ -110,11 +114,13 @@ void Brushes::init() {
 	addManagedBrush(house_brush);
 	addManagedBrush(house_exit_brush);
 	addManagedBrush(waypoint_brush);
+	addManagedBrush(temple_brush);
 
 	addManagedBrush(pz_brush, TILESTATE_PROTECTIONZONE);
 	addManagedBrush(rook_brush, TILESTATE_NOPVP);
 	addManagedBrush(nolog_brush, TILESTATE_NOLOGOUT);
 	addManagedBrush(pvp_brush, TILESTATE_PVPZONE);
+	addManagedBrush(zone_brush);
 
 	GroundBrush::init();
 	WallBrush::init();
@@ -261,7 +267,7 @@ TerrainBrush::~TerrainBrush() {
 bool TerrainBrush::friendOf(TerrainBrush* other) {
 	const uint32_t borderID = other->getID();
 	const bool found = std::ranges::any_of(friends, [borderID](uint32_t friendId) {
-		return friendId == borderID || friendId == 0xFFFFFFFF;
+		return friendId == borderID || friendId == Brush::WILDCARD_ID;
 	});
 	return found ? !hate_friends : hate_friends;
 }

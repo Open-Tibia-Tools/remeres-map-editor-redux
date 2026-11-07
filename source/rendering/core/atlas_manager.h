@@ -75,6 +75,13 @@ public:
 	void bind(uint32_t slot = 0) const;
 
 	/**
+	 * Smooth zoomed sprites (the "Enable anti-aliasing" option).
+	 */
+	void setSmoothing(bool smooth) {
+		atlas_.setSmoothing(smooth);
+	}
+
+	/**
 	 * Get a region for a white pixel.
 	 */
 	const AtlasRegion* getWhitePixel() const;

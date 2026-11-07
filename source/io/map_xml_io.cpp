@@ -6,6 +6,7 @@
 #include "map_xml_io.h"
 #include "map/map.h"
 #include "map/tile.h"
+#include "map/map_region.h"
 #include "game/creatures.h"
 #include "game/creature.h"
 #include "game/spawn.h"
@@ -14,37 +15,409 @@
 #include "app/settings.h"
 
 #include <spdlog/spdlog.h>
+#include <algorithm>
+#include <chrono>
 #include <format>
-#include <sstream>
+#include <filesystem>
 #include <ranges>
 
 std::pair<std::string, std::string> MapXMLIO::normalizeMapFilePaths(const std::filesystem::path& dir, const std::string& filename) {
 	std::filesystem::path base = std::filesystem::is_directory(dir) ? dir : dir.parent_path();
-	std::filesystem::path full = base / filename;
-	std::string s = full.string();
+	std::filesystem::path resolved = base / filename;
+	std::error_code ec;
+	resolved = std::filesystem::weakly_canonical(resolved, ec);
+
+	// Security: Prevent path traversal attacks by ensuring the resolved sidecar path
+	// remains strictly contained within the map directory.
+	std::filesystem::path canonical_base = std::filesystem::weakly_canonical(base, ec);
+	auto rel = resolved.lexically_relative(canonical_base);
+	if (filename.find("..") != std::string::npos || rel.empty() || rel.is_absolute() || rel.string().starts_with("..")) {
+		spdlog::warn("MapXMLIO: Sidecar file '{}' attempts path traversal outside map directory. Constraining to base name.", filename);
+		resolved = base / std::filesystem::path(filename).filename();
+	}
+
+	std::string s = resolved.string();
 	return { s, s };
 }
 
-bool MapXMLIO::loadSpawns(Map& map, const std::filesystem::path& dir) {
-	auto paths = normalizeMapFilePaths(dir, map.spawnfile);
-	if (!std::filesystem::exists(paths.second)) {
-		return false;
+namespace {
+	enum class CreatureFilter {
+		All,
+		Monsters,
+		Npcs,
+	};
+
+	struct SpawnFileFormat {
+		const char* root;
+		const char* spawnTag;
+		CreatureFilter filter;
+	};
+
+	bool loadXMLFile(pugi::xml_document& doc, const std::string& path_utf8, const std::string& path_local) {
+#if defined(_WIN32)
+		return doc.load_file(std::filesystem::u8path(path_utf8).c_str());
+#else
+		return doc.load_file(path_utf8.c_str());
+#endif
 	}
 
-	pugi::xml_document doc;
-	if (!doc.load_file(paths.second.c_str())) {
+	bool saveXMLFile(const pugi::xml_document& doc, const std::string& path_utf8, const std::string& path_local) {
+		std::error_code ec;
+#if defined(_WIN32)
+		auto p = std::filesystem::u8path(path_utf8);
+		std::filesystem::create_directories(p.parent_path(), ec);
+		return doc.save_file(p.c_str(), "	", pugi::format_default, pugi::encoding_utf8);
+#else
+		std::filesystem::create_directories(std::filesystem::path(path_utf8).parent_path(), ec);
+		return doc.save_file(path_utf8.c_str(), "	", pugi::format_default, pugi::encoding_utf8);
+#endif
+	}
+
+	// OTBM 5 splits spawns into a monster file and an NPC file, each with its own tag names
+	constexpr SpawnFileFormat STANDARD_SPAWN_FILE { "spawns", "spawn", CreatureFilter::All };
+	constexpr SpawnFileFormat MONSTERS_SPAWN_FILE { "monsters", "monster", CreatureFilter::Monsters };
+	constexpr SpawnFileFormat NPCS_SPAWN_FILE { "npcs", "npc", CreatureFilter::Npcs };
+
+	bool loadSpawnFile(Map& map, const std::filesystem::path& dir, const std::string& filename) {
+		auto paths = MapXMLIO::normalizeMapFilePaths(dir, filename);
+		if (!std::filesystem::exists(paths.first)) {
+			return false;
+		}
+
+		pugi::xml_document doc;
+		if (!loadXMLFile(doc, paths.first, paths.second)) {
+			return false;
+		}
+		return MapXMLIO::loadSpawns(map, doc);
+	}
+
+	void appendCreatureNode(pugi::xml_node spawnNode, const char* tag, int x, int y, int z, const SpawnAlternative& creature, bool isOtbm5) {
+		pugi::xml_node creatureNode = spawnNode.append_child(tag);
+		creatureNode.append_attribute("name") = creature.name.c_str();
+		creatureNode.append_attribute("x") = x;
+		creatureNode.append_attribute("y") = y;
+		if (isOtbm5) {
+			creatureNode.append_attribute("z") = z;
+		}
+		const int32_t spawntime = creature.spawntime > 0 ? creature.spawntime : std::max(1, g_settings.getInteger(Config::DEFAULT_SPAWNTIME));
+		creatureNode.append_attribute("spawntime") = spawntime;
+		creatureNode.append_attribute("direction") = static_cast<int>(creature.direction);
+		if (isOtbm5 && creature.weight > 0) {
+			creatureNode.append_attribute("weight") = creature.weight;
+		}
+	}
+
+	// Polling the progress dialog pumps events, so it is not free: the
+	// auxiliary writers check for cancellation every this many items.
+	constexpr size_t kCancelPollStride = 128;
+
+	// Progress within one document, before the stage it belongs to is applied.
+	using ItemProgress = std::function<void(size_t done, size_t total)>;
+
+	// Visits the creature tiles in the square of the given radius around a spawn,
+	// row by row in the same order as a plain nested x/y loop. Uses a cell
+	// cursor so neighbouring tiles share one cell/floor lookup and empty
+	// 4/16/64-tile spans are skipped at once; a plain getTile() per tile does a
+	// binary search over the map's cells, which made saving maps with many or
+	// large spawns very slow.
+	template <typename Fn>
+	void forEachCreatureTileAround(const Map& map, const Position& center, int32_t radius, SpatialHashGrid::CellCursor& cursor, Fn&& fn) {
+		for (int32_t y = -radius; y <= radius; ++y) {
+			const int32_t ty = center.y + y;
+			if (ty < 0) {
+				continue;
+			}
+			for (int32_t x = -radius; x <= radius;) {
+				const int32_t tx = center.x + x;
+				if (tx < 0) {
+					++x;
+					continue;
+				}
+				const Floor* floor = map.getFloor(tx, ty, center.z, cursor);
+				if (!floor) {
+					x += ((tx | cursor.empty_span_mask) + 1) - tx;
+					continue;
+				}
+				const Tile* tile = floor->locs[(tx & 3) * 4 + (ty & 3)].get();
+				if (tile && tile->creature) {
+					fn(x, y, *tile);
+				}
+				++x;
+			}
+		}
+	}
+
+	bool shouldAbortWriting(const MapXMLIO::CancelCheck& shouldCancel, size_t& processed) {
+		if (!shouldCancel || ++processed % kCancelPollStride != 0) {
+			return false;
+		}
+		return shouldCancel();
+	}
+
+	bool writeSpawnDocument(const Map& map, pugi::xml_document& doc, const SpawnFileFormat& format, const MapXMLIO::CancelCheck& shouldCancel, const ItemProgress& report) {
+		pugi::xml_node decl = doc.prepend_child(pugi::node_declaration);
+		if (!decl) {
+			return false;
+		}
+		decl.append_attribute("version") = "1.0";
+
+		const bool isOtbm5 = format.filter != CreatureFilter::All;
+		pugi::xml_node rootNode = doc.append_child(format.root);
+		struct ResetSavedGuard {
+			std::vector<Creature*>& list;
+			~ResetSavedGuard() {
+				for (auto* creature : list) {
+					creature->reset();
+				}
+			}
+		};
+		std::vector<Creature*> creatureList;
+		ResetSavedGuard guard { creatureList };
+
+		size_t processed = 0;
+		SpatialHashGrid::CellCursor cursor;
+		// Building one spawn node rescans every tile inside its radius, and that
+		// scan dominates the stage, so report often enough to move the bar.
+		constexpr size_t kProgressReportStride = 256;
+		const size_t spawnCount = map.spawns.size();
+		size_t index = 0;
+		for (const auto& spawnPos : map.spawns) {
+			if (shouldAbortWriting(shouldCancel, processed)) {
+				return false;
+			}
+			if (report && index % kProgressReportStride == 0) {
+				report(index, spawnCount);
+			}
+			++index;
+
+			const Tile* tile = map.getTile(spawnPos);
+			if (!tile) {
+				continue;
+			}
+			Spawn* spawn = tile->spawn.get();
+			if (!spawn) {
+				continue;
+			}
+
+			Position spawnPosition = spawnPos;
+			pugi::xml_node spawnNode = rootNode.append_child(format.spawnTag);
+			spawnNode.append_attribute("centerx") = spawnPosition.x;
+			spawnNode.append_attribute("centery") = spawnPosition.y;
+			spawnNode.append_attribute("centerz") = spawnPosition.z;
+
+			const bool ownNpcRadius = format.filter == CreatureFilter::Npcs && spawn->getNpcSize() > 0;
+			int32_t radius = ownNpcRadius ? spawn->getNpcSize() : spawn->getSize();
+			spawnNode.append_attribute("radius") = radius;
+
+			bool skippedOtherKind = false;
+			forEachCreatureTileAround(map, spawnPosition, radius, cursor, [&](int32_t x, int32_t y, const Tile& creatureTile) {
+				Creature* creature = creatureTile.creature.get();
+				if (creature->isSaved()) {
+					return;
+				}
+				if (isOtbm5 && creature->isNpc() != (format.filter == CreatureFilter::Npcs)) {
+					skippedOtherKind = true;
+					return;
+				}
+
+				const SpawnAlternative entry { creature->getName(), creature->getSpawnTime(), creature->getDirection(), creature->getWeight() };
+				appendCreatureNode(spawnNode, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, isOtbm5);
+				if (isOtbm5) {
+					for (const auto& alternative : creature->getAlternatives()) {
+						appendCreatureNode(spawnNode, "monster", x, y, spawnPosition.z, alternative, isOtbm5);
+					}
+				}
+
+				creature->save();
+				creatureList.push_back(creature);
+			});
+
+			// A spawn holding only the other kind of creature belongs to the other file; empty spawns stay with the monsters
+			if (isOtbm5 && !spawnNode.first_child() && (skippedOtherKind || format.filter == CreatureFilter::Npcs)) {
+				rootNode.remove_child(spawnNode);
+			}
+		}
+
+		if (report) {
+			report(spawnCount, spawnCount);
+		}
+
+		return true;
+	}
+
+	// OTBM 5 writes a monster file and an NPC file out of the same spawn list,
+	// and the cost of that stage is rescanning the area around every spawn, so
+	// both documents are built in a single pass instead of one pass per file.
+	bool writeOtbm5SpawnDocuments(const Map& map, pugi::xml_document& monsterDoc, pugi::xml_document& npcDoc, const MapXMLIO::CancelCheck& shouldCancel, const ItemProgress& report) {
+		pugi::xml_node monsterDecl = monsterDoc.prepend_child(pugi::node_declaration);
+		pugi::xml_node npcDecl = npcDoc.prepend_child(pugi::node_declaration);
+		if (!monsterDecl || !npcDecl) {
+			return false;
+		}
+		monsterDecl.append_attribute("version") = "1.0";
+		npcDecl.append_attribute("version") = "1.0";
+
+		pugi::xml_node monsterRoot = monsterDoc.append_child(MONSTERS_SPAWN_FILE.root);
+		pugi::xml_node npcRoot = npcDoc.append_child(NPCS_SPAWN_FILE.root);
+
+		struct ResetSavedGuard {
+			std::vector<Creature*>& list;
+			~ResetSavedGuard() {
+				for (auto* creature : list) {
+					creature->reset();
+				}
+			}
+		};
+		std::vector<Creature*> creatureList;
+		ResetSavedGuard guard { creatureList };
+
+		size_t processed = 0;
+		SpatialHashGrid::CellCursor cursor;
+		constexpr size_t kProgressReportStride = 256;
+		const size_t spawnCount = map.spawns.size();
+		size_t index = 0;
+		for (const auto& spawnPos : map.spawns) {
+			if (shouldAbortWriting(shouldCancel, processed)) {
+				return false;
+			}
+			if (report && index % kProgressReportStride == 0) {
+				report(index, spawnCount);
+			}
+			++index;
+
+			const Tile* tile = map.getTile(spawnPos);
+			if (!tile) {
+				continue;
+			}
+			Spawn* spawn = tile->spawn.get();
+			if (!spawn) {
+				continue;
+			}
+
+			const Position spawnPosition = spawnPos;
+			const int32_t monsterRadius = spawn->getSize();
+			const int32_t npcRadius = spawn->getNpcSize() > 0 ? spawn->getNpcSize() : spawn->getSize();
+
+			pugi::xml_node monsterNode = monsterRoot.append_child(MONSTERS_SPAWN_FILE.spawnTag);
+			monsterNode.append_attribute("centerx") = spawnPosition.x;
+			monsterNode.append_attribute("centery") = spawnPosition.y;
+			monsterNode.append_attribute("centerz") = spawnPosition.z;
+			monsterNode.append_attribute("radius") = monsterRadius;
+
+			pugi::xml_node npcNode = npcRoot.append_child(NPCS_SPAWN_FILE.spawnTag);
+			npcNode.append_attribute("centerx") = spawnPosition.x;
+			npcNode.append_attribute("centery") = spawnPosition.y;
+			npcNode.append_attribute("centerz") = spawnPosition.z;
+			npcNode.append_attribute("radius") = npcRadius;
+
+			// One scan covers both windows: each creature goes to its own file and
+			// only if it falls inside the radius that file declares for this spawn.
+			bool npcInsideMonsterWindow = false;
+			const int32_t scanRadius = std::max(monsterRadius, npcRadius);
+			forEachCreatureTileAround(map, spawnPosition, scanRadius, cursor, [&](int32_t x, int32_t y, const Tile& creatureTile) {
+				Creature* creature = creatureTile.creature.get();
+
+				const bool insideMonster = x >= -monsterRadius && x <= monsterRadius && y >= -monsterRadius && y <= monsterRadius;
+				const bool insideNpc = x >= -npcRadius && x <= npcRadius && y >= -npcRadius && y <= npcRadius;
+				if (creature->isNpc() && insideMonster) {
+					// An NPC inside the monster window marks this spawn as belonging
+					// to the NPC file even when an earlier spawn already claimed it;
+					// it is written to the NPC file, not here.
+					npcInsideMonsterWindow = true;
+				}
+				if (creature->isSaved()) {
+					return;
+				}
+				if (creature->isNpc() ? !insideNpc : !insideMonster) {
+					return;
+				}
+
+				pugi::xml_node node = creature->isNpc() ? npcNode : monsterNode;
+				const SpawnAlternative entry { creature->getName(), creature->getSpawnTime(), creature->getDirection(), creature->getWeight() };
+				appendCreatureNode(node, creature->isNpc() ? "npc" : "monster", x, y, spawnPosition.z, entry, true);
+				for (const auto& alternative : creature->getAlternatives()) {
+					appendCreatureNode(node, "monster", x, y, spawnPosition.z, alternative, true);
+				}
+
+				creature->save();
+				creatureList.push_back(creature);
+			});
+
+			// A spawn holding only the other kind of creature belongs to the other
+			// file; empty spawns stay with the monsters.
+			if (!monsterNode.first_child() && npcInsideMonsterWindow) {
+				monsterRoot.remove_child(monsterNode);
+			}
+			if (!npcNode.first_child()) {
+				npcRoot.remove_child(npcNode);
+			}
+		}
+
+		if (report) {
+			report(spawnCount, spawnCount);
+		}
+
+		return true;
+	}
+
+	// In OTBM 5, house size counts every tile that is not a wall, plus tables and doors
+	int32_t calculateOtbm5HouseSize(const Map& map, const House& house) {
+		return static_cast<int32_t>(std::ranges::count_if(house.getTiles(), [&](const Position& pos) {
+			const Tile* tile = map.getTile(pos);
+			if (!tile) {
+				return false;
+			}
+			const Item* top = tile->getTopItem();
+			return !tile->getWall() || tile->getTable() || (top && top->isDoor());
+		}));
+	}
+
+	bool saveSpawnFile(const Map& map, const std::filesystem::path& dir, const std::string& filename, const SpawnFileFormat& format, const MapXMLIO::CancelCheck& shouldCancel, const ItemProgress& report) {
+		if (filename.empty()) {
+			return false;
+		}
+		auto paths = MapXMLIO::normalizeMapFilePaths(dir, filename);
+
+		const auto started = std::chrono::steady_clock::now();
+		pugi::xml_document doc;
+		if (writeSpawnDocument(map, doc, format, shouldCancel, report)) {
+			if (saveXMLFile(doc, paths.first, paths.second)) {
+				spdlog::info("MapXMLIO: Wrote spawns file '{}' in {:.0f} ms", paths.second,
+					std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count());
+				return true;
+			}
+		}
 		return false;
 	}
-	return loadSpawns(map, doc);
+}
+
+bool MapXMLIO::loadSpawns(Map& map, const std::filesystem::path& dir) {
+	return loadSpawnFile(map, dir, map.getSpawnFilename());
+}
+
+bool MapXMLIO::loadMonsterSpawns(Map& map, const std::filesystem::path& dir) {
+	return loadSpawnFile(map, dir, map.getMonsterFilename());
+}
+
+bool MapXMLIO::loadNpcSpawns(Map& map, const std::filesystem::path& dir) {
+	return loadSpawnFile(map, dir, map.getNpcFilename());
 }
 
 bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
-	pugi::xml_node node = doc.child("spawns");
+	pugi::xml_node node;
+	SpawnFileFormat format = STANDARD_SPAWN_FILE;
+	for (const auto& candidate : { STANDARD_SPAWN_FILE, MONSTERS_SPAWN_FILE, NPCS_SPAWN_FILE }) {
+		if ((node = doc.child(candidate.root))) {
+			format = candidate;
+			break;
+		}
+	}
 	if (!node) {
 		return false;
 	}
 
-	for (auto spawnNode : node.children("spawn")) {
+	size_t alternatives = 0;
+	for (auto spawnNode : node.children(format.spawnTag)) {
 		Position spawnPosition {
 			spawnNode.attribute("centerx").as_int(),
 			spawnNode.attribute("centery").as_int(),
@@ -63,11 +436,6 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 		}
 
 		Tile* tile = map.getTile(spawnPosition);
-		if (tile && tile->spawn) {
-			spdlog::warn("MapXMLIO: Duplicate spawn at {}:{}:{}", tile->getX(), tile->getY(), tile->getZ());
-			continue;
-		}
-
 		if (!tile) {
 			tile = map.createTile(spawnPosition.x, spawnPosition.y, spawnPosition.z);
 		}
@@ -77,8 +445,23 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 			continue;
 		}
 
-		tile->spawn = std::make_unique<Spawn>(radius);
-		map.addSpawn(tile);
+		// In partitioned spawn files (OTBM 5), monster and NPC files can each have a spawn on the same tile, with its own radius
+		const bool sharedNpcSpawn = format.filter == CreatureFilter::Npcs && tile->spawn && (tile->spawn->getKinds() & Spawn::MONSTERS);
+		const auto setRadius = [&](int32_t value) {
+			sharedNpcSpawn ? tile->spawn->setNpcSize(value) : tile->spawn->setSize(value);
+		};
+		if (tile->spawn) {
+			if (!sharedNpcSpawn) {
+				radius = std::max(radius, tile->spawn->getSize());
+			}
+			setRadius(radius);
+		} else {
+			tile->spawn = std::make_unique<Spawn>(radius);
+			map.addSpawn(tile);
+		}
+		if (format.filter != CreatureFilter::All) {
+			tile->spawn->addKind(format.filter == CreatureFilter::Npcs ? Spawn::NPCS : Spawn::MONSTERS);
+		}
 
 		for (auto creatureNode : spawnNode.children()) {
 			std::string nodeName = as_lower_str(creatureNode.name());
@@ -94,14 +477,16 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 			}
 
 			int32_t spawntime = creatureNode.attribute("spawntime").as_int();
-			if (spawntime == 0) {
-				spawntime = g_settings.getInteger(Config::DEFAULT_SPAWNTIME);
+			if (spawntime <= 0) {
+				spawntime = std::max(1, g_settings.getInteger(Config::DEFAULT_SPAWNTIME));
 			}
 
-			Direction direction = NORTH;
-			int dir = creatureNode.attribute("direction").as_int(static_cast<int>(NORTH));
-			if (dir >= DIRECTION_FIRST && dir <= DIRECTION_LAST) {
-				direction = static_cast<Direction>(dir);
+			Direction direction = SOUTH;
+			if (auto dirAttr = creatureNode.attribute("direction")) {
+				int dir = dirAttr.as_int(static_cast<int>(SOUTH));
+				if (dir >= DIRECTION_FIRST && dir <= DIRECTION_LAST) {
+					direction = static_cast<Direction>(dir);
+				}
 			}
 
 			Position creaturePosition = spawnPosition;
@@ -115,13 +500,17 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 
 			creaturePosition.x += xAttr.as_int();
 			creaturePosition.y += yAttr.as_int();
+			if (auto zAttr = creatureNode.attribute("z")) {
+				creaturePosition.z = zAttr.as_int();
+			}
+			const uint32_t weight = creatureNode.attribute("weight").as_uint();
 
 			radius = std::clamp<int32_t>(
 				std::max({ radius, std::abs(creaturePosition.x - spawnPosition.x), std::abs(creaturePosition.y - spawnPosition.y) }),
 				1,
 				g_settings.getInteger(Config::MAX_SPAWN_RADIUS)
 			);
-			tile->spawn->setSize(radius);
+			setRadius(radius);
 
 			Tile* creatureTile = (creaturePosition == spawnPosition) ? tile : map.getTile(creaturePosition);
 
@@ -131,7 +520,12 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 			}
 
 			if (creatureTile->creature) {
-				spdlog::warn("MapXMLIO: Duplicate creature '{}' at {}:{}:{}", name, creaturePosition.x, creaturePosition.y, creaturePosition.z);
+				if (!isNpc && !creatureTile->creature->isNpc()) {
+					creatureTile->creature->addAlternative({ name, spawntime, direction, weight });
+					++alternatives;
+				} else {
+					spdlog::warn("MapXMLIO: Duplicate creature '{}' at {}:{}:{}", name, creaturePosition.x, creaturePosition.y, creaturePosition.z);
+				}
 				continue;
 			}
 
@@ -143,6 +537,10 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 			creatureTile->creature = std::make_unique<Creature>(type);
 			creatureTile->creature->setDirection(direction);
 			creatureTile->creature->setSpawnTime(spawntime);
+			creatureTile->creature->setWeight(weight);
+			if (isNpc) {
+				creatureTile->creature->markAsNpcSpawn();
+			}
 
 			if (creatureTile->getLocation()->getSpawnCount() == 0) {
 				if (!creatureTile->spawn) {
@@ -152,81 +550,49 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 			}
 		}
 	}
+	if (alternatives > 0) {
+		spdlog::info("MapXMLIO: Kept {} weighted spawn alternatives (extra monsters sharing a tile; the server spawns one of them by weight)", alternatives);
+	}
 	return true;
 }
 
-bool MapXMLIO::saveSpawns(const Map& map, const std::filesystem::path& dir) {
-	auto paths = normalizeMapFilePaths(dir, map.spawnfile);
-
-	pugi::xml_document doc;
-	if (saveSpawns(map, doc)) {
-		return doc.save_file(paths.second.c_str(), "\t", pugi::format_default, pugi::encoding_utf8);
-	}
-	return false;
-}
-
-bool MapXMLIO::saveSpawns(const Map& map, pugi::xml_document& doc) {
-	pugi::xml_node decl = doc.prepend_child(pugi::node_declaration);
-	if (!decl) {
-		return false;
-	}
-	decl.append_attribute("version") = "1.0";
-
-	pugi::xml_node rootNode = doc.append_child("spawns");
-	struct ResetSavedGuard {
-		std::vector<Creature*>& list;
-		~ResetSavedGuard() {
-			for (auto* creature : list) {
-				creature->reset();
-			}
+bool MapXMLIO::saveSpawns(const Map& map, const std::filesystem::path& dir, const CancelCheck& shouldCancel, const ProgressReport& report) {
+	// The stage reports against the spawn list; the label travels with it so the
+	// dialog can name what is being written.
+	const auto withLabel = [&report](const std::string& label) -> ItemProgress {
+		if (!report) {
+			return {};
 		}
+		return [&report, label](size_t done, size_t total) {
+			report(label, done, total);
+		};
 	};
-	std::vector<Creature*> creatureList;
-	ResetSavedGuard guard { creatureList };
 
-	for (const auto& spawnPos : map.spawns) {
-		const Tile* tile = map.getTile(spawnPos);
-		if (!tile) {
-			continue;
+	if (map.getVersion().otbm == MAP_OTBM_5) {
+		const std::string stem = dir.stem().string();
+		const std::string monsterFile = map.getMonsterFilename().empty() ? (stem + "-monster.xml") : map.getMonsterFilename();
+		const std::string npcFile = map.getNpcFilename().empty() ? (stem + "-npc.xml") : map.getNpcFilename();
+
+		pugi::xml_document monsterDoc;
+		pugi::xml_document npcDoc;
+		const auto started = std::chrono::steady_clock::now();
+		if (!writeOtbm5SpawnDocuments(map, monsterDoc, npcDoc, shouldCancel, withLabel(std::format("{}, {}", monsterFile, npcFile)))) {
+			return false;
 		}
-		Spawn* spawn = tile->spawn.get();
-		if (!spawn) {
-			continue;
+
+		const auto monsterPaths = normalizeMapFilePaths(dir, monsterFile);
+		const auto npcPaths = normalizeMapFilePaths(dir, npcFile);
+		if (!saveXMLFile(monsterDoc, monsterPaths.first, monsterPaths.second) || !saveXMLFile(npcDoc, npcPaths.first, npcPaths.second)) {
+			return false;
 		}
-
-		Position spawnPosition = spawnPos;
-		pugi::xml_node spawnNode = rootNode.append_child("spawn");
-		spawnNode.append_attribute("centerx") = spawnPosition.x;
-		spawnNode.append_attribute("centery") = spawnPosition.y;
-		spawnNode.append_attribute("centerz") = spawnPosition.z;
-
-		int32_t radius = spawn->getSize();
-		spawnNode.append_attribute("radius") = radius;
-
-		for (int32_t y = -radius; y <= radius; ++y) {
-			for (int32_t x = -radius; x <= radius; ++x) {
-				const Tile* creatureTile = map.getTile(spawnPosition + Position(x, y, 0));
-				if (creatureTile && creatureTile->creature && !creatureTile->creature->isSaved()) {
-					Creature* creature = creatureTile->creature.get();
-					pugi::xml_node creatureNode = spawnNode.append_child(creature->isNpc() ? "npc" : "monster");
-
-					creatureNode.append_attribute("name") = creature->getName().c_str();
-					creatureNode.append_attribute("x") = x;
-					creatureNode.append_attribute("y") = y;
-					creatureNode.append_attribute("spawntime") = creature->getSpawnTime();
-
-					if (creature->getDirection() != NORTH) {
-						creatureNode.append_attribute("direction") = static_cast<int>(creature->getDirection());
-					}
-
-					creature->save();
-					creatureList.push_back(creature);
-				}
-			}
-		}
+		spdlog::info("MapXMLIO: Wrote spawns '{}' and '{}' in {:.0f} ms", monsterPaths.second, npcPaths.second,
+			std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count());
+		return true;
 	}
 
-	return true;
+	const std::string stem = dir.stem().string();
+	const std::string spawnFile = map.getSpawnFilename().empty() ? (stem + "-spawn.xml") : map.getSpawnFilename();
+	return saveSpawnFile(map, dir, spawnFile, STANDARD_SPAWN_FILE, shouldCancel, withLabel(spawnFile));
 }
 
 bool MapXMLIO::loadHouses(Map& map, const std::filesystem::path& dir) {
@@ -236,7 +602,7 @@ bool MapXMLIO::loadHouses(Map& map, const std::filesystem::path& dir) {
 	}
 
 	pugi::xml_document doc;
-	if (!doc.load_file(paths.second.c_str())) {
+	if (!loadXMLFile(doc, paths.first, paths.second)) {
 #if defined(OTSERV_DEBUG_XML)
 		spdlog::warn("MapXMLIO::loadHouses: load_file failed for {}", paths.second);
 		return true;
@@ -284,6 +650,9 @@ bool MapXMLIO::loadHouses(Map& map, pugi::xml_document& doc) {
 			house->guildhall = guildhallAttr.as_bool();
 		}
 
+		house->clientid = houseNode.attribute("clientid").as_uint();
+		house->beds = houseNode.attribute("beds").as_int(-1);
+
 		if (auto townIdAttr = houseNode.attribute("townid")) {
 			house->townid = townIdAttr.as_uint();
 		} else {
@@ -295,17 +664,18 @@ bool MapXMLIO::loadHouses(Map& map, pugi::xml_document& doc) {
 	return true;
 }
 
-bool MapXMLIO::saveHouses(const Map& map, const std::filesystem::path& dir) {
-	auto paths = normalizeMapFilePaths(dir, map.housefile);
+bool MapXMLIO::saveHouses(const Map& map, const std::filesystem::path& dir, const CancelCheck& shouldCancel) {
+	const std::string houseFile = map.getHouseFilename().empty() ? (dir.stem().string() + "-house.xml") : map.getHouseFilename();
+	auto paths = normalizeMapFilePaths(dir, houseFile);
 
 	pugi::xml_document doc;
-	if (saveHouses(map, doc)) {
-		return doc.save_file(paths.second.c_str(), "\t", pugi::format_default, pugi::encoding_utf8);
+	if (saveHouses(map, doc, shouldCancel)) {
+		return saveXMLFile(doc, paths.first, paths.second);
 	}
 	return false;
 }
 
-bool MapXMLIO::saveHouses(const Map& map, pugi::xml_document& doc) {
+bool MapXMLIO::saveHouses(const Map& map, pugi::xml_document& doc, const CancelCheck& shouldCancel) {
 	pugi::xml_node decl = doc.prepend_child(pugi::node_declaration);
 	if (!decl) {
 		return false;
@@ -313,7 +683,12 @@ bool MapXMLIO::saveHouses(const Map& map, pugi::xml_document& doc) {
 	decl.append_attribute("version") = "1.0";
 
 	pugi::xml_node houseNodes = doc.append_child("houses");
+	size_t processed = 0;
 	for (const auto& [id, housePtr] : map.houses) {
+		if (shouldAbortWriting(shouldCancel, processed)) {
+			return false;
+		}
+
 		const auto* house = housePtr.get();
 		pugi::xml_node houseNode = houseNodes.append_child("house");
 
@@ -331,9 +706,64 @@ bool MapXMLIO::saveHouses(const Map& map, pugi::xml_document& doc) {
 		}
 
 		houseNode.append_attribute("townid") = house->townid;
-		houseNode.append_attribute("size") = static_cast<int32_t>(house->size());
+		const bool isOtbm5 = map.getVersion().otbm == MAP_OTBM_5;
+		houseNode.append_attribute("size") = isOtbm5 ? calculateOtbm5HouseSize(map, *house) : static_cast<int32_t>(house->size());
+		if (isOtbm5) {
+			houseNode.append_attribute("clientid") = house->clientid;
+			if (house->beds >= 0) {
+				houseNode.append_attribute("beds") = house->beds;
+			}
+		}
 	}
 	return true;
+}
+
+bool MapXMLIO::loadZones(Map& map, const std::filesystem::path& dir) {
+	auto paths = normalizeMapFilePaths(dir, map.zonefile);
+	pugi::xml_document doc;
+	if (!loadXMLFile(doc, paths.first, paths.second)) {
+		return false;
+	}
+
+	pugi::xml_node node = doc.child("zones");
+	if (!node) {
+		return false;
+	}
+
+	map.zones.clear();
+	map.max_assigned_zone_id = 0;
+	for (auto zoneNode : node.children("zone")) {
+		const std::string name = zoneNode.attribute("name").as_string();
+		const unsigned int raw_id = zoneNode.attribute("zoneid").as_uint();
+		if (name.empty() || raw_id == 0 || raw_id > 0xFFFF) {
+			spdlog::warn("MapXMLIO: Malformed zone data (name: '{}', id: {}), discarding...", name, raw_id);
+			continue;
+		}
+		const uint16_t id = static_cast<uint16_t>(raw_id);
+		if (map.findZone(id) != nullptr || map.findZone(name) != nullptr) {
+			spdlog::warn("MapXMLIO: Duplicate zone id ({}) or name ('{}'), discarding...", id, name);
+			continue;
+		}
+		map.zones.push_back({ name, id });
+		map.max_assigned_zone_id = std::max(map.max_assigned_zone_id, id);
+	}
+	return true;
+}
+
+bool MapXMLIO::saveZones(const Map& map, const std::filesystem::path& dir) {
+	auto paths = normalizeMapFilePaths(dir, map.zonefile);
+
+	pugi::xml_document doc;
+	pugi::xml_node decl = doc.prepend_child(pugi::node_declaration);
+	decl.append_attribute("version") = "1.0";
+
+	pugi::xml_node zoneNodes = doc.append_child("zones");
+	for (const auto& zone : map.zones) {
+		pugi::xml_node zoneNode = zoneNodes.append_child("zone");
+		zoneNode.append_attribute("name") = zone.name.c_str();
+		zoneNode.append_attribute("zoneid") = zone.id;
+	}
+	return saveXMLFile(doc, paths.first, paths.second);
 }
 
 bool MapXMLIO::loadWaypoints(Map& map, const std::filesystem::path& dir, bool replace) {
@@ -343,7 +773,7 @@ bool MapXMLIO::loadWaypoints(Map& map, const std::filesystem::path& dir, bool re
 	}
 
 	pugi::xml_document doc;
-	if (!doc.load_file(paths.second.c_str())) {
+	if (!loadXMLFile(doc, paths.first, paths.second)) {
 		return false;
 	}
 	return loadWaypoints(map, doc, replace);
@@ -376,17 +806,17 @@ bool MapXMLIO::loadWaypoints(Map& map, pugi::xml_document& doc, bool replace) {
 	return loadWaypoints(map, doc.child("waypoints"), replace);
 }
 
-bool MapXMLIO::saveWaypoints(const Map& map, const std::filesystem::path& dir) {
+bool MapXMLIO::saveWaypoints(const Map& map, const std::filesystem::path& dir, const CancelCheck& shouldCancel) {
 	auto paths = normalizeMapFilePaths(dir, map.waypointfile);
 
 	pugi::xml_document doc;
-	if (saveWaypoints(map, doc)) {
-		return doc.save_file(paths.second.c_str(), "\t", pugi::format_default, pugi::encoding_utf8);
+	if (saveWaypoints(map, doc, shouldCancel)) {
+		return saveXMLFile(doc, paths.first, paths.second);
 	}
 	return false;
 }
 
-bool MapXMLIO::saveWaypoints(const Map& map, pugi::xml_document& doc) {
+bool MapXMLIO::saveWaypoints(const Map& map, pugi::xml_document& doc, const CancelCheck& shouldCancel) {
 	pugi::xml_node decl = doc.prepend_child(pugi::node_declaration);
 	if (!decl) {
 		return false;
@@ -395,7 +825,12 @@ bool MapXMLIO::saveWaypoints(const Map& map, pugi::xml_document& doc) {
 
 	pugi::xml_node rootNode = doc.append_child("waypoints");
 
+	size_t processed = 0;
 	for (const auto& [name, waypoint] : map.waypoints) {
+		if (shouldAbortWriting(shouldCancel, processed)) {
+			return false;
+		}
+
 		pugi::xml_node wpNode = rootNode.append_child("waypoint");
 
 		wpNode.append_attribute("name") = waypoint->name.c_str();

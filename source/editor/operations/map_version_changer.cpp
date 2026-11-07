@@ -38,12 +38,20 @@ MapVersionChangeResult MapVersionChanger::changeMapVersion(Editor& editor, MapVe
 	Map& map = editor.map;
 	MapVersion old_ver = map.getVersion();
 
-	if (new_ver.client != old_ver.client) {
+	if (old_ver.otbm == MAP_OTBM_5 && new_ver.otbm < MAP_OTBM_5 && !map.zones.empty()) {
+		result.warnings.push_back("Downgrading from OTBM 5 to an earlier OTBM version will permanently remove all Zone definitions and tile zone assignments when saving.");
+	}
+
+	const bool client_changed = (new_ver.client != old_ver.client || new_ver.items_major != old_ver.items_major);
+	if (client_changed) {
 		// Switch version
 		editor.selection.clear();
 		editor.actionQueue->clear();
 
-		if (new_ver.client < old_ver.client) {
+		const bool is_downgrade = (new_ver.client < old_ver.client) || (new_ver.client == old_ver.client && new_ver.items_major < old_ver.items_major);
+		if (is_downgrade) {
+			result.warnings.push_back("Converting to a previous version may have serious side-effects.");
+
 			// Remember all creatures types on the map
 			MapConversionContext conversion_context;
 			foreach_TileOnMap(map, conversion_context);
@@ -52,7 +60,10 @@ MapVersionChangeResult MapVersionChanger::changeMapVersion(Editor& editor, MapVe
 			map.convert(new_ver);
 
 			// Load the new version
-			ClientVersion* target = ClientVersion::getBestMatch(new_ver.client);
+			ClientVersion* target = ClientVersion::getByItemsVersion(new_ver.items_major, new_ver.client);
+			if (!target) {
+				target = ClientVersion::getBestMatch(new_ver.client);
+			}
 			std::string load_error_1;
 			if (!target || !g_version.LoadVersion(target->getID(), load_error_1, result.warnings)) {
 				result.error = load_error_1;
@@ -75,7 +86,10 @@ MapVersionChangeResult MapVersionChanger::changeMapVersion(Editor& editor, MapVe
 
 			map.cleanInvalidTiles();
 		} else {
-			ClientVersion* target = ClientVersion::getBestMatch(new_ver.client);
+			ClientVersion* target = ClientVersion::getByItemsVersion(new_ver.items_major, new_ver.client);
+			if (!target) {
+				target = ClientVersion::getBestMatch(new_ver.client);
+			}
 			std::string load_error_2;
 			if (!target || !g_version.LoadVersion(target->getID(), load_error_2, result.warnings)) {
 				result.error = load_error_2;

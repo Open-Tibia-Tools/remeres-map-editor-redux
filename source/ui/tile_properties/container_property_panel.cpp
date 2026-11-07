@@ -10,6 +10,7 @@
 #include "map/tile.h"
 #include "map/map.h"
 #include "ui/dialog_util.h"
+#include "ui/dialog_helper.h"
 #include "ui/find_item_window.h"
 #include "ui/gui_ids.h"
 #include "util/image_manager.h"
@@ -17,14 +18,13 @@
 #include "editor/editor.h"
 #include "editor/action.h"
 #include "editor/action_queue.h"
-#include "ui/properties/properties_window.h"
-#include "ui/properties/old_properties_window.h"
+#include "ui/properties/item_properties_window.h"
 #include "app/settings.h"
 
 ContainerPropertyPanel::ContainerPropertyPanel(wxWindow* parent) :
 	ItemPropertyPanel(parent), grid_canvas(nullptr) {
 
-	grid_canvas = newd ContainerGridCanvas(this, g_settings.getBoolean(Config::USE_LARGE_CONTAINER_ICONS));
+	grid_canvas = new ContainerGridCanvas(this, g_settings.getBoolean(Config::USE_LARGE_CONTAINER_ICONS));
 	grid_canvas->Bind(wxEVT_BUTTON, &ContainerPropertyPanel::OnContainerItemClick, this);
 	grid_canvas->Bind(wxEVT_CONTEXT_MENU, &ContainerPropertyPanel::OnContainerItemRightClick, this);
 
@@ -81,11 +81,11 @@ void ContainerPropertyPanel::OnContainerItemRightClick(wxContextMenuEvent& event
 
 	wxMenu menu;
 	if (index < static_cast<int>(container->getItemCount())) {
-		menu.Append(CONTAINER_POPUP_MENU_EDIT, "&Edit Item")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PEN_TO_SQUARE, wxSize(16, 16)));
-		menu.Append(CONTAINER_POPUP_MENU_ADD, "&Add Item")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
-		menu.Append(CONTAINER_POPUP_MENU_REMOVE, "&Remove Item")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_MINUS, wxSize(16, 16)));
+		menu.Append(CONTAINER_POPUP_MENU_EDIT, "&Edit Item")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN_TO_SQUARE));
+		menu.Append(CONTAINER_POPUP_MENU_ADD, "&Add Item")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
+		menu.Append(CONTAINER_POPUP_MENU_REMOVE, "&Remove Item")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	} else {
-		menu.Append(CONTAINER_POPUP_MENU_ADD, "&Add Item")->SetBitmap(IMAGE_MANAGER.GetBitmap(ICON_PLUS, wxSize(16, 16)));
+		menu.Append(CONTAINER_POPUP_MENU_ADD, "&Add Item")->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	}
 
 	if (container->getVolume() <= (int)container->getVector().size()) {
@@ -117,6 +117,9 @@ void ContainerPropertyPanel::OnAddItem(wxCommandEvent& WXUNUSED(event)) {
 				Item* new_item_base = new_tile->getItemAt(index);
 				if (new_item_base && new_item_base->asContainer()) {
 					Container* container = static_cast<Container*>(new_item_base);
+					if (container->getVector().size() >= container->getVolume()) {
+						return;
+					}
 					auto& contents = container->getVector();
 					uint32_t sub_index = grid_canvas->GetSelectedIndex();
 
@@ -175,16 +178,15 @@ void ContainerPropertyPanel::OnEditItem(wxCommandEvent& WXUNUSED(event)) {
 	}
 
 	Item* new_sub_item = new_container->getItem(sub_item_index);
-	wxPoint newDialogAt = GetPosition() + FROM_DIP(this, wxPoint(20, 20));
+	wxPoint newDialogAt = GetPosition() + FromDIP(wxPoint(20, 20));
 
-	wxDialog* d;
-	if (current_map->getVersion().otbm >= MAP_OTBM_4) {
-		d = newd PropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
-	} else {
-		d = newd OldPropertiesWindow(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
+	wxDialog* d = DialogHelper::CreateItemPropertiesDialog(this, current_map, new_tile.get(), new_sub_item, newDialogAt);
+	if (!d) {
+		return;
 	}
 
-	if (d->ShowModal() == wxID_OK) {
+	const int result = d->ShowModal();
+	if (result == 1 || result == wxID_OK) {
 		std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
 		action->addChange(std::make_unique<Change>(std::move(new_tile)));
 		editor->addAction(std::move(action));

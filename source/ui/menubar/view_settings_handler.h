@@ -14,6 +14,7 @@ public:
 	void OnToolbars(wxCommandEvent& event);
 	void OnToggleAutomagic(wxCommandEvent& event);
 	void OnSelectionTypeChange(wxCommandEvent& event);
+	void OnSelectionMethodChange(wxCommandEvent& event);
 
 private:
 	MainMenuBar* menuBar;

@@ -200,6 +200,9 @@ void DoorBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 		bool close_match = false;
 		bool perfect_match = false;
 		bool open = parameter ? *static_cast<bool*>(parameter) : (item->isBrushDoor() && item->isOpen());
+		if (parameter && *static_cast<bool*>(parameter) && item->isBrushDoor()) {
+			open = !item->isOpen();
+		}
 		bool prefLocked = DoorBrush::isLocked();
 
 		WallBrush* test_brush = wb;
@@ -294,5 +297,87 @@ void DoorBrush::draw(BaseMap* map, Tile* tile, void* parameter) {
 			break;
 		}
 		return;
+	}
+}
+
+uint16_t DoorBrush::getDoorItemId(BaseMap* map, const Position& pos) const {
+	if (!map) {
+		return getFallbackDoorItemId();
+	}
+	Tile* tile = map->getTile(pos);
+	if (!tile) {
+		return getFallbackDoorItemId();
+	}
+	Item* item = tile->getWall();
+	if (!item) {
+		return getFallbackDoorItemId();
+	}
+	WallBrush* wb = item->getWallBrush();
+	if (!wb) {
+		return getFallbackDoorItemId();
+	}
+	BorderType wall_alignment = item->getWallAlignment();
+	uint16_t discarded_id = 0;
+	bool open = item->isBrushDoor() && item->isOpen();
+	bool prefLocked = DoorBrush::isLocked();
+
+	WallBrush* test_brush = wb;
+	do {
+		const auto& doorItems = test_brush->items.getDoorItems(wall_alignment);
+		for (const auto& dt : doorItems) {
+			if (dt.type == doortype) {
+				const auto it = g_item_definitions.get(dt.id);
+				if (it) {
+					if (it.hasFlag(ItemFlag::IsOpen) == open) {
+						if (open || dt.locked == prefLocked) {
+							return dt.id;
+						}
+						discarded_id = dt.id;
+					} else if (discarded_id == 0) {
+						discarded_id = dt.id;
+					}
+				}
+			}
+		}
+		test_brush = test_brush->redirect_to;
+	} while (test_brush != wb && test_brush != nullptr);
+
+	return discarded_id != 0 ? discarded_id : getFallbackDoorItemId();
+}
+
+uint16_t DoorBrush::getFallbackDoorItemId() const {
+	if (cached_fallback_id != 0) {
+		return cached_fallback_id;
+	}
+	for (const auto& [name, brush] : g_brushes.getMap()) {
+		if (brush && brush->is<WallBrush>()) {
+			WallBrush* wb = brush->as<WallBrush>();
+			for (int align : { WALL_HORIZONTAL, WALL_VERTICAL, WALL_POLE }) {
+				const auto& doorItems = wb->items.getDoorItems(align);
+				for (const auto& dt : doorItems) {
+					if (dt.type == doortype && dt.id != 0) {
+						cached_fallback_id = dt.id;
+						return cached_fallback_id;
+					}
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+void DoorBrush::getRelatedItems(std::vector<uint16_t>& items) {
+	for (const auto& [name, brush] : g_brushes.getMap()) {
+		if (brush && brush->is<WallBrush>()) {
+			WallBrush* wb = brush->as<WallBrush>();
+			for (int align : { WALL_HORIZONTAL, WALL_VERTICAL, WALL_POLE }) {
+				const auto& doorItems = wb->items.getDoorItems(align);
+				for (const auto& dt : doorItems) {
+					if (dt.type == doortype && dt.id != 0) {
+						items.push_back(dt.id);
+					}
+				}
+			}
+		}
 	}
 }
