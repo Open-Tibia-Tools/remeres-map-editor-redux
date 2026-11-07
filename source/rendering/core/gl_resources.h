@@ -275,4 +275,48 @@ private:
 	GLuint id = 0;
 };
 
+// RAII wrapper for OpenGL Renderbuffers (RBO)
+class GLRenderbuffer {
+public:
+	GLRenderbuffer() {
+		glCreateRenderbuffers(1, &id);
+		spdlog::info("GLRenderbuffer created [ID={}]", id);
+	}
+
+	~GLRenderbuffer() {
+		if (id) {
+			spdlog::info("GLRenderbuffer deleted [ID={}]", id);
+			glDeleteRenderbuffers(1, &id);
+		}
+	}
+
+	// Disable copy
+	GLRenderbuffer(const GLRenderbuffer&) = delete;
+	GLRenderbuffer& operator=(const GLRenderbuffer&) = delete;
+
+	// Enable move
+	GLRenderbuffer(GLRenderbuffer&& other) noexcept :
+		id(std::exchange(other.id, 0)) { }
+
+	GLRenderbuffer& operator=(GLRenderbuffer&& other) noexcept {
+		if (this != &other) {
+			if (id) {
+				glDeleteRenderbuffers(1, &id);
+			}
+			id = std::exchange(other.id, 0);
+		}
+		return *this;
+	}
+
+	explicit operator GLuint() const {
+		return id;
+	}
+	GLuint GetID() const {
+		return id;
+	}
+
+private:
+	GLuint id = 0;
+};
+
 #endif

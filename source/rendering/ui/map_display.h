@@ -43,6 +43,11 @@ class DrawingController;
 class ScreenshotController;
 class MapMenuHandler;
 
+namespace rme::rendering {
+class SceneFramebuffer;
+class SceneBlitRenderer;
+}
+
 class MapCanvas : public wxGLCanvas {
 private:
 	std::unique_ptr<wxGLContext> m_glContext;
@@ -168,6 +173,8 @@ public:
 	std::unique_ptr<SelectionController> selection_controller;
 	std::unique_ptr<DrawingController> drawing_controller;
 	std::unique_ptr<MapMenuHandler> menu_handler;
+	std::unique_ptr<rme::rendering::SceneFramebuffer> scene_fbo_;
+	std::unique_ptr<rme::rendering::SceneBlitRenderer> scene_blitter_;
 
 private:
 	bool IsAnimationEnabled() const;

@@ -218,6 +218,8 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_interaction_state.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_timer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_view.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/scene_blit_renderer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/scene_framebuffer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/ring_buffer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shader_program.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shared_geometry.h
@@ -233,6 +235,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/pathing_shader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/indicator_shader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/zone_shader.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/scene_blit_shader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/highlight_items_shader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/chunk_shader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/sprite_batch_shader.h
@@ -657,6 +660,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/primitive_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_timer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_view.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/scene_blit_renderer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/scene_framebuffer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/ring_buffer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shader_program.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shared_geometry.cpp

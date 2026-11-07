@@ -43,6 +43,8 @@
 #include "util/image_manager.h"
 #include <wx/textctrl.h>
 #include "rendering/ui/map_status_updater.h"
+#include "rendering/core/scene_framebuffer.h"
+#include "rendering/core/scene_blit_renderer.h"
 #include "rendering/map_drawer.h"
 #include "rendering/core/text_renderer.h"
 #include <glad/glad.h>
@@ -167,6 +169,8 @@ MapCanvas::~MapCanvas() {
 		spdlog::warn("MapCanvas: Destroying canvas without a current OpenGL context. Cleanup might fail or assert.");
 	}
 
+	scene_blitter_.reset();
+	scene_fbo_.reset();
 	drawer.reset();
 	m_nvg.reset();
 
@@ -354,6 +358,19 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 		interaction.is_pasting = isPasting();
 		interaction.current_brush = g_brush_manager.GetCurrentBrush();
 
+		if (!scene_fbo_) {
+			scene_fbo_ = std::make_unique<rme::rendering::SceneFramebuffer>();
+		}
+		if (!scene_blitter_) {
+			scene_blitter_ = std::make_unique<rme::rendering::SceneBlitRenderer>();
+			scene_blitter_->Initialize();
+		}
+
+		scene_fbo_->Resize(vp.screensize_x, vp.screensize_y);
+		scene_fbo_->SetSmoothing(options.anti_aliasing);
+
+		scene_fbo_->Bind();
+
 		drawer->SetupVars(vp);
 		drawer->SetupGL();
 		drawer->Draw(interaction);
@@ -365,7 +382,12 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 
 		drawer->Release();
 
-		// Draw UI (Tooltips, Overlays & HUD) using NanoVG
+		scene_fbo_->Unbind();
+
+		// Blit Scene FBO to screen backbuffer (applying post-composition smoothing if anti-aliasing is enabled)
+		scene_blitter_->Draw(scene_fbo_->GetColorTexture(), vp.screensize_x, vp.screensize_y);
+
+		// Draw UI (Tooltips, Overlays & HUD) using NanoVG directly on default framebuffer
 		{
 			rme::prof::Scope nvg_scope(rme::prof::Phase::NanoVg);
 			DrawOverlays(m_nvg.get(), options);
