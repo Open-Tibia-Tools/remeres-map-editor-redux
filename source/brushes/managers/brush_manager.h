@@ -72,9 +72,7 @@ public:
 	void SetSpawnTime(int time);
 
 	// Default weight applied to newly placed creatures (0 = no weight attribute)
-	void SetDefaultCreatureWeight(int weight) {
-		creature_default_weight = weight;
-	}
+	void SetDefaultCreatureWeight(int weight);
 	[[nodiscard]] int GetDefaultCreatureWeight() const {
 		return creature_default_weight;
 	}

@@ -408,6 +408,11 @@ void BrushManager::SetSpawnTime(int time) {
 	CreatureBrush::setDefaultSpawnTime(time);
 }
 
+void BrushManager::SetDefaultCreatureWeight(int weight) {
+	creature_default_weight = weight;
+	CreatureBrush::setDefaultWeight(weight);
+}
+
 void BrushManager::FillDoodadPreviewBuffer() {
 	if (!current_brush || !current_brush->is<DoodadBrush>()) {
 		return;

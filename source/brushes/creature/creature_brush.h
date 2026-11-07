@@ -69,6 +69,9 @@ public:
 	static void setDefaultSpawnTime(int time) { default_spawn_time = time; }
 	static int getDefaultSpawnTime() { return default_spawn_time; }
 
+	static void setDefaultWeight(int weight) { default_weight = weight; }
+	static int getDefaultWeight() { return default_weight; }
+
 protected:
 	CreatureType* creature_type;
 	mutable std::unique_ptr<Sprite> creature_sprite_wrapper;
@@ -76,6 +79,7 @@ protected:
 
 private:
 	static inline int default_spawn_time = 60;
+	static inline int default_weight = 0;
 };
 
 #endif
