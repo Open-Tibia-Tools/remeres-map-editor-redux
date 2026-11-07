@@ -128,7 +128,7 @@ void AboutWindow::OnClickLicense(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 	path.SetFullName("COPYING.txt");
-	std::ifstream gpl(path.GetFullPath().ToStdWstring());
+	std::ifstream gpl(nstr(path.GetFullPath()));
 
 	std::string gpl_str;
 	char ch;

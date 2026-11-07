@@ -481,6 +481,9 @@ int NanoVGCanvas::CreateGenericSpriteTexture(NVGcontext* vg, Sprite* sprite, uin
 
 void NanoVGCanvas::UpdateScrollbar(int contentHeight) {
 	m_contentHeight = contentHeight;
+	if (!HasScrollbar(wxVERTICAL)) {
+		return;
+	}
 	int h = GetClientSize().y;
 	int maxScroll = std::max(0, contentHeight - h);
 	m_scrollPos = std::clamp(m_scrollPos, 0, maxScroll);

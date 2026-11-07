@@ -17,6 +17,8 @@
 #include <wx/file.h>
 #include <wx/filedlg.h>
 #include <wx/stattext.h>
+#include "util/test_mode.h"
+#include <spdlog/spdlog.h>
 
 #include <format>
 #include <span>
@@ -61,6 +63,11 @@ long DialogUtil::PopupDialog(wxWindow* parent, wxString title, wxString text, lo
 		return wxID_ANY;
 	}
 
+	if (!rme::AreWarningsEnabled()) {
+		spdlog::info("[PopupDialog] {}: {}", title.ToStdString(), text.ToStdString());
+		return (style & wxYES) ? wxID_YES : ((style & wxOK) ? wxID_OK : wxID_CANCEL);
+	}
+
 	wxMessageDialog dlg(parent, text, title, style);
 	return dlg.ShowModal();
 }
@@ -72,6 +79,13 @@ long DialogUtil::PopupDialog(wxString title, wxString text, long style, wxString
 
 void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<std::string>& param_items) {
 	if (param_items.empty()) {
+		return;
+	}
+
+	if (!rme::AreWarningsEnabled()) {
+		for (const auto& item : param_items) {
+			spdlog::warn("[ListDialog: {}] {}", title.ToStdString(), item);
+		}
 		return;
 	}
 

@@ -18,13 +18,7 @@ PaletteManager::PaletteManager() :
 	palette_creation_counter(0) {
 }
 
-PaletteManager::~PaletteManager() {
-	spdlog::info("PaletteManager destructor started");
-	spdlog::default_logger()->flush();
-
-	spdlog::info("PaletteManager destructor finished");
-	spdlog::default_logger()->flush();
-}
+PaletteManager::~PaletteManager() = default;
 
 PaletteWindow* PaletteManager::GetPalette() {
 	if (palettes.empty()) {

@@ -62,7 +62,9 @@ PreferencesWindow::PreferencesWindow(wxWindow* parent, bool clientVersionSelecte
 		list_view->SetMinSize(wxSize(FromDIP(170), -1));
 		list_view->SetBackgroundColour(Theme::Get(Theme::Role::RaisedSurface));
 		list_view->SetTextColour(Theme::Get(Theme::Role::Text));
-		list_view->SetColumnWidth(0, FromDIP(150));
+		if (list_view->GetColumnCount() > 0) {
+			list_view->SetColumnWidth(0, FromDIP(150));
+		}
 	}
 
 	sizer->Add(book, wxSizerFlags(1).Expand().DoubleBorder(wxALL));
