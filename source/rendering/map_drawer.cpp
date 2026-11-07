@@ -160,8 +160,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		return;
 	}
 	auto* atlas = g_graphics.getAtlasManager();
-	// Keep texture atlas in GL_NEAREST; anti-aliasing is applied post-composition on SceneFramebuffer
-	atlas->setSmoothing(false);
+	atlas->setSmoothing(options.anti_aliasing);
 
 	const RenderFrameContext ctx {
 		*atlas,
