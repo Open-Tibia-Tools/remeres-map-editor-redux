@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature - Stones (Crystals)">
+    <item fromid="7805" toid="7812" />
+    <item id="10870" />
+    <item fromid="11427" toid="11428" />
+    <item id="14949" />
+    <item id="14952" />
+    <item id="14955" />
+    <item id="14958" />
+    <item id="14961" />
+    <item id="14964" />
+    <item id="14967" />
+    <item id="14974" />
+    <item fromid="16169" toid="16171" />
+    <item fromid="19303" toid="19313" />
+    <item fromid="25356" toid="25359" />
+</tileset>

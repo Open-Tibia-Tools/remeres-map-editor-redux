@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature - Brushes">
+    <brush name="brushes" />
+    <brush name="brushes (blueberry)" />
+    <brush name="brushes (dead)" />
+</tileset>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Grass">
+    <item fromid="3651" toid="3653" />
+    <item fromid="5462" toid="5465" />
+    <item id="5470" />
+</tileset>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature - Plants">
+    <brush name="flowering cactus" />
+    <brush name="herbs" />
+    <brush name="moonshine bells" />
+    <brush name="sea plants" />
+    <brush name="swamp plants" />
+    <brush name="twilight morels" />
+    <brush name="vase plant" />
+</tileset>

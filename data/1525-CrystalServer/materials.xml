@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<materials>
+    <metaitem id="80" />
+    <metaitem id="81" />
+    <metaitem id="82" />
+    <metaitem id="83" />
+    <metaitem id="84" />
+    <metaitem id="85" />
+    <metaitem id="86" />
+    <metaitem id="87" />
+    <metaitem id="88" />
+    <metaitem id="89" />
+    <borders>
+        <include folder="borders/" />
+    </borders>
+    <brushes>
+        <include folder="brushes/" />
+    </brushes>
+    <creatures>
+        <include folder="creatures/" />
+    </creatures>
+    <items>
+        <include folder="items/" />
+    </items>
+    <tilesets>
+        <include folder="tilesets/" subfolders="true" />
+    </tilesets>
+    <palettes>
+        <include file="palettes.xml" />
+    </palettes>
+</materials>
