@@ -19,21 +19,21 @@
 #include "ui/gui.h"
 #include "ui/dialog_util.h"
 
-void IOMap::error(const wxString format, ...) {
+void IOMap::error(const char* format, ...) {
 	va_list argp;
 	va_start(argp, format);
-	errorstr.PrintfV(format, argp);
+	errorstr.PrintfV(wxstr(format), argp);
 	va_end(argp);
-};
+}
 
-void IOMap::warning(const wxString format, ...) {
+void IOMap::warning(const char* format, ...) {
 	wxString s;
 	va_list argp;
 	va_start(argp, format);
-	s.PrintfV(format, argp);
+	s.PrintfV(wxstr(format), argp);
 	va_end(argp);
 	warnings.push_back(s.ToStdString());
-};
+}
 
 bool IOMap::queryUser(const wxString& title, const wxString& text) {
 	return DialogUtil::PopupDialog(title, text, wxYES | wxNO) == wxID_YES;

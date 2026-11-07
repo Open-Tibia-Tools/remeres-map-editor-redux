@@ -35,8 +35,8 @@ protected:
 	wxString errorstr;
 
 	bool queryUser(const wxString& title, const wxString& format);
-	void warning(const wxString format, ...);
-	void error(const wxString format, ...);
+	void warning(const char* format, ...);
+	void error(const char* format, ...);
 
 public:
 	IOMap() {
