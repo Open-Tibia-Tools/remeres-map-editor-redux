@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Animals">
+    <item id="6490" />
+    <item fromid="6493" toid="6494" />
+    <item id="6497" />
+</tileset>

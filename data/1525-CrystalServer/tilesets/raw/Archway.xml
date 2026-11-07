@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Archway">
+    <item fromid="19405" toid="19408" />
+    <item fromid="19411" toid="19412" />
+</tileset>

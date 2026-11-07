@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Interior">
+    <brush name="bookcase" />
+    <brush name="bambu bookcase with books" />
+    <brush name="new bookcase" />
+    <brush name="venorean bookcase" />
+    <brush name="hovering shelf" />
+    <brush name="strong wooden gable" />
+    <brush name="bamboo shelf" />
+    <brush name="wooden counter" />
+    <brush name="store counter" />
+    <brush name="venorean wooden counter" />
+    <brush name="venorean store counter" />
+    <brush name="big brown table, horizontal" />
+    <brush name="big brown table, vertical" />
+    <brush name="new big brown table, horizontal" />
+    <brush name="new big brown table, horizontal 2" />
+    <brush name="new big brown table, vertical 2" />
+    <brush name="zao table" />
+    <brush name="timber table" />
+    <brush name="big venorean table" />
+    <brush name="anniversary table" />
+    <brush name="wooden seats table" />
+    <brush name="anniversary table (seats)" />
+    <brush name="table cloth" />
+    <brush name="zao wagon" />
+    <brush name="zao red wagon" />
+    <brush name="alter" />
+    <brush name="green sofa" />
+    <brush name="redwhite sofa" />
+    <brush name="large throne" />
+    <brush name="brass throne" />
+    <brush name="dragon throne" />
+    <brush name="zao throne" />
+    <brush name="stone throne" />
+    <brush name="stone table" />
+    <item id="31481" />
+    <brush name="throne of scarlett etzel" />
+    <brush name="bench" />
+    <brush name="leaf bench" />
+    <brush name="venorean bench" />
+    <brush name="stuffed bear display" />
+    <brush name="stuffed teddy display" />
+    <brush name="brown bear skin rug" />
+    <brush name="white bear skin rug" />
+    <brush name="badger fur" />
+    <brush name="red carpet" />
+    <brush name="blue carpet" />
+    <brush name="green carpet" />
+    <brush name="brown carpet" />
+    <brush name="old carpet" />
+    <brush name="old carpet - rolled" />
+    <brush name="vengoth carpet" />
+    <item fromid="23453" toid="23455" />
+    <item id="23537" />
+    <item fromid="23715" toid="23720" />
+    <brush name="new unknown carpet" />
+    <brush name="blue psicodelic carpet" />
+    <brush name="violet arcane carpet" />
+    <brush name="blue arcane carpet" />
+    <brush name="red arcane carpet" />
+    <brush name="violet arcane eye carpet" />
+    <brush name="blue arcane eye carpet" />
+    <brush name="red arcane eye carpet" />
+    <brush name="total psicodelic carpet" />
+    <item fromid="31468" toid="31469" />
+    <item fromid="24424" toid="24431" />
+    <item id="26150" />
+    <item id="26153" />
+    <item id="26155" />
+    <item id="26168" />
+    <item id="26115" />
+    <item id="26117" />
+    <item id="26119" />
+    <item fromid="26121" toid="26122" />
+    <item id="22736" />
+    <brush name="new bed 1" />
+    <brush name="new bed 2" />
+    <brush name="normal bed" />
+    <brush name="normal bed with sleeper" />
+    <brush name="cot" />
+    <brush name="cot with sleeper" />
+    <brush name="hammock" />
+    <brush name="hammock with sleeper" />
+    <brush name="hay bed" />
+    <brush name="hay bed with sleeper" />
+    <brush name="green bed" />
+    <brush name="red bed" />
+    <brush name="yellow bed" />
+    <brush name="simple bed" />
+    <brush name="venorean bed" />
+    <item id="2526" />
+    <item id="3501" />
+    <brush name="mailbox (furniture)" />
+    <brush name="ornate mailbox" />
+    <brush name="large cask 2" />
+    <brush name="large cask 3" />
+    <brush name="large cask" />
+    <brush name="big potion cask" />
+    <brush name="big potion keg" />
+    <item id="137" />
+    <item fromid="2519" toid="2542" />
+    <brush name="yalahar fire basin" />
+    <item id="8523" />
+    <brush name="dragon basin" />
+    <brush name="dripping candles" />
+    <brush name="zao torch" />
+    <brush name="zao lamp" />
+    <brush name="mystic floor lamp - on" />
+    <brush name="mystic floor lamp - off" />
+    <brush name="oramond lamp - on" />
+    <brush name="oramond lamp - off" />
+    <brush name="heart lamp 1" />
+    <brush name="heart lamp 2" />
+    <brush name="heart lamp 3" />
+    <brush name="little big flower lamp" />
+    <brush name="curly hortensis lamp" />
+    <brush name="new crystal lamp" />
+    <brush name="wooden candelabra" />
+    <brush name="wooden coffin" />
+    <brush name="open wooden coffin" />
+    <item id="2904" />
+    <brush name="oven - on" />
+    <brush name="oven - off" />
+    <brush name="chimney - on" />
+    <brush name="chimney - off" />
+    <brush name="festive fireplace" />
+    <brush name="fired chimney" />
+    <brush name="weapon rack" />
+    <brush name="weapon rack - empty" />
+    <brush name="rack weapons" />
+    <brush name="armor rack" />
+    <brush name="map board" />
+    <item id="3458" />
+    <item id="6501" />
+    <brush name="distilling machine" />
+    <brush name="strange apparatus1" />
+    <brush name="strange apparatus2" />
+    <brush name="strange apparatus3" />
+    <brush name="strange apparatus4" />
+    <brush name="strange apparatus5" />
+    <brush name="strange apparatus6" />
+    <brush name="strange apparatus7" />
+    <brush name="stack of scrolls" />
+    <brush name="zao shrine" />
+    <brush name="zao well" />
+    <brush name="dragon fountain" />
+    <brush name="zao weapon's rack - empty" />
+    <brush name="zao weapon's rack - full" />
+    <brush name="decorative axe" />
+    <brush name="decorative axe pair" />
+    <brush name="decorative axes" />
+    <brush name="decorative axes (random)" />
+    <brush name="crystal ball" />
+    <brush name="unknown26" />
+    <brush name="lizard weapon rack - full" />
+    <brush name="lizard weapon rack - pair" />
+    <brush name="lizard weapon rack - empty" />
+    <brush name="piano" />
+    <brush name="harp" />
+    <brush name="alchemistic bookstand" />
+    <brush name="alchemistic scales" />
+    <item id="28189" />
+    <brush name="reward shrine" />
+    <brush name="shrine" />
+    <item id="27947" />
+    <brush name="pedestal with a note" />
+    <item fromid="2427" toid="2430" />
+    <item fromid="2445" toid="2471" />
+    <brush name="wooden chest" />
+    <item id="2473" />
+    <item id="2519" />
+    <item id="2523" />
+    <item fromid="2431" toid="2434" />
+    <item fromid="2441" toid="2444" />
+    <item fromid="2455" toid="2462" />
+    <item fromid="2463" toid="2468" />
+    <item fromid="6367" toid="6370" />
+    <item fromid="7856" toid="7863" />
+    <item fromid="11809" toid="11810" />
+    <item fromid="11812" toid="11813" />
+    <item fromid="12640" toid="12644" />
+    <item fromid="12763" toid="12764" />
+    <item fromid="14754" toid="14755" />
+    <item fromid="17353" toid="17358" />
+    <item fromid="17870" toid="17873" />
+    <item fromid="17959" toid="17962" />
+    <item fromid="18015" toid="18020" />
+    <item fromid="18482" toid="18485" />
+    <item fromid="23419" toid="23430" />
+    <item fromid="23700" toid="23702" />
+    <item fromid="23704" toid="23706" />
+    <item fromid="25227" toid="25232" />
+    <item fromid="26105" toid="26110" />
+    <item fromid="26162" toid="26167" />
+    <item fromid="27663" toid="27664" />
+    <item fromid="28682" toid="28685" />
+    <item fromid="27876" toid="27881" />
+    <item fromid="27894" toid="27895" />
+    <item fromid="28185" toid="28186" />
+    <item fromid="28268" toid="28277" />
+    <item id="28462" />
+    <item fromid="28481" toid="28482" />
+    <item fromid="28686" toid="28687" />
+    <item fromid="28938" toid="28943" />
+    <item fromid="31187" toid="31190" />
+    <item fromid="31192" toid="31195" />
+    <item fromid="31687" toid="31690" />
+    <item fromid="31705" toid="31706" />
+    <item fromid="32142" toid="32147" />
+    <item fromid="32775" toid="32776" />
+    <item fromid="32780" toid="32783" />
+    <item fromid="33032" toid="33033" />
+    <item fromid="33043" toid="33046" />
+    <item fromid="34040" toid="34043" />
+    <item fromid="34054" toid="34057" />
+    <item id="34276" />
+    <item id="34278" />
+    <item fromid="34296" toid="34299" />
+    <item fromid="2314" toid="2316" />
+    <item id="2319" />
+    <item fromid="2346" toid="2351" />
+    <item fromid="9062" toid="9066" />
+    <item id="11056" />
+    <item id="15155" />
+    <item id="17367" />
+    <item id="23411" />
+    <item id="23414" />
+    <item fromid="23417" toid="23418" />
+    <item fromid="23698" toid="23699" />
+    <item fromid="25225" toid="25226" />
+    <item id="26111" />
+    <item fromid="27665" toid="27666" />
+    <item fromid="28680" toid="28681" />
+    <item fromid="28936" toid="28937" />
+    <item fromid="30229" toid="30232" />
+    <item id="31191" />
+    <item fromid="31207" toid="31208" />
+    <item id="31679" />
+    <item fromid="32139" toid="32141" />
+    <item id="32777" />
+    <item fromid="33034" toid="33035" />
+    <item id="32974" />
+    <item fromid="34284" toid="34291" />
+    <item fromid="2358" toid="2361" />
+    <item fromid="2366" toid="2369" />
+    <item fromid="2374" toid="2385" />
+    <item fromid="2418" toid="2425" />
+    <item fromid="7163" toid="7166" />
+    <item fromid="8519" toid="8522" />
+    <item fromid="10978" toid="10979" />
+    <item fromid="11800" toid="11807" />
+    <item fromid="15151" toid="15154" />
+    <item fromid="17359" toid="17366" />
+    <item fromid="23403" toid="23410" />
+    <item fromid="23693" toid="23696" />
+    <item fromid="24525" toid="24528" />
+    <item fromid="25221" toid="25224" />
+    <item fromid="26101" toid="26104" />
+    <item fromid="26156" toid="26161" />
+    <item fromid="27898" toid="27899" />
+    <item fromid="28676" toid="28679" />
+    <item fromid="28932" toid="28935" />
+    <item fromid="30239" toid="30242" />
+    <item fromid="31183" toid="31186" />
+    <item fromid="31691" toid="31694" />
+    <item id="32123" />
+    <item fromid="32128" toid="32138" />
+    <item fromid="33036" toid="33039" />
+    <item fromid="34036" toid="34039" />
+    <item fromid="34050" toid="34053" />
+    <item fromid="34292" toid="34295" />
+    <item id="121" />
+    <item id="2397" />
+    <item fromid="2386" toid="2401" />
+    <item fromid="24432" toid="24433" />
+    <item id="25233" />
+    <item fromid="25210" toid="25220" />
+    <item fromid="26076" toid="26080" />
+    <item id="26100" />
+    <item fromid="26169" toid="26176" />
+    <item fromid="26179" toid="26180" />
+    <item fromid="28674" toid="28675" />
+    <item fromid="28690" toid="28695" />
+    <item fromid="31217" toid="31222" />
+    <item id="28701" />
+    <item fromid="23442" toid="23445" />
+    <item fromid="31462" toid="31465" />
+    <item fromid="31470" toid="31473" />
+    <item fromid="31680" toid="31682" />
+    <item fromid="31695" toid="31698" />
+    <item fromid="31955" toid="31956" />
+    <item fromid="32907" toid="32912" />
+    <item fromid="33027" toid="33031" />
+    <item fromid="33047" toid="33049" />
+    <item fromid="34026" toid="34035" />
+    <item fromid="34270" toid="34276" />
+    <item id="122" />
+    <item id="23452" />
+    <item id="23691" />
+    <item id="23697" />
+    <item id="23703" />
+    <brush name="wooden chest" />
+    <item id="2478" />
+    <item fromid="2483" toid="2486" />
+    <item fromid="4073" toid="4077" />
+    <item fromid="11809" toid="11810" />
+    <item fromid="14243" toid="14245" />
+    <item fromid="16182" toid="16184" />
+    <item id="14244" />
+    <item id="19068" />
+    <item id="19250" />
+    <item fromid="23740" toid="23741" />
+    <item fromid="24861" toid="24864" />
+    <item fromid="25229" toid="25232" />
+    <item id="24875" />
+    <item id="24877" />
+    <item fromid="26164" toid="26167" />
+    <item fromid="28682" toid="28685" />
+    <item fromid="23740" toid="23741" />
+    <item id="28938" />
+    <item fromid="28939" toid="28941" />
+    <item fromid="28944" toid="28946" />
+    <item fromid="28827" toid="28828" />
+    <item fromid="31187" toid="31190" />
+    <item fromid="31687" toid="31690" />
+    <item fromid="31935" toid="31936" />
+    <item fromid="32780" toid="32783" />
+    <item fromid="33043" toid="33046" />
+    <item fromid="34040" toid="34043" />
+    <item fromid="34054" toid="34057" />
+    <item fromid="34296" toid="34299" />
+    <item id="33923" />
+</tileset>
