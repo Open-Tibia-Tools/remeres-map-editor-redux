@@ -29,9 +29,7 @@
         </tileset>
     </palette>
     <palette name="Collection">
-        <tileset>
-            <include folder="tilesets/collections/" subfolders="true" />
-        </tileset>
+        <tileset />
     </palette>
     <palette name="Item">
         <tileset>
