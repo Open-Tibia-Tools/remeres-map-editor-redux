@@ -357,6 +357,23 @@ std::shared_ptr<std::vector<uint8_t>> SpriteArchive::decodeSheetPixels(const std
 		const int source_row = kSheetDimension - row - 1;
 		std::memcpy(decoded_pixels->data() + row * kSheetDimension * 4, pixel_data + source_row * kSheetDimension * 4, static_cast<size_t>(kSheetDimension) * 4);
 	}
+
+	// CipSoft BMP sprite sheets encode transparent backgrounds as magenta (0xFF00FF).
+	// Clear magenta chroma key and zero-alpha pixels so bilinear filtering (GL_LINEAR / anti-aliasing)
+	// does not bleed magenta fringes into adjacent sprite edges (matching OTClient spriteappearances.cpp).
+	uint8_t* sanitized_data = decoded_pixels->data();
+	for (size_t i = 0; i < static_cast<size_t>(kSheetBytes); i += 4) {
+		const uint8_t b = sanitized_data[i + 0];
+		const uint8_t g = sanitized_data[i + 1];
+		const uint8_t r = sanitized_data[i + 2];
+		const uint8_t a = sanitized_data[i + 3];
+		if ((r == 0xFF && g == 0x00 && b == 0xFF) || a == 0) {
+			sanitized_data[i + 0] = 0;
+			sanitized_data[i + 1] = 0;
+			sanitized_data[i + 2] = 0;
+			sanitized_data[i + 3] = 0;
+		}
+	}
 	return decoded_pixels;
 }
 

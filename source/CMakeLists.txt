@@ -248,7 +248,6 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_light.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sync_handle.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/text_renderer.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_array.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_atlas.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/house_shader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/shaders/pathing_shader.h
@@ -704,7 +703,6 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_atlas_lut.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_batch.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/text_renderer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_array.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/texture_atlas.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/drag_shadow_drawer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/cursors/live_cursor_drawer.cpp

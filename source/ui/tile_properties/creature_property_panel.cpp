@@ -36,7 +36,7 @@ CreaturePropertyPanel::CreaturePropertyPanel(wxWindow* parent) :
 	// Spawn time
 	time_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Spawn Time");
 	spawntime_spin = new wxSpinCtrl(time_sizer->GetStaticBox(), wxID_ANY);
-	spawntime_spin->SetRange(10, 86400); // Max 24 hours
+	spawntime_spin->SetRange(1, 86400); // Max 24 hours
 	time_sizer->Add(spawntime_spin, wxSizerFlags(1).Expand().Border(wxALL, 5));
 	main_sizer->Add(time_sizer, wxSizerFlags().Expand().Border(wxALL, 5));
 

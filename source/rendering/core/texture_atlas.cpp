@@ -303,9 +303,9 @@ std::optional<AtlasRegion> TextureAtlas::addSprite(const uint8_t* rgba_data, int
 		glTextureSubImage3D(texture_id_->GetID(), 0, pixel_x, pixel_y, layer, pixel_width, pixel_height, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgba_data);
 	}
 
-	// Calculate UV coordinates with half-texel inset to prevent bleeding
-	const float texel_size = 1.0f / static_cast<float>(ATLAS_SIZE);
-	const float half_texel = texel_size * 0.5f;
+	// Exact normalized UV coordinates covering the full sprite rectangle.
+	// Boundary clamping to avoid bleeding is handled in shaders via clampToSprite().
+
 
 	AtlasRegion region;
 	region.atlas_index = static_cast<uint32_t>(layer);
@@ -315,10 +315,10 @@ std::optional<AtlasRegion> TextureAtlas::addSprite(const uint8_t* rgba_data, int
 	region.pixel_height = pixel_height;
 	region.slot_width = slot_width;
 	region.slot_height = slot_height;
-	region.u_min = static_cast<float>(pixel_x) / ATLAS_SIZE + half_texel;
-	region.v_min = static_cast<float>(pixel_y) / ATLAS_SIZE + half_texel;
-	region.u_max = static_cast<float>(pixel_x + pixel_width) / ATLAS_SIZE - half_texel;
-	region.v_max = static_cast<float>(pixel_y + pixel_height) / ATLAS_SIZE - half_texel;
+	region.u_min = static_cast<float>(pixel_x) / ATLAS_SIZE;
+	region.v_min = static_cast<float>(pixel_y) / ATLAS_SIZE;
+	region.u_max = static_cast<float>(pixel_x + pixel_width) / ATLAS_SIZE;
+	region.v_max = static_cast<float>(pixel_y + pixel_height) / ATLAS_SIZE;
 	return region;
 }
 
