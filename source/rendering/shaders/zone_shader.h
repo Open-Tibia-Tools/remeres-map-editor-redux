@@ -7,7 +7,7 @@ namespace rme::rendering::shaders {
 
 /**
  * @brief GLSL module providing dedicated on-top zone overlays:
- *        Special Zones (PZ, No-PvP, No-Logout, PvP Zone),
+ *        Special Zones (PZ, No-PvP, No-Logout, PvP Zone), stripes on Refresh tiles,
  *        Spawn Radius (clean translucent magenta wash + individual spawn boundary borders),
  *        and Pathing / Blocking (translucent gray wash + bright cyan outer connected borders).
  */
@@ -18,6 +18,7 @@ uniform vec4 uPzWash;
 uniform vec4 uNpWash;
 uniform vec4 uNlWash;
 uniform vec4 uPvpWash;
+uniform vec4 uRefreshWash;
 uniform vec4 uBlockingWash;
 uniform vec4 uSpawnWash;
 
@@ -234,6 +235,19 @@ bool evaluateSpecialZones(uint flags, int lx, int ly, out vec4 outLayer) {
     return true;
 }
 
+// Refresh tiles: diagonal stripes, so they stay readable on top of a zone wash.
+bool evaluateRefreshOverlay(uint flags, int lx, int ly, out vec4 outLayer) {
+    if ((flags & (1u << 29)) == 0u) {
+        return false;
+    }
+    if (((lx % 32) + (ly % 32)) % 8 >= 2) {
+        return false;
+    }
+
+    outLayer = uRefreshWash;
+    return true;
+}
+
 bool evaluateSpawnOverlay(uint flags, out vec4 outLayer) {
     if ((flags & 2u) == 0u) {
         return false;
@@ -338,6 +352,11 @@ bool evaluateZoneOverlay(vec2 worldPos, vec2 quadCoord, vec2 quadSize, uint zone
 
     // 1. Special Zones (showSpecialTiles)
     if (showSpecialTiles != 0 && evaluateSpecialZones(flags, lx, ly, layer)) {
+        blendOverlayLayer(color, hasOverlay, layer);
+    }
+
+    // 1b. Refresh tiles (showSpecialTiles)
+    if (showSpecialTiles != 0 && evaluateRefreshOverlay(flags, lx, ly, layer)) {
         blendOverlayLayer(color, hasOverlay, layer);
     }
 

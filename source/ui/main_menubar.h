@@ -29,6 +29,7 @@ namespace MenuBar {
 
 	enum ActionID {
 		NEW,
+		NEW_SECTOR_MAP,
 		OPEN,
 		SAVE,
 		SAVE_AS,
@@ -49,6 +50,7 @@ namespace MenuBar {
 		FIND_ITEM,
 		REPLACE_ITEMS,
 		SEARCH_ON_MAP_EVERYTHING,
+		SEARCH_ON_MAP_SERVER_NUMBER,
 		SEARCH_ON_MAP_UNIQUE,
 		SEARCH_ON_MAP_ACTION,
 		SEARCH_ON_MAP_CONTAINER,
@@ -123,6 +125,10 @@ namespace MenuBar {
 		SHOW_INVALID_TILES,
 		SHOW_INVALID_ZONES,
 		SHOW_WAYPOINTS,
+		SHOW_SCRIPT_MARKERS,
+		SHOW_DEPOT_MARKERS,
+		SHOW_RAID_MARKERS,
+		SHOW_START_MARKERS,
 		SHOW_GRID,
 		SHOW_EXTRA,
 		SHOW_CREATURES,
@@ -213,6 +219,7 @@ public:
 
 	// Handlers
 	void OnNew(wxCommandEvent& event);
+	void OnNewSectorMap(wxCommandEvent& event);
 	void OnOpen(wxCommandEvent& event);
 	void OnSave(wxCommandEvent& event);
 	void OnSaveAs(wxCommandEvent& event);
@@ -240,6 +247,7 @@ public:
 	void OnSearchForItem(wxCommandEvent& event);
 	void OnReplaceItems(wxCommandEvent& event);
 	void OnSearchForStuffOnMap(wxCommandEvent& event);
+	void OnSearchForServerNumberOnMap(wxCommandEvent& event);
 	void OnSearchForUniqueOnMap(wxCommandEvent& event);
 	void OnSearchForActionOnMap(wxCommandEvent& event);
 	void OnSearchForContainerOnMap(wxCommandEvent& event);

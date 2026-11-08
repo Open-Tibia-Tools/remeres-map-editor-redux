@@ -172,6 +172,7 @@ inline void SetSpriteBatchOverlayUniforms(
 	const glm::vec4& zone_nopvp_color,
 	const glm::vec4& zone_nologout_color,
 	const glm::vec4& zone_pvp_color,
+	const glm::vec4& zone_refresh_color,
 	const glm::vec4& zone_blocking_color,
 	const glm::vec4& zone_spawn_color,
 	const glm::vec4& house_active_color,
@@ -200,6 +201,7 @@ inline void SetSpriteBatchOverlayUniforms(
 	shader.SetVec4("uNpWash", zone_nopvp_color);
 	shader.SetVec4("uNlWash", zone_nologout_color);
 	shader.SetVec4("uPvpWash", zone_pvp_color);
+	shader.SetVec4("uRefreshWash", zone_refresh_color);
 	shader.SetVec4("uBlockingWash", zone_blocking_color);
 	shader.SetVec4("uSpawnWash", zone_spawn_color);
 	shader.SetVec4("uHouseActiveWash", house_active_color);

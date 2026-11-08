@@ -253,7 +253,7 @@ private:
 				child_prefix,
 				child.teleport_destination.x, child.teleport_destination.y, child.teleport_destination.z,
 				child.position.x, child.position.y, child.position.z)));
-		} else if (child.kind == SearchResultKind::Creature) {
+		} else if (child.kind == SearchResultKind::Creature || child.kind == SearchResultKind::ServerNumber) {
 			SetToolTip(wxstr(std::format("{}{} | Pos: [{}, {}, {}]", child_prefix, child.subtitle, child.position.x, child.position.y, child.position.z)));
 		} else if (child.unique_id > 0 && child.action_id > 0) {
 			SetToolTip(wxstr(std::format("{}UID: {} | AID: {} | Pos: [{}, {}, {}]", child_prefix, child.unique_id, child.action_id, child.position.x, child.position.y, child.position.z)));

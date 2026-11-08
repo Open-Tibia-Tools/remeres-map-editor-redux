@@ -41,6 +41,8 @@
 #include "rendering/drawers/overlays/hook_indicator_drawer.h"
 #include "rendering/drawers/overlays/lua_overlay_drawer.h"
 #include "rendering/drawers/overlays/marker_drawer.h"
+#include "rendering/drawers/overlays/home_radius_drawer.h"
+#include "rendering/drawers/overlays/server_marker_drawer.h"
 #include "rendering/drawers/overlays/preview_drawer.h"
 #include "rendering/drawers/overlays/selection_drawer.h"
 #include "rendering/drawers/overlays/zone_overlay_drawer.h"
@@ -76,6 +78,8 @@ class MapDrawer {
 	DoorIndicatorDrawer door_indicator_drawer;
 	ItemDrawer item_drawer;
 	MarkerDrawer marker_drawer;
+	rme::rendering::ServerMarkerDrawer server_marker_drawer;
+	rme::rendering::HomeRadiusDrawer home_radius_drawer;
 	PreviewDrawer preview_drawer;
 	ShadeDrawer shade_drawer;
 	TileRenderer tile_renderer;
@@ -103,6 +107,8 @@ public:
 	void DrawUIOverlays(NVGcontext* vg);
 	void ClearFrameOverlays();
 	void DrawCreatureNames(NVGcontext* vg);
+	void DrawServerMarkers(NVGcontext* vg);
+	void DrawHomeRadii(NVGcontext* vg);
 	bool hasOverlays();
 
 	void DrawLight();
@@ -177,6 +183,7 @@ private:
 		bool show_zones = false;
 		bool show_hooks = false;
 		bool highlight_locked_doors = false;
+		uint8_t server_marker_kinds = 0;
 		uint64_t map_generation = 0;
 		bool valid = false;
 
@@ -191,6 +198,7 @@ private:
 			bool opt_zones,
 			bool opt_hooks,
 			bool opt_doors,
+			uint8_t opt_server_markers,
 			uint64_t cur_gen
 		) const noexcept {
 			if (!valid) {
@@ -201,7 +209,8 @@ private:
 			}
 			if (show_tooltips != opt_tooltips || show_houses != opt_houses ||
 			    show_waypoints != opt_waypoints || show_towns != opt_towns ||
-			    show_zones != opt_zones || show_hooks != opt_hooks || highlight_locked_doors != opt_doors) {
+			    show_zones != opt_zones || show_hooks != opt_hooks || highlight_locked_doors != opt_doors ||
+			    server_marker_kinds != opt_server_markers) {
 				return false;
 			}
 			if (map_generation != cur_gen) {

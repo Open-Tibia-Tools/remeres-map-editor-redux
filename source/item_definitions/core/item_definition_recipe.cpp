@@ -16,8 +16,8 @@ const ItemDefinitionRecipe& ItemDefinitionRecipeRegistry::get(ItemDefinitionMode
 	static const ItemDefinitionRecipe dat_srv {
 		.mode = ItemDefinitionMode::DatSrv,
 		.sources = { ItemDefinitionSourceKind::Dat, ItemDefinitionSourceKind::Srv, ItemDefinitionSourceKind::Xml },
-		.source_count = 3,
-		.runnable = false,
+		.source_count = 2,
+		.runnable = true,
 	};
 	static const ItemDefinitionRecipe protobuf_otb {
 		.mode = ItemDefinitionMode::ProtobufOtb,

@@ -35,6 +35,8 @@ public:
 	void OnSearchForTeleportOnMap(wxCommandEvent& event);
 	void OnSearchForCreatureOnMap(wxCommandEvent& event);
 	void OnSearchForPickupableOnMap(wxCommandEvent& event);
+	// Quest, key and door level numbers of sector maps
+	void OnSearchForServerNumberOnMap(wxCommandEvent& event);
 
 	// Selection searches
 	void OnSearchForStuffOnSelection(wxCommandEvent& event);

@@ -371,6 +371,10 @@ void Settings::IO(IOMode mode) {
 	Bool(SHOW_TECHNICAL_ITEMS, true);
 	Bool(SHOW_INVALID_TILES, true);
 	Bool(SHOW_WAYPOINTS, true);
+	Bool(SHOW_SCRIPT_MARKERS, true);
+	Bool(SHOW_DEPOT_MARKERS, true);
+	Bool(SHOW_RAID_MARKERS, true);
+	Bool(SHOW_START_MARKERS, true);
 	Bool(SHOW_INVALID_ZONES, true);
 	Bool(SHOW_GRID, false);
 	Bool(SHOW_EXTRA, true);
@@ -538,6 +542,12 @@ void Settings::IO(IOMode mode) {
 	Int(ZONE_PVP_COLOR_B, 51);
 	Int(ZONE_PVP_COLOR_A, 122);
 	Int(ZONE_PVP_BLEND_MODE, 0);
+
+	Int(ZONE_REFRESH_COLOR_R, 0);
+	Int(ZONE_REFRESH_COLOR_G, 200);
+	Int(ZONE_REFRESH_COLOR_B, 200);
+	Int(ZONE_REFRESH_COLOR_A, 140);
+	Int(ZONE_REFRESH_BLEND_MODE, 0);
 
 	Int(ZONE_BLOCKING_COLOR_R, 0);
 	Int(ZONE_BLOCKING_COLOR_G, 0);

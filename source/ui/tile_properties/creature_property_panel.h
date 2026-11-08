@@ -20,6 +20,8 @@ public:
 	void SetCreature(Creature* creature, Tile* tile, Map* map);
 
 	void OnSpawnTimeChange(wxSpinEvent& event);
+	void OnAmountChange(wxSpinEvent& event);
+	void OnRadiusChange(wxSpinEvent& event);
 	void OnDirectionChange(wxCommandEvent& event);
 
 protected:
@@ -29,6 +31,12 @@ protected:
 
 	wxStaticBoxSizer* time_sizer;
 	wxSpinCtrl* spawntime_spin;
+
+	wxStaticBoxSizer* amount_sizer;
+	wxSpinCtrl* amount_spin;
+
+	wxStaticBoxSizer* radius_sizer;
+	wxSpinCtrl* radius_spin;
 
 	wxStaticBoxSizer* dir_sizer;
 	wxChoice* direction_choice;

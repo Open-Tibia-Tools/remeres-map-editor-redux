@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Herbs">
+    <item fromid="3734" toid="3741" />
+    <item id="3673" />
+    <item id="3655" />
+    <item id="3674" />
+</tileset>

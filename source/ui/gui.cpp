@@ -468,7 +468,9 @@ int GUI::GetBrushVariation() const {
 	return g_brush_manager.GetBrushVariation();
 }
 int GUI::GetSpawnTime() const {
-	return g_brush_manager.GetSpawnTime();
+	// The brush manager only holds a value once the spawn time is changed.
+	const int spawn_time = g_brush_manager.GetSpawnTime();
+	return spawn_time > 0 ? spawn_time : g_settings.getInteger(Config::DEFAULT_SPAWNTIME);
 }
 void GUI::SetSpawnTime(int time) {
 	g_brush_manager.SetSpawnTime(time);
@@ -652,6 +654,10 @@ std::unique_ptr<LiveClient> GUI::PopPendingLiveClient(LiveClient* ptr) {
 
 bool GUI::NewMap() {
 	return g_editors.NewMap();
+}
+
+bool GUI::NewSectorMap() {
+	return g_editors.NewSectorMap();
 }
 void GUI::OpenMap() {
 	g_editors.OpenMap();

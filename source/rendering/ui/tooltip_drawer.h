@@ -19,11 +19,14 @@
 #define RME_TOOLTIP_DRAWER_H_
 
 #include "app/definitions.h"
+#include "game/srv_item_attributes.h"
 #include "map/position.h"
 #include "rendering/core/render_view.h"
 #include "rendering/indicators/technical_item_registry.h"
 #include <nanovg.h>
 #include <glm/vec3.hpp>
+#include <algorithm>
+#include <array>
 #include <vector>
 #include <string>
 #include <string_view>
@@ -32,6 +35,9 @@
 class Item;
 class Waypoint;
 struct NVGcontext;
+namespace rme::srv {
+	struct Marker;
+}
 
 struct ContainerItem {
 	uint16_t id = 0;
@@ -46,8 +52,10 @@ enum class TooltipCategory {
 	TELEPORT,  // Purple - teleporter
 	TEXT,      // Gold - readable text (signs, books)
 	WAYPOINT,  // Vivid Blue - landmark
+	TOWN,      // Town temple
 	HOUSE,     // Emerald Green / Orange - house / guildhall
-	ZONE       // Dynamic Zone RGB - zone area
+	ZONE,      // Dynamic Zone RGB - zone area
+	SERVER     // Server marker of a sector map (scripts, depots, raids, start positions)
 };
 
 // Structured tooltip data for card-based rendering
@@ -74,9 +82,14 @@ struct TooltipData {
 	std::string text;
 	std::string description;
 	Position destination; // For teleports (check if valid via destination.x > 0)
+	// Server item attributes (sector maps), indexed by rme::srv::ItemAttribute (0 = not set)
+	std::array<int32_t, rme::srv::kItemAttributes.size()> srvAttributes {};
 
 	// Waypoint-specific
 	std::string waypointName;
+
+	// Town-specific
+	uint32_t townId = 0;
 
 	// House-specific
 	uint32_t houseId = 0;
@@ -92,6 +105,11 @@ struct TooltipData {
 	uint32_t zoneAreaIndex = 0;
 	size_t zoneAreaTileCount = 0;
 	std::string zoneFlags;
+
+	// Server marker (sector maps): its lines of the shown kinds
+	// (rme::srv::MarkerKindSet) are the tooltip's fields
+	const rme::srv::Marker* serverMarker = nullptr;
+	uint8_t serverMarkerKinds = 0;
 
 	// Container contents
 	std::vector<ContainerItem> containerItems;
@@ -110,7 +128,9 @@ struct TooltipData {
 
 	// Determine category based on fields
 	void updateCategory() {
-		if (houseId > 0) {
+		if (serverMarker) {
+			category = TooltipCategory::SERVER;
+		} else if (houseId > 0) {
 			category = TooltipCategory::HOUSE;
 		} else if (zoneId > 0) {
 			category = TooltipCategory::ZONE;
@@ -118,7 +138,7 @@ struct TooltipData {
 			category = TooltipCategory::WAYPOINT;
 		} else if (destination.x > 0) {
 			category = TooltipCategory::TELEPORT;
-		} else if (doorId > 0) {
+		} else if (doorId > 0 || hasSrvDoorFields()) {
 			category = TooltipCategory::DOOR;
 		} else if (!text.empty()) {
 			category = TooltipCategory::TEXT;
@@ -131,7 +151,19 @@ struct TooltipData {
 	bool hasVisibleFields() const {
 		return houseId > 0 || zoneId > 0 || !waypointName.empty() || actionId > 0 ||
 		       uniqueId > 0 || doorId > 0 || depotId > 0 || !text.empty() ||
-		       !description.empty() || destination.x > 0 || !containerItems.empty() || count > 1;
+		       !description.empty() || destination.x > 0 || !containerItems.empty() || count > 1 ||
+		       serverMarker != nullptr || hasSrvFields();
+	}
+
+	bool hasSrvFields() const {
+		return std::ranges::any_of(srvAttributes, [](int32_t value) { return value != 0; });
+	}
+
+	// Keyhole, level and quest doors
+	bool hasSrvDoorFields() const {
+		using rme::srv::ItemAttribute;
+		const auto has = [this](ItemAttribute attribute) { return srvAttributes[static_cast<size_t>(attribute)] != 0; };
+		return has(ItemAttribute::KeyholeNumber) || has(ItemAttribute::DoorLevel) || has(ItemAttribute::DoorQuestNumber);
 	}
 
 	void clear() {
@@ -152,7 +184,9 @@ struct TooltipData {
 		text.clear();
 		description.clear();
 		destination = Position();
+		srvAttributes = {};
 		waypointName.clear();
+		townId = 0;
 
 		houseId = 0;
 		houseRent = 0;
@@ -166,6 +200,8 @@ struct TooltipData {
 		zoneAreaIndex = 0;
 		zoneAreaTileCount = 0;
 		zoneFlags.clear();
+		serverMarker = nullptr;
+		serverMarkerKinds = 0;
 
 		containerItems.clear();
 		containerCapacity = 0;
@@ -187,6 +223,10 @@ public:
 
 	// Add a waypoint tooltip
 	void addWaypointTooltip(Position pos, std::string_view name);
+
+	// Add the tooltip of a server marker with its lines of the `shown` kinds
+	// (rme::srv::MarkerKindSet); `marker` must outlive the tooltip
+	void addServerMarkerTooltip(const rme::srv::Marker& marker, uint8_t shown);
 
 	// Draw all tooltips
 	void draw(NVGcontext* vg, const RenderView& view);

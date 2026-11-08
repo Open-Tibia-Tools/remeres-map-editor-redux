@@ -84,8 +84,8 @@ struct VisualRow {
 
 class ZonePalettePanel::ZoneCanvas final : public NanoVGCanvas {
 public:
-	explicit ZoneCanvas(ZonePalettePanel* owner) :
-		NanoVGCanvas(owner, wxID_ANY, wxVSCROLL | wxWANTS_CHARS),
+	explicit ZoneCanvas(ZonePalettePanel* owner, wxWindow* parent = nullptr) :
+		NanoVGCanvas(parent ? parent : owner, wxID_ANY, wxVSCROLL | wxWANTS_CHARS),
 		m_owner(owner) {
 		SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 
@@ -626,6 +626,7 @@ ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 	PalettePanel(parent, id) {
 	auto* root_sizer = new wxBoxSizer(wxVERTICAL);
 	auto* box_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Zones");
+	wxWindow* static_box = box_sizer->GetStaticBox();
 
 	// 1. TilesetGridToolbar (Filter, Sort, Expand All / Collapse All)
 	TilesetGridToolbar::Actions actions;
@@ -642,7 +643,7 @@ ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 		if (canvas_) canvas_->SetFilter("");
 	};
 
-	toolbar_ = new TilesetGridToolbar(this, std::move(actions), TilesetGridToolbar::Part_Sort | TilesetGridToolbar::Part_Search);
+	toolbar_ = new TilesetGridToolbar(static_box, std::move(actions), TilesetGridToolbar::Part_Sort | TilesetGridToolbar::Part_Search);
 
 	// Expand / Collapse tools on toolbar
 	if (auto* aui = toolbar_->GetToolBar()) {
@@ -665,26 +666,26 @@ ZonePalettePanel::ZonePalettePanel(wxWindow* parent, wxWindowID id) :
 	box_sizer->Add(toolbar_, 0, wxEXPAND | wxBOTTOM, FromDIP(2));
 
 	// 2. Modern Zone Tree Canvas
-	canvas_ = new ZoneCanvas(this);
+	canvas_ = new ZoneCanvas(this, static_box);
 	box_sizer->Add(canvas_, 1, wxEXPAND | wxBOTTOM, FromDIP(4));
 
 	// 3. Action Button Bar (Add, Rename, Remove)
 	auto* button_sizer = new wxBoxSizer(wxHORIZONTAL);
 	const int dip_2 = FromDIP(2);
 
-	add_button_ = new wxButton(this, wxID_ANY, "Add", wxDefaultPosition, wxSize(FromDIP(50), -1));
+	add_button_ = new wxButton(static_box, wxID_ANY, "Add", wxDefaultPosition, wxSize(FromDIP(50), -1));
 	add_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	add_button_->SetFont(Theme::GetFont(9, false));
 	add_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickAddZone(); });
 	button_sizer->Add(add_button_, 1, wxEXPAND | wxRIGHT, dip_2);
 
-	rename_button_ = new wxButton(this, wxID_ANY, "Rename", wxDefaultPosition, wxSize(FromDIP(60), -1));
+	rename_button_ = new wxButton(static_box, wxID_ANY, "Rename", wxDefaultPosition, wxSize(FromDIP(60), -1));
 	rename_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 	rename_button_->SetFont(Theme::GetFont(9, false));
 	rename_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickRenameZone(); });
 	button_sizer->Add(rename_button_, 1, wxEXPAND | wxRIGHT, dip_2);
 
-	remove_button_ = new wxButton(this, wxID_ANY, "Remove", wxDefaultPosition, wxSize(FromDIP(60), -1));
+	remove_button_ = new wxButton(static_box, wxID_ANY, "Remove", wxDefaultPosition, wxSize(FromDIP(60), -1));
 	remove_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	remove_button_->SetFont(Theme::GetFont(9, false));
 	remove_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickRemoveZone(); });

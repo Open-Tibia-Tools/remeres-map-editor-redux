@@ -19,6 +19,7 @@
 #define RME_ITEM_PROPERTIES_WINDOW_H_
 
 #include "app/main.h"
+#include "ui/properties/srv_attribute_fields.h"
 
 #include "ui/controls/item_buttons.h"
 #include "ui/properties/object_properties_base.h"
@@ -41,6 +42,7 @@ protected:
 	// item
 	wxSpinCtrl* count_field;
 	wxSpinCtrl* action_id_field;
+	SrvAttributeFields srv_fields;
 	wxSpinCtrl* unique_id_field;
 	wxSpinCtrl* door_id_field;
 	wxSpinCtrl* tier_field;

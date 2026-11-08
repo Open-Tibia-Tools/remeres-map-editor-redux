@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Board Games">
+    <item fromid="1210" toid="1269" />
+    <item fromid="3533" toid="3548" />
+</tileset>

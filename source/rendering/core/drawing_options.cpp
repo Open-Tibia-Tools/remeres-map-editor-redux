@@ -1,5 +1,6 @@
 #include "app/definitions.h"
 #include "brushes/managers/brush_manager.h"
+#include "game/srv_markers.h"
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/light_defaults.h"
@@ -22,6 +23,7 @@ void DrawingOptions::SetDefault() {
 	show_invalid_tiles = true;
 	show_invalid_zones = true;
 	show_waypoints = true;
+	server_marker_kinds = rme::srv::kAllMarkerKinds;
 	ingame = false;
 	is_drawing_mode = false;
 	is_drawing = false;
@@ -68,6 +70,7 @@ void DrawingOptions::SetDefault() {
 	zone_nopvp_blend_mode = 0;
 	zone_nologout_blend_mode = 0;
 	zone_pvp_blend_mode = 0;
+	zone_refresh_blend_mode = 0;
 	zone_blocking_blend_mode = 0;
 	zone_spawn_blend_mode = 1;
 	house_active_blend_mode = 1;
@@ -77,6 +80,7 @@ void DrawingOptions::SetDefault() {
 	zone_nopvp_color = glm::vec4(0.0f / 255.0f, 219.0f / 255.0f, 92.0f / 255.0f, 117.0f / 255.0f);
 	zone_nologout_color = glm::vec4(255.0f / 255.0f, 122.0f / 255.0f, 0.0f / 255.0f, 122.0f / 255.0f);
 	zone_pvp_color = glm::vec4(245.0f / 255.0f, 26.0f / 255.0f, 51.0f / 255.0f, 122.0f / 255.0f);
+	zone_refresh_color = glm::vec4(0.0f / 255.0f, 200.0f / 255.0f, 200.0f / 255.0f, 140.0f / 255.0f);
 	zone_blocking_color = glm::vec4(0.0f / 255.0f, 0.0f / 255.0f, 0.0f / 255.0f, 89.0f / 255.0f);
 	zone_spawn_color = glm::vec4(255.0f / 255.0f, 0.0f / 255.0f, 128.0f / 255.0f, 89.0f / 255.0f);
 	house_active_color = glm::vec4(89.0f / 255.0f, 191.0f / 255.0f, 13.0f / 255.0f, 133.0f / 255.0f);
@@ -98,6 +102,7 @@ void DrawingOptions::SetIngame() {
 	show_invalid_tiles = false;
 	show_invalid_zones = false;
 	show_waypoints = false;
+	server_marker_kinds = 0;
 	ingame = true;
 	dragging = false;
 	boundbox_selection = false;
@@ -180,6 +185,19 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const bool new_show_invalid_tiles = settings.getBoolean(Config::SHOW_INVALID_TILES);
 	const bool new_show_invalid_zones = settings.getBoolean(Config::SHOW_INVALID_ZONES);
 	const bool new_show_waypoints = settings.getBoolean(Config::SHOW_WAYPOINTS);
+	rme::srv::MarkerKindSet new_server_marker_kinds = 0;
+	if (settings.getBoolean(Config::SHOW_SCRIPT_MARKERS)) {
+		new_server_marker_kinds |= rme::srv::kindBit(rme::srv::MarkerKind::Script);
+	}
+	if (settings.getBoolean(Config::SHOW_DEPOT_MARKERS)) {
+		new_server_marker_kinds |= rme::srv::kindBit(rme::srv::MarkerKind::Depot);
+	}
+	if (settings.getBoolean(Config::SHOW_RAID_MARKERS)) {
+		new_server_marker_kinds |= rme::srv::kindBit(rme::srv::MarkerKind::Raid);
+	}
+	if (settings.getBoolean(Config::SHOW_START_MARKERS)) {
+		new_server_marker_kinds |= rme::srv::kindBit(rme::srv::MarkerKind::Start);
+	}
 	const int new_show_grid = settings.getInteger(Config::SHOW_GRID);
 	const bool new_ingame = !settings.getBoolean(Config::SHOW_EXTRA);
 	const bool new_show_all_floors = settings.getBoolean(Config::SHOW_ALL_FLOORS);
@@ -220,6 +238,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const int new_zone_nopvp_blend_mode = settings.getInteger(Config::ZONE_NOPVP_BLEND_MODE);
 	const int new_zone_nologout_blend_mode = settings.getInteger(Config::ZONE_NOLOGOUT_BLEND_MODE);
 	const int new_zone_pvp_blend_mode = settings.getInteger(Config::ZONE_PVP_BLEND_MODE);
+	const int new_zone_refresh_blend_mode = settings.getInteger(Config::ZONE_REFRESH_BLEND_MODE);
 	const int new_zone_blocking_blend_mode = settings.getInteger(Config::ZONE_BLOCKING_BLEND_MODE);
 	const int new_zone_spawn_blend_mode = settings.getInteger(Config::ZONE_SPAWN_BLEND_MODE);
 	const int new_house_active_blend_mode = settings.getInteger(Config::HOUSE_ACTIVE_BLEND_MODE);
@@ -237,6 +256,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const glm::vec4 new_zone_nopvp_color = readVec4(Config::ZONE_NOPVP_COLOR_R, Config::ZONE_NOPVP_COLOR_G, Config::ZONE_NOPVP_COLOR_B, Config::ZONE_NOPVP_COLOR_A);
 	const glm::vec4 new_zone_nologout_color = readVec4(Config::ZONE_NOLOGOUT_COLOR_R, Config::ZONE_NOLOGOUT_COLOR_G, Config::ZONE_NOLOGOUT_COLOR_B, Config::ZONE_NOLOGOUT_COLOR_A);
 	const glm::vec4 new_zone_pvp_color = readVec4(Config::ZONE_PVP_COLOR_R, Config::ZONE_PVP_COLOR_G, Config::ZONE_PVP_COLOR_B, Config::ZONE_PVP_COLOR_A);
+	const glm::vec4 new_zone_refresh_color = readVec4(Config::ZONE_REFRESH_COLOR_R, Config::ZONE_REFRESH_COLOR_G, Config::ZONE_REFRESH_COLOR_B, Config::ZONE_REFRESH_COLOR_A);
 	const glm::vec4 new_zone_blocking_color = readVec4(Config::ZONE_BLOCKING_COLOR_R, Config::ZONE_BLOCKING_COLOR_G, Config::ZONE_BLOCKING_COLOR_B, Config::ZONE_BLOCKING_COLOR_A);
 	const glm::vec4 new_zone_spawn_color = readVec4(Config::ZONE_SPAWN_COLOR_R, Config::ZONE_SPAWN_COLOR_G, Config::ZONE_SPAWN_COLOR_B, Config::ZONE_SPAWN_COLOR_A);
 	const glm::vec4 new_house_active_color = readVec4(Config::HOUSE_ACTIVE_COLOR_R, Config::HOUSE_ACTIVE_COLOR_G, Config::HOUSE_ACTIVE_COLOR_B, Config::HOUSE_ACTIVE_COLOR_A);
@@ -275,6 +295,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	show_invalid_tiles = new_show_invalid_tiles;
 	show_invalid_zones = new_show_invalid_zones;
 	show_waypoints = new_show_waypoints;
+	server_marker_kinds = new_server_marker_kinds;
 	show_grid = new_show_grid;
 	ingame = new_ingame;
 	show_all_floors = new_show_all_floors;
@@ -320,6 +341,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 		new_zone_nopvp_blend_mode != zone_nopvp_blend_mode ||
 		new_zone_nologout_blend_mode != zone_nologout_blend_mode ||
 		new_zone_pvp_blend_mode != zone_pvp_blend_mode ||
+		new_zone_refresh_blend_mode != zone_refresh_blend_mode ||
 		new_zone_blocking_blend_mode != zone_blocking_blend_mode ||
 		new_zone_spawn_blend_mode != zone_spawn_blend_mode ||
 		new_house_active_blend_mode != house_active_blend_mode ||
@@ -329,6 +351,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 		new_zone_nopvp_color != zone_nopvp_color ||
 		new_zone_nologout_color != zone_nologout_color ||
 		new_zone_pvp_color != zone_pvp_color ||
+		new_zone_refresh_color != zone_refresh_color ||
 		new_zone_blocking_color != zone_blocking_color ||
 		new_zone_spawn_color != zone_spawn_color ||
 		new_house_active_color != house_active_color ||
@@ -344,6 +367,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	zone_nopvp_blend_mode = new_zone_nopvp_blend_mode;
 	zone_nologout_blend_mode = new_zone_nologout_blend_mode;
 	zone_pvp_blend_mode = new_zone_pvp_blend_mode;
+	zone_refresh_blend_mode = new_zone_refresh_blend_mode;
 	zone_blocking_blend_mode = new_zone_blocking_blend_mode;
 	zone_spawn_blend_mode = new_zone_spawn_blend_mode;
 	house_active_blend_mode = new_house_active_blend_mode;
@@ -353,6 +377,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	zone_nopvp_color = new_zone_nopvp_color;
 	zone_nologout_color = new_zone_nologout_color;
 	zone_pvp_color = new_zone_pvp_color;
+	zone_refresh_color = new_zone_refresh_color;
 	zone_blocking_color = new_zone_blocking_color;
 	zone_spawn_color = new_zone_spawn_color;
 	house_active_color = new_house_active_color;

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Weapons - Melee">
+    <item fromid="3264" toid="3276" />
+    <item fromid="3278" toid="3286" />
+    <item fromid="3288" toid="3297" />
+    <item fromid="3299" toid="3342" />
+    <item id="3343" />
+    <item id="3344" />
+    <item id="3345" />
+    <item id="3346" />
+    <item id="3348" />
+</tileset>

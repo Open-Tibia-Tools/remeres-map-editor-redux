@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Trash">
+    <item id="2878" />
+    <item id="2892" />
+    <item id="2894" />
+    <item fromid="3104" toid="3131" />
+    <item fromid="3135" toid="3144" />
+</tileset>

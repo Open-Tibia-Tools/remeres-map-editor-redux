@@ -39,7 +39,172 @@ std::string_view SpawnIssue::GetKindString() const noexcept {
 	return is_npc ? "NPC" : "Monster";
 }
 
-std::vector<SpawnIssue> SpawnValidator::ScanMap(const Map& map, const SpawnValidationSettings& settings) {
+namespace {
+
+// The checks of one placed creature: its tile, spawn time, type and
+// alternatives. `center` is its spawn, or on a sector map its own home.
+void checkCreature(const Tile& tile, const Position& pos, const Position& center, const SpawnValidationSettings& settings, std::vector<SpawnIssue>& issues, uint32_t& nextId) {
+	const Creature* creature = tile.creature.get();
+	const std::string& name = creature->getName();
+	const bool isNpc = creature->isNpc();
+	const int spawntime = creature->getSpawnTime();
+
+	// 1. Check tile validity for the placed creature
+	if (!tile.hasGround()) {
+		if (settings.check_missing_or_empty_tiles) {
+			issues.push_back(SpawnIssue{
+				.id = nextId++,
+				.name = name,
+				.pos = pos,
+				.spawn_center = center,
+				.spawntime = spawntime,
+				.is_npc = isNpc,
+				.is_alternative = false,
+				.alternative_index = 0,
+				.type = SpawnIssueType::EmptyTile,
+				.description = "Tile has no ground; server voids or drops it on load."
+			});
+		}
+	} else if (tile.isBlocking()) {
+		if (settings.check_blocked_tiles) {
+			issues.push_back(SpawnIssue{
+				.id = nextId++,
+				.name = name,
+				.pos = pos,
+				.spawn_center = center,
+				.spawntime = spawntime,
+				.is_npc = isNpc,
+				.is_alternative = false,
+				.alternative_index = 0,
+				.type = SpawnIssueType::BlockedTile,
+				.description = "Tile is blocked by a wall or unpassable obstacle."
+			});
+		}
+	} else if (!isNpc && tile.isPZ()) {
+		if (settings.check_blocked_tiles) {
+			issues.push_back(SpawnIssue{
+				.id = nextId++,
+				.name = name,
+				.pos = pos,
+				.spawn_center = center,
+				.spawntime = spawntime,
+				.is_npc = isNpc,
+				.is_alternative = false,
+				.alternative_index = 0,
+				.type = SpawnIssueType::BlockedTile,
+				.description = "Monster placed in Protection Zone (monsters cannot spawn in PZ)."
+			});
+		}
+	}
+
+	// 2. Check spawntime
+	if (settings.check_invalid_spawntime) {
+		if (spawntime < settings.min_spawntime || spawntime > settings.max_spawntime) {
+			issues.push_back(SpawnIssue{
+				.id = nextId++,
+				.name = name,
+				.pos = pos,
+				.spawn_center = center,
+				.spawntime = spawntime,
+				.is_npc = isNpc,
+				.is_alternative = false,
+				.alternative_index = 0,
+				.type = SpawnIssueType::InvalidSpawntime,
+				.description = std::format("Spawntime is {}s (valid range: [{}s, {}s]).", spawntime, settings.min_spawntime, settings.max_spawntime)
+			});
+		}
+	}
+
+	// 3. Check creature type definition
+	if (settings.check_unknown_creature) {
+		CreatureType* type = g_creatures[name];
+		if (!type || type->missing) {
+			issues.push_back(SpawnIssue{
+				.id = nextId++,
+				.name = name,
+				.pos = pos,
+				.spawn_center = center,
+				.spawntime = spawntime,
+				.is_npc = isNpc,
+				.is_alternative = false,
+				.alternative_index = 0,
+				.type = SpawnIssueType::UnknownCreature,
+				.description = std::format("Creature '{}' not found in loaded creature database.", name)
+			});
+		} else if (type->isNpc != isNpc) {
+			issues.push_back(SpawnIssue{
+				.id = nextId++,
+				.name = name,
+				.pos = pos,
+				.spawn_center = center,
+				.spawntime = spawntime,
+				.is_npc = isNpc,
+				.is_alternative = false,
+				.alternative_index = 0,
+				.type = SpawnIssueType::KindMismatch,
+				.description = std::format("'{}' registered as {} but placed as {}.", name, type->isNpc ? "NPC" : "Monster", isNpc ? "NPC" : "Monster")
+			});
+		}
+	}
+
+	// 4. Check OTBM 5 alternative creatures on this tile
+	const auto& alternatives = creature->getAlternatives();
+	for (uint32_t altIdx = 0; altIdx < static_cast<uint32_t>(alternatives.size()); ++altIdx) {
+		const auto& alt = alternatives[altIdx];
+
+		if (settings.check_invalid_spawntime) {
+			if (alt.spawntime < settings.min_spawntime || alt.spawntime > settings.max_spawntime) {
+				issues.push_back(SpawnIssue{
+					.id = nextId++,
+					.name = alt.name,
+					.pos = pos,
+					.spawn_center = center,
+					.spawntime = alt.spawntime,
+					.is_npc = false,
+					.is_alternative = true,
+					.alternative_index = altIdx,
+					.type = SpawnIssueType::InvalidSpawntime,
+					.description = std::format("Alternative #{} spawntime is {}s (valid range: [{}s, {}s]).", altIdx + 1, alt.spawntime, settings.min_spawntime, settings.max_spawntime)
+				});
+			}
+		}
+
+		if (settings.check_unknown_creature) {
+			CreatureType* altType = g_creatures[alt.name];
+			if (!altType || altType->missing) {
+				issues.push_back(SpawnIssue{
+					.id = nextId++,
+					.name = alt.name,
+					.pos = pos,
+					.spawn_center = center,
+					.spawntime = alt.spawntime,
+					.is_npc = false,
+					.is_alternative = true,
+					.alternative_index = altIdx,
+					.type = SpawnIssueType::UnknownCreature,
+					.description = std::format("Alternative #{} creature '{}' not found in database.", altIdx + 1, alt.name)
+				});
+			} else if (altType->isNpc) {
+				issues.push_back(SpawnIssue{
+					.id = nextId++,
+					.name = alt.name,
+					.pos = pos,
+					.spawn_center = center,
+					.spawntime = alt.spawntime,
+					.is_npc = false,
+					.is_alternative = true,
+					.alternative_index = altIdx,
+					.type = SpawnIssueType::KindMismatch,
+					.description = std::format("Alternative #{} '{}' is an NPC, not a monster.", altIdx + 1, alt.name)
+				});
+			}
+		}
+	}
+}
+
+} // namespace
+
+std::vector<SpawnIssue> SpawnValidator::ScanMap(Map& map, const SpawnValidationSettings& settings) {
 	std::vector<SpawnIssue> issues;
 	uint32_t nextId = 1;
 
@@ -88,162 +253,7 @@ std::vector<SpawnIssue> SpawnValidator::ScanMap(const Map& map, const SpawnValid
 					continue;
 				}
 
-				Creature* creature = tile->creature.get();
-				const std::string& name = creature->getName();
-				const bool isNpc = creature->isNpc();
-				const int spawntime = creature->getSpawnTime();
-
-				// 1. Check tile validity for the placed creature
-				if (!tile->hasGround()) {
-					if (settings.check_missing_or_empty_tiles) {
-						issues.push_back(SpawnIssue{
-							.id = nextId++,
-							.name = name,
-							.pos = checkPos,
-							.spawn_center = spawnPos,
-							.spawntime = spawntime,
-							.is_npc = isNpc,
-							.is_alternative = false,
-							.alternative_index = 0,
-							.type = SpawnIssueType::EmptyTile,
-							.description = "Tile has no ground; server voids or drops it on load."
-						});
-					}
-				} else if (tile->isBlocking()) {
-					if (settings.check_blocked_tiles) {
-						issues.push_back(SpawnIssue{
-							.id = nextId++,
-							.name = name,
-							.pos = checkPos,
-							.spawn_center = spawnPos,
-							.spawntime = spawntime,
-							.is_npc = isNpc,
-							.is_alternative = false,
-							.alternative_index = 0,
-							.type = SpawnIssueType::BlockedTile,
-							.description = "Tile is blocked by a wall or unpassable obstacle."
-						});
-					}
-				} else if (!isNpc && tile->isPZ()) {
-					if (settings.check_blocked_tiles) {
-						issues.push_back(SpawnIssue{
-							.id = nextId++,
-							.name = name,
-							.pos = checkPos,
-							.spawn_center = spawnPos,
-							.spawntime = spawntime,
-							.is_npc = isNpc,
-							.is_alternative = false,
-							.alternative_index = 0,
-							.type = SpawnIssueType::BlockedTile,
-							.description = "Monster placed in Protection Zone (monsters cannot spawn in PZ)."
-						});
-					}
-				}
-
-				// 2. Check spawntime
-				if (settings.check_invalid_spawntime) {
-					if (spawntime < settings.min_spawntime || spawntime > settings.max_spawntime) {
-						issues.push_back(SpawnIssue{
-							.id = nextId++,
-							.name = name,
-							.pos = checkPos,
-							.spawn_center = spawnPos,
-							.spawntime = spawntime,
-							.is_npc = isNpc,
-							.is_alternative = false,
-							.alternative_index = 0,
-							.type = SpawnIssueType::InvalidSpawntime,
-							.description = std::format("Spawntime is {}s (valid range: [{}s, {}s]).", spawntime, settings.min_spawntime, settings.max_spawntime)
-						});
-					}
-				}
-
-				// 3. Check creature type definition
-				if (settings.check_unknown_creature) {
-					CreatureType* type = g_creatures[name];
-					if (!type || type->missing) {
-						issues.push_back(SpawnIssue{
-							.id = nextId++,
-							.name = name,
-							.pos = checkPos,
-							.spawn_center = spawnPos,
-							.spawntime = spawntime,
-							.is_npc = isNpc,
-							.is_alternative = false,
-							.alternative_index = 0,
-							.type = SpawnIssueType::UnknownCreature,
-							.description = std::format("Creature '{}' not found in loaded creature database.", name)
-						});
-					} else if (type->isNpc != isNpc) {
-						issues.push_back(SpawnIssue{
-							.id = nextId++,
-							.name = name,
-							.pos = checkPos,
-							.spawn_center = spawnPos,
-							.spawntime = spawntime,
-							.is_npc = isNpc,
-							.is_alternative = false,
-							.alternative_index = 0,
-							.type = SpawnIssueType::KindMismatch,
-							.description = std::format("'{}' registered as {} but placed as {}.", name, type->isNpc ? "NPC" : "Monster", isNpc ? "NPC" : "Monster")
-						});
-					}
-				}
-
-				// 4. Check OTBM 5 alternative creatures on this tile
-				const auto& alternatives = creature->getAlternatives();
-				for (uint32_t altIdx = 0; altIdx < static_cast<uint32_t>(alternatives.size()); ++altIdx) {
-					const auto& alt = alternatives[altIdx];
-
-					if (settings.check_invalid_spawntime) {
-						if (alt.spawntime < settings.min_spawntime || alt.spawntime > settings.max_spawntime) {
-							issues.push_back(SpawnIssue{
-								.id = nextId++,
-								.name = alt.name,
-								.pos = checkPos,
-								.spawn_center = spawnPos,
-								.spawntime = alt.spawntime,
-								.is_npc = false,
-								.is_alternative = true,
-								.alternative_index = altIdx,
-								.type = SpawnIssueType::InvalidSpawntime,
-								.description = std::format("Alternative #{} spawntime is {}s (valid range: [{}s, {}s]).", altIdx + 1, alt.spawntime, settings.min_spawntime, settings.max_spawntime)
-							});
-						}
-					}
-
-					if (settings.check_unknown_creature) {
-						CreatureType* altType = g_creatures[alt.name];
-						if (!altType || altType->missing) {
-							issues.push_back(SpawnIssue{
-								.id = nextId++,
-								.name = alt.name,
-								.pos = checkPos,
-								.spawn_center = spawnPos,
-								.spawntime = alt.spawntime,
-								.is_npc = false,
-								.is_alternative = true,
-								.alternative_index = altIdx,
-								.type = SpawnIssueType::UnknownCreature,
-								.description = std::format("Alternative #{} creature '{}' not found in database.", altIdx + 1, alt.name)
-							});
-						} else if (altType->isNpc) {
-							issues.push_back(SpawnIssue{
-								.id = nextId++,
-								.name = alt.name,
-								.pos = checkPos,
-								.spawn_center = spawnPos,
-								.spawntime = alt.spawntime,
-								.is_npc = false,
-								.is_alternative = true,
-								.alternative_index = altIdx,
-								.type = SpawnIssueType::KindMismatch,
-								.description = std::format("Alternative #{} '{}' is an NPC, not a monster.", altIdx + 1, alt.name)
-							});
-						}
-					}
-				}
+				checkCreature(*tile, checkPos, spawnPos, settings, issues, nextId);
 			}
 		}
 
@@ -261,6 +271,19 @@ std::vector<SpawnIssue> SpawnValidator::ScanMap(const Map& map, const SpawnValid
 				.type = SpawnIssueType::UnwalkableZone,
 				.description = std::format("Spawn radius {} contains 0 walkable tiles; creatures cannot spawn.", radius)
 			});
+		}
+	}
+
+	// Sector maps have no spawns: each creature with a home radius is a
+	// home of its own (game/srv_homes.h), centred on its own tile.
+	for (auto& location : map.tiles()) {
+		const Tile* tile = location.get();
+		if (!tile || !tile->creature || !tile->creature->getHomeRadius()) {
+			continue;
+		}
+		const Position& pos = tile->getPosition();
+		if (visitedCreatures.insert(pos).second) {
+			checkCreature(*tile, pos, pos, settings, issues, nextId);
 		}
 	}
 

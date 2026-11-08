@@ -13,6 +13,8 @@
 #include "map/tile.h"
 #include "game/item.h"
 #include "game/complexitem.h"
+#include "game/srv_item_attributes.h"
+#include "game/srv_markers.h"
 #include "game/house.h"
 #include "game/town.h"
 #include "editor/editor.h"
@@ -41,6 +43,8 @@ namespace {
 		Position destination;
 		bool hasContent = false;
 		uint16_t count = 0;
+		std::array<int32_t, rme::srv::kItemAttributes.size()> srv_attributes {};
+		bool hasSrv = false;
 
 		const bool is_complex = item->isComplex();
 		const bool is_house_tile = houseId > 0;
@@ -58,6 +62,12 @@ namespace {
 			action = item->getActionID();
 			text = item->getText();
 			description = item->getDescription();
+			for (size_t i = 0; i < srv_attributes.size(); ++i) {
+				if (const int32_t* value = item->getIntegerAttribute(rme::srv::key(static_cast<rme::srv::ItemAttribute>(i)))) {
+					srv_attributes[i] = *value;
+					hasSrv = hasSrv || *value != 0;
+				}
+			}
 		}
 
 		if (door) {
@@ -81,7 +91,7 @@ namespace {
 		}
 
 		if (unique == 0 && action == 0 && doorId == 0 && depotId == 0 && text.empty() &&
-		    description.empty() && destination.x == 0 && !hasContent && count <= 1) {
+		    description.empty() && destination.x == 0 && !hasContent && count <= 1 && !hasSrv) {
 			return false;
 		}
 
@@ -103,6 +113,7 @@ namespace {
 		data.text = text;
 		data.description = description;
 		data.destination = destination;
+		data.srvAttributes = srv_attributes;
 
 		if (door && editor != nullptr) {
 			if (const House* house = editor->map.houses.getHouse(houseId)) {
@@ -260,7 +271,8 @@ void MapOverlayCollector::Collect(
 					if (town_ptr && town_ptr->getTemplePosition() == pos) {
 						TooltipData& tData = out_tooltip_drawer->requestTooltipData();
 						tData.pos = pos;
-						tData.category = TooltipCategory::WAYPOINT;
+						tData.category = TooltipCategory::TOWN;
+						tData.townId = town_id;
 						tData.itemName = town_ptr->getName();
 						tData.subtitle = "Town Temple";
 						tData.badgeType = rme::rendering::TileIndicatorType::TownTemple;
@@ -361,6 +373,16 @@ void MapOverlayCollector::Collect(
 					zData.zoneAreaTileCount = cluster.tile_count;
 					out_tooltip_drawer->commitTooltip();
 				}
+			}
+		}
+	}
+
+	// 7. Server markers of sector maps (triggered per kind by options.server_marker_kinds); they need no tile
+	if (need_tooltips && !options.ingame && options.server_marker_kinds != 0 && map.server_markers) {
+		for (const rme::srv::Marker& marker : map.server_markers->onFloor(map_z)) {
+			const Position& pos = marker.position;
+			if (pos.x >= bounds.start_x && pos.x <= bounds.end_x && pos.y >= bounds.start_y && pos.y <= bounds.end_y) {
+				out_tooltip_drawer->addServerMarkerTooltip(marker, options.server_marker_kinds);
 			}
 		}
 	}

@@ -148,6 +148,23 @@ void SearchHandler::OnSearchForPickupableOnMap(wxCommandEvent& WXUNUSED(event)) 
 	DispatchSearch(SearchCategory::Pickupable, false, "Find Pickupable (Map)");
 }
 
+void SearchHandler::OnSearchForServerNumberOnMap(wxCommandEvent& WXUNUSED(event)) {
+	if (!g_gui.IsEditorOpen()) {
+		return;
+	}
+
+	// Like the other Find commands it lists everything; the results filter
+	// narrows it down, e.g. to "Quest Chest: 64" or "Key: 3001".
+	using rme::srv::ItemAttribute;
+	SearchQuery query;
+	query.server_number = ServerNumberFilter {
+		.attributes = { ItemAttribute::ChestQuestNumber, ItemAttribute::DoorQuestNumber, ItemAttribute::KeyNumber, ItemAttribute::KeyholeNumber, ItemAttribute::DoorLevel },
+		.include_scripts = true,
+	};
+	query.query_title = "Find Quests, Keys and Levels (Map)";
+	SearchResults::ExecuteAndShow(&g_gui.GetCurrentMap(), std::move(query));
+}
+
 // Selection searches
 void SearchHandler::OnSearchForStuffOnSelection(wxCommandEvent& WXUNUSED(event)) {
 	DispatchSearch(SearchCategory::Everything, true, "Find Everything (Selection)");

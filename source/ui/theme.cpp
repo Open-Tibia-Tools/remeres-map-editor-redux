@@ -143,6 +143,8 @@ wxColour Theme::GetDark(Role role) {
 		case Role::TooltipBorderText:
 		case Role::TooltipBorderHouse:
 		case Role::TooltipBorderZone:
+		case Role::TooltipBorderTown:
+		case Role::TooltipBorderServer:
 			return wxColour(58, 58, 64); // Standardized Charcoal Gray
 		case Role::TooltipWindowBg:
 			return wxColour(24, 26, 30);
@@ -168,6 +170,16 @@ wxColour Theme::GetDark(Role role) {
 			return wxColour(255, 255, 255);
 		case Role::TooltipSubtitleText:
 			return wxColour(160, 165, 175);
+		case Role::ServerMarkerStart:
+			return wxColour(255, 215, 0); // Gold
+		case Role::ServerMarkerDepot:
+			return wxColour(46, 204, 113); // Emerald
+		case Role::ServerMarkerRaid:
+			return wxColour(231, 76, 60); // Red
+		case Role::ServerMarkerScript:
+			return wxColour(171, 130, 255); // Lavender
+		case Role::HomeRadius:
+			return wxColour(52, 152, 219); // Sky blue
 		case Role::BrushCategoryGround:
 			return wxColour(85, 230, 85);
 		case Role::BrushCategoryWall:
@@ -271,6 +283,8 @@ wxColour Theme::GetLight(Role role) {
 		case Role::TooltipBorderText:
 		case Role::TooltipBorderHouse:
 		case Role::TooltipBorderZone:
+		case Role::TooltipBorderTown:
+		case Role::TooltipBorderServer:
 			return wxColour(80, 80, 88); // Standardized Charcoal Gray (Light)
 		case Role::TooltipWindowBg:
 			return wxColour(235, 236, 240);
@@ -296,6 +310,16 @@ wxColour Theme::GetLight(Role role) {
 			return wxColour(20, 20, 24);
 		case Role::TooltipSubtitleText:
 			return wxColour(90, 95, 105);
+		case Role::ServerMarkerStart:
+			return wxColour(255, 215, 0); // Gold
+		case Role::ServerMarkerDepot:
+			return wxColour(46, 204, 113); // Emerald
+		case Role::ServerMarkerRaid:
+			return wxColour(231, 76, 60); // Red
+		case Role::ServerMarkerScript:
+			return wxColour(171, 130, 255); // Lavender
+		case Role::HomeRadius:
+			return wxColour(52, 152, 219); // Sky blue
 		case Role::BrushCategoryGround:
 			return wxColour(30, 155, 40);
 		case Role::BrushCategoryWall:

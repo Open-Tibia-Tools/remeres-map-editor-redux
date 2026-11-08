@@ -28,9 +28,15 @@
 #include <wx/wx.h>
 #include "item_definitions/core/item_definition_store.h"
 #include "util/nvg_utils.h"
+#include "game/srv_markers.h"
+#include "rendering/drawers/overlays/server_marker_drawer.h"
 #include <algorithm>
+#include <iterator>
 
 namespace {
+	// Server markers can name dozens of rules; the tooltip lists the first ones.
+	constexpr size_t kMaxServerMarkerLines = 8;
+
 	inline NVGcolor ThemeNvColor(Theme::Role role, uint8_t alpha = 255) {
 		const wxColour c = Theme::Get(role);
 		return nvgRGBA(c.Red(), c.Green(), c.Blue(), alpha);
@@ -123,11 +129,29 @@ void TooltipDrawer::addWaypointTooltip(Position pos, std::string_view name) {
 	commitTooltip();
 }
 
+void TooltipDrawer::addServerMarkerTooltip(const rme::srv::Marker& marker, uint8_t shown) {
+	const auto kind = marker.shownKind(shown);
+	if (!kind) {
+		return;
+	}
+	TooltipData& data = requestTooltipData();
+	data.pos = marker.position;
+	data.category = TooltipCategory::SERVER;
+	data.serverMarker = &marker;
+	data.serverMarkerKinds = shown;
+	data.itemName.assign(rme::srv::markerKindLabel(*kind));
+	data.subtitle.assign(rme::rendering::serverMarkerSource(*kind));
+	commitTooltip();
+}
+
 NVGcolor TooltipDrawer::getHeaderColor(const TooltipData& tooltip) const {
 	Theme::Role role = Theme::Role::TooltipBorderItem;
 	switch (tooltip.category) {
 		case TooltipCategory::WAYPOINT:
 			role = Theme::Role::TooltipBorderWaypoint;
+			break;
+		case TooltipCategory::TOWN:
+			role = Theme::Role::TooltipBorderTown;
 			break;
 		case TooltipCategory::DOOR:
 			role = Theme::Role::TooltipBorderDoor;
@@ -143,6 +167,9 @@ NVGcolor TooltipDrawer::getHeaderColor(const TooltipData& tooltip) const {
 			break;
 		case TooltipCategory::ZONE:
 			role = Theme::Role::TooltipBorderZone;
+			break;
+		case TooltipCategory::SERVER:
+			role = Theme::Role::TooltipBorderServer;
 			break;
 		case TooltipCategory::ITEM:
 		default:
@@ -258,6 +285,17 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 		field.wrappedLines.clear();
 	};
 
+	// Server item attributes (keyholes, quest chests, door levels, ...)
+	auto addSrvFields = [&]() {
+		for (size_t i = 0; i < tooltip.srvAttributes.size(); ++i) {
+			if (tooltip.srvAttributes[i] != 0) {
+				const size_t start = storage.size();
+				std::format_to(std::back_inserter(storage), "{}", tooltip.srvAttributes[i]);
+				addStorageField(rme::srv::kItemAttributes[i].label, start, Theme::Role::TooltipActionId);
+			}
+		}
+	};
+
 	if (tooltip.category == TooltipCategory::HOUSE) {
 		size_t start = storage.size();
 		std::format_to(std::back_inserter(storage), "{}", tooltip.houseId);
@@ -280,6 +318,7 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 			std::format_to(std::back_inserter(storage), "{}", tooltip.uniqueId);
 			addStorageField("Unique ID", start, Theme::Role::TooltipUniqueId);
 		}
+		addSrvFields();
 
 		start = storage.size();
 		std::format_to(std::back_inserter(storage), "{} sqm", tooltip.houseSize);
@@ -319,8 +358,36 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 		if (!tooltip.zoneFlags.empty()) {
 			addDirectField("Flags", tooltip.zoneFlags, Theme::Role::TooltipTextValue);
 		}
-	} else if (tooltip.category == TooltipCategory::WAYPOINT) {
+	} else if (tooltip.category == TooltipCategory::SERVER && tooltip.serverMarker) {
+		// One field per line of a shown kind; the kind labels the first line of its group.
+		size_t listed = 0;
+		size_t hidden = 0;
+		const rme::srv::MarkerLine* previous = nullptr;
+		for (const rme::srv::MarkerLine& line : tooltip.serverMarker->lines) {
+			if ((tooltip.serverMarkerKinds & rme::srv::kindBit(line.kind)) == 0) {
+				continue;
+			}
+			if (listed == kMaxServerMarkerLines) {
+				++hidden;
+				continue;
+			}
+			const bool first_of_kind = !previous || previous->kind != line.kind;
+			addDirectField(first_of_kind ? rme::srv::markerKindLabel(line.kind) : std::string_view {}, line.text, Theme::Role::TooltipBodyText);
+			previous = &line;
+			++listed;
+		}
+		if (hidden > 0) {
+			const size_t start = storage.size();
+			std::format_to(std::back_inserter(storage), "... and {} more", hidden);
+			addStorageField({}, start, Theme::Role::TooltipLabel);
+		}
+	} else if (tooltip.category == TooltipCategory::WAYPOINT || tooltip.category == TooltipCategory::TOWN) {
 		size_t start = storage.size();
+		if (tooltip.townId > 0) {
+			std::format_to(std::back_inserter(storage), "{}", tooltip.townId);
+			addStorageField("Town ID", start, Theme::Role::TooltipTextValue);
+			start = storage.size();
+		}
 		std::format_to(std::back_inserter(storage), "{}, {}, {}", tooltip.pos.x, tooltip.pos.y, tooltip.pos.z);
 		addStorageField("Position", start, Theme::Role::TooltipTextValue);
 	} else {
@@ -353,6 +420,7 @@ void TooltipDrawer::prepareFields(const TooltipData& tooltip) {
 			}
 			addStorageField("Depot ID", start, Theme::Role::TooltipDepotId);
 		}
+		addSrvFields();
 		if (tooltip.houseSize > 0) {
 			size_t start = storage.size();
 			std::format_to(std::back_inserter(storage), "{} sqm", tooltip.houseSize);
@@ -396,7 +464,9 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 	nvgFontSize(vg, 12.0f);
 	nvgFontFace(vg, "sans");
 	float nameBounds[4] = { 0 };
-	nvgTextBounds(vg, 0, 0, scratch_title.data(), nullptr, nameBounds);
+	if (!scratch_title.empty()) {
+		nvgTextBounds(vg, 0, 0, scratch_title.data(), scratch_title.data() + scratch_title.size(), nameBounds);
+	}
 	float nameWidth = nameBounds[2] - nameBounds[0];
 
 	// Subtitle width
@@ -418,6 +488,9 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 	float maxLabelWidth = 0.0f;
 	for (size_t i = 0; i < scratch_fields_count; ++i) {
 		const auto& field = scratch_fields[i];
+		if (field.label.empty()) {
+			continue;
+		}
 		auto it = s_label_width_cache.find(field.label);
 		float lw = 0.0f;
 		if (it != s_label_width_cache.end()) {
@@ -433,7 +506,7 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 		}
 	}
 
-	lm.valueStartX = maxLabelWidth + 12.0f;
+	lm.valueStartX = (maxLabelWidth > 0.0f) ? (maxLabelWidth + 12.0f) : 0.0f;
 	float maxValueWidth = maxWidth - lm.valueStartX - padding * 2.0f;
 
 	int totalFieldLines = 0;
@@ -441,6 +514,11 @@ TooltipDrawer::LayoutMetrics TooltipDrawer::calculateLayout(NVGcontext* vg, cons
 
 	for (size_t i = 0; i < scratch_fields_count; ++i) {
 		auto& field = scratch_fields[i];
+		if (field.value.empty()) {
+			field.wrappedLines.push_back(field.value);
+			totalFieldLines++;
+			continue;
+		}
 		const char* start = field.value.data();
 		const char* end = start + field.value.length();
 
@@ -729,6 +807,10 @@ void TooltipDrawer::drawSunkenSlot(NVGcontext* vg, float sx, float sy, float siz
 		rme::rendering::DrawNanoVGIndicatorBadge(vg, tooltip.badgeType, sx, sy, size);
 	} else if (tooltip.category == TooltipCategory::ZONE) {
 		rme::rendering::DrawNanoVGCustomIndicatorBadge(vg, sx, sy, size, tooltip.zoneRgb, "zone");
+	} else if (tooltip.category == TooltipCategory::SERVER && tooltip.serverMarker) {
+		if (const auto kind = tooltip.serverMarker->shownKind(tooltip.serverMarkerKinds)) {
+			rme::rendering::drawServerMarkerBadge(vg, *kind, sx, sy, size);
+		}
 	} else if (tooltip.itemId > 0) {
 		int img = getSpriteImage(vg, tooltip.itemId);
 		if (img > 0) {
@@ -788,16 +870,22 @@ void TooltipDrawer::drawHeader(NVGcontext* vg, float x, float y, float width, co
 	if (scratch_subtitle.empty()) {
 		// Vertically centered when no subtitle
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgText(vg, textX, slotY + kSlotSize * 0.5f, scratch_title.data(), nullptr);
+		if (!scratch_title.empty()) {
+			nvgText(vg, textX, slotY + kSlotSize * 0.5f, scratch_title.data(), scratch_title.data() + scratch_title.size());
+		}
 	} else {
 		// Two-line layout: title at top, subtitle at bottom
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-		nvgText(vg, textX, slotY + 2.0f, scratch_title.data(), nullptr);
+		if (!scratch_title.empty()) {
+			nvgText(vg, textX, slotY + 2.0f, scratch_title.data(), scratch_title.data() + scratch_title.size());
+		}
 
 		nvgFontSize(vg, 10.0f);
 		nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
 		nvgFillColor(vg, ThemeNvColor(Theme::Role::TooltipSubtitleText));
-		nvgText(vg, textX, slotY + 18.0f, scratch_subtitle.data(), nullptr);
+		if (!scratch_subtitle.empty()) {
+			nvgText(vg, textX, slotY + 18.0f, scratch_subtitle.data(), scratch_subtitle.data() + scratch_subtitle.size());
+		}
 	}
 }
 
@@ -814,14 +902,18 @@ void TooltipDrawer::drawFields(NVGcontext* vg, float x, float y, float valueStar
 		bool firstLine = true;
 		for (const auto& line : field.wrappedLines) {
 			if (firstLine) {
-				wxColour labelCol = Theme::Get(Theme::Role::TooltipLabel);
-				nvgFillColor(vg, nvgRGBA(labelCol.Red(), labelCol.Green(), labelCol.Blue(), 200));
-				nvgText(vg, contentX, cursorY, field.label.data(), field.label.data() + field.label.size());
+				if (!field.label.empty()) {
+					wxColour labelCol = Theme::Get(Theme::Role::TooltipLabel);
+					nvgFillColor(vg, nvgRGBA(labelCol.Red(), labelCol.Green(), labelCol.Blue(), 200));
+					nvgText(vg, contentX, cursorY, field.label.data(), field.label.data() + field.label.size());
+				}
 				firstLine = false;
 			}
 
-			nvgFillColor(vg, nvgRGBA(field.r, field.g, field.b, 255));
-			nvgText(vg, contentX + valueStartX, cursorY, line.data(), line.data() + line.size());
+			if (!line.empty()) {
+				nvgFillColor(vg, nvgRGBA(field.r, field.g, field.b, 255));
+				nvgText(vg, contentX + valueStartX, cursorY, line.data(), line.data() + line.size());
+			}
 			cursorY += lineHeight;
 		}
 	}
@@ -987,7 +1079,8 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		// Far-zoom LOD: when zoomed out very far (zoom > 3.0f), cull dense item tooltips
 		// so street signs/blackboards don't flood whole towns. Macro entities (houses, towns, waypoints) stay visible.
 		if (view.zoom > 3.0f && tooltip.category != TooltipCategory::HOUSE &&
-		    tooltip.category != TooltipCategory::ZONE && tooltip.category != TooltipCategory::WAYPOINT) {
+		    tooltip.category != TooltipCategory::ZONE && tooltip.category != TooltipCategory::WAYPOINT &&
+		    tooltip.category != TooltipCategory::TOWN) {
 			continue;
 		}
 
@@ -1018,7 +1111,7 @@ void TooltipDrawer::draw(NVGcontext* vg, const RenderView& view) {
 		// Skip if nothing to show
 		if (scratch_fields_count == 0 && tooltip.containerItems.empty() && tooltip.text.empty() &&
 		    tooltip.category != TooltipCategory::HOUSE && tooltip.category != TooltipCategory::ZONE &&
-		    tooltip.category != TooltipCategory::WAYPOINT) {
+		    tooltip.category != TooltipCategory::WAYPOINT && tooltip.category != TooltipCategory::TOWN) {
 			continue;
 		}
 

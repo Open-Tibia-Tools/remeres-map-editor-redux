@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Signs">
+    <brush name="blackboard (normal)" />
+    <brush name="blackboard (player house)" />
+    <brush name="pointing sign" />
+    <brush name="rectangle sign" />
+    <brush name="street sign" />
+    <item id="2018" />
+    <item id="2019" />
+    <item id="2020" />
+    <item id="4989" />
+    <item id="4990" />
+    <brush name="wall sign" />
+</tileset>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Walls">
+    <item fromid="1270" toid="1315" />
+    <item fromid="1329" toid="1449" />
+    <item fromid="1624" toid="1681" />
+    <item fromid="1734" toid="1747" />
+    <item fromid="2162" toid="2170" />
+    <item fromid="2201" toid="2216" />
+    <item fromid="2222" toid="2241" />
+    <item fromid="1450" toid="1623" />
+    <item fromid="1682" toid="1699" />
+    <item fromid="2291" toid="2298" />
+    <item fromid="3145" toid="3146" />
+    <item fromid="5008" toid="5012" />
+    <item fromid="5061" toid="5073" />
+</tileset>

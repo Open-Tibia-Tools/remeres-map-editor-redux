@@ -260,10 +260,16 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 
 	TextRenderer::BeginFrame(vg, GetSize().x, GetSize().y, GetContentScaleFactor());
 
+	if (!options.ingame && options.show_creatures) {
+		drawer->DrawHomeRadii(vg);
+	}
 	if (options.show_creatures) {
 		drawer->DrawCreatureNames(vg);
 	}
-	if (options.show_tooltips || options.show_houses || options.show_waypoints || options.show_towns || options.show_zones) {
+	if (!options.ingame && options.server_marker_kinds != 0) {
+		drawer->DrawServerMarkers(vg);
+	}
+	if (options.show_tooltips || options.show_houses || options.show_waypoints || options.show_towns || options.show_zones || options.server_marker_kinds != 0) {
 		drawer->DrawTooltips(vg);
 	}
 	if (options.show_hooks) {

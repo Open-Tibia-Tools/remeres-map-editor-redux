@@ -52,6 +52,7 @@ function ItemClass:setPodiumOutfit(lookType, direction) end
 ---@field outfit number|table
 ---@field direction number
 ---@field spawnTime number
+---@field amount number
 
 ---@class Spawn
 ---@field radius number
@@ -79,6 +80,7 @@ function ItemClass:setPodiumOutfit(lookType, direction) end
 ---@field isNoPvp boolean
 ---@field isNoLogout boolean
 ---@field isPvpZone boolean
+---@field isRefresh boolean
 local TileClass = {}
 
 --- Adds an item to the tile.
