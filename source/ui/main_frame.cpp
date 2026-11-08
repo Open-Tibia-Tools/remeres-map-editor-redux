@@ -101,7 +101,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 			.CloseButton(true)
 			.MaximizeButton(true)
 			.BestSize(358, 500)
-			.MinSize(FromDIP(wxSize(220, 180)))
+			.MinSize(g_gui.tile_properties_panel->GetMinSize())
 	);
 	g_gui.brush_items_window = new BrushItemsWindow(this);
 	g_gui.aui_manager->AddPane(g_gui.brush_items_window,

@@ -100,6 +100,12 @@ TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	splitter->SplitVertically(left_panel, right_panel, FromDIP(250));
 	splitter->SetMinimumPaneSize(FromDIP(150));
 
+	// Every property panel is still shown here, so the best width is the widest one's.
+	// The splitter keeps its sash clear of the second pane's minimum width.
+	right_panel->SetMinSize(wxSize(right_panel->GetBestSize().GetWidth(), wxDefaultCoord));
+	const int min_width = splitter->GetMinimumPaneSize() + splitter->GetSashSize() + 2 * splitter->GetBorderSize() + right_panel->GetMinWidth();
+	SetMinSize(wxSize(min_width, FromDIP(180)));
+
 	HideAllPropertyPanels();
 	placeholder_text->Show();
 

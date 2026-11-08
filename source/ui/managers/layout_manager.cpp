@@ -294,6 +294,8 @@ void LayoutManager::LoadPerspective() {
 				g_gui.aui_manager->LoadPaneInfo(layout, info);
 				EnsurePaneOnScreen(info);
 			}
+			// Saved layouts store the minimum size from the version that wrote them.
+			info.MinSize(g_gui.tile_properties_panel->GetMinSize());
 		}
 	}
 
