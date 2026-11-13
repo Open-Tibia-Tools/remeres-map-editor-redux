@@ -62,6 +62,7 @@ void ExtractItem(
 				container_items.push_back(SearchContainedItem {
 					.item_id = static_cast<uint16_t>(inner->getID()),
 					.count = count,
+					.subtype = inner->getSubtype(),
 				});
 			}
 		}
@@ -145,10 +146,14 @@ void ExtractItem(
 		return;
 	}
 
+	const uint16_t subtype = item->getSubtype();
+
 	auto& group = group_map[item_id];
 	if (group.id == 0) {
 		group.id = item_id;
 		group.client_id = item->getClientID();
+		// The group header shows the first instance. Each child keeps its own subtype.
+		group.subtype = subtype;
 		group.name = std::string(item->getName());
 		if (group.name.empty()) {
 			group.name = std::format("Item #{}", item_id);
@@ -161,6 +166,7 @@ void ExtractItem(
 	child.formatted_pos = std::format("Position: [{}, {}, {}]", child.position.x, child.position.y, child.position.z);
 	child.kind = kind;
 	child.item_id = item_id;
+	child.subtype = subtype;
 	child.unique_id = uid;
 	child.action_id = aid;
 	child.text = std::string(text_view);
@@ -358,6 +364,7 @@ std::vector<SearchResultGroup> SearchEngine::Execute(Map& map, const SearchQuery
 			if (target.id == 0) {
 				target.id = g.id;
 				target.client_id = g.client_id;
+				target.subtype = g.subtype;
 				target.name = std::move(g.name);
 				target.is_creature = false;
 			}

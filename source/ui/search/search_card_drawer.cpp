@@ -52,7 +52,7 @@ int SearchCardDrawer::GetTextureForGroup(NVGcontext* vg, NanoVGCanvas* canvas, c
 		}
 		return 0;
 	}
-	return canvas->GetOrCreateItemImage(static_cast<uint16_t>(group.id));
+	return canvas->GetOrCreateItemImage(static_cast<uint16_t>(group.id), group.subtype);
 }
 
 void SearchCardDrawer::DrawGroupHeader(
@@ -271,7 +271,7 @@ void SearchCardDrawer::DrawContainerCard(
 	const wxRect main_slot = geo.GetMainIconRect();
 	rme::ui::grid::DrawCardChrome(vg, main_slot, false, false, 0.0f, false);
 
-	const int main_tex = canvas ? canvas->GetOrCreateItemImage(child.item_id) : 0;
+	const int main_tex = canvas ? canvas->GetOrCreateItemImage(child.item_id, child.subtype) : 0;
 	rme::ui::grid::DrawCellIcon(vg, main_slot, main_tex, rme::rendering::TileIndicatorType::None);
 
 	// 3. Row 1: Horizontal strip of 32x32 contained items (or empty 32x32 box)
@@ -310,7 +310,7 @@ void SearchCardDrawer::DrawContainerCard(
 			rme::ui::grid::DrawCardChrome(vg, slot_rect, false, false, 0.0f, false);
 
 			const auto& contained = child.container_items[i];
-			const int ctex = canvas ? canvas->GetOrCreateItemImage(contained.item_id) : 0;
+			const int ctex = canvas ? canvas->GetOrCreateItemImage(contained.item_id, contained.subtype) : 0;
 			rme::ui::grid::DrawCellIcon(vg, slot_rect, ctex, rme::rendering::TileIndicatorType::None);
 
 			// Count badge if count > 1
@@ -395,7 +395,7 @@ void SearchCardDrawer::DrawChildCard(
 				}
 			}
 		} else {
-			tex = canvas->GetOrCreateItemImage(child.item_id);
+			tex = canvas->GetOrCreateItemImage(child.item_id, child.subtype);
 		}
 	}
 	rme::ui::grid::DrawCellIcon(vg, slot_rect, tex, rme::rendering::TileIndicatorType::None);
