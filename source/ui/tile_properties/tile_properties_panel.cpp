@@ -100,7 +100,7 @@ TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	right_sizer->Add(placeholder_text, wxSizerFlags(1).Center().Border(wxALL, 10));
 	right_panel->SetSizer(right_sizer);
 
-	splitter->SplitHorizontally(left_panel, right_panel, MeasureLeftPaneHeight());
+	splitter->SplitVertically(left_panel, right_panel, FromDIP(250));
 
 	// Every property panel is still shown here, so this first measurement covers all of them.
 	UpdateMinSize();
@@ -117,17 +117,15 @@ void TilePropertiesPanel::UpdateMinSize() {
 	right_panel->SetMinSize(wxSize(MeasurePropertiesWidth(), wxDefaultCoord));
 
 	const int left_width = MeasureLeftPaneWidth();
-	const int right_width = right_panel->GetMinWidth();
-	const int min_width = std::max(left_width, right_width) + splitter->GetSashSize() + 2 * splitter->GetBorderSize();
+	splitter->SetMinimumPaneSize(left_width);
 
-	const int min_height = MeasureLeftPaneHeight() + MeasurePropertiesHeight() + splitter->GetSashSize() + 2 * splitter->GetBorderSize();
-
-	splitter->SetMinimumPaneSize(FromDIP(150));
-	SetMinSize(wxSize(min_width, min_height));
+	const int min_width = left_width + splitter->GetSashSize() + 2 * splitter->GetBorderSize()
+		+ right_panel->GetMinWidth();
+	SetMinSize(wxSize(min_width, FromDIP(180)));
 }
 
-std::array<const wxWindow*, 8> TilePropertiesPanel::PropertyPanels() const {
-	return {
+int TilePropertiesPanel::MeasurePropertiesWidth() const {
+	const auto panels = std::to_array<const wxWindow*>({
 		map_flags_panel,
 		item_property_panel,
 		container_property_panel,
@@ -136,32 +134,18 @@ std::array<const wxWindow*, 8> TilePropertiesPanel::PropertyPanels() const {
 		door_property_panel,
 		spawn_property_panel,
 		creature_property_panel,
-	};
-}
+	});
 
-int TilePropertiesPanel::MeasurePropertiesWidth() const {
 	int width = right_panel->GetBestSize().GetWidth();
-	for (const wxWindow* panel : PropertyPanels()) {
+	for (const wxWindow* panel : panels) {
 		width = std::max(width, panel->GetBestSize().GetWidth() + 2 * FromDIP(2));
 	}
 	return width;
 }
 
-int TilePropertiesPanel::MeasurePropertiesHeight() const {
-	int height = 0;
-	for (const wxWindow* panel : PropertyPanels()) {
-		height = std::max(height, panel->GetBestSize().GetHeight() + 2 * FromDIP(2));
-	}
-	return height;
-}
-
 int TilePropertiesPanel::MeasureLeftPaneWidth() const {
 	const int list_width = browse_field_list->GetBestSize().GetWidth() + 2 * FromDIP(2);
 	return std::max(list_width, left_panel->GetBestSize().GetWidth());
-}
-
-int TilePropertiesPanel::MeasureLeftPaneHeight() const {
-	return left_panel->GetBestSize().GetHeight();
 }
 
 TilePropertiesPanel::~TilePropertiesPanel() {

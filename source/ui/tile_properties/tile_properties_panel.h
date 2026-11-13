@@ -8,7 +8,6 @@
 #include <wx/wx.h>
 #include <wx/panel.h>
 #include <wx/splitter.h>
-#include <array>
 
 class Tile;
 class Map;
@@ -39,11 +38,8 @@ public:
 	void UpdateMinSize();
 
 protected:
-	std::array<const wxWindow*, 8> PropertyPanels() const;
 	int MeasurePropertiesWidth() const;
-	int MeasurePropertiesHeight() const;
 	int MeasureLeftPaneWidth() const;
-	int MeasureLeftPaneHeight() const;
 
 	wxSplitterWindow* splitter;
 	wxPanel* left_panel;
