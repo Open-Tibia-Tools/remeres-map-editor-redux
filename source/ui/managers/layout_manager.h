@@ -6,7 +6,31 @@
 #define RME_LAYOUT_MANAGER_H_
 
 #include "app/main.h"
+#include <algorithm>
+#include <optional>
 #include <string>
+
+namespace rme::ui::layout {
+
+	struct PaneRect {
+		int x = 0;
+		int y = 0;
+		int width = 0;
+		int height = 0;
+	};
+
+	// Moves a pane rectangle inside a display rectangle.
+	// Returns nullopt when the pane cannot fit on the display.
+	constexpr std::optional<PaneRect> FitPaneInDisplay(PaneRect pane, PaneRect display) {
+		if (pane.width > display.width || pane.height > display.height) {
+			return std::nullopt;
+		}
+		pane.x = std::clamp(pane.x, display.x, display.x + display.width - pane.width);
+		pane.y = std::clamp(pane.y, display.y, display.y + display.height - pane.height);
+		return pane;
+	}
+
+} // namespace rme::ui::layout
 
 class PaletteWindow;
 class wxAuiPaneInfo;
