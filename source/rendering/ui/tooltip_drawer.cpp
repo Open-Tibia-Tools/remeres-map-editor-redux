@@ -170,7 +170,8 @@ int TooltipDrawer::getSpriteImage(NVGcontext* vg, uint16_t itemId, uint16_t subt
 		lastContext = vg;
 	}
 
-	const uint32_t cacheKey = (static_cast<uint32_t>(itemId) << 16) | subtype;
+	const auto slot = NvgUtils::GetCompositeSlot(itemId, subtype);
+	const uint32_t cacheKey = slot.CacheKey(itemId);
 	auto itCache = spriteCache.find(cacheKey);
 	if (itCache != spriteCache.end()) {
 		return itCache->second;

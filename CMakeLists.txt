@@ -247,3 +247,10 @@ target_link_libraries(test_universal_rotator PRIVATE ${LUA_LIBRARIES})
 
 enable_testing()
 add_test(NAME test_universal_rotator COMMAND test_universal_rotator)
+
+# --- Unit test for item sprite pattern mapping ---
+add_executable(test_item_sprite_pattern tests/test_item_sprite_pattern.cpp)
+set_target_properties(test_item_sprite_pattern PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_item_sprite_pattern PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_include_directories(test_item_sprite_pattern PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_item_sprite_pattern COMMAND test_item_sprite_pattern)

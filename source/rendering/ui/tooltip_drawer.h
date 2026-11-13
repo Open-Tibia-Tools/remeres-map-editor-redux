@@ -223,11 +223,11 @@ protected:
 	std::vector<TooltipData> tooltips;
 	size_t active_count = 0;
 
-	std::unordered_map<uint32_t, int> spriteCache; // itemId -> nvg image handle
+	std::unordered_map<uint32_t, int> spriteCache; // (itemId, sprite pattern) -> nvg image handle
 	NVGcontext* lastContext = nullptr;
 
 	// Helper to get or load sprite image
-	int getSpriteImage(NVGcontext* vg, uint16_t itemId, uint16_t subtype = 0);
+	int getSpriteImage(NVGcontext* vg, uint16_t itemId, uint16_t subtype);
 
 	// Helper to get header border color based on category and tooltip data
 	NVGcolor getHeaderColor(const TooltipData& tooltip) const;

@@ -11,6 +11,7 @@
 
 #define NANOVG_GL3_IMPLEMENTATION
 #include "util/nvg_utils.h"
+#include "game/item_sprite_pattern.h"
 #include <nanovg_gl.h>
 #include "rendering/core/graphics.h"
 #include "ui/icons/sprite_icon_service.h"
@@ -191,8 +192,9 @@ void NanoVGCanvas::SetScrollPosition(int pos) {
 	Refresh();
 }
 
-int NanoVGCanvas::GetOrCreateItemImage(uint16_t itemId, uint16_t subtype) {
-	const uint64_t imageKey = (static_cast<uint64_t>(itemId) << 16) | subtype;
+int NanoVGCanvas::GetOrCreateItemImage(uint16_t itemId, std::optional<uint16_t> subtype) {
+	const auto slot = NvgUtils::GetCompositeSlot(itemId, subtype);
+	const uint64_t imageKey = slot.CacheKey(itemId);
 	int tex = GetCachedImage(imageKey);
 	if (tex != 0) {
 		return (tex > 0) ? tex : 0;
@@ -328,7 +330,7 @@ int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64
 			is_stackable = g_item_definitions.get(*sid).hasFlag(ItemFlag::Stackable);
 		}
 	}
-	const int pattern_x = (is_stackable && gs->pattern_x >= 3) ? 2 : 0;
+	const int pattern_x = is_stackable ? ItemSpritePattern::RepresentativeIndex(gs->pattern_x) : 0;
 	const auto metrics = gs->getPlainLayoutMetrics(-1, pattern_x, 0, 0, 0);
 	int w = metrics.total_width;
 	int h = metrics.total_height;

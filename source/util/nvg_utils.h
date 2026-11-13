@@ -3,6 +3,7 @@
 
 #include "item_definitions/core/item_definition_store.h"
 #include "game/item.h"
+#include "game/item_sprite_pattern.h"
 #include "ui/gui.h"
 #include <nanovg.h>
 #include <vector>
@@ -17,6 +18,31 @@ namespace NvgUtils {
 	// Returns 0 if generation fails.
 	inline NVGcolor ToNvColor(const wxColour& c) {
 		return nvgRGBA(c.Red(), c.Green(), c.Blue(), c.Alpha());
+	}
+
+	// How a subtype selects a sprite pattern.
+	using PatternSlot = ItemSpritePattern::PatternSlot;
+
+	// Slot in the item's pattern grid for a given definition and optional subtype.
+	inline PatternSlot GetPatternSlot(const ItemDefinitionView& it, bool is_stackable, std::optional<uint16_t> subtype) {
+		if (it && (it.isFluidContainer() || it.isSplash())) {
+			return PatternSlot::At(Item::ServerFluidToSpritePattern(subtype.value_or(LIQUID_WATER)));
+		}
+		if (is_stackable) {
+			return subtype.has_value()
+				? PatternSlot::At(ItemSpritePattern::FromCount(*subtype))
+				: PatternSlot::Representative();
+		}
+		return PatternSlot::None();
+	}
+
+	// Slot used for the composite image of an item id and optional subtype.
+	inline PatternSlot GetCompositeSlot(uint16_t id, std::optional<uint16_t> subtype) {
+		const auto it = g_item_definitions.get(id);
+		if (!it) {
+			return PatternSlot::None();
+		}
+		return GetPatternSlot(it, it.hasFlag(ItemFlag::Stackable), subtype);
 	}
 
 	// Creates a composite RGBA buffer from a GameSprite.
@@ -48,46 +74,16 @@ namespace NvgUtils {
 		int pattern_x = 0;
 		int pattern_y = 0;
 
-		if (it && (it.isFluidContainer() || it.isSplash())) {
-			const uint16_t fluid = subtype_opt.value_or(0);
-			const uint8_t pattern_index = Item::ServerFluidToSpritePattern(fluid);
-			if (gs.pattern_x > 0) {
-				pattern_x = pattern_index % gs.pattern_x;
-				if (gs.pattern_y > 0) {
-					pattern_y = (pattern_index / gs.pattern_x) % gs.pattern_y;
-				}
-			}
-		} else if (is_stackable) {
-			int exactCount = 0;
-			if (subtype_opt.has_value() && *subtype_opt > 0) {
-				const uint16_t count = *subtype_opt;
-				if (count <= 1) {
-					exactCount = 0;
-				} else if (count <= 2) {
-					exactCount = 1;
-				} else if (count <= 3) {
-					exactCount = 2;
-				} else if (count <= 4) {
-					exactCount = 3;
-				} else if (count < 10) {
-					exactCount = 4;
-				} else if (count < 25) {
-					exactCount = 5;
-				} else if (count < 50) {
-					exactCount = 6;
-				} else {
-					exactCount = 7;
-				}
-			} else {
-				// Representative preview (e.g. palette or catalog view)
-				exactCount = (gs.pattern_x >= 3) ? 2 : 0;
-			}
-			if (gs.pattern_x > 0) {
-				pattern_x = exactCount % gs.pattern_x;
-				if (gs.pattern_y > 0) {
-					pattern_y = (exactCount / gs.pattern_x) % gs.pattern_y;
-				}
-			}
+		const auto slot = GetPatternSlot(it, is_stackable, subtype_opt);
+		if (slot.kind == PatternSlot::Kind::Representative) {
+			// Palette preview: show a pile only when the sprite has a third pattern column.
+			const auto offset = ItemSpritePattern::Resolve(ItemSpritePattern::RepresentativeIndex(gs.pattern_x), gs.pattern_x, gs.pattern_y);
+			pattern_x = offset.x;
+			pattern_y = offset.y;
+		} else if (slot.kind == PatternSlot::Kind::Index) {
+			const auto offset = ItemSpritePattern::Resolve(slot.index, gs.pattern_x, gs.pattern_y);
+			pattern_x = offset.x;
+			pattern_y = offset.y;
 		} else if (it && it.hasFlag(ItemFlag::IsHangable) && gs.pattern_x > 1) {
 			pattern_x = 1;
 		}
@@ -185,7 +181,7 @@ namespace NvgUtils {
 	// Generates RGBA pixel data for a given item ID and optional subtype (fluid / charges / count).
 	// Returns a texture ID created in the given NanoVG context.
 	// Returns 0 if generation fails.
-	inline int CreateItemTexture(NVGcontext* vg, uint16_t id, uint16_t subtype = 0) {
+	inline int CreateItemTexture(NVGcontext* vg, uint16_t id, std::optional<uint16_t> subtype = std::nullopt) {
 		const auto it = g_item_definitions.get(id);
 		GameSprite* gs = it ? dynamic_cast<GameSprite*>(g_gui.gfx.getSprite(it.clientId())) : nullptr;
 		if (!gs) {

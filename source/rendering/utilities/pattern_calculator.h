@@ -4,6 +4,7 @@
 #include "rendering/core/game_sprite.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "game/item.h"
+#include "game/item_sprite_pattern.h"
 #include "map/tile.h"
 #include "brushes/brush_enums.h"
 #include <bit>
@@ -51,13 +52,9 @@ public:
 		if (it.isSplash() || it.isFluidContainer()) {
 			const uint16_t fluid = item ? item->getSubtype() : 0;
 			patterns.subtype = fluid;
-			const uint8_t pattern_index = Item::ServerFluidToSpritePattern(fluid);
-			if (spr->pattern_x > 0) {
-				patterns.x = pattern_index % spr->pattern_x;
-				if (spr->pattern_y > 0) {
-					patterns.y = (pattern_index / spr->pattern_x) % spr->pattern_y;
-				}
-			}
+			const auto offset = ItemSpritePattern::Resolve(Item::ServerFluidToSpritePattern(fluid), spr->pattern_x, spr->pattern_y);
+			patterns.x = offset.x;
+			patterns.y = offset.y;
 
 		} else if (it.hasFlag(ItemFlag::IsHangable)) {
 			if (tile && tile->hasHookSouth()) {
@@ -79,31 +76,11 @@ public:
 			}
 		} else if (it.hasFlag(ItemFlag::Stackable)) {
 			const uint16_t itemSubtype = item ? item->getSubtype() : 0;
-			int exactCount = 0;
-			if (itemSubtype <= 1) {
-				exactCount = 0;
-			} else if (itemSubtype <= 2) {
-				exactCount = 1;
-			} else if (itemSubtype <= 3) {
-				exactCount = 2;
-			} else if (itemSubtype <= 4) {
-				exactCount = 3;
-			} else if (itemSubtype < 10) {
-				exactCount = 4;
-			} else if (itemSubtype < 25) {
-				exactCount = 5;
-			} else if (itemSubtype < 50) {
-				exactCount = 6;
-			} else {
-				exactCount = 7;
-			}
-			patterns.subtype = exactCount;
-			if (spr->pattern_x > 0) {
-				patterns.x = exactCount % spr->pattern_x;
-				if (spr->pattern_y > 0) {
-					patterns.y = (exactCount / spr->pattern_x) % spr->pattern_y;
-				}
-			}
+			const uint8_t slot = ItemSpritePattern::FromCount(itemSubtype);
+			patterns.subtype = slot;
+			const auto offset = ItemSpritePattern::Resolve(slot, spr->pattern_x, spr->pattern_y);
+			patterns.x = offset.x;
+			patterns.y = offset.y;
 		}
 
 		return patterns;
