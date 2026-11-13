@@ -11,7 +11,7 @@
 
 #define NANOVG_GL3_IMPLEMENTATION
 #include "util/nvg_utils.h"
-#include "game/item_sprite_pattern.h"
+#include "game/subtype_pattern.h"
 #include <nanovg_gl.h>
 #include "rendering/core/graphics.h"
 #include "ui/icons/sprite_icon_service.h"
@@ -330,7 +330,7 @@ int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64
 			is_stackable = g_item_definitions.get(*sid).hasFlag(ItemFlag::Stackable);
 		}
 	}
-	const int pattern_x = is_stackable ? ItemSpritePattern::RepresentativeIndex(gs->pattern_x) : 0;
+	const int pattern_x = is_stackable ? SubtypePattern::RepresentativeIndex(gs->pattern_x) : 0;
 	const auto metrics = gs->getPlainLayoutMetrics(-1, pattern_x, 0, 0, 0);
 	int w = metrics.total_width;
 	int h = metrics.total_height;

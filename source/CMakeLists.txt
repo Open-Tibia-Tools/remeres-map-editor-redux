@@ -90,7 +90,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/game/house.h
     ${CMAKE_CURRENT_LIST_DIR}/game/item.h
     ${CMAKE_CURRENT_LIST_DIR}/game/item_attributes.h
-    ${CMAKE_CURRENT_LIST_DIR}/game/item_sprite_pattern.h
+    ${CMAKE_CURRENT_LIST_DIR}/game/subtype_pattern.h
     ${CMAKE_CURRENT_LIST_DIR}/game/materials.h
     ${CMAKE_CURRENT_LIST_DIR}/game/material_database.h
     ${CMAKE_CURRENT_LIST_DIR}/game/material_include_resolver.h

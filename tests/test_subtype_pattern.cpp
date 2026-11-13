@@ -1,4 +1,4 @@
-#include "game/item_sprite_pattern.h"
+#include "game/subtype_pattern.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -7,7 +7,7 @@ namespace {
 
 	void Check(bool condition, const char* expression, int line) {
 		if (!condition) {
-			std::fprintf(stderr, "Assertion failed: %s at tests/test_item_sprite_pattern.cpp:%d\n", expression, line);
+			std::fprintf(stderr, "Assertion failed: %s at tests/test_subtype_pattern.cpp:%d\n", expression, line);
 			std::exit(1);
 		}
 	}
@@ -17,9 +17,9 @@ namespace {
 #define CHECK(condition) Check(static_cast<bool>(condition), #condition, __LINE__)
 
 int main() {
-	using ItemSpritePattern::FromCount;
-	using ItemSpritePattern::PatternSlot;
-	using ItemSpritePattern::Resolve;
+	using SubtypePattern::FromCount;
+	using SubtypePattern::Resolve;
+	using SubtypePattern::Slot;
 
 	// Stack count brackets.
 	CHECK(FromCount(0) == 0);
@@ -38,24 +38,24 @@ int main() {
 	CHECK(FromCount(65535) == 7);
 
 	// Typed slots.
-	CHECK(PatternSlot::None().kind == PatternSlot::Kind::None);
-	CHECK(PatternSlot::Representative().kind == PatternSlot::Kind::Representative);
-	CHECK(PatternSlot::At(3).kind == PatternSlot::Kind::Index);
-	CHECK(PatternSlot::At(3).index == 3);
+	CHECK(Slot::None().kind == Slot::Kind::None);
+	CHECK(Slot::Representative().kind == Slot::Kind::Representative);
+	CHECK(Slot::At(3).kind == Slot::Kind::Index);
+	CHECK(Slot::At(3).index == 3);
 
 	// Cache keys: item id, kind and index must not overlap.
-	CHECK(PatternSlot::None().CacheKey(5) != PatternSlot::At(0).CacheKey(5));
-	CHECK(PatternSlot::None().CacheKey(5) != PatternSlot::Representative().CacheKey(5));
-	CHECK(PatternSlot::Representative().CacheKey(5) != PatternSlot::At(2).CacheKey(5));
-	CHECK(PatternSlot::At(0).CacheKey(5) != PatternSlot::At(1).CacheKey(5));
-	CHECK(PatternSlot::At(0).CacheKey(5) != PatternSlot::At(0).CacheKey(6));
-	CHECK(PatternSlot::At(7).CacheKey(65535) == 67108359u);
+	CHECK(Slot::None().CacheKey(5) != Slot::At(0).CacheKey(5));
+	CHECK(Slot::None().CacheKey(5) != Slot::Representative().CacheKey(5));
+	CHECK(Slot::Representative().CacheKey(5) != Slot::At(2).CacheKey(5));
+	CHECK(Slot::At(0).CacheKey(5) != Slot::At(1).CacheKey(5));
+	CHECK(Slot::At(0).CacheKey(5) != Slot::At(0).CacheKey(6));
+	CHECK(Slot::At(7).CacheKey(65535) == 67108359u);
 
 	// Representative stack preview.
-	CHECK(ItemSpritePattern::RepresentativeIndex(0) == 0);
-	CHECK(ItemSpritePattern::RepresentativeIndex(2) == 0);
-	CHECK(ItemSpritePattern::RepresentativeIndex(3) == 2);
-	CHECK(ItemSpritePattern::RepresentativeIndex(8) == 2);
+	CHECK(SubtypePattern::RepresentativeIndex(0) == 0);
+	CHECK(SubtypePattern::RepresentativeIndex(2) == 0);
+	CHECK(SubtypePattern::RepresentativeIndex(3) == 2);
+	CHECK(SubtypePattern::RepresentativeIndex(8) == 2);
 
 	// Pattern resolution.
 	auto offset = Resolve(0, 1, 1);

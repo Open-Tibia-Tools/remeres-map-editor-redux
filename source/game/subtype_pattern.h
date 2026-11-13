@@ -1,12 +1,12 @@
-#ifndef RME_GAME_ITEM_SPRITE_PATTERN_H_
-#define RME_GAME_ITEM_SPRITE_PATTERN_H_
+#ifndef RME_GAME_SUBTYPE_PATTERN_H_
+#define RME_GAME_SUBTYPE_PATTERN_H_
 
 #include <cstdint>
 
-namespace ItemSpritePattern {
+namespace SubtypePattern {
 
 	// How an item subtype selects a sprite pattern.
-	struct PatternSlot {
+	struct Slot {
 		enum class Kind : uint8_t {
 			None,           // The subtype does not change the sprite.
 			Representative, // Preview of a stack without a concrete count.
@@ -16,17 +16,17 @@ namespace ItemSpritePattern {
 		Kind kind = Kind::None;
 		uint8_t index = 0;
 
-		static_assert(static_cast<uint8_t>(Kind::Index) <= 0x3, "PatternSlot::Kind must fit in two key bits");
+		static_assert(static_cast<uint8_t>(Kind::Index) <= 0x3, "SubtypePattern::Slot::Kind must fit in two key bits");
 
-		static constexpr PatternSlot None() {
+		static constexpr Slot None() {
 			return {};
 		}
 
-		static constexpr PatternSlot Representative() {
+		static constexpr Slot Representative() {
 			return { Kind::Representative, 0 };
 		}
 
-		static constexpr PatternSlot At(uint8_t pattern_index) {
+		static constexpr Slot At(uint8_t pattern_index) {
 			return { Kind::Index, pattern_index };
 		}
 
@@ -89,6 +89,6 @@ namespace ItemSpritePattern {
 		return offset;
 	}
 
-} // namespace ItemSpritePattern
+} // namespace SubtypePattern
 
-#endif // RME_GAME_ITEM_SPRITE_PATTERN_H_
+#endif // RME_GAME_SUBTYPE_PATTERN_H_

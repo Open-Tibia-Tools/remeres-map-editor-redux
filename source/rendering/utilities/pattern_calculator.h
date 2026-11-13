@@ -4,7 +4,7 @@
 #include "rendering/core/game_sprite.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "game/item.h"
-#include "game/item_sprite_pattern.h"
+#include "game/subtype_pattern.h"
 #include "map/tile.h"
 #include "brushes/brush_enums.h"
 #include <bit>
@@ -52,7 +52,7 @@ public:
 		if (it.isSplash() || it.isFluidContainer()) {
 			const uint16_t fluid = item ? item->getSubtype() : 0;
 			patterns.subtype = fluid;
-			const auto offset = ItemSpritePattern::Resolve(Item::ServerFluidToSpritePattern(fluid), spr->pattern_x, spr->pattern_y);
+			const auto offset = SubtypePattern::Resolve(Item::ServerFluidToSpritePattern(fluid), spr->pattern_x, spr->pattern_y);
 			patterns.x = offset.x;
 			patterns.y = offset.y;
 
@@ -76,9 +76,9 @@ public:
 			}
 		} else if (it.hasFlag(ItemFlag::Stackable)) {
 			const uint16_t itemSubtype = item ? item->getSubtype() : 0;
-			const uint8_t slot = ItemSpritePattern::FromCount(itemSubtype);
+			const uint8_t slot = SubtypePattern::FromCount(itemSubtype);
 			patterns.subtype = slot;
-			const auto offset = ItemSpritePattern::Resolve(slot, spr->pattern_x, spr->pattern_y);
+			const auto offset = SubtypePattern::Resolve(slot, spr->pattern_x, spr->pattern_y);
 			patterns.x = offset.x;
 			patterns.y = offset.y;
 		}

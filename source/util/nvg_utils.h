@@ -3,7 +3,7 @@
 
 #include "item_definitions/core/item_definition_store.h"
 #include "game/item.h"
-#include "game/item_sprite_pattern.h"
+#include "game/subtype_pattern.h"
 #include "ui/gui.h"
 #include <nanovg.h>
 #include <vector>
@@ -21,7 +21,7 @@ namespace NvgUtils {
 	}
 
 	// How a subtype selects a sprite pattern.
-	using PatternSlot = ItemSpritePattern::PatternSlot;
+	using PatternSlot = SubtypePattern::Slot;
 
 	// Slot in the item's pattern grid for a given definition and optional subtype.
 	inline PatternSlot GetPatternSlot(const ItemDefinitionView& it, bool is_stackable, std::optional<uint16_t> subtype) {
@@ -30,7 +30,7 @@ namespace NvgUtils {
 		}
 		if (is_stackable) {
 			return subtype.has_value()
-				? PatternSlot::At(ItemSpritePattern::FromCount(*subtype))
+				? PatternSlot::At(SubtypePattern::FromCount(*subtype))
 				: PatternSlot::Representative();
 		}
 		return PatternSlot::None();
@@ -77,11 +77,11 @@ namespace NvgUtils {
 		const auto slot = GetPatternSlot(it, is_stackable, subtype_opt);
 		if (slot.kind == PatternSlot::Kind::Representative) {
 			// Palette preview: show a pile only when the sprite has a third pattern column.
-			const auto offset = ItemSpritePattern::Resolve(ItemSpritePattern::RepresentativeIndex(gs.pattern_x), gs.pattern_x, gs.pattern_y);
+			const auto offset = SubtypePattern::Resolve(SubtypePattern::RepresentativeIndex(gs.pattern_x), gs.pattern_x, gs.pattern_y);
 			pattern_x = offset.x;
 			pattern_y = offset.y;
 		} else if (slot.kind == PatternSlot::Kind::Index) {
-			const auto offset = ItemSpritePattern::Resolve(slot.index, gs.pattern_x, gs.pattern_y);
+			const auto offset = SubtypePattern::Resolve(slot.index, gs.pattern_x, gs.pattern_y);
 			pattern_x = offset.x;
 			pattern_y = offset.y;
 		} else if (it && it.hasFlag(ItemFlag::IsHangable) && gs.pattern_x > 1) {
