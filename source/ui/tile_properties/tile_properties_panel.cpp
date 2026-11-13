@@ -1,5 +1,4 @@
 #include <wx/collheaderctrl.h>
-#include <algorithm>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -24,6 +23,9 @@
 #include "map/tile.h"
 #include "game/spawn.h"
 #include "game/creature.h"
+
+#include <algorithm>
+#include <array>
 
 TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize),
@@ -117,12 +119,22 @@ void TilePropertiesPanel::UpdateMinSize() {
 	const int left_width = MeasureLeftPaneWidth();
 	splitter->SetMinimumPaneSize(left_width);
 
-	const int min_width = left_width + splitter->GetSashSize() + 2 * splitter->GetBorderSize() + right_panel->GetMinWidth();
+	const int min_width = left_width + splitter->GetSashSize() + 2 * splitter->GetBorderSize()
+		+ right_panel->GetMinWidth();
 	SetMinSize(wxSize(min_width, FromDIP(180)));
 }
 
 int TilePropertiesPanel::MeasurePropertiesWidth() const {
-	const wxWindow* panels[] = { map_flags_panel, item_property_panel, container_property_panel, depot_property_panel, teleport_property_panel, door_property_panel, spawn_property_panel, creature_property_panel };
+	const std::array<const wxWindow*, 8> panels{
+		map_flags_panel,
+		item_property_panel,
+		container_property_panel,
+		depot_property_panel,
+		teleport_property_panel,
+		door_property_panel,
+		spawn_property_panel,
+		creature_property_panel,
+	};
 
 	int width = right_panel->GetBestSize().GetWidth();
 	for (const wxWindow* panel : panels) {

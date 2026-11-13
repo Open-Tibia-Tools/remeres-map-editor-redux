@@ -184,21 +184,24 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 		spdlog::info("MainFrame: DPI changed from ({}, {}) to ({}, {})",
 			event.GetOldDPI().x, event.GetOldDPI().y,
 			event.GetNewDPI().x, event.GetNewDPI().y);
-		if (g_gui.tile_properties_panel) {
-			g_gui.tile_properties_panel->UpdateMinSize();
-		}
-		if (g_gui.aui_manager) {
-			if (g_gui.tile_properties_panel) {
-				wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.tile_properties_panel);
-				if (info.IsOk()) {
-					info.MinSize(g_gui.tile_properties_panel->GetMinSize());
-					LayoutManager::EnsurePaneOnScreen(info);
-				}
-			}
-			g_gui.aui_manager->Update();
-		}
-		g_gui.RefreshView(true);
+		// Let wxAuiManager::OnDPIChanged rescale the pane sizes first, then measure at the new DPI.
 		event.Skip();
+		CallAfter([this] {
+			if (g_gui.tile_properties_panel) {
+				g_gui.tile_properties_panel->UpdateMinSize();
+			}
+			if (g_gui.aui_manager) {
+				if (g_gui.tile_properties_panel) {
+					wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.tile_properties_panel);
+					if (info.IsOk()) {
+						info.MinSize(g_gui.tile_properties_panel->GetMinSize());
+						LayoutManager::EnsurePaneOnScreen(info);
+					}
+				}
+				g_gui.aui_manager->Update();
+			}
+			g_gui.RefreshView(true);
+		});
 	});
 }
 
