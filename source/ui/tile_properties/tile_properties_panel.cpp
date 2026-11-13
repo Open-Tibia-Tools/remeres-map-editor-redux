@@ -1,4 +1,3 @@
-#include <wx/collheaderctrl.h>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -24,6 +23,7 @@
 #include "game/spawn.h"
 #include "game/creature.h"
 
+#include <wx/collheaderctrl.h>
 #include <algorithm>
 #include <array>
 
@@ -125,7 +125,7 @@ void TilePropertiesPanel::UpdateMinSize() {
 }
 
 int TilePropertiesPanel::MeasurePropertiesWidth() const {
-	const std::array<const wxWindow*, 8> panels{
+	const auto panels = std::to_array<const wxWindow*>({
 		map_flags_panel,
 		item_property_panel,
 		container_property_panel,
@@ -134,7 +134,7 @@ int TilePropertiesPanel::MeasurePropertiesWidth() const {
 		door_property_panel,
 		spawn_property_panel,
 		creature_property_panel,
-	};
+	});
 
 	int width = right_panel->GetBestSize().GetWidth();
 	for (const wxWindow* panel : panels) {

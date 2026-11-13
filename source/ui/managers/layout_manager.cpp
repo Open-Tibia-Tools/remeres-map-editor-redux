@@ -50,19 +50,28 @@ void LayoutManager::EnsurePaneOnScreen(wxAuiPaneInfo& info) {
 		return;
 	}
 
+	const int display_index = wxDisplay::GetFromPoint(info.floating_pos);
+	if (display_index == wxNOT_FOUND) {
+		info.Dock();
+		return;
+	}
+
+	// AUI gives the client size precedence. Without a frame we cannot convert it to
+	// frame dimensions, so keep the saved values for the post-Update pass.
+	if (info.frame == nullptr && info.floating_client_size != wxDefaultSize) {
+		return;
+	}
+
 	wxSize size = info.floating_size;
-	if (size.x <= 0 || size.y <= 0) {
+	if (info.frame != nullptr && info.floating_client_size != wxDefaultSize) {
+		size = info.frame->ClientToWindowSize(info.floating_client_size);
+	}
+	if (size == wxDefaultSize) {
 		size = info.best_size;
 	}
 	size.x = std::max(size.x, info.min_size.x);
 	size.y = std::max(size.y, info.min_size.y);
 	if (size.x <= 0 || size.y <= 0) {
-		return;
-	}
-
-	const int display_index = wxDisplay::GetFromPoint(info.floating_pos);
-	if (display_index == wxNOT_FOUND) {
-		info.Dock();
 		return;
 	}
 
@@ -78,6 +87,11 @@ void LayoutManager::EnsurePaneOnScreen(wxAuiPaneInfo& info) {
 
 	info.FloatingPosition(wxPoint(fitted->x, fitted->y));
 	info.FloatingSize(wxSize(fitted->width, fitted->height));
+	info.FloatingClientSize(wxDefaultSize);
+
+	if (info.frame) {
+		info.frame->SetSize(wxRect(wxPoint(fitted->x, fitted->y), wxSize(fitted->width, fitted->height)));
+	}
 }
 
 void LayoutManager::UpdatePaletteActivePage(PaletteWindow* palette, const std::string& page_name) {
@@ -344,6 +358,9 @@ void LayoutManager::LoadPerspective() {
 
 
 	g_gui.aui_manager->Update();
+	for (wxAuiPaneInfo& pane : g_gui.aui_manager->GetAllPanes()) {
+		EnsurePaneOnScreen(pane);
+	}
 	if (g_gui.root && g_gui.root->GetAuiToolBar()) {
 		g_gui.root->GetAuiToolBar()->LoadPerspective();
 	}
