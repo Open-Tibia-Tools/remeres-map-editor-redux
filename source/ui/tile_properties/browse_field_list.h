@@ -14,7 +14,6 @@ class Tile;
 class Map;
 class Item;
 class TilePropertiesItemGrid;
-class TilesetGridToolbar;
 
 class BrowseFieldList : public wxPanel {
 public:
@@ -37,7 +36,6 @@ protected:
 	void UpdateButtons();
 
 	TilePropertiesItemGrid* item_grid;
-	TilesetGridToolbar* grid_toolbar;
 	wxButton* btn_up;
 	wxButton* btn_down;
 	wxButton* btn_delete;

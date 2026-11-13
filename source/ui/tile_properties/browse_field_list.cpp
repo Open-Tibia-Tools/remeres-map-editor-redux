@@ -13,7 +13,6 @@
 #include "ui/tile_properties/tile_properties_panel.h"
 #include "util/image_manager.h"
 #include "util/virtual_item_grid.h"
-#include "palette/controls/tileset_grid_toolbar.h"
 
 #include "game/item.h"
 
@@ -131,37 +130,11 @@ BrowseFieldList::BrowseFieldList(wxWindow* parent) :
 
 	main_sizer->Add(toolbar_sizer, wxSizerFlags(0).Expand().Border(wxALL, 2));
 
-	TilesetGridToolbar::Actions actions;
-	actions.show_labels = [this](bool show) {
-		item_grid->SetShowLabels(show);
-	};
-	actions.icon_size = [this](int size) {
-		if (item_grid->IsListMode()) {
-			item_grid->SetListMode(false);
-		}
-		item_grid->SetIconSize(size);
-		grid_toolbar->SetState(item_grid->GetShowLabels(), size, false, TilesetSortKey::ID, TilesetSortDirection::Ascending, false, false);
-	};
-	actions.list_mode = [this](bool list) {
-		item_grid->SetListMode(list);
-		grid_toolbar->SetState(item_grid->GetShowLabels(), item_grid->GetIconSize(), false, TilesetSortKey::ID, TilesetSortDirection::Ascending, false, list);
-	};
-	actions.grid_spacing = [this](int spacing) {
-		item_grid->SetGridSpacing(spacing);
-	};
-
-	grid_toolbar = new TilesetGridToolbar(
-		main_sizer->GetStaticBox(),
-		std::move(actions),
-		TilesetGridToolbar::Part_Labels | TilesetGridToolbar::Part_Size | TilesetGridToolbar::Part_Spacing
-	);
-	grid_toolbar->SetGridSpacing(4);
-	grid_toolbar->SetState(false, 32, false, TilesetSortKey::ID, TilesetSortDirection::Ascending, false, false);
-	grid_toolbar->ApplyTheme();
-	main_sizer->Add(grid_toolbar, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 2));
-
 	item_grid = new TilePropertiesItemGrid(main_sizer->GetStaticBox());
 	item_grid->SetBrushIndicators(false);
+	item_grid->SetShowLabels(false);
+	item_grid->SetGridSpacing(2);
+	item_grid->SetListMode(true);
 	main_sizer->Add(item_grid, wxSizerFlags(1).Expand());
 
 	SetSizer(main_sizer);
