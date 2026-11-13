@@ -54,6 +54,7 @@ enum class SearchResultKind : uint8_t {
 struct SearchContainedItem {
 	uint16_t item_id = 0;
 	int count = 1;
+	uint16_t subtype = 0;
 };
 
 struct SearchResultChildEntry {
@@ -61,6 +62,7 @@ struct SearchResultChildEntry {
 	std::string formatted_pos;
 	SearchResultKind kind = SearchResultKind::GenericItem;
 	uint16_t item_id = 0;
+	uint16_t subtype = 0;
 	uint16_t unique_id = 0;
 	uint16_t action_id = 0;
 	std::string text;
@@ -74,6 +76,7 @@ struct SearchResultChildEntry {
 struct SearchResultGroup {
 	uint32_t id = 0;
 	uint16_t client_id = 0;
+	uint16_t subtype = 0; // First extracted instance; children keep their own.
 	std::string name;
 	std::string lowercase_name;
 	std::string id_str;

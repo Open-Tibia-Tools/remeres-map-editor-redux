@@ -94,6 +94,7 @@ namespace {
 		data.pos = pos;
 		data.itemId = id;
 		data.clientId = static_cast<uint16_t>(item->getClientID());
+		data.subtype = item->getSubtype();
 		data.itemName = itemName;
 		data.count = count;
 		data.actionId = action;

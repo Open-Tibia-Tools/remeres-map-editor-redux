@@ -58,6 +58,7 @@ struct TooltipData {
 	// Header info
 	uint16_t itemId = 0;
 	uint16_t clientId = 0;
+	uint16_t subtype = 0;
 	std::string itemName;
 	uint16_t count = 0;
 	std::string subtitle;
@@ -139,6 +140,7 @@ struct TooltipData {
 		category = TooltipCategory::ITEM;
 		itemId = 0;
 		clientId = 0;
+		subtype = 0;
 		itemName.clear();
 		count = 0;
 		subtitle.clear();
@@ -221,11 +223,11 @@ protected:
 	std::vector<TooltipData> tooltips;
 	size_t active_count = 0;
 
-	std::unordered_map<uint32_t, int> spriteCache; // itemId -> nvg image handle
+	std::unordered_map<uint32_t, int> spriteCache; // (itemId, sprite pattern) -> nvg image handle
 	NVGcontext* lastContext = nullptr;
 
 	// Helper to get or load sprite image
-	int getSpriteImage(NVGcontext* vg, uint16_t itemId);
+	int getSpriteImage(NVGcontext* vg, uint16_t itemId, uint16_t subtype);
 
 	// Helper to get header border color based on category and tooltip data
 	NVGcolor getHeaderColor(const TooltipData& tooltip) const;
