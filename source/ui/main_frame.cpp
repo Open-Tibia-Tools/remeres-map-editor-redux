@@ -52,10 +52,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	std::vector<std::string> warnings;
 	wxString error;
 
-	wxFileName filename;
-	filename.Assign(FileSystem::GetFoundDataDirectory() + "menubar.xml");
-	if (!filename.FileExists()) {
-		filename = FileName(FileSystem::GetDataDirectory() + "menubar.xml");
+	FileName filename = FileSystem::GetFoundDataDirectory() / "menubar.xml";
+	if (!std::filesystem::exists(filename)) {
+		filename = FileSystem::GetDataDirectory() / "menubar.xml";
 	}
 
 	if (!menu_bar->Load(filename, warnings, error)) {
@@ -351,7 +350,7 @@ bool MainFrame::DoQuerySave(bool doclose) {
 				if (result != wxID_OK) {
 					return false;
 				}
-				if (!g_gui.SaveCurrentMap(file.GetPath(), true)) {
+				if (!g_gui.SaveCurrentMap(file.GetPath().ToStdWstring(), true)) {
 					return false;
 				}
 			}
@@ -378,13 +377,13 @@ bool MainFrame::DoQueryImportCreatures() {
 					wxArrayString paths;
 					dlg.GetPaths(paths);
 					for (uint32_t i = 0; i < paths.GetCount(); ++i) {
-						wxString error;
+						std::string error;
 						std::vector<std::string> warnings;
-						bool ok = g_creatures.importXMLFromOT(FileName(paths[i]), error, warnings);
+						bool ok = g_creatures.importXMLFromOT(paths[i].ToStdWstring(), error, warnings);
 						if (ok) {
 							DialogUtil::ListDialog("Monster loader errors", warnings);
 						} else {
-							DialogUtil::PopupDialog(g_gui.root, "Error", "Error OT data file \"" + paths[i] + "\".\n" + error, wxOK | wxICON_INFORMATION);
+							DialogUtil::PopupDialog(g_gui.root, "Error", wxstr(std::format("Error OT data file \"{}\".\n{}", paths[i].ToStdString(), error)), wxOK | wxICON_INFORMATION);
 						}
 					}
 				} else {

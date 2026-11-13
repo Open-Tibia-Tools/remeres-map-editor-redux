@@ -5,11 +5,12 @@
 
 #include "app/client_version.h"
 #include "ui/theme.h"
+#include "ui/wx_common.h"
 #include "util/image_manager.h"
 
 namespace {
-wxString fallbackValue(const wxString& value) {
-	return value.empty() ? wxString("-") : value;
+wxString fallbackValue(std::string_view value) {
+	return value.empty() ? wxString("-") : wxstr(value);
 }
 
 wxString formatUnsigned(uint32_t value) {
@@ -20,7 +21,7 @@ wxString formatMapDescription(const OTBMStartupPeekResult* info) {
 	if (!info || info->description.empty()) {
 		return "-";
 	}
-	return info->description;
+	return wxstr(info->description);
 }
 
 wxString formatMapClientVersion(const OTBMStartupPeekResult* info) {
@@ -101,7 +102,7 @@ wxColour StartupStatusColour(StartupCompatibilityStatus status) {
 }
 
 std::vector<StartupInfoField> BuildStartupMapFields(const OTBMStartupPeekResult* info) {
-	const wxString error_description = (info != nullptr && info->has_error && !info->error_message.empty()) ? info->error_message : wxString("-");
+	const wxString error_description = (info != nullptr && info->has_error && !info->error_message.empty()) ? wxstr(info->error_message) : wxString("-");
 	const wxColour error_colour = (info != nullptr && info->has_error) ? Theme::Get(Theme::Role::Warning) : wxNullColour;
 
 	if (!info || info->has_error) {
@@ -130,7 +131,7 @@ std::vector<StartupInfoField> BuildStartupMapFields(const OTBMStartupPeekResult*
 	};
 
 	if (info->otbm_version == 5) {
-		const wxString monster_file = !info->monster_xml_file.empty() ? info->monster_xml_file : info->spawn_xml_file;
+		const std::string& monster_file = !info->monster_xml_file.empty() ? info->monster_xml_file : info->spawn_xml_file;
 		fields.push_back({ "Monster Spawn File", fallbackValue(monster_file), std::string(ICON_FILE), wxNullColour, false });
 		fields.push_back({ "NPC Spawn File", fallbackValue(info->npc_xml_file), std::string(ICON_FILE), wxNullColour, false });
 		fields.push_back({ "Zone File", fallbackValue(info->zone_xml_file), std::string(ICON_FILE), wxNullColour, false });

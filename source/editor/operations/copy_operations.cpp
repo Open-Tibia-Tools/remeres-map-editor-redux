@@ -2,12 +2,11 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "editor/operations/copy_operations.h"
 #include "editor/copybuffer.h"
 #include "editor/editor.h"
 #include "map/tile_operations.h"
-#include "ui/gui.h"
 #include "game/creature.h"
 #include "game/spawn.h"
 #include "map/map.h"
@@ -16,13 +15,12 @@
 #include "app/settings.h"
 
 #include <algorithm>
+#include <format>
 #include <limits>
-#include <sstream>
 
-void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
+CopyResult CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 	if (editor.selection.empty()) {
-		g_gui.SetStatusText("No tiles to copy.");
-		return;
+		return {.empty = true};
 	}
 
 	buffer.clear();
@@ -64,16 +62,16 @@ void CopyOperations::copy(Editor& editor, CopyBuffer& buffer, int floor) {
 	}
 
 	buffer.copyPos = Position(min_x, min_y, floor);
-
-	std::ostringstream ss;
-	ss << "Copied " << tile_count << " tile" << (tile_count > 1 ? "s" : "") << " (" << item_count << " item" << (item_count > 1 ? "s" : "") << ")";
-	g_gui.SetStatusText(wxstr(ss.str()));
+	return {
+		.tile_count = tile_count,
+		.item_count = item_count,
+		.empty = false
+	};
 }
 
-void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
+CopyResult CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 	if (editor.selection.empty()) {
-		g_gui.SetStatusText("No tiles to cut.");
-		return;
+		return {.empty = true};
 	}
 
 	buffer.clear();
@@ -163,9 +161,11 @@ void CopyOperations::cut(Editor& editor, CopyBuffer& buffer, int floor) {
 	}
 
 	editor.addBatch(std::move(batch));
-	std::stringstream ss;
-	ss << "Cut out " << tile_count << " tile" << (tile_count > 1 ? "s" : "") << " (" << item_count << " item" << (item_count > 1 ? "s" : "") << ")";
-	g_gui.SetStatusText(wxstr(ss.str()));
+	return {
+		.tile_count = tile_count,
+		.item_count = item_count,
+		.empty = false
+	};
 }
 
 void CopyOperations::paste(Editor& editor, CopyBuffer& buffer, const Position& toPosition) {

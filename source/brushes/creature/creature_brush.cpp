@@ -15,15 +15,16 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "brushes/creature/creature_brush.h"
-#include "ui/gui.h"
 #include "app/settings.h"
 #include "map/tile.h"
 #include "game/creature.h"
 #include "map/basemap.h"
 #include "game/spawn.h"
+#include "rendering/core/graphics.h"
+#include "rendering/core/game_sprite.h"
 
 #include <algorithm>
 
@@ -50,7 +51,7 @@ Sprite* CreatureBrush::getSprite() const {
 		const Outfit& outfit = creature_type->outfit;
 		if (outfit.lookItem != 0) {
 			if (const auto definition = g_item_definitions.get(outfit.lookItem)) {
-				return g_gui.gfx.getSprite(definition.clientId());
+				return g_graphics.getSprite(definition.clientId());
 			}
 			return nullptr;
 		}
@@ -59,9 +60,9 @@ Sprite* CreatureBrush::getSprite() const {
 		const Outfit* useOutfit = (outfit.lookType != 0) ? &outfit : &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 
 		if (!creature_sprite_wrapper) {
-			GameSprite* gs = g_gui.gfx.getCreatureSprite(lookType);
+			GameSprite* gs = g_graphics.getCreatureSprite(lookType);
 			if (!gs && lookType != DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType) {
-				gs = g_gui.gfx.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
+				gs = g_graphics.getCreatureSprite(DEFAULT_UNKNOWN_CREATURE_OUTFIT.lookType);
 				useOutfit = &DEFAULT_UNKNOWN_CREATURE_OUTFIT;
 			}
 			if (gs) {
@@ -124,7 +125,7 @@ void CreatureBrush::draw_creature(BaseMap* map, Tile* tile) {
 			}
 			tile->creature = std::make_unique<Creature>(creature_type);
 			tile->creature->setDirection(current_direction);
-			tile->creature->setSpawnTime(g_gui.GetSpawnTime());
+			tile->creature->setSpawnTime(default_spawn_time);
 		}
 	}
 }

@@ -18,7 +18,7 @@
 #ifndef RME_SETTINGS_H_
 #define RME_SETTINGS_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include <toml++/toml.h>
 #include <variant>

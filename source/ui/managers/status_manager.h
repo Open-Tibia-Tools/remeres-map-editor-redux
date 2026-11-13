@@ -7,12 +7,18 @@
 
 #include "app/main.h"
 #include <chrono>
+#include <string_view>
 
 class StatusManager {
 public:
 	void SetTitle(const wxString& title);
 	void UpdateTitle();
 	void SetStatusText(const wxString& text, int field = 1, int duration_ms = 3500);
+	void SetStatusText(std::string_view text, int field = 1, int duration_ms = 3500);
+	void SetStatusText(const std::string& text, int field = 1, int duration_ms = 3500) {
+		SetStatusText(std::string_view(text), field, duration_ms);
+	}
+	void SetStatusText(const char* text, int field = 1, int duration_ms = 3500);
 	bool HasActiveMessage() const;
 
 private:

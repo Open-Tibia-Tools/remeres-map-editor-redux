@@ -2,10 +2,10 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "brushes/brush_utility.h"
-#include "ui/gui.h"
+#include "brushes/brush_footprint.h"
 #include "editor/editor.h"
 #include "brushes/brush.h"
 #include "brushes/ground/ground_brush.h"
@@ -15,17 +15,16 @@
 bool BrushUtility::processed[BrushUtility::BLOCK_SIZE * BrushUtility::BLOCK_SIZE] = { false };
 int BrushUtility::countMaxFills = 0;
 
-void BrushUtility::GetTilesToDraw(int mouse_map_x, int mouse_map_y, int floor, std::vector<Position>* tilestodraw, std::vector<Position>* tilestoborder, bool fill) {
+void BrushUtility::GetTilesToDraw(Map* map, Brush* brush, const BrushFootprint& footprint, int mouse_map_x, int mouse_map_y, int floor, std::vector<Position>* tilestodraw, std::vector<Position>* tilestoborder, bool fill) {
 	if (fill) {
-		Brush* brush = g_gui.GetCurrentBrush();
-		if (!brush || !brush->is<GroundBrush>()) {
+		if (!map || !brush || !brush->is<GroundBrush>()) {
 			return;
 		}
 
 		GroundBrush* newBrush = brush->as<GroundBrush>();
 		Position position(mouse_map_x, mouse_map_y, floor);
 
-		Tile* tile = g_gui.GetCurrentMap().getTile(position);
+		Tile* tile = map->getTile(position);
 		GroundBrush* oldBrush = nullptr;
 		if (tile) {
 			oldBrush = tile->getGroundBrush();
@@ -48,10 +47,9 @@ void BrushUtility::GetTilesToDraw(int mouse_map_x, int mouse_map_y, int floor, s
 
 		std::fill(std::begin(processed), std::end(processed), false);
 		countMaxFills = 0;
-		FloodFill(&g_gui.GetCurrentMap(), position, BLOCK_SIZE / 2, BLOCK_SIZE / 2, oldBrush, tilestodraw);
+		FloodFill(map, position, BLOCK_SIZE / 2, BLOCK_SIZE / 2, oldBrush, tilestodraw);
 
 	} else {
-		const BrushFootprint footprint = g_gui.GetBrushFootprint();
 		for (int y = footprint.min_offset_y - 1; y <= footprint.max_offset_y + 1; ++y) {
 			for (int x = footprint.min_offset_x - 1; x <= footprint.max_offset_x + 1; ++x) {
 				if (footprint.containsOffset(x, y)) {

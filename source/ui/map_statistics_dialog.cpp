@@ -26,7 +26,9 @@ void MapStatisticsDialog::Show(wxWindow* parent) {
 	g_gui.CreateLoadBar("Collecting data...");
 
 	Map* map = &g_gui.GetCurrentMap();
-	MapStatistics stats = MapStatisticsCollector::Collect(map);
+	MapStatistics stats = MapStatisticsCollector::Collect(map, [](int percent) {
+		g_gui.SetLoadDone(percent);
+	});
 
 	g_gui.DestroyLoadBar();
 

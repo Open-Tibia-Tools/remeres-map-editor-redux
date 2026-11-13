@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "lua_api_noise.h"
+#include "lua_api.h"
 #include "ext/fast_noise_lite.h"
 
 namespace LuaAPI {

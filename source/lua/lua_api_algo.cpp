@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "lua_api_algo.h"
+#include "lua_api.h"
 
 #include <vector>
 #include <random>

@@ -18,6 +18,19 @@ void StatusManager::SetStatusText(const wxString& text, int field, int duration_
 	}
 }
 
+void StatusManager::SetStatusText(std::string_view text, int field, int duration_ms) {
+	if (g_gui.root) {
+		g_gui.root->SetStatusText(wxString::FromUTF8(text.data(), text.size()), field);
+	}
+	if (field == 1 && duration_ms > 0) {
+		message_expiry_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(duration_ms);
+	}
+}
+
+void StatusManager::SetStatusText(const char* text, int field, int duration_ms) {
+	SetStatusText(std::string_view(text ? text : ""), field, duration_ms);
+}
+
 bool StatusManager::HasActiveMessage() const {
 	return std::chrono::steady_clock::now() < message_expiry_;
 }

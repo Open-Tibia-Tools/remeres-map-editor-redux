@@ -1,7 +1,7 @@
 #ifndef RME_INGAME_PREVIEW_FLOOR_VISIBILITY_CALCULATOR_H_
 #define RME_INGAME_PREVIEW_FLOOR_VISIBILITY_CALCULATOR_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "map/position.h"
 
 class BaseMap;

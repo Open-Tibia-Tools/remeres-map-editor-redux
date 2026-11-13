@@ -24,7 +24,6 @@
 #include <nanovg.h>
 #include <format>
 #include <charconv>
-#include "rendering/core/coordinate_mapper.h"
 #include <wx/wx.h>
 #include "item_definitions/core/item_definition_store.h"
 #include "util/nvg_utils.h"

@@ -3,7 +3,7 @@
 #include "map/tile.h"
 #include "game/town.h"
 #include "app/settings.h"
-#include <wx/filename.h>
+#include <filesystem>
 #include <sstream>
 
 Position MapInitialPositionResolver::Resolve(Map& map, std::string_view mapPath) {
@@ -13,9 +13,10 @@ Position MapInitialPositionResolver::Resolve(Map& map, std::string_view mapPath)
 	if (!mapPath.empty()) {
 		const std::string saved_path = g_settings.getString(Config::RECENT_EDITED_MAP_PATH);
 		if (!saved_path.empty()) {
-			wxFileName saved_fn(saved_path);
-			wxFileName current_fn(wxString::FromUTF8(mapPath.data(), mapPath.size()));
-			if (saved_fn == current_fn) {
+			std::error_code ec1, ec2;
+			const auto saved_fn = std::filesystem::weakly_canonical(std::filesystem::path(saved_path), ec1);
+			const auto current_fn = std::filesystem::weakly_canonical(std::filesystem::path(std::string(mapPath)), ec2);
+			if (!ec1 && !ec2 && saved_fn == current_fn) {
 				const std::string pos_str = g_settings.getString(Config::RECENT_EDITED_MAP_POSITION);
 				if (!pos_str.empty()) {
 					std::istringstream stream(pos_str);

@@ -16,23 +16,23 @@ namespace rme::collection {
 
 
 std::filesystem::path CollectionXmlService::GetCollectionsDirectory() {
-	wxString modularPath = g_version.GetModularDataPath();
+	std::filesystem::path modularPath = g_version.GetModularDataPath();
 	std::filesystem::path baseDir;
 	if (!modularPath.empty()) {
-		baseDir = modularPath.ToStdWstring();
+		baseDir = modularPath;
 	} else {
-		baseDir = std::filesystem::path(FileSystem::GetDataDirectory().ToStdWstring()) / "1098";
+		baseDir = FileSystem::GetDataDirectory() / "1098";
 	}
 	return baseDir / "tilesets" / "collections";
 }
 
 std::filesystem::path CollectionXmlService::GetPalettesXmlPath() {
-	wxString modularPath = g_version.GetModularDataPath();
+	std::filesystem::path modularPath = g_version.GetModularDataPath();
 	std::filesystem::path baseDir;
 	if (!modularPath.empty()) {
-		baseDir = modularPath.ToStdWstring();
+		baseDir = modularPath;
 	} else {
-		baseDir = std::filesystem::path(FileSystem::GetDataDirectory().ToStdWstring()) / "1098";
+		baseDir = FileSystem::GetDataDirectory() / "1098";
 	}
 	return baseDir / "palettes.xml";
 }

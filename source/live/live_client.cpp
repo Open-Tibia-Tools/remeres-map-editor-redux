@@ -429,7 +429,7 @@ void LiveClient::parseChangeClientVersion(NetworkMessage& message) {
 		return;
 	}
 
-	wxString error;
+	std::string error;
 	std::vector<std::string> warnings;
 	g_version.LoadVersion(clientVersion, error, warnings);
 

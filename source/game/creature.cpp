@@ -15,9 +15,10 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "game/creature.h"
+#include "util/common.h"
 #include <array>
 #include <string_view>
 #include <unordered_map>

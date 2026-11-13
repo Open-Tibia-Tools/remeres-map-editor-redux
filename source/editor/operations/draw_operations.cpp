@@ -2,15 +2,13 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include <format>
 #include "editor/operations/draw_operations.h"
 #include <unordered_set>
 #include <array>
 #include "editor/editor.h"
 #include "editor/action_queue.h"
-#include "ui/gui.h"
-#include "brushes/managers/doodad_preview_manager.h"
 #include "brushes/brush.h"
 #include "brushes/doodad/doodad_brush.h"
 #include "brushes/ground/ground_brush.h"
@@ -24,6 +22,7 @@
 #include "brushes/creature/creature_brush.h"
 #include "brushes/spawn/spawn_brush.h"
 #include "brushes/door/door_brush.h"
+#include "brushes/managers/doodad_preview_manager.h"
 #include "game/town.h"
 #include "map/map.h"
 #include "map/tile.h"
@@ -223,8 +222,7 @@ namespace {
 
 		if (alt && dodraw) {
 			// This is exempt from USE_AUTOMAGIC
-			g_doodad_preview.GetBufferMap()->clear();
-			BaseMap* draw_map = g_doodad_preview.GetBufferMap();
+			BaseMap draw_map;
 
 			const bool is_multi_tile = tilestodraw.size() > 1;
 			bool special = !is_multi_tile;
@@ -236,23 +234,23 @@ namespace {
 					if (is_multi_tile) {
 						TileOperations::cleanWalls(new_tile.get(), brush);
 					}
-					brush->draw(draw_map, new_tile.get(), special ? &special : nullptr);
-					(void)draw_map->setTile(drawPos, std::move(new_tile));
+					brush->draw(&draw_map, new_tile.get(), special ? &special : nullptr);
+					(void)draw_map.setTile(drawPos, std::move(new_tile));
 				} else {
 					std::unique_ptr<Tile> new_tile(editor.map.allocator(location));
-					brush->draw(draw_map, new_tile.get(), special ? &special : nullptr);
-					(void)draw_map->setTile(drawPos, std::move(new_tile));
+					brush->draw(&draw_map, new_tile.get(), special ? &special : nullptr);
+					(void)draw_map.setTile(drawPos, std::move(new_tile));
 				}
 			}
 			// Iterate over the map instead of tilestodraw to avoid duplicates!
-			for (MapIterator it = draw_map->begin(); it != draw_map->end(); ++it) {
+			for (MapIterator it = draw_map.begin(); it != draw_map.end(); ++it) {
 				Tile* tile = it->get();
 				if (tile) {
-					TileOperations::wallize(tile, draw_map);
+					TileOperations::wallize(tile, &draw_map);
 					action->addChange(std::make_unique<Change>(std::unique_ptr<Tile>(tile)));
 				}
 			}
-			draw_map->clear(false);
+			draw_map.clear(false);
 			// Commit
 			batch->addAndCommitAction(std::move(action));
 		} else {
@@ -300,8 +298,7 @@ namespace {
 
 } // namespace
 
-void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw) {
-	Brush* brush = g_gui.GetCurrentBrush();
+void DrawOperations::draw(Editor& editor, Brush* brush, Position offset, bool alt, bool dodraw, int brush_size) {
 	if (!brush) {
 		return;
 	}
@@ -313,14 +310,10 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 		if (!house_exit_brush->canDraw(&editor.map, offset)) {
 			Tile* tile = editor.map.getTile(offset);
 			if (house_exit_brush->getHouseID() == 0) {
-				g_gui.SetStatusText("Cannot place exit: no house selected.");
-			} else if (!tile || !tile->hasGround()) {
-				g_gui.SetStatusText("Cannot place house exit on void (tile must have ground).");
-			} else if (tile->isHouseTile()) {
-				g_gui.SetStatusText("Cannot place house exit inside a house tile (exit must be a walkable tile outside the house).");
-			} else if (tile->isBlocking()) {
-				g_gui.SetStatusText("Cannot place house exit on a blocking tile (must be a walkable tile outside).");
-			}
+						} else if (!tile || !tile->hasGround()) {
+						} else if (tile->isHouseTile()) {
+						} else if (tile->isBlocking()) {
+						}
 			return;
 		}
 
@@ -334,8 +327,7 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 		action->addChange(std::unique_ptr<Change>(Change::Create(house, offset)));
 		batch->addAndCommitAction(std::move(action));
 		editor.addBatch(std::move(batch), 2);
-		g_gui.SetStatusText(wxstr(std::format("House \"{}\" (ID: {}) exit set to ({}, {}, {})", house->name, house->getID(), offset.x, offset.y, offset.z)));
-	} else if (brush->is<WaypointBrush>()) {
+		} else if (brush->is<WaypointBrush>()) {
 		WaypointBrush* waypoint_brush = brush->as<WaypointBrush>();
 		if (!waypoint_brush->canDraw(&editor.map, offset)) {
 			return;
@@ -351,18 +343,15 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 		action->addChange(std::unique_ptr<Change>(Change::Create(waypoint, offset)));
 		batch->addAndCommitAction(std::move(action));
 		editor.addBatch(std::move(batch), 2);
-		g_gui.SetStatusText(wxstr(std::format("Waypoint \"{}\" moved to ({}, {}, {})", waypoint->name, offset.x, offset.y, offset.z)));
-	} else if (brush->is<TownTempleBrush>()) {
+		} else if (brush->is<TownTempleBrush>()) {
 		TownTempleBrush* temple_brush = brush->as<TownTempleBrush>();
 		if (!temple_brush->canDraw(&editor.map, offset)) {
-			g_gui.SetStatusText("Cannot set temple position here: tile must have ground.");
-			return;
+					return;
 		}
 
 		if (temple_brush->hasPlacementCallback()) {
 			temple_brush->invokePlacementCallback(offset);
-			g_gui.SelectPreviousBrush();
-			return;
+					return;
 		}
 
 		Town* town = editor.map.towns.getTown(temple_brush->getTownID());
@@ -370,9 +359,7 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 			return;
 		}
 		if (town->getTemplePosition() == offset) {
-			g_gui.SetStatusText(wxstr(std::format("Town \"{}\" (ID: {}) temple position is already at ({}, {}, {}).", town->getName(), town->getID(), offset.x, offset.y, offset.z)));
-			g_gui.SelectPreviousBrush();
-			return;
+							return;
 		}
 
 		std::unique_ptr<BatchAction> batch = editor.actionQueue->createBatch(ACTION_DRAW);
@@ -380,11 +367,7 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 		action->addChange(std::unique_ptr<Change>(Change::Create(town, offset)));
 		batch->addAndCommitAction(std::move(action));
 		editor.addBatch(std::move(batch), 2);
-		g_gui.SetStatusText(wxstr(std::format("Town \"{}\" (ID: {}) temple position set to ({}, {}, {})", town->getName(), town->getID(), offset.x, offset.y, offset.z)));
-		g_gui.SelectPreviousBrush();
-		g_gui.RefreshPalettes();
-		g_gui.RefreshView();
-	} else if (brush->is<WallBrush>()) {
+					} else if (brush->is<WallBrush>()) {
 		std::unique_ptr<BatchAction> batch = editor.actionQueue->createBatch(ACTION_DRAW);
 		std::unique_ptr<Action> action = editor.actionQueue->createAction(batch.get());
 		// This will only occur with a size 0, when clicking on a tile (not drawing)
@@ -418,7 +401,7 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 		}
 		int param;
 		if (!brush->is<CreatureBrush>()) {
-			param = g_gui.GetBrushSize();
+			param = brush_size;
 		}
 		if (dodraw) {
 			brush->draw(&editor.map, new_tile.get(), &param);
@@ -431,8 +414,7 @@ void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw
 	}
 }
 
-void DrawOperations::draw(Editor& editor, const PositionVector& tilestodraw, bool alt, bool dodraw) {
-	Brush* brush = g_gui.GetCurrentBrush();
+void DrawOperations::draw(Editor& editor, Brush* brush, const PositionVector& tilestodraw, bool alt, bool dodraw, int brush_size) {
 	if (!brush) {
 		return;
 	}
@@ -496,8 +478,7 @@ void DrawOperations::draw(Editor& editor, const PositionVector& tilestodraw, boo
 	editor.addAction(std::move(action), 2);
 }
 
-void DrawOperations::draw(Editor& editor, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw) {
-	Brush* brush = g_gui.GetCurrentBrush();
+void DrawOperations::draw(Editor& editor, Brush* brush, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw, int brush_size) {
 	if (!brush) {
 		return;
 	}
@@ -624,8 +605,7 @@ void DrawOperations::draw(Editor& editor, const PositionVector& tilestodraw, Pos
 	}
 }
 
-void DrawOperations::punchGroundToFloorBelow(Editor& editor, const PositionVector& tilestodraw, const PositionVector& tilestoborder) {
-	Brush* brush = g_gui.GetCurrentBrush();
+void DrawOperations::drawGroundHoleToFloorBelow(Editor& editor, Brush* brush, const PositionVector& tilestodraw, const PositionVector& tilestoborder) {
 	if (!brush || !brush->is<GroundBrush>() || tilestodraw.empty()) {
 		return;
 	}

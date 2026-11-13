@@ -20,11 +20,13 @@
 
 #include "live/live_socket.h"
 #include "net/net_connection.h"
+#include <boost/asio.hpp>
 
 #include <set>
 
 class DirtyList;
 class MapTab;
+class wxWindow;
 
 class LiveClient : public LiveSocket {
 public:

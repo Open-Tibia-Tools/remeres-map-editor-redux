@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "lua_api_map.h"
+#include "lua_api.h"
 #include "lua_api.h"
 #include "map/map.h"
 #include "map/basemap.h"

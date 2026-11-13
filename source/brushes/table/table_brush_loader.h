@@ -5,9 +5,12 @@
 #ifndef RME_BRUSHES_TABLE_TABLE_BRUSH_LOADER_H
 #define RME_BRUSHES_TABLE_TABLE_BRUSH_LOADER_H
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include <optional>
 #include <string_view>
+#include <vector>
+#include <string>
+#include <cstdint>
 
 class TableBrush;
 class TableBrushItems;

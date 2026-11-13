@@ -20,12 +20,11 @@
 #include "ui/dialog_util.h"
 #include "lua_api_image.h"
 #include "ui/gui.h"
-#include "game/items.h"
+#include "item_definitions/core/item_definition_store.h"
 #include "rendering/ui/map_display.h"
 #include "rendering/map_drawer.h"
 #include "editor/editor.h"
 #include <wx/msgdlg.h>
-#include "ui/common_windows.h"
 #include "ui/find_item_window.h"
 #include "ui/dcbutton.h"
 #include "ui/theme.h"
@@ -1712,7 +1711,8 @@ LuaDialog* LuaDialog::item(sol::table options) {
 		currentRowSizer->Add(label, 0, getSizerFlags(options, wxALIGN_CENTER_VERTICAL | wxRIGHT, currentRowSizer), getSizerBorder(options));
 	}
 
-	int clientId = (itemId > 100 && itemId <= g_items.getMaxID()) ? g_items[itemId].clientID : 0;
+	const auto initialView = g_item_definitions.get(static_cast<ServerItemId>(itemId));
+	int clientId = (itemId > 100 && initialView) ? initialView.clientId() : 0;
 	ItemButton* btn = new ItemButton(getParentForWidget(), RENDER_SIZE_32x32, clientId);
 	currentRowSizer->Add(btn, 0, getSizerFlags(options, wxALIGN_CENTER_VERTICAL | wxRIGHT, currentRowSizer), getSizerBorder(options));
 
@@ -1748,7 +1748,8 @@ LuaDialog* LuaDialog::item(sol::table options) {
 			FindItemDialog dlg(this, "Select Item", false);
 			if (dlg.ShowModal() == wxID_OK) {
 				int newItemId = dlg.getResultID();
-				int newClientId = (newItemId > 100 && newItemId <= g_items.getMaxID()) ? g_items[newItemId].clientID : 0;
+				const auto newView = g_item_definitions.get(static_cast<ServerItemId>(newItemId));
+				int newClientId = (newItemId > 100 && newView) ? newView.clientId() : 0;
 				btn->SetSprite(newClientId);
 				btn->Refresh(); // Ensure visual update holding the new sprite
 				values[id] = sol::make_object(lua, newItemId);

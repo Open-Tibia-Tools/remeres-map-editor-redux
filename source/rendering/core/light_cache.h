@@ -44,6 +44,7 @@ public:
 	static constexpr uint64_t FAR_FLOOR_FRAME_THRESHOLD = 60;
 	static constexpr uint64_t PRUNE_INTERVAL_FRAMES = 120;
 	static constexpr size_t MAX_CACHED_LIGHT_CHUNKS = 65536;
+	static constexpr size_t TARGET_CACHED_LIGHT_CHUNKS = 49152;
 
 	LightCache();
 	~LightCache();
@@ -105,6 +106,7 @@ private:
 		const LightConfig& config,
 		GraphicManager& gfx
 	);
+	void evictOldest(size_t count_to_remove, uint64_t current_frame);
 
 	std::unordered_map<ChunkCoord, CachedLightChunk, ChunkCoordHash> chunks_;
 	LightGatherer gatherer_;

@@ -19,6 +19,8 @@
 #define RME_MAP_H_
 
 #include <cstdint>
+#include <functional>
+#include <string_view>
 #include "map/map_storage_format.h"
 #include "map/basemap.h"
 #include "map/tile.h"
@@ -44,17 +46,19 @@ public:
 	Map();
 	~Map() override;
 
+	using ProgressCallback = std::function<void(int percent, std::string_view msg)>;
+
 	// Operations on the entire map
-	void cleanInvalidTiles(bool showdialog = false);
-	void cleanInvalidZones(bool showdialog = false);
-	void convertHouseTiles(uint32_t fromId, uint32_t toId);
+	void cleanInvalidTiles(ProgressCallback progress_cb = nullptr);
+	void cleanInvalidZones(ProgressCallback progress_cb = nullptr);
+	void convertHouseTiles(uint32_t fromId, uint32_t toId, ProgressCallback progress_cb = nullptr);
 	void updateTownIdForHouses(uint32_t old_town_id, uint32_t new_town_id);
 
 	// Save a bmp image of the minimap
 
 	//
-	bool convert(MapVersion to, bool showdialog = false);
-	bool convert(const ConversionMap& cm, bool showdialog = false);
+	bool convert(MapVersion to);
+	bool convert(const ConversionMap& cm, ProgressCallback progress_cb = nullptr);
 
 	// Query information about the map
 
@@ -74,9 +78,9 @@ public:
 		return warnings;
 	}
 	bool hasError() const {
-		return error.size() != 0;
+		return !error.empty();
 	}
-	wxString getError() const {
+	const std::string& getError() const {
 		return error;
 	}
 
@@ -195,11 +199,11 @@ public:
 
 protected:
 	// Loads a map
-	bool open(const std::string& identifier);
+	bool open(const std::string& identifier, std::function<void(int, std::string_view)> progress_cb = nullptr);
 
 protected:
 	std::vector<std::string> warnings;
-	wxString error;
+	std::string error;
 
 	std::string name; // The map name, NOT the same as filename
 	std::string filename; // the maps filename

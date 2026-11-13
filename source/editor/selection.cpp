@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "map/tile_operations.h"
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "editor/selection.h"
 #include "editor/selection_thread.h"
@@ -26,7 +26,6 @@
 #include "game/item.h"
 #include "editor/editor.h"
 #include "editor/action_queue.h"
-#include "ui/gui.h"
 
 #include <ranges>
 #include <algorithm>

@@ -3,16 +3,19 @@
 
 #include "app/rme_forward_declarations.h"
 #include "map/position.h"
-// We don't want partial define of Editor, so forward declare or include?
-// Ideally forward declare to avoid circular dependency if Editor includes this.
+
 class Editor;
+class Brush;
 
 class DrawOperations {
 public:
-	static void draw(Editor& editor, Position offset, bool alt, bool dodraw);
-	static void draw(Editor& editor, const PositionVector& tilestodraw, bool alt, bool dodraw);
-	static void draw(Editor& editor, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw);
-	static void punchGroundToFloorBelow(Editor& editor, const PositionVector& tilestodraw, const PositionVector& tilestoborder);
+	static void draw(Editor& editor, Brush* brush, Position offset, bool alt, bool dodraw, int brush_size = 1);
+	static void draw(Editor& editor, Brush* brush, const PositionVector& tilestodraw, bool alt, bool dodraw, int brush_size = 1);
+	static void draw(Editor& editor, Brush* brush, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw, int brush_size = 1);
+	static void drawGroundHoleToFloorBelow(Editor& editor, Brush* brush, const PositionVector& tilestodraw, const PositionVector& tilestoborder);
+	static void punchGroundToFloorBelow(Editor& editor, Brush* brush, const PositionVector& tilestodraw, const PositionVector& tilestoborder) {
+		drawGroundHoleToFloorBelow(editor, brush, tilestodraw, tilestoborder);
+	}
 };
 
 #endif

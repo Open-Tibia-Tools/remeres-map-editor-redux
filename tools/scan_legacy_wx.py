@@ -406,12 +406,24 @@ def main():
     parser.add_argument("--category", help="Filter by specific category")
     parser.add_argument("--summary", action="store_true", help="Print summary only")
     parser.add_argument("--output", help="Write report to file")
+    parser.add_argument("--decoupling", action="store_true", help="Also audit domain decoupling in rme_core via scan_wx_dependencies.py")
     args = parser.parse_args()
 
     root_dir = Path(args.dir)
     if not root_dir.exists():
         print(f"Error: directory '{args.dir}' does not exist.", file=sys.stderr)
         sys.exit(1)
+
+    if args.decoupling:
+        try:
+            import scan_wx_dependencies as dec_scan
+            repo_root = Path(__file__).resolve().parent.parent
+            v, s, tot = dec_scan.run_scan(repo_root, 'rme_core')
+            print(dec_scan.format_text(v, s, tot, 'rme_core', args.summary))
+            if v:
+                sys.exit(1)
+        except Exception as e:
+            print(f"Warning: could not run decoupling check: {e}", file=sys.stderr)
 
     findings = scan_directory(root_dir)
 

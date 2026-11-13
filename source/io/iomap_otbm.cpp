@@ -15,7 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include <format>
 #include <vector>
@@ -25,7 +25,6 @@
 
 #include "app/settings.h"
 #include "ext/pugixml.hpp"
-#include "ui/gui.h"
 
 #include "game/creatures.h"
 #include "game/creature.h"
@@ -70,24 +69,6 @@ constexpr int32_t kSpawnStageEndPercent = 96;
 constexpr int32_t kHouseStagePercent = 97;
 constexpr int32_t kWaypointStagePercent = 98;
 
-// Reports a named save stage and tells whether the save should continue
-// (the user can abort through the progress dialog). Switching the message to
-// "Cancelling..." keeps the dialog responsive while the save unwinds.
-bool reportSaveStage(int32_t percent, const wxString& message) {
-	g_gui.SetLoadDone(percent, message);
-	if (g_gui.WasLoadCancelled()) {
-		g_gui.SetLoadText("Cancelling...");
-		return false;
-	}
-	return true;
-}
-
-// Cancellation predicate handed to the auxiliary XML writers, which poll it
-// while they build their documents: pumping here is what lets an Abort click
-// be observed during those phases.
-bool shouldAbortSave() {
-	return g_gui.PollCancellation();
-}
 } // namespace
 
 // Item OTBM operations delegated to ItemSerializationOTBM (used by LiveSocket)
@@ -123,10 +104,6 @@ namespace {
 	constexpr size_t kHeaderPeekBytes = 64 * 1024;
 	constexpr uint8_t kNodeStart = 0xFE;
 
-	std::filesystem::path toPath(const FileName& filename) {
-		return std::filesystem::path(filename.GetFullPath().ToStdWstring());
-	}
-
 	bool hasValidOtbmPrefix(std::span<const uint8_t> data) noexcept {
 		if (data.size() < 5) {
 			return false;
@@ -138,8 +115,7 @@ namespace {
 
 	// Runs parse on a decompressed or raw prefix; nullopt when the file is unreadable or not OTBM.
 	template <typename Parse>
-	std::optional<bool> parseHeaderPrefix(const FileName& filename, Parse&& parse) {
-		const auto path = toPath(filename);
+	std::optional<bool> parseHeaderPrefix(const std::filesystem::path& path, Parse&& parse) {
 		const bool is_gzip = Compression::isGzipFile(path);
 		for (size_t limit = kHeaderPeekBytes;; limit *= 4) {
 			const auto bytes = is_gzip
@@ -157,7 +133,7 @@ namespace {
 	}
 }
 
-bool IOMapOTBM::getVersionInfo(const FileName& filename, MapVersion& out_ver) {
+bool IOMapOTBM::getVersionInfo(const std::filesystem::path& filename, MapVersion& out_ver) {
 	return parseHeaderPrefix(filename, [&](NodeFileReadHandle& f) { return getVersionInfo(&f, out_ver); }).value_or(false);
 }
 
@@ -165,16 +141,18 @@ bool IOMapOTBM::getVersionInfo(NodeFileReadHandle* f, MapVersion& out_ver) {
 	return HeaderSerializationOTBM::getVersionInfo(*f, out_ver);
 }
 
-bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResult& out_info) {
-	out_info = {};
-	out_info.map_name = identifier.GetName();
 
-	wxDateTime modified_time;
-	if (identifier.GetTimes(nullptr, &modified_time, nullptr)) {
-		out_info.modified_time = modified_time;
+bool IOMapOTBM::peekStartupInfo(const std::filesystem::path& identifier, OTBMStartupPeekResult& out_info) {
+	out_info = {};
+	out_info.map_name = identifier.stem().string();
+
+	std::error_code ec;
+	auto ftime = std::filesystem::last_write_time(identifier, ec);
+	if (!ec) {
+		out_info.modified_time = ftime;
 	}
 
-	out_info.is_compressed = Compression::isGzipFile(toPath(identifier));
+	out_info.is_compressed = Compression::isGzipFile(identifier);
 
 	const auto parsed = parseHeaderPrefix(identifier, [&](NodeFileReadHandle& f) { return HeaderSerializationOTBM::peekStartupInfo(f, out_info); });
 	if (!parsed) {
@@ -208,19 +186,18 @@ bool IOMapOTBM::peekStartupInfo(const FileName& identifier, OTBMStartupPeekResul
 	return true;
 }
 
-bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
-	spdlog::debug("Loading OTBM map from disk: {}", filename.GetFullPath().ToStdString());
-	const auto path = toPath(filename);
+bool IOMapOTBM::loadMapFromDisk(Map& map, const std::filesystem::path& path) {
+	spdlog::debug("Loading OTBM map from disk: {}", path.string());
 
 	const bool is_gzip = Compression::isGzipFile(path);
 	map.setCompression(is_gzip ? OtbmCompression::Gzip : OtbmCompression::None);
 	if (is_gzip) {
-		g_gui.SetLoadDone(0, "Decompressing map...");
+		reportProgress(0, "Decompressing map...");
 	}
 
 	const auto buffer = is_gzip ? Compression::decompressGzipFile(path) : Compression::readRawFile(path);
 	if (!buffer) {
-		spdlog::error("Couldn't read{} map file: {}", is_gzip ? " compressed" : "", filename.GetFullPath().ToStdString());
+		spdlog::error("Couldn't read{} map file: {}", is_gzip ? " compressed" : "", path.string());
 		return false;
 	}
 
@@ -230,37 +207,35 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	}
 
 	if (!loadMapFast(map, buffer->data() + 4, buffer->size() - 4)) {
-		spdlog::error("Failed to load OTBM map: {}", filename.GetFullPath().ToStdString());
+		spdlog::error("Failed to load OTBM map: {}", path.string());
 		return false;
 	}
 
 	// Read auxiliary files
-	auto loadAux = [&](bool (*func)(Map&, const FileName&), const std::string& suffix, const std::string& label, std::string& target) {
-		std::string defaultFile = nstr(filename.GetName()) + "-" + suffix + ".xml";
+	auto loadAux = [&](bool (*func)(Map&, const std::filesystem::path&), const std::string& suffix, const std::string& label, std::string& target) {
+		std::string defaultFile = path.stem().string() + "-" + suffix + ".xml";
 		bool expected = !target.empty();
 
 		if (expected) {
 			// Validate/sanitize OTBM-provided target
-			auto paths = MapXMLIO::normalizeMapFilePaths(filename, target);
-			if (!FileName(wxstr(paths.first)).FileExists()) {
+			auto paths = MapXMLIO::normalizeMapFilePaths(path, target);
+			if (!std::filesystem::exists(paths.second)) {
 				// File does not exist or invalid, try default
 				expected = false;
 			}
 		}
 
 		if (!expected) {
-			auto paths = MapXMLIO::normalizeMapFilePaths(filename, defaultFile);
-			if (FileName(wxstr(paths.first)).FileExists()) {
+			auto paths = MapXMLIO::normalizeMapFilePaths(path, defaultFile);
+			if (std::filesystem::exists(paths.second)) {
 				target = defaultFile;
 				expected = true;
 			}
 		}
 
 		if (expected) {
-			// Name the companion file being read; the loader otherwise only
-			// reports the OTBM stages and the XML sidecars stay invisible.
-			g_gui.SetLoadText(wxstr(std::format("Loading {} ({})...", label, target)));
-			if (!func(map, filename)) {
+			reportProgress(98, std::format("Loading {} ({})...", label, target));
+			if (!func(map, path)) {
 				spdlog::warn("Failed to load {} file: {}", suffix, target);
 			}
 		} else {
@@ -294,16 +269,16 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 
 	// Ensure all auxiliary filenames have defaults so converting between OTBM versions never encounters empty paths
 	if (map.spawnfile.empty()) {
-		map.spawnfile = nstr(filename.GetName()) + "-spawn.xml";
+		map.spawnfile = path.stem().string() + "-spawn.xml";
 	}
 	if (map.monsterfile.empty()) {
-		map.monsterfile = nstr(filename.GetName()) + "-monster.xml";
+		map.monsterfile = path.stem().string() + "-monster.xml";
 	}
 	if (map.npcfile.empty()) {
-		map.npcfile = nstr(filename.GetName()) + "-npc.xml";
+		map.npcfile = path.stem().string() + "-npc.xml";
 	}
 	if (map.housefile.empty()) {
-		map.housefile = nstr(filename.GetName()) + "-house.xml";
+		map.housefile = path.stem().string() + "-house.xml";
 	}
 
 	// Waypoints handling: if OTBM has waypoints, it is the authority and XML is ignored entirely.
@@ -311,16 +286,16 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	if (map.waypoints.empty()) {
 		std::string waypointFile = map.waypointfile;
 		if (waypointFile.empty()) {
-			waypointFile = nstr(filename.GetName()) + "-waypoint.xml";
+			waypointFile = path.stem().string() + "-waypoint.xml";
 		}
 
-		auto waypointPaths = MapXMLIO::normalizeMapFilePaths(filename, waypointFile);
-		if (FileName(wxstr(waypointPaths.first)).FileExists()) {
+		auto waypointPaths = MapXMLIO::normalizeMapFilePaths(path, waypointFile);
+		if (std::filesystem::exists(waypointPaths.second)) {
 			if (map.waypointfile.empty()) {
 				map.waypointfile = waypointFile;
 			}
-			g_gui.SetLoadText(wxstr(std::format("Loading waypoints ({})...", waypointFile)));
-			if (MapXMLIO::loadWaypoints(map, filename, false)) {
+			reportProgress(99, std::format("Loading waypoints ({})...", waypointFile));
+			if (MapXMLIO::loadWaypoints(map, path, false)) {
 				spdlog::info("IOMapOTBM: Loaded waypoints from '{}' (total waypoints: {})",
 					map.waypointfile, map.waypoints.size());
 			}
@@ -328,14 +303,15 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 			map.waypointfile = waypointFile;
 		}
 	} else if (map.waypointfile.empty()) {
-		map.waypointfile = nstr(filename.GetName()) + "-waypoint.xml";
+		map.waypointfile = path.stem().string() + "-waypoint.xml";
 	}
 	map.getChangeTracker().markAllDirty();
-
-	// Everything (OTBM tiles and companion XML) is in; close the bar here so the
-	// companion files stay visible while they load.
-	g_gui.SetLoadDone(100);
+	reportProgress(100, "Done");
 	return true;
+}
+
+bool IOMapOTBM::loadMap(Map& map, const std::filesystem::path& filename) {
+	return loadMapFromDisk(map, filename);
 }
 
 bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
@@ -426,7 +402,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 	std::vector<uint64_t> cell_keys;
 
 	auto t_prescan_start = std::chrono::high_resolution_clock::now();
-	g_gui.SetLoadDone(5, "Scanning map nodes...");
+	reportProgress(5, "Scanning map nodes...");
 
 	// Stream through children of OTBM_MAP_DATA
 	while (stream.hasMore()) {
@@ -538,7 +514,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 	std::vector<std::vector<std::pair<uint16_t, Position>>> thread_zone_tiles(n_threads);
 	std::vector<uint64_t> thread_tile_counts(n_threads, 0);
 
-	g_gui.SetLoadDone(20, "Loading map tiles in parallel...");
+	reportProgress(20, "Loading map tiles in parallel...");
 	auto t_load_start = std::chrono::high_resolution_clock::now();
 
 	std::vector<std::thread> workers;
@@ -579,7 +555,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 			break;
 		}
 		int pct = 20 + static_cast<int>(70.0 * done / (total_buckets > 0 ? total_buckets : 1));
-		g_gui.SetLoadDone(pct, wxstr(std::format("Loading map tiles ({}/{} blocks)...", done, total_buckets)));
+		reportProgress(pct, std::format("Loading map tiles ({}/{} blocks)...", done, total_buckets));
 		std::this_thread::sleep_for(std::chrono::milliseconds(25));
 	}
 
@@ -628,7 +604,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 		}
 	}
 
-	g_gui.SetLoadDone(95, "Finalizing houses and map data...");
+	reportProgress(95, "Finalizing houses and map data...");
 
 	// Register house tiles sequentially into map.houses
 	for (const auto& hlist : thread_house_tiles) {
@@ -656,28 +632,22 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 		map.zone_index.addTilesBulk(zone_id, positions);
 	}
 
-	// Keep the bar open (and the message current) for the companion files that
-	// loadMapFromDisk reads next; it closes it once they are done.
-	g_gui.SetLoadDone(96);
+	reportProgress(96, "Loaded tiles");
 	return true;
 }
 
-bool IOMapOTBM::loadMap(Map& map, const FileName& filename) {
-	return loadMapFromDisk(map, filename);
-}
-
-bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
+bool IOMapOTBM::saveMapToDisk(Map& map, const std::filesystem::path& identifier) {
 	const std::string magic = g_settings.getInteger(Config::SAVE_WITH_OTB_MAGIC_NUMBER) ? "OTBM" : std::string(4, '\0');
 
 	// Zones created in the editor on a map that had none still need a file for the header to reference
 	if (map.getVersion().otbm == MAP_OTBM_5 && !map.zones.empty()) {
 		if (map.zonefile.empty()) {
-			map.zonefile = nstr(identifier.GetName() + "-zones.xml");
+			map.zonefile = identifier.stem().string() + "-zones.xml";
 		} else {
 			const std::filesystem::path zone_p(map.zonefile);
 			if (zone_p.is_absolute()) {
 				std::error_code ec;
-				const auto rel = std::filesystem::relative(zone_p, toPath(identifier).parent_path(), ec);
+				const auto rel = std::filesystem::relative(zone_p, identifier.parent_path(), ec);
 				if (!ec && !rel.empty() && !rel.is_absolute() && rel.generic_string().find("..") == std::string::npos) {
 					map.zonefile = rel.generic_string();
 				} else {
@@ -692,36 +662,34 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 	const bool is_compressed = (map.getCompression() == OtbmCompression::Gzip);
 	std::unique_ptr<NodeFileWriteHandle> f;
 	if (is_compressed) {
-		f = std::make_unique<GzipNodeFileWriteHandle>(toPath(identifier), magic);
+		f = std::make_unique<GzipNodeFileWriteHandle>(identifier, magic);
 	} else {
-		f = std::make_unique<DiskNodeFileWriteHandle>(std::string(identifier.GetFullPath().utf8_str()), magic);
+		f = std::make_unique<DiskNodeFileWriteHandle>(identifier.string(), magic);
 	}
 
 	if (!f->isOk()) {
-		spdlog::error("Can not open file {} for writing", identifier.GetFullPath().ToStdString());
+		spdlog::error("Can not open file {} for writing", identifier.string());
 		return false;
 	}
 
-	g_gui.SetLoadText(wxstr(std::format("Writing tiles into {}...", nstr(identifier.GetFullName()))));
+	reportProgress(0, std::format("Writing tiles into {}...", identifier.filename().string()));
 	if (!saveMap(map, *f)) {
 		return false;
 	}
 
-	if (!reportSaveStage(kFinalizeStagePercent, wxstr(std::format("Finishing file ({})...", nstr(identifier.GetFullName()))))) {
-		return false;
-	}
+	reportProgress(kFinalizeStagePercent, std::format("Finishing file ({})...", identifier.filename().string()));
 
 	if (is_compressed) {
 		f->close();
 		if (!f->isOk()) {
-			spdlog::error("Failed to write compressed map {}: {}", identifier.GetFullPath().ToStdString(), f->getErrorMessage());
+			spdlog::error("Failed to write compressed map {}: {}", identifier.string(), f->getErrorMessage());
 			return false;
 		}
 	}
 
 	// Auxiliary companion files: name them in the stages so the dialog says
 	// which files are being written, not just which kind of data.
-	const std::string map_name = nstr(identifier.GetName());
+	const std::string map_name = identifier.stem().string();
 	const bool otbm5 = map.getVersion().otbm == MAP_OTBM_5;
 	auto aux_name = [&map_name](const std::string& configured, std::string_view suffix) {
 		return configured.empty() ? map_name + std::string(suffix) : configured;
@@ -731,13 +699,11 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 		? std::format("{}, {}", aux_name(map.getMonsterFilename(), "-monster.xml"), aux_name(map.getNpcFilename(), "-npc.xml"))
 		: aux_name(map.getSpawnFilename(), "-spawn.xml");
 
-	if (!reportSaveStage(kSpawnStagePercent, wxstr(std::format("Saving spawns ({})...", spawn_files)))) {
-		return false;
-	}
+	reportProgress(kSpawnStagePercent, std::format("Saving spawns ({})...", spawn_files));
 	// The spawn stage is the long one: it rescans the area of every spawn while
 	// it builds both files, so it reports which file it is on and how far it is.
 	int32_t last_spawn_percent = -1;
-	const auto on_spawn_progress = [&last_spawn_percent](const std::string& file, size_t done, size_t total) {
+	const auto on_spawn_progress = [this, &last_spawn_percent](const std::string& file, size_t done, size_t total) {
 		const int32_t percent = total == 0
 			? kSpawnStageEndPercent
 			: kSpawnStagePercent + static_cast<int32_t>(static_cast<int64_t>(kSpawnStageEndPercent - kSpawnStagePercent) * static_cast<int64_t>(done) / static_cast<int64_t>(total));
@@ -746,55 +712,50 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 			return;
 		}
 		last_spawn_percent = percent;
-		g_gui.SetLoadDone(percent, wxstr(std::format("Saving spawns ({})...", file)));
+		reportProgress(percent, std::format("Saving spawns ({})...", file));
 	};
 
-	if (!MapXMLIO::saveSpawns(map, identifier, shouldAbortSave, on_spawn_progress)) {
+if (!MapXMLIO::saveSpawns(map, identifier, {}, on_spawn_progress)) {
 		spdlog::error("Failed to save spawns!");
 		return false;
 	}
 
-	if (!reportSaveStage(kHouseStagePercent, wxstr(std::format("Saving houses ({})...", aux_name(map.getHouseFilename(), "-house.xml"))))) {
-		return false;
-	}
-	if (!MapXMLIO::saveHouses(map, identifier, shouldAbortSave)) {
+reportProgress(kHouseStagePercent, std::format("Saving houses ({})...", aux_name(map.getHouseFilename(), "-house.xml")));
+	if (!MapXMLIO::saveHouses(map, identifier, {})) {
 		spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save houses");
 		return false;
 	}
 
-	const auto waypointFormat = static_cast<Config::WaypointStorageFormat>(
+const auto waypointFormat = static_cast<Config::WaypointStorageFormat>(
 		g_settings.getInteger(Config::WAYPOINT_STORAGE_FORMAT)
 	);
 
 	if (map.getVersion().otbm == MAP_OTBM_5 && !map.zones.empty()) {
 		if (map.zonefile.empty()) {
-			map.zonefile = identifier.GetName() + "-zones.xml";
+			map.zonefile = identifier.stem().string() + "-zones.xml";
 			spdlog::info("Auto-created zone file: {}", map.zonefile);
 		}
-		g_gui.SetLoadText(wxstr(std::format("Saving zones ({})...", map.zonefile)));
+		reportProgress(kWaypointStagePercent, std::format("Saving zones ({})...", map.zonefile));
 		if (!MapXMLIO::saveZones(map, identifier)) {
 			spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save zones");
 			return false;
 		}
-		// Waypoints for OTBM 5 live in the OTBM WAYPOINTS node (written in saveMap
-		// per waypointFormat); only fall through for the optional XML companion.
 	}
 
+
 	if (waypointFormat == Config::WaypointStorageFormat::XML || waypointFormat == Config::WaypointStorageFormat::BOTH) {
-		if (!reportSaveStage(kWaypointStagePercent, wxstr(std::format("Saving waypoints ({})...", aux_name(map.getWaypointFilename(), "-waypoint.xml"))))) {
-			return false;
-		}
+		reportProgress(kWaypointStagePercent, std::format("Saving waypoints ({})...", aux_name(map.getWaypointFilename(), "-waypoint.xml")));
 		if (map.waypoints.size() > 0) {
 			if (map.waypointfile.empty()) {
-				map.waypointfile = identifier.GetName() + "-waypoint.xml";
+				map.waypointfile = identifier.stem().string() + "-waypoint.xml";
 				spdlog::info("Auto-created waypoint file: {}", map.waypointfile);
 			}
-			if (!MapXMLIO::saveWaypoints(map, identifier, shouldAbortSave)) {
+			if (!MapXMLIO::saveWaypoints(map, identifier, {})) {
 				spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save waypoints");
 				return false;
 			}
 		} else if (!map.waypointfile.empty()) {
-			if (!MapXMLIO::saveWaypoints(map, identifier, shouldAbortSave)) {
+			if (!MapXMLIO::saveWaypoints(map, identifier, {})) {
 				spdlog::error("IOMapOTBM::saveMapToDisk: Failed to save waypoints");
 				return false;
 			}
@@ -803,14 +764,11 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 
 	// An Abort clicked while the last files were written must still discard the
 	// save instead of accepting it and marking the map as clean.
-	if (shouldAbortSave()) {
-		return false;
-	}
 
 	return true;
 }
 
-bool IOMapOTBM::saveMap(Map& map, const FileName& identifier) {
+bool IOMapOTBM::saveMap(Map& map, const std::filesystem::path& identifier) {
 	return saveMapToDisk(map, identifier);
 }
 
@@ -896,15 +854,8 @@ bool IOMapOTBM::saveMap(Map& map, NodeFileWriteHandle& f) {
 }
 
 bool IOMapOTBM::writeTileData(const Map& map, NodeFileWriteHandle& f) {
-	// Progress reported by the tile writer fills the tile stage of the bar;
-	// the callback returns false to abort a cancelled save, and reports the
-	// cancellation to the dialog before unwinding.
-	return TileSerializationOTBM::writeTileData(*this, map, f, [](int tilesWritten) {
-		g_gui.SetLoadDone(tilesWritten * kTileWriteStagePercent / 100);
-		if (g_gui.WasLoadCancelled()) {
-			g_gui.SetLoadText("Cancelling...");
-			return false;
-		}
+	return TileSerializationOTBM::writeTileData(*this, map, f, [this](int tilesWritten) {
+		reportProgress(tilesWritten * kTileWriteStagePercent / 100);
 		return true;
 	});
 }

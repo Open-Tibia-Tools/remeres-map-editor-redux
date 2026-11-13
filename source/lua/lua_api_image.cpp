@@ -22,7 +22,7 @@
 #include "rendering/core/game_sprite.h"
 #include "ui/icons/sprite_icon_service.h"
 #include "rendering/core/normal_image.h"
-#include "game/items.h"
+#include "item_definitions/core/item_definition_store.h"
 #include <filesystem>
 #include <cstring>
 #include <vector>
@@ -72,8 +72,8 @@ namespace LuaAPI {
 
 		namespace fs = std::filesystem;
 		fs::path scriptsPath = fs::weakly_canonical(LuaScriptManager::getInstance().getScriptsDirectory());
-		fs::path dataPath = fs::weakly_canonical(FileSystem::GetDataDirectory().ToStdString());
-		fs::path execPath = fs::weakly_canonical(FileSystem::GetExecDirectory().ToStdString());
+		fs::path dataPath = fs::weakly_canonical(FileSystem::GetDataDirectory());
+		fs::path execPath = fs::weakly_canonical(FileSystem::GetExecDirectory());
 		std::vector<fs::path> lookupRoots;
 
 		try {
@@ -146,14 +146,12 @@ namespace LuaAPI {
 		spriteId(0), spriteSource(false) {
 		if (isItemSprite) {
 			// Get sprite ID from item type
-			if (g_items.typeExists(id)) {
-				ItemType itemType = g_items.getItemType(id);
-				if (itemType.id != 0) {
-					loadFromSpriteId(itemType.clientID);
-					if (image.IsOk()) {
-						spriteId = itemType.clientID;
-						spriteSource = true;
-					}
+			const auto view = g_item_definitions.get(static_cast<ServerItemId>(id));
+			if (view && view.clientId() != 0) {
+				loadFromSpriteId(view.clientId());
+				if (image.IsOk()) {
+					spriteId = view.clientId();
+					spriteSource = true;
 				}
 			}
 		} else {
@@ -200,11 +198,8 @@ namespace LuaAPI {
 
 	// Helper to reliably get sprite ID from item ID, handling client ID mapping
 	int getItemSpriteId(int itemId) {
-		if (!g_items.typeExists(itemId)) {
-			return 0;
-		}
-		ItemType itemType = g_items.getItemType(itemId);
-		return itemType.clientID;
+		const auto view = g_item_definitions.get(static_cast<ServerItemId>(itemId));
+		return view ? view.clientId() : 0;
 	}
 
 	void LuaImage::loadFromSpriteId(int id) {

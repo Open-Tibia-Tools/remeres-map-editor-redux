@@ -15,17 +15,23 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
-
+#include "app/definitions.h"
 #include "util/common.h"
-#include "math.h"
 
+#include <cmath>
 #include <cstdio>
 #include <format>
 #include <random>
-#include <regex>
 #include <algorithm>
 #include <array>
+
+#if defined(_WIN32)
+	#define WIN32_LEAN_AND_MEAN
+	#define NOMINMAX
+	#include <windows.h>
+#else
+	#include <filesystem>
+#endif
 
 // random generator
 std::mt19937& getRandomGenerator() {
@@ -74,29 +80,6 @@ double s2f(const std::string& s) {
 }
 
 
-
-wxString f2ws(const double _d) {
-	wxString str;
-	str << _d;
-	return str;
-}
-
-int ws2i(const wxString s) {
-	long _i;
-	if (s.ToLong(&_i)) {
-		return static_cast<int>(_i);
-	}
-	return 0;
-}
-
-double ws2f(const wxString s) {
-	double _d;
-	if (s.ToDouble(&_d)) {
-		return _d;
-	}
-	return 0.0;
-}
-
 void replaceString(std::string& str, std::string_view sought, std::string_view replacement) {
 	if (sought.empty()) {
 		return;
@@ -119,7 +102,7 @@ void trim_left(std::string& source, std::string_view t) {
 }
 
 void to_lower_str(std::string& source) {
-std::ranges::transform(source, source.begin(), [](unsigned char c) { return std::tolower(c); });
+	std::ranges::transform(source, source.begin(), [](unsigned char c) { return std::tolower(c); });
 }
 
 void to_upper_str(std::string& source) {
@@ -158,63 +141,29 @@ int random(int high) {
 }
 
 std::wstring string2wstring(const std::string& utf8string) {
-	return wxstr(utf8string).ToStdWstring();
+	if (utf8string.empty()) {
+		return {};
+	}
+#if defined(_WIN32)
+	const int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, utf8string.data(), static_cast<int>(utf8string.size()), nullptr, 0);
+	std::wstring result(sizeNeeded, 0);
+	MultiByteToWideChar(CP_UTF8, 0, utf8string.data(), static_cast<int>(utf8string.size()), result.data(), sizeNeeded);
+	return result;
+#else
+	return std::filesystem::path(utf8string).wstring();
+#endif
 }
 
 std::string wstring2string(const std::wstring& widestring) {
-	return wxString(widestring).ToStdString();
-}
-
-bool posFromClipboard(Position& position, const int mapWidth /* = MAP_MAX_WIDTH */, const int mapHeight /* = MAP_MAX_HEIGHT */) {
-	wxClipboardLocker locker(wxTheClipboard);
-	if (!locker) {
-		return false;
+	if (widestring.empty()) {
+		return {};
 	}
-
-	if (!wxTheClipboard->IsSupported(wxDF_TEXT)) {
-		return false;
-	}
-
-	wxTextDataObject data;
-	wxTheClipboard->GetData(data);
-
-	std::string input = data.GetText().ToStdString();
-	if (input.empty()) {
-		return false;
-	}
-
-	bool done = false;
-	std::smatch matches;
-	static const std::regex expression = std::regex(R"(.*?(\d+).*?(\d+).*?(\d+).*?)", std::regex_constants::ECMAScript);
-	if (std::regex_match(input, matches, expression)) {
-		try {
-			const int tmpX = std::stoi(matches.str(1));
-			const int tmpY = std::stoi(matches.str(2));
-			const int tmpZ = std::stoi(matches.str(3));
-
-			const Position pastedPos = Position(tmpX, tmpY, tmpZ);
-			if (pastedPos.isValid() && tmpX <= mapWidth && tmpY <= mapHeight) {
-				position.x = tmpX;
-				position.y = tmpY;
-				position.z = tmpZ;
-				done = true;
-			}
-		} catch (const std::out_of_range&) { }
-	}
-
-	return done;
-}
-
-wxString b2yn(bool value) {
-	return value ? "Yes" : "No";
-}
-
-wxColor colorFromEightBit(int color) {
-	if (color <= 0 || color >= 216) {
-		return wxColor(0, 0, 0);
-	}
-	const uint8_t red = static_cast<uint8_t>((color / 36) % 6 * 51);
-	const uint8_t green = static_cast<uint8_t>((color / 6) % 6 * 51);
-	const uint8_t blue = static_cast<uint8_t>(color % 6 * 51);
-	return wxColor(red, green, blue);
+#if defined(_WIN32)
+	const int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, widestring.data(), static_cast<int>(widestring.size()), nullptr, 0, nullptr, nullptr);
+	std::string result(sizeNeeded, 0);
+	WideCharToMultiByte(CP_UTF8, 0, widestring.data(), static_cast<int>(widestring.size()), result.data(), sizeNeeded, nullptr, nullptr);
+	return result;
+#else
+	return std::filesystem::path(widestring).string();
+#endif
 }

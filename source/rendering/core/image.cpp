@@ -1,5 +1,6 @@
 #include "rendering/core/image.h"
 #include "rendering/core/graphics.h"
+#include <ranges>
 
 Image::Image() :
 	isGLLoaded(false) {

@@ -2,7 +2,7 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "brushes/doodad/doodad_brush_loader.h"
 #include "brushes/doodad/doodad_brush_items.h"
 #include "brushes/doodad/doodad_brush.h" // For DoodadBrush definition if needed for pointer check?
@@ -13,6 +13,7 @@
 
 #include "ext/pugixml.hpp"
 #include <boost/lexical_cast.hpp>
+#include <format>
 
 // Helper
 #include <ranges>
@@ -73,7 +74,7 @@ bool DoodadBrushLoader::load(pugi::xml_node node, DoodadBrushItems& items, Dooda
 				settings.thickness = boost::lexical_cast<int32_t>(thicknessString.substr(0, slash));
 				settings.thickness_ceiling = std::max<int32_t>(settings.thickness, boost::lexical_cast<int32_t>(thicknessString.substr(slash + 1)));
 			} catch (const boost::bad_lexical_cast&) {
-				warnings.push_back((wxString("Invalid thickness format: ") + wxstr(thicknessString)).ToStdString());
+				warnings.push_back(std::format("Invalid thickness format: {}", thicknessString));
 				settings.thickness = 0;
 				settings.thickness_ceiling = 0;
 			}

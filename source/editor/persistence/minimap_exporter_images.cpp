@@ -16,7 +16,10 @@
 #include <utility>
 #include <vector>
 #include <webp/encode.h>
-#include <wx/image.h>
+
+#define STBIW_WINDOWS_UTF8
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
 
 namespace minimap_export {
 namespace {
@@ -46,14 +49,6 @@ struct StitchedLayout {
 	int height = 0;
 	std::vector<StitchedPlacement> placements;
 };
-
-[[nodiscard]] std::filesystem::path toPath(const wxFileName& file) {
-#ifdef _WIN32
-	return std::filesystem::path(file.GetFullPath().ToStdWstring());
-#else
-	return std::filesystem::path(file.GetFullPath().ToStdString());
-#endif
-}
 
 [[nodiscard]] uint8_t shadedChannel(uint8_t channel, double shade) {
 	return static_cast<uint8_t>(std::clamp(static_cast<int>(std::lround(channel * shade)), 0, 255));
@@ -144,27 +139,18 @@ void fillScaledTilePixels(const Bounds& bounds, const Chunk& chunk, double scale
 	return pixels;
 }
 
-[[nodiscard]] bool saveJpg(const wxFileName& file, int width, int height, const std::vector<uint8_t>& pixels) {
-	wxImage image(width, height);
-	uint8_t* data = image.GetData();
-	if (!data) {
-		return false;
-	}
-
-	std::memcpy(data, pixels.data(), pixels.size());
-	return image.SaveFile(file.GetFullPath(), wxBITMAP_TYPE_JPEG);
+[[nodiscard]] bool saveJpg(const std::filesystem::path& file, int width, int height, const std::vector<uint8_t>& pixels) {
+	return stbi_write_jpg(file.string().c_str(), width, height, PixelFormatRGB, pixels.data(), 90) != 0;
 }
 
-[[nodiscard]] bool saveWebp(const wxFileName& file, int width, int height, const std::vector<uint8_t>& pixels) {
+[[nodiscard]] bool saveWebp(const std::filesystem::path& file, int width, int height, const std::vector<uint8_t>& pixels) {
 	uint8_t* encoded = nullptr;
 	const size_t encodedSize = WebPEncodeLosslessRGB(pixels.data(), width, height, width * PixelFormatRGB, &encoded);
 	if (encodedSize == 0 || !encoded) {
 		return false;
 	}
 
-	std::ofstream stream(
-		toPath(file),
-		std::ios::binary);
+	std::ofstream stream(file, std::ios::binary);
 	const bool opened = stream.good();
 	if (opened) {
 		stream.write(reinterpret_cast<const char*>(encoded), static_cast<std::streamsize>(encodedSize));
@@ -266,12 +252,12 @@ void fillScaledTilePixels(const Bounds& bounds, const Chunk& chunk, double scale
 		}
 	}
 
-	const wxFileName file = fullImageFile(options, floor);
+	const std::filesystem::path file = fullImageFile(options, floor);
 	const bool saved = options.format == MinimapExportFormat::Jpg
 		? saveJpg(file, layout.width, layout.height, pixels)
 		: saveWebp(file, layout.width, layout.height, pixels);
 	if (!saved) {
-		return { .ok = false, .error = "Failed to write stitched minimap image: " + file.GetFullPath().ToStdString() };
+		return { .ok = false, .error = "Failed to write stitched minimap image: " + file.string() };
 	}
 
 	return { .ok = true, .filesWritten = 1 };
@@ -296,15 +282,15 @@ MinimapExportResult exportImages(Editor& editor, const MinimapExportOptions& opt
 	uint64_t completed = 0;
 	size_t filesWritten = 0;
 
-	const wxFileName fullImages = fullImagesDirectory(options);
+	const std::filesystem::path fullImages = fullImagesDirectory(options);
 	if (!ensureDirectory(fullImages)) {
-		return { .ok = false, .error = "Failed to create full minimap image folder: " + fullImages.GetFullPath().ToStdString() };
+		return { .ok = false, .error = "Failed to create full minimap image folder: " + fullImages.string() };
 	}
 
 	for (const int floor : outputFloors.floors()) {
-		const wxFileName chunksDirectory = floorDirectory(options, floor);
+		const std::filesystem::path chunksDirectory = floorDirectory(options, floor);
 		if (!ensureDirectory(chunksDirectory)) {
-			return { .ok = false, .filesWritten = filesWritten, .error = "Failed to create minimap floor folder: " + chunksDirectory.GetFullPath().ToStdString() };
+			return { .ok = false, .filesWritten = filesWritten, .error = "Failed to create minimap floor folder: " + chunksDirectory.string() };
 		}
 
 		std::vector<LoadedChunkImage> loadedChunks;
@@ -316,14 +302,14 @@ MinimapExportResult exportImages(Editor& editor, const MinimapExportOptions& opt
 			if (progress) {
 				progress(completed, total);
 			}
-			wxUnusedVar(wrotePixels);
+			(void)wrotePixels;
 
-			const wxFileName file = chunkFile(options, floor, chunk);
+			const std::filesystem::path file = chunkFile(options, floor, chunk);
 			const bool saved = options.format == MinimapExportFormat::Jpg
 				? saveJpg(file, chunk.width, chunk.height, pixels)
 				: saveWebp(file, chunk.width, chunk.height, pixels);
 			if (!saved) {
-				return { .ok = false, .filesWritten = filesWritten, .error = "Failed to write minimap image: " + file.GetFullPath().ToStdString() };
+				return { .ok = false, .filesWritten = filesWritten, .error = "Failed to write minimap image: " + file.string() };
 			}
 			loadedChunks.push_back({
 				.chunk = chunk,

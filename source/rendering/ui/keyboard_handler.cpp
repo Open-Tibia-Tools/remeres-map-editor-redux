@@ -79,7 +79,14 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 			break;
 		}
 		case WXK_DELETE: {
-			canvas->editor.destroySelection();
+			auto result = canvas->editor.destroySelection();
+			if (result.empty) {
+				g_gui.SetStatusText("No selected items to delete.");
+			} else {
+				g_gui.SetStatusText(std::format("Deleted {} tile{} ({} item{})",
+					result.tile_count, (result.tile_count > 1 ? "s" : ""),
+					result.item_count, (result.item_count > 1 ? "s" : "")));
+			}
 			canvas->RequestSharedMapRefresh();
 			break;
 		}

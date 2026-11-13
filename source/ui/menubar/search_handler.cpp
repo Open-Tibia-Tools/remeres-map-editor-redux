@@ -13,7 +13,7 @@
 #include "editor/operations/clean_operations.h"
 #include "map/map.h"
 #include "editor/action_queue.h"
-#include "game/items.h"
+#include "item_definitions/core/item_definition_store.h"
 
 #include <algorithm>
 #include <format>
@@ -213,7 +213,7 @@ void SearchHandler::OnRemoveItemOnSelection(wxCommandEvent& WXUNUSED(event)) {
 	if (dialog.ShowModal() == wxID_OK) {
 		g_gui.GetCurrentEditor()->actionQueue->clear();
 		g_gui.CreateLoadBar("Searching item on selection to remove...");
-		EditorOperations::RemoveItemCondition condition(dialog.getResultID());
+		EditorOperations::RemoveItemCondition condition(dialog.getResultID(), [](uint32_t percent) { g_gui.SetLoadDone(percent); });
 		int64_t count = RemoveItemOnMap(g_gui.GetCurrentMap(), condition, true);
 		g_gui.DestroyLoadBar();
 

@@ -5,7 +5,7 @@
 #ifndef RME_VERSION_MANAGER_H_
 #define RME_VERSION_MANAGER_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "app/client_version.h"
 #include "item_definitions/core/missing_item_report.h"
 
@@ -17,7 +17,7 @@ public:
 	~VersionManager();
 
 	void UnloadVersion(bool full_clear = false);
-	bool LoadVersion(ClientVersionID ver, wxString& error, std::vector<std::string>& warnings, bool force = false);
+	bool LoadVersion(ClientVersionID ver, std::string& error, std::vector<std::string>& warnings, bool force = false);
 
 	// The current version loaded (returns CLIENT_VERSION_NONE if no version is loaded)
 	const ClientVersion& GetCurrentVersion() const;
@@ -42,16 +42,17 @@ public:
 		return last_load_has_otb;
 	}
 
-	[[nodiscard]] wxString GetModularDataPath() const;
+	[[nodiscard]] std::filesystem::path GetModularDataPath() const;
 
 private:
-	bool LoadDataFiles(wxString& error, std::vector<std::string>& warnings);
+	bool PromptForClientPaths(ClientVersion* version);
+	bool LoadDataFiles(std::string& error, std::vector<std::string>& warnings);
 	void FailDataLoad();
-	bool LoadMaterialManifest(const FileName& materials_manifest, MaterialManifestFiles& manifest_files, wxString& error);
-	bool LoadCanonicalAssets(const wxString& modular_data_path, const MaterialManifestFiles& manifest_files, wxString& error, std::vector<std::string>& warnings);
+	bool LoadMaterialManifest(const std::filesystem::path& materials_manifest, MaterialManifestFiles& manifest_files, std::string& error);
+	bool LoadCanonicalAssets(const std::filesystem::path& modular_data_path, const MaterialManifestFiles& manifest_files, std::string& error, std::vector<std::string>& warnings);
 	void AppendMissingItemWarnings(std::vector<std::string>& warnings) const;
-	bool LoadCreatureFiles(const MaterialManifestFiles& manifest_files, wxString& error, std::vector<std::string>& warnings);
-	bool LoadModularMaterials(const FileName& materials_manifest, wxString& error, std::vector<std::string>& warnings);
+	bool LoadCreatureFiles(const MaterialManifestFiles& manifest_files, std::string& error, std::vector<std::string>& warnings);
+	bool LoadModularMaterials(const std::filesystem::path& materials_manifest, std::string& error, std::vector<std::string>& warnings);
 	void RegisterCreaturesFromOpenMaps();
 
 	ClientVersionID loaded_version;

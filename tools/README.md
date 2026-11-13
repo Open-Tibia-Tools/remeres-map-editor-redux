@@ -292,3 +292,27 @@ python tools/scan_legacy_wx.py --format md --output wx_scan_report.md
 # Filter by category (deprecated_api, sizer_patterns, high_dpi, modernization, modern_features)
 python tools/scan_legacy_wx.py --category deprecated_api
 ```
+
+
+---
+
+# scan_wx_dependencies.py
+
+Automated auditor for wxWidgets decoupling and domain architecture purity.
+
+Zero-dependency Python 3.9+ script.
+
+```bash
+# Verify rme_core backend target purity (zero wx/UI dependencies, exits 1 on violation)
+python tools/scan_wx_dependencies.py --target rme_core --strict
+
+# Verify all domain modules (brushes, game, io, item_definitions, map, core operations)
+python tools/scan_wx_dependencies.py --target core --strict
+
+# Full codebase footprint breakdown across all subsystems (JSON or Markdown)
+python tools/scan_wx_dependencies.py --target all --summary
+python tools/scan_wx_dependencies.py --target all --format md -o wx_footprint.md
+
+# Run unit tests
+python tools/test_scan_wx_dependencies.py
+```

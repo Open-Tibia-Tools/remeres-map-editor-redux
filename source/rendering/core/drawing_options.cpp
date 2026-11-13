@@ -1,5 +1,4 @@
 #include "app/definitions.h"
-#include "brushes/managers/brush_manager.h"
 #include "rendering/core/drawing_options.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/light_defaults.h"
@@ -168,7 +167,7 @@ void DrawingOptions::MarkSettingDirty(uint32_t key) noexcept {
 	dirty_ = true;
 }
 
-void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_manager) {
+void DrawingOptions::Update(const Settings& settings, int light_intensity, int server_light_color, float ambient_light_level) {
 	const bool new_transparent_floors = settings.getBoolean(Config::TRANSPARENT_FLOORS);
 	const int transparent_shade_pct = std::clamp(settings.getInteger(Config::TRANSPARENT_FLOORS_SHADE), 0, 100);
 	const uint8_t new_transparent_floors_tint = static_cast<uint8_t>(255 * (100 - transparent_shade_pct) / 100);
@@ -206,10 +205,10 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const bool new_extended_house_shader = settings.getBoolean(Config::EXT_HOUSE_SHADER);
 	const bool new_extended_pathing_shader = settings.getBoolean(Config::EXT_PATHING_SHADER);
 	const SpriteLight new_server_light = SpriteLight {
-		.intensity = static_cast<uint8_t>(std::clamp(brush_manager.GetLightIntensity(), 0, 255)),
-		.color = static_cast<uint8_t>(std::clamp(brush_manager.GetServerLightColor(), 0, 255))
+		.intensity = static_cast<uint8_t>(std::clamp(light_intensity, 0, 255)),
+		.color = static_cast<uint8_t>(std::clamp(server_light_color, 0, 255))
 	};
-	const float new_minimum_ambient_light = std::clamp(brush_manager.GetAmbientLightLevel(), 0.0f, 1.0f);
+	const float new_minimum_ambient_light = std::clamp(ambient_light_level, 0.0f, 1.0f);
 	const bool new_anti_aliasing = settings.getBoolean(Config::ANTI_ALIASING);
 
 	const bool new_show_zone_borders = settings.getBoolean(Config::ZONE_BORDERS_ENABLED);
@@ -361,19 +360,9 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	dirty_ = false;
 }
 
-void DrawingOptions::UpdateIfNeeded(const Settings& settings, const BrushManager& brush_manager) {
+void DrawingOptions::UpdateIfNeeded(const Settings& settings, int light_intensity, int server_light_color, float ambient_light_level) {
 	if (dirty_) {
-		Update(settings, brush_manager);
-	}
-}
-
-void DrawingOptions::Update() {
-	Update(g_settings, g_brush_manager);
-}
-
-void DrawingOptions::UpdateIfNeeded() {
-	if (dirty_) {
-		Update();
+		Update(settings, light_intensity, server_light_color, ambient_light_level);
 	}
 }
 

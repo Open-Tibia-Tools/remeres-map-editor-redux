@@ -20,8 +20,7 @@
 
 #include "game/outfit.h"
 #include "ext/pugixml.hpp"
-#include <wx/filename.h>
-
+#include <filesystem>
 #include <string>
 #include <map>
 #include <vector>
@@ -56,10 +55,10 @@ public:
 		return creature_map.end();
 	}
 
-	bool loadFromXML(const wxFileName& filename, bool standard, wxString& error, std::vector<std::string>& warnings);
-	bool importXMLFromOT(const wxFileName& filename, wxString& error, std::vector<std::string>& warnings);
+	bool loadFromXML(const std::filesystem::path& filename, bool standard, std::string& error, std::vector<std::string>& warnings);
+	bool importXMLFromOT(const std::filesystem::path& filename, std::string& error, std::vector<std::string>& warnings);
 
-	bool saveToXML(const wxFileName& filename);
+	bool saveToXML(const std::filesystem::path& filename);
 };
 
 class CreatureType {
@@ -80,7 +79,7 @@ public:
 	static void preserve_assign_creature_fields(CreatureType* dest, const CreatureType& src);
 
 	static CreatureType* loadFromXML(pugi::xml_node node, std::vector<std::string>& warnings, std::string_view fallbackType = "");
-	static CreatureType* loadFromOTXML(const wxFileName& filename, pugi::xml_document& node, std::vector<std::string>& warnings);
+	static CreatureType* loadFromOTXML(const std::filesystem::path& filename, pugi::xml_document& node, std::vector<std::string>& warnings);
 };
 
 extern CreatureDatabase g_creatures;

@@ -5,7 +5,7 @@
 #ifndef RME_AUTO_BORDER_H
 #define RME_AUTO_BORDER_H
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include <array>
 #include <string>
 #include <string_view>

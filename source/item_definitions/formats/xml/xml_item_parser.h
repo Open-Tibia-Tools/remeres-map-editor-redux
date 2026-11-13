@@ -5,7 +5,7 @@
 
 class XmlItemParser : public IItemDefinitionParser {
 public:
-	bool parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, wxString& error, std::vector<std::string>& warnings) const override;
+	bool parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::string& error, std::vector<std::string>& warnings) const override;
 };
 
 #endif

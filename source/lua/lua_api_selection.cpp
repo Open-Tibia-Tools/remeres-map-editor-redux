@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "lua_api_selection.h"
+#include "lua_api.h"
 #include "editor/selection.h"
 #include "map/tile.h"
 #include "map/position.h"

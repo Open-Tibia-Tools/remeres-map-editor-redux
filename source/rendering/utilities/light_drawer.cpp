@@ -251,8 +251,9 @@ void LightDrawer::render(
 		return;
 	}
 
-	const float world_x = static_cast<float>(last_min_cx_ * rme::lighting::CHUNK_SIZE * TILE_SIZE - view.view_scroll_x);
-	const float world_y = static_cast<float>(last_min_cy_ * rme::lighting::CHUNK_SIZE * TILE_SIZE - view.view_scroll_y);
+	const int floor_offset = view.getFloorAdjustment();
+	const float world_x = static_cast<float>(last_min_cx_ * rme::lighting::CHUNK_SIZE * TILE_SIZE - view.view_scroll_x - floor_offset);
+	const float world_y = static_cast<float>(last_min_cy_ * rme::lighting::CHUNK_SIZE * TILE_SIZE - view.view_scroll_y - floor_offset);
 	const float world_w = static_cast<float>((last_max_cx_ - last_min_cx_ + 1) * rme::lighting::CHUNK_SIZE * TILE_SIZE);
 	const float world_h = static_cast<float>((last_max_cy_ - last_min_cy_ + 1) * rme::lighting::CHUNK_SIZE * TILE_SIZE);
 

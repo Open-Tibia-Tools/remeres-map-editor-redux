@@ -3,7 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "brushes/table/table_brush_items.h"
-#include "app/main.h"
+#include "app/definitions.h"
 
 void TableBrushItems::addItem(int alignment, uint16_t id, int chance) {
 	if (alignment < 0 || alignment >= static_cast<int>(table_items.size())) {

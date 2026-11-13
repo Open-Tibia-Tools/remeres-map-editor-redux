@@ -7,6 +7,8 @@
 #include "app/settings.h"
 #include "brushes/managers/brush_manager.h"
 #include "brushes/brush.h"
+#include "brushes/door/door_brush.h"
+#include "brushes/creature/creature_brush.h"
 #include "brushes/managers/doodad_preview_manager.h"
 #include "brushes/spawn/spawn_brush.h"
 #include "brushes/creature/creature_brush.h"
@@ -20,6 +22,7 @@
 #include "ui/gui.h"
 #include "ui/main_toolbar.h"
 #include "rendering/core/light_defaults.h"
+#include "rendering/core/drawing_options.h"
 #include <algorithm>
 #include <array>
 
@@ -41,26 +44,6 @@ namespace {
 BrushManager g_brush_manager;
 
 BrushManager::BrushManager() :
-	house_brush(nullptr),
-	house_exit_brush(nullptr),
-	waypoint_brush(nullptr),
-	optional_brush(nullptr),
-	eraser(nullptr),
-	normal_door_brush(nullptr),
-	locked_door_brush(nullptr),
-	magic_door_brush(nullptr),
-	quest_door_brush(nullptr),
-	hatch_door_brush(nullptr),
-	window_door_brush(nullptr),
-	normal_door_alt_brush(nullptr),
-	archway_door_brush(nullptr),
-	pz_brush(nullptr),
-	rook_brush(nullptr),
-	nolog_brush(nullptr),
-	pvp_brush(nullptr),
-	zone_brush(nullptr),
-	temple_brush(nullptr),
-
 	current_brush(nullptr),
 	previous_brush(nullptr),
 	brush_shape(BRUSHSHAPE_SQUARE),
@@ -124,7 +107,7 @@ void BrushManager::SelectBrushInternal(Brush* brush) {
 		return;
 	}
 
-	g_status.SetStatusText("Selected brush: " + wxstr(brush->getName()));
+	g_status.SetStatusText(std::format("Selected brush: {}", brush->getName()));
 
 	if (const auto* creature = brush->as<CreatureBrush>()) {
 		// Creature brushes keep their own facing direction, defaulting to SOUTH.
@@ -218,8 +201,7 @@ void BrushManager::SetBrushSizeInternal(int nz) {
 		brush_size_y = normalized_size;
 		exact_brush_size = false;
 		aspect_ratio_locked = true;
-		g_doodad_preview.FillBuffer();
-		g_gui.SetCurrentMapSecondaryMap(g_doodad_preview.GetBufferMap());
+		UpdateDoodadPreview();
 	} else {
 		brush_size_x = normalized_size;
 		brush_size_y = normalized_size;
@@ -354,7 +336,7 @@ void BrushManager::SetBrushThickness(bool on, int x, int y) {
 	}
 
 	if (current_brush && current_brush->is<DoodadBrush>()) {
-		g_doodad_preview.FillBuffer();
+		FillDoodadPreviewBuffer();
 	}
 
 	g_gui.RefreshView();
@@ -364,7 +346,7 @@ void BrushManager::SetBrushThickness(int low, int ceil) {
 	custom_thickness_mod = static_cast<float>(std::max(low, 1)) / static_cast<float>(std::max(ceil, 1));
 
 	if (use_custom_thickness && current_brush && current_brush->is<DoodadBrush>()) {
-		g_doodad_preview.FillBuffer();
+		FillDoodadPreviewBuffer();
 	}
 
 	g_gui.RefreshView();
@@ -417,21 +399,59 @@ bool BrushManager::HasResizableDoodadBrush() const {
 
 void BrushManager::SetDoorLocked(bool on) {
 	draw_locked_doors = on;
+	DoorBrush::setLocked(on);
 	g_gui.RefreshView();
 }
 
+void BrushManager::SetSpawnTime(int time) {
+	creature_spawntime = time;
+	CreatureBrush::setDefaultSpawnTime(time);
+}
+
+void BrushManager::SetDefaultCreatureWeight(int weight) {
+	creature_default_weight = weight;
+	CreatureBrush::setDefaultWeight(weight);
+}
+
 void BrushManager::FillDoodadPreviewBuffer() {
+	if (!current_brush || !current_brush->is<DoodadBrush>()) {
+		return;
+	}
 	if (g_settings.getBoolean(Config::RANDOMIZE_DOODADS)) {
 		brush_variation = random(0, 1000000);
-		if (current_brush) {
-			current_brush->setVariation(brush_variation);
-		}
+		current_brush->setVariation(brush_variation);
 	}
-	g_doodad_preview.FillBuffer();
+	g_doodad_preview.FillBuffer(
+		current_brush->as<DoodadBrush>(),
+		GetBrushVariation(),
+		GetBrushFootprint(),
+		UseCustomThickness(),
+		GetCustomThicknessMod()
+	);
 }
 void BrushManager::UpdateDoodadPreview() {
-	g_doodad_preview.FillBuffer();
+	FillDoodadPreviewBuffer();
 	g_gui.SetCurrentMapSecondaryMap(g_doodad_preview.GetBufferMap());
+}
+
+void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_manager) {
+	Update(settings, brush_manager.GetLightIntensity(), brush_manager.GetServerLightColor(), brush_manager.GetAmbientLightLevel());
+}
+
+void DrawingOptions::UpdateIfNeeded(const Settings& settings, const BrushManager& brush_manager) {
+	if (dirty_) {
+		Update(settings, brush_manager);
+	}
+}
+
+void DrawingOptions::Update() {
+	Update(g_settings, g_brush_manager);
+}
+
+void DrawingOptions::UpdateIfNeeded() {
+	if (dirty_) {
+		Update();
+	}
 }
 
 int BrushManager::GetSpawnTime() const {
@@ -440,4 +460,3 @@ int BrushManager::GetSpawnTime() const {
 	}
 	return creature_spawntime;
 }
-

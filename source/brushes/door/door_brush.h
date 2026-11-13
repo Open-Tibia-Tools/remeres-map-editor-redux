@@ -10,8 +10,9 @@
 class DoorBrush : public Brush {
 public:
 	explicit DoorBrush(DoorType doortype);
-	~DoorBrush() override = default;
+	~DoorBrush() override;
 
+	static DoorBrush* getDoorBrush(DoorType type);
 
 	static void switchDoor(Item* door);
 
@@ -25,6 +26,9 @@ public:
 		return true;
 	}
 
+	static void setLocked(bool locked) { pref_locked = locked; }
+	static bool isLocked() { return pref_locked; }
+
 	void getRelatedItems(std::vector<uint16_t>& items) override;
 
 	[[nodiscard]] uint16_t getDoorItemId(BaseMap* map, const Position& pos) const;
@@ -33,6 +37,9 @@ public:
 protected:
 	DoorType doortype;
 	mutable uint16_t cached_fallback_id = 0;
+
+private:
+	static inline bool pref_locked = false;
 };
 
 #endif

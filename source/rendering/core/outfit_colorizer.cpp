@@ -4,6 +4,7 @@
 
 #include "rendering/core/outfit_colorizer.h"
 #include "rendering/core/outfit_colors.h"
+#include "app/definitions.h"
 #include <ranges>
 #include <span>
 

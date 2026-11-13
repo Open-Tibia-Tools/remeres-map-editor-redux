@@ -15,34 +15,30 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "editor/copybuffer.h"
 #include "editor/editor.h"
 #include "editor/operations/copy_operations.h"
-#include "ui/gui.h"
 #include "game/creature.h"
 
 CopyBuffer::CopyBuffer() :
-	tiles(std::make_unique<BaseMap>()) {
-	;
-}
-
-size_t CopyBuffer::GetTileCount() {
-	return tiles ? (size_t)tiles->size() : 0;
-}
-
-BaseMap& CopyBuffer::getBufferMap() {
-	ASSERT(tiles);
-	return *tiles;
+	tiles(nullptr),
+	copyPos() {
 }
 
 CopyBuffer::~CopyBuffer() {
-	clear();
+	tiles.reset();
+}
+
+size_t CopyBuffer::GetTileCount() {
+	if (!tiles) {
+		return 0;
+	}
+	return tiles->size();
 }
 
 Position CopyBuffer::getPosition() const {
-	ASSERT(tiles);
 	return copyPos;
 }
 
@@ -50,12 +46,12 @@ void CopyBuffer::clear() {
 	tiles.reset();
 }
 
-void CopyBuffer::copy(Editor& editor, int floor) {
-	CopyOperations::copy(editor, *this, floor);
+CopyResult CopyBuffer::copy(Editor& editor, int floor) {
+	return CopyOperations::copy(editor, *this, floor);
 }
 
-void CopyBuffer::cut(Editor& editor, int floor) {
-	CopyOperations::cut(editor, *this, floor);
+CopyResult CopyBuffer::cut(Editor& editor, int floor) {
+	return CopyOperations::cut(editor, *this, floor);
 }
 
 void CopyBuffer::paste(Editor& editor, const Position& toPosition) {
@@ -64,4 +60,11 @@ void CopyBuffer::paste(Editor& editor, const Position& toPosition) {
 
 bool CopyBuffer::canPaste() const {
 	return tiles && tiles->size() != 0;
+}
+
+BaseMap& CopyBuffer::getBufferMap() {
+	if (!tiles) {
+		tiles = std::make_unique<BaseMap>();
+	}
+	return *tiles;
 }

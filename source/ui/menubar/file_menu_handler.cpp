@@ -13,7 +13,6 @@
 #include "ui/extension_window.h"
 #include "game/creatures.h"
 #include "app/managers/version_manager.h"
-#include "ui/controls/sortable_list_box.h"
 #include "ui/brush_items/brush_items_window.h"
 
 FileMenuHandler::FileMenuHandler(MainFrame* frame, MainMenuBar* menubar) :
@@ -71,13 +70,13 @@ void FileMenuHandler::OnImportMonsterData(wxCommandEvent& WXUNUSED(event)) {
 		wxArrayString paths;
 		dlg.GetPaths(paths);
 		for (uint32_t i = 0; i < paths.GetCount(); ++i) {
-			wxString error;
+			std::string error;
 			std::vector<std::string> warnings;
-			bool ok = g_creatures.importXMLFromOT(FileName(paths[i]), error, warnings);
+			bool ok = g_creatures.importXMLFromOT(paths[i].ToStdWstring(), error, warnings);
 			if (ok) {
 				DialogUtil::ListDialog("Monster loader errors", warnings);
 			} else {
-				DialogUtil::PopupDialog(g_gui.root, "Error", "Error OT data file \"" + paths[i] + "\".\n" + error, wxOK | wxICON_INFORMATION);
+				DialogUtil::PopupDialog(g_gui.root, "Error", wxstr(std::format("Error OT data file \"{}\".\n{}", paths[i].ToStdString(), error)), wxOK | wxICON_INFORMATION);
 			}
 		}
 	}
@@ -99,10 +98,10 @@ void FileMenuHandler::OnReloadDataFiles(wxCommandEvent& WXUNUSED(event)) {
 	if (g_gui.brush_items_window) {
 		g_gui.brush_items_window->SetActiveBrush(nullptr);
 	}
-	wxString error;
+	std::string error;
 	std::vector<std::string> warnings;
 	g_version.LoadVersion(g_version.GetCurrentVersionID(), error, warnings, true);
-	DialogUtil::PopupDialog("Error", error, wxOK);
+	DialogUtil::PopupDialog("Error", wxstr(error), wxOK);
 	DialogUtil::ListDialog("Warnings", warnings);
 }
 

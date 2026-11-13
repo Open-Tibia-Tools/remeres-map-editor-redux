@@ -6,7 +6,6 @@
 #include "game/item.h"
 #include "game/complexitem.h"
 #include "game/creature.h"
-#include "game/items.h"
 #include "brushes/creature/creature_brush.h"
 #include "ui/gui.h"
 

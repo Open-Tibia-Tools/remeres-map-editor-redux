@@ -18,8 +18,8 @@
 #define RME_IOMAP_OTBM_H_
 
 #include <vector>
-#include <wx/datetime.h>
-#include <wx/string.h>
+#include <string>
+#include <filesystem>
 #include "io/iomap.h"
 #include "io/filehandle.h"
 #include "io/otbm/otbm_types.h"
@@ -75,22 +75,22 @@ struct OTBM_HouseTile_coords {
 #pragma pack()
 
 struct OTBMStartupPeekResult {
-	wxString map_name;
-	wxString client_version = "Placeholder";
+	std::string map_name;
+	std::string client_version = "Placeholder";
 	uint16_t width = 0;
 	uint16_t height = 0;
 	int otbm_version = 0;
 	uint32_t items_major_version = 0;
 	uint32_t items_minor_version = 0;
-	wxString house_xml_file;
-	wxString spawn_xml_file;
-	wxString monster_xml_file;
-	wxString npc_xml_file;
-	wxString zone_xml_file;
-	wxString description;
-	wxDateTime modified_time;
+	std::string house_xml_file;
+	std::string spawn_xml_file;
+	std::string monster_xml_file;
+	std::string npc_xml_file;
+	std::string zone_xml_file;
+	std::string description;
+	std::filesystem::file_time_type modified_time{};
 	bool has_error = false;
-	wxString error_message;
+	std::string error_message;
 	bool is_compressed = false;
 };
 
@@ -103,20 +103,20 @@ public:
 
 	using WriteResult = OTBMWriteResult;
 
-	static bool getVersionInfo(const FileName& identifier, MapVersion& out_ver);
-	static bool peekStartupInfo(const FileName& identifier, OTBMStartupPeekResult& out_info);
+	static bool getVersionInfo(const std::filesystem::path& identifier, MapVersion& out_ver);
+	static bool peekStartupInfo(const std::filesystem::path& identifier, OTBMStartupPeekResult& out_info);
 
-	bool loadMap(Map& map, const FileName& identifier) override;
-	bool saveMap(Map& map, const FileName& identifier) override;
+	bool loadMap(Map& map, const std::filesystem::path& identifier) override;
+	bool saveMap(Map& map, const std::filesystem::path& identifier) override;
 
 protected:
 	static bool getVersionInfo(NodeFileReadHandle* f, MapVersion& out_ver);
 
-	bool loadMapFromDisk(Map& map, const FileName& identifier);
+	bool loadMapFromDisk(Map& map, const std::filesystem::path& identifier);
 	bool loadMapFast(Map& map, const uint8_t* data, size_t size);
 
 
-	bool saveMapToDisk(Map& map, const FileName& identifier);
+	bool saveMapToDisk(Map& map, const std::filesystem::path& identifier);
 
 	bool saveMap(Map& map, NodeFileWriteHandle& handle);
 

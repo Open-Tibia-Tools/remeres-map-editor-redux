@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "lua_api_creature.h"
+#include "lua_api.h"
 #include "lua_api.h"
 #include "game/creature.h"
 #include "game/creatures.h"

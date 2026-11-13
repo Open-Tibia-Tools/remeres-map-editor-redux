@@ -3,7 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "brushes/wall/wall_brush_items.h"
-#include "app/main.h" // For random
+#include "app/definitions.h" // For random
 
 void WallBrushItems::addWallItem(int alignment, uint16_t id, int chance) {
 	if (alignment < 0 || alignment >= 17) {

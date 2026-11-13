@@ -24,16 +24,17 @@ std::string MapBackupService::GenerateTimestampString(bool compact) {
 }
 
 void MapBackupService::WriteCrashMarker(const std::vector<std::string>& files) {
-	std::string marker_path = nstr(FileSystem::GetLocalDataDirectory()) + ".saving.txt";
-	std::ofstream f(marker_path.c_str(), std::ios::trunc | std::ios::out);
+	std::filesystem::path marker_path = FileSystem::GetLocalDataDirectory() / ".saving.txt";
+	std::ofstream f(marker_path, std::ios::trunc | std::ios::out);
 	for (const auto& file : files) {
 		f << file << '\n';
 	}
 }
 
 void MapBackupService::ClearCrashMarker() {
-	std::string marker_path = nstr(FileSystem::GetLocalDataDirectory()) + ".saving.txt";
-	std::remove(marker_path.c_str());
+	std::filesystem::path marker_path = FileSystem::GetLocalDataDirectory() / ".saving.txt";
+	std::error_code ec;
+	std::filesystem::remove(marker_path, ec);
 }
 
 bool MapBackupService::CreateSnapshot(
@@ -44,17 +45,18 @@ bool MapBackupService::CreateSnapshot(
 ) {
 	const std::string time_str = GenerateTimestampString(true);
 
-	FileName target_file;
+	std::filesystem::path target_file;
 	if (editor.map.hasFile()) {
-		FileName src(wxstr(editor.map.getFilename()));
-		target_file = src;
-		target_file.SetName(src.GetName() + "_" + operation_tag + "_" + time_str);
+		std::filesystem::path src(editor.map.getFilename());
+		std::string stem = src.stem().string();
+		std::string ext = src.extension().string();
+		target_file = src.parent_path() / (stem + "_" + operation_tag + "_" + time_str + ext);
 	} else {
-		std::string dir = nstr(FileSystem::GetLocalDataDirectory());
-		target_file.Assign(wxstr(dir + "untitled_" + operation_tag + "_" + time_str + ".otbm"));
+		std::filesystem::path dir = FileSystem::GetLocalDataDirectory();
+		target_file = dir / ("untitled_" + operation_tag + "_" + time_str + ".otbm");
 	}
 
-	out_backup_path = nstr(target_file.GetFullPath());
+	out_backup_path = target_file.string();
 
 	const std::string original_spawnfile = editor.map.getSpawnFilename();
 	const std::string original_monsterfile = editor.map.getMonsterFilename();
@@ -65,7 +67,7 @@ bool MapBackupService::CreateSnapshot(
 	const bool original_changed = editor.map.hasChanged();
 	const bool original_unnamed = editor.map.isUnnamed();
 
-	const std::string snapshot_base = nstr(target_file.GetName());
+	const std::string snapshot_base = target_file.stem().string();
 	editor.map.setSpawnFilename(snapshot_base + "-spawn.xml");
 	editor.map.setMonsterFilename(snapshot_base + "-monster.xml");
 	editor.map.setNpcFilename(snapshot_base + "-npc.xml");
@@ -89,14 +91,15 @@ bool MapBackupService::CreateSnapshot(
 	}
 
 	if (!save_ok) {
-		const std::string dir = nstr(target_file.GetPath(wxPATH_GET_SEPARATOR | wxPATH_GET_VOLUME));
-		std::remove(nstr(target_file.GetFullPath()).c_str());
-		std::remove((dir + snapshot_base + "-spawn.xml").c_str());
-		std::remove((dir + snapshot_base + "-monster.xml").c_str());
-		std::remove((dir + snapshot_base + "-npc.xml").c_str());
-		std::remove((dir + snapshot_base + "-house.xml").c_str());
-		std::remove((dir + snapshot_base + "-zones.xml").c_str());
-		std::remove((dir + snapshot_base + "-waypoint.xml").c_str());
+		const std::filesystem::path dir = target_file.parent_path();
+		std::error_code ec;
+		std::filesystem::remove(target_file, ec);
+		std::filesystem::remove(dir / (snapshot_base + "-spawn.xml"), ec);
+		std::filesystem::remove(dir / (snapshot_base + "-monster.xml"), ec);
+		std::filesystem::remove(dir / (snapshot_base + "-npc.xml"), ec);
+		std::filesystem::remove(dir / (snapshot_base + "-house.xml"), ec);
+		std::filesystem::remove(dir / (snapshot_base + "-zones.xml"), ec);
+		std::filesystem::remove(dir / (snapshot_base + "-waypoint.xml"), ec);
 
 		out_error = "Failed to save backup map snapshot to: " + out_backup_path;
 		spdlog::error("MapBackupService::CreateSnapshot: {}", out_error);

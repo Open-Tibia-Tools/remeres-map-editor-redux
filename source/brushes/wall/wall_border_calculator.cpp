@@ -8,7 +8,7 @@
 #include "map/basemap.h"
 #include "map/tile_operations.h"
 #include "item_definitions/core/item_definition_store.h"
-#include "app/main.h" // ASSERT, etc
+#include "app/definitions.h" // ASSERT, etc
 
 #include <vector>
 #include <memory>
