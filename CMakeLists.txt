@@ -60,6 +60,7 @@ find_package(Lua REQUIRED)
 find_package(sol2 CONFIG REQUIRED)
 find_package(cpr CONFIG REQUIRED)
 find_package(WebP CONFIG REQUIRED)
+find_package(Catch2 3 CONFIG REQUIRED)
 
 # nanovg: try vcpkg/Conan first, fallback to ext/nanovg
 find_package(nanovg CONFIG QUIET)
@@ -247,3 +248,11 @@ target_link_libraries(test_universal_rotator PRIVATE ${LUA_LIBRARIES})
 
 enable_testing()
 add_test(NAME test_universal_rotator COMMAND test_universal_rotator)
+
+# --- Unit test for subtype pattern mapping ---
+add_executable(test_subtype_pattern tests/test_subtype_pattern.cpp)
+set_target_properties(test_subtype_pattern PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_subtype_pattern PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_subtype_pattern PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_subtype_pattern PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_subtype_pattern COMMAND test_subtype_pattern)
