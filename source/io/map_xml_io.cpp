@@ -102,10 +102,9 @@ namespace {
 		if (isOtbm5) {
 			creatureNode.append_attribute("z") = z;
 		}
-		creatureNode.append_attribute("spawntime") = creature.spawntime;
-		if (creature.direction != NORTH) {
-			creatureNode.append_attribute("direction") = static_cast<int>(creature.direction);
-		}
+		const int32_t spawntime = creature.spawntime > 0 ? creature.spawntime : std::max(1, g_settings.getInteger(Config::DEFAULT_SPAWNTIME));
+		creatureNode.append_attribute("spawntime") = spawntime;
+		creatureNode.append_attribute("direction") = static_cast<int>(creature.direction);
 		if (isOtbm5 && creature.weight > 0) {
 			creatureNode.append_attribute("weight") = creature.weight;
 		}
@@ -481,14 +480,16 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 			}
 
 			int32_t spawntime = creatureNode.attribute("spawntime").as_int();
-			if (spawntime == 0) {
-				spawntime = g_settings.getInteger(Config::DEFAULT_SPAWNTIME);
+			if (spawntime <= 0) {
+				spawntime = std::max(1, g_settings.getInteger(Config::DEFAULT_SPAWNTIME));
 			}
 
-			Direction direction = NORTH;
-			int dir = creatureNode.attribute("direction").as_int(static_cast<int>(NORTH));
-			if (dir >= DIRECTION_FIRST && dir <= DIRECTION_LAST) {
-				direction = static_cast<Direction>(dir);
+			Direction direction = SOUTH;
+			if (auto dirAttr = creatureNode.attribute("direction")) {
+				int dir = dirAttr.as_int(static_cast<int>(SOUTH));
+				if (dir >= DIRECTION_FIRST && dir <= DIRECTION_LAST) {
+					direction = static_cast<Direction>(dir);
+				}
 			}
 
 			Position creaturePosition = spawnPosition;

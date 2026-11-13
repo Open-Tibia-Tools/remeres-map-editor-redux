@@ -202,11 +202,6 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 	const float item_house_id = (options.show_houses && options.extended_house_shader && is_house_tile) ? static_cast<float>(tile->getHouseID()) : 0.0f;
 	constexpr uint8_t default_ir = 255, default_ig = 255, default_ib = 255;
 
-	uint8_t r = 255, g = 255, b = 255;
-	if (options.hasTileColorModifiers()) {
-		TileColorCalculator::Calculate(tile, options, r, g, b);
-	}
-
 	BlitItemParams item_params(position, nullptr, options);
 	item_params.tile = tile;
 	item_params.ctx = &ctx;
@@ -302,11 +297,6 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 	const float item_house_id = (options.show_houses && options.extended_house_shader && is_house_tile) ? static_cast<float>(tile->getHouseID()) : 0.0f;
 	constexpr uint8_t default_ir = 255, default_ig = 255, default_ib = 255;
 
-	uint8_t r = 255, g = 255, b = 255;
-	if (options.hasTileColorModifiers()) {
-		TileColorCalculator::Calculate(tile, options, r, g, b);
-	}
-
 	BlitItemParams item_params(position, nullptr, options);
 	item_params.tile = tile;
 	item_params.ctx = &ctx;
@@ -356,6 +346,7 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 		item_params.patterns = &patterns;
 		item_params.red = default_ir;
 		item_params.green = default_ig;
+		item_params.blue = default_ib;
 		const bool is_blocking_item = item->isBlocking() &&
 			!rme::rendering::TechnicalItemRegistry::IsInvisibleWall(item->getID(), it.clientId());
 		item_params.zone_flags = (options.show_blocking && options.extended_pathing_shader && is_blocking_item)

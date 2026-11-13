@@ -28,7 +28,7 @@ CreaturePropertiesWindow::CreaturePropertiesWindow(wxWindow* win_parent, const M
 	subsizer->Add(new wxStaticText(this, wxID_ANY, "\"" + wxstr(edit_creature->getName()) + "\""), wxSizerFlags(1).Expand());
 
 	subsizer->Add(new wxStaticText(this, wxID_ANY, "Spawn interval"));
-	count_field = new wxSpinCtrl(this, wxID_ANY, std::to_string(edit_creature->getSpawnTime()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 10, 86400, edit_creature->getSpawnTime());
+	count_field = new wxSpinCtrl(this, wxID_ANY, std::to_string(edit_creature->getSpawnTime()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 86400, edit_creature->getSpawnTime());
 	count_field->SetToolTip("Spawn interval in seconds");
 	subsizer->Add(count_field, wxSizerFlags(1).Expand());
 
