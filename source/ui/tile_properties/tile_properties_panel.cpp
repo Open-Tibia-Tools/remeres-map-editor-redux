@@ -132,7 +132,7 @@ int TilePropertiesPanel::MeasurePropertiesWidth() const {
 }
 
 int TilePropertiesPanel::MeasureLeftPaneWidth() const {
-	const int list_width = browse_field_list->GetMinSize().GetWidth() + 2 * FromDIP(2);
+	const int list_width = browse_field_list->GetBestSize().GetWidth() + 2 * FromDIP(2);
 	return std::max(list_width, left_panel->GetBestSize().GetWidth());
 }
 

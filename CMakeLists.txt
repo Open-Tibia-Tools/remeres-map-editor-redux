@@ -256,28 +256,3 @@ set_target_properties(test_subtype_pattern PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_subtype_pattern PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_subtype_pattern PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_subtype_pattern COMMAND test_subtype_pattern)
-
-# --- Unit test for pane geometry ---
-add_executable(test_pane_geometry tests/test_pane_geometry.cpp)
-set_target_properties(test_pane_geometry PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_pane_geometry PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_compile_definitions(test_pane_geometry PRIVATE WXWIN_COMPATIBILITY_3_3 NANOVG_GL3)
-target_link_libraries(test_pane_geometry PRIVATE Catch2::Catch2WithMain glad::glad)
-
-if(TARGET wxWidgets::wxWidgets)
-	target_link_libraries(test_pane_geometry PRIVATE wxWidgets::wxWidgets)
-else()
-	target_link_libraries(test_pane_geometry PRIVATE ${wxWidgets_LIBRARIES})
-endif()
-
-target_include_directories(test_pane_geometry PRIVATE
-	${Boost_INCLUDE_DIRS}
-	${OPENGL_INCLUDE_DIR}
-	${ZLIB_INCLUDE_DIR}
-	${Protobuf_INCLUDE_DIRS}
-	${LIBLZMA_INCLUDE_DIRS}
-	${CMAKE_CURRENT_BINARY_DIR}
-	${LUA_INCLUDE_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}/source
-)
-add_test(NAME test_pane_geometry COMMAND test_pane_geometry)

@@ -27,6 +27,7 @@
 #include "game/item.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "map/tile.h"
+#include "ui/managers/layout_manager.h"
 
 // These two symbols live in application.cpp, which is intentionally excluded
 // from the test link so its main() does not conflict with the test entry point.
@@ -388,6 +389,29 @@ int main() {
 		editor.actionQueue->undo();
 		cur_t1 = editor.map.getTile(10, 10, 7);
 		TEST_ASSERT(cur_t1->items[1]->getID() == 100); // undone to initial state!
+	}
+
+	{
+		using rme::ui::layout::FitPaneInDisplay;
+
+		const auto inside = FitPaneInDisplay({ 100, 100, 300, 200 }, { 0, 0, 1920, 1080 });
+		TEST_ASSERT(inside.has_value());
+		TEST_ASSERT(inside->x == 100 && inside->y == 100);
+
+		const auto clamped = FitPaneInDisplay({ 1800, 1000, 300, 200 }, { 0, 0, 1920, 1080 });
+		TEST_ASSERT(clamped.has_value());
+		TEST_ASSERT(clamped->x == 1620 && clamped->y == 880);
+
+		const auto too_big = FitPaneInDisplay({ 0, 0, 2000, 1100 }, { 0, 0, 1920, 1080 });
+		TEST_ASSERT(!too_big.has_value());
+
+		const auto negative = FitPaneInDisplay({ -2000, 100, 300, 200 }, { -1920, 0, 1920, 1080 });
+		TEST_ASSERT(negative.has_value());
+		TEST_ASSERT(negative->x == -1920 && negative->y == 100);
+
+		const auto exact = FitPaneInDisplay({ 50, 50, 1920, 1080 }, { 0, 0, 1920, 1080 });
+		TEST_ASSERT(exact.has_value());
+		TEST_ASSERT(exact->x == 0 && exact->y == 0);
 	}
 
 	std::cout << "universal rotator tests passed\n";

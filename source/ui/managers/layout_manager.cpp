@@ -56,6 +56,9 @@ void LayoutManager::EnsurePaneOnScreen(wxAuiPaneInfo& info) {
 	}
 	size.x = std::max(size.x, info.min_size.x);
 	size.y = std::max(size.y, info.min_size.y);
+	if (size.x <= 0 || size.y <= 0) {
+		return;
+	}
 
 	const int display_index = wxDisplay::GetFromPoint(info.floating_pos);
 	if (display_index == wxNOT_FOUND) {
