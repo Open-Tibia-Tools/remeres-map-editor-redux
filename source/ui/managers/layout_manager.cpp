@@ -15,6 +15,7 @@
 #include "ui/main_menubar.h"
 #include "ui/main_toolbar.h"
 #include <wx/display.h>
+#include <algorithm>
 #include "ui/managers/minimap_manager.h"
 #include "ingame_preview/ingame_preview_manager.h"
 #include "ingame_preview/ingame_preview_window.h"
@@ -45,20 +46,51 @@ namespace {
 } // namespace
 
 void LayoutManager::EnsurePaneOnScreen(wxAuiPaneInfo& info) {
-	if (info.IsFloatable()) {
-		bool offscreen = true;
-		for (uint32_t index = 0; index < wxDisplay::GetCount(); ++index) {
-			wxDisplay display(index);
-			wxRect rect = display.GetClientArea();
-			if (rect.Contains(info.floating_pos)) {
-				offscreen = false;
-				break;
-			}
-		}
+	if (!info.IsFloating()) {
+		return;
+	}
 
-		if (offscreen) {
-			info.Dock();
-		}
+	const int display_index = wxDisplay::GetFromPoint(info.floating_pos);
+	if (display_index == wxNOT_FOUND) {
+		info.Dock();
+		return;
+	}
+
+	// AUI gives the client size precedence. Without a frame we cannot convert it to
+	// frame dimensions, so keep the saved values for the post-Update pass.
+	if (info.frame == nullptr && info.floating_client_size != wxDefaultSize) {
+		return;
+	}
+
+	wxSize size = info.floating_size;
+	if (info.frame != nullptr && info.floating_client_size != wxDefaultSize) {
+		size = info.frame->ClientToWindowSize(info.floating_client_size);
+	}
+	if (size == wxDefaultSize) {
+		size = info.best_size;
+	}
+	size.x = std::max(size.x, info.min_size.x);
+	size.y = std::max(size.y, info.min_size.y);
+	if (size.x <= 0 || size.y <= 0) {
+		return;
+	}
+
+	const wxRect display = wxDisplay(display_index).GetClientArea();
+	const auto fitted = rme::ui::layout::FitPaneInDisplay(
+		{ info.floating_pos.x, info.floating_pos.y, size.x, size.y },
+		{ display.x, display.y, display.width, display.height }
+	);
+	if (!fitted) {
+		info.Dock();
+		return;
+	}
+
+	info.FloatingPosition(wxPoint(fitted->x, fitted->y));
+	info.FloatingSize(wxSize(fitted->width, fitted->height));
+	info.FloatingClientSize(wxDefaultSize);
+
+	if (info.frame) {
+		info.frame->SetSize(wxRect(wxPoint(fitted->x, fitted->y), wxSize(fitted->width, fitted->height)));
 	}
 }
 
@@ -292,8 +324,10 @@ void LayoutManager::LoadPerspective() {
 			const wxString layout = wxstr(g_settings.getString(Config::TILE_PROPERTIES_LAYOUT));
 			if (!layout.empty()) {
 				g_gui.aui_manager->LoadPaneInfo(layout, info);
-				EnsurePaneOnScreen(info);
 			}
+			// Saved layouts store the minimum size from the version that wrote them.
+			info.MinSize(g_gui.tile_properties_panel->GetMinSize());
+			EnsurePaneOnScreen(info);
 		}
 	}
 
@@ -324,6 +358,9 @@ void LayoutManager::LoadPerspective() {
 
 
 	g_gui.aui_manager->Update();
+	for (wxAuiPaneInfo& pane : g_gui.aui_manager->GetAllPanes()) {
+		EnsurePaneOnScreen(pane);
+	}
 	if (g_gui.root && g_gui.root->GetAuiToolBar()) {
 		g_gui.root->GetAuiToolBar()->LoadPerspective();
 	}
