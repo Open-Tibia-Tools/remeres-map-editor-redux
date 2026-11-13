@@ -1,4 +1,5 @@
 #include <wx/collheaderctrl.h>
+#include <algorithm>
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
@@ -98,13 +99,9 @@ TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	right_panel->SetSizer(right_sizer);
 
 	splitter->SplitVertically(left_panel, right_panel, FromDIP(250));
-	splitter->SetMinimumPaneSize(FromDIP(150));
 
-	// Every property panel is still shown here, so the best width is the widest one's.
-	// The splitter keeps its sash clear of the second pane's minimum width.
-	right_panel->SetMinSize(wxSize(right_panel->GetBestSize().GetWidth(), wxDefaultCoord));
-	const int min_width = splitter->GetMinimumPaneSize() + splitter->GetSashSize() + 2 * splitter->GetBorderSize() + right_panel->GetMinWidth();
-	SetMinSize(wxSize(min_width, FromDIP(180)));
+	// Every property panel is still shown here, so this first measurement covers all of them.
+	UpdateMinSize();
 
 	HideAllPropertyPanels();
 	placeholder_text->Show();
@@ -112,6 +109,31 @@ TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
 	main_sizer->Add(splitter, wxSizerFlags(1).Expand());
 	SetSizer(main_sizer);
+}
+
+void TilePropertiesPanel::UpdateMinSize() {
+	right_panel->SetMinSize(wxSize(MeasurePropertiesWidth(), wxDefaultCoord));
+
+	const int left_width = MeasureLeftPaneWidth();
+	splitter->SetMinimumPaneSize(left_width);
+
+	const int min_width = left_width + splitter->GetSashSize() + 2 * splitter->GetBorderSize() + right_panel->GetMinWidth();
+	SetMinSize(wxSize(min_width, FromDIP(180)));
+}
+
+int TilePropertiesPanel::MeasurePropertiesWidth() const {
+	const wxWindow* panels[] = { map_flags_panel, item_property_panel, container_property_panel, depot_property_panel, teleport_property_panel, door_property_panel, spawn_property_panel, creature_property_panel };
+
+	int width = right_panel->GetBestSize().GetWidth();
+	for (const wxWindow* panel : panels) {
+		width = std::max(width, panel->GetBestSize().GetWidth() + 2 * FromDIP(2));
+	}
+	return width;
+}
+
+int TilePropertiesPanel::MeasureLeftPaneWidth() const {
+	const int list_width = browse_field_list->GetMinSize().GetWidth() + 2 * FromDIP(2);
+	return std::max(list_width, left_panel->GetBestSize().GetWidth());
 }
 
 TilePropertiesPanel::~TilePropertiesPanel() {

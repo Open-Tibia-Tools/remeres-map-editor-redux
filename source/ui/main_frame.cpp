@@ -26,6 +26,7 @@
 #include "ui/main_menubar.h"
 #include "app/updater.h"
 #include "ui/tile_properties/tile_properties_panel.h"
+#include "ui/managers/layout_manager.h"
 #include "ui/brush_items/brush_items_window.h"
 #include <wx/stattext.h>
 #include <wx/slider.h>
@@ -183,7 +184,17 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 		spdlog::info("MainFrame: DPI changed from ({}, {}) to ({}, {})",
 			event.GetOldDPI().x, event.GetOldDPI().y,
 			event.GetNewDPI().x, event.GetNewDPI().y);
+		if (g_gui.tile_properties_panel) {
+			g_gui.tile_properties_panel->UpdateMinSize();
+		}
 		if (g_gui.aui_manager) {
+			if (g_gui.tile_properties_panel) {
+				wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.tile_properties_panel);
+				if (info.IsOk()) {
+					info.MinSize(g_gui.tile_properties_panel->GetMinSize());
+					LayoutManager::EnsurePaneOnScreen(info);
+				}
+			}
 			g_gui.aui_manager->Update();
 		}
 		g_gui.RefreshView(true);
