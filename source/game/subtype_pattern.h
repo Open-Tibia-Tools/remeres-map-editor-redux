@@ -30,8 +30,9 @@ namespace SubtypePattern {
 			return { Kind::Index, pattern_index };
 		}
 
-		// Stable image cache key for this slot and an item id.
-		// The fields do not overlap: item id in bits 10+, kind in bits 8-9, index in bits 0-7.
+		// Compact key for a per-canvas image cache. Callers that share the cache
+		// with other key spaces must tag the key (see NanoVGCanvas).
+		// Fields do not overlap: item id in bits 10+, kind in bits 8-9, index in bits 0-7.
 		constexpr uint32_t CacheKey(uint16_t item_id) const {
 			return (static_cast<uint32_t>(item_id) << 10)
 				| (static_cast<uint32_t>(kind) << 8)

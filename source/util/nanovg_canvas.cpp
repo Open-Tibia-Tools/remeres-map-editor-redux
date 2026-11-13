@@ -194,7 +194,10 @@ void NanoVGCanvas::SetScrollPosition(int pos) {
 
 int NanoVGCanvas::GetOrCreateItemImage(uint16_t itemId, std::optional<uint16_t> subtype) {
 	const auto slot = NvgUtils::GetCompositeSlot(itemId, subtype);
-	const uint64_t imageKey = slot.CacheKey(itemId);
+	// m_imageCache is shared with outfit (lookType << 16), icon and sprite pointer keys.
+	// Tag item keys so their 26-bit range cannot overlap those spaces.
+	constexpr uint64_t kItemImageKeyTag = 1ULL << 62;
+	const uint64_t imageKey = kItemImageKeyTag | slot.CacheKey(itemId);
 	int tex = GetCachedImage(imageKey);
 	if (tex != 0) {
 		return (tex > 0) ? tex : 0;

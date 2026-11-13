@@ -23,6 +23,7 @@
     "sol2",
     "libwebp",
     "cpr",
+    "catch2",
     "zlib"
   ],
   "builtin-baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9"
