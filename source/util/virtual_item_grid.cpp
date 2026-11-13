@@ -121,6 +121,15 @@ std::string VirtualItemGrid::GetSortName(uint16_t id) const {
 	return definition ? std::string(definition.name()) : std::string();
 }
 
+void VirtualItemGrid::SetListMode(bool list) {
+	if (m_listMode == list) {
+		return;
+	}
+	m_listMode = list;
+	m_labelCache.Clear();
+	RefreshGrid();
+}
+
 void VirtualItemGrid::RefreshGrid() {
 	UpdateLayout();
 	Refresh();
@@ -132,10 +141,19 @@ void VirtualItemGrid::UpdateLayout() {
 		width = 200;
 	}
 
-	const wxSize cell = CellSize();
+	const size_t count = GetItemCount();
 	const int padding = m_gridSpacing;
+
+	if (m_listMode) {
+		m_columns = 1;
+		const int rowHeight = rme::ui::grid::kListRowHeight;
+		const int contentHeight = count > 0 ? (padding + static_cast<int>(count) * (rowHeight + padding)) : 0;
+		UpdateScrollbar(contentHeight);
+		return;
+	}
+
+	const wxSize cell = CellSize();
 	m_columns = std::max(1, (width - padding) / (cell.x + padding));
-	size_t count = GetItemCount();
 	int rows = (count + m_columns - 1) / m_columns;
 	int contentHeight = rows * (cell.y + padding) + padding;
 
@@ -147,10 +165,25 @@ wxSize VirtualItemGrid::DoGetBestClientSize() const {
 }
 
 int VirtualItemGrid::HitTest(int x, int y) const {
-	const wxSize cell = CellSize();
 	const int padding = m_gridSpacing;
 	int scrollPos = GetScrollPosition();
 	int realY = y + scrollPos;
+
+	if (m_listMode) {
+		const int rowHeight = rme::ui::grid::kListRowHeight;
+		const int rowStep = rowHeight + padding;
+		if (realY < padding) {
+			return -1;
+		}
+		const int row = (realY - padding) / rowStep;
+		const int offset = (realY - padding) % rowStep;
+		if (offset >= rowHeight || row < 0 || row >= static_cast<int>(GetItemCount())) {
+			return -1;
+		}
+		return row;
+	}
+
+	const wxSize cell = CellSize();
 	int col = (x - padding) / (cell.x + padding);
 	int row = (realY - padding) / (cell.y + padding);
 
@@ -170,8 +203,14 @@ int VirtualItemGrid::HitTest(int x, int y) const {
 }
 
 wxRect VirtualItemGrid::GetItemRect(int index) const {
-	const wxSize cell = CellSize();
 	const int padding = m_gridSpacing;
+	if (m_listMode) {
+		const int rowHeight = rme::ui::grid::kListRowHeight;
+		const int width = std::max(1, GetClientSize().x - 2 * padding);
+		return wxRect(padding, padding + index * (rowHeight + padding), width, rowHeight);
+	}
+
+	const wxSize cell = CellSize();
 	int row = index / m_columns;
 	int col = index % m_columns;
 	return wxRect(
@@ -278,8 +317,8 @@ void VirtualItemGrid::ClearCache() {
 	ClearImageCache();
 }
 
-int VirtualItemGrid::GetOrCreateItemTexture(NVGcontext* vg, uint16_t id) {
-	return GetOrCreateItemImage(id);
+int VirtualItemGrid::GetOrCreateItemTexture(NVGcontext* vg, uint16_t id, std::optional<uint16_t> subtype) {
+	return GetOrCreateItemImage(id, subtype);
 }
 
 wxString VirtualItemGrid::GetItemName(size_t index) const {
@@ -296,8 +335,6 @@ wxString VirtualItemGrid::GetItemTooltip(size_t index) const {
 }
 
 void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
-	const wxSize cell = CellSize();
-	int rowHeight = cell.y + m_gridSpacing;
 	int scrollPos = GetScrollPosition();
 
 	size_t count = GetItemCount();
@@ -305,12 +342,14 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 		return;
 	}
 
-	// Calculate visible range
-	int startRow = scrollPos / rowHeight;
-	int endRow = (scrollPos + height + rowHeight - 1) / rowHeight;
+	const int rowHeight = (m_listMode ? rme::ui::grid::kListRowHeight : CellSize().y) + m_gridSpacing;
+	const int startRow = std::max(0, (scrollPos - m_gridSpacing) / rowHeight);
+	const int endRow = (scrollPos + height - m_gridSpacing + rowHeight - 1) / rowHeight + 1;
 
-	int startIdx = startRow * m_columns;
-	int endIdx = std::min(static_cast<int>(count), (endRow + 1) * m_columns);
+	const int startIdx = m_listMode ? startRow : startRow * m_columns;
+	const int endIdx = m_listMode
+		? std::min(static_cast<int>(count), endRow + 1)
+		: std::min(static_cast<int>(count), (endRow + 1) * m_columns);
 
 	for (int i = startIdx; i < endIdx; ++i) {
 		if (i < 0) {
@@ -321,7 +360,7 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 		const bool isSelected = IsItemSelected(i);
 		const bool isHovered = (i == m_hoverIndex);
 
-		const wxRect drawn = rme::ui::grid::DrawCardChrome(vg, cell, isSelected, isHovered, m_hoverAnim, m_showLabels);
+		const wxRect drawn = rme::ui::grid::DrawCardChrome(vg, cell, isSelected, isHovered, m_hoverAnim, m_showLabels && !m_listMode);
 
 		const uint16_t id = GetItem(i);
 		const auto definition = g_item_definitions.get(id);
@@ -330,18 +369,23 @@ void VirtualItemGrid::OnNanoVGPaint(NVGcontext* vg, int width, int height) {
 
 		int texture = 0;
 		if (badge == rme::rendering::TileIndicatorType::None) {
-			texture = GetOrCreateItemTexture(vg, id);
+			texture = GetOrCreateItemTexture(vg, id, GetItemSubtype(i));
 		}
-		const wxRect iconRect = rme::ui::grid::IconRect(drawn, m_iconSize);
+
+		const int iconSize = m_listMode ? rme::ui::grid::kIconSizeBase : m_iconSize;
+		const wxRect iconRect = m_listMode
+			? wxRect(drawn.x + rme::ui::grid::kIconOffset, drawn.y + rme::ui::grid::kIconOffset, iconSize, iconSize)
+			: rme::ui::grid::IconRect(drawn, iconSize);
 		rme::ui::grid::DrawCellIcon(vg, iconRect, texture, badge);
 
 		if (m_indicatorDogEar) {
-			const bool isLightTheme = (Theme::Get(Theme::Role::Surface).Red() > 128);
 			const NVGcolor stdColor = rme::ui::grid::GetStandardCategoryColor(Theme::Role::BrushCategoryDefaultRaw);
 			rme::ui::grid::DrawDogEarBadge(vg, iconRect, stdColor);
 		}
 
-		if (m_showLabels) {
+		if (m_listMode) {
+			rme::ui::grid::DrawListLabel(vg, drawn, GetItemName(i));
+		} else if (m_showLabels) {
 			rme::ui::grid::DrawCellLabel(vg, cell, GetItemName(i), isSelected, m_labelCache);
 		}
 	}

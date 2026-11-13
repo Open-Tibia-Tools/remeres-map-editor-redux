@@ -8,10 +8,13 @@
 #include <wx/wx.h>
 #include <wx/panel.h>
 
+#include <functional>
+
 class Tile;
 class Map;
 class Item;
-class TilePropertiesListBox;
+class TilePropertiesItemGrid;
+class TilesetGridToolbar;
 
 class BrowseFieldList : public wxPanel {
 public:
@@ -25,13 +28,16 @@ public:
 		on_item_selected_cb = cb;
 	}
 
-	void OnItemSelected(wxCommandEvent& event);
+	void OnItemSelected(Item* item);
 	void OnClickUp(wxCommandEvent& event);
 	void OnClickDown(wxCommandEvent& event);
 	void OnClickDelete(wxCommandEvent& event);
 
 protected:
-	TilePropertiesListBox* item_list;
+	void UpdateButtons();
+
+	TilePropertiesItemGrid* item_grid;
+	TilesetGridToolbar* grid_toolbar;
 	wxButton* btn_up;
 	wxButton* btn_down;
 	wxButton* btn_delete;

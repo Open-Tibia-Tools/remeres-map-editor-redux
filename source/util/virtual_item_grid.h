@@ -5,6 +5,7 @@
 #include "util/nanovg_canvas.h"
 #include "util/grid_view_options.h"
 #include "util/grid_cell_renderer.h"
+#include <optional>
 #include <vector>
 
 /**
@@ -23,6 +24,10 @@ public:
 	virtual wxString GetItemName(size_t index) const; // Optional override
 	/** Tooltip for an entry; defaults to the label. */
 	virtual wxString GetItemTooltip(size_t index) const;
+	/** Subtype used for the item texture; nullopt keeps the representative sprite. */
+	virtual std::optional<uint16_t> GetItemSubtype(size_t index) const {
+		return std::nullopt;
+	}
 
 	// View options, shared with the palette tileset grid toolbar
 	void SetShowLabels(bool show);
@@ -65,6 +70,10 @@ public:
 	}
 
 	// View control
+	void SetListMode(bool list);
+	bool IsListMode() const {
+		return m_listMode;
+	}
 	void RefreshGrid(); // Re-calculates layout and repaints
 	void EnsureVisible(int index);
 	void ClearCache();
@@ -102,11 +111,12 @@ protected:
 	wxSize CellSize() const;
 
 	// Rendering helpers
-	int GetOrCreateItemTexture(NVGcontext* vg, uint16_t itemId);
+	int GetOrCreateItemTexture(NVGcontext* vg, uint16_t itemId, std::optional<uint16_t> subtype = std::nullopt);
 
 	// Member variables
 	int m_iconSize;
 	bool m_showLabels;
+	bool m_listMode = false;
 	bool m_indicatorDogEar = false;
 	int m_gridSpacing = 4;
 	TilesetSortKey m_sortKey = TilesetSortKey::Name;
