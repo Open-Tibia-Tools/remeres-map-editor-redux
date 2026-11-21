@@ -4,25 +4,27 @@
 
 #include "app/main.h"
 
-#include "editor/managers/editor_manager.h"
-#include "ui/gui.h"
-#include "ui/map_tab.h"
-#include "ui/main_menubar.h"
-#include "palette/palette_window.h"
-#include "editor/editor.h"
-#include "editor/editor_factory.h"
-#include "editor/action_queue.h"
-#include "ui/dialog_util.h"
-#include "ui/welcome_dialog.h"
 #include "app/application.h"
 #include "app/managers/version_manager.h"
-#include "ui/managers/status_manager.h"
-#include "palette/managers/palette_manager.h"
 #include "brushes/managers/brush_manager.h"
-#include "live/live_tab.h"
-#include "live/live_client.h"
+#include "editor/action_queue.h"
+#include "editor/editor.h"
+#include "editor/editor_factory.h"
+#include "editor/managers/editor_manager.h"
+#include "editor/persistence/map_load_decision.h"
 #include "io/iomap_otbm.h"
+#include "live/live_client.h"
+#include "live/live_tab.h"
 #include "map/map_initial_position_resolver.h"
+#include "palette/managers/palette_manager.h"
+#include "palette/palette_window.h"
+#include "ui/dialog_util.h"
+#include "ui/dialogs/client_mismatch_dialog.h"
+#include "ui/gui.h"
+#include "ui/main_menubar.h"
+#include "ui/managers/status_manager.h"
+#include "ui/map_tab.h"
+#include "ui/welcome_dialog.h"
 
 #include <chrono>
 #include <filesystem>
@@ -346,8 +348,9 @@ void EditorManager::SaveMapAsGzip() {
 	}
 }
 
-bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load_options) {
-	spdlog::info("EditorManager::LoadMap - Loading map: {}", nstr(fileName.GetFullPath()));
+bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& initial_load_options)
+{
+    spdlog::info("EditorManager::LoadMap - Loading map: {}", nstr(fileName.GetFullPath()));
 	const auto load_started = std::chrono::steady_clock::now();
 	g_status.SetStatusText("Loading map...");
 	if (g_gui.root) {
@@ -355,11 +358,8 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 	}
 	g_gui.FinishWelcomeDialog();
 
-	if (GetCurrentEditor() && !GetCurrentMap().hasChanged() && !GetCurrentMap().hasFile()) {
-		CloseCurrentEditor();
-	}
-
-	std::unique_ptr<Editor> editor;
+    MapLoadOptions load_options = initial_load_options;
+    std::unique_ptr<Editor> editor;
 	try {
 		MapVersion ver;
 		if (!IOMapOTBM::getVersionInfo(fileName, ver)) {
@@ -383,8 +383,63 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 		}
 
 		ClientVersion* current = g_version.getLoadedVersion();
-		if (!current || current->getID() != target->getID()) {
-			wxString error;
+
+        MapLoadDecisionInput decision_input {
+            .loaded_client_id = current ? current->getID() : "",
+            .resolved_target_id = target ? target->getID() : "",
+            .options = load_options,
+        };
+
+        const auto decision = DecideMapLoadAction(decision_input);
+
+        if (decision.resolution == MapLoadResolution::UnsupportedVersion) {
+            throw std::runtime_error(std::format("Unsupported client version (OtbId: {})", static_cast<int>(ver.client)));
+        }
+
+        if (decision.resolution == MapLoadResolution::PromptMismatch) {
+            ClientMismatchDialog dlg(g_gui.root, *current, *target, ver.items_major, GetOpenMapCount());
+            dlg.ShowModal();
+
+            const auto choice = dlg.GetChoice();
+            if (choice == ClientMismatchChoice::ForceLoadActive) {
+                load_options.selected_client_id = current->getID();
+                load_options.force_client_mismatch = true;
+                target = current;
+            } else if (choice == ClientMismatchChoice::SwitchVersion) {
+                if (!target->hasValidPaths()) {
+                    if (!target->loadValidPaths()) {
+                        g_status.SetStatusText("Map load cancelled.");
+                        return false;
+                    }
+                }
+
+                wxString error;
+                std::vector<std::string> warnings;
+                if (CloseAllEditors()) {
+                    if (!g_version.LoadVersion(target->getID(), error, warnings)) {
+                        g_status.SetStatusText("Failed to load map.");
+                        DialogUtil::PopupDialog("Error", error, wxOK);
+                        return false;
+                    }
+                    if (!warnings.empty()) {
+                        DialogUtil::ListDialog("Warnings", warnings);
+                    }
+                } else {
+                    return false;
+                }
+            } else {
+                g_status.SetStatusText("Map load cancelled.");
+                return false;
+            }
+        } else if (decision.requires_switch) {
+            if (!target->hasValidPaths()) {
+                if (!target->loadValidPaths()) {
+                    g_status.SetStatusText("Map load cancelled.");
+                    return false;
+                }
+            }
+
+            wxString error;
 			std::vector<std::string> warnings;
 			if (CloseAllEditors()) {
 				if (!g_version.LoadVersion(target->getID(), error, warnings)) {
@@ -398,9 +453,13 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 			} else {
 				return false;
 			}
-		}
+        }
 
-		editor = EditorFactory::LoadFromFile(g_gui.copybuffer, fileName, load_options);
+        if (GetCurrentEditor() && !GetCurrentMap().hasChanged() && !GetCurrentMap().hasFile()) {
+            CloseCurrentEditor();
+        }
+
+        editor = EditorFactory::LoadFromFile(g_gui.copybuffer, fileName, load_options);
 	} catch (std::runtime_error& e) {
 		g_status.SetStatusText("Failed to load map.");
 		DialogUtil::PopupDialog(g_gui.root, "Error!", wxString(e.what(), wxConvUTF8), wxOK);
