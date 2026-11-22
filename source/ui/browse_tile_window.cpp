@@ -46,10 +46,6 @@ public:
 	Item* GetSelectedItem();
 	void RemoveSelected();
 
-	void SetSelection(int index) override;
-	void Select(int index, bool select = true) override;
-	void ClearSelection() override;
-
 protected:
 	void UpdateItems();
 
@@ -117,55 +113,29 @@ int BrowseTileListBox::OnMeasureItem(size_t n) const {
 }
 
 Item* BrowseTileListBox::GetSelectedItem() {
-	if (GetItemCount() == 0 || GetSelectedCount() == 0) {
+	const int selection = GetSelection();
+	if (selection < 0 || static_cast<size_t>(selection) >= items.size()) {
 		return nullptr;
 	}
-
-	return TileOperations::getTopSelectedItem(edit_tile);
+	return items[selection];
 }
 
 void BrowseTileListBox::RemoveSelected() {
-	if (GetItemCount() == 0 || GetSelectedCount() == 0) {
+	const int selection = GetSelection();
+	Item* target = GetSelectedItem();
+	if (!target) {
 		return;
 	}
 
+	// The list selection is the only source of truth; the tile's Item selection flags are left untouched.
 	ClearSelection();
-	items.clear();
-
-	// Delete the items from the tile
-	auto tile_selection = TileOperations::popSelectedItems(edit_tile, true);
-	// items are automatically deleted when tile_selection goes out of scope
+	TileOperations::removeItem(edit_tile, target);
 
 	UpdateItems();
+	if (!items.empty()) {
+		SetSelection(std::min(selection, static_cast<int>(items.size()) - 1));
+	}
 	Refresh();
-}
-
-void BrowseTileListBox::SetSelection(int index) {
-	if (m_selection != -1 && (size_t)m_selection < items.size()) {
-		items[m_selection]->deselect();
-	}
-	NanoVGListBox::SetSelection(index);
-	if (m_selection != -1 && (size_t)m_selection < items.size()) {
-		items[m_selection]->select();
-	}
-}
-
-void BrowseTileListBox::Select(int index, bool select) {
-	if (index >= 0 && (size_t)index < items.size()) {
-		if (select) {
-			items[index]->select();
-		} else {
-			items[index]->deselect();
-		}
-	}
-	NanoVGListBox::Select(index, select);
-}
-
-void BrowseTileListBox::ClearSelection() {
-	for (Item* item : items) {
-		item->deselect();
-	}
-	NanoVGListBox::ClearSelection();
 }
 
 void BrowseTileListBox::UpdateItems() {
@@ -253,6 +223,9 @@ void BrowseTileWindow::OnItemSelected(wxCommandEvent& WXUNUSED(event)) {
 void BrowseTileWindow::OnClickDelete(wxCommandEvent& WXUNUSED(event)) {
 	item_list->RemoveSelected();
 	item_count_txt->SetLabelText("Item count:  " + std::to_string(item_list->GetItemCount()));
+	const size_t count = item_list->GetSelectedCount();
+	delete_button->Enable(count != 0);
+	select_raw_button->Enable(count == 1);
 }
 
 void BrowseTileWindow::OnClickSelectRaw(wxCommandEvent& WXUNUSED(event)) {
