@@ -42,6 +42,16 @@ namespace TileStackRows {
 		return resolved && !resolved->is_ground && resolved->item_index + 1 < item_count;
 	}
 
+	// Row a context menu acts on: the row under the mouse, or the selected row when the menu is opened
+	// from the keyboard. Empty space below the rows yields no row, so no menu is shown there.
+	constexpr std::optional<int> ContextMenuRow(bool from_keyboard, int hit_row, int selected_row, bool has_ground, std::size_t item_count) {
+		const int row = from_keyboard ? selected_row : hit_row;
+		if (!Resolve(row, has_ground, item_count)) {
+			return std::nullopt;
+		}
+		return row;
+	}
+
 	// Row to select after `deleted_row` was removed from a list that now has `remaining_rows` rows:
 	// the row just before it, or the new first row, or none when the list is empty.
 	constexpr std::optional<int> FallbackRowAfterDelete(int deleted_row, std::size_t remaining_rows) {

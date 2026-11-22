@@ -12,11 +12,14 @@
 #include "rendering/core/game_sprite.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/image.h"
+#include "rendering/core/item_render_rules.h"
+#include "rendering/ui/pick_candidate_order.h"
 #include "rendering/ui/selection_geometry.h"
 #include "rendering/utilities/pattern_calculator.h"
 #include "ui/gui.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <optional>
 #include <vector>
@@ -25,6 +28,20 @@ namespace {
 
 	constexpr int kPixelSelectionSearchRange = 4;
 	constexpr uint8_t kPixelSelectionAlphaThreshold = 32;
+
+	// Front-to-back item sublayers. Ground and border are handled explicitly as well; the
+	// spawn marker is checked together with BottomItem.
+	constexpr std::array<int, 9> kPickDepthOrder = {
+		static_cast<int>(rme::rendering::RenderSublayer::TopItem),
+		static_cast<int>(rme::rendering::RenderSublayer::DynamicEntity),
+		static_cast<int>(rme::rendering::RenderSublayer::CommonItem) + 3,
+		static_cast<int>(rme::rendering::RenderSublayer::CommonItem) + 2,
+		static_cast<int>(rme::rendering::RenderSublayer::CommonItem) + 1,
+		static_cast<int>(rme::rendering::RenderSublayer::CommonItem),
+		static_cast<int>(rme::rendering::RenderSublayer::BottomItem),
+		static_cast<int>(rme::rendering::RenderSublayer::Border),
+		static_cast<int>(rme::rendering::RenderSublayer::Ground),
+	};
 
 	enum class PixelTestResult : uint8_t {
 		Miss,
@@ -252,27 +269,39 @@ namespace {
 		std::vector<ItemRenderInfo> render_list;
 		render_list.reserve(tile.items.size());
 
+		const bool show_invalid = g_settings.getBoolean(Config::SHOW_INVALID_TILES);
 		int elevation = 0;
 		int common_step = 0;
 		int order = 0;
 		for (const std::unique_ptr<Item>& item_ptr : tile.items) {
 			Item* item = item_ptr.get();
-			if (!item || item->isBorderLayer() || item->isMetaItem()) {
-				continue;
-			}
-			if (IsItemHiddenBySettings(*item) || IsItemInvalidAndHidden(*item) || IsItemUnresolvedAndHidden(*item)) {
+			if (!item || item->isBorderLayer()) {
 				continue;
 			}
 
 			const ItemDefinitionView definition = item->getDefinition();
-			int sublayer = 0;
-			if (item->isAlwaysOnBottom()) {
-				sublayer = 3;
-			} else if (definition.hasFlag(ItemFlag::TopEffect)) {
-				sublayer = 10;
-			} else {
-				sublayer = 4 + std::min(common_step, 3);
+			const bool invalid = item->isInvalidOTBMItem();
+			if (invalid && (!show_invalid || !definition)) {
+				continue;
+			}
+
+			const rme::rendering::RenderSublayer layer = rme::rendering::ResolveItemSublayer(
+				item->isAlwaysOnBottom(),
+				definition && definition.hasFlag(ItemFlag::TopEffect)
+			);
+			int sublayer = static_cast<int>(layer);
+			if (layer == rme::rendering::RenderSublayer::CommonItem) {
+				sublayer += rme::rendering::CommonItemElevationStep(common_step);
 				++common_step;
+			}
+
+			// Hidden items still consume a common-item stack slot, exactly like the
+			// tile renderer advances its common counter before ItemDrawer filters.
+			if (item->isMetaItem()) {
+				continue;
+			}
+			if (IsItemHiddenBySettings(*item) || IsItemInvalidAndHidden(*item) || IsItemUnresolvedAndHidden(*item)) {
+				continue;
 			}
 
 			render_list.push_back(ItemRenderInfo {
@@ -283,7 +312,7 @@ namespace {
 			});
 
 			if (GameSprite* sprite = item->getSprite()) {
-				elevation += sprite->draw_height;
+				rme::rendering::AdvanceItemElevation(elevation, sprite->draw_height, sprite->hasElevation());
 			}
 		}
 
@@ -305,63 +334,106 @@ namespace {
 		};
 	}
 
-	SelectionHit FindHitOnTile(Tile& tile, const Position& tile_pos, int pixel_x, int pixel_y, bool is_target_tile) {
-		const std::vector<ItemRenderInfo> render_list = BuildItemRenderList(tile);
+	// Candidate anchor tile cached for one pixel-perfect pick. The render list is
+	// built lazily because most candidates are rejected without touching items.
+	struct PickCandidate {
+		int dx = 0;
+		int dy = 0;
+		Tile* tile = nullptr;
+		Position position;
+		int local_x = 0;
+		int local_y = 0;
+		bool render_list_built = false;
+		std::vector<ItemRenderInfo> render_list;
+	};
 
-		// TopEffect items (sublayer 10) render in front of creatures (sublayer 8)
-		for (const ItemRenderInfo& info : render_list) {
-			if (info.sublayer >= 10) {
-				if (HitTestItem(*info.item, tile, tile_pos, pixel_x, pixel_y, info.elevation) == PixelTestResult::Hit) {
-					return MakeItemHit(&tile, info.item);
+	SelectionHit FindGroundHitOnTile(Tile& tile, const Position& tile_pos, int pixel_x, int pixel_y) {
+		// Tested on every candidate: a multi-tile ground sprite (e.g. mountain 919) extends up-left from its
+		// anchor, so its visible part can cover the clicked tile while the anchor is a neighbour. HitTestItem()
+		// misses for pixels outside the sprite parts, so 1x1 grounds of neighbouring candidates never match.
+		if (tile.ground && !IsItemInvalidAndHidden(*tile.ground) && !IsItemUnresolvedAndHidden(*tile.ground)) {
+			if (HitTestItem(*tile.ground, tile, tile_pos, pixel_x, pixel_y, 0) == PixelTestResult::Hit) {
+				return MakeItemHit(&tile, tile.ground.get());
+			}
+		}
+		return {};
+	}
+
+	// Tests one render-depth sublayer on one candidate tile. The caller walks
+	// diagonals and sublayers front-to-back, so this function must only report a
+	// hit for the requested depth.
+	SelectionHit FindHitOnTileAtDepth(PickCandidate& candidate, int depth_sub) {
+		if (!candidate.tile) {
+			return {};
+		}
+
+		Tile& tile = *candidate.tile;
+		const bool is_clicked_tile = candidate.dx == 0 && candidate.dy == 0;
+
+		if (depth_sub == static_cast<int>(rme::rendering::RenderSublayer::Ground)) {
+			return FindGroundHitOnTile(tile, candidate.position, candidate.local_x, candidate.local_y);
+		}
+
+		if (depth_sub == static_cast<int>(rme::rendering::RenderSublayer::DynamicEntity)) {
+			if (tile.creature && g_settings.getInteger(Config::SHOW_CREATURES)) {
+				if (HitTestCreature(*tile.creature, candidate.local_x, candidate.local_y) == PixelTestResult::Hit) {
+					return SelectionHit {
+						.kind = SelectionHitKind::Creature,
+						.tile = &tile,
+						.creature = tile.creature.get(),
+					};
 				}
 			}
+			return {};
 		}
 
-		if (tile.creature && g_settings.getInteger(Config::SHOW_CREATURES)) {
-			const PixelTestResult result = HitTestCreature(*tile.creature, pixel_x, pixel_y);
-			if (result == PixelTestResult::Hit) {
-				return SelectionHit {
-					.kind = SelectionHitKind::Creature,
-					.tile = &tile,
-					.creature = tile.creature.get(),
-				};
-			}
-		}
-
-		// Common and bottom items
-		for (const ItemRenderInfo& info : render_list) {
-			if (info.sublayer < 10) {
-				if (HitTestItem(*info.item, tile, tile_pos, pixel_x, pixel_y, info.elevation) == PixelTestResult::Hit) {
-					return MakeItemHit(&tile, info.item);
+		if (depth_sub == static_cast<int>(rme::rendering::RenderSublayer::Border)) {
+			for (auto it = tile.items.rbegin(); it != tile.items.rend(); ++it) {
+				Item* item = it->get();
+				if (!item || !item->isBorderLayer() || item->isMetaItem()) {
+					continue;
+				}
+				if (IsItemHiddenBySettings(*item) || IsItemInvalidAndHidden(*item) || IsItemUnresolvedAndHidden(*item)) {
+					continue;
+				}
+				if (HitTestItem(*item, tile, candidate.position, candidate.local_x, candidate.local_y, 0) == PixelTestResult::Hit) {
+					return MakeItemHit(&tile, item);
 				}
 			}
+			return {};
 		}
 
-		if (is_target_tile && tile.spawn && g_settings.getInteger(Config::SHOW_SPAWNS)) {
+		const bool is_item_depth = depth_sub == static_cast<int>(rme::rendering::RenderSublayer::TopItem) ||
+			depth_sub == static_cast<int>(rme::rendering::RenderSublayer::BottomItem) ||
+			(depth_sub >= static_cast<int>(rme::rendering::RenderSublayer::CommonItem) &&
+			 depth_sub < static_cast<int>(rme::rendering::RenderSublayer::CommonItem) + 4);
+		if (!is_item_depth) {
+			return {};
+		}
+
+		if (!candidate.render_list_built) {
+			candidate.render_list = BuildItemRenderList(tile);
+			candidate.render_list_built = true;
+		}
+
+		for (const ItemRenderInfo& info : candidate.render_list) {
+			if (info.sublayer != depth_sub) {
+				continue;
+			}
+			if (HitTestItem(*info.item, tile, candidate.position, candidate.local_x, candidate.local_y, info.elevation) == PixelTestResult::Hit) {
+				return MakeItemHit(&tile, info.item);
+			}
+		}
+
+		// Spawn markers render above items but below the border layer; preserve the
+		// existing target-tile-only rule.
+		if (depth_sub == static_cast<int>(rme::rendering::RenderSublayer::BottomItem) && is_clicked_tile &&
+		    tile.spawn && g_settings.getInteger(Config::SHOW_SPAWNS)) {
 			return SelectionHit {
 				.kind = SelectionHitKind::Spawn,
 				.tile = &tile,
 				.spawn = tile.spawn.get(),
 			};
-		}
-
-		for (auto it = tile.items.rbegin(); it != tile.items.rend(); ++it) {
-			Item* item = it->get();
-			if (!item || !item->isBorderLayer() || item->isMetaItem()) {
-				continue;
-			}
-			if (IsItemHiddenBySettings(*item) || IsItemInvalidAndHidden(*item) || IsItemUnresolvedAndHidden(*item)) {
-				continue;
-			}
-			if (HitTestItem(*item, tile, tile_pos, pixel_x, pixel_y, 0) == PixelTestResult::Hit) {
-				return MakeItemHit(&tile, item);
-			}
-		}
-
-		if (is_target_tile && tile.ground && !IsItemInvalidAndHidden(*tile.ground) && !IsItemUnresolvedAndHidden(*tile.ground)) {
-			if (HitTestItem(*tile.ground, tile, tile_pos, pixel_x, pixel_y, 0) == PixelTestResult::Hit) {
-				return MakeItemHit(&tile, tile.ground.get());
-			}
 		}
 
 		return {};
@@ -401,20 +473,32 @@ namespace {
 			return PickStandard(editor, clicked_pos);
 		}
 
-		for (int dy = kPixelSelectionSearchRange; dy >= 0; --dy) {
-			for (int dx = kPixelSelectionSearchRange; dx >= 0; --dx) {
-				Position storage_pos(clicked_pos.x + dx, clicked_pos.y + dy, clicked_pos.z);
-				Tile* tile = editor.map.getTile(storage_pos);
-				if (!tile) {
-					continue;
-				}
+		constexpr int candidate_span = kPixelSelectionSearchRange + 1;
+		std::array<PickCandidate, candidate_span * candidate_span> candidates;
+		for (int dy = 0; dy <= kPixelSelectionSearchRange; ++dy) {
+			for (int dx = 0; dx <= kPixelSelectionSearchRange; ++dx) {
+				PickCandidate& candidate = candidates[dy * candidate_span + dx];
+				candidate.dx = dx;
+				candidate.dy = dy;
+				candidate.position = Position(clicked_pos.x + dx, clicked_pos.y + dy, clicked_pos.z);
+				candidate.tile = editor.map.getTile(candidate.position);
+				candidate.local_x = pixel.x - dx * TILE_SIZE;
+				candidate.local_y = pixel.y - dy * TILE_SIZE;
+			}
+		}
 
-				const SelectionPixelOffset local {
-					.x = pixel.x - dx * TILE_SIZE,
-					.y = pixel.y - dy * TILE_SIZE,
-				};
-
-				SelectionHit hit = FindHitOnTile(*tile, storage_pos, local.x, local.y, dx == 0 && dy == 0);
+		// Front to back in render-depth order: diagonal first, then the effective
+		// sublayer (TopEffect, creature, common 3..0, bottom, spawn, border, ground).
+		// For a given depth the candidates use the chunk-cache painter tie order.
+		for (int diagonal = PickCandidateOrder::MaxDiagonal(kPixelSelectionSearchRange); diagonal >= 0; --diagonal) {
+			for (const int depth_sub : kPickDepthOrder) {
+				SelectionHit hit;
+				PickCandidateOrder::ForEachOnDiagonal(kPixelSelectionSearchRange, diagonal, [&](int dx, int dy) {
+					if (hit.HasEntity()) {
+						return;
+					}
+					hit = FindHitOnTileAtDepth(candidates[dy * candidate_span + dx], depth_sub);
+				});
 				if (hit.HasEntity()) {
 					return hit;
 				}

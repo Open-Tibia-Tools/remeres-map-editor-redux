@@ -49,8 +49,8 @@ void ClipboardHandler::cut(Editor& editor, int floor) {
 	g_gui.RefreshView();
 }
 
-void ClipboardHandler::paste() {
-	g_gui.DoPaste();
+void ClipboardHandler::paste(Editor& editor, const Position& position) {
+	editor.copybuffer.paste(editor, position);
 	g_gui.RefreshView();
 }
 
