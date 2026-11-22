@@ -109,6 +109,14 @@ public:
 	bool loadMap(Map& map, const FileName& identifier) override;
 	bool saveMap(Map& map, const FileName& identifier) override;
 
+	// OTBM 1-4 tile zones in the TFS-ZONES format (see io/otbm/tfs_tile_zones.h).
+	// On load it follows Config::TFS_TILE_ZONES, on save the map being written.
+	bool tfs_tile_zones = false;
+
+	[[nodiscard]] bool hasZones() const noexcept {
+		return version.otbm == MAP_OTBM_5 || tfs_tile_zones;
+	}
+
 protected:
 	static bool getVersionInfo(NodeFileReadHandle* f, MapVersion& out_ver);
 

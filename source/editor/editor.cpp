@@ -52,6 +52,7 @@ Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version) :
 	replace_brush(nullptr) {
 	spdlog::info("Editor created (Empty) [Editor={}]", (void*)this);
 	map.convert(version);
+	map.setTfsTileZones(g_settings.getBoolean(Config::TFS_TILE_ZONES));
 	map.initializeEmpty();
 }
 

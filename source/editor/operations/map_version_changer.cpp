@@ -8,6 +8,7 @@
 #include "app/application.h"
 #include "game/creature.h"
 #include "map/tile.h"
+#include "app/settings.h"
 
 #include <unordered_map>
 
@@ -39,7 +40,9 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 	Map& map = editor.map;
 	MapVersion old_ver = map.getVersion();
 
-	if (old_ver.otbm == MAP_OTBM_5 && new_ver.otbm < MAP_OTBM_5 && !map.zones.empty()) {
+	// OTBM 1-4 keep zones only in the TFS-ZONES format; a map already using it keeps it
+	const bool keeps_tfs_zones = map.usesTfsTileZones() || g_settings.getBoolean(Config::TFS_TILE_ZONES);
+	if (old_ver.otbm == MAP_OTBM_5 && new_ver.otbm < MAP_OTBM_5 && !map.zones.empty() && !keeps_tfs_zones) {
 		int ret = DialogUtil::PopupDialog(
 			parent,
 			"Warning: Zone Data Loss",
@@ -131,5 +134,6 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 	} else {
 		map.convert(new_ver, true);
 	}
+	map.setTfsTileZones(keeps_tfs_zones);
 	return true;
 }

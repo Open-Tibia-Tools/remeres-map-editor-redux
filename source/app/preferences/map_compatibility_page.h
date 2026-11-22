@@ -1,6 +1,7 @@
 #ifndef RME_PREFERENCES_MAP_COMPATIBILITY_PAGE_H
 #define RME_PREFERENCES_MAP_COMPATIBILITY_PAGE_H
 
+#include <wx/checkbox.h>
 #include <wx/choice.h>
 
 #include "preferences_page.h"
@@ -12,6 +13,7 @@ public:
 
 private:
 	wxChoice* waypoint_storage_choice = nullptr;
+	wxCheckBox* tfs_tile_zones_chkbox = nullptr;
 };
 
 #endif

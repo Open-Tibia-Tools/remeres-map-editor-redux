@@ -282,7 +282,8 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	// If the map has zone assignments on tiles but no corresponding zone metadata was loaded
 	// (e.g. missing, corrupt, or unreferenced sidecar XML), synthesize placeholder definitions
 	// so orphan zone IDs are preserved in the palette and re-saved rather than silently lost.
-	if (map.supportsZones()) {
+	// The map takes its version from the loader only after this returns, so ask the loader.
+	if (hasZones()) {
 		for (uint16_t zid : map.zone_index.getZoneIds()) {
 			if (!map.findZone(zid)) {
 				map.zones.push_back({ std::format("Zone {}", zid), zid });
@@ -361,6 +362,7 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 	if (version.otbm > MAP_OTBM_5) {
 		spdlog::warn("Unsupported or damaged map version: {}", static_cast<int>(version.otbm));
 	}
+	tfs_tile_zones = version.otbm < MAP_OTBM_5 && g_settings.getBoolean(Config::TFS_TILE_ZONES);
 
 	if (!stream.getU16(map.width) || !stream.getU16(map.height)) {
 		return false;
@@ -687,6 +689,9 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 				map.zonefile = zone_p.generic_string();
 			}
 		}
+	} else if (map.usesTfsTileZones() && !map.zones.empty()) {
+		// OTBM 1-4 headers cannot reference a zone file, so the names go to the file the loader looks for by default
+		map.zonefile = nstr(identifier.GetName() + "-zones.xml");
 	}
 
 	const bool is_compressed = (map.getCompression() == OtbmCompression::Gzip);
@@ -766,7 +771,7 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 		g_settings.getInteger(Config::WAYPOINT_STORAGE_FORMAT)
 	);
 
-	if (map.getVersion().otbm == MAP_OTBM_5 && !map.zones.empty()) {
+	if (map.supportsZones() && !map.zones.empty()) {
 		if (map.zonefile.empty()) {
 			map.zonefile = identifier.GetName() + "-zones.xml";
 			spdlog::info("Auto-created zone file: {}", map.zonefile);
@@ -816,6 +821,7 @@ bool IOMapOTBM::saveMap(Map& map, const FileName& identifier) {
 
 bool IOMapOTBM::saveMap(Map& map, NodeFileWriteHandle& f) {
 	const MapVersion mapVersion = map.getVersion();
+	tfs_tile_zones = map.usesTfsTileZones();
 
 	f.addNode(0);
 	{

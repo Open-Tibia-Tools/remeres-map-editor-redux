@@ -37,7 +37,7 @@ void NpcBrush::draw_creature(BaseMap* map, Tile* tile) {
 		return;
 	}
 
-	const bool is_otbm5 = map && map->supportsZones();
+	const bool is_otbm5 = map && map->isOtbm5();
 
 	if (tile->spawn == nullptr && tile->getLocation()->getSpawnCount() == 0) {
 		tile->spawn = std::make_unique<Spawn>(1);

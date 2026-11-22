@@ -94,6 +94,7 @@ bool Map::open(const std::string& file) {
 	bool success = maploader.loadMap(*this, wxstr(file));
 
 	mapVersion = maploader.version;
+	tfs_tile_zones = maploader.tfs_tile_zones;
 
 	warnings = maploader.getWarnings();
 

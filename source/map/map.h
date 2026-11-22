@@ -157,7 +157,17 @@ public:
 	}
 
 	[[nodiscard]] bool supportsZones() const noexcept override {
+		return isOtbm5() || usesTfsTileZones();
+	}
+	[[nodiscard]] bool isOtbm5() const noexcept override {
 		return mapVersion.otbm == MAP_OTBM_5;
+	}
+	// OTBM 1-4 map whose tiles keep zones in the TFS-ZONES format (io/otbm/tfs_tile_zones.h)
+	[[nodiscard]] bool usesTfsTileZones() const noexcept {
+		return mapVersion.otbm < MAP_OTBM_5 && tfs_tile_zones;
+	}
+	void setTfsTileZones(bool enabled) noexcept {
+		tfs_tile_zones = enabled;
 	}
 
 	// OTBM 5 zone registry (Canary / Crystal Server); ids stay stable on rename because tiles reference them
@@ -206,6 +216,7 @@ protected:
 	std::string description; // The description of the map
 
 	MapVersion mapVersion;
+	bool tfs_tile_zones = false;
 
 	// Map Width and Height - for info purposes
 	uint16_t width, height;

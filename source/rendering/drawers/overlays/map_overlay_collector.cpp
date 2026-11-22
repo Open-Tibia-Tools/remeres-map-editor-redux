@@ -332,7 +332,7 @@ void MapOverlayCollector::Collect(
 		}
 
 		// Zone cluster tooltips (triggered by options.show_zones)
-		if (options.show_zones && (map.getVersion().otbm == MAP_OTBM_5)) {
+		if (options.show_zones && map.supportsZones()) {
 			for (const auto& zone : map.zones) {
 				if (zone.id == 0) {
 					continue;

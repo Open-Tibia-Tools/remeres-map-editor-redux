@@ -7,8 +7,10 @@
 #include "game/house.h"
 #include "io/otbm/item_serialization_otbm.h"
 #include "io/otbm/fast_otbm_reader.h"
+#include "io/otbm/tfs_tile_zones.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "ui/gui.h"
+#include <spdlog/spdlog.h>
 #include <algorithm>
 #include <chrono>
 #include <functional>
@@ -187,6 +189,15 @@ void TileSerializationOTBM::readTileArea(
 				case OTBM_ATTR_TILE_FLAGS: {
 					uint32_t flags = 0;
 					if (tileNode.stream.getU32(flags)) {
+						if (iomap.tfs_tile_zones && (flags & TfsTileZones::kZoneFlag)) {
+							const bool complete = TfsTileZones::ReadZoneList(tileNode.stream, [tile](uint16_t zone_id) {
+								tile->addZone(zone_id);
+							});
+							if (!complete) {
+								spdlog::warn("TFS zone list of tile {}:{}:{} is not terminated", x, y, z);
+							}
+							flags = TfsTileZones::FlagsToKeep(flags);
+						}
 						tile->setMapFlags(flags);
 						const uint32_t unknownBits = flags & ~KNOWN_TILE_FLAG_MASK;
 						if (unknownBits != 0) {
@@ -378,9 +389,15 @@ void TileSerializationOTBM::serializeTile(const IOMapOTBM& iomap, const Tile* sa
 		f.addU32(save_tile->getHouseID());
 	}
 
-	if (save_tile->getMapFlags()) {
+	// In TFS-ZONES maps the zone flag follows the zone list only: a stray flag without a list would corrupt the tile
+	const bool tfs_zones = iomap.tfs_tile_zones && save_tile->hasZones();
+	const uint32_t map_flags = iomap.tfs_tile_zones ? TfsTileZones::FlagsToWrite(save_tile->getMapFlags(), tfs_zones) : save_tile->getMapFlags();
+	if (map_flags) {
 		f.addU8(OTBM_ATTR_TILE_FLAGS);
-		f.addU32(save_tile->getMapFlags());
+		f.addU32(map_flags);
+		if (tfs_zones) {
+			TfsTileZones::WriteZoneList(f, save_tile->getZoneIds());
+		}
 	}
 
 	if (save_tile->ground) {

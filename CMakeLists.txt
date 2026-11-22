@@ -256,3 +256,11 @@ set_target_properties(test_subtype_pattern PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_subtype_pattern PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_subtype_pattern PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_subtype_pattern COMMAND test_subtype_pattern)
+
+# --- Unit test for TFS-ZONES tile zone lists ---
+add_executable(test_tfs_tile_zones tests/test_tfs_tile_zones.cpp)
+set_target_properties(test_tfs_tile_zones PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_tfs_tile_zones PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_tfs_tile_zones PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_tfs_tile_zones PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_tfs_tile_zones COMMAND test_tfs_tile_zones)

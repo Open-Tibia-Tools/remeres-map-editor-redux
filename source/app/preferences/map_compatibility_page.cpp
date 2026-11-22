@@ -43,8 +43,20 @@ MapCompatibilityPage::MapCompatibilityPage(wxWindow* parent) : ScrollablePrefere
 	// Section 2: Zones
 	auto* zones_section = new PreferencesSectionPanel(
 		GetScrollWindow(),
-		"Zones (Placeholder)",
-		"Placeholder"
+		"Zones",
+		"OTBM 5 maps (Canary, Crystal Server) always keep zones. Older map versions need a server that reads them."
+	);
+
+	tfs_tile_zones_chkbox = PreferencesLayout::AddCheckBoxRow(
+		zones_section,
+		"TFS zones in OTBM 1-4 maps",
+		"Read and write tile zones in the TFS-ZONES format (fridaii). Only for servers built with it: other TFS servers cannot load such a map.",
+		g_settings.getBoolean(Config::TFS_TILE_ZONES)
+	);
+
+	PreferencesLayout::AddNotice(
+		zones_section,
+		"Applies to maps opened, created or converted to OTBM 1-4 after the change. Zone names are saved to <map>-zones.xml next to the map."
 	);
 	page_sizer->Add(zones_section, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(10)));
 
@@ -62,5 +74,8 @@ MapCompatibilityPage::MapCompatibilityPage(wxWindow* parent) : ScrollablePrefere
 void MapCompatibilityPage::Apply() {
 	if (waypoint_storage_choice) {
 		g_settings.setInteger(Config::WAYPOINT_STORAGE_FORMAT, waypoint_storage_choice->GetSelection());
+	}
+	if (tfs_tile_zones_chkbox) {
+		g_settings.setInteger(Config::TFS_TILE_ZONES, tfs_tile_zones_chkbox->GetValue());
 	}
 }
