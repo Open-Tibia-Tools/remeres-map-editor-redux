@@ -280,3 +280,11 @@ set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_sprite_footprint PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_sprite_footprint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_sprite_footprint COMMAND test_sprite_footprint)
+
+# --- Unit test for the per-chunk tile mask (Show Light Strength overlay) ---
+add_executable(test_chunk_tile_mask tests/test_chunk_tile_mask.cpp)
+set_target_properties(test_chunk_tile_mask PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_chunk_tile_mask PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_chunk_tile_mask PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_chunk_tile_mask PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_chunk_tile_mask COMMAND test_chunk_tile_mask)

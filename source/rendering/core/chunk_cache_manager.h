@@ -7,6 +7,7 @@
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include "rendering/core/chunk_tile_mask.h"
 #include "rendering/core/shader_program.h"
 #include "rendering/core/tile_instance.h"
 #include "map/spatial_change_tracker.h"
@@ -98,6 +99,10 @@ struct CachedChunk {
 		dynamic_tile_mask[idx >> 6] |= (uint64_t{1} << (idx & 63));
 	}
 
+	// Tiles whose ground or items emit light, for the Show Light Strength overlay. Built on
+	// every bake whatever the option is, because toggling the option does not re-bake.
+	ChunkTileMask light_tile_mask;
+
 	CachedChunk() = default;
 	~CachedChunk() {
 		if (vbo != 0) {
@@ -126,13 +131,15 @@ struct CachedChunk {
 		animated_sprites(std::move(other.animated_sprites)),
 		animated_runs(std::move(other.animated_runs)),
 		animated_shadow(std::move(other.animated_shadow)),
-		dynamic_tile_mask(other.dynamic_tile_mask) {
+		dynamic_tile_mask(other.dynamic_tile_mask),
+		light_tile_mask(other.light_tile_mask) {
 		other.vbo = 0;
 		other.vbo_capacity = 0;
 		other.instance_count = 0;
 		other.terrain_instance_count = 0;
 		other.item_instance_count = 0;
 		other.dynamic_tile_mask.fill(0);
+		other.light_tile_mask.clear();
 	}
 
 	CachedChunk& operator=(CachedChunk&& other) noexcept {
@@ -160,12 +167,14 @@ struct CachedChunk {
 			animated_runs = std::move(other.animated_runs);
 			animated_shadow = std::move(other.animated_shadow);
 			dynamic_tile_mask = other.dynamic_tile_mask;
+			light_tile_mask = other.light_tile_mask;
 			other.vbo = 0;
 			other.vbo_capacity = 0;
 			other.instance_count = 0;
 			other.terrain_instance_count = 0;
 			other.item_instance_count = 0;
 			other.dynamic_tile_mask.fill(0);
+			other.light_tile_mask.clear();
 		}
 		return *this;
 	}
