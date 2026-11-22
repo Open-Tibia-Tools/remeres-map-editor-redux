@@ -4,6 +4,7 @@
 
 #include "map/tile_operations.h"
 #include "app/main.h"
+#include "map/tile_stack_rows.h"
 #include "ui/tile_properties/browse_field_list.h"
 #include "map/tile.h"
 #include "map/map.h"
@@ -194,29 +195,15 @@ void BrowseFieldList::SetTile(Tile* tile, Map* map) {
 void BrowseFieldList::SelectItem(Item* item) {
 	item_list->SelectItem(item);
 	int selection = item_list->GetSelection();
-	if (selection != wxNOT_FOUND) {
-		btn_up->Enable(selection > 0);
-		btn_down->Enable(selection < item_list->GetItemCount() - 1);
-		btn_delete->Enable(true);
-	} else {
-		btn_up->Enable(false);
-		btn_down->Enable(false);
-		btn_delete->Enable(false);
-	}
+	UpdateButtons(selection);
 }
 
 void BrowseFieldList::OnItemSelected(wxCommandEvent& event) {
 	int selection = item_list->GetSelection();
 	Item* selected_item = nullptr;
+	UpdateButtons(selection);
 	if (selection != wxNOT_FOUND) {
-		btn_up->Enable(selection > 0);
-		btn_down->Enable(selection < item_list->GetItemCount() - 1);
-		btn_delete->Enable(true);
 		selected_item = item_list->GetItem(selection);
-	} else {
-		btn_up->Enable(false);
-		btn_down->Enable(false);
-		btn_delete->Enable(false);
 	}
 
 	if (on_item_selected_cb) {
@@ -236,22 +223,18 @@ void BrowseFieldList::OnItemSelected(wxCommandEvent& event) {
 }
 
 void BrowseFieldList::OnClickUp(wxCommandEvent& event) {
-	int selection = item_list->GetSelection();
-	if (selection == wxNOT_FOUND || selection <= 0) {
-		return;
-	}
-
 	if (!current_tile) {
 		return;
 	}
-	int index_in_items = selection - (current_tile->ground ? 1 : 0);
-	if (index_in_items <= 0) {
+	const int selection = item_list->GetSelection();
+	const bool has_ground = current_tile->ground != nullptr;
+	if (!TileStackRows::CanMoveUp(selection, has_ground, current_tile->items.size())) {
 		return;
 	}
+	const auto index_in_items = TileStackRows::Resolve(selection, has_ground, current_tile->items.size())->item_index;
 
 	Editor* editor = g_gui.GetCurrentEditor();
-	if (editor && current_tile) {
-		Position pos = current_tile->getPosition();
+	if (editor) {
 		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, editor->map);
 		std::swap(new_tile->items[index_in_items], new_tile->items[index_in_items - 1]);
 		new_tile->items[index_in_items - 1]->select();
@@ -263,21 +246,18 @@ void BrowseFieldList::OnClickUp(wxCommandEvent& event) {
 }
 
 void BrowseFieldList::OnClickDown(wxCommandEvent& event) {
-	int selection = item_list->GetSelection();
-	if (selection == wxNOT_FOUND) {
-		return;
-	}
-
 	if (!current_tile) {
 		return;
 	}
-	int index_in_items = selection - (current_tile->ground ? 1 : 0);
-	if (index_in_items < 0 || index_in_items >= (int)current_tile->items.size() - 1) {
+	const int selection = item_list->GetSelection();
+	const bool has_ground = current_tile->ground != nullptr;
+	if (!TileStackRows::CanMoveDown(selection, has_ground, current_tile->items.size())) {
 		return;
 	}
+	const auto index_in_items = TileStackRows::Resolve(selection, has_ground, current_tile->items.size())->item_index;
 
 	Editor* editor = g_gui.GetCurrentEditor();
-	if (editor && current_tile) {
+	if (editor) {
 		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, editor->map);
 		std::swap(new_tile->items[index_in_items], new_tile->items[index_in_items + 1]);
 		new_tile->items[index_in_items + 1]->select();
@@ -289,36 +269,46 @@ void BrowseFieldList::OnClickDown(wxCommandEvent& event) {
 }
 
 void BrowseFieldList::OnClickDelete(wxCommandEvent& event) {
-	int selection = item_list->GetSelection();
-	if (selection == wxNOT_FOUND) {
+	if (!current_tile) {
 		return;
 	}
-
-	if (current_tile->ground && selection == 0) {
-		return;
-	}
-
-	int index_in_items = selection - (current_tile->ground ? 1 : 0);
-	if (index_in_items < 0 || index_in_items >= (int)current_tile->items.size()) {
+	const int selection = item_list->GetSelection();
+	const bool has_ground = current_tile->ground != nullptr;
+	const auto row = TileStackRows::Resolve(selection, has_ground, current_tile->items.size());
+	if (!row) {
 		return;
 	}
 
 	Editor* editor = g_gui.GetCurrentEditor();
-	if (editor && current_tile) {
-		Position pos = current_tile->getPosition();
-		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, editor->map);
-		new_tile->items.erase(new_tile->items.begin() + index_in_items);
-
-		if (index_in_items > 0) {
-			new_tile->items[index_in_items - 1]->select();
-		} else if (new_tile->ground) {
-			new_tile->ground->select();
-		} else if (!new_tile->items.empty()) {
-			new_tile->items[0]->select();
-		}
-
-		std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
-		action->addChange(std::make_unique<Change>(std::move(new_tile)));
-		editor->addAction(std::move(action));
+	if (!editor) {
+		return;
 	}
+
+	std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, editor->map);
+	Item* target = row->is_ground ? new_tile->ground.get() : new_tile->items[row->item_index].get();
+	if (!TileOperations::removeItem(new_tile.get(), target)) {
+		return;
+	}
+
+	// Keep one row selected so the panel follows the edited tile after the change is applied.
+	const bool new_has_ground = new_tile->ground != nullptr;
+	const std::size_t remaining_rows = TileStackRows::RowCount(new_has_ground, new_tile->items.size());
+	if (const auto fallback_row = TileStackRows::FallbackRowAfterDelete(selection, remaining_rows)) {
+		const auto fallback = TileStackRows::Resolve(*fallback_row, new_has_ground, new_tile->items.size());
+		Item* fallback_item = fallback->is_ground ? new_tile->ground.get() : new_tile->items[fallback->item_index].get();
+		fallback_item->select();
+	}
+
+	std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
+	action->addChange(std::make_unique<Change>(std::move(new_tile)));
+	editor->addAction(std::move(action));
+}
+
+void BrowseFieldList::UpdateButtons(int selection) {
+	const bool has_tile = current_tile != nullptr;
+	const bool has_ground = has_tile && current_tile->ground != nullptr;
+	const std::size_t item_count = has_tile ? current_tile->items.size() : 0;
+	btn_up->Enable(TileStackRows::CanMoveUp(selection, has_ground, item_count));
+	btn_down->Enable(TileStackRows::CanMoveDown(selection, has_ground, item_count));
+	btn_delete->Enable(TileStackRows::Resolve(selection, has_ground, item_count).has_value());
 }
