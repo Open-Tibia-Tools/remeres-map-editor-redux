@@ -220,6 +220,8 @@ protected:
 	mutable uint8_t outfit_layout_cache_count_ = 0;
 	rme::rendering::SpritePartFootprint part_footprint_ {};
 	bool part_footprint_dirty_ = true;
+	static constexpr uint8_t kMaxPartFootprintAttempts = 3;
+	uint8_t part_footprint_attempts_ = 0;
 };
 
 #endif

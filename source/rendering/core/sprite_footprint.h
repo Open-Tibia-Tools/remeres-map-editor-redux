@@ -83,9 +83,11 @@ template <typename ImageSource>
 			continue;
 		}
 
+		// Read the pixels first: decoding them can update the image's dimensions.
+		const bool newly_opaque = !footprint.isOpaque(column, row) && source.isOpaque(index);
 		footprint.column_widths[column] = std::max(footprint.column_widths[column], source.width(index));
 		footprint.row_heights[row] = std::max(footprint.row_heights[row], source.height(index));
-		if (!footprint.isOpaque(column, row) && source.isOpaque(index)) {
+		if (newly_opaque) {
 			footprint.markOpaque(column, row);
 		}
 	}

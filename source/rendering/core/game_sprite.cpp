@@ -96,6 +96,7 @@ void GameSprite::invalidateMetricCaches() {
 	plain_layout_cache_count_ = 0;
 	outfit_layout_cache_count_ = 0;
 	part_footprint_dirty_ = true;
+	part_footprint_attempts_ = 0;
 }
 
 const rme::rendering::SpritePartFootprint& GameSprite::getPartFootprint() {
@@ -103,8 +104,11 @@ const rme::rendering::SpritePartFootprint& GameSprite::getPartFootprint() {
 		SpriteImageAlphaSource source(*this);
 		const size_t image_count = std::min<size_t>(numsprites, spriteList.size());
 		part_footprint_ = rme::rendering::BuildSpritePartFootprint(width, height, image_count, source);
-		// Retry on a later frame when some pixels could not be read yet.
-		part_footprint_dirty_ = source.hadUnavailablePixels();
+		// Retry on a later frame when some pixels could not be read yet, but give up after a few
+		// attempts so an image that can never be read is not decoded again on every frame; its
+		// parts then stay in the footprint.
+		++part_footprint_attempts_;
+		part_footprint_dirty_ = source.hadUnavailablePixels() && part_footprint_attempts_ < kMaxPartFootprintAttempts;
 	}
 	return part_footprint_;
 }
