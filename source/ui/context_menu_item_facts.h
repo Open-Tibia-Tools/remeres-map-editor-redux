@@ -21,6 +21,7 @@ namespace ContextMenu {
 		bool has_visible_carpet_brush = false;
 		bool has_visible_table_brush = false;
 		bool has_visible_ground_brush = false;
+		bool has_raw_brush = false;
 	};
 
 	// Reads the facts of `item`. The result only holds bools and does not outlive the call.

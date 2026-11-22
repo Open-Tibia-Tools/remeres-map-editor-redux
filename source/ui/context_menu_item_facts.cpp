@@ -34,6 +34,7 @@ namespace ContextMenu {
 			.has_visible_carpet_brush = carpet && carpet->visibleInPalette(),
 			.has_visible_table_brush = table && table->visibleInPalette(),
 			.has_visible_ground_brush = ground && ground->visibleInPalette(),
+			.has_raw_brush = item.getRAWBrush() != nullptr,
 		};
 	}
 

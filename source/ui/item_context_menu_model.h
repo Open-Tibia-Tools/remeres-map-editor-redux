@@ -47,46 +47,55 @@ namespace ItemContextMenu {
 		entries.push_back({ Command::Copy });
 		entries.push_back({ Command::Delete });
 		entries.push_back({ Command::Separator });
-
 		entries.push_back({ Command::CopyServerId });
 		entries.push_back({ Command::CopyClientId });
 		entries.push_back({ Command::CopyName });
-		entries.push_back({ Command::Separator });
 
-		if (item.is_rotatable) {
-			entries.push_back({ Command::Rotate });
+		std::vector<Entry> brushes;
+		if (item.has_raw_brush) {
+			brushes.push_back({ Command::SelectRaw });
 		}
-		if (item.is_teleport && item.teleport_has_destination) {
-			entries.push_back({ Command::GotoDestination });
-		}
-		if (item.is_brush_door) {
-			entries.push_back({ item.is_open_door ? Command::CloseDoor : Command::OpenDoor });
-			entries.push_back({ Command::Separator });
-		}
-
-		entries.push_back({ Command::SelectRaw });
 		if (item.has_visible_wall_brush) {
-			entries.push_back({ Command::SelectWall });
+			brushes.push_back({ Command::SelectWall });
 		}
 		if (item.has_visible_carpet_brush) {
-			entries.push_back({ Command::SelectCarpet });
+			brushes.push_back({ Command::SelectCarpet });
 		}
 		if (item.has_visible_table_brush) {
-			entries.push_back({ Command::SelectTable });
+			brushes.push_back({ Command::SelectTable });
 		}
 		if (item.has_visible_doodad_brush) {
-			entries.push_back({ Command::SelectDoodad });
+			brushes.push_back({ Command::SelectDoodad });
 		}
 		if (item.is_brush_door && item.has_door_brush) {
-			entries.push_back({ Command::SelectDoor });
+			brushes.push_back({ Command::SelectDoor });
 		}
 		if (item.has_visible_ground_brush) {
-			entries.push_back({ Command::SelectGround });
+			brushes.push_back({ Command::SelectGround });
 		}
 		if (item.has_collection_brush) {
-			entries.push_back({ Command::SelectCollection });
+			brushes.push_back({ Command::SelectCollection });
 		}
 
+		std::vector<Entry> tail;
+		if (item.is_rotatable) {
+			tail.push_back({ Command::Rotate });
+		}
+		if (item.is_teleport && item.teleport_has_destination) {
+			tail.push_back({ Command::GotoDestination });
+		}
+		if (item.is_brush_door) {
+			tail.push_back({ item.is_open_door ? Command::CloseDoor : Command::OpenDoor });
+			if (!brushes.empty()) {
+				tail.push_back({ Command::Separator });
+			}
+		}
+		tail.insert(tail.end(), brushes.begin(), brushes.end());
+
+		if (!tail.empty()) {
+			entries.push_back({ Command::Separator });
+			entries.insert(entries.end(), tail.begin(), tail.end());
+		}
 		return entries;
 	}
 

@@ -33,10 +33,17 @@ namespace {
 		return commands;
 	}
 
+	// A plain stacked item that has a RAW brush (most items do).
+	Facts PlainItem() {
+		Facts facts;
+		facts.item.has_raw_brush = true;
+		return facts;
+	}
+
 } // namespace
 
 TEST_CASE("a plain item offers only row operations", "[item_context_menu]") {
-	const auto entries = Build(Facts {});
+	const auto entries = Build(PlainItem());
 
 	REQUIRE(Has(entries, Command::Copy));
 	REQUIRE(Has(entries, Command::Delete));
@@ -60,8 +67,17 @@ TEST_CASE("a plain item offers only row operations", "[item_context_menu]") {
 	REQUIRE(Count(entries, Command::Delete) == 1);
 }
 
-TEST_CASE("the item menu starts with the row clipboard block", "[item_context_menu]") {
+TEST_CASE("a row without a RAW brush hides Select RAW", "[item_context_menu]") {
 	const auto entries = Build(Facts {});
+
+	REQUIRE_FALSE(Has(entries, Command::SelectRaw));
+	REQUIRE_FALSE(Has(entries, Command::SelectWall));
+	REQUIRE(entries.back().command == Command::CopyName);
+	REQUIRE(Count(entries, Command::Separator) == 1);
+}
+
+TEST_CASE("the item menu starts with the row clipboard block", "[item_context_menu]") {
+	const auto entries = Build(PlainItem());
 	REQUIRE(Commands(entries) == std::vector<Command> {
 									  Command::Copy,
 									  Command::Delete,
@@ -142,6 +158,7 @@ TEST_CASE("doodad, wall, carpet and table selectors need the matching item", "[i
 TEST_CASE("a ground row offers its ground brush", "[item_context_menu]") {
 	Facts facts;
 	facts.item.has_visible_ground_brush = true;
+	facts.item.has_raw_brush = true;
 	const auto entries = Build(facts);
 
 	REQUIRE(Has(entries, Command::SelectGround));
@@ -165,10 +182,18 @@ TEST_CASE("a door separator never leaves a dangling separator", "[item_context_m
 	Facts facts;
 	facts.item.is_door = true;
 	facts.item.is_brush_door = true;
-	const auto entries = Build(facts);
+	facts.item.has_raw_brush = true;
+	auto entries = Build(facts);
 	REQUIRE(entries.front().command != Command::Separator);
 	REQUIRE(entries.back().command != Command::Separator);
 	REQUIRE(Count(entries, Command::Separator) == 3);
+	REQUIRE(entries.back().command == Command::SelectRaw);
+
+	// No brush selector after the door: the door separator must disappear too.
+	facts.item.has_raw_brush = false;
+	entries = Build(facts);
+	REQUIRE(entries.back().command == Command::OpenDoor);
+	REQUIRE(Count(entries, Command::Separator) == 2);
 }
 
 TEST_CASE("the full item menu keeps the canvas order for shared entries", "[item_context_menu]") {
@@ -180,6 +205,7 @@ TEST_CASE("the full item menu keeps the canvas order for shared entries", "[item
 	facts.item.has_visible_wall_brush = true;
 	facts.item.has_visible_ground_brush = true;
 	facts.item.has_collection_brush = true;
+	facts.item.has_raw_brush = true;
 
 	REQUIRE(Commands(Build(facts)) == std::vector<Command> {
 											Command::Copy,
