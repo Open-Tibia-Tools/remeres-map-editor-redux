@@ -19,9 +19,12 @@
 #include "ui/properties/item_properties_window.h"
 #include "ui/properties/property_validator.h"
 #include "ui/properties/property_applier.h"
-#include "ui/properties/teleport_service.h"
+#include "ui/numbertextctrl.h"
+#include "ui/position_paste.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "util/image_manager.h"
+
+#include <algorithm>
 
 // ============================================================================
 // Item Properties Window
@@ -145,15 +148,23 @@ void ItemPropertiesWindow::createTeleportFields(wxFlexGridSizer* subsizer, wxWin
 		subsizer->Add(new wxStaticText(parent, wxID_ANY, "Destination"));
 
 		wxSizer* possizer = new wxBoxSizer(wxHORIZONTAL);
-		x_field = new wxSpinCtrl(parent, wxID_ANY, std::to_string(teleport->getX()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, edit_map->getWidth(), teleport->getX());
-		x_field->Bind(wxEVT_CHAR, &ItemPropertiesWindow::OnChar, this);
+		// Plain text fields, not wxSpinCtrl: the native spin control on wxMSW does not pass
+		// WM_PASTE on, so a pasted position could not fill all three fields. No
+		// wxTE_PROCESS_ENTER, so Enter still confirms the dialog.
+		const int map_width = edit_map->getWidth();
+		const int map_height = edit_map->getHeight();
+		x_field = new NumberTextCtrl(parent, wxID_ANY, teleport->getX(), 0, std::max(map_width - 1, 0), 0, "X", wxDefaultPosition, FromDIP(wxSize(-1, 20)));
+		x_field->SetToolTip("X Coordinate");
 		possizer->Add(x_field, wxSizerFlags(3).Expand());
-		y_field = new wxSpinCtrl(parent, wxID_ANY, std::to_string(teleport->getY()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, edit_map->getHeight(), teleport->getY());
-		y_field->Bind(wxEVT_CHAR, &ItemPropertiesWindow::OnChar, this);
+		y_field = new NumberTextCtrl(parent, wxID_ANY, teleport->getY(), 0, std::max(map_height - 1, 0), 0, "Y", wxDefaultPosition, FromDIP(wxSize(-1, 20)));
+		y_field->SetToolTip("Y Coordinate");
 		possizer->Add(y_field, wxSizerFlags(3).Expand());
-		z_field = new wxSpinCtrl(parent, wxID_ANY, std::to_string(teleport->getZ()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, MAP_MAX_LAYER, teleport->getZ());
-		z_field->Bind(wxEVT_CHAR, &ItemPropertiesWindow::OnChar, this);
+		z_field = new NumberTextCtrl(parent, wxID_ANY, teleport->getZ(), 0, MAP_MAX_LAYER, 0, "Z", wxDefaultPosition, FromDIP(wxSize(-1, 20)));
+		z_field->SetToolTip("Z Coordinate (Layer)");
 		possizer->Add(z_field, wxSizerFlags(2).Expand());
+		BindPositionPaste(x_field, y_field, z_field, [map_width, map_height] {
+			return PositionBounds { map_width, map_height };
+		});
 
 		subsizer->Add(possizer, wxSizerFlags(1).Expand());
 	}
@@ -172,21 +183,6 @@ void ItemPropertiesWindow::OnFocusChange(wxFocusEvent& event) {
 	}
 }
 
-void ItemPropertiesWindow::OnChar(wxKeyEvent& evt) {
-	if (evt.GetKeyCode() == WXK_CONTROL_V) {
-		int x, y, z;
-		const Editor* const editor = g_gui.GetCurrentEditor();
-		if (TeleportService::handlePositionPaste(x, y, z, editor->map.getWidth(), editor->map.getHeight())) {
-			x_field->SetValue(x);
-			y_field->SetValue(y);
-			z_field->SetValue(z);
-			return;
-		}
-	}
-
-	evt.Skip();
-}
-
 void ItemPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 	if (edit_item) {
 		// Normal item
@@ -200,7 +196,10 @@ void ItemPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 
 		Position new_dest;
 		if (teleport) {
-			new_dest = Position(x_field->GetValue(), y_field->GetValue(), z_field->GetValue());
+			x_field->CheckRange();
+			y_field->CheckRange();
+			z_field->CheckRange();
+			new_dest = Position(x_field->GetIntValue(), y_field->GetIntValue(), z_field->GetIntValue());
 		}
 		uint8_t new_door_id = 0;
 		if (door) {

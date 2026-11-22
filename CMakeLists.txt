@@ -280,3 +280,11 @@ set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_sprite_footprint PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_sprite_footprint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_sprite_footprint COMMAND test_sprite_footprint)
+
+# --- Unit test for the copy position formats and the position paste parser ---
+add_executable(test_position_format tests/test_position_format.cpp source/map/position_format.cpp)
+set_target_properties(test_position_format PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_position_format PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_position_format PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_position_format PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_position_format COMMAND test_position_format)

@@ -17,6 +17,7 @@
 
 #include "app/main.h"
 #include "ui/numbertextctrl.h"
+#include "util/number_input.h"
 #include <format>
 
 NumberTextCtrl::NumberTextCtrl(wxWindow* parent, wxWindowID id, long value, long minvalue, long maxvalue, const wxPoint& pos, const wxSize& sz, long style, const wxString& name) :
@@ -47,6 +48,7 @@ void NumberTextCtrl::OnTextEnter(wxCommandEvent& evt) {
 }
 
 void NumberTextCtrl::SetIntValue(long value) {
+	lastval = value;
 	wxString sv;
 	sv << value;
 	// Will generate events
@@ -78,31 +80,15 @@ void NumberTextCtrl::SetMaxValue(long value) {
 }
 
 void NumberTextCtrl::CheckRange() {
-	wxString text = GetValue();
+	const wxString text = GetValue();
+
+	// Text that is not one whole number (for example a pasted position that was not
+	// accepted as one) restores the last value instead of gluing its digits together.
+	const long v = static_cast<long>(ResolveNumberInput(text.utf8_string(), minval, maxval, lastval));
+	lastval = v;
+
 	wxString ntext;
-
-	for (auto ch : text) {
-		if (ch >= '0' && ch <= '9') {
-			ntext.Append(ch);
-		}
-	}
-
-	// Check that value is in range
-	long v;
-	if (ntext.size() != 0 && ntext.ToLong(&v)) {
-		if (v < minval) {
-			v = minval;
-		} else if (v > maxval) {
-			v = maxval;
-		}
-
-		ntext.clear();
-		ntext << v;
-		lastval = v;
-	} else {
-		ntext.clear();
-		ntext << lastval;
-	}
+	ntext << v;
 
 	// Check if there was any change
 	if (ntext != text) {

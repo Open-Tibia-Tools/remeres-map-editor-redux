@@ -5,35 +5,16 @@
 #include "app/main.h"
 #include "app/preferences/preferences_layout.h"
 #include "app/settings.h"
+#include "map/position_format.h"
 #include "ui/gui.h"
 
 namespace {
-constexpr std::array<const char*, 5> kPositionChoiceLabels = {
-	"Lua table",
-	"Compact JSON",
-	"CSV",
-	"Tuple",
-	"Constructor call",
-};
-
 int ClampPositionFormatSelection(int selection) {
-	return std::clamp(selection, 0, static_cast<int>(kPositionChoiceLabels.size()) - 1);
+	return static_cast<int>(PositionFormatFromSetting(selection));
 }
 
 wxString BuildPositionPreview(int selection) {
-	switch (ClampPositionFormatSelection(selection)) {
-		case 0:
-			return "{x = 512, y = 1024, z = 7}";
-		case 1:
-			return R"({"x":512,"y":1024,"z":7})";
-		case 2:
-			return "512, 1024, 7";
-		case 3:
-			return "(512, 1024, 7)";
-		case 4:
-		default:
-			return "Position(512, 1024, 7)";
-	}
+	return wxString::FromUTF8(FormatPosition(Position(512, 1024, 7), PositionFormatFromSetting(selection)));
 }
 }
 
@@ -125,8 +106,8 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Choose how copied map positions should be written when you paste them into scripts, notes, or chat."
 	);
 	position_format_choice = new wxChoice(clipboard_section, wxID_ANY);
-	for (const auto* label : kPositionChoiceLabels) {
-		position_format_choice->Append(wxString::FromUTF8(label));
+	for (const PositionFormatInfo& info : kPositionFormats) {
+		position_format_choice->Append(wxString::FromUTF8(info.label));
 	}
 	position_format_choice->SetSelection(ClampPositionFormatSelection(g_settings.getInteger(Config::COPY_POSITION_FORMAT)));
 	PreferencesLayout::AddControlRow(

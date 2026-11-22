@@ -34,8 +34,11 @@ public:
 	void SetMinValue(long value);
 	void SetMaxValue(long value);
 
-protected:
+	// Clamps the text to the range, or restores the last value when the text is not one
+	// whole number. Runs on Enter and when the field loses focus.
 	void CheckRange();
+
+protected:
 
 	long minval, maxval, lastval;
 };
