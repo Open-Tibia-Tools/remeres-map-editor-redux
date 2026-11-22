@@ -186,6 +186,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_palette_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/panels/brush_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_animation.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/walk_animation.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/atlas_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_cache_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/coordinate_mapper.h

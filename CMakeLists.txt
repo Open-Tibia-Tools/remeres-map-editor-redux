@@ -256,3 +256,11 @@ set_target_properties(test_subtype_pattern PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_subtype_pattern PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_subtype_pattern PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_subtype_pattern COMMAND test_subtype_pattern)
+
+# --- Unit test for outfit walk animation frames ---
+add_executable(test_walk_animation tests/test_walk_animation.cpp)
+set_target_properties(test_walk_animation PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_walk_animation PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_walk_animation PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_walk_animation PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_walk_animation COMMAND test_walk_animation)

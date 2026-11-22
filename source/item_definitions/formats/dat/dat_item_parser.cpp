@@ -245,7 +245,7 @@ namespace {
 		return true;
 	}
 
-	bool readFrameMetadata(const DatCatalog& catalog, FileReadHandle& file, DatCatalogEntry& entry, uint8_t frames, uint32_t group_index) {
+	bool readFrameMetadata(const DatCatalog& catalog, FileReadHandle& file, DatFrameGroup& group, uint8_t frames) {
 		if (frames <= 1) {
 			return true;
 		}
@@ -268,23 +268,17 @@ namespace {
 				if (!file.getU32(duration.minimum) || !file.getU32(duration.maximum)) {
 					return false;
 				}
-				if (group_index == 0) {
-					animation.frame_durations.push_back(duration);
-				}
+				animation.frame_durations.push_back(duration);
 			}
 		}
 
-		if (group_index == 0) {
-			entry.animation = std::move(animation);
-		}
+		group.animation = std::move(animation);
 		return true;
 	}
 
-	bool readSpriteIds(DatCatalog& catalog, FileReadHandle& file, DatCatalogEntry& entry, uint32_t sprite_count, uint32_t group_index, std::vector<std::string>& warnings) {
-		if (group_index == 0) {
-			entry.sprite_ids.clear();
-			entry.sprite_ids.reserve(sprite_count);
-		}
+	bool readSpriteIds(const DatCatalog& catalog, FileReadHandle& file, const DatCatalogEntry& entry, DatFrameGroup& group, uint32_t sprite_count, std::vector<std::string>& warnings) {
+		group.sprite_ids.clear();
+		group.sprite_ids.reserve(sprite_count);
 
 		for (uint32_t sprite_index = 0; sprite_index < sprite_count; ++sprite_index) {
 			uint32_t sprite_id = 0;
@@ -308,18 +302,14 @@ namespace {
 				return false;
 			}
 
-			if (group_index != 0) {
-				continue;
-			}
-
-			entry.sprite_ids.push_back(sprite_id);
-			catalog.max_sprite_id = std::max(catalog.max_sprite_id, sprite_id);
+			group.sprite_ids.push_back(sprite_id);
 		}
 		return true;
 	}
 
 	bool readSpriteGroup(DatCatalog& catalog, FileReadHandle& file, DatCatalogEntry& entry, uint32_t group_index, std::vector<std::string>& warnings) {
-		if (catalog.has_frame_groups && entry.client_id > catalog.item_count && !file.skip(1)) {
+		uint8_t group_type = DAT_FRAME_GROUP_IDLE;
+		if (catalog.has_frame_groups && entry.client_id > catalog.item_count && !file.getU8(group_type)) {
 			return false;
 		}
 
@@ -349,7 +339,8 @@ namespace {
 			return false;
 		}
 
-		if (!readFrameMetadata(catalog, file, entry, frames, group_index)) {
+		DatFrameGroup group;
+		if (!readFrameMetadata(catalog, file, group, frames)) {
 			return false;
 		}
 
@@ -400,18 +391,46 @@ namespace {
 		}
 		const auto sprite_count = static_cast<uint32_t>(sprite_count_64);
 
-		if (group_index == 0) {
-			entry.width = width;
-			entry.height = height;
-			entry.layers = layers;
-			entry.pattern_x = pattern_x;
-			entry.pattern_y = pattern_y;
-			entry.pattern_z = pattern_z;
-			entry.frames = frames;
-			entry.numsprites = sprite_count;
+		if (!readSpriteIds(catalog, file, entry, group, sprite_count, warnings)) {
+			return false;
 		}
 
-		return readSpriteIds(catalog, file, entry, sprite_count, group_index, warnings);
+		const bool is_standing_group = group_index == 0;
+		const bool is_walking_group = group_index != 0 && group_type == DAT_FRAME_GROUP_MOVING && !entry.walking_group;
+		if (!is_standing_group && !is_walking_group) {
+			return true;
+		}
+
+		for (const uint32_t sprite_id : group.sprite_ids) {
+			catalog.max_sprite_id = std::max(catalog.max_sprite_id, sprite_id);
+		}
+
+		if (is_walking_group) {
+			group.width = width;
+			group.height = height;
+			group.layers = layers;
+			group.pattern_x = pattern_x;
+			group.pattern_y = pattern_y;
+			group.pattern_z = pattern_z;
+			group.frames = frames;
+			group.numsprites = sprite_count;
+			entry.walking_group = std::move(group);
+			return true;
+		}
+
+		entry.width = width;
+		entry.height = height;
+		entry.layers = layers;
+		entry.pattern_x = pattern_x;
+		entry.pattern_y = pattern_y;
+		entry.pattern_z = pattern_z;
+		entry.frames = frames;
+		entry.numsprites = sprite_count;
+		entry.sprite_ids = std::move(group.sprite_ids);
+		if (group.animation) {
+			entry.animation = std::move(group.animation);
+		}
+		return true;
 	}
 }
 

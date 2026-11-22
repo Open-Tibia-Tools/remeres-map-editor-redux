@@ -29,6 +29,15 @@ namespace {
 		return fallback;
 	}
 
+	const FrameGroup* selectWalkingFrameGroup(const Appearance& appearance, const FrameGroup* standing_group) {
+		for (const auto& frame_group : appearance.frame_group()) {
+			if (&frame_group != standing_group && frame_group.has_sprite_info() && frame_group.fixed_frame_group() == FIXED_FRAME_GROUP_OUTFIT_MOVING) {
+				return &frame_group;
+			}
+		}
+		return nullptr;
+	}
+
 	std::string buildPassiveMetadataJson(const AppearanceFlags& flags) {
 		json::json metadata = json::json::object();
 
@@ -238,7 +247,7 @@ namespace {
 		fragment.passive_metadata_json = buildPassiveMetadataJson(flags);
 	}
 
-	void applyAnimation(const SpriteAnimation& animation, DatCatalogEntry& entry) {
+	void applyAnimation(const SpriteAnimation& animation, std::optional<DatAnimationInfo>& target) {
 		if (animation.sprite_phase_size() == 0) {
 			return;
 		}
@@ -262,10 +271,35 @@ namespace {
 				.maximum = phase.duration_max(),
 			});
 		}
-		entry.animation = std::move(animation_info);
+		target = std::move(animation_info);
 	}
 
-	bool fillEntry(const Appearance& appearance, uint32_t client_id, DatCatalogEntry& entry, DatCatalog& catalog, bool apply_item_flags) {
+	void fillWalkingGroup(const FrameGroup& frame_group, DatCatalogEntry& entry, DatCatalog& catalog) {
+		const auto& sprite_info = frame_group.sprite_info();
+		if (sprite_info.sprite_id_size() == 0) {
+			return;
+		}
+
+		DatFrameGroup group;
+		group.width = 1;
+		group.height = 1;
+		group.pattern_x = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_width()));
+		group.pattern_y = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_height()));
+		group.pattern_z = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_depth()));
+		group.layers = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.layers()));
+		group.frames = static_cast<uint8_t>(std::max<int>(1, sprite_info.animation().sprite_phase_size()));
+		group.numsprites = static_cast<uint32_t>(sprite_info.sprite_id_size());
+		group.sprite_ids.assign(sprite_info.sprite_id().begin(), sprite_info.sprite_id().end());
+		for (uint32_t sprite_id : group.sprite_ids) {
+			catalog.max_sprite_id = std::max(catalog.max_sprite_id, sprite_id);
+		}
+		if (sprite_info.has_animation()) {
+			applyAnimation(sprite_info.animation(), group.animation);
+		}
+		entry.walking_group = std::move(group);
+	}
+
+	bool fillEntry(const Appearance& appearance, uint32_t client_id, DatCatalogEntry& entry, DatCatalog& catalog, bool apply_item_flags, bool load_walking_group) {
 		entry = {};
 		entry.client_id = client_id;
 		entry.item_fragment.client_id = static_cast<ClientItemId>(client_id);
@@ -295,7 +329,13 @@ namespace {
 		}
 
 		if (sprite_info.has_animation()) {
-			applyAnimation(sprite_info.animation(), entry);
+			applyAnimation(sprite_info.animation(), entry.animation);
+		}
+
+		if (load_walking_group) {
+			if (const FrameGroup* walking_group = selectWalkingFrameGroup(appearance, frame_group)) {
+				fillWalkingGroup(*walking_group, entry, catalog);
+			}
 		}
 
 		if (appearance.has_flags()) {
@@ -400,7 +440,7 @@ bool ProtobufItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatC
 		}
 
 		auto& entry = catalog.entries[object.id()];
-		if (!fillEntry(object, object.id(), entry, catalog, true)) {
+		if (!fillEntry(object, object.id(), entry, catalog, true, false)) {
 			entry = {};
 			warnings.push_back(std::format("Skipping protobuf object appearance {} because it has no sprite data.", object.id()));
 		}
@@ -414,7 +454,7 @@ bool ProtobufItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatC
 
 		const uint32_t client_id = item_count + outfit.id();
 		auto& entry = catalog.entries[client_id];
-		if (!fillEntry(outfit, client_id, entry, catalog, false)) {
+		if (!fillEntry(outfit, client_id, entry, catalog, false, true)) {
 			entry = {};
 			warnings.push_back(std::format("Skipping protobuf outfit appearance {} because it has no sprite data.", outfit.id()));
 		}
