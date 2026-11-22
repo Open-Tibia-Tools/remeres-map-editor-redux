@@ -38,7 +38,7 @@ private:
 	void OnClearItems();
 	void OnClearBrushes();
 	void OnClearAll();
-	void OnSave(const std::string& paletteName, const std::string& name, bool isNew, bool append, bool includeItems, bool includeBrushes);
+	void OnSave(const std::string& paletteName, const std::string& name, bool isNew, bool append, rme::collection::CollectionInclusionMode mode);
 
 	struct DiscardAction {
 		enum class Kind {

@@ -144,8 +144,8 @@ void CollectionStudioWindow::InitLayout() {
 	callbacks.onClearAll = [this]() {
 		OnClearAll();
 	};
-	callbacks.onSave = [this](const std::string& paletteName, const std::string& name, bool isNew, bool append, bool includeItems, bool includeBrushes) {
-		OnSave(paletteName, name, isNew, append, includeItems, includeBrushes);
+	callbacks.onSave = [this](const std::string& paletteName, const std::string& name, bool isNew, bool append, rme::collection::CollectionInclusionMode mode) {
+		OnSave(paletteName, name, isNew, append, mode);
 	};
 
 	m_optionsPanel = new rme::ui::CollectionOptionsPanel(this, std::move(callbacks));
@@ -367,21 +367,24 @@ void CollectionStudioWindow::UpdateUI() {
 		m_brushCountLabel->SetLabelText(wxstr(std::format("Brushes: {}", m_staging.brushes.size())));
 	}
 	if (m_optionsPanel) {
-		m_optionsPanel->UpdateCounts(m_staging.itemIds.size(), m_staging.brushes.size());
+		const auto coverage = rme::collection::CollectionExtractorService::BuildSaveSelection(
+			m_staging,
+			rme::collection::CollectionInclusionMode::BrushesAndUncoveredItems
+		);
+		m_optionsPanel->UpdateCounts(coverage.stagedItemCount, coverage.brushes.size(), coverage.coveredItemCount);
 		m_optionsPanel->EnableAccumulate(m_editor != nullptr);
 		m_optionsPanel->UpdateUndoRedo(!m_undoStack.empty(), !m_redoStack.empty());
 	}
 	Layout();
 }
 
-void CollectionStudioWindow::OnSave(const std::string& paletteName, const std::string& name, bool isNew, bool append, bool includeItems, bool includeBrushes) {
-	std::span<const uint16_t> itemsToSave = includeItems ? m_staging.itemIds : std::span<const uint16_t>{};
-	std::span<Brush* const> brushesToSave = includeBrushes ? m_staging.brushes : std::span<Brush* const>{};
+void CollectionStudioWindow::OnSave(const std::string& paletteName, const std::string& name, bool isNew, bool append, rme::collection::CollectionInclusionMode mode) {
+	const auto selection = rme::collection::CollectionExtractorService::BuildSaveSelection(m_staging, mode);
 
 	auto tilesetFilePath = rme::collection::CollectionXmlService::GetTilesetFilePath(paletteName, name);
 
 	std::string error;
-	if (!rme::collection::CollectionXmlService::SaveTilesetXml(tilesetFilePath, name, itemsToSave, brushesToSave, append, error)) {
+	if (!rme::collection::CollectionXmlService::SaveTilesetXml(tilesetFilePath, name, selection.itemIds, selection.brushes, append, error)) {
 		DialogUtil::PopupDialog(this, "Add to Tileset", wxstr(std::format("Error saving tileset:\n{}", error)), wxOK | wxICON_ERROR);
 		return;
 	}

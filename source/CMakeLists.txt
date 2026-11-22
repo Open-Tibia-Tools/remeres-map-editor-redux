@@ -301,7 +301,9 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/spawn_validator_window.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/collection_extractor_service.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/collection_save_plan.h
     ${CMAKE_CURRENT_LIST_DIR}/io/collection_xml_service.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/collection_tileset_xml.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/managers/collection_palette_sync.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/collection_item_grid.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/collection_brush_grid.h

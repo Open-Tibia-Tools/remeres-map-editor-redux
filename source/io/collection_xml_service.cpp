@@ -1,7 +1,10 @@
 #include "io/collection_xml_service.h"
+#include "io/collection_tileset_xml.h"
 
 #include "app/managers/version_manager.h"
 #include "brushes/brush.h"
+#include "editor/operations/collection_extractor_service.h"
+#include "game/creatures.h"
 #include "game/materials.h"
 #include "util/file_system.h"
 #include "util/common.h"
@@ -247,8 +250,6 @@ bool CollectionXmlService::SaveTilesetXml(
 			return false;
 		}
 
-		std::set<std::string> brushSet;
-		std::set<uint16_t> itemSet;
 		pugi::xml_document doc;
 		pugi::xml_node root;
 
@@ -257,35 +258,6 @@ bool CollectionXmlService::SaveTilesetXml(
 			pugi::xml_parse_result res = doc.load_file(filePath.wstring().c_str(), pugi::parse_default | pugi::parse_comments | pugi::parse_declaration);
 			if (res) {
 				root = doc.child("tileset");
-				if (root) {
-					for (pugi::xml_node child = root.first_child(); child; child = child.next_sibling()) {
-						std::string childName = as_lower_str(child.name());
-						if (childName == "brush") {
-							std::string bname = child.attribute("name").as_string();
-							if (!bname.empty()) {
-								brushSet.insert(bname);
-							}
-						} else if (childName == "item") {
-							if (child.attribute("id")) {
-								uint16_t id = static_cast<uint16_t>(child.attribute("id").as_uint());
-								if (id != 0) {
-									itemSet.insert(id);
-								}
-							} else if (child.attribute("fromid")) {
-								uint32_t fromId = child.attribute("fromid").as_uint();
-								uint32_t toId = child.attribute("toid").as_uint(fromId);
-								if (fromId > toId) {
-									std::swap(fromId, toId);
-								}
-								for (uint32_t id = fromId; id <= toId && id <= 0xFFFF; ++id) {
-									if (id != 0) {
-										itemSet.insert(static_cast<uint16_t>(id));
-									}
-								}
-							}
-						}
-					}
-				}
 			}
 		}
 
@@ -299,23 +271,25 @@ bool CollectionXmlService::SaveTilesetXml(
 			root.append_attribute("name").set_value(tilesetName.c_str());
 		}
 
-		// Append only missing brushes
-		for (Brush* b : brushes) {
-			if (b && !b->getName().empty() && !brushSet.contains(b->getName())) {
-				brushSet.insert(b->getName());
-				pugi::xml_node brushNode = root.append_child("brush");
-				brushNode.append_attribute("name").set_value(b->getName().c_str());
+		std::vector<std::string> brushNames;
+		brushNames.reserve(brushes.size());
+		for (const Brush* b : brushes) {
+			if (b) {
+				brushNames.push_back(b->getName());
 			}
 		}
 
-		// Append only missing items
-		for (uint16_t id : itemIds) {
-			if (id != 0 && !itemSet.contains(id)) {
-				itemSet.insert(id);
-				pugi::xml_node itemNode = root.append_child("item");
-				itemNode.append_attribute("id").set_value(id);
+		AppendMissingTilesetEntries(root, brushNames, itemIds);
+		SortTilesetEntries(root, [](std::string_view name) {
+			if (const Brush* brush = g_brushes.getBrush(name)) {
+				return CollectionBrushLookup { ClassifyCollectionBrush(*brush), brush->getID() };
 			}
-		}
+			// Same fallback as the tileset loaders: a <brush> may name a creature whose brush is not created yet.
+			if (g_creatures[std::string(name)]) {
+				return CollectionBrushLookup { CollectionBrushCategory::Creature, 0 };
+			}
+			return CollectionBrushLookup {};
+		});
 
 		if (!doc.save_file(filePath.wstring().c_str(), "    ", pugi::format_default, pugi::encoding_utf8)) {
 			outErrorMessage = std::format("Failed to save tileset XML to '{}'", filePath.string());

@@ -1,5 +1,6 @@
 #include "ui/dialogs/collection_options_panel.h"
 #include "ui/dialog_util.h"
+#include "ui/theme.h"
 
 #include "io/collection_xml_service.h"
 #include "util/common.h"
@@ -102,9 +103,21 @@ void CollectionOptionsPanel::InitUI() {
 	m_includeItemsCheck->SetValue(true);
 	includeBox->Add(m_includeItemsCheck, wxSizerFlags().Border(wxALL, 6));
 
+	wxBoxSizer* onlyUncoveredSizer = new wxBoxSizer(wxHORIZONTAL);
+	onlyUncoveredSizer->AddSpacer(Theme::Grid(4));
+	m_onlyUncoveredCheck = new wxCheckBox(includeBox->GetStaticBox(), wxID_ANY, "Only items not covered by brushes (0 covered)");
+	m_onlyUncoveredCheck->SetValue(true);
+	m_onlyUncoveredCheck->SetToolTip("Skip items that an included brush already draws, so the tileset gets no duplicate entries");
+	onlyUncoveredSizer->Add(m_onlyUncoveredCheck);
+	includeBox->Add(onlyUncoveredSizer, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
+
 	m_includeBrushesCheck = new wxCheckBox(includeBox->GetStaticBox(), wxID_ANY, "Include Brushes (0)");
 	m_includeBrushesCheck->SetValue(true);
 	includeBox->Add(m_includeBrushesCheck, wxSizerFlags().Border(wxALL, 6));
+
+	m_saveSummaryLabel = new wxStaticText(includeBox->GetStaticBox(), wxID_ANY, "Will save 0 of 0 items and 0 brushes");
+	m_saveSummaryLabel->SetFont(m_saveSummaryLabel->GetFont().Smaller());
+	includeBox->Add(m_saveSummaryLabel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
 	rootSizer->Add(includeBox, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
@@ -151,6 +164,11 @@ void CollectionOptionsPanel::InitUI() {
 	m_radioExisting->Bind(wxEVT_RADIOBUTTON, &CollectionOptionsPanel::OnModeChanged, this);
 	m_nameInput->Bind(wxEVT_TEXT, &CollectionOptionsPanel::OnNameChanged, this);
 	m_existingChoice->Bind(wxEVT_CHOICE, &CollectionOptionsPanel::OnExistingChanged, this);
+	for (wxCheckBox* check : { m_includeItemsCheck, m_onlyUncoveredCheck, m_includeBrushesCheck }) {
+		check->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
+			UpdateInclusionControls();
+		});
+	}
 
 	m_accumulateBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
 		if (m_callbacks.onAccumulateSelection) {
@@ -184,6 +202,7 @@ void CollectionOptionsPanel::InitUI() {
 	RefreshExistingTilesets();
 	m_nameInput->SetValue(wxstr(GenerateDefaultTilesetName()));
 	UpdateFilePreview();
+	UpdateInclusionControls();
 }
 
 void CollectionOptionsPanel::RefreshPalettes() {
@@ -268,12 +287,36 @@ void CollectionOptionsPanel::UpdateUndoRedo(bool canUndo, bool canRedo) {
 	}
 }
 
-void CollectionOptionsPanel::UpdateCounts(size_t itemCount, size_t brushCount) {
+void CollectionOptionsPanel::UpdateCounts(size_t itemCount, size_t brushCount, size_t coveredItemCount) {
 	m_itemCount = itemCount;
 	m_brushCount = brushCount;
+	m_coveredItemCount = coveredItemCount;
+	UpdateInclusionControls();
+}
+
+std::optional<rme::collection::CollectionInclusionMode> CollectionOptionsPanel::GetInclusionMode() const {
+	return rme::collection::ResolveCollectionInclusionMode(
+		m_includeItemsCheck->GetValue(),
+		m_includeBrushesCheck->GetValue(),
+		m_onlyUncoveredCheck->GetValue()
+	);
+}
+
+void CollectionOptionsPanel::UpdateInclusionControls() {
+	m_onlyUncoveredCheck->Enable(m_includeItemsCheck->GetValue() && m_includeBrushesCheck->GetValue());
 
 	m_includeItemsCheck->SetLabelText(wxstr(std::format("Include Items ({})", m_itemCount)));
+	m_onlyUncoveredCheck->SetLabelText(wxstr(std::format("Only items not covered by brushes ({} covered)", m_coveredItemCount)));
 	m_includeBrushesCheck->SetLabelText(wxstr(std::format("Include Brushes ({})", m_brushCount)));
+
+	rme::collection::CollectionSaveCounts counts;
+	if (const auto mode = GetInclusionMode()) {
+		counts = rme::collection::ComputeCollectionSaveCounts(*mode, m_itemCount, m_coveredItemCount, m_brushCount);
+	}
+	m_saveSummaryLabel->SetLabelText(
+		wxstr(std::format("Will save {} of {} items and {} brushes", counts.items, m_itemCount, counts.brushes))
+	);
+	Layout();
 }
 
 void CollectionOptionsPanel::OnModeChanged(wxCommandEvent&) {
@@ -316,10 +359,9 @@ std::string CollectionOptionsPanel::GetTargetTilesetName() const {
 
 void CollectionOptionsPanel::PerformSave() {
 	// 1. Empty staging guard
-	const bool incItems = IsIncludeItems();
-	const bool incBrushes = IsIncludeBrushes();
+	const std::optional<rme::collection::CollectionInclusionMode> mode = GetInclusionMode();
 
-	if (!incItems && !incBrushes) {
+	if (!mode) {
 		DialogUtil::PopupDialog(
 			this,
 			"Add to Tileset",
@@ -329,10 +371,7 @@ void CollectionOptionsPanel::PerformSave() {
 		return;
 	}
 
-	const size_t effectiveItems = incItems ? m_itemCount : 0;
-	const size_t effectiveBrushes = incBrushes ? m_brushCount : 0;
-
-	if (effectiveItems == 0 && effectiveBrushes == 0) {
+	if (rme::collection::ComputeCollectionSaveCounts(*mode, m_itemCount, m_coveredItemCount, m_brushCount).Empty()) {
 		DialogUtil::PopupDialog(
 			this,
 			"Add to Tileset",
@@ -381,12 +420,12 @@ void CollectionOptionsPanel::PerformSave() {
 			int result = dlg.ShowModal();
 			if (result == CollisionDialog::Append) {
 				if (m_callbacks.onSave) {
-					m_callbacks.onSave(paletteName, targetName, false, true, incItems, incBrushes);
+					m_callbacks.onSave(paletteName, targetName, false, true, *mode);
 				}
 				return;
 			} else if (result == CollisionDialog::Overwrite) {
 				if (m_callbacks.onSave) {
-					m_callbacks.onSave(paletteName, targetName, true, false, incItems, incBrushes);
+					m_callbacks.onSave(paletteName, targetName, true, false, *mode);
 				}
 				return;
 			} else if (result == CollisionDialog::Rename) {
@@ -399,7 +438,7 @@ void CollectionOptionsPanel::PerformSave() {
 		}
 
 		if (m_callbacks.onSave) {
-			m_callbacks.onSave(paletteName, targetName, true, false, incItems, incBrushes);
+			m_callbacks.onSave(paletteName, targetName, true, false, *mode);
 		}
 	} else {
 		if (m_existingChoice->GetCount() == 0 || m_existingChoice->GetSelection() == wxNOT_FOUND) {
@@ -408,7 +447,7 @@ void CollectionOptionsPanel::PerformSave() {
 		}
 		targetName = m_existingChoice->GetStringSelection().ToStdString();
 		if (m_callbacks.onSave) {
-			m_callbacks.onSave(paletteName, targetName, false, true, incItems, incBrushes);
+			m_callbacks.onSave(paletteName, targetName, false, true, *mode);
 		}
 	}
 }
