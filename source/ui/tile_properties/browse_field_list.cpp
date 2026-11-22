@@ -6,14 +6,16 @@
 #include "app/main.h"
 #include "map/tile_stack_rows.h"
 #include "ui/tile_properties/browse_field_list.h"
-#include "ui/map_popup_menu.h"
-#include "ui/tile_context_actions.h"
+#include "ui/context_menu_item_facts.h"
+#include "ui/item_context_actions.h"
+#include "ui/item_context_menu_model.h"
+#include "ui/item_popup_menu.h"
+#include "ui/tile_item_actions.h"
 #include "map/tile.h"
 #include "map/map.h"
 #include "ui/gui.h"
 #include "editor/editor.h"
 #include "editor/action_queue.h"
-#include "ui/tile_properties/tile_properties_panel.h"
 #include "util/image_manager.h"
 #include "util/nanovg_listbox.h"
 #include "rendering/core/graphics.h"
@@ -231,13 +233,11 @@ void BrowseFieldList::ApplyListSelection() {
 		on_item_selected_cb(selected_item);
 	}
 
-	// Issue #3: Sync selection with the editor
+	// Issue #3: Sync selection with the editor. A panel row is one item, so no
+	// BORDER_IS_GROUND expansion: the commands act on exactly this row.
 	Editor* editor = g_gui.GetCurrentEditor();
 	if (editor && current_tile && selected_item) {
-		editor->selection.start(Selection::INTERNAL);
-		editor->selection.clear();
-		editor->selection.add(current_tile, selected_item);
-		editor->selection.finish(Selection::INTERNAL);
+		editor->selection.setSingleItem(current_tile, selected_item);
 	}
 }
 
@@ -251,44 +251,38 @@ void BrowseFieldList::OnContextMenu(wxContextMenuEvent& event) {
 	const bool from_keyboard = event.GetPosition() == wxDefaultPosition;
 	const wxPoint click_point = from_keyboard ? wxDefaultPosition : item_list->ScreenToClient(event.GetPosition());
 	const int hit_row = from_keyboard ? wxNOT_FOUND : item_list->RowAtClientPoint(click_point);
-	const auto row = TileStackRows::ContextMenuRow(from_keyboard, hit_row, item_list->GetSelection(), current_tile->ground != nullptr, current_tile->items.size());
+	const bool has_ground = current_tile->ground != nullptr;
+	const auto row = TileStackRows::ContextMenuRow(
+		from_keyboard, hit_row, item_list->GetSelection(), has_ground, current_tile->items.size()
+	);
 	if (!row) {
 		return;
 	}
 
-	// Same mode switch as a right click on the map, so Cut and Copy work from the panel too.
+	// Same mode switch as a right click on the map, so Copy works from the panel too.
 	if (g_gui.IsDrawingMode()) {
 		g_gui.SetSelectionMode();
 	}
 
-	// The clicked row becomes the editor selection first, so every action works on exactly that item.
+	// The clicked row becomes the editor selection first, so every command works on exactly that item.
 	item_list->SetSelection(*row);
 	ApplyListSelection();
-	if (!current_tile) {
+	Item* item = item_list->GetItem(*row);
+	if (!current_tile || !item) {
 		return;
 	}
 
-	// Copy the target now: a mutating action replaces the tile and refreshes this panel.
 	const Position position = current_tile->getPosition();
 	const wxPoint menu_point = from_keyboard ? item_list->RowMenuAnchor(*row) : click_point;
 
-	MapPopupMenu menu(*editor);
-	menu.Update();
+	ItemPopupMenu menu;
+	menu.Update(ItemContextMenu::Facts { .item = ContextMenu::CollectItemFacts(*item) });
 	const int menu_id = item_list->GetPopupMenuSelectionFromUser(menu, menu_point);
 	if (menu_id == wxID_NONE || g_gui.GetCurrentEditor() != editor) {
 		return;
 	}
 
-	TileContextActions::Execute(
-		menu_id,
-		TileContextTarget {
-			.editor = *editor,
-			.floor = position.z,
-			.paste_position = position,
-			.script_position = position,
-			.dialog_position = item_list->ClientToScreen(menu_point),
-		}
-	);
+	ItemContextActions::Execute(menu_id, *editor, position, *row);
 	editor->actionQueue->resetTimer();
 }
 
@@ -338,14 +332,8 @@ void BrowseFieldList::OnClickDown(wxCommandEvent& event) {
 	}
 }
 
-void BrowseFieldList::OnClickDelete(wxCommandEvent& event) {
+void BrowseFieldList::OnClickDelete(wxCommandEvent& WXUNUSED(event)) {
 	if (!current_tile) {
-		return;
-	}
-	const int selection = item_list->GetSelection();
-	const bool has_ground = current_tile->ground != nullptr;
-	const auto row = TileStackRows::Resolve(selection, has_ground, current_tile->items.size());
-	if (!row) {
 		return;
 	}
 
@@ -354,24 +342,7 @@ void BrowseFieldList::OnClickDelete(wxCommandEvent& event) {
 		return;
 	}
 
-	std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, editor->map);
-	Item* target = row->is_ground ? new_tile->ground.get() : new_tile->items[row->item_index].get();
-	if (!TileOperations::removeItem(new_tile.get(), target)) {
-		return;
-	}
-
-	// Keep one row selected so the panel follows the edited tile after the change is applied.
-	const bool new_has_ground = new_tile->ground != nullptr;
-	const std::size_t remaining_rows = TileStackRows::RowCount(new_has_ground, new_tile->items.size());
-	if (const auto fallback_row = TileStackRows::FallbackRowAfterDelete(selection, remaining_rows)) {
-		const auto fallback = TileStackRows::Resolve(*fallback_row, new_has_ground, new_tile->items.size());
-		Item* fallback_item = fallback->is_ground ? new_tile->ground.get() : new_tile->items[fallback->item_index].get();
-		fallback_item->select();
-	}
-
-	std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
-	action->addChange(std::make_unique<Change>(std::move(new_tile)));
-	editor->addAction(std::move(action));
+	TileItemActions::DeleteRow(*editor, current_tile, item_list->GetSelection());
 }
 
 void BrowseFieldList::UpdateButtons(int selection) {

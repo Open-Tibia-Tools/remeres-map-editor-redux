@@ -50,6 +50,9 @@ public:
 	void add(Tile* tile, Spawn* spawn);
 	void add(Tile* tile, Creature* creature);
 	void add(Tile* tile);
+	// Selects exactly `item` on `tile` and nothing else, without the BORDER_IS_GROUND expansion
+	// of add(). Surfaces that act on one row (Tile Properties) use this.
+	void setSingleItem(Tile* tile, Item* item);
 	void remove(Tile* tile, Item* item);
 	void remove(Tile* tile, Spawn* spawn);
 	void remove(Tile* tile, Creature* creature);

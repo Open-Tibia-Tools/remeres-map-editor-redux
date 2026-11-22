@@ -8,15 +8,16 @@
 #include "ui/map_popup_menu.h"
 
 #include <algorithm>
-#include <string_view>
+#include <optional>
 
 #include "editor/editor.h"
+#include "ui/context_menu_item_facts.h"
+#include "ui/context_menu_presentation.h"
 #include "ui/gui.h"
 #include "ui/gui_ids.h"
 #include "ui/tile_context_menu_model.h"
 #include "brushes/brush.h"
 #include "game/item.h"
-#include "game/complexitem.h"
 #include "map/map.h"
 #include "map/tile.h"
 #include "util/image_manager.h"
@@ -28,29 +29,6 @@
 #include "lua/lua_script_manager.h"
 
 namespace {
-
-	struct EntryPresentation {
-		int id = wxID_NONE;
-		const char* label = "";
-		const char* help = "";
-		std::string_view icon;
-	};
-
-	TileContextMenu::SelectedItemFacts CollectSelectedItemFacts(Item* item) {
-		const Teleport* teleport = dynamic_cast<const Teleport*>(item);
-		const Brush* doodad = item->getDoodadBrush();
-		return TileContextMenu::SelectedItemFacts {
-			.is_rotatable = item->isRoteable(),
-			.is_teleport = teleport != nullptr,
-			.teleport_has_destination = teleport && teleport->hasDestination(),
-			.is_door = item->isDoor(),
-			.is_open_door = item->isOpen(),
-			.is_brush_door = item->isBrushDoor(),
-			.has_door_brush = item->getDoorBrush() != nullptr,
-			.has_visible_doodad_brush = doodad && doodad->visibleInPalette(),
-			.has_collection_brush = item->hasCollectionBrush(),
-		};
-	}
 
 	void CollectStackFacts(const Tile* tile, TileContextMenu::Facts& facts) {
 		const auto note_brush = [&facts](const Brush* brush, bool& has_kind) {
@@ -104,7 +82,7 @@ namespace {
 
 		const ItemVector selected_items = TileOperations::getSelectedItems(tile);
 		if (selected_items.size() == 1) {
-			facts.selected_item = CollectSelectedItemFacts(selected_items.back());
+			facts.selected_item = ContextMenu::CollectItemFacts(*selected_items.back());
 		}
 
 		if (g_luaScripts.isInitialized()) {
@@ -114,73 +92,73 @@ namespace {
 		return facts;
 	}
 
-	EntryPresentation Present(TileContextMenu::Command command) {
+	std::optional<ContextMenu::EntryPresentation> PresentTile(TileContextMenu::Command command) {
 		using TileContextMenu::Command;
 		switch (command) {
 			case Command::Cut:
-				return { MAP_POPUP_MENU_CUT, "&Cut\tCTRL+X", "Cut out all selected items", ICON_CUT };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_CUT);
 			case Command::Copy:
-				return { MAP_POPUP_MENU_COPY, "&Copy\tCTRL+C", "Copy all selected items", ICON_COPY };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_COPY);
 			case Command::CopyPosition:
-				return { MAP_POPUP_MENU_COPY_POSITION, "&Copy Position", "Copy the position as a lua table", ICON_LOCATION };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_COPY_POSITION);
 			case Command::Paste:
-				return { MAP_POPUP_MENU_PASTE, "&Paste\tCTRL+V", "Paste items in the copybuffer here", ICON_PASTE };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_PASTE);
 			case Command::Delete:
-				return { MAP_POPUP_MENU_DELETE, "&Delete\tDEL", "Removes all seleceted items", ICON_TRASH_CAN };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_DELETE);
 			case Command::AdvancedReplace:
-				return { MAP_POPUP_MENU_ADVANCED_REPLACE, "Replace tiles...", "Open Advanced Replace Tool for selected items", ICON_WAND_MAGIC };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_ADVANCED_REPLACE);
 			case Command::AddToCollection:
-				return { MAP_POPUP_MENU_ADD_TO_COLLECTION, "Add to tileset...", "Add selected items and brushes to a tileset", ICON_LAYER_GROUP };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_ADD_TO_COLLECTION);
 			case Command::CopyServerId:
-				return { MAP_POPUP_MENU_COPY_SERVER_ID, "Copy Item Server Id", "Copy the server id of this item", ICON_SERVER };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_COPY_SERVER_ID);
 			case Command::CopyClientId:
-				return { MAP_POPUP_MENU_COPY_CLIENT_ID, "Copy Item Client Id", "Copy the client id of this item", ICON_DESKTOP };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_COPY_CLIENT_ID);
 			case Command::CopyName:
-				return { MAP_POPUP_MENU_COPY_NAME, "Copy Item Name", "Copy the name of this item", ICON_TAG };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_COPY_NAME);
 			case Command::Rotate:
-				return { MAP_POPUP_MENU_ROTATE, "&Rotate item", "Rotate this item", ICON_ROTATE };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_ROTATE);
 			case Command::GotoDestination:
-				return { MAP_POPUP_MENU_GOTO, "&Go To Destination", "Go to the destination of this teleport", ICON_ARROW_RIGHT_TO_BRACKET };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_GOTO);
 			case Command::OpenDoor:
-				return { MAP_POPUP_MENU_SWITCH_DOOR, "&Open door", "Open this door", ICON_DOOR_OPEN };
+				return ContextMenu::EntryPresentation { MAP_POPUP_MENU_SWITCH_DOOR, "&Open door", "Open this door", ICON_DOOR_OPEN };
 			case Command::CloseDoor:
-				return { MAP_POPUP_MENU_SWITCH_DOOR, "&Close door", "Close this door", ICON_DOOR_CLOSED };
+				return ContextMenu::EntryPresentation { MAP_POPUP_MENU_SWITCH_DOOR, "&Close door", "Close this door", ICON_DOOR_CLOSED };
 			case Command::SelectCreature:
-				return { MAP_POPUP_MENU_SELECT_CREATURE_BRUSH, "Select Creature", "Uses the current creature as a creature brush", ICON_DRAGON };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_SELECT_CREATURE_BRUSH);
 			case Command::SelectSpawn:
-				return { MAP_POPUP_MENU_SELECT_SPAWN_BRUSH, "Select Spawn", "Select the spawn brush", ICON_FIRE };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_SELECT_SPAWN_BRUSH);
 			case Command::SelectRaw:
-				return { MAP_POPUP_MENU_SELECT_RAW_BRUSH, "Select RAW", "Uses the top item as a RAW brush", ICON_CUBE };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_SELECT_RAW_BRUSH);
 			case Command::SelectWall:
-				return { MAP_POPUP_MENU_SELECT_WALL_BRUSH, "Select Wallbrush", "Uses the current item as a wallbrush", ICON_DUNGEON };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_SELECT_WALL_BRUSH);
 			case Command::SelectCarpet:
-				return { MAP_POPUP_MENU_SELECT_CARPET_BRUSH, "Select Carpetbrush", "Uses the current item as a carpetbrush", ICON_RUG };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_SELECT_CARPET_BRUSH);
 			case Command::SelectTable:
-				return { MAP_POPUP_MENU_SELECT_TABLE_BRUSH, "Select Tablebrush", "Uses the current item as a tablebrush", ICON_TABLE };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_SELECT_TABLE_BRUSH);
 			case Command::SelectDoodad:
-				return { MAP_POPUP_MENU_SELECT_DOODAD_BRUSH, "Select Doodadbrush", "Use this doodad brush", ICON_TREE };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_SELECT_DOODAD_BRUSH);
 			case Command::SelectDoor:
-				return { MAP_POPUP_MENU_SELECT_DOOR_BRUSH, "Select Doorbrush", "Use this door brush", ICON_DOOR_CLOSED };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_SELECT_DOOR_BRUSH);
 			case Command::SelectGround:
-				return { MAP_POPUP_MENU_SELECT_GROUND_BRUSH, "Select Groundbrush", "Uses the current item as a groundbrush", ICON_LAYER_GROUP };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_SELECT_GROUND_BRUSH);
 			case Command::SelectCollection:
-				return { MAP_POPUP_MENU_SELECT_COLLECTION_BRUSH, "Select Collection", "Use this collection", ICON_LAYER_GROUP };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_SELECT_COLLECTION_BRUSH);
 			case Command::SelectHouse:
-				return { MAP_POPUP_MENU_SELECT_HOUSE_BRUSH, "Select House", "Draw with the house on this tile.", ICON_HOUSE };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_SELECT_HOUSE_BRUSH);
 			case Command::Properties:
-				return { MAP_POPUP_MENU_PROPERTIES, "&Properties", "Properties for the current object", ICON_GEAR };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_PROPERTIES);
 			case Command::BrowseField:
-				return { MAP_POPUP_MENU_BROWSE_TILE, "Browse Field", "Navigate from tile items", ICON_SEARCH };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_BROWSE_TILE);
 			case Command::TileProperties:
-				return { MAP_POPUP_MENU_TILE_PROPERTIES, "Tile Properties", "Show tile properties panel", ICON_LIST };
+				return ContextMenu::PresentMenuEntry(MAP_POPUP_MENU_TILE_PROPERTIES);
 			case Command::Separator:
 			case Command::Script:
 				break;
 		}
-		return {};
+		return std::nullopt;
 	}
 
-}
+} // namespace
 
 MapPopupMenu::MapPopupMenu(Editor& editor) :
 	wxMenu(""), editor(editor) {
@@ -211,9 +189,13 @@ void MapPopupMenu::Update() {
 			continue;
 		}
 
-		const EntryPresentation presentation = Present(entry.command);
-		wxMenuItem* menu_item = Append(presentation.id, presentation.label, presentation.help);
-		menu_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(presentation.icon));
+		const std::optional<ContextMenu::EntryPresentation> presentation = PresentTile(entry.command);
+		if (!presentation) {
+			continue;
+		}
+
+		wxMenuItem* menu_item = Append(presentation->id, presentation->label, presentation->help);
+		menu_item->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(presentation->icon));
 		menu_item->Enable(entry.enabled);
 	}
 }

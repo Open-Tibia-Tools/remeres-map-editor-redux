@@ -5,13 +5,16 @@
 #ifndef RME_UI_TILE_CONTEXT_MENU_MODEL_H_
 #define RME_UI_TILE_CONTEXT_MENU_MODEL_H_
 
+#include "ui/context_menu_item_facts.h"
+
 #include <cstddef>
 #include <optional>
 #include <vector>
 
 // Decides which entries the tile context menu shows and which of them are enabled.
-// The map canvas and the Tile Properties item list both build their menu from this model;
-// it reads only plain facts about the current selection, so it has no wx or Tile dependency.
+// The map canvas builds its menu from this model; the Tile Properties list has its own
+// item-scoped model (ItemContextMenu) because it acts on one row, not on the whole tile.
+// It reads only plain facts about the current selection, so it has no wx or Tile dependency.
 namespace TileContextMenu {
 
 	enum class Command {
@@ -48,17 +51,7 @@ namespace TileContextMenu {
 	};
 
 	// Facts about the one selected item (ground or stacked item) when exactly one is selected.
-	struct SelectedItemFacts {
-		bool is_rotatable = false;
-		bool is_teleport = false;
-		bool teleport_has_destination = false;
-		bool is_door = false;
-		bool is_open_door = false;
-		bool is_brush_door = false;
-		bool has_door_brush = false;
-		bool has_visible_doodad_brush = false;
-		bool has_collection_brush = false;
-	};
+	using SelectedItemFacts = ContextMenu::SelectedItemFacts;
 
 	struct Facts {
 		// Number of selected tiles.

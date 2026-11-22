@@ -11,6 +11,7 @@
 #include "rendering/core/template_image.h"
 #include "rendering/core/sprite_decoder.h"
 #include "rendering/core/sprite_layout_calculator.h"
+#include "rendering/core/sprite_footprint.h"
 #include <spdlog/spdlog.h>
 #include <atomic>
 #include <algorithm>
@@ -37,6 +38,54 @@ GameSprite::GameSprite() :
 
 GameSprite::~GameSprite() = default;
 
+namespace {
+
+	// Alpha seam for BuildSpritePartFootprint() over the sprite's loaded images.
+	class SpriteImageAlphaSource {
+	public:
+		explicit SpriteImageAlphaSource(const GameSprite& sprite) :
+			sprite_(sprite) { }
+
+		int width(size_t index) const {
+			const Image* image = sprite_.spriteList[index];
+			return image ? static_cast<int>(image->getDimensions().width) : TILE_SIZE;
+		}
+
+		int height(size_t index) const {
+			const Image* image = sprite_.spriteList[index];
+			return image ? static_cast<int>(image->getDimensions().height) : TILE_SIZE;
+		}
+
+		bool isOpaque(size_t index) const {
+			if (index < sprite_.sprite_ids.size() && sprite_.sprite_ids[index] == 0) {
+				return false;
+			}
+			Image* image = sprite_.spriteList[index];
+			if (!image) {
+				return false;
+			}
+			const std::unique_ptr<uint8_t[]> rgba = image->getRGBAData();
+			if (!rgba) {
+				// Pixels unavailable: keep the part in the footprint rather than hide a drawn part.
+				// The caller retries a bounded number of frames before caching the conservative result.
+				had_unavailable_pixels_ = true;
+				return true;
+			}
+			const size_t byte_count = image->getDimensions().pixelCount() * 4;
+			return rme::rendering::HasOpaqueTexel(std::span<const uint8_t>(rgba.get(), byte_count), rme::rendering::kSpriteFootprintAlphaThreshold);
+		}
+
+		bool hadUnavailablePixels() const {
+			return had_unavailable_pixels_;
+		}
+
+	private:
+		const GameSprite& sprite_;
+		mutable bool had_unavailable_pixels_ = false;
+	};
+
+} // namespace
+
 ImageDimensions GameSprite::GetSize() const {
 	return getCompositePixelSize();
 }
@@ -46,6 +95,22 @@ void GameSprite::invalidateMetricCaches() {
 	geometry_cache_dirty = true;
 	plain_layout_cache_count_ = 0;
 	outfit_layout_cache_count_ = 0;
+	part_footprint_dirty_ = true;
+	part_footprint_attempts_ = 0;
+}
+
+const rme::rendering::SpritePartFootprint& GameSprite::getPartFootprint() {
+	if (part_footprint_dirty_) {
+		SpriteImageAlphaSource source(*this);
+		const size_t image_count = std::min<size_t>(numsprites, spriteList.size());
+		part_footprint_ = rme::rendering::BuildSpritePartFootprint(width, height, image_count, source);
+		// Retry on a later frame when some pixels could not be read yet, but give up after a few
+		// attempts so an image that can never be read is not decoded again on every frame; its
+		// parts then stay in the footprint.
+		++part_footprint_attempts_;
+		part_footprint_dirty_ = source.hadUnavailablePixels() && part_footprint_attempts_ < kMaxPartFootprintAttempts;
+	}
+	return part_footprint_;
 }
 
 void GameSprite::ColorizeTemplatePixels(uint8_t* dest, const uint8_t* mask, size_t pixelCount, int lookHead, int lookBody, int lookLegs, int lookFeet, bool destHasAlpha) {
