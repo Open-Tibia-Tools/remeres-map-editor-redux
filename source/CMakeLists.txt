@@ -202,6 +202,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_archive.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_decoder.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_layout_calculator.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_footprint.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/template_image.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_preloader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_buffer.h
@@ -281,6 +282,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/popup_action_handler.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/screenshot_controller.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/selection_controller.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/pick_candidate_order.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/selection_geometry.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/selection_picker.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/tooltip_drawer.h

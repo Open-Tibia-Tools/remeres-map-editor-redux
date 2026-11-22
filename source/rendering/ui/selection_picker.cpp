@@ -12,6 +12,7 @@
 #include "rendering/core/game_sprite.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/image.h"
+#include "rendering/ui/pick_candidate_order.h"
 #include "rendering/ui/selection_geometry.h"
 #include "rendering/utilities/pattern_calculator.h"
 #include "ui/gui.h"
@@ -305,7 +306,29 @@ namespace {
 		};
 	}
 
-	SelectionHit FindHitOnTile(Tile& tile, const Position& tile_pos, int pixel_x, int pixel_y, bool is_target_tile) {
+	// Everything a tile draws above its ground (items, creature, spawn marker) versus the ground itself.
+	enum class TileHitLayer {
+		AboveGround,
+		Ground,
+	};
+
+	SelectionHit FindGroundHitOnTile(Tile& tile, const Position& tile_pos, int pixel_x, int pixel_y) {
+		// Tested on every candidate: a multi-tile ground sprite (e.g. mountain 919) extends up-left from its
+		// anchor, so its visible part can cover the clicked tile while the anchor is a neighbour. HitTestItem()
+		// misses for pixels outside the sprite parts, so 1x1 grounds of neighbouring candidates never match.
+		if (tile.ground && !IsItemInvalidAndHidden(*tile.ground) && !IsItemUnresolvedAndHidden(*tile.ground)) {
+			if (HitTestItem(*tile.ground, tile, tile_pos, pixel_x, pixel_y, 0) == PixelTestResult::Hit) {
+				return MakeItemHit(&tile, tile.ground.get());
+			}
+		}
+		return {};
+	}
+
+	SelectionHit FindHitOnTile(Tile& tile, const Position& tile_pos, int pixel_x, int pixel_y, bool is_target_tile, TileHitLayer layer) {
+		if (layer == TileHitLayer::Ground) {
+			return FindGroundHitOnTile(tile, tile_pos, pixel_x, pixel_y);
+		}
+
 		const std::vector<ItemRenderInfo> render_list = BuildItemRenderList(tile);
 
 		// TopEffect items (sublayer 10) render in front of creatures (sublayer 8)
@@ -358,12 +381,6 @@ namespace {
 			}
 		}
 
-		if (is_target_tile && tile.ground && !IsItemInvalidAndHidden(*tile.ground) && !IsItemUnresolvedAndHidden(*tile.ground)) {
-			if (HitTestItem(*tile.ground, tile, tile_pos, pixel_x, pixel_y, 0) == PixelTestResult::Hit) {
-				return MakeItemHit(&tile, tile.ground.get());
-			}
-		}
-
 		return {};
 	}
 
@@ -401,20 +418,24 @@ namespace {
 			return PickStandard(editor, clicked_pos);
 		}
 
-		for (int dy = kPixelSelectionSearchRange; dy >= 0; --dy) {
-			for (int dx = kPixelSelectionSearchRange; dx >= 0; --dx) {
-				Position storage_pos(clicked_pos.x + dx, clicked_pos.y + dy, clicked_pos.z);
-				Tile* tile = editor.map.getTile(storage_pos);
-				if (!tile) {
-					continue;
-				}
-
-				const SelectionPixelOffset local {
-					.x = pixel.x - dx * TILE_SIZE,
-					.y = pixel.y - dy * TILE_SIZE,
-				};
-
-				SelectionHit hit = FindHitOnTile(*tile, storage_pos, local.x, local.y, dx == 0 && dy == 0);
+		// Front to back in render order: diagonals first, and on each diagonal everything above the
+		// ground before any ground (see pick_candidate_order.h).
+		for (int diagonal = PickCandidateOrder::MaxDiagonal(kPixelSelectionSearchRange); diagonal >= 0; --diagonal) {
+			for (const TileHitLayer layer : { TileHitLayer::AboveGround, TileHitLayer::Ground }) {
+				SelectionHit hit;
+				PickCandidateOrder::ForEachOnDiagonal(kPixelSelectionSearchRange, diagonal, [&](int dx, int dy) {
+					if (hit.HasEntity()) {
+						return;
+					}
+					const Position storage_pos(clicked_pos.x + dx, clicked_pos.y + dy, clicked_pos.z);
+					Tile* tile = editor.map.getTile(storage_pos);
+					if (!tile) {
+						return;
+					}
+					const int local_x = pixel.x - dx * TILE_SIZE;
+					const int local_y = pixel.y - dy * TILE_SIZE;
+					hit = FindHitOnTile(*tile, storage_pos, local_x, local_y, dx == 0 && dy == 0, layer);
+				});
 				if (hit.HasEntity()) {
 					return hit;
 				}

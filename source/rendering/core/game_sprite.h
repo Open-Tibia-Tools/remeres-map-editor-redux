@@ -62,6 +62,7 @@ public:
 };
 
 #include "rendering/core/sprite_layout_calculator.h"
+#include "rendering/core/sprite_footprint.h"
 
 class Image;
 class TemplateImage;
@@ -93,6 +94,9 @@ public:
 	uint8_t getMiniMapColor() const;
 	SpriteLayoutMetrics getPlainLayoutMetrics(int subtype, int pattern_x, int pattern_y, int pattern_z, int frame);
 	SpriteLayoutMetrics getOutfitLayoutMetrics(int dir, int addon, int pattern_z, int frame);
+	// Union part geometry and opaque-part mask over all frames, patterns and layers. Built lazily
+	// on first use (decodes each image once), then cached until invalidateMetricCaches().
+	[[nodiscard]] const rme::rendering::SpritePartFootprint& getPartFootprint();
 	void invalidateMetricCaches();
 
 	bool hasLight() const noexcept {
@@ -214,6 +218,8 @@ protected:
 	mutable uint8_t plain_layout_cache_count_ = 0;
 	mutable std::array<OutfitLayoutCacheEntry, LAYOUT_CACHE_CAPACITY> outfit_layout_cache_entries_ {};
 	mutable uint8_t outfit_layout_cache_count_ = 0;
+	rme::rendering::SpritePartFootprint part_footprint_ {};
+	bool part_footprint_dirty_ = true;
 };
 
 #endif
