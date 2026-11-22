@@ -371,7 +371,8 @@ TEST_CASE("append merges into an unsorted tileset without losing entries", "[col
 		pugi::parse_default | pugi::parse_comments | pugi::parse_declaration));
 	pugi::xml_node root = doc.child("tileset");
 
-	const std::vector<std::string> newBrushes = { "rug", "bush", "grass", "dirt" };
+	// "Rat" is already listed as <creature>, so it must not be appended again as <brush>.
+	const std::vector<std::string> newBrushes = { "rug", "bush", "grass", "dirt", "Rat" };
 	const std::vector<uint16_t> newItems = { 302, 900, 100, 0 };
 	AppendMissingTilesetEntries(root, newBrushes, newItems);
 	SortTilesetEntries(root, Resolver(known));

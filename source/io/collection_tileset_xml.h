@@ -58,7 +58,8 @@ inline void AppendMissingTilesetEntries(pugi::xml_node root, std::span<const std
 		if (child.type() != pugi::node_element) {
 			continue;
 		}
-		if (EqualsCollectionNameIgnoreCase(child.name(), "brush")) {
+		// Creature brushes may already be listed as <creature name>, which loads the same brush.
+		if (EqualsCollectionNameIgnoreCase(child.name(), "brush") || EqualsCollectionNameIgnoreCase(child.name(), "creature")) {
 			std::string name = child.attribute("name").as_string();
 			if (!name.empty()) {
 				brushSet.insert(std::move(name));
