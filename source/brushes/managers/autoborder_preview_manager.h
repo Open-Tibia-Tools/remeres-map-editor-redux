@@ -8,6 +8,7 @@
 #include "app/main.h"
 #include <memory>
 #include <vector>
+#include "brushes/ground/border_update_policy.h"
 #include "map/position.h"
 
 class BaseMap;
@@ -32,8 +33,8 @@ private:
 
 	bool CheckPreconditions(const Position& pos);
 	void CopyMapArea(Editor& editor, const Position& pos);
-	void SimulateBrush(Editor& editor, const Position& pos, const std::vector<Position>& tilestodraw, bool alt_pressed);
-	void ApplyBorders(const std::vector<Position>& tilestodraw, const std::vector<Position>& tilestoborder);
+	void SimulateBrush(Editor& editor, const Position& pos, const std::vector<Position>& tilestodraw, bool alt_pressed, const BorderUpdate::Options& border_options);
+	void ApplyBorders(const std::vector<Position>& tilestodraw, const std::vector<Position>& tilestoborder, const BorderUpdate::Options& border_options);
 	void PruneUnchanged(Editor& editor, const Position& pos);
 };
 

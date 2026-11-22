@@ -436,6 +436,8 @@ void Settings::IO(IOMode mode) {
 	Int(BORDERIZE_PASTE_THRESHOLD, 10000);
 	Bool(ALWAYS_MAKE_BACKUP, false);
 	Bool(USE_AUTOMAGIC, true);
+	Bool(AUTOBORDER_CURRENT_BRUSH_ONLY, false);
+	Int(AUTOBORDER_PLACEMENT, 0); // BorderUpdate::Placement: 0 = bottom, 1 = top
 	Bool(HOUSE_BRUSH_REMOVE_ITEMS, false);
 	Bool(AUTO_ASSIGN_DOORID, true);
 	Bool(ERASER_LEAVE_UNIQUE, true);

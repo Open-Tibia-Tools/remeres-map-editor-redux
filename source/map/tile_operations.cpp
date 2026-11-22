@@ -94,8 +94,8 @@ namespace TileOperations {
 		}
 	}
 
-	void borderize(Tile* tile, BaseMap* map) {
-		GroundBrush::doBorders(map, tile);
+	void borderize(Tile* tile, BaseMap* map, const BorderUpdate::Options& options) {
+		GroundBrush::doBorders(map, tile, options);
 	}
 
 	void cleanBorders(Tile* tile) {

@@ -46,6 +46,7 @@ private:
 	void UpdateSectionVisibility();
 	void UpdateSizeLabels();
 	void UpdateModeButtons();
+	void UpdateAutoborderPlacementButton();
 	void SyncToolSelection();
 	void SetMutatingUi(bool value);
 	[[nodiscard]] bool IsMutatingUi() const;
@@ -55,6 +56,7 @@ private:
 	[[nodiscard]] bool HasRandomizeDoodadsControl() const;
 	[[nodiscard]] bool HasPreviewBorderControl() const;
 	[[nodiscard]] bool HasDrawOnFloorBelowControl() const;
+	[[nodiscard]] bool HasAutoborderScopeControl() const;
 	[[nodiscard]] bool HasLockDoorsControl() const;
 	[[nodiscard]] bool HasSpawnControls() const;
 	[[nodiscard]] bool HasWeightControl() const;
@@ -72,6 +74,8 @@ private:
 	void OnPreviewBorderToggled(wxCommandEvent& event);
 	void OnDrawOnFloorBelowToggled(wxCommandEvent& event);
 	void OnDrawOnFloorBelowConfigClicked(wxCommandEvent& event);
+	void OnAutoborderCurrentBrushToggled(wxCommandEvent& event);
+	void OnAutoborderPlacementClicked(wxCommandEvent& event);
 	void OnLockDoorsToggled(wxCommandEvent& event);
 	void OnThicknessChanged(wxCommandEvent& event);
 	void OnRandomizeDoodadsToggled(wxCommandEvent& event);
@@ -104,6 +108,9 @@ private:
 	wxPanel* draw_below_panel = nullptr;
 	wxCheckBox* draw_on_floor_below_checkbox = nullptr;
 	wxBitmapButton* draw_on_floor_below_config_button = nullptr;
+	wxPanel* autoborder_scope_panel = nullptr;
+	wxCheckBox* autoborder_current_brush_checkbox = nullptr;
+	wxBitmapButton* autoborder_placement_button = nullptr;
 	wxCheckBox* lock_doors_checkbox = nullptr;
 	wxCheckBox* randomize_doodads_checkbox = nullptr;
 	wxStaticText* thickness_label = nullptr;

@@ -13,6 +13,7 @@
 #include "app/settings.h"
 #include "brushes/brush_utility.h"
 #include "editor/editor.h"
+#include "editor/operations/draw_operations.h"
 #include "brushes/door/door_brush.h"
 #include "brushes/wall/wall_brush.h"
 #include "brushes/ground/ground_brush.h"
@@ -47,8 +48,10 @@ void AutoborderPreviewManager::Update(Editor& editor, const Position& pos, bool 
 	// Use BrushUtility to get affected tiles based on shape
 	BrushUtility::GetTilesToDraw(pos.x, pos.y, pos.z, &tilestodraw, &tilestoborder);
 
-	SimulateBrush(editor, pos, tilestodraw, alt_pressed);
-	ApplyBorders(tilestodraw, tilestoborder);
+	// Same policy as the real paint, so the preview matches the result.
+	const BorderUpdate::Options border_options = DrawOperations::groundBorderOptions(brush);
+	SimulateBrush(editor, pos, tilestodraw, alt_pressed, border_options);
+	ApplyBorders(tilestodraw, tilestoborder, border_options);
 	PruneUnchanged(editor, pos);
 }
 
@@ -92,7 +95,7 @@ void AutoborderPreviewManager::CopyMapArea(Editor& editor, const Position& pos) 
 	}
 }
 
-void AutoborderPreviewManager::SimulateBrush(Editor& editor, const Position& pos, const std::vector<Position>& tilestodraw, bool alt_pressed) {
+void AutoborderPreviewManager::SimulateBrush(Editor& editor, const Position& pos, const std::vector<Position>& tilestodraw, bool alt_pressed, const BorderUpdate::Options& border_options) {
 	Brush* brush = g_gui.GetCurrentBrush();
 	if (!brush) {
 		return;
@@ -114,7 +117,7 @@ void AutoborderPreviewManager::SimulateBrush(Editor& editor, const Position& pos
 
 		if (is_wall) {
 			TileOperations::cleanWalls(tile);
-		} else if (is_ground) {
+		} else if (is_ground && !border_options.preservesOtherBrushes()) {
 			TileOperations::cleanBorders(tile);
 		}
 
@@ -134,7 +137,7 @@ void AutoborderPreviewManager::SimulateBrush(Editor& editor, const Position& pos
 	}
 }
 
-void AutoborderPreviewManager::ApplyBorders(const std::vector<Position>& tilestodraw, const std::vector<Position>& tilestoborder) {
+void AutoborderPreviewManager::ApplyBorders(const std::vector<Position>& tilestodraw, const std::vector<Position>& tilestoborder, const BorderUpdate::Options& border_options) {
 	Brush* brush = g_gui.GetCurrentBrush();
 	if (!brush) {
 		return;
@@ -164,7 +167,7 @@ void AutoborderPreviewManager::ApplyBorders(const std::vector<Position>& tilesto
 				TileOperations::carpetize(tile, preview_buffer_map.get());
 			} else {
 				// Default/Ground
-				TileOperations::borderize(tile, preview_buffer_map.get());
+				TileOperations::borderize(tile, preview_buffer_map.get(), border_options);
 			}
 		}
 	};

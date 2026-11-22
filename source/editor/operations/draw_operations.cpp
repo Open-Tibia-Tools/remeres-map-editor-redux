@@ -139,7 +139,9 @@ namespace {
 
 		std::pair<bool, GroundBrush*> param_obj;
 		std::pair<bool, GroundBrush*>* param = nullptr;
+		BorderUpdate::Options border_options;
 		if constexpr (std::is_same_v<T, GroundBrush>) {
+			border_options = DrawOperations::groundBorderOptions(brush);
 			if (alt) {
 				param_obj = editor.replace_brush
 					? std::pair<bool, GroundBrush*> { false, editor.replace_brush }
@@ -153,7 +155,9 @@ namespace {
 			auto* tile = location->get();
 			if (tile) {
 				std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
-				if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
+				// A scoped update leaves other brushes' borders in place; the border
+				// pass below removes the active brush's own stale ones.
+				if (g_settings.getInteger(Config::USE_AUTOMAGIC) && !border_options.preservesOtherBrushes()) {
 					TileOperations::cleanBorders(new_tile.get());
 				}
 
@@ -187,7 +191,7 @@ namespace {
 						TileOperations::tableize(new_tile.get(), &editor.map);
 						TileOperations::carpetize(new_tile.get(), &editor.map);
 					}
-					TileOperations::borderize(new_tile.get(), &editor.map);
+					TileOperations::borderize(new_tile.get(), &editor.map, border_options);
 					action->addChange(std::make_unique<Change>(std::move(new_tile)));
 				} else {
 					std::unique_ptr<Tile> new_tile(editor.map.allocator(location));
@@ -197,7 +201,7 @@ namespace {
 						// new_tile->tableize(map);
 						// new_tile->carpetize(map);
 					}
-					TileOperations::borderize(new_tile.get(), &editor.map);
+					TileOperations::borderize(new_tile.get(), &editor.map, border_options);
 					if (!new_tile->empty()) {
 						action->addChange(std::make_unique<Change>(std::move(new_tile)));
 					}
@@ -299,6 +303,20 @@ namespace {
 	}
 
 } // namespace
+
+BorderUpdate::Options DrawOperations::groundBorderOptions(const Brush* brush) {
+	BorderUpdate::Options options;
+	if (!brush || !brush->is<GroundBrush>()) {
+		return options;
+	}
+
+	options.placement = BorderUpdate::PlacementFromSetting(g_settings.getInteger(Config::AUTOBORDER_PLACEMENT));
+	if (g_settings.getBoolean(Config::AUTOBORDER_CURRENT_BRUSH_ONLY)) {
+		options.scope = BorderUpdate::Scope::CurrentBrushOnly;
+		options.active_brush = brush->as<GroundBrush>();
+	}
+	return options;
+}
 
 void DrawOperations::draw(Editor& editor, Position offset, bool alt, bool dodraw) {
 	Brush* brush = g_gui.GetCurrentBrush();

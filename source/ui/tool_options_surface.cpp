@@ -236,11 +236,21 @@ void ToolOptionsSurface::BuildUi() {
 	draw_below_row->Add(draw_on_floor_below_config_button, wxSizerFlags().CenterVertical().Border(wxLEFT, FromDIP(4)));
 	draw_below_panel->SetSizer(draw_below_row);
 
+	autoborder_scope_panel = new wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
+	auto* autoborder_scope_row = new wxBoxSizer(wxHORIZONTAL);
+	autoborder_current_brush_checkbox = new wxCheckBox(autoborder_scope_panel, wxID_ANY, "Autoborder current brush only");
+	autoborder_current_brush_checkbox->SetToolTip("When enabled, automagic only recalculates the borders of this ground brush.\nBorders of other brushes on the affected tiles are kept in place.");
+	autoborder_placement_button = new wxBitmapButton(autoborder_scope_panel, wxID_ANY, IMAGE_MANAGER.GetBitmapBundle(ICON_ANGLES_DOWN), wxDefaultPosition, FromDIP(wxSize(24, 20)), wxBU_EXACTFIT);
+	autoborder_scope_row->Add(autoborder_current_brush_checkbox, wxSizerFlags(1).CenterVertical());
+	autoborder_scope_row->Add(autoborder_placement_button, wxSizerFlags().CenterVertical().Border(wxLEFT, FromDIP(4)));
+	autoborder_scope_panel->SetSizer(autoborder_scope_row);
+
 	lock_doors_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Lock Doors (Shift)");
 	randomize_doodads_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Randomize Doodads");
 	randomize_doodads_checkbox->SetValue(g_settings.getBoolean(Config::RANDOMIZE_DOODADS));
 	other_sizer->Add(preview_border_checkbox, wxSizerFlags().Expand().Border(wxALL, FromDIP(6)));
 	other_sizer->Add(draw_below_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6)));
+	other_sizer->Add(autoborder_scope_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6)));
 	other_sizer->Add(lock_doors_checkbox, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6)));
 	main_sizer->Add(other_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(4)));
 
@@ -253,6 +263,8 @@ void ToolOptionsSurface::BuildUi() {
 	preview_border_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnPreviewBorderToggled, this);
 	draw_on_floor_below_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnDrawOnFloorBelowToggled, this);
 	draw_on_floor_below_config_button->Bind(wxEVT_BUTTON, &ToolOptionsSurface::OnDrawOnFloorBelowConfigClicked, this);
+	autoborder_current_brush_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnAutoborderCurrentBrushToggled, this);
+	autoborder_placement_button->Bind(wxEVT_BUTTON, &ToolOptionsSurface::OnAutoborderPlacementClicked, this);
 	lock_doors_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnLockDoorsToggled, this);
 	randomize_doodads_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnRandomizeDoodadsToggled, this);
 	thickness_slider->Bind(wxEVT_SLIDER, &ToolOptionsSurface::OnThicknessChanged, this);
@@ -392,6 +404,8 @@ void ToolOptionsSurface::RefreshFromState() {
 	preview_border_checkbox->SetValue(g_settings.getInteger(Config::SHOW_AUTOBORDER_PREVIEW));
 	draw_on_floor_below_checkbox->SetValue(g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW));
 	draw_on_floor_below_config_button->Enable(g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW));
+	autoborder_current_brush_checkbox->SetValue(g_settings.getBoolean(Config::AUTOBORDER_CURRENT_BRUSH_ONLY));
+	UpdateAutoborderPlacementButton();
 	lock_doors_checkbox->SetValue(g_settings.getInteger(Config::DRAW_LOCKED_DOOR));
 	const int thickness_percent = g_brush_manager.UseCustomThickness() ? std::clamp(static_cast<int>(g_brush_manager.GetCustomThicknessMod() * 100.0f), MIN_THICKNESS, MAX_THICKNESS) : MAX_THICKNESS;
 	thickness_slider->SetValue(thickness_percent);
@@ -418,11 +432,12 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 	const bool show_thickness = HasThicknessControl();
 	const bool show_preview_border = HasPreviewBorderControl();
 	const bool show_draw_on_floor_below = HasDrawOnFloorBelowControl();
+	const bool show_autoborder_scope = HasAutoborderScopeControl();
 	const bool show_lock_doors = HasLockDoorsControl();
 	const bool show_spawn_controls = HasSpawnControls();
 	const bool show_weight = HasWeightControl();
 	const bool show_randomize_doodads = HasRandomizeDoodadsControl();
-	const bool show_other = show_thickness || show_preview_border || show_draw_on_floor_below || show_lock_doors || show_spawn_controls || show_weight || show_randomize_doodads;
+	const bool show_other = show_thickness || show_preview_border || show_draw_on_floor_below || show_autoborder_scope || show_lock_doors || show_spawn_controls || show_weight || show_randomize_doodads;
 
 	main_sizer->Show(main_tools_sizer, show_tools, true);
 	main_sizer->Show(size_sizer, show_size, true);
@@ -435,6 +450,7 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 	DetachWindowIfPresent(other_sizer, weight_panel);
 	DetachWindowIfPresent(other_sizer, preview_border_checkbox);
 	DetachWindowIfPresent(other_sizer, draw_below_panel);
+	DetachWindowIfPresent(other_sizer, autoborder_scope_panel);
 	DetachWindowIfPresent(other_sizer, lock_doors_checkbox);
 	DetachWindowIfPresent(other_sizer, randomize_doodads_checkbox);
 
@@ -454,6 +470,9 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 	}
 	if (show_draw_on_floor_below) {
 		AddWindowToSizer(other_sizer, draw_below_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6));
+	}
+	if (show_autoborder_scope) {
+		AddWindowToSizer(other_sizer, autoborder_scope_panel, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6));
 	}
 	if (show_lock_doors) {
 		AddWindowToSizer(other_sizer, lock_doors_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6));
@@ -485,6 +504,16 @@ void ToolOptionsSurface::UpdateModeButtons() {
 		const auto bitmap = CreateModeBitmap(connected ? "svg/solid/link.svg" : "svg/solid/unlink.svg", connected ? MODE_ON_COLOUR : MODE_OFF_COLOUR);
 		ConfigureFlatModeButton(aspect_button, bitmap);
 	}
+}
+
+void ToolOptionsSurface::UpdateAutoborderPlacementButton() {
+	if (!autoborder_placement_button) {
+		return;
+	}
+
+	const bool on_top = BorderUpdate::PlacementFromSetting(g_settings.getInteger(Config::AUTOBORDER_PLACEMENT)) == BorderUpdate::Placement::Top;
+	autoborder_placement_button->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(on_top ? ICON_ANGLES_UP : ICON_ANGLES_DOWN));
+	autoborder_placement_button->SetToolTip(on_top ? "Apply border on top: new borders are drawn above existing borders. Click to change." : "Apply border on bottom: new borders are drawn beneath existing borders. Click to change.");
 }
 
 void ToolOptionsSurface::SyncToolSelection() {
@@ -566,6 +595,38 @@ void ToolOptionsSurface::OnDrawOnFloorBelowToggled(wxCommandEvent& event) {
 void ToolOptionsSurface::OnDrawOnFloorBelowConfigClicked(wxCommandEvent& WXUNUSED(event)) {
 	FloorBelowOffsetDialog dlg(this);
 	dlg.ShowModal();
+	g_gui.FocusCurrentMapCanvas();
+}
+
+bool ToolOptionsSurface::HasAutoborderScopeControl() const {
+	return active_brush && active_brush->is<GroundBrush>() && g_settings.getBoolean(Config::USE_AUTOMAGIC);
+}
+
+void ToolOptionsSurface::OnAutoborderCurrentBrushToggled(wxCommandEvent& event) {
+	if (IsMutatingUi()) {
+		return;
+	}
+
+	g_settings.setInteger(Config::AUTOBORDER_CURRENT_BRUSH_ONLY, event.IsChecked() ? 1 : 0);
+	g_gui.RefreshView();
+	g_gui.FocusCurrentMapCanvas();
+}
+
+void ToolOptionsSurface::OnAutoborderPlacementClicked(wxCommandEvent& WXUNUSED(event)) {
+	const BorderUpdate::Placement current = BorderUpdate::PlacementFromSetting(g_settings.getInteger(Config::AUTOBORDER_PLACEMENT));
+
+	wxMenu menu;
+	menu.AppendRadioItem(TOOL_OPTIONS_BORDER_PLACEMENT_TOP, "Apply border on top")->Check(current == BorderUpdate::Placement::Top);
+	menu.AppendRadioItem(TOOL_OPTIONS_BORDER_PLACEMENT_BOTTOM, "Apply border on bottom")->Check(current == BorderUpdate::Placement::Bottom);
+
+	const wxRect button_rect = autoborder_placement_button->GetRect();
+	const int selected = autoborder_scope_panel->GetPopupMenuSelectionFromUser(menu, wxPoint(button_rect.GetLeft(), button_rect.GetBottom()));
+	if (selected == TOOL_OPTIONS_BORDER_PLACEMENT_TOP || selected == TOOL_OPTIONS_BORDER_PLACEMENT_BOTTOM) {
+		const BorderUpdate::Placement placement = selected == TOOL_OPTIONS_BORDER_PLACEMENT_TOP ? BorderUpdate::Placement::Top : BorderUpdate::Placement::Bottom;
+		g_settings.setInteger(Config::AUTOBORDER_PLACEMENT, BorderUpdate::PlacementToSetting(placement));
+		UpdateAutoborderPlacementButton();
+		g_gui.RefreshView();
+	}
 	g_gui.FocusCurrentMapCanvas();
 }
 

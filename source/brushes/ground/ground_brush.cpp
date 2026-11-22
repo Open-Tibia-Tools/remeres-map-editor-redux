@@ -44,7 +44,56 @@ GroundBrush::~GroundBrush() {
 }
 
 bool GroundBrush::load(pugi::xml_node node, std::vector<std::string>& warnings) {
-	return GroundBrushLoader::load(*this, node, warnings);
+	const bool loaded = GroundBrushLoader::load(*this, node, warnings);
+	// A failed load can still have added borders, so the cache follows either way.
+	rebuildBorderOwnership();
+	return loaded;
+}
+
+void GroundBrush::rebuildBorderOwnership() {
+	border_ownership.clear();
+	for (const auto& bb : borders) {
+		if (bb->autoborder) {
+			border_ownership.items.insertAll(bb->autoborder->tiles);
+		}
+		// Only replacement results belong to this brush. to_replace_id and the match
+		// conditions may name another brush's border items, which stay that brush's;
+		// the fused entry records them so a joint result is not torn apart.
+		for (const auto& sc : bb->specific_cases) {
+			if (sc->with_id == 0) {
+				continue;
+			}
+			border_ownership.items.insert(sc->with_id);
+
+			BorderUpdate::FusedBorder fused;
+			fused.result_id = sc->with_id;
+			fused.replaced_id = sc->to_replace_id;
+			for (const uint16_t source : sc->items_to_match) {
+				// A match_group condition stores the group number, not an item id.
+				if (sc->match_group == 0 || source != sc->match_group) {
+					fused.sources.push_back(source);
+				}
+			}
+			border_ownership.fused.push_back(std::move(fused));
+		}
+	}
+	if (optional_border) {
+		border_ownership.items.insertAll(optional_border->tiles);
+	}
+}
+
+bool GroundBrush::usesAutoBorder(const AutoBorder* border) const {
+	if (!border) {
+		return false;
+	}
+	if (border == optional_border) {
+		return true;
+	}
+	return std::ranges::any_of(borders, [border](const auto& bb) { return bb->autoborder == border; });
+}
+
+bool GroundBrush::ownsBorderBlock(const BorderBlock* block) const {
+	return std::ranges::any_of(borders, [block](const auto& bb) { return bb.get() == block; });
 }
 
 void GroundBrush::undraw(BaseMap* map, Tile* tile) {
@@ -135,8 +184,8 @@ inline GroundBrush* extractGroundBrushFromTile(BaseMap* map, uint32_t x, uint32_
 	return t ? t->getGroundBrush() : nullptr;
 }
 
-void GroundBrush::doBorders(BaseMap* map, Tile* tile) {
-	GroundBorderCalculator::calculate(map, tile);
+void GroundBrush::doBorders(BaseMap* map, Tile* tile, const BorderUpdate::Options& options) {
+	GroundBorderCalculator::calculate(map, tile, options);
 }
 void GroundBrush::getRelatedItems(std::vector<uint16_t>& items) {
 	for (const auto& item_block : border_items) {
