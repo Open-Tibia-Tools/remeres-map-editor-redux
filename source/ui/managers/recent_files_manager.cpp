@@ -54,7 +54,7 @@ void RecentFilesManager::Save() {
 }
 
 void RecentFilesManager::AddFile(const FileName& file) {
-	recentFiles.AddFileToHistory(file.GetFullPath());
+	recentFiles.AddFileToHistory(wxString(file.wstring()));
 }
 
 void RecentFilesManager::UseMenu(wxMenu* menu) {

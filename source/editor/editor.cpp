@@ -15,7 +15,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "editor/editor.h"
 #include "editor/action_queue.h"
@@ -23,8 +23,6 @@
 #include "map/map.h"
 #include "game/complexitem.h"
 #include "app/settings.h"
-#include "ui/gui.h"
-#include "rendering/ui/map_display.h"
 #include "brushes/brush.h"
 #include "brushes/ground/ground_brush.h"
 #include "brushes/wall/wall_brush.h"
@@ -36,7 +34,6 @@
 #include "brushes/creature/creature_brush.h"
 #include "brushes/spawn/spawn_brush.h"
 
-#include "live/live_server.h"
 #include "live/live_client.h"
 #include "live/live_action.h"
 
@@ -55,14 +52,14 @@ Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version) :
 	map.initializeEmpty();
 }
 
-Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, const FileName& fn, const MapLoadOptions& load_options) :
+Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, const std::filesystem::path& fn, const MapLoadOptions& load_options, EditorPersistence::ProgressCallback on_progress) :
 	live_manager(*this),
 	actionQueue(new ActionQueue(*this)),
 	selection(*this),
 	copybuffer(copybuffer),
 	replace_brush(nullptr) {
 	spdlog::info("Editor created (From File) [Editor={}]", (void*)this);
-	EditorPersistence::loadMap(*this, fn, load_options);
+	EditorPersistence::loadMap(*this, fn, load_options, std::move(on_progress));
 }
 
 Editor::Editor(CopyBuffer& copybuffer, const MapVersion& version, std::unique_ptr<LiveClient> client) :
@@ -81,7 +78,6 @@ Editor::~Editor() {
 		live_manager.CloseServer();
 	}
 
-	UnnamedRenderingLock();
 	selection.clear();
 	spdlog::info("Editor destroyed [Editor={}]", (void*)this);
 }
@@ -102,54 +98,61 @@ void Editor::addAction(std::unique_ptr<Action> action, int stacking_delay) {
 	notifyStateChange();
 }
 
-void Editor::borderizeSelection() {
-	SelectionOperations::borderizeSelection(*this);
+bool Editor::borderizeSelection() {
+	return SelectionOperations::borderizeSelection(*this);
 }
 
-void Editor::borderizeMap(bool showdialog) {
-	MapProcessor::borderizeMap(*this, showdialog);
+void Editor::borderizeMap(std::function<void(int)> on_progress) {
+	MapProcessor::borderizeMap(*this, on_progress);
 }
 
-void Editor::randomizeSelection() {
-	SelectionOperations::randomizeSelection(*this);
+bool Editor::randomizeSelection() {
+	return SelectionOperations::randomizeSelection(*this);
 }
 
-void Editor::randomizeMap(bool showdialog) {
-	MapProcessor::randomizeMap(*this, showdialog);
+void Editor::randomizeMap(std::function<void(int)> on_progress) {
+	MapProcessor::randomizeMap(*this, on_progress);
 }
 
-void Editor::clearInvalidHouseTiles(bool showdialog) {
-	MapProcessor::clearInvalidHouseTiles(*this, showdialog);
+void Editor::clearInvalidHouseTiles(std::function<void(int)> on_progress) {
+	MapProcessor::clearInvalidHouseTiles(*this, on_progress);
 }
 
-void Editor::clearModifiedTileState(bool showdialog) {
-	MapProcessor::clearModifiedTileState(*this, showdialog);
+void Editor::clearModifiedTileState(std::function<void(int)> on_progress) {
+	MapProcessor::clearModifiedTileState(*this, on_progress);
 }
 
 void Editor::moveSelection(Position offset) {
 	SelectionOperations::moveSelection(*this, offset);
 }
 
-void Editor::destroySelection() {
-	SelectionOperations::destroySelection(*this);
+DestroySelectionResult Editor::destroySelection() {
+	return SelectionOperations::destroySelection(*this);
 }
 
 // Helper functions moved to SelectionOperations
 
-void Editor::drawInternal(Position offset, bool alt, bool dodraw) {
-	DrawOperations::draw(*this, offset, alt, dodraw);
+void Editor::markTileModified(const Position& pos) {
+	map.getChangeTracker().markTileDirty(pos);
+	if (onTileModified) {
+		onTileModified(pos);
+	}
 }
 
-void Editor::drawInternal(const PositionVector& tilestodraw, bool alt, bool dodraw) {
-	DrawOperations::draw(*this, tilestodraw, alt, dodraw);
+void Editor::drawInternal(Brush* brush, Position offset, bool alt, bool dodraw, int brush_size) {
+	DrawOperations::draw(*this, brush, offset, alt, dodraw, brush_size);
 }
 
-void Editor::drawInternal(const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw) {
-	DrawOperations::draw(*this, tilestodraw, tilestoborder, alt, dodraw);
+void Editor::drawInternal(Brush* brush, const PositionVector& tilestodraw, bool alt, bool dodraw, int brush_size) {
+	DrawOperations::draw(*this, brush, tilestodraw, alt, dodraw, brush_size);
 }
 
-void Editor::drawGroundHoleToFloorBelow(const PositionVector& tilestodraw, const PositionVector& tilestoborder) {
-	DrawOperations::punchGroundToFloorBelow(*this, tilestodraw, tilestoborder);
+void Editor::drawInternal(Brush* brush, const PositionVector& tilestodraw, PositionVector& tilestoborder, bool alt, bool dodraw, int brush_size) {
+	DrawOperations::draw(*this, brush, tilestodraw, tilestoborder, alt, dodraw, brush_size);
+}
+
+void Editor::drawGroundHoleToFloorBelow(Brush* brush, const PositionVector& tilestodraw, const PositionVector& tilestoborder) {
+	DrawOperations::drawGroundHoleToFloorBelow(*this, brush, tilestodraw, tilestoborder);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

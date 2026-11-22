@@ -7,8 +7,8 @@
 
 #include "brushes/doodad/doodad_brush_types.h"
 #include "brushes/doodad/doodad_brush_items.h"
-#include <wx/string.h>
-#include <wx/arrstr.h>
+#include <string>
+#include <vector>
 
 // Forward declarations
 namespace pugi {

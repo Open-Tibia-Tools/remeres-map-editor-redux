@@ -127,22 +127,65 @@ void LightCache::invalidateTile(int32_t x, int32_t y, int32_t z) {
 }
 
 void LightCache::prune(int current_floor, uint64_t current_frame) {
-	size_t evicted_count = 0;
+	size_t far_floor_evicted = 0;
 	for (auto it = chunks_.begin(); it != chunks_.end(); ) {
 		const uint64_t age = current_frame - it->second.last_accessed_frame;
 		const bool is_far_floor = std::abs(it->first.z - current_floor) > 2;
 
 		if (is_far_floor && age > FAR_FLOOR_FRAME_THRESHOLD) {
 			it = chunks_.erase(it);
-			++evicted_count;
+			++far_floor_evicted;
 		} else {
 			++it;
 		}
 	}
-	if (evicted_count > 0) {
-		spdlog::info("[LightCache] Pruned {} stale light chunk(s) | Remaining: {} cached",
-			evicted_count, chunks_.size());
+
+	size_t lru_evicted = 0;
+	if (chunks_.size() > MAX_CACHED_LIGHT_CHUNKS) {
+		const size_t needed = chunks_.size() - TARGET_CACHED_LIGHT_CHUNKS;
+		evictOldest(needed, current_frame);
+		lru_evicted = needed;
 	}
+
+	const size_t total_evicted = far_floor_evicted + lru_evicted;
+	if (total_evicted > 0) {
+		spdlog::info("[LightCache] Pruned {} light chunk(s) ({} far floor, {} LRU) | Remaining: {}/{}",
+			total_evicted, far_floor_evicted, lru_evicted, chunks_.size(), MAX_CACHED_LIGHT_CHUNKS);
+	}
+}
+
+void LightCache::evictOldest(size_t count_to_remove, uint64_t current_frame) {
+	if (count_to_remove == 0 || chunks_.empty()) {
+		return;
+	}
+
+	std::vector<std::pair<uint64_t, ChunkCoord>> candidates;
+	candidates.reserve(chunks_.size());
+
+	for (const auto& [coord, chunk] : chunks_) {
+		if (chunk.last_accessed_frame < current_frame) {
+			candidates.emplace_back(chunk.last_accessed_frame, coord);
+		}
+	}
+
+	if (candidates.empty()) {
+		return;
+	}
+
+	const size_t num_evict = std::min(count_to_remove, candidates.size());
+	std::partial_sort(
+		candidates.begin(),
+		candidates.begin() + num_evict,
+		candidates.end(),
+		[](const auto& a, const auto& b) { return a.first < b.first; }
+	);
+
+	for (size_t i = 0; i < num_evict; ++i) {
+		chunks_.erase(candidates[i].second);
+	}
+
+	spdlog::warn("[LightCache] High-water mark exceeded (>{} chunks)! LRU evicted {} oldest chunks | Remaining: {}",
+		MAX_CACHED_LIGHT_CHUNKS, num_evict, chunks_.size());
 }
 
 void LightCache::bakeChunk(

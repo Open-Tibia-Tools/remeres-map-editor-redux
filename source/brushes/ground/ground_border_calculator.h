@@ -5,7 +5,7 @@
 #ifndef RME_GROUND_BORDER_CALCULATOR_H
 #define RME_GROUND_BORDER_CALCULATOR_H
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 class BaseMap;
 class Tile;

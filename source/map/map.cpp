@@ -15,14 +15,13 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
-
-#include "ui/gui.h" // loadbar
+#include "app/definitions.h"
 
 #include "map/map.h"
 #include "map/map_converter.h"
 #include "map/map_spawn_manager.h"
 
+#include <filesystem>
 #include <sstream>
 #include <algorithm>
 #include <ranges>
@@ -81,7 +80,7 @@ Map::~Map() {
 	spdlog::info("Map destroying [Map={}]", static_cast<void*>(this));
 }
 
-bool Map::open(const std::string& file) {
+bool Map::open(const std::string& file, std::function<void(int, std::string_view)> progress_cb) {
 	if (file == filename) {
 		return true; // Do not reopen ourselves!
 	}
@@ -90,8 +89,13 @@ bool Map::open(const std::string& file) {
 	tilecount = 0;
 
 	IOMapOTBM maploader(getVersion());
+	if (progress_cb) {
+		maploader.setProgressCallback([progress_cb](int percent, std::string_view msg) {
+			progress_cb(percent, msg);
+		});
+	}
 
-	bool success = maploader.loadMap(*this, wxstr(file));
+	bool success = maploader.loadMap(*this, file);
 
 	mapVersion = maploader.version;
 
@@ -105,33 +109,33 @@ bool Map::open(const std::string& file) {
 	has_changed = false;
 	change_tracker.markAllDirty();
 
-	wxFileName fn = wxstr(file);
-	filename = fn.GetFullPath().ToStdString();
-	name = fn.GetFullName().ToStdString();
+	std::filesystem::path fn = std::filesystem::u8path(file);
+	filename = fn.string();
+	name = fn.filename().string();
 
 	// convert(getReplacementMapClassic(), true);
 
 	return true;
 }
 
-bool Map::convert(MapVersion to, bool showdialog) {
-	return MapConverter::convert(*this, to, showdialog);
+bool Map::convert(MapVersion to) {
+	return MapConverter::convert(*this, to);
 }
 
-bool Map::convert(const ConversionMap& rm, bool showdialog) {
-	return MapConverter::convert(*this, rm, showdialog);
+bool Map::convert(const ConversionMap& rm, ProgressCallback progress_cb) {
+	return MapConverter::convert(*this, rm, progress_cb);
 }
 
-void Map::cleanInvalidTiles(bool showdialog) {
-	MapConverter::cleanInvalidTiles(*this, showdialog);
+void Map::cleanInvalidTiles(ProgressCallback progress_cb) {
+	MapConverter::cleanInvalidTiles(*this, progress_cb);
 }
 
-void Map::cleanInvalidZones(bool showdialog) {
-	MapConverter::cleanInvalidZones(*this, showdialog);
+void Map::cleanInvalidZones(ProgressCallback progress_cb) {
+	MapConverter::cleanInvalidZones(*this, progress_cb);
 }
 
-void Map::convertHouseTiles(uint32_t fromId, uint32_t toId) {
-	MapConverter::convertHouseTiles(*this, fromId, toId);
+void Map::convertHouseTiles(uint32_t fromId, uint32_t toId, ProgressCallback progress_cb) {
+	MapConverter::convertHouseTiles(*this, fromId, toId, progress_cb);
 }
 
 void Map::updateTownIdForHouses(uint32_t old_town_id, uint32_t new_town_id) {

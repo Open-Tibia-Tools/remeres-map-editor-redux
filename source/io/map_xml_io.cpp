@@ -2,7 +2,7 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "map_xml_io.h"
 #include "map/map.h"
 #include "map/tile.h"
@@ -13,7 +13,6 @@
 #include "game/town.h"
 #include "game/house.h"
 #include "app/settings.h"
-#include "ui/gui.h"
 
 #include <spdlog/spdlog.h>
 #include <algorithm>
@@ -22,26 +21,23 @@
 #include <filesystem>
 #include <ranges>
 
-std::pair<std::string, std::string> MapXMLIO::normalizeMapFilePaths(const wxFileName& dir, const std::string& filename) {
-	wxFileName resolved(dir.GetPath(wxPATH_GET_SEPARATOR | wxPATH_GET_VOLUME), wxstr(filename));
-	resolved.Normalize(wxPATH_NORM_ALL, dir.GetPath());
+std::pair<std::string, std::string> MapXMLIO::normalizeMapFilePaths(const std::filesystem::path& dir, const std::string& filename) {
+	std::filesystem::path base = std::filesystem::is_directory(dir) ? dir : dir.parent_path();
+	std::filesystem::path resolved = base / filename;
+	std::error_code ec;
+	resolved = std::filesystem::weakly_canonical(resolved, ec);
 
 	// Security: Prevent path traversal attacks by ensuring the resolved sidecar path
 	// remains strictly contained within the map directory.
-	const wxString base_dir = dir.GetPath();
-	wxString base_dir_with_sep = dir.GetPath(wxPATH_GET_SEPARATOR | wxPATH_GET_VOLUME);
-	if (!base_dir_with_sep.EndsWith(wxFileName::GetPathSeparator())) {
-		base_dir_with_sep += wxFileName::GetPathSeparator();
-	}
-	if (filename.find("..") != std::string::npos || (resolved.IsAbsolute() && !resolved.GetFullPath().StartsWith(base_dir_with_sep))) {
+	std::filesystem::path canonical_base = std::filesystem::weakly_canonical(base, ec);
+	auto rel = resolved.lexically_relative(canonical_base);
+	if (filename.find("..") != std::string::npos || rel.empty() || rel.is_absolute() || rel.string().starts_with("..")) {
 		spdlog::warn("MapXMLIO: Sidecar file '{}' attempts path traversal outside map directory. Constraining to base name.", filename);
-		resolved = wxFileName(base_dir, resolved.GetFullName());
+		resolved = base / std::filesystem::path(filename).filename();
 	}
 
-	std::string utf8_path = resolved.GetFullPath().ToStdString();
-	std::string encoded_path = resolved.GetFullPath().ToStdString();
-
-	return { utf8_path, encoded_path };
+	std::string s = resolved.string();
+	return { s, s };
 }
 
 namespace {
@@ -59,7 +55,7 @@ namespace {
 
 	bool loadXMLFile(pugi::xml_document& doc, const std::string& path_utf8, const std::string& path_local) {
 #if defined(_WIN32)
-		return doc.load_file(wxstr(path_utf8).wc_str());
+		return doc.load_file(std::filesystem::u8path(path_utf8).c_str());
 #else
 		return doc.load_file(path_utf8.c_str());
 #endif
@@ -68,11 +64,12 @@ namespace {
 	bool saveXMLFile(const pugi::xml_document& doc, const std::string& path_utf8, const std::string& path_local) {
 		std::error_code ec;
 #if defined(_WIN32)
-		std::filesystem::create_directories(std::filesystem::path(wxstr(path_utf8).wc_str()).parent_path(), ec);
-		return doc.save_file(wxstr(path_utf8).wc_str(), "\t", pugi::format_default, pugi::encoding_utf8);
+		auto p = std::filesystem::u8path(path_utf8);
+		std::filesystem::create_directories(p.parent_path(), ec);
+		return doc.save_file(p.c_str(), "	", pugi::format_default, pugi::encoding_utf8);
 #else
 		std::filesystem::create_directories(std::filesystem::path(path_utf8).parent_path(), ec);
-		return doc.save_file(path_utf8.c_str(), "\t", pugi::format_default, pugi::encoding_utf8);
+		return doc.save_file(path_utf8.c_str(), "	", pugi::format_default, pugi::encoding_utf8);
 #endif
 	}
 
@@ -81,9 +78,9 @@ namespace {
 	constexpr SpawnFileFormat MONSTERS_SPAWN_FILE { "monsters", "monster", CreatureFilter::Monsters };
 	constexpr SpawnFileFormat NPCS_SPAWN_FILE { "npcs", "npc", CreatureFilter::Npcs };
 
-	bool loadSpawnFile(Map& map, const wxFileName& dir, const std::string& filename) {
+	bool loadSpawnFile(Map& map, const std::filesystem::path& dir, const std::string& filename) {
 		auto paths = MapXMLIO::normalizeMapFilePaths(dir, filename);
-		if (!FileName(wxstr(paths.first)).FileExists()) {
+		if (!std::filesystem::exists(paths.first)) {
 			return false;
 		}
 
@@ -375,7 +372,7 @@ namespace {
 		}));
 	}
 
-	bool saveSpawnFile(const Map& map, const wxFileName& dir, const std::string& filename, const SpawnFileFormat& format, const MapXMLIO::CancelCheck& shouldCancel, const ItemProgress& report) {
+	bool saveSpawnFile(const Map& map, const std::filesystem::path& dir, const std::string& filename, const SpawnFileFormat& format, const MapXMLIO::CancelCheck& shouldCancel, const ItemProgress& report) {
 		if (filename.empty()) {
 			return false;
 		}
@@ -394,15 +391,15 @@ namespace {
 	}
 }
 
-bool MapXMLIO::loadSpawns(Map& map, const wxFileName& dir) {
+bool MapXMLIO::loadSpawns(Map& map, const std::filesystem::path& dir) {
 	return loadSpawnFile(map, dir, map.getSpawnFilename());
 }
 
-bool MapXMLIO::loadMonsterSpawns(Map& map, const wxFileName& dir) {
+bool MapXMLIO::loadMonsterSpawns(Map& map, const std::filesystem::path& dir) {
 	return loadSpawnFile(map, dir, map.getMonsterFilename());
 }
 
-bool MapXMLIO::loadNpcSpawns(Map& map, const wxFileName& dir) {
+bool MapXMLIO::loadNpcSpawns(Map& map, const std::filesystem::path& dir) {
 	return loadSpawnFile(map, dir, map.getNpcFilename());
 }
 
@@ -559,7 +556,7 @@ bool MapXMLIO::loadSpawns(Map& map, pugi::xml_document& doc) {
 	return true;
 }
 
-bool MapXMLIO::saveSpawns(const Map& map, const wxFileName& dir, const CancelCheck& shouldCancel, const ProgressReport& report) {
+bool MapXMLIO::saveSpawns(const Map& map, const std::filesystem::path& dir, const CancelCheck& shouldCancel, const ProgressReport& report) {
 	// The stage reports against the spawn list; the label travels with it so the
 	// dialog can name what is being written.
 	const auto withLabel = [&report](const std::string& label) -> ItemProgress {
@@ -572,8 +569,9 @@ bool MapXMLIO::saveSpawns(const Map& map, const wxFileName& dir, const CancelChe
 	};
 
 	if (map.getVersion().otbm == MAP_OTBM_5) {
-		const std::string monsterFile = map.getMonsterFilename().empty() ? (nstr(dir.GetName()) + "-monster.xml") : map.getMonsterFilename();
-		const std::string npcFile = map.getNpcFilename().empty() ? (nstr(dir.GetName()) + "-npc.xml") : map.getNpcFilename();
+		const std::string stem = dir.stem().string();
+		const std::string monsterFile = map.getMonsterFilename().empty() ? (stem + "-monster.xml") : map.getMonsterFilename();
+		const std::string npcFile = map.getNpcFilename().empty() ? (stem + "-npc.xml") : map.getNpcFilename();
 
 		pugi::xml_document monsterDoc;
 		pugi::xml_document npcDoc;
@@ -592,13 +590,14 @@ bool MapXMLIO::saveSpawns(const Map& map, const wxFileName& dir, const CancelChe
 		return true;
 	}
 
-	const std::string spawnFile = map.getSpawnFilename().empty() ? (nstr(dir.GetName()) + "-spawn.xml") : map.getSpawnFilename();
+	const std::string stem = dir.stem().string();
+	const std::string spawnFile = map.getSpawnFilename().empty() ? (stem + "-spawn.xml") : map.getSpawnFilename();
 	return saveSpawnFile(map, dir, spawnFile, STANDARD_SPAWN_FILE, shouldCancel, withLabel(spawnFile));
 }
 
-bool MapXMLIO::loadHouses(Map& map, const wxFileName& dir) {
+bool MapXMLIO::loadHouses(Map& map, const std::filesystem::path& dir) {
 	auto paths = normalizeMapFilePaths(dir, map.housefile);
-	if (!FileName(wxstr(paths.first)).FileExists()) {
+	if (!std::filesystem::exists(paths.second)) {
 		return false;
 	}
 
@@ -665,8 +664,8 @@ bool MapXMLIO::loadHouses(Map& map, pugi::xml_document& doc) {
 	return true;
 }
 
-bool MapXMLIO::saveHouses(const Map& map, const wxFileName& dir, const CancelCheck& shouldCancel) {
-	const std::string houseFile = map.getHouseFilename().empty() ? (nstr(dir.GetName()) + "-house.xml") : map.getHouseFilename();
+bool MapXMLIO::saveHouses(const Map& map, const std::filesystem::path& dir, const CancelCheck& shouldCancel) {
+	const std::string houseFile = map.getHouseFilename().empty() ? (dir.stem().string() + "-house.xml") : map.getHouseFilename();
 	auto paths = normalizeMapFilePaths(dir, houseFile);
 
 	pugi::xml_document doc;
@@ -719,7 +718,7 @@ bool MapXMLIO::saveHouses(const Map& map, pugi::xml_document& doc, const CancelC
 	return true;
 }
 
-bool MapXMLIO::loadZones(Map& map, const wxFileName& dir) {
+bool MapXMLIO::loadZones(Map& map, const std::filesystem::path& dir) {
 	auto paths = normalizeMapFilePaths(dir, map.zonefile);
 	pugi::xml_document doc;
 	if (!loadXMLFile(doc, paths.first, paths.second)) {
@@ -751,7 +750,7 @@ bool MapXMLIO::loadZones(Map& map, const wxFileName& dir) {
 	return true;
 }
 
-bool MapXMLIO::saveZones(const Map& map, const wxFileName& dir) {
+bool MapXMLIO::saveZones(const Map& map, const std::filesystem::path& dir) {
 	auto paths = normalizeMapFilePaths(dir, map.zonefile);
 
 	pugi::xml_document doc;
@@ -767,9 +766,9 @@ bool MapXMLIO::saveZones(const Map& map, const wxFileName& dir) {
 	return saveXMLFile(doc, paths.first, paths.second);
 }
 
-bool MapXMLIO::loadWaypoints(Map& map, const wxFileName& dir, bool replace) {
+bool MapXMLIO::loadWaypoints(Map& map, const std::filesystem::path& dir, bool replace) {
 	auto paths = normalizeMapFilePaths(dir, map.waypointfile);
-	if (!FileName(wxstr(paths.first)).FileExists()) {
+	if (!std::filesystem::exists(paths.second)) {
 		return false;
 	}
 
@@ -807,7 +806,7 @@ bool MapXMLIO::loadWaypoints(Map& map, pugi::xml_document& doc, bool replace) {
 	return loadWaypoints(map, doc.child("waypoints"), replace);
 }
 
-bool MapXMLIO::saveWaypoints(const Map& map, const wxFileName& dir, const CancelCheck& shouldCancel) {
+bool MapXMLIO::saveWaypoints(const Map& map, const std::filesystem::path& dir, const CancelCheck& shouldCancel) {
 	auto paths = normalizeMapFilePaths(dir, map.waypointfile);
 
 	pugi::xml_document doc;

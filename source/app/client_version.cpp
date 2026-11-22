@@ -18,21 +18,16 @@
 #include <toml++/toml.h>
 #include <charconv>
 #include <string>
-#include "app/main.h"
-
+#include <format>
+#include <fstream>
+#include "app/definitions.h"
 #include "app/settings.h"
 #include "io/filehandle.h"
 
-#include "ui/gui.h"
-
 #include "util/file_system.h"
-#include "ui/dialog_util.h"
 #include "app/client_version.h"
-#include <format>
+#include <spdlog/spdlog.h>
 #include "app/client_asset_detector.h"
-
-#include <wx/dir.h>
-#include <wx/filename.h>
 
 // Static methods to load/save
 
@@ -63,8 +58,9 @@ void ClientVersion::loadVersions() {
 					continue;
 				}
 
-				wxString client_path = wxstr((*client)["clientPath"].value_or(""));
-				if (!client_path.empty() && !wxFileName::DirExists(client_path)) {
+				std::string client_path_str = (*client)["clientPath"].value_or("");
+				std::filesystem::path client_path = std::filesystem::u8path(client_path_str);
+				if (!client_path.empty() && !std::filesystem::is_directory(client_path)) {
 					it = clients->erase(it);
 					changed = true;
 					continue;
@@ -73,7 +69,7 @@ void ClientVersion::loadVersions() {
 				ClientVersion* version = get(name);
 				if (version) {
 					// ONLY override the user-specific path
-					version->setClientPath(FileName(client_path));
+					version->setClientPath(client_path);
 
 					bool isDefault = (*client)["default"].value_or(false);
 					if (isDefault) {
@@ -93,42 +89,34 @@ void ClientVersion::loadVersions() {
 }
 
 void ClientVersion::loadVersionsFromTOML(const std::string& configName) {
-	wxFileName file_to_load;
+	std::filesystem::path file_to_load;
 
-	wxFileName exec_dir_client_toml;
-	exec_dir_client_toml.Assign(FileSystem::GetExecDirectory());
-	exec_dir_client_toml.SetFullName(configName);
-
-	wxFileName data_dir_client_toml;
-	data_dir_client_toml.Assign(FileSystem::GetDataDirectory());
-	data_dir_client_toml.SetFullName(configName);
-
-	wxFileName work_dir_client_toml;
-	work_dir_client_toml.Assign(FileSystem::GetFoundDataDirectory());
-	work_dir_client_toml.SetFullName(configName);
+	std::filesystem::path exec_dir_client_toml = FileSystem::GetExecDirectory() / configName;
+	std::filesystem::path data_dir_client_toml = FileSystem::GetDataDirectory() / configName;
+	std::filesystem::path work_dir_client_toml = FileSystem::GetFoundDataDirectory() / configName;
 
 	file_to_load = data_dir_client_toml; // Primary location
-	if (!file_to_load.FileExists()) {
+	if (!std::filesystem::exists(file_to_load)) {
 		file_to_load = exec_dir_client_toml;
-		if (!file_to_load.FileExists()) {
+		if (!std::filesystem::exists(file_to_load)) {
 			file_to_load = work_dir_client_toml;
-			if (!file_to_load.FileExists()) {
-				file_to_load.Clear();
+			if (!std::filesystem::exists(file_to_load)) {
+				file_to_load.clear();
 			}
 		}
 	}
 
-	if (!file_to_load.FileExists()) {
+	if (file_to_load.empty() || !std::filesystem::exists(file_to_load)) {
 		return;
 	}
 
-	loaded_file_path = file_to_load.GetFullPath().ToStdString();
+	loaded_file_path = file_to_load.string();
 
 	toml::table config;
 	try {
-		config = toml::parse_file(file_to_load.GetFullPath().ToStdString());
+		config = toml::parse_file(file_to_load.string());
 	} catch (const toml::parse_error& err) {
-		wxLogError("Parsing failed for %s: %s", configName, err.description());
+		spdlog::error("Parsing failed for {}: {}", configName, err.description());
 		return;
 	}
 
@@ -154,7 +142,7 @@ void ClientVersion::loadVersionsFromTOML(const std::string& configName) {
 
 			// Data Directory
 			std::string dataDirectory = client["dataDirectory"].value_or("");
-			std::unique_ptr<ClientVersion> cv = std::make_unique<ClientVersion>(otb, name, wxstr(dataDirectory));
+			std::unique_ptr<ClientVersion> cv = std::make_unique<ClientVersion>(otb, name, dataDirectory);
 
 			ClientVersion* cv_ptr = cv.get();
 			cv_ptr->version = version;
@@ -259,14 +247,11 @@ DatFormat ClientVersion::getDatFormatForVersion(int version) {
 }
 
 bool ClientVersion::isDefaultPath() const {
-	wxFileName clientPath = getClientPath();
-	wxFileName dataPath = getDataPath();
+	std::filesystem::path clientPath = getClientPath();
+	std::filesystem::path dataPath = getDataPath();
 
-	// Normalize both to ensure matching comparison and clean strings
-	clientPath.Normalize();
-	dataPath.Normalize();
-
-	return clientPath.GetFullPath() == dataPath.GetFullPath();
+	std::error_code ec;
+	return std::filesystem::equivalent(clientPath, dataPath, ec) || clientPath == dataPath;
 }
 
 bool ClientVersion::saveVersions() {
@@ -292,11 +277,11 @@ bool ClientVersion::saveVersions() {
 		db_obj.insert_or_assign("extended", version->is_extended);
 		db_obj.insert_or_assign("frameDurations", version->has_frame_durations);
 		db_obj.insert_or_assign("frameGroups", version->has_frame_groups);
-		db_obj.insert_or_assign("dataDirectory", nstr(version->data_path));
+		db_obj.insert_or_assign("dataDirectory", version->data_path);
 
 		if (!version->data_versions.empty()) {
-			db_obj.insert_or_assign("datSignature", fmt::format("{:X}", version->data_versions[0].datSignature));
-			db_obj.insert_or_assign("sprSignature", fmt::format("{:X}", version->data_versions[0].sprSignature));
+			db_obj.insert_or_assign("datSignature", std::format("{:X}", version->data_versions[0].datSignature));
+			db_obj.insert_or_assign("sprSignature", std::format("{:X}", version->data_versions[0].sprSignature));
 		}
 
 		toml::array otbmVers;
@@ -310,10 +295,9 @@ bool ClientVersion::saveVersions() {
 		// User config object (ONLY path)
 		toml::table config_obj;
 		config_obj.insert_or_assign("name", version->name);
-		wxFileName cp = version->getClientPath();
-		if (cp.IsOk() && !cp.GetFullPath().IsEmpty()) {
-			cp.Normalize();
-			config_obj.insert_or_assign("clientPath", nstr(cp.GetFullPath()));
+		std::filesystem::path cp = version->getClientPath();
+		if (!cp.empty()) {
+			config_obj.insert_or_assign("clientPath", cp.string());
 		} else {
 			config_obj.insert_or_assign("clientPath", "");
 		}
@@ -324,22 +308,19 @@ bool ClientVersion::saveVersions() {
 	// Save Database
 	db_table.insert_or_assign("clients", std::move(db_clients_array));
 
-	wxFileName db_file;
+	std::filesystem::path db_file;
 	if (!loaded_file_path.empty()) {
-		db_file.Assign(loaded_file_path);
+		db_file = loaded_file_path;
 	} else {
-		db_file.Assign(FileSystem::GetDataDirectory(), "clients.toml");
+		db_file = FileSystem::GetDataDirectory() / "clients.toml";
 	}
 
-	if (!db_file.DirExists()) {
-		if (!db_file.Mkdir(0755, wxPATH_MKDIR_FULL)) {
-			wxLogError("Failed to create directory for clients.toml: %s", db_file.GetPath());
-		}
-	}
+	std::error_code ec;
+	std::filesystem::create_directories(db_file.parent_path(), ec);
 
-	std::ofstream db_stream(db_file.GetFullPath().ToStdString());
+	std::ofstream db_stream(db_file);
 	if (!db_stream.is_open()) {
-		wxLogError("Failed to open clients.toml for writing: %s", db_file.GetFullPath());
+		spdlog::error("Failed to open clients.toml for writing: {}", db_file.string());
 		return false;
 	}
 	db_stream << db_table;
@@ -353,7 +334,7 @@ bool ClientVersion::saveVersions() {
 
 // Client version class
 
-ClientVersion::ClientVersion(OtbVersion otb, std::string versionName, wxString path) :
+ClientVersion::ClientVersion(OtbVersion otb, std::string versionName, std::string path) :
 	otb(otb),
 	version(0),
 	name(versionName),
@@ -463,33 +444,33 @@ void ClientVersion::setLatestVersion(ClientVersion* version) {
 }
 
 FileName ClientVersion::getDataPath() const {
-	wxString basePath = FileSystem::GetDataDirectory();
-	if (!wxFileName(basePath).DirExists()) {
+	std::filesystem::path basePath = FileSystem::GetDataDirectory();
+	std::error_code ec;
+	if (!std::filesystem::is_directory(basePath, ec)) {
 		basePath = FileSystem::GetFoundDataDirectory();
 	}
-	return basePath + data_path + FileName::GetPathSeparator();
+	return basePath / data_path;
 }
 
 FileName ClientVersion::getLocalDataPath() const {
-	FileName f = FileSystem::GetLocalDataDirectory() + data_path + FileName::GetPathSeparator();
-	f.Mkdir(0755, wxPATH_MKDIR_FULL);
+	FileName f = FileSystem::GetLocalDataDirectory() / data_path;
+	std::error_code ec;
+	std::filesystem::create_directories(f, ec);
 	return f;
 }
 
 bool ClientVersion::hasValidPaths() {
-	if (!client_path.DirExists()) {
+	if (!std::filesystem::is_directory(client_path)) {
 		return false;
 	}
-
-	wxDir dir(client_path.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
 
 	// OTFI loading removed (deprecated)
 	// Metadata and sprites paths are now set in loadVersionsFromTOML or defaulted.
 	// We just verify they exist here.
-	metadata_path = wxFileName(client_path.GetFullPath(), wxString(metadata_file));
-	sprites_path = wxFileName(client_path.GetFullPath(), wxString(sprites_file));
+	metadata_path = client_path / metadata_file;
+	sprites_path = client_path / sprites_file;
 
-	if (!metadata_path.FileExists() || !sprites_path.FileExists()) {
+	if (!std::filesystem::exists(metadata_path) || !std::filesystem::exists(sprites_path)) {
 		// protobuf should stick to catalog-content.json and the appearances file it references,
 		// whose hashed name changes with every client update
 		if (isProtobuf()) {
@@ -499,18 +480,18 @@ bool ClientVersion::hasValidPaths() {
 			}
 			metadata_file = *detected.metadata_file_name;
 			sprites_file = *detected.sprites_file_name;
-			metadata_path = wxFileName(client_path.GetFullPath(), wxString::FromUTF8(metadata_file));
-			sprites_path = wxFileName(client_path.GetFullPath(), wxString::FromUTF8(sprites_file));
-			return metadata_path.FileExists() && sprites_path.FileExists();
+			metadata_path = client_path / metadata_file;
+			sprites_path = client_path / sprites_file;
+			return std::filesystem::exists(metadata_path) && std::filesystem::exists(sprites_path);
 		}
 
 		// Fallback to "Tibia.dat" / "Tibia.spr" if the configured files don't exist
 		// This maintains some backward compatibility if the toml config is slightly off but files are standard
-		metadata_path = wxFileName(client_path.GetFullPath(), wxString(ASSETS_NAME) + ".dat");
-		sprites_path = wxFileName(client_path.GetFullPath(), wxString(ASSETS_NAME) + ".spr");
+		metadata_path = client_path / (std::string(ASSETS_NAME) + ".dat");
+		sprites_path = client_path / (std::string(ASSETS_NAME) + ".spr");
 	}
 
-	if (!metadata_path.FileExists() || !sprites_path.FileExists()) {
+	if (!std::filesystem::exists(metadata_path) || !std::filesystem::exists(sprites_path)) {
 		return false;
 	}
 
@@ -520,9 +501,9 @@ bool ClientVersion::hasValidPaths() {
 	}
 
 	// Peek the version of the files
-	FileReadHandle dat_file(metadata_path.GetFullPath().ToStdString());
+	FileReadHandle dat_file(metadata_path.string());
 	if (!dat_file.isOk()) {
-		wxLogError("Could not open metadata file.");
+		spdlog::error("Could not open metadata file: {}", metadata_path.string());
 		return false;
 	}
 
@@ -530,9 +511,9 @@ bool ClientVersion::hasValidPaths() {
 	dat_file.getU32(datSignature);
 	dat_file.close();
 
-	FileReadHandle spr_file(sprites_path.GetFullPath().ToStdString());
+	FileReadHandle spr_file(sprites_path.string());
 	if (!spr_file.isOk()) {
-		wxLogError("Could not open sprites file.");
+		spdlog::error("Could not open sprites file: {}", sprites_path.string());
 		return false;
 	}
 
@@ -546,43 +527,8 @@ bool ClientVersion::hasValidPaths() {
 		}
 	}
 
-	wxString message = wxstr(std::format(
-		"Signatures are incorrect.\n"
-		"Metadata signature: {:X}\n"
-		"Sprites signature: {:X}",
-		datSignature, sprSignature
-	));
-	wxLogError(message);
+	spdlog::error("Signatures are incorrect. Metadata signature: {:X}, Sprites signature: {:X}", datSignature, sprSignature);
 	return false;
-}
-
-bool ClientVersion::loadValidPaths() {
-	while (!hasValidPaths()) {
-		wxString message = wxstr(std::format(
-			"Could not locate metadata and/or sprite files, please navigate to your client assets {} installation folder.\n"
-			"Attempted metadata file: {}\n"
-			"Attempted sprites file: {}\n",
-			name, metadata_path.GetFullPath().ToStdString(), sprites_path.GetFullPath().ToStdString()
-		));
-
-		DialogUtil::PopupDialog("Error", message, wxOK);
-
-		wxString dirHelpText("Select assets directory.");
-		wxDirDialog file_dlg(nullptr, dirHelpText, "", wxDD_DIR_MUST_EXIST);
-		int ok = file_dlg.ShowModal();
-		if (ok == wxID_CANCEL) {
-			return false;
-		}
-
-		client_path.Assign(file_dlg.GetPath() + FileName::GetPathSeparator());
-	}
-
-	if (!ClientVersion::saveVersions()) {
-		wxLogError("Failed to save client versions after locating valid paths.");
-		return false;
-	}
-
-	return true;
 }
 
 DatFormat ClientVersion::getDatFormatForSignature(uint32_t signature) const {
@@ -612,11 +558,11 @@ bool ClientVersion::isVisible() const {
 }
 
 void ClientVersion::setClientPath(const FileName& dir) {
-	client_path.Assign(dir);
+	client_path = dir;
 }
 
 bool ClientVersion::hasConfiguredClientPath() const {
-	return client_path.IsOk() && !client_path.GetFullPath().IsEmpty();
+	return !client_path.empty();
 }
 
 MapVersionID ClientVersion::getPrefferedMapVersionID() const {
@@ -685,7 +631,7 @@ void ClientVersion::restore() {
 }
 
 std::unique_ptr<ClientVersion> ClientVersion::clone() const {
-	auto new_cv = std::make_unique<ClientVersion>(otb, name, data_path.ToStdString());
+	auto new_cv = std::make_unique<ClientVersion>(otb, name, data_path);
 	new_cv->version = version;
 	new_cv->visible = visible;
 	new_cv->is_transparent = is_transparent;

@@ -1,4 +1,4 @@
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "brushes/brush_footprint.h"
 

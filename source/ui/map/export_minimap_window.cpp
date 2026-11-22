@@ -147,8 +147,8 @@ void ExportMinimapWindow::OnChoiceChanged(wxCommandEvent& event) {
 }
 
 void ExportMinimapWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
-	const wxFileName directory = wxFileName::DirName(directory_text_field_->GetValue());
-	g_settings.setString(Config::MINIMAP_EXPORT_DIR, directory.GetFullPath().ToStdString());
+	const std::filesystem::path directory(directory_text_field_->GetValue().ToStdWstring());
+	g_settings.setString(Config::MINIMAP_EXPORT_DIR, directory.string());
 
 	MinimapExportOptions options {
 		.outputDirectory = directory,

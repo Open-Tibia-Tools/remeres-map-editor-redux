@@ -70,7 +70,7 @@ void ExtensionsDialog::OnClickOK(wxCommandEvent& evt) {
 }
 
 void ExtensionsDialog::OnClickOpenFolder(wxCommandEvent& evt) {
-	wxString cmd, extensionsDir = FileSystem::GetExtensionsDirectory();
+	wxString cmd, extensionsDir = wxstr(FileSystem::GetExtensionsDirectory().string());
 #if defined __WINDOWS__
 	cmd << "explorer";
 #elif defined __APPLE__

@@ -54,8 +54,8 @@ private:
 
 class BinaryWriter {
 public:
-	explicit BinaryWriter(const wxFileName& file) :
-		stream_(toPath(file), std::ios::binary) {
+	explicit BinaryWriter(const std::filesystem::path& file) :
+		stream_(file, std::ios::binary) {
 	}
 
 	[[nodiscard]] bool ok() const {
@@ -85,13 +85,6 @@ public:
 	}
 
 private:
-	[[nodiscard]] static std::filesystem::path toPath(const wxFileName& file) {
-#ifdef _WIN32
-		return std::filesystem::path(file.GetFullPath().ToStdWstring());
-#else
-		return std::filesystem::path(file.GetFullPath().ToStdString());
-#endif
-	}
 
 	std::ofstream stream_;
 };

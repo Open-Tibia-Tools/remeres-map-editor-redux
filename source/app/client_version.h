@@ -21,10 +21,7 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <wx/string.h>
-#include <wx/filename.h>
-
-#include "app/main.h"
+#include "app/definitions.h"
 #include "app/settings.h"
 #include "item_definitions/core/item_definition_types.h"
 
@@ -224,9 +221,12 @@ struct ClientData {
 class ClientVersion;
 using ClientVersionList = std::vector<ClientVersion*>;
 
-class ClientVersion : boost::noncopyable {
+class ClientVersion {
 public:
-	ClientVersion(OtbVersion otb, std::string versionName, wxString path);
+	ClientVersion(const ClientVersion&) = delete;
+	ClientVersion& operator=(const ClientVersion&) = delete;
+
+	ClientVersion(OtbVersion otb, std::string versionName, std::string path);
 	~ClientVersion() = default;
 
 	static void loadVersions();
@@ -256,7 +256,6 @@ public:
 	}
 
 	bool hasValidPaths();
-	bool loadValidPaths();
 	bool isDefaultPath() const;
 	void setClientPath(const FileName& dir);
 	bool hasConfiguredClientPath() const;
@@ -365,10 +364,10 @@ public:
 	}
 
 	std::string getDataDirectory() const {
-		return data_path.ToStdString();
+		return data_path;
 	}
 	void setDataDirectory(const std::string& v) {
-		data_path = wxstr(v);
+		data_path = v;
 	}
 
 	uint32_t getDatSignature() const {
@@ -448,10 +447,10 @@ public:
 	FileName getClientPath() const {
 		return client_path;
 	}
-	wxFileName getMetadataPath() const {
+	const std::filesystem::path& getMetadataPath() const {
 		return metadata_path;
 	}
-	wxFileName getSpritesPath() const {
+	const std::filesystem::path& getSpritesPath() const {
 		return sprites_path;
 	}
 
@@ -470,7 +469,7 @@ private:
 		bool has_frame_durations;
 		bool has_frame_groups;
 		FileName client_path;
-		wxString data_path;
+		std::string data_path;
 		MapVersionID preferred_map_version;
 		OtbVersion otb;
 		std::vector<ClientData> data_versions;
@@ -496,10 +495,10 @@ private:
 	std::vector<ClientData> data_versions;
 	std::vector<ClientVersion*> extension_versions;
 
-	wxString data_path;
+	std::string data_path;
 	FileName client_path;
-	wxFileName metadata_path;
-	wxFileName sprites_path;
+	std::filesystem::path metadata_path;
+	std::filesystem::path sprites_path;
 	std::string description;
 	ItemDefinitionMode item_definition_mode = ItemDefinitionMode::DatOtb;
 

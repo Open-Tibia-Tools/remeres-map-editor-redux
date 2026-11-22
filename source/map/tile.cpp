@@ -15,15 +15,13 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "brushes/brush.h"
 
 #include "editor/editor.h"
 #include "map/tile.h"
 #include "map/tile_operations.h"
-#include "ui/gui.h"
-#include "ui/managers/minimap_manager.h"
 #include "game/creature.h"
 #include "game/house.h"
 #include "map/basemap.h"
@@ -277,7 +275,7 @@ bool Tile::hasProperty(enum ITEMPROPERTY prop) const {
 
 int Tile::getIndexOf(Item* item) const {
 	if (!item) {
-		return wxNOT_FOUND;
+		return -1;
 	}
 
 	int index = 0;
@@ -294,7 +292,7 @@ int Tile::getIndexOf(Item* item) const {
 			return index;
 		}
 	}
-	return wxNOT_FOUND;
+	return -1;
 }
 
 Item* Tile::getTopItem() const {
@@ -416,12 +414,8 @@ void Tile::modify() {
 	statflags |= TILESTATE_MODIFIED;
 	minimapColor = INVALID_MINIMAP_COLOR;
 
-	if (Editor* editor = g_gui.GetCurrentEditor()) {
-		const Position position = getPosition();
-		editor->map.getChangeTracker().markTileDirty(position);
-		if (!ownedLocation && editor->map.getTile(position) == this) {
-			g_minimap.MarkTileDirty(editor->map, position);
-		}
+	if (s_modified_cb) {
+		s_modified_cb(this);
 	}
 
 	if (isSelected()) {

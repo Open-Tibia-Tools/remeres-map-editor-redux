@@ -4,6 +4,7 @@
 #include "item_definitions/core/item_definition_types.h"
 #include "app/client_version.h"
 
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -115,10 +116,10 @@ struct ItemDefinitionFragments {
 
 struct ItemDefinitionLoadInput {
 	ItemDefinitionMode mode = ItemDefinitionMode::DatOtb;
-	wxFileName dat_path;
-	wxFileName otb_path;
-	wxFileName xml_path;
-	std::vector<wxFileName> xml_paths;
+	std::filesystem::path dat_path;
+	std::filesystem::path otb_path;
+	std::filesystem::path xml_path;
+	std::vector<std::filesystem::path> xml_paths;
 	ClientVersion* client_version = nullptr;
 	GraphicManager* graphics = nullptr;
 	const DatCatalog* dat_catalog = nullptr;

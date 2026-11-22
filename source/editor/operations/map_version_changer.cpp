@@ -2,10 +2,8 @@
 
 #include "editor/editor.h"
 #include "editor/action_queue.h"
-#include "ui/gui.h"
-#include "ui/dialog_util.h"
 #include "app/managers/version_manager.h"
-#include "app/application.h"
+#include "game/creatures.h"
 #include "game/creature.h"
 #include "map/tile.h"
 
@@ -35,64 +33,44 @@ struct MapConversionContext {
 	}
 };
 
-bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVersion new_ver) {
+MapVersionChangeResult MapVersionChanger::changeMapVersion(Editor& editor, MapVersion new_ver, const MapConversionOptions& options) {
+	MapVersionChangeResult result;
 	Map& map = editor.map;
 	MapVersion old_ver = map.getVersion();
 
 	if (old_ver.otbm == MAP_OTBM_5 && new_ver.otbm < MAP_OTBM_5 && !map.zones.empty()) {
-		int ret = DialogUtil::PopupDialog(
-			parent,
-			"Warning: Zone Data Loss",
-			"Downgrading from OTBM 5 to an earlier OTBM version will permanently remove all Zone definitions and tile zone assignments when saving. Are you sure you want to proceed?",
-			wxYES | wxNO
-		);
-		if (ret != wxID_YES) {
-			return false;
-		}
+		result.warnings.push_back("Downgrading from OTBM 5 to an earlier OTBM version will permanently remove all Zone definitions and tile zone assignments when saving.");
 	}
 
 	const bool client_changed = (new_ver.client != old_ver.client || new_ver.items_major != old_ver.items_major);
 	if (client_changed) {
-		if (g_gui.GetOpenMapCount() > 1) {
-			DialogUtil::PopupDialog(parent, "Error", "You can not change editor version with multiple maps open", wxOK);
-			return false;
-		}
-		wxString error;
-		std::vector<std::string> warnings;
-
 		// Switch version
 		editor.selection.clear();
 		editor.actionQueue->clear();
 
 		const bool is_downgrade = (new_ver.client < old_ver.client) || (new_ver.client == old_ver.client && new_ver.items_major < old_ver.items_major);
 		if (is_downgrade) {
-			int ret = DialogUtil::PopupDialog(parent, "Notice", "Converting to a previous version may have serious side-effects, are you sure you want to do this?", wxYES | wxNO);
-			if (ret != wxID_YES) {
-				return false;
-			}
-			UnnamedRenderingLock();
+			result.warnings.push_back("Converting to a previous version may have serious side-effects.");
 
 			// Remember all creatures types on the map
 			MapConversionContext conversion_context;
 			foreach_TileOnMap(map, conversion_context);
 
 			// Perform the conversion
-			map.convert(new_ver, true);
+			map.convert(new_ver);
 
 			// Load the new version
 			ClientVersion* target = ClientVersion::getByItemsVersion(new_ver.items_major, new_ver.client);
 			if (!target) {
 				target = ClientVersion::getBestMatch(new_ver.client);
 			}
-			if (!target || !g_version.LoadVersion(target->getID(), error, warnings)) {
-				DialogUtil::ListDialog(parent, "Warnings", warnings);
-				if (error.empty() && !target) {
-					error = "No compatible client version found for this protocol.";
+			std::string load_error_1;
+			if (!target || !g_version.LoadVersion(target->getID(), load_error_1, result.warnings)) {
+				result.error = load_error_1;
+				if (result.error.empty() && !target) {
+					result.error = "No compatible client version found for this protocol.";
 				}
-				DialogUtil::PopupDialog(parent, "Map Loader Error", error, wxOK);
-				DialogUtil::PopupDialog(parent, "Conversion Error", "Could not convert map. The map will now be closed.", wxOK);
-
-				return false;
+				return result;
 			}
 
 			// Remove all creatures that were present are present in the new version
@@ -100,36 +78,31 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 				return g_creatures[pair.first] != nullptr;
 			});
 
-			if (!conversion_context.creature_types.empty()) {
-				int add = DialogUtil::PopupDialog(parent, "Unrecognized creatures", "There were creatures on the old version that are not present in this and were on the map, do you want to add them to this version as well?", wxYES | wxNO);
-				if (add == wxID_YES) {
-					for (const auto& [name, info] : conversion_context.creature_types) {
-						g_creatures.addCreatureType(info.name, info.is_npc, info.outfit);
-					}
+			if (!conversion_context.creature_types.empty() && options.keep_unrecognized_creatures) {
+				for (const auto& [name, info] : conversion_context.creature_types) {
+					g_creatures.addCreatureType(info.name, info.is_npc, info.outfit);
 				}
 			}
 
-			map.cleanInvalidTiles(true);
+			map.cleanInvalidTiles();
 		} else {
-			UnnamedRenderingLock();
 			ClientVersion* target = ClientVersion::getByItemsVersion(new_ver.items_major, new_ver.client);
 			if (!target) {
 				target = ClientVersion::getBestMatch(new_ver.client);
 			}
-			if (!target || !g_version.LoadVersion(target->getID(), error, warnings)) {
-				DialogUtil::ListDialog(parent, "Warnings", warnings);
-				if (error.empty() && !target) {
-					error = "No compatible client version found for this protocol.";
+			std::string load_error_2;
+			if (!target || !g_version.LoadVersion(target->getID(), load_error_2, result.warnings)) {
+				result.error = load_error_2;
+				if (result.error.empty() && !target) {
+					result.error = "No compatible client version found for this protocol.";
 				}
-				DialogUtil::PopupDialog(parent, "Map Loader Error", error, wxOK);
-				DialogUtil::PopupDialog(parent, "Conversion Error", "Could not convert map. The map will now be closed.", wxOK);
-
-				return false;
+				return result;
 			}
-			map.convert(new_ver, true);
+			map.convert(new_ver);
 		}
 	} else {
-		map.convert(new_ver, true);
+		map.convert(new_ver);
 	}
-	return true;
+	result.success = true;
+	return result;
 }

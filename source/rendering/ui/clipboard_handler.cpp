@@ -38,13 +38,23 @@ int ClampCopyPositionFormat(int format) {
 
 void ClipboardHandler::copy(Editor& editor, int floor) {
 	if (g_gui.IsSelectionMode()) {
-		editor.copybuffer.copy(editor, floor);
+		auto result = editor.copybuffer.copy(editor, floor);
+		if (result.empty) {
+			g_gui.SetStatusText("No tiles to copy.");
+		} else {
+			g_gui.SetStatusText(std::format("Copied {} tile{} ({} item{})", result.tile_count, (result.tile_count > 1 ? "s" : ""), result.item_count, (result.item_count > 1 ? "s" : "")));
+		}
 	}
 }
 
 void ClipboardHandler::cut(Editor& editor, int floor) {
 	if (g_gui.IsSelectionMode()) {
-		editor.copybuffer.cut(editor, floor);
+		auto result = editor.copybuffer.cut(editor, floor);
+		if (result.empty) {
+			g_gui.SetStatusText("No tiles to cut.");
+		} else {
+			g_gui.SetStatusText(std::format("Cut out {} tile{} ({} item{})", result.tile_count, (result.tile_count > 1 ? "s" : ""), result.item_count, (result.item_count > 1 ? "s" : "")));
+		}
 	}
 	g_gui.RefreshView();
 }
@@ -55,7 +65,12 @@ void ClipboardHandler::paste() {
 }
 
 void ClipboardHandler::doDelete(Editor& editor) {
-	editor.destroySelection();
+	auto result = editor.destroySelection();
+	if (result.empty) {
+		g_gui.SetStatusText("No selected items to delete.");
+	} else {
+		g_gui.SetStatusText(std::format("Deleted {} tile{} ({} item{})", result.tile_count, (result.tile_count > 1 ? "s" : ""), result.item_count, (result.item_count > 1 ? "s" : "")));
+	}
 	g_gui.RefreshView();
 }
 

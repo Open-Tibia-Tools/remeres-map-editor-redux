@@ -204,7 +204,7 @@ void MainMenuBar::OnGenerateMap(wxCommandEvent& event) {
 }
 
 void MainMenuBar::OnOpenRecent(wxCommandEvent& event) {
-	FileName fn(recentFilesManager.GetFile(event.GetId() - recentFilesManager.GetBaseId()));
+	FileName fn(recentFilesManager.GetFile(event.GetId() - recentFilesManager.GetBaseId()).ToStdWstring());
 	frame->LoadMap(fn);
 }
 

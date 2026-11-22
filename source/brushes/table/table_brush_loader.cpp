@@ -10,6 +10,9 @@
 #include <utility>
 #include <string_view>
 #include <algorithm>
+#include <cctype>
+#include <format>
+
 
 bool TableBrushLoader::load(pugi::xml_node node, TableBrush& brush, TableBrushItems& items, std::vector<std::string>& warnings) {
 	uint16_t look_id = 0;
@@ -102,6 +105,6 @@ std::optional<uint32_t> TableBrushLoader::getAlignment(std::string_view alignStr
 		}
 	}
 
-	warnings.push_back((wxString("Unknown table alignment '") + wxstr(alignString) + "'\n").ToStdString());
+	warnings.push_back(std::format("Unknown table alignment '{}'\n", alignString));
 	return std::nullopt;
 }

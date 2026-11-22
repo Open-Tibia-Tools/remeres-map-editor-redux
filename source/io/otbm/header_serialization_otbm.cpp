@@ -5,7 +5,6 @@
 
 #include "map/map.h"
 #include "item_definitions/core/item_definition_store.h"
-#include "ui/dialog_util.h"
 #include <spdlog/spdlog.h>
 
 namespace {
@@ -87,7 +86,7 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 				if (!map_header_node->getString(description)) {
 					return false;
 				}
-				out_info.description = wxstr(description);
+				out_info.description = description;
 				break;
 			}
 			case OTBM_ATTR_EXT_SPAWN_FILE: {
@@ -96,9 +95,9 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 					return false;
 				}
 				if (out_info.otbm_version == 5) {
-					out_info.monster_xml_file = wxstr(spawn_file);
+					out_info.monster_xml_file = spawn_file;
 				} else {
-					out_info.spawn_xml_file = wxstr(spawn_file);
+					out_info.spawn_xml_file = spawn_file;
 				}
 				break;
 			}
@@ -107,7 +106,7 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 				if (!map_header_node->getString(house_file)) {
 					return false;
 				}
-				out_info.house_xml_file = wxstr(house_file);
+				out_info.house_xml_file = house_file;
 				break;
 			}
 			case OTBM_ATTR_EXT_SPAWN_NPC_FILE: {
@@ -115,7 +114,7 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 				if (!map_header_node->getString(npc_file)) {
 					return false;
 				}
-				out_info.npc_xml_file = wxstr(npc_file);
+				out_info.npc_xml_file = npc_file;
 				break;
 			}
 			case OTBM_ATTR_EXT_ZONE_FILE: {
@@ -123,7 +122,7 @@ bool HeaderSerializationOTBM::peekStartupInfo(NodeFileReadHandle& f, OTBMStartup
 				if (!map_header_node->getString(zone_file)) {
 					return false;
 				}
-				out_info.zone_xml_file = wxstr(zone_file);
+				out_info.zone_xml_file = zone_file;
 				break;
 			}
 			default:
@@ -173,7 +172,7 @@ bool HeaderSerializationOTBM::readMapAttributes(Map& map, FastOTBMStream& stream
 					spdlog::warn("Invalid map zonefile tag");
 					return true;
 				}
-				if (zone_path.find("..") != std::string::npos || wxFileName(wxstr(zone_path)).IsAbsolute()) {
+				if (zone_path.find("..") != std::string::npos || std::filesystem::path(zone_path).is_absolute()) {
 					spdlog::warn("Map zonefile tag contains path traversal or absolute path: '{}'. Discarding.", zone_path);
 					map.zonefile.clear();
 					return true;

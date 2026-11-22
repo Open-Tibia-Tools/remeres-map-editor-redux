@@ -18,7 +18,7 @@
 #ifndef RME_BASE_MAP_H_
 #define RME_BASE_MAP_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "map/position.h"
 #include "io/filehandle.h"
 #include "map/map_allocator.h"

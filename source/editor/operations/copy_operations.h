@@ -10,10 +10,16 @@
 class Editor;
 class CopyBuffer;
 
+struct CopyResult {
+	int tile_count = 0;
+	int item_count = 0;
+	bool empty = false;
+};
+
 class CopyOperations {
 public:
-	static void copy(Editor& editor, CopyBuffer& buffer, int floor);
-	static void cut(Editor& editor, CopyBuffer& buffer, int floor);
+	static CopyResult copy(Editor& editor, CopyBuffer& buffer, int floor);
+	static CopyResult cut(Editor& editor, CopyBuffer& buffer, int floor);
 	static void paste(Editor& editor, CopyBuffer& buffer, const Position& toPosition);
 };
 

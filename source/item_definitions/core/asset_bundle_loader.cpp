@@ -23,7 +23,7 @@ namespace {
 	}
 }
 
-bool AssetBundleLoader::load(const AssetLoadRequest& request, AssetBundle& bundle, wxString& error, std::vector<std::string>& warnings) const {
+bool AssetBundleLoader::load(const AssetLoadRequest& request, AssetBundle& bundle, std::string& error, std::vector<std::string>& warnings) const {
 	bundle = {};
 
 	DatItemParser dat_parser;
@@ -46,10 +46,8 @@ bool AssetBundleLoader::load(const AssetLoadRequest& request, AssetBundle& bundl
 				return false;
 			}
 
-			std::string spr_error;
-			bundle.sprite_archive = SpriteArchive::loadProtobuf(request.spr_path.GetFullPath().ToStdWstring(), spr_error, warnings);
+			bundle.sprite_archive = SpriteArchive::loadProtobuf(request.spr_path, error, warnings);
 			if (!bundle.sprite_archive) {
-				error = wxString::FromUTF8(spr_error);
 				return false;
 			}
 			break;
@@ -62,16 +60,14 @@ bool AssetBundleLoader::load(const AssetLoadRequest& request, AssetBundle& bundl
 				return false;
 			}
 
-			std::string spr_error;
-			bundle.sprite_archive = SpriteArchive::load(request.spr_path.GetFullPath().ToStdWstring(), bundle.dat_catalog.is_extended, spr_error, warnings);
+			bundle.sprite_archive = SpriteArchive::load(request.spr_path, bundle.dat_catalog.is_extended, error, warnings);
 			if (!bundle.sprite_archive) {
-				error = wxString::FromUTF8(spr_error);
 				return false;
 			}
 			break;
 		}
 		default:
-			error = wxString::FromUTF8(std::format("Unsupported item definition mode {}.", static_cast<int>(request.mode)));
+			error = std::format("Unsupported item definition mode {}.", static_cast<int>(request.mode));
 			return false;
 	}
 
@@ -83,10 +79,8 @@ bool AssetBundleLoader::load(const AssetLoadRequest& request, AssetBundle& bundl
 	return true;
 }
 
-bool AssetBundleLoader::install(AssetBundle& bundle, GraphicManager& graphics, ItemDefinitionStore& store, wxString& error, std::vector<std::string>& warnings) const {
-	std::string install_error;
-	if (!GraphicsAssembler::install(graphics, bundle.dat_catalog, bundle.sprite_archive, install_error, warnings)) {
-		error = wxString::FromUTF8(install_error);
+bool AssetBundleLoader::install(AssetBundle& bundle, GraphicManager& graphics, ItemDefinitionStore& store, std::string& error, std::vector<std::string>& warnings) const {
+	if (!GraphicsAssembler::install(graphics, bundle.dat_catalog, bundle.sprite_archive, error, warnings)) {
 		return false;
 	}
 

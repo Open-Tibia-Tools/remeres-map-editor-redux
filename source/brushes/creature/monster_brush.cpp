@@ -2,10 +2,9 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "brushes/creature/monster_brush.h"
-#include "ui/gui.h"
 #include "app/settings.h"
 #include "map/tile.h"
 #include "game/creature.h"
@@ -53,9 +52,9 @@ void MonsterBrush::draw_creature(BaseMap* map, Tile* tile) {
 	}
 
 	tile->creature = std::make_unique<Creature>(creature_type);
-	tile->creature->setSpawnTime(g_gui.GetSpawnTime());
+	tile->creature->setSpawnTime(getDefaultSpawnTime());
 	if (is_otbm5) {
-		if (const int weight = g_gui.GetDefaultCreatureWeight(); weight > 0) {
+		if (const int weight = getDefaultWeight(); weight > 0) {
 			tile->creature->setWeight(static_cast<uint32_t>(weight));
 		}
 	}

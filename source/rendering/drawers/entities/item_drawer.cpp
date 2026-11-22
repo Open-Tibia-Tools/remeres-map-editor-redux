@@ -118,8 +118,8 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	// Display invisible items via technical item shader indicators
 	if (options.show_tech_items && !options.ingame) {
-		const uint16_t client_id = it.clientId();
-		const uint16_t server_id = item ? item->getID() : 0;
+		const ClientItemId client_id = it.clientId();
+		const ServerItemId server_id = item ? item->getID() : 0;
 		const auto tech_type = rme::rendering::TechnicalItemRegistry::Classify(server_id, client_id);
 		if (tech_type != rme::rendering::TileIndicatorType::None) {
 			const AtlasRegion* white_pixel = atlas ? atlas->getWhitePixel() : nullptr;

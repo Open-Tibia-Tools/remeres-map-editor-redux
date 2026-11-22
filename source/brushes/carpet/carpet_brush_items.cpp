@@ -2,7 +2,7 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "brushes/carpet/carpet_brush_items.h"
 #include "brushes/brush_utility.h" // For CARPET_CENTER
 

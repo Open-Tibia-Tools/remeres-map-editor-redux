@@ -19,14 +19,9 @@
 #define RME_COMMON_H_
 
 #include <wx/defs.h>
+#include "app/definitions.h"
 
 // Enums
-
-enum {
-	SELECT_CURRENT_FLOOR,
-	SELECT_ALL_FLOORS,
-	SELECT_VISIBLE_FLOORS,
-};
 
 enum EditorMode {
 	SELECTION_MODE,

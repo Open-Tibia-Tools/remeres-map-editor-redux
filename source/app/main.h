@@ -26,6 +26,7 @@
 	#define _WIN32_WINNT 0x0501
 #endif
 
+#include "app/definitions.h"
 
 
 // Boost libraries
@@ -34,7 +35,6 @@
 #include <boost/asio.hpp>
 
 #include <wx/defs.h>
-#include "app/definitions.h"
 
 #include <glad/glad.h>
 
@@ -73,16 +73,6 @@
 // This has annoyed me one time too many
 #define wxANY_ID (wxID_ANY)
 
-#include <assert.h>
-#define _MSG(msg) !bool(msg)
-#ifndef ASSERT
-	#ifdef __DEBUG__
-		#define ASSERT assert
-	#else
-		#define ASSERT(...)
-	#endif
-#endif
-
 // The complete STL ?, well, almost ;)
 #include <math.h>
 #include <list>
@@ -103,12 +93,11 @@
 #include <fstream>
 
 using StringVector = std::vector<std::string>;
-using FileName = wxFileName;
 
 #include "util/json.h"
 
 #include "util/common.h"
-#include "app/threads.h"
+#include "ui/wx_common.h"
 
 #include "app/rme_forward_declarations.h"
 

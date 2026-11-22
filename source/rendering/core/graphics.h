@@ -87,10 +87,10 @@ public:
 
 
 	std::filesystem::path getMetadataPath() const {
-		return client_version ? std::filesystem::path(client_version->getMetadataPath().GetFullPath().ToStdString()) : std::filesystem::path();
+		return client_version ? client_version->getMetadataPath() : std::filesystem::path();
 	}
 	std::filesystem::path getSpritesPath() const {
-		return client_version ? std::filesystem::path(client_version->getSpritesPath().GetFullPath().ToStdString()) : std::filesystem::path();
+		return client_version ? client_version->getSpritesPath() : std::filesystem::path();
 	}
 
 	bool hasTransparency() const;

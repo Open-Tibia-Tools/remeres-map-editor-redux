@@ -11,10 +11,35 @@
 
 #include "ui/tile_properties/tile_properties_panel.h"
 #include "map/tile.h"
+#include "map/tile_operations.h"
 #include "game/creature.h"
 #include "game/spawn.h"
+#include "ui/managers/minimap_manager.h"
 
 void SetupCallbacks(Editor* editor) {
+	static bool s_global_callbacks_initialized = false;
+	if (!s_global_callbacks_initialized) {
+		s_global_callbacks_initialized = true;
+		Tile::setModifiedCallback([](Tile* tile) {
+			if (Editor* current_editor = g_gui.GetCurrentEditor()) {
+				const Position position = tile->getPosition();
+				current_editor->map.getChangeTracker().markTileDirty(position);
+				if (!tile->ownedLocation && current_editor->map.getTile(position) == tile) {
+					g_minimap.MarkTileDirty(current_editor->map, position);
+				}
+			}
+		});
+		TileOperations::setSelectionChangedCallback([](Tile*) {
+			if (Editor* current_editor = g_gui.GetCurrentEditor()) {
+				current_editor->selection.markChanged();
+			}
+		});
+	}
+
+	editor->onTileModified = [editor](const Position& pos) {
+		g_minimap.MarkTileDirty(editor->map, pos);
+	};
+
 	editor->onStateChange = [editor]() {
 		g_gui.UpdateTitle();
 		g_gui.UpdateMenus();
@@ -75,13 +100,17 @@ std::unique_ptr<Editor> EditorFactory::CreateEmpty(CopyBuffer& copybuffer) {
 	return editor;
 }
 
-std::unique_ptr<Editor> EditorFactory::LoadFromFile(CopyBuffer& copybuffer, const FileName& fn, const MapLoadOptions& load_options) {
+std::unique_ptr<Editor> EditorFactory::LoadFromFile(
+	CopyBuffer& copybuffer,
+	const std::filesystem::path& fn,
+	const MapLoadOptions& load_options,
+	ProgressCallback on_progress) {
 	MapVersion mapVersion;
 	mapVersion.otbm = g_version.GetCurrentVersion().getPrefferedMapVersionID();
 	mapVersion.client = g_version.GetCurrentVersion().getProtocolID();
 	mapVersion.items_major = g_version.GetCurrentVersion().getOTBVersion().format_version;
 
-	std::unique_ptr<Editor> editor = std::make_unique<Editor>(copybuffer, mapVersion, fn, load_options);
+	std::unique_ptr<Editor> editor = std::make_unique<Editor>(copybuffer, mapVersion, fn, load_options, std::move(on_progress));
 	SetupCallbacks(editor.get());
 	return editor;
 }
@@ -106,7 +135,7 @@ bool EditorFactory::EnsureVersion(ClientVersionID version) {
 		return false;
 	}
 
-	wxString error;
+	std::string error;
 	std::vector<std::string> warnings;
 	if (g_version.LoadVersion(version, error, warnings)) {
 		if (!warnings.empty()) {
@@ -114,7 +143,7 @@ bool EditorFactory::EnsureVersion(ClientVersionID version) {
 		}
 		return true;
 	} else {
-		DialogUtil::PopupDialog("Error", error, wxOK);
+		DialogUtil::PopupDialog("Error", wxstr(error), wxOK);
 		return false;
 	}
 }

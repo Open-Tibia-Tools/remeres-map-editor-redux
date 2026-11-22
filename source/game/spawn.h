@@ -18,6 +18,12 @@
 #ifndef RME_SPAWN_H_
 #define RME_SPAWN_H_
 
+#include "app/definitions.h"
+#include "map/position.h"
+#include <memory>
+#include <set>
+#include <list>
+
 class Tile;
 
 class Spawn {

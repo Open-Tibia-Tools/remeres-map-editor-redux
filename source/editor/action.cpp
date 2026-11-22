@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "map/tile_operations.h"
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "editor/action.h"
 #include "editor/dirty_list.h"
@@ -25,7 +25,6 @@
 #include "map/tile.h"
 #include "game/town.h"
 #include "editor/editor.h"
-#include "ui/gui.h"
 
 #include <ranges>
 #include <ctime>
@@ -281,8 +280,7 @@ void Action::commit(DirtyList* dirty_list) {
 					dirty_list->AddChange(c);
 				}
 				if (type != ACTION_SELECT) {
-					editor.map.getChangeTracker().markTileDirty(pos);
-					g_minimap.MarkTileDirty(editor.map, pos);
+					editor.markTileModified(pos);
 				}
 				break;
 			}
@@ -298,12 +296,10 @@ void Action::commit(DirtyList* dirty_list) {
 					p.pos = oldpos;
 
 					if (oldpos != Position() && oldpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(oldpos);
-						g_minimap.MarkTileDirty(editor.map, oldpos);
+						editor.markTileModified(oldpos);
 					}
 					if (newpos != Position() && newpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(newpos);
-						g_minimap.MarkTileDirty(editor.map, newpos);
+						editor.markTileModified(newpos);
 					}
 				}
 				break;
@@ -336,12 +332,10 @@ void Action::commit(DirtyList* dirty_list) {
 					p.pos = oldpos;
 
 					if (oldpos != Position() && oldpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(oldpos);
-						g_minimap.MarkTileDirty(editor.map, oldpos);
+						editor.markTileModified(oldpos);
 					}
 					if (newpos != Position() && newpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(newpos);
-						g_minimap.MarkTileDirty(editor.map, newpos);
+						editor.markTileModified(newpos);
 					}
 				}
 				break;
@@ -371,12 +365,10 @@ void Action::commit(DirtyList* dirty_list) {
 					p.pos = oldpos;
 
 					if (oldpos != Position() && oldpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(oldpos);
-						g_minimap.MarkTileDirty(editor.map, oldpos);
+						editor.markTileModified(oldpos);
 					}
 					if (newpos != Position() && newpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(newpos);
-						g_minimap.MarkTileDirty(editor.map, newpos);
+						editor.markTileModified(newpos);
 					}
 				}
 				break;
@@ -533,8 +525,7 @@ void Action::undo(DirtyList* dirty_list) {
 					dirty_list->AddChange(c);
 				}
 				if (type != ACTION_SELECT) {
-					editor.map.getChangeTracker().markTileDirty(pos);
-					g_minimap.MarkTileDirty(editor.map, pos);
+					editor.markTileModified(pos);
 				}
 				break;
 			}
@@ -549,12 +540,10 @@ void Action::undo(DirtyList* dirty_list) {
 					p.pos = oldpos;
 
 					if (oldpos != Position() && oldpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(oldpos);
-						g_minimap.MarkTileDirty(editor.map, oldpos);
+						editor.markTileModified(oldpos);
 					}
 					if (newpos != Position() && newpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(newpos);
-						g_minimap.MarkTileDirty(editor.map, newpos);
+						editor.markTileModified(newpos);
 					}
 				}
 				break;
@@ -587,12 +576,10 @@ void Action::undo(DirtyList* dirty_list) {
 					p.pos = oldpos;
 
 					if (oldpos != Position() && oldpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(oldpos);
-						g_minimap.MarkTileDirty(editor.map, oldpos);
+						editor.markTileModified(oldpos);
 					}
 					if (newpos != Position() && newpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(newpos);
-						g_minimap.MarkTileDirty(editor.map, newpos);
+						editor.markTileModified(newpos);
 					}
 				}
 				break;
@@ -622,12 +609,10 @@ void Action::undo(DirtyList* dirty_list) {
 					p.pos = oldpos;
 
 					if (oldpos != Position() && oldpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(oldpos);
-						g_minimap.MarkTileDirty(editor.map, oldpos);
+						editor.markTileModified(oldpos);
 					}
 					if (newpos != Position() && newpos.isValid()) {
-						editor.map.getChangeTracker().markTileDirty(newpos);
-						g_minimap.MarkTileDirty(editor.map, newpos);
+						editor.markTileModified(newpos);
 					}
 				}
 				break;

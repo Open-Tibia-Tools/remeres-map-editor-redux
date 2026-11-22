@@ -1,6 +1,7 @@
 #ifndef RME_GAME_MATERIAL_DATABASE_H_
 #define RME_GAME_MATERIAL_DATABASE_H_
 
+#include <deque>
 #include <string>
 #include <vector>
 

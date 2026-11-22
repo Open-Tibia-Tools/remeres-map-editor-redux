@@ -22,8 +22,12 @@ void CollectionPaletteSync::Sync(
 	// 1. Register tileset file in MaterialDatabase::tileset_sources
 	g_materials.getDatabase().addTilesetSource(tilesetFilePath.string());
 	g_materials.getDatabase().addTilesetSource(tilesetFilePath.generic_string());
-	FileName fn(wxstr(tilesetFilePath.string()));
-	g_materials.getDatabase().addTilesetSource(fn.GetFullPath().ToStdString());
+	std::error_code ec;
+	const auto abs_path = std::filesystem::absolute(tilesetFilePath, ec);
+	if (!ec) {
+		g_materials.getDatabase().addTilesetSource(abs_path.string());
+		g_materials.getDatabase().addTilesetSource(abs_path.generic_string());
+	}
 
 	// 2. Prepare brushes: load all brushes and items directly from the authoritative XML file
 	std::vector<Brush*> activeBrushes;

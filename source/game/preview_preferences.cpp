@@ -1,7 +1,7 @@
 #include "game/preview_preferences.h"
 #include "util/json.h"
-#include <wx/stdpaths.h>
-#include <wx/filename.h>
+#include "util/file_system.h"
+#include <filesystem>
 #include <fstream>
 #include <spdlog/spdlog.h>
 
@@ -56,10 +56,9 @@ void from_json(const nlohmann::json& j, FavoriteItem& f) {
 }
 
 void PreviewPreferences::load() {
-	wxFileName fn(wxStandardPaths::Get().GetUserDataDir(), "preferences.json");
-	std::string path = fn.GetFullPath().ToStdString();
+	std::filesystem::path prefPath = FileSystem::GetLocalDataDirectory() / "preferences.json";
 
-	std::ifstream f(path);
+	std::ifstream f(prefPath);
 	if (!f.is_open()) {
 		return;
 	}
@@ -89,11 +88,9 @@ void PreviewPreferences::load() {
 }
 
 void PreviewPreferences::save() {
-	wxFileName fn(wxStandardPaths::Get().GetUserDataDir(), "preferences.json");
-	wxString dir = fn.GetPath();
-	if (!wxDirExists(dir)) {
-		wxMkdir(dir);
-	}
+	std::filesystem::path dir = FileSystem::GetLocalDataDirectory();
+	std::error_code ec;
+	std::filesystem::create_directories(dir, ec);
 
 	nlohmann::json j;
 	j["speed"] = current_speed;
@@ -102,7 +99,7 @@ void PreviewPreferences::save() {
 	j["last_outfit"] = current_outfit;
 	j["favorites"] = favorites;
 
-	std::ofstream f(fn.GetFullPath().ToStdString());
+	std::ofstream f(dir / "preferences.json");
 	if (f.is_open()) {
 		f << j.dump(4);
 	}

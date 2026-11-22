@@ -19,6 +19,9 @@
 #define RME_MAP_IO_H_
 
 #include "app/client_version.h"
+#include <filesystem>
+#include <functional>
+#include <string_view>
 
 enum ImportType {
 	IMPORT_DONT,
@@ -32,9 +35,7 @@ class Map;
 class IOMap {
 protected:
 	std::vector<std::string> warnings;
-	wxString errorstr;
-
-	bool queryUser(const wxString& title, const wxString& format);
+	std::string errorstr;
 
 public:
 	IOMap() {
@@ -48,12 +49,32 @@ public:
 	std::vector<std::string>& getWarnings() {
 		return warnings;
 	}
-	wxString& getError() {
+	const std::vector<std::string>& getWarnings() const {
+		return warnings;
+	}
+	std::string& getError() {
+		return errorstr;
+	}
+	const std::string& getError() const {
 		return errorstr;
 	}
 
-	virtual bool loadMap(Map& map, const FileName& identifier) = 0;
-	virtual bool saveMap(Map& map, const FileName& identifier) = 0;
+	using ProgressCallback = std::function<void(int percent, std::string_view message)>;
+
+	void setProgressCallback(ProgressCallback cb) {
+		progress_callback = std::move(cb);
+	}
+	void reportProgress(int percent, std::string_view message = "") const {
+		if (progress_callback) {
+			progress_callback(percent, message);
+		}
+	}
+
+	virtual bool loadMap(Map& map, const std::filesystem::path& identifier) = 0;
+	virtual bool saveMap(Map& map, const std::filesystem::path& identifier) = 0;
+
+protected:
+	ProgressCallback progress_callback;
 };
 
 class VirtualIOMap : public IOMap {
@@ -62,10 +83,10 @@ public:
 		version = v;
 	}
 
-	bool loadMap(Map& map, const FileName& identifier) override {
+	bool loadMap(Map& map, const std::filesystem::path& identifier) override {
 		return false;
 	}
-	bool saveMap(Map& map, const FileName& identifier) override {
+	bool saveMap(Map& map, const std::filesystem::path& identifier) override {
 		return false;
 	}
 };

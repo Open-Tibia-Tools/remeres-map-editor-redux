@@ -6,8 +6,8 @@
 
 class DatItemParser : public IItemDefinitionParser {
 public:
-	bool parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, wxString& error, std::vector<std::string>& warnings) const override;
-	bool parseCatalog(const ItemDefinitionLoadInput& input, DatCatalog& catalog, wxString& error, std::vector<std::string>& warnings) const;
+	bool parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::string& error, std::vector<std::string>& warnings) const override;
+	bool parseCatalog(const ItemDefinitionLoadInput& input, DatCatalog& catalog, std::string& error, std::vector<std::string>& warnings) const;
 
 	static void appendFragments(const DatCatalog& catalog, ItemDefinitionFragments& fragments);
 };

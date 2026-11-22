@@ -2,7 +2,7 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "item_serialization_otbm.h"
 #include "game/item.h"
 #include "game/complexitem.h"

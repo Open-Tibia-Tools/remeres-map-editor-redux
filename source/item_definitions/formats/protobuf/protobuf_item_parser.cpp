@@ -327,7 +327,7 @@ void ProtobufItemParser::appendFragments(const DatCatalog& catalog, ItemDefiniti
 	}
 }
 
-bool ProtobufItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, wxString& error, std::vector<std::string>& warnings) const {
+bool ProtobufItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::string& error, std::vector<std::string>& warnings) const {
 	if (input.dat_catalog != nullptr) {
 		appendFragments(*input.dat_catalog, fragments);
 		if (fragments.dat.empty()) {
@@ -350,15 +350,15 @@ bool ProtobufItemParser::parse(const ItemDefinitionLoadInput& input, ItemDefinit
 	return true;
 }
 
-bool ProtobufItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatCatalog& catalog, wxString& error, std::vector<std::string>& warnings) const {
-	if (input.dat_path.GetFullPath().IsEmpty()) {
+bool ProtobufItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatCatalog& catalog, std::string& error, std::vector<std::string>& warnings) const {
+	if (input.dat_path.empty()) {
 		error = "Protobuf parser requires an appearances file path.";
 		return false;
 	}
 
-	std::ifstream stream(input.dat_path.GetFullPath().ToStdString(), std::ios::in | std::ios::binary);
+	std::ifstream stream(input.dat_path, std::ios::in | std::ios::binary);
 	if (!stream.is_open()) {
-		error = wxString::FromUTF8(std::format("Failed to open {} for reading.", input.dat_path.GetFullPath().utf8_string()));
+		error = std::format("Failed to open {} for reading.", input.dat_path.string());
 		return false;
 	}
 
@@ -421,10 +421,10 @@ bool ProtobufItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatC
 	}
 
 	if (catalog.max_sprite_id >= MAX_SPRITES) {
-		error = wxString::FromUTF8(std::format(
+		error = std::format(
 			"Protobuf catalog references sprite id {} which exceeds MAX_SPRITES={}.",
 			catalog.max_sprite_id,
-			MAX_SPRITES));
+			MAX_SPRITES);
 		return false;
 	}
 	catalog.sprite_dimensions.assign(static_cast<size_t>(catalog.max_sprite_id) + 1, DatSpriteDimensions {});

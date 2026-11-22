@@ -19,9 +19,43 @@
 #define RME_DEFINITIONS_H_
 
 #include <cstdint>
+#include <cassert>
 #include <numbers>
+#include <string>
+#include <vector>
+#include <filesystem>
 
-#define __W_RME_APPLICATION_NAME__ wxString("OTAcademy Map Editor")
+#include "app/rme_forward_declarations.h"
+#include "ext/pugixml.hpp"
+
+using StringVector = std::vector<std::string>;
+using FileName = std::filesystem::path;
+
+#ifdef DEBUG_MEM
+	#define _CRTDBG_MAP_ALLOC
+	#include <stdlib.h>
+	#include <crtdbg.h>
+	#pragma warning(disable : 4291)
+_Ret_bytecap_(_Size) inline void* __CRTDECL operator new(size_t _Size, const char* file, int line) {
+	return ::operator new(_Size, _NORMAL_BLOCK, file, line);
+}
+_Ret_bytecap_(_Size) inline void* __CRTDECL operator new[](size_t _Size, const char* file, int line) {
+	return ::operator new[](_Size, _NORMAL_BLOCK, file, line);
+}
+	#define newd new (__FILE__, __LINE__)
+#else
+	#define newd new
+#endif
+
+#define _MSG(msg) !bool(msg)
+#ifndef ASSERT
+	#ifdef __DEBUG__
+		#define ASSERT assert
+	#else
+		#define ASSERT(...)
+	#endif
+#endif
+
 #define __RME_APPLICATION_NAME__ std::string("OTAcademy Map Editor")
 
 // Version info
@@ -51,16 +85,12 @@
 
 #ifdef __EXPERIMENTAL__
 	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__ " BETA")
-	#define __W_RME_VERSION__ wxString(__RME_VERSION_STRING__ " BETA")
 #elif __SNAPSHOT__
 	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__ " - SNAPSHOT")
-	#define __W_RME_VERSION__ wxString(__RME_VERSION_STRING__ " - SNAPSHOT")
 #elif __PRERELEASE__
 	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__ " (Pre-release)")
-	#define __W_RME_VERSION__ wxString(__RME_VERSION_STRING__ " (Pre-release)")
 #else
 	#define __RME_VERSION__ std::string(__RME_VERSION_STRING__)
-	#define __W_RME_VERSION__ wxString(__RME_VERSION_STRING__)
 #endif
 // OS
 
@@ -162,6 +192,23 @@ constexpr int MaxLightIntensity = 8;
 constexpr int PixelFormatRGB = 3;
 constexpr int PixelFormatRGBA = 4;
 
+// Client version constants
+inline constexpr int OTB_VERSION_NONE = 0;
+
+// Selection floor modes
+enum SelectionFloorMode {
+	SELECT_CURRENT_FLOOR,
+	SELECT_ALL_FLOORS,
+	SELECT_VISIBLE_FLOORS,
+};
+
+// VSync mode
+enum class VSyncMode : int {
+	Off = 0,
+	On = 1,
+	Adaptive = 2,
+};
+
 struct DrawColor {
 	uint8_t r;
 	uint8_t g;
@@ -176,8 +223,6 @@ struct DrawColor {
 	}
 };
 
-// wxString conversions
-#define nstr(str) (str).ToStdString()
 
 // increment & decrement definitions
 #define IMPLEMENT_INCREMENT_OP(Type)                     \

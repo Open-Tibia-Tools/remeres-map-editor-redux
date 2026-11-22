@@ -5,8 +5,8 @@
 #ifndef RME_CARPET_BRUSH_LOADER_H
 #define RME_CARPET_BRUSH_LOADER_H
 
-#include <wx/string.h>
-#include <wx/arrstr.h>
+#include <string>
+#include <vector>
 #include "app/rme_forward_declarations.h"
 
 // Forward declarations

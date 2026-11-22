@@ -74,7 +74,7 @@ namespace {
 	}
 }
 
-bool ItemDefinitionResolver::resolve(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, wxString& error, std::vector<std::string>& warnings, MissingItemReport* missingReport) {
+bool ItemDefinitionResolver::resolve(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, std::string& error, std::vector<std::string>& warnings, MissingItemReport* missingReport) {
 	rows.clear();
 	switch (input.mode) {
 		// modes with otb
@@ -96,7 +96,7 @@ bool ItemDefinitionResolver::resolve(const ItemDefinitionLoadInput& input, const
 	return false;
 }
 
-bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, wxString& error, std::vector<std::string>& warnings, MissingItemReport* missingReport) {
+bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, std::string& error, std::vector<std::string>& warnings, MissingItemReport* missingReport) {
 	rows.reserve(fragments.otb.size());
 
 	// Track which DAT client IDs are referenced by OTB
@@ -147,7 +147,7 @@ bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input,
 					.description = otb.description
 				});
 			} else {
-				error = wxString::FromUTF8(std::format("Missing DAT definition for client id {} (server id {}).", effective_client_id, server_id));
+				error = std::format("Missing DAT definition for client id {} (server id {}).", effective_client_id, server_id);
 				return false;
 			}
 			// Continue processing other items
@@ -252,7 +252,7 @@ bool ItemDefinitionResolver::resolveDatOtb(const ItemDefinitionLoadInput& input,
 	return true;
 }
 
-bool ItemDefinitionResolver::resolveDatOnly(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, wxString& error, std::vector<std::string>& warnings, MissingItemReport* missingReport) {
+bool ItemDefinitionResolver::resolveDatOnly(const ItemDefinitionLoadInput& input, const ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, std::string& error, std::vector<std::string>& warnings, MissingItemReport* missingReport) {
 	rows.reserve(fragments.dat.size());
 
 	std::unordered_map<ClientItemId, size_t> client_to_row;

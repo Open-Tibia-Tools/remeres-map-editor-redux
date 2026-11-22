@@ -1,7 +1,7 @@
 #ifndef RME_MAP_SEARCH_H_
 #define RME_MAP_SEARCH_H_
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include <vector>
 #include <utility>
 #include <string>

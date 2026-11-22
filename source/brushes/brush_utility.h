@@ -9,11 +9,13 @@
 #include <vector>
 
 class Map;
+class Brush;
 class GroundBrush;
+struct BrushFootprint;
 
 class BrushUtility {
 public:
-	static void GetTilesToDraw(int mouse_map_x, int mouse_map_y, int floor, std::vector<Position>* tilestodraw, std::vector<Position>* tilestoborder, bool fill = false);
+	static void GetTilesToDraw(Map* map, Brush* brush, const BrushFootprint& footprint, int mouse_map_x, int mouse_map_y, int floor, std::vector<Position>* tilestodraw, std::vector<Position>* tilestoborder, bool fill = false);
 
 private:
 	static bool FloodFill(Map* map, const Position& center, int x, int y, GroundBrush* brush, std::vector<Position>* positions);

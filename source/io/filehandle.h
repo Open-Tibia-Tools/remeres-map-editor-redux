@@ -33,9 +33,6 @@
 #include <cstring>
 #include <string_view>
 
-class wxFileName;
-using FileName = wxFileName;
-
 #ifndef FORCEINLINE
 	#ifdef _MSV_VER
 		#define FORCEINLINE __forceinline
@@ -98,6 +95,7 @@ public:
 class FileReadHandle : public FileHandle {
 public:
 	explicit FileReadHandle(const std::string& name);
+	explicit FileReadHandle(const std::filesystem::path& path) : FileReadHandle(path.string()) {}
 	~FileReadHandle() override;
 
 	FORCEINLINE bool getU8(uint8_t& u8) {
@@ -324,6 +322,8 @@ protected:
 class DiskNodeFileReadHandle : public NodeFileReadHandle {
 public:
 	DiskNodeFileReadHandle(const std::string& name, const std::vector<std::string>& acceptable_identifiers);
+	DiskNodeFileReadHandle(const std::filesystem::path& path, const std::vector<std::string>& acceptable_identifiers) :
+		DiskNodeFileReadHandle(path.string(), acceptable_identifiers) {}
 	~DiskNodeFileReadHandle() override;
 
 	void close() override;
@@ -376,6 +376,7 @@ protected:
 class FileWriteHandle : public FileHandle {
 public:
 	explicit FileWriteHandle(const std::string& name);
+	explicit FileWriteHandle(const std::filesystem::path& path) : FileWriteHandle(path.string()) {}
 	~FileWriteHandle() override;
 
 	FORCEINLINE bool addU8(uint8_t u8) {
@@ -474,6 +475,8 @@ protected:
 class DiskNodeFileWriteHandle : public NodeFileWriteHandle {
 public:
 	DiskNodeFileWriteHandle(const std::string& name, const std::string& identifier);
+	DiskNodeFileWriteHandle(const std::filesystem::path& path, const std::string& identifier) :
+		DiskNodeFileWriteHandle(path.string(), identifier) {}
 	~DiskNodeFileWriteHandle() override;
 
 	void close() override;

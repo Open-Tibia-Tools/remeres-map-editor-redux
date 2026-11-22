@@ -1,12 +1,11 @@
-#include "app/main.h"
+#include "app/definitions.h"
 #include "map/map_statistics.h"
 #include "map/map.h"
 #include "map/tile.h"
-#include "ui/gui.h"
 #include <sstream>
 #include <unordered_map>
 
-MapStatistics MapStatisticsCollector::Collect(Map* map) {
+MapStatistics MapStatisticsCollector::Collect(Map* map, std::function<void(int)> progress) {
 	MapStatistics stats;
 	int load_counter = 0;
 
@@ -14,8 +13,8 @@ MapStatistics MapStatisticsCollector::Collect(Map* map) {
 
 	std::ranges::for_each(map->tiles(), [&](auto& tile_location) {
 		Tile* tile = tile_location.get();
-		if (load_counter % 8192 == 0) {
-			g_gui.SetLoadDone(static_cast<unsigned int>(static_cast<int64_t>(load_counter) * 95ll / static_cast<int64_t>(map->getTileCount())));
+		if (progress && load_counter % 8192 == 0) {
+			progress(static_cast<int>(static_cast<int64_t>(load_counter) * 95ll / static_cast<int64_t>(map->getTileCount())));
 		}
 
 		if (tile->empty()) {
@@ -90,8 +89,8 @@ MapStatistics MapStatisticsCollector::Collect(Map* map) {
 	Houses& houses = map->houses;
 	for (const auto& [house_id, house] : houses) {
 
-		if (load_counter % 64) {
-			g_gui.SetLoadDone(static_cast<unsigned int>(95ll + static_cast<int64_t>(load_counter) * 5ll / static_cast<int64_t>(stats.house_count)));
+		if (progress && load_counter % 64 == 0) {
+			progress(static_cast<int>(95ll + static_cast<int64_t>(load_counter) * 5ll / static_cast<int64_t>(stats.house_count)));
 		}
 
 		if (house->size() > stats.largest_house_size) {

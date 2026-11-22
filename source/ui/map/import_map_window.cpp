@@ -3,6 +3,7 @@
 
 #include "editor/editor.h"
 #include "editor/persistence/editor_persistence.h"
+#include "ui/gui.h"
 #include "ui/dialog_util.h"
 #include "ui/gui_ids.h"
 #include "map/map.h"
@@ -143,9 +144,39 @@ void ImportMapWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 				break;
 		}
 
+		MapImportOptions options {
+			.import_x_offset = x_offset_ctrl->GetValue(),
+			.import_y_offset = y_offset_ctrl->GetValue(),
+			.house_import_type = house_import_type,
+			.spawn_import_type = spawn_import_type,
+			.auto_resize = true
+		};
+
 		EndModal(1);
 
-		EditorPersistence::importMap(editor, fn, x_offset_ctrl->GetValue(), y_offset_ctrl->GetValue(), house_import_type, spawn_import_type);
+		g_gui.CreateLoadBar("Merging maps...");
+		auto result = EditorPersistence::importMap(
+			editor,
+			fn.GetFullPath().ToStdString(),
+			options,
+			[](int percent, std::string_view msg) {
+				g_gui.SetLoadDone(percent, msg.empty() ? wxString() : wxstr(std::string(msg)));
+			}
+		);
+		g_gui.DestroyLoadBar();
+
+		if (!result.warnings.empty()) {
+			DialogUtil::ListDialog("Warning", result.warnings);
+		}
+
+		if (!result.success) {
+			DialogUtil::PopupDialog("Error", result.error, wxOK | wxICON_INFORMATION);
+			return;
+		}
+
+		DialogUtil::PopupDialog("Success", wxString::Format("Map imported successfully, %llu tiles were discarded as invalid.", result.discarded_tiles), wxOK);
+		g_gui.RefreshPalettes();
+		g_gui.FitViewToMap();
 	}
 }
 

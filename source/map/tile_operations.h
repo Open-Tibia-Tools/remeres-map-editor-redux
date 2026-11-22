@@ -32,6 +32,9 @@ namespace TileOperations {
 	void merge(Tile* dest, Tile* src, const BaseMap* target_map = nullptr);
 	Item* transformItem(Item* old_item, uint16_t new_id, Tile* parent = nullptr);
 
+	using SelectionChangedCallback = std::function<void(Tile* tile)>;
+	void setSelectionChangedCallback(SelectionChangedCallback cb);
+
 	void select(Tile* tile);
 	void deselect(Tile* tile);
 	void selectGround(Tile* tile);

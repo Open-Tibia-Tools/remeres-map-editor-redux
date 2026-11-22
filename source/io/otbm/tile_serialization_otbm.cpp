@@ -8,7 +8,6 @@
 #include "io/otbm/item_serialization_otbm.h"
 #include "io/otbm/fast_otbm_reader.h"
 #include "item_definitions/core/item_definition_store.h"
-#include "ui/gui.h"
 #include <algorithm>
 #include <chrono>
 #include <functional>

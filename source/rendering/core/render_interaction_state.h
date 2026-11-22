@@ -3,10 +3,15 @@
 
 #include <optional>
 #include "map/position.h"
-#include "rendering/drawers/overlays/brush_overlay_drawer.h"
 
 class BaseMap;
 class Brush;
+
+struct BrushOverlayDragState {
+	bool is_dragging_draw = false;
+	int last_click_map_x = 0;
+	int last_click_map_y = 0;
+};
 
 struct InteractionRenderState {
 	std::optional<MapBounds> selection_bounds;

@@ -79,29 +79,90 @@ include(source/CMakeLists.txt)
 
 set(RME_APPEARANCES_PROTO "${CMAKE_CURRENT_SOURCE_DIR}/source/protobuf/appearances.proto")
 protobuf_generate_cpp(RME_PROTO_SRCS RME_PROTO_HDRS "${RME_APPEARANCES_PROTO}")
+set_source_files_properties(${RME_PROTO_SRCS} PROPERTIES COMPILE_OPTIONS "/std:c++17")
 
-# Removed WIN32 to enable Console subsystem for persistent debugging logs
-add_library(rme_proto STATIC ${RME_PROTO_SRCS} ${RME_PROTO_HDRS})
-set_target_properties(rme_proto PROPERTIES CXX_STANDARD 17)
-set_target_properties(rme_proto PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_include_directories(rme_proto PUBLIC
-	${Protobuf_INCLUDE_DIRS}
+# Core static library - ZERO wxWidgets include directories or libraries
+add_library(rme_core STATIC ${rme_core_H} ${rme_core_SRC} ${RME_PROTO_SRCS} ${RME_PROTO_HDRS})
+
+set_target_properties(rme_core PROPERTIES CXX_STANDARD 23)
+set_target_properties(rme_core PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_compile_definitions(rme_core PUBLIC NANOVG_GL3)
+
+target_include_directories(rme_core PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/source
 	${CMAKE_CURRENT_BINARY_DIR}
+	${Boost_INCLUDE_DIRS}
+	${OPENGL_INCLUDE_DIR}
+	${ZLIB_INCLUDE_DIR}
+	${Protobuf_INCLUDE_DIRS}
+	${LIBLZMA_INCLUDE_DIRS}
 )
-if(TARGET protobuf::libprotobuf)
-	target_link_libraries(rme_proto PUBLIC protobuf::libprotobuf)
+
+target_link_libraries(rme_core PUBLIC
+	glad::glad
+	glm::glm
+	spdlog::spdlog
+	tomlplusplus::tomlplusplus
+	WebP::webp
+	${OPENGL_LIBRARIES}
+)
+
+if(TARGET Boost::boost)
+	target_link_libraries(rme_core PUBLIC Boost::boost Boost::system)
 else()
-	target_link_libraries(rme_proto PUBLIC ${Protobuf_LIBRARIES})
+	target_link_libraries(rme_core PUBLIC ${Boost_LIBRARIES})
 endif()
 
+if(TARGET ZLIB::ZLIB)
+	target_link_libraries(rme_core PUBLIC ZLIB::ZLIB)
+else()
+	target_link_libraries(rme_core PUBLIC ${ZLIB_LIBRARIES})
+endif()
+
+if(TARGET protobuf::libprotobuf)
+	target_link_libraries(rme_core PUBLIC protobuf::libprotobuf)
+else()
+	target_link_libraries(rme_core PUBLIC ${Protobuf_LIBRARIES})
+endif()
+
+if(TARGET LibLZMA::LibLZMA)
+	target_link_libraries(rme_core PUBLIC LibLZMA::LibLZMA)
+else()
+	target_link_libraries(rme_core PUBLIC ${LIBLZMA_LIBRARIES})
+endif()
+
+# Main executable (UI layer)
 # Removed WIN32 to enable Console subsystem for persistent debugging logs
-add_executable(rme ${rme_H} ${rme_SRC})
+add_executable(rme ${rme_ui_H} ${rme_ui_SRC})
 
 set_target_properties(rme PROPERTIES CXX_STANDARD 23)
 set_target_properties(rme PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_compile_definitions(rme PRIVATE WXWIN_COMPATIBILITY_3_3 NANOVG_GL3)
 target_precompile_headers(rme PRIVATE source/app/main.h)
-target_link_libraries(rme PRIVATE rme_proto)
+
+target_include_directories(rme PRIVATE
+	${LUA_INCLUDE_DIR}
+)
+
+target_link_libraries(rme PRIVATE
+	rme_core
+	nanovg::nanovg
+	sol2::sol2
+	cpr::cpr
+	${LUA_LIBRARIES}
+)
+
+if(TARGET Boost::boost)
+	target_link_libraries(rme PRIVATE Boost::thread)
+endif()
+
+# Link against wxWidgets (only in UI layer)
+if(TARGET wxWidgets::wxWidgets)
+	target_link_libraries(rme PRIVATE wxWidgets::wxWidgets)
+else()
+	target_link_libraries(rme PRIVATE ${wxWidgets_LIBRARIES})
+endif()
+
 # Defines NANOVG_GL3_IMPLEMENTATION, which must not leak into a unity batch
 set_source_files_properties(source/util/nanovg_canvas.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 if(MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")
@@ -110,7 +171,6 @@ endif()
 if(MSVC AND CMAKE_UNITY_BUILD)
 	target_compile_options(rme PRIVATE /bigobj)
 endif()
- 
 # Copy assets to build directory
 add_custom_command(TARGET rme POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
@@ -122,73 +182,14 @@ add_custom_command(TARGET rme POST_BUILD
 	COMMENT "Copying assets to output directory..."
 )
 
-
-# Link against wxWidgets (works with both vcpkg and Conan)
-if(TARGET wxWidgets::wxWidgets)
-	# Conan provides a single wxWidgets::wxWidgets target
-	target_link_libraries(rme PRIVATE wxWidgets::wxWidgets)
-else()
-	# vcpkg/system provides wxWidgets_LIBRARIES variable
-	target_link_libraries(rme PRIVATE ${wxWidgets_LIBRARIES})
-endif()
-
-# Include directories (for legacy find modules)
-target_include_directories(rme PRIVATE
-	${Boost_INCLUDE_DIRS}
-	${OPENGL_INCLUDE_DIR}
-	${ZLIB_INCLUDE_DIR}
-	${Protobuf_INCLUDE_DIRS}
-	${LIBLZMA_INCLUDE_DIRS}
-	${CMAKE_CURRENT_BINARY_DIR}
-	${LUA_INCLUDE_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}/source
-)
-
-# Link other libraries (works with both vcpkg targets and Conan targets)
-if(TARGET Boost::boost)
-	target_link_libraries(rme PRIVATE Boost::boost Boost::thread Boost::system)
-else()
-	target_link_libraries(rme PRIVATE ${Boost_LIBRARIES})
-endif()
-
-
-if(TARGET ZLIB::ZLIB)
-	target_link_libraries(rme PRIVATE ZLIB::ZLIB)
-else()
-	target_link_libraries(rme PRIVATE ${ZLIB_LIBRARIES})
-endif()
-
-if(TARGET protobuf::libprotobuf)
-	target_link_libraries(rme PRIVATE protobuf::libprotobuf)
-else()
-	target_link_libraries(rme PRIVATE ${Protobuf_LIBRARIES})
-endif()
-
-if(TARGET LibLZMA::LibLZMA)
-	target_link_libraries(rme PRIVATE LibLZMA::LibLZMA)
-else()
-	target_link_libraries(rme PRIVATE ${LIBLZMA_LIBRARIES})
-endif()
-
-target_link_libraries(rme PRIVATE ${OPENGL_LIBRARIES})
-target_link_libraries(rme PRIVATE glad::glad)
-target_link_libraries(rme PRIVATE glm::glm)
-target_link_libraries(rme PRIVATE nanovg::nanovg)
-target_link_libraries(rme PRIVATE spdlog::spdlog)
-target_link_libraries(rme PRIVATE tomlplusplus::tomlplusplus)
-target_link_libraries(rme PRIVATE sol2::sol2)
-target_link_libraries(rme PRIVATE cpr::cpr)
-target_link_libraries(rme PRIVATE WebP::webp)
-target_link_libraries(rme PRIVATE ${LUA_LIBRARIES})
-
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT "rme")
 
 # --- Unit test for universal rotator ---
-set(TEST_ROTATOR_SRC ${rme_SRC})
+set(TEST_ROTATOR_SRC ${rme_ui_SRC})
 list(REMOVE_ITEM TEST_ROTATOR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/source/app/application.cpp")
 
 add_executable(test_universal_rotator ${rme_H} ${TEST_ROTATOR_SRC} tests/test_universal_rotator.cpp)
-target_link_libraries(test_universal_rotator PRIVATE rme_proto)
+target_link_libraries(test_universal_rotator PRIVATE rme_core)
 set_target_properties(test_universal_rotator PROPERTIES CXX_STANDARD 23)
 set_target_properties(test_universal_rotator PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_compile_definitions(test_universal_rotator PRIVATE WXWIN_COMPATIBILITY_3_3 NANOVG_GL3)
@@ -201,50 +202,21 @@ else()
 endif()
 
 target_include_directories(test_universal_rotator PRIVATE
-	${Boost_INCLUDE_DIRS}
-	${OPENGL_INCLUDE_DIR}
-	${ZLIB_INCLUDE_DIR}
-	${Protobuf_INCLUDE_DIRS}
-	${LIBLZMA_INCLUDE_DIRS}
 	${CMAKE_CURRENT_BINARY_DIR}
 	${LUA_INCLUDE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/source
 )
 
 if(TARGET Boost::boost)
-	target_link_libraries(test_universal_rotator PRIVATE Boost::boost Boost::thread Boost::system)
-else()
-	target_link_libraries(test_universal_rotator PRIVATE ${Boost_LIBRARIES})
+	target_link_libraries(test_universal_rotator PRIVATE Boost::thread)
 endif()
 
-if(TARGET ZLIB::ZLIB)
-	target_link_libraries(test_universal_rotator PRIVATE ZLIB::ZLIB)
-else()
-	target_link_libraries(test_universal_rotator PRIVATE ${ZLIB_LIBRARIES})
-endif()
-
-if(TARGET protobuf::libprotobuf)
-	target_link_libraries(test_universal_rotator PRIVATE protobuf::libprotobuf)
-else()
-	target_link_libraries(test_universal_rotator PRIVATE ${Protobuf_LIBRARIES})
-endif()
-
-if(TARGET LibLZMA::LibLZMA)
-	target_link_libraries(test_universal_rotator PRIVATE LibLZMA::LibLZMA)
-else()
-	target_link_libraries(test_universal_rotator PRIVATE ${LIBLZMA_LIBRARIES})
-endif()
-
-target_link_libraries(test_universal_rotator PRIVATE ${OPENGL_LIBRARIES})
-target_link_libraries(test_universal_rotator PRIVATE glad::glad)
-target_link_libraries(test_universal_rotator PRIVATE glm::glm)
-target_link_libraries(test_universal_rotator PRIVATE nanovg::nanovg)
-target_link_libraries(test_universal_rotator PRIVATE spdlog::spdlog)
-target_link_libraries(test_universal_rotator PRIVATE tomlplusplus::tomlplusplus)
-target_link_libraries(test_universal_rotator PRIVATE sol2::sol2)
-target_link_libraries(test_universal_rotator PRIVATE cpr::cpr)
-target_link_libraries(test_universal_rotator PRIVATE WebP::webp)
-target_link_libraries(test_universal_rotator PRIVATE ${LUA_LIBRARIES})
+target_link_libraries(test_universal_rotator PRIVATE
+	nanovg::nanovg
+	sol2::sol2
+	cpr::cpr
+	${LUA_LIBRARIES}
+)
 
 enable_testing()
 add_test(NAME test_universal_rotator COMMAND test_universal_rotator)

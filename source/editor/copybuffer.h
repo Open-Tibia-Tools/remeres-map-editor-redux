@@ -18,11 +18,12 @@
 #ifndef RME_COPYBUFFER_H_
 #define RME_COPYBUFFER_H_
 
-#include <wx/dataobj.h>
 #include <memory>
 
 #include "map/position.h"
 #include "map/basemap.h"
+
+#include "editor/operations/copy_operations.h"
 
 class Editor;
 
@@ -32,8 +33,8 @@ public:
 	virtual ~CopyBuffer();
 
 	// In-editor implantation
-	void copy(Editor& editor, int floor);
-	void cut(Editor& editor, int floor);
+	CopyResult copy(Editor& editor, int floor);
+	CopyResult cut(Editor& editor, int floor);
 	void paste(Editor& editor, const Position& toPosition);
 	bool canPaste() const;
 	// Returns the upper-left corner of the copybuffer

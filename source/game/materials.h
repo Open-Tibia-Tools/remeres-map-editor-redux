@@ -57,7 +57,7 @@ public:
 
 	[[nodiscard]] PaletteBrushRegistrationResult registerImportedCreature(CreatureType& creature);
 
-	bool loadMaterials(const FileName& identifier, wxString& error, std::vector<std::string>& warnings);
+	bool loadMaterials(const std::filesystem::path& identifier, std::string& error, std::vector<std::string>& warnings);
 	bool needSave() const {
 		return modified;
 	}
@@ -81,15 +81,15 @@ protected:
 		}
 	};
 
-	bool unserializeMaterials(const FileName& filename, pugi::xml_node node, wxString& error, std::vector<std::string>& warnings);
-	bool loadMaterialsSection(const FileName& filename, pugi::xml_node section, std::string_view sectionName, ManifestSectionsSeen& seen, std::vector<FileName>& paletteFiles, wxString& error, std::vector<std::string>& warnings);
-	bool loadTilesetSources(const FileName& filename, pugi::xml_node section, wxString& error);
-	bool loadModuleIncludes(const FileName& manifest, pugi::xml_node section, std::string_view expectedNode, wxString& error, std::vector<std::string>& warnings);
-	bool loadPaletteIncludes(const FileName& manifest, pugi::xml_node section, std::vector<FileName>& paletteFiles, wxString& error);
-	bool resolvePaletteReferences(const std::vector<FileName>& paletteFiles, wxString& error, std::vector<std::string>& warnings);
-	bool loadPaletteFile(const FileName& filename, wxString& error, std::vector<std::string>& warnings);
-	bool loadTilesetInclude(const FileName& manifest, pugi::xml_node includeNode, DynamicPaletteDefinition& palette, wxString& error, std::vector<std::string>& warnings);
-	bool loadDynamicTilesetFile(const FileName& filename, DynamicPaletteDefinition& palette, wxString& error, std::vector<std::string>& warnings);
+	bool unserializeMaterials(const std::filesystem::path& filename, pugi::xml_node node, std::string& error, std::vector<std::string>& warnings);
+	bool loadMaterialsSection(const std::filesystem::path& filename, pugi::xml_node section, std::string_view sectionName, ManifestSectionsSeen& seen, std::vector<std::filesystem::path>& paletteFiles, std::string& error, std::vector<std::string>& warnings);
+	bool loadTilesetSources(const std::filesystem::path& filename, pugi::xml_node section, std::string& error);
+	bool loadModuleIncludes(const std::filesystem::path& manifest, pugi::xml_node section, std::string_view expectedNode, std::string& error, std::vector<std::string>& warnings);
+	bool loadPaletteIncludes(const std::filesystem::path& manifest, pugi::xml_node section, std::vector<std::filesystem::path>& paletteFiles, std::string& error);
+	bool resolvePaletteReferences(const std::vector<std::filesystem::path>& paletteFiles, std::string& error, std::vector<std::string>& warnings);
+	bool loadPaletteFile(const std::filesystem::path& filename, std::string& error, std::vector<std::string>& warnings);
+	bool loadTilesetInclude(const std::filesystem::path& manifest, pugi::xml_node includeNode, DynamicPaletteDefinition& palette, std::string& error, std::vector<std::string>& warnings);
+	bool loadDynamicTilesetFile(const std::filesystem::path& filename, DynamicPaletteDefinition& palette, std::string& error, std::vector<std::string>& warnings);
 
 	MaterialsExtensionList extensions;
 

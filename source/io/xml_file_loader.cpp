@@ -4,8 +4,11 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <format>
 #include <unordered_set>
+
+namespace fs = std::filesystem;
 
 namespace {
 	struct XmlVisitState {
@@ -13,10 +16,13 @@ namespace {
 		std::unordered_set<std::string> visiting;
 	};
 
-	std::string normalizedPathKey(const FileName& filename) {
-		FileName normalized(filename);
-		normalized.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE);
-		std::string path_key = normalized.GetFullPath().ToStdString();
+	std::string normalizedPathKey(const fs::path& filename) {
+		std::error_code ec;
+		fs::path p = fs::weakly_canonical(filename, ec);
+		if (ec) {
+			p = filename.lexically_normal();
+		}
+		std::string path_key = p.string();
 #if defined(_WIN32) || defined(__APPLE__)
 		std::transform(path_key.begin(), path_key.end(), path_key.begin(), [](unsigned char ch) {
 			return static_cast<char>(std::tolower(ch));
@@ -25,7 +31,7 @@ namespace {
 		return path_key;
 	}
 
-	bool visitFile(const FileName& filename, const char* root_name, const XmlFileLoader::XmlChildVisitor& visitor, XmlVisitState& state, wxString& error, std::vector<std::string>& warnings) {
+	bool visitFile(const fs::path& filename, const char* root_name, const XmlFileLoader::XmlChildVisitor& visitor, XmlVisitState& state, std::string& error, std::vector<std::string>& warnings) {
 		const std::string path_key = normalizedPathKey(filename);
 		if (state.visiting.contains(path_key)) {
 			warnings.push_back(std::format("Skipping cyclic XML include: {}", path_key));
@@ -37,15 +43,15 @@ namespace {
 		}
 
 		pugi::xml_document doc;
-		const pugi::xml_parse_result result = doc.load_file(filename.GetFullPath().ToStdString().c_str());
+		const pugi::xml_parse_result result = doc.load_file(filename.c_str());
 		if (!result) {
-			error = wxString::FromUTF8(std::format("Could not open XML file {}.", filename.GetFullPath().utf8_string()));
+			error = std::format("Could not open XML file {}.", filename.string());
 			return false;
 		}
 
 		const pugi::xml_node root = doc.child(root_name);
 		if (!root) {
-			error = wxString::FromUTF8(std::format("XML file {} has an invalid <{}> root.", filename.GetFullPath().utf8_string(), root_name));
+			error = std::format("XML file {} has an invalid <{}> root.", filename.string(), root_name);
 			return false;
 		}
 
@@ -59,11 +65,11 @@ namespace {
 					continue;
 				}
 
-				const FileName include_file = XmlFileLoader::resolveRelative(filename, wxString::FromUTF8(include_attribute.as_string()));
-				wxString include_error;
+				const fs::path include_file = XmlFileLoader::resolveRelative(filename, include_attribute.as_string());
+				std::string include_error;
 				if (!visitFile(include_file, root_name, visitor, state, include_error, warnings)) {
 					error = include_error.empty()
-						? wxString::FromUTF8(std::format("Failed to load XML include {}.", include_file.GetFullPath().ToStdString()))
+						? std::format("Failed to load XML include {}.", include_file.string())
 						: include_error;
 					state.visiting.erase(path_key);
 					return false;
@@ -83,18 +89,19 @@ namespace {
 	}
 }
 
-FileName XmlFileLoader::resolveRelative(const FileName& source_file, const wxString& relative_path) {
-	FileName resolved(relative_path);
-	if (!resolved.IsAbsolute()) {
-		resolved.Assign(source_file.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + relative_path);
+fs::path XmlFileLoader::resolveRelative(const fs::path& source_file, const std::string& relative_path) {
+	fs::path rel(relative_path);
+	fs::path base = source_file.parent_path();
+	fs::path resolved = rel.is_absolute() ? rel : (base / rel);
+	std::error_code ec;
+	fs::path canon = fs::weakly_canonical(resolved, ec);
+	if (ec) {
+		canon = resolved.lexically_normal();
 	}
-	resolved.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE);
-	return resolved;
+	return canon;
 }
 
-bool XmlFileLoader::visitElements(const FileName& entry_file, const char* root_name, const XmlChildVisitor& visitor, wxString& error, std::vector<std::string>& warnings) {
+bool XmlFileLoader::visitElements(const fs::path& entry_file, const char* root_name, const XmlChildVisitor& visitor, std::string& error, std::vector<std::string>& warnings) {
 	XmlVisitState state;
-	FileName normalized_entry(entry_file);
-	normalized_entry.Normalize(wxPATH_NORM_ABSOLUTE | wxPATH_NORM_DOTS | wxPATH_NORM_TILDE);
-	return visitFile(normalized_entry, root_name, visitor, state, error, warnings);
+	return visitFile(entry_file, root_name, visitor, state, error, warnings);
 }

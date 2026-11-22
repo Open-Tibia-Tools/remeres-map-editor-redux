@@ -2,24 +2,20 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "map/operations/map_processor.h"
 #include "editor/editor.h"
 #include "map/map.h"
 #include "map/tile_operations.h"
-#include "ui/gui.h"
 #include "brushes/ground/ground_brush.h"
 
-void MapProcessor::borderizeMap(Editor& editor, bool showdialog) {
-	if (showdialog) {
-		g_gui.CreateLoadBar("Borderizing map...");
-	}
-
+void MapProcessor::borderizeMap(Editor& editor, std::function<void(int)> on_progress) {
 	uint64_t tiles_done = 0;
+	const auto total_tiles = editor.map.getTileCount();
 	for (TileLocation& tileLocation : editor.map) {
-		if (showdialog && tiles_done % 4096 == 0) {
-			g_gui.SetLoadDone(static_cast<int32_t>(tiles_done / double(editor.map.getTileCount()) * 100.0));
+		if (on_progress && tiles_done % 4096 == 0 && total_tiles > 0) {
+			on_progress(static_cast<int32_t>(tiles_done / double(total_tiles) * 100.0));
 		}
 
 		Tile* tile = tileLocation.get();
@@ -28,21 +24,14 @@ void MapProcessor::borderizeMap(Editor& editor, bool showdialog) {
 		TileOperations::borderize(tile, &editor.map);
 		++tiles_done;
 	}
-
-	if (showdialog) {
-		g_gui.DestroyLoadBar();
-	}
 }
 
-void MapProcessor::randomizeMap(Editor& editor, bool showdialog) {
-	if (showdialog) {
-		g_gui.CreateLoadBar("Randomizing map...");
-	}
-
+void MapProcessor::randomizeMap(Editor& editor, std::function<void(int)> on_progress) {
 	uint64_t tiles_done = 0;
+	const auto total_tiles = editor.map.getTileCount();
 	for (TileLocation& tileLocation : editor.map) {
-		if (showdialog && tiles_done % 4096 == 0) {
-			g_gui.SetLoadDone(static_cast<int32_t>(tiles_done / double(editor.map.getTileCount()) * 100.0));
+		if (on_progress && tiles_done % 4096 == 0 && total_tiles > 0) {
+			on_progress(static_cast<int32_t>(tiles_done / double(total_tiles) * 100.0));
 		}
 
 		Tile* tile = tileLocation.get();
@@ -71,17 +60,9 @@ void MapProcessor::randomizeMap(Editor& editor, bool showdialog) {
 		}
 		++tiles_done;
 	}
-
-	if (showdialog) {
-		g_gui.DestroyLoadBar();
-	}
 }
 
-void MapProcessor::clearInvalidHouseTiles(Editor& editor, bool showdialog) {
-	if (showdialog) {
-		g_gui.CreateLoadBar("Clearing invalid house tiles...");
-	}
-
+void MapProcessor::clearInvalidHouseTiles(Editor& editor, std::function<void(int)> on_progress) {
 	Houses& houses = editor.map.houses;
 
 	HouseMap::iterator iter = houses.begin();
@@ -95,9 +76,10 @@ void MapProcessor::clearInvalidHouseTiles(Editor& editor, bool showdialog) {
 	}
 
 	uint64_t tiles_done = 0;
+	const auto total_tiles = editor.map.getTileCount();
 	for (auto& tileLocation : editor.map) {
-		if (showdialog && tiles_done % 4096 == 0) {
-			g_gui.SetLoadDone(static_cast<int32_t>(tiles_done / double(editor.map.getTileCount()) * 100.0));
+		if (on_progress && tiles_done % 4096 == 0 && total_tiles > 0) {
+			on_progress(static_cast<int32_t>(tiles_done / double(total_tiles) * 100.0));
 		}
 
 		Tile* tile = tileLocation.get();
@@ -109,30 +91,19 @@ void MapProcessor::clearInvalidHouseTiles(Editor& editor, bool showdialog) {
 		}
 		++tiles_done;
 	}
-
-	if (showdialog) {
-		g_gui.DestroyLoadBar();
-	}
 }
 
-void MapProcessor::clearModifiedTileState(Editor& editor, bool showdialog) {
-	if (showdialog) {
-		g_gui.CreateLoadBar("Clearing modified state from all tiles...");
-	}
-
+void MapProcessor::clearModifiedTileState(Editor& editor, std::function<void(int)> on_progress) {
 	uint64_t tiles_done = 0;
+	const auto total_tiles = editor.map.getTileCount();
 	for (auto& tileLocation : editor.map) {
-		if (showdialog && tiles_done % 4096 == 0) {
-			g_gui.SetLoadDone(static_cast<int32_t>(tiles_done / double(editor.map.getTileCount()) * 100.0));
+		if (on_progress && tiles_done % 4096 == 0 && total_tiles > 0) {
+			on_progress(static_cast<int32_t>(tiles_done / double(total_tiles) * 100.0));
 		}
 
 		Tile* tile = tileLocation.get();
 		ASSERT(tile);
 		tile->unmodify();
 		++tiles_done;
-	}
-
-	if (showdialog) {
-		g_gui.DestroyLoadBar();
 	}
 }

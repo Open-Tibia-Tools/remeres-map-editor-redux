@@ -1,10 +1,9 @@
-#include "app/main.h"
+#include "app/definitions.h"
 #include "map/map_search.h"
 #include "map/map.h"
 #include "map/tile.h"
 #include "map/map_region.h" // For MapNode, Floor
 #include "map/spatial_hash_grid.h"
-#include "ui/gui.h"
 #include "editor/editor.h"
 #include "editor/operations/search_operations.h"
 #include <algorithm>
@@ -108,7 +107,7 @@ std::vector<SearchResult> MapSearchUtility::SearchItems(Map& map, bool unique, b
 		std::vector<SearchResult> results;
 		results.reserve(searcher.found.size());
 		for (auto& p : searcher.found) {
-			results.push_back({ p.first, p.second, searcher.desc(p.second).ToStdString() });
+			results.push_back({ p.first, p.second, searcher.desc(p.second) });
 		}
 		return results;
 	};

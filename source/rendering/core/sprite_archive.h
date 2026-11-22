@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <string>

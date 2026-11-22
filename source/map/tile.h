@@ -34,6 +34,7 @@ class Map;
 #include <memory>
 #include <span>
 #include <vector>
+#include <functional>
 
 enum {
 	TILESTATE_NONE = 0x0000,
@@ -115,6 +116,14 @@ public: // Functions
 	void unmodify() {
 		statflags &= ~TILESTATE_MODIFIED;
 	}
+
+	using TileModifiedCallback = std::function<void(Tile* tile)>;
+	static void setModifiedCallback(TileModifiedCallback cb) { s_modified_cb = std::move(cb); }
+
+private:
+	static inline TileModifiedCallback s_modified_cb = nullptr;
+
+public:
 
 	// Get memory footprint size
 	uint32_t memsize() const;

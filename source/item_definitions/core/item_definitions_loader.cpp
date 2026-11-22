@@ -22,14 +22,14 @@ namespace {
 	}
 }
 
-bool ItemDefinitionsLoader::assemble(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, wxString& error, std::vector<std::string>& warnings, MissingItemReport* missingReport) const {
+bool ItemDefinitionsLoader::assemble(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, std::string& error, std::vector<std::string>& warnings, MissingItemReport* missingReport) const {
 	const ItemDefinitionRecipe& recipe = ItemDefinitionRecipeRegistry::get(input.mode);
 	if (!recipe.runnable) {
 		error = "Selected item definition mode is not implemented yet.";
 		return false;
 	}
 
-	if (input.xml_path.GetFullPath().IsEmpty() && input.xml_paths.empty()) {
+	if (input.xml_path.empty() && input.xml_paths.empty()) {
 		error = "items.xml path is missing.";
 		return false;
 	}
@@ -81,7 +81,7 @@ bool ItemDefinitionsLoader::assemble(const ItemDefinitionLoadInput& input, ItemD
 	return true;
 }
 
-bool ItemDefinitionsLoader::load(const ItemDefinitionLoadInput& input, wxString& error, std::vector<std::string>& warnings) const {
+bool ItemDefinitionsLoader::load(const ItemDefinitionLoadInput& input, std::string& error, std::vector<std::string>& warnings) const {
 	ItemDefinitionFragments fragments;
 	std::vector<ResolvedItemDefinitionRow> rows;
 	if (!assemble(input, fragments, rows, error, warnings)) {

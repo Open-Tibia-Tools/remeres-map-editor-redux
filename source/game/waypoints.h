@@ -19,6 +19,8 @@
 #define RME_WAYPOINTS_H_
 
 #include "map/position.h"
+#include <map>
+#include <memory>
 
 class Waypoint {
 public:

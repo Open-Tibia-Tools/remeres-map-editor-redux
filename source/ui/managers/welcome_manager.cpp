@@ -47,10 +47,10 @@ void WelcomeManager::OnWelcomeDialogAction(wxCommandEvent& event) {
 	} else if (event.GetId() == wxID_OPEN) {
 		if (welcomeDialog != nullptr) {
 			if (auto load_request = welcomeDialog->ConsumePendingLoadRequest()) {
-				g_gui.LoadMap(FileName(load_request->map_path), load_request->load_options);
+				g_gui.LoadMap(FileName(load_request->map_path.ToStdWstring()), load_request->load_options);
 				return;
 			}
 		}
-		g_gui.LoadMap(FileName(event.GetString()));
+		g_gui.LoadMap(FileName(event.GetString().ToStdWstring()));
 	}
 }

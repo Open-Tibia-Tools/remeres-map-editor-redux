@@ -38,7 +38,7 @@
 #include "palette/palette_window.h"
 #include "rendering/ui/screenshot_controller.h"
 #include "rendering/utilities/tile_describer.h"
-#include "rendering/core/coordinate_mapper.h"
+#include "rendering/core/map_view_math.h"
 #include "rendering/ui/map_display.h"
 #include "util/image_manager.h"
 #include <wx/textctrl.h>
@@ -58,7 +58,6 @@
 #include "util/phase_profiler.h"
 #include <chrono>
 #include <thread>
-
 #include "ui/map_popup_menu.h"
 #include "brushes/brush_utility.h"
 #include "rendering/ui/clipboard_handler.h"
@@ -423,7 +422,18 @@ void MapCanvas::ScreenToMap(int screen_x, int screen_y, int custom_floor, int* m
 		mw->GetViewStart(&start_x, &start_y);
 	}
 
-	CoordinateMapper::ScreenToMap(screen_x, screen_y, start_x, start_y, zoom, custom_floor, GetContentScaleFactor(), map_x, map_y);
+	MainMapViewMath::ScreenToMap(
+		screen_x,
+		screen_y,
+		MainMapViewport {
+			.view_scroll_x = start_x,
+			.view_scroll_y = start_y,
+			.zoom = zoom,
+			.floor = custom_floor,
+			.scale_factor = GetContentScaleFactor(),
+		},
+		map_x,
+		map_y);
 }
 
 MainMapPixelPosition MapCanvas::ScreenToMapPixel(int screen_x, int screen_y) const {
@@ -432,7 +442,16 @@ MainMapPixelPosition MapCanvas::ScreenToMapPixel(int screen_x, int screen_y) con
 		mw->GetViewStart(&start_x, &start_y);
 	}
 
-	return CoordinateMapper::ScreenToMapPixel(screen_x, screen_y, start_x, start_y, zoom, floor, GetContentScaleFactor());
+	return MainMapViewMath::ScreenToMapPixel(
+		screen_x,
+		screen_y,
+		MainMapViewport {
+			.view_scroll_x = start_x,
+			.view_scroll_y = start_y,
+			.zoom = zoom,
+			.floor = floor,
+			.scale_factor = GetContentScaleFactor(),
+		});
 }
 #if 0
 

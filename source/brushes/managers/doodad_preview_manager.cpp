@@ -2,18 +2,16 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 #include "brushes/managers/doodad_preview_manager.h"
 #include "brushes/brush.h"
 #include "brushes/doodad/doodad_brush.h"
-#include "brushes/managers/brush_manager.h"
 #include "game/sprites.h"
 #include "map/map.h"
-#include "app/settings.h"
-#include "ui/gui.h"
 #include <cmath>
 #include <numbers>
 #include <vector>
+#include <random>
 
 DoodadPreviewManager g_doodad_preview;
 
@@ -27,20 +25,23 @@ void DoodadPreviewManager::Clear() {
 	doodad_buffer_map->clear();
 }
 
-void DoodadPreviewManager::FillBuffer() {
-	Brush* current_brush = g_brush_manager.GetCurrentBrush();
-	if (!current_brush || !current_brush->is<DoodadBrush>()) {
+void DoodadPreviewManager::FillBuffer(
+	DoodadBrush* brush,
+	int variation,
+	const BrushFootprint& footprint,
+	bool useCustomThickness,
+	float customThicknessMod
+) {
+	if (!brush) {
 		return;
 	}
 
 	doodad_buffer_map->clear();
 
-	DoodadBrush* brush = current_brush->as<DoodadBrush>();
-	if (brush->isEmpty(g_brush_manager.GetBrushVariation())) {
+	if (brush->isEmpty(variation)) {
 		return;
 	}
 
-	const BrushFootprint footprint = g_brush_manager.GetBrushFootprint();
 	std::vector<Position> valid_offsets;
 	for (int y = footprint.min_offset_y; y <= footprint.max_offset_y; ++y) {
 		for (int x = footprint.min_offset_x; x <= footprint.max_offset_x; ++x) {
@@ -50,13 +51,12 @@ void DoodadPreviewManager::FillBuffer() {
 		}
 	}
 
-	const int variation = g_brush_manager.GetBrushVariation();
 	Position center_pos(0x8000, 0x8000, 0x8);
 
 	if (!footprint.isSingleTile() && !brush->oneSizeFitsAll()) {
 		const int area = std::max(1, static_cast<int>(valid_offsets.size()));
 		int object_count = 0;
-		const int object_range = (g_brush_manager.UseCustomThickness() ? static_cast<int>(area * g_brush_manager.GetCustomThicknessMod()) : brush->getThickness() * area / std::max(1, brush->getThicknessCeiling()));
+		const int object_range = (useCustomThickness ? static_cast<int>(area * customThicknessMod) : brush->getThickness() * area / std::max(1, brush->getThicknessCeiling()));
 
 		std::mt19937 seeded_rng(static_cast<uint32_t>(1337u + static_cast<uint32_t>(variation) * 37u));
 		auto next_rand = [&](int min_val, int max_val) -> int {

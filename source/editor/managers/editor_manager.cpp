@@ -200,11 +200,25 @@ bool EditorManager::SaveCurrentMap(FileName fileName, bool showdialog) {
 				g_gui.root->Update();
 			}
 
+			if (showdialog) {
+				g_gui.CreateLoadBar("Saving OTBM map...");
+			}
+			auto progress = showdialog ? [](int percent, std::string_view msg) {
+				g_gui.SetLoadDone(percent, msg.empty() ? wxString() : wxstr(std::string(msg)));
+			} : EditorPersistence::ProgressCallback{};
+
 			const auto save_started = std::chrono::steady_clock::now();
-			const bool success = EditorPersistence::saveMap(*editor, fileName, showdialog);
+			auto result = EditorPersistence::saveMap(*editor, fileName, progress);
 			const double save_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - save_started).count();
 
-			if (success && !editor->map.hasChanged()) {
+			if (showdialog) {
+				g_gui.DestroyLoadBar();
+			}
+
+			const bool success = result.success;
+			if (!result.success) {
+				DialogUtil::PopupDialog("Error", result.error_message, wxOK);
+			} else if (!editor->map.hasChanged()) {
 				// Report what actually landed on disk, not just that it worked.
 				std::error_code size_ec;
 				const auto file_size = std::filesystem::file_size(std::filesystem::path(editor->map.getFilename()), size_ec);
@@ -274,7 +288,7 @@ void EditorManager::OpenMap() {
 	wxFileDialog dialog(g_gui.root, "Open map file", wxEmptyString, wxEmptyString, wildcard, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
 	if (dialog.ShowModal() == wxID_OK) {
-		LoadMap(dialog.GetPath());
+		LoadMap(dialog.GetPath().ToStdWstring());
 	}
 }
 
@@ -284,13 +298,13 @@ void EditorManager::SaveMap() {
 	}
 
 	if (GetCurrentMap().hasFile()) {
-		SaveCurrentMap(FileName(""), true);
+		SaveCurrentMap(FileName(), true);
 	} else {
 		wxString wildcard = MAP_SAVE_FILE_WILDCARD;
 		wxFileDialog dialog(g_gui.root, "Save...", wxEmptyString, wxEmptyString, wildcard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 
 		if (dialog.ShowModal() == wxID_OK) {
-			SaveCurrentMap(dialog.GetPath(), true);
+			SaveCurrentMap(dialog.GetPath().ToStdWstring(), true);
 		}
 	}
 }
@@ -312,13 +326,13 @@ void EditorManager::SaveMapAs() {
 			GetCurrentMap().setCompression(OtbmCompression::None);
 		}
 
-		if (!SaveCurrentMap(dialog.GetPath(), true)) {
+		if (!SaveCurrentMap(dialog.GetPath().ToStdWstring(), true)) {
 			GetCurrentMap().setCompression(prev_compression);
 			return;
 		}
 
 		g_status.UpdateTitle();
-		g_gui.root->AddRecentFile(dialog.GetPath());
+		g_gui.root->AddRecentFile(dialog.GetPath().ToStdWstring());
 		g_gui.root->UpdateMenubar();
 	}
 }
@@ -335,19 +349,19 @@ void EditorManager::SaveMapAsGzip() {
 		const OtbmCompression prev_compression = GetCurrentMap().getCompression();
 		GetCurrentMap().setCompression(OtbmCompression::Gzip);
 
-		if (!SaveCurrentMap(dialog.GetPath(), true)) {
+		if (!SaveCurrentMap(dialog.GetPath().ToStdWstring(), true)) {
 			GetCurrentMap().setCompression(prev_compression);
 			return;
 		}
 
 		g_status.UpdateTitle();
-		g_gui.root->AddRecentFile(dialog.GetPath());
+		g_gui.root->AddRecentFile(dialog.GetPath().ToStdWstring());
 		g_gui.root->UpdateMenubar();
 	}
 }
 
 bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load_options) {
-	spdlog::info("EditorManager::LoadMap - Loading map: {}", nstr(fileName.GetFullPath()));
+	spdlog::info("EditorManager::LoadMap - Loading map: {}", fileName.string());
 	const auto load_started = std::chrono::steady_clock::now();
 	g_status.SetStatusText("Loading map...");
 	if (g_gui.root) {
@@ -363,7 +377,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 	try {
 		MapVersion ver;
 		if (!IOMapOTBM::getVersionInfo(fileName, ver)) {
-			throw std::runtime_error(std::format("Could not open file \"{}\".\nThis is not a valid OTBM file or it does not exist.", nstr(fileName.GetFullPath())));
+			throw std::runtime_error(std::format("Could not open file \"{}\".\nThis is not a valid OTBM file or it does not exist.", fileName.string()));
 		}
 
 		ClientVersion* target = nullptr;
@@ -384,12 +398,12 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 
 		ClientVersion* current = g_version.getLoadedVersion();
 		if (!current || current->getID() != target->getID()) {
-			wxString error;
+			std::string error;
 			std::vector<std::string> warnings;
 			if (CloseAllEditors()) {
 				if (!g_version.LoadVersion(target->getID(), error, warnings)) {
 					g_status.SetStatusText("Failed to load map.");
-					DialogUtil::PopupDialog("Error", error, wxOK);
+					DialogUtil::PopupDialog("Error", wxstr(error), wxOK);
 					return false;
 				}
 				if (!warnings.empty()) {
@@ -400,7 +414,12 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 			}
 		}
 
-		editor = EditorFactory::LoadFromFile(g_gui.copybuffer, fileName, load_options);
+		ScopedLoadingBar loading_bar("Loading OTBM map...");
+		auto on_progress = [](int percent, std::string_view msg) {
+			g_gui.SetLoadDone(percent, msg.empty() ? wxString() : wxstr(std::string(msg)));
+		};
+
+		editor = EditorFactory::LoadFromFile(g_gui.copybuffer, fileName, load_options, on_progress);
 	} catch (std::runtime_error& e) {
 		g_status.SetStatusText("Failed to load map.");
 		DialogUtil::PopupDialog(g_gui.root, "Error!", wxString(e.what(), wxConvUTF8), wxOK);
@@ -420,7 +439,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 	g_gui.FitViewToMap(mapTab);
 	g_gui.root->UpdateMenubar();
 
-	const Position initial_pos = MapInitialPositionResolver::Resolve(*mapTab->GetMap(), fileName.GetFullPath().ToStdString());
+	const Position initial_pos = MapInitialPositionResolver::Resolve(*mapTab->GetMap(), fileName.string());
 	mapTab->SetScreenCenterPosition(initial_pos);
 
 	mapTab->GetView()->ResetMinimapViewportToCurrentView();
@@ -430,17 +449,17 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 	const uint64_t loaded_tiles = mapTab->GetMap()->getTileCount();
 	const double load_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - load_started).count();
 	if (loaded_tiles > 0) {
-		g_status.SetStatusText(std::format("Map loaded: {} ({} tiles) in {:.1f} s.", nstr(fileName.GetFullName()), loaded_tiles, load_seconds));
-		spdlog::info("Map loaded: {} ({} tiles) in {:.1f} s", nstr(fileName.GetFullName()), loaded_tiles, load_seconds);
+		g_status.SetStatusText(std::format("Map loaded: {} ({} tiles) in {:.1f} s.", fileName.filename().string(), loaded_tiles, load_seconds));
+		spdlog::info("Map loaded: {} ({} tiles) in {:.1f} s", fileName.filename().string(), loaded_tiles, load_seconds);
 	} else {
 		std::error_code size_ec;
-		const auto bytes = std::filesystem::file_size(std::filesystem::path(fileName.GetFullPath().utf8_string()), size_ec);
+		const auto bytes = std::filesystem::file_size(fileName, size_ec);
 		if (size_ec) {
 			g_status.SetStatusText("Map loaded successfully.");
 		} else {
 			const double megabytes = static_cast<double>(bytes) / (1024.0 * 1024.0);
-			g_status.SetStatusText(std::format("Map loaded: {} ({:.1f} MB) in {:.1f} s.", nstr(fileName.GetFullName()), megabytes, load_seconds));
-			spdlog::info("Map loaded: {} ({:.1f} MB) in {:.1f} s", nstr(fileName.GetFullName()), megabytes, load_seconds);
+			g_status.SetStatusText(std::format("Map loaded: {} ({:.1f} MB) in {:.1f} s.", fileName.filename().string(), megabytes, load_seconds));
+			spdlog::info("Map loaded: {} ({:.1f} MB) in {:.1f} s", fileName.filename().string(), megabytes, load_seconds);
 		}
 	}
 	return true;
@@ -456,7 +475,12 @@ void EditorManager::DoCut() {
 		return;
 	}
 
-	editor->copybuffer.cut(*editor, g_gui.GetCurrentFloor());
+	auto result = editor->copybuffer.cut(*editor, g_gui.GetCurrentFloor());
+	if (result.empty) {
+		g_gui.SetStatusText("No tiles to cut.");
+	} else {
+		g_gui.SetStatusText(std::format("Cut out {} tile{} ({} item{})", result.tile_count, (result.tile_count > 1 ? "s" : ""), result.item_count, (result.item_count > 1 ? "s" : "")));
+	}
 	g_gui.RefreshView();
 	g_gui.root->UpdateMenubar();
 }
@@ -471,7 +495,12 @@ void EditorManager::DoCopy() {
 		return;
 	}
 
-	editor->copybuffer.copy(*editor, g_gui.GetCurrentFloor());
+	auto result = editor->copybuffer.copy(*editor, g_gui.GetCurrentFloor());
+	if (result.empty) {
+		g_gui.SetStatusText("No tiles to copy.");
+	} else {
+		g_gui.SetStatusText(std::format("Copied {} tile{} ({} item{})", result.tile_count, (result.tile_count > 1 ? "s" : ""), result.item_count, (result.item_count > 1 ? "s" : "")));
+	}
 	g_gui.RefreshView();
 	g_gui.root->UpdateMenubar();
 }

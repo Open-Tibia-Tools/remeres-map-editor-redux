@@ -57,7 +57,7 @@ WelcomeDialog::WelcomeDialog(const wxString& title_text, const wxString& version
 		m_configured_clients.push_back({
 			client,
 			wxstr(client->getName()),
-			client->getClientPath().GetFullPath(),
+			wxString(client->getClientPath().wstring()),
 		});
 	}
 
@@ -98,7 +98,7 @@ void WelcomeDialog::RefreshConfiguredClients() {
 		m_configured_clients.push_back({
 			client,
 			wxstr(client->getName()),
-			client->getClientPath().GetFullPath(),
+			wxString(client->getClientPath().wstring()),
 		});
 	}
 
@@ -503,7 +503,7 @@ void WelcomeDialog::EnsurePeeked(const wxString& path) {
 	}
 
 	OTBMStartupPeekResult peek_result;
-	if (!IOMapOTBM::peekStartupInfo(FileName(path), peek_result) && !peek_result.has_error) {
+	if (!IOMapOTBM::peekStartupInfo(std::filesystem::path(path.ToStdWstring()), peek_result) && !peek_result.has_error) {
 		peek_result.has_error = true;
 		peek_result.error_message = "Could not read the selected map.";
 	}

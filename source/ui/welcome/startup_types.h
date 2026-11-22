@@ -4,6 +4,7 @@
 #include <string>
 
 #include <wx/colour.h>
+#include <wx/gdicmn.h>
 #include <wx/string.h>
 
 #include "editor/persistence/map_load_options.h"

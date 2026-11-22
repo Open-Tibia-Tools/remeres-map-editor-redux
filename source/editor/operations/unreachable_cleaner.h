@@ -1,12 +1,8 @@
-//////////////////////////////////////////////////////////////////////
-// This file is part of Remere's Map Editor
-//////////////////////////////////////////////////////////////////////
-
 #ifndef RME_EDITOR_OPERATIONS_UNREACHABLE_CLEANER_H_
 #define RME_EDITOR_OPERATIONS_UNREACHABLE_CLEANER_H_
 
-#include "app/main.h"
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 #include "map/position.h"
@@ -15,11 +11,9 @@ class Editor;
 class Map;
 class Tile;
 
-#include <functional>
-
 namespace EditorOperations {
 
-using ProgressCallback = std::function<void(int percent)>;
+using ProgressCallback = std::function<void(uint32_t percent)>;
 
 enum class CleanerFloorScope : uint8_t {
 	All = 0,        // Floors 0 - 15
@@ -54,7 +48,17 @@ public:
 		ProgressCallback on_progress = nullptr,
 		uint64_t* out_total_tiles = nullptr
 	);
-	static UnreachableCleanerResult Clean(Editor& editor, const UnreachableCleanerSettings& settings);
+	static UnreachableCleanerResult Apply(
+		Editor& editor,
+		const std::vector<Position>& to_remove,
+		const UnreachableCleanerSettings& settings,
+		ProgressCallback on_progress = nullptr
+	);
+	static UnreachableCleanerResult Clean(
+		Editor& editor,
+		const UnreachableCleanerSettings& settings,
+		ProgressCallback on_progress = nullptr
+	);
 };
 
 } // namespace EditorOperations

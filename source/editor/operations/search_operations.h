@@ -8,25 +8,33 @@
 #include "game/creature.h"
 #include "game/item.h"
 #include "game/complexitem.h"
-#include "ui/gui.h"
+
+#include <algorithm>
+#include <format>
+#include <functional>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace EditorOperations {
 
 	constexpr int SEARCH_UPDATE_INTERVAL = 0x8000;
+	using ProgressCallback = std::function<void(uint32_t percent)>;
 
 	struct ItemSearcher {
-		ItemSearcher(uint16_t itemId, uint32_t maxCount, uint32_t offset = 0) :
-			itemId(itemId), maxCount(maxCount), offset(offset) { }
+		ItemSearcher(uint16_t itemId, uint32_t maxCount, uint32_t offset = 0, ProgressCallback on_progress = nullptr) :
+			itemId(itemId), maxCount(maxCount), offset(offset), on_progress(std::move(on_progress)) { }
 
 		uint16_t itemId;
 		uint32_t maxCount;
 		uint32_t offset;
+		ProgressCallback on_progress;
 		uint32_t totalMatches = 0;
 		std::vector<std::pair<Tile*, Item*>> result;
 
 		void operator()(Map& map, Tile* tile, Item* item, long long done) {
-			if (done % SEARCH_UPDATE_INTERVAL == 0) {
-				g_gui.SetLoadDone((unsigned int)(100 * done / map.getTileCount()));
+			if (on_progress && done % SEARCH_UPDATE_INTERVAL == 0) {
+				on_progress(static_cast<uint32_t>(100 * done / map.getTileCount()));
 			}
 
 			if (item->getID() == itemId) {
@@ -43,12 +51,14 @@ namespace EditorOperations {
 	};
 
 	struct MapSearcher {
-		MapSearcher() :
+		MapSearcher(ProgressCallback on_progress = nullptr) :
+			on_progress(std::move(on_progress)),
 			search_unique(false),
 			search_action(false),
 			search_container(false),
 			search_writeable(false) { }
 
+		ProgressCallback on_progress;
 		bool search_unique;
 		bool search_action;
 		bool search_container;
@@ -56,8 +66,8 @@ namespace EditorOperations {
 		std::vector<std::pair<Tile*, Item*>> found;
 
 		void operator()(Map& map, Tile* tile, Item* item, long long done) {
-			if (done >= 0 && done % SEARCH_UPDATE_INTERVAL == 0) {
-				g_gui.SetLoadDone((unsigned int)(100 * done / map.getTileCount()));
+			if (on_progress && done >= 0 && done % SEARCH_UPDATE_INTERVAL == 0) {
+				on_progress(static_cast<uint32_t>(100 * done / map.getTileCount()));
 			}
 			Container* container;
 			if ((search_unique && item->getUniqueID() > 0) || (search_action && item->getActionID() > 0) || (search_container && ((container = dynamic_cast<Container*>(item)) && container->getItemCount())) || (search_writeable && item->getText().length() > 0)) {
@@ -65,32 +75,32 @@ namespace EditorOperations {
 			}
 		}
 
-		wxString desc(Item* item) {
-			wxString label;
+		std::string desc(Item* item) {
+			std::string label;
 			if (search_action) {
 				if (item->getActionID() > 0) {
-					label << "AID:" << item->getActionID() << " ";
+					label += std::format("AID:{} ", item->getActionID());
 				}
 				if (item->getUniqueID() > 0) {
-					label << "UID:" << item->getUniqueID() << " ";
+					label += std::format("UID:{} ", item->getUniqueID());
 				}
 			} else {
 				if (item->getUniqueID() > 0) {
-					label << "UID:" << item->getUniqueID() << " ";
+					label += std::format("UID:{} ", item->getUniqueID());
 				}
 				if (item->getActionID() > 0) {
-					label << "AID:" << item->getActionID() << " ";
+					label += std::format("AID:{} ", item->getActionID());
 				}
 			}
 
-			label << wxstr(item->getName());
+			label += item->getName();
 
 			if (dynamic_cast<Container*>(item)) {
-				label << " (Container) ";
+				label += " (Container) ";
 			}
 
 			if (item->getText().length() > 0) {
-				label << " (Text: " << wxstr(item->getText()) << ") ";
+				label += std::format(" (Text: {}) ", item->getText());
 			}
 
 			return label;
@@ -141,18 +151,19 @@ namespace EditorOperations {
 	};
 
 	struct CreatureSearcher {
-		CreatureSearcher(const Brush* creatureBrush, uint32_t maxCount, uint32_t offset = 0) :
-			creatureBrush(creatureBrush), maxCount(maxCount), offset(offset) { }
+		CreatureSearcher(const Brush* creatureBrush, uint32_t maxCount, uint32_t offset = 0, ProgressCallback on_progress = nullptr) :
+			creatureBrush(creatureBrush), maxCount(maxCount), offset(offset), on_progress(std::move(on_progress)) { }
 
 		const Brush* creatureBrush;
 		uint32_t maxCount;
 		uint32_t offset;
+		ProgressCallback on_progress;
 		uint32_t totalMatches = 0;
 		std::vector<std::pair<Tile*, Creature*>> result;
 
 		void operator()(Map& map, Tile* tile, long long done) {
-			if (done % SEARCH_UPDATE_INTERVAL == 0) {
-				g_gui.SetLoadDone(static_cast<uint32_t>(100 * done / map.getTileCount()));
+			if (on_progress && done % SEARCH_UPDATE_INTERVAL == 0) {
+				on_progress(static_cast<uint32_t>(100 * done / map.getTileCount()));
 			}
 
 			if (tile->creature != nullptr && static_cast<const Brush*>(tile->creature->getBrush()) == creatureBrush) {

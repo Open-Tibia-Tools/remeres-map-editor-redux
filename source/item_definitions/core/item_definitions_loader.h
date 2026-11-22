@@ -6,8 +6,8 @@
 
 class ItemDefinitionsLoader {
 public:
-	bool assemble(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, wxString& error, std::vector<std::string>& warnings, MissingItemReport* missingReport = nullptr) const;
-	bool load(const ItemDefinitionLoadInput& input, wxString& error, std::vector<std::string>& warnings) const;
+	bool assemble(const ItemDefinitionLoadInput& input, ItemDefinitionFragments& fragments, std::vector<ResolvedItemDefinitionRow>& rows, std::string& error, std::vector<std::string>& warnings, MissingItemReport* missingReport = nullptr) const;
+	bool load(const ItemDefinitionLoadInput& input, std::string& error, std::vector<std::string>& warnings) const;
 };
 
 #endif

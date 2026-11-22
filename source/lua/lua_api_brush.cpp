@@ -16,7 +16,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "lua_api_brush.h"
+#include "lua_api.h"
 #include "map/map.h"
 #include "brushes/brush.h"
 #include "brushes/raw/raw_brush.h"

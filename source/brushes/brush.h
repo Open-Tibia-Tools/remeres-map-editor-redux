@@ -17,9 +17,10 @@
 
 #ifndef RME_BRUSH_H_
 #define RME_BRUSH_H_
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "map/position.h"
+#include "util/common.h"
 
 #include "brushes/brush_enums.h"
 #include <map>
@@ -58,6 +59,7 @@ class WaypointBrush;
 class TownTempleBrush;
 class FlagBrush;
 class EraserBrush;
+class ZoneBrush;
 
 enum class BrushCursor {
 	Default,
@@ -89,6 +91,28 @@ public:
 		manager_ptr = brush.get();
 		addBrush(std::move(brush));
 	}
+
+	// Built-in managed brush pointers
+	HouseBrush* house_brush = nullptr;
+	HouseExitBrush* house_exit_brush = nullptr;
+	WaypointBrush* waypoint_brush = nullptr;
+	OptionalBorderBrush* optional_brush = nullptr;
+	EraserBrush* eraser = nullptr;
+	SpawnBrush* spawn_brush = nullptr;
+	DoorBrush* normal_door_brush = nullptr;
+	DoorBrush* locked_door_brush = nullptr;
+	DoorBrush* magic_door_brush = nullptr;
+	DoorBrush* quest_door_brush = nullptr;
+	DoorBrush* hatch_door_brush = nullptr;
+	DoorBrush* normal_door_alt_brush = nullptr;
+	DoorBrush* archway_door_brush = nullptr;
+	DoorBrush* window_door_brush = nullptr;
+	FlagBrush* pz_brush = nullptr;
+	FlagBrush* rook_brush = nullptr;
+	FlagBrush* nolog_brush = nullptr;
+	FlagBrush* pvp_brush = nullptr;
+	TownTempleBrush* temple_brush = nullptr;
+	ZoneBrush* zone_brush = nullptr;
 
 	bool unserializeBorder(pugi::xml_node node, std::vector<std::string>& warnings);
 	bool unserializeBrush(pugi::xml_node node, std::vector<std::string>& warnings);

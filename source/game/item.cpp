@@ -15,17 +15,18 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include "app/main.h"
+#include "app/definitions.h"
 
 #include "brushes/brush.h"
-#include "rendering/core/graphics.h"
-#include "ui/gui.h"
+#include "brushes/door/door_brush.h"
 #include "map/tile.h"
 #include "game/complexitem.h"
 #include "io/iomap.h"
 #include "game/item.h"
-#include "brushes/managers/brush_manager.h"
 #include "item_definitions/core/item_definition_store.h"
+#include "rendering/core/graphics.h"
+#include "rendering/core/game_sprite.h"
+#include "rendering/core/sprite_light.h"
 #include <unordered_map>
 
 #include "brushes/ground/ground_brush.h"
@@ -122,7 +123,7 @@ uint32_t Item::memsize() const {
 }
 
 GameSprite* Item::getSprite() const {
-	return g_gui.gfx.getGameSprite(getClientID());
+	return g_graphics.getGameSprite(getClientID());
 }
 
 void Item::setSubtype(uint16_t n) {
@@ -331,46 +332,7 @@ DoorBrush* Item::getDoorBrush() const {
 	}
 
 	DoorType door_type = definition.editorData().brush->as<WallBrush>()->getDoorTypeFromID(id);
-	DoorBrush* door_brush = nullptr;
-	// Quite a horrible dependency on a global here, meh.
-	switch (door_type) {
-		case WALL_DOOR_NORMAL: {
-			door_brush = g_brush_manager.normal_door_brush;
-			break;
-		}
-		case WALL_DOOR_LOCKED: {
-			door_brush = g_brush_manager.locked_door_brush;
-			break;
-		}
-		case WALL_DOOR_QUEST: {
-			door_brush = g_brush_manager.quest_door_brush;
-			break;
-		}
-		case WALL_DOOR_MAGIC: {
-			door_brush = g_brush_manager.magic_door_brush;
-			break;
-		}
-		case WALL_DOOR_NORMAL_ALT: {
-			door_brush = g_brush_manager.normal_door_alt_brush;
-			break;
-		}
-		case WALL_ARCHWAY: {
-			door_brush = g_brush_manager.archway_door_brush;
-			break;
-		}
-		case WALL_WINDOW: {
-			door_brush = g_brush_manager.window_door_brush;
-			break;
-		}
-		case WALL_HATCH_WINDOW: {
-			door_brush = g_brush_manager.hatch_door_brush;
-			break;
-		}
-		default: {
-			break;
-		}
-	}
-	return door_brush;
+	return DoorBrush::getDoorBrush(door_type);
 }
 
 WallBrush* Item::getWallBrush() const {

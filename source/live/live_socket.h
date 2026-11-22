@@ -23,6 +23,8 @@
 #include "live/live_packets.h"
 #include "io/filehandle.h"
 #include "io/iomap.h"
+#include <wx/string.h>
+#include <wx/colour.h>
 
 #include <memory>
 #include <unordered_map>
