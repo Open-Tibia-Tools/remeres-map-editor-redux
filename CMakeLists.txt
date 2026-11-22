@@ -265,6 +265,14 @@ target_link_libraries(test_tile_stack_rows PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_tile_stack_rows PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_tile_stack_rows COMMAND test_tile_stack_rows)
 
+# --- Unit test for minimap dirty rect bounds ---
+add_executable(test_minimap_rect tests/test_minimap_rect.cpp)
+set_target_properties(test_minimap_rect PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_minimap_rect PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_minimap_rect PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_minimap_rect PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_minimap_rect COMMAND test_minimap_rect)
+
 # --- Unit test for pixel-perfect picking of multi-tile grounds ---
 add_executable(test_selection_multitile_ground tests/test_selection_multitile_ground.cpp)
 set_target_properties(test_selection_multitile_ground PROPERTIES CXX_STANDARD 23)
