@@ -123,13 +123,15 @@ void MinimapCache::uploadRect(const Map& map, int floor, FloorCachePage& page, c
 	const size_t buffer_size = static_cast<size_t>(clamped_rect.width) * clamped_rect.height;
 	upload_buffer_.assign(buffer_size, 0);
 
-	const int origin_x = page.page_x * PageSize + clamped_rect.x;
-	const int origin_y = page.page_y * PageSize + clamped_rect.y;
-	const int rect_end_x = origin_x + clamped_rect.width - 1;
-	const int rect_end_y = origin_y + clamped_rect.height - 1;
+	// visitLeaves() takes an exclusive end; the per-node loops below use the inclusive last tile.
+	const MinimapMapBounds bounds = ToMinimapMapBounds(clamped_rect, page.page_x, page.page_y, PageSize);
+	const int origin_x = bounds.min_x;
+	const int origin_y = bounds.min_y;
+	const int rect_end_x = bounds.end_x - 1;
+	const int rect_end_y = bounds.end_y - 1;
 	const int rect_w = clamped_rect.width;
 
-	map.visitLeaves(origin_x, origin_y, rect_end_x, rect_end_y, [&](const MapNode* node, int node_map_x, int node_map_y) {
+	map.visitLeaves(bounds.min_x, bounds.min_y, bounds.end_x, bounds.end_y, [&](const MapNode* node, int node_map_x, int node_map_y) {
 		const Floor* node_floor = node->getFloor(floor);
 		if (!node_floor) {
 			return;

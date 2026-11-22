@@ -34,4 +34,24 @@ struct MinimapDirtyRect {
 	};
 }
 
+// Map-space tile bounds of a page-local dirty rect. The end is exclusive, which is the contract of
+// Map::visitLeaves(); a 1x1 rect therefore has end == min + 1.
+struct MinimapMapBounds {
+	int min_x = 0;
+	int min_y = 0;
+	int end_x = 0;
+	int end_y = 0;
+};
+
+[[nodiscard]] inline MinimapMapBounds ToMinimapMapBounds(const MinimapDirtyRect& page_rect, int page_x, int page_y, int page_size) {
+	const int min_x = page_x * page_size + page_rect.x;
+	const int min_y = page_y * page_size + page_rect.y;
+	return {
+		.min_x = min_x,
+		.min_y = min_y,
+		.end_x = min_x + page_rect.width,
+		.end_y = min_y + page_rect.height,
+	};
+}
+
 #endif
