@@ -6,6 +6,8 @@
 #include "app/main.h"
 #include "map/tile_stack_rows.h"
 #include "ui/tile_properties/browse_field_list.h"
+#include "ui/map_popup_menu.h"
+#include "ui/tile_context_actions.h"
 #include "map/tile.h"
 #include "map/map.h"
 #include "ui/gui.h"
@@ -35,6 +37,10 @@ public:
 	void OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t index) override;
 	int OnMeasureItem(size_t index) const override;
 	Item* GetItem(size_t index) const;
+
+	int RowAtClientPoint(const wxPoint& point) const;
+	// Client point a context menu for `row` opens at: the left edge of the row, vertically centred.
+	wxPoint RowMenuAnchor(int row) const;
 
 protected:
 	std::vector<Item*> items;
@@ -137,6 +143,15 @@ Item* TilePropertiesListBox::GetItem(size_t index) const {
 	return nullptr;
 }
 
+int TilePropertiesListBox::RowAtClientPoint(const wxPoint& point) const {
+	return HitTest(point.x, point.y + GetScrollPosition());
+}
+
+wxPoint TilePropertiesListBox::RowMenuAnchor(int row) const {
+	const wxRect rect = GetItemRect(row);
+	return wxPoint(rect.GetLeft(), rect.GetTop() - GetScrollPosition() + rect.GetHeight() / 2);
+}
+
 // ----------------------------------------------------------------------------
 
 BrowseFieldList::BrowseFieldList(wxWindow* parent) :
@@ -173,6 +188,7 @@ BrowseFieldList::BrowseFieldList(wxWindow* parent) :
 
 	// Events
 	item_list->Bind(wxEVT_LISTBOX, &BrowseFieldList::OnItemSelected, this);
+	item_list->Bind(wxEVT_CONTEXT_MENU, &BrowseFieldList::OnContextMenu, this);
 	btn_up->Bind(wxEVT_BUTTON, &BrowseFieldList::OnClickUp, this);
 	btn_down->Bind(wxEVT_BUTTON, &BrowseFieldList::OnClickDown, this);
 	btn_delete->Bind(wxEVT_BUTTON, &BrowseFieldList::OnClickDelete, this);
@@ -199,6 +215,11 @@ void BrowseFieldList::SelectItem(Item* item) {
 }
 
 void BrowseFieldList::OnItemSelected(wxCommandEvent& event) {
+	ApplyListSelection();
+	event.Skip(); // Let parent handle property panel swap if needed
+}
+
+void BrowseFieldList::ApplyListSelection() {
 	int selection = item_list->GetSelection();
 	Item* selected_item = nullptr;
 	UpdateButtons(selection);
@@ -218,8 +239,57 @@ void BrowseFieldList::OnItemSelected(wxCommandEvent& event) {
 		editor->selection.add(current_tile, selected_item);
 		editor->selection.finish(Selection::INTERNAL);
 	}
+}
 
-	event.Skip(); // Let parent handle property panel swap if needed
+void BrowseFieldList::OnContextMenu(wxContextMenuEvent& event) {
+	Editor* editor = g_gui.GetCurrentEditor();
+	if (!editor || !current_tile || current_map != &editor->map) {
+		return;
+	}
+
+	// A keyboard-opened menu (Shift+F10 / Menu key) has no position and acts on the selected row.
+	const bool from_keyboard = event.GetPosition() == wxDefaultPosition;
+	const wxPoint click_point = from_keyboard ? wxDefaultPosition : item_list->ScreenToClient(event.GetPosition());
+	const int hit_row = from_keyboard ? wxNOT_FOUND : item_list->RowAtClientPoint(click_point);
+	const auto row = TileStackRows::ContextMenuRow(from_keyboard, hit_row, item_list->GetSelection(), current_tile->ground != nullptr, current_tile->items.size());
+	if (!row) {
+		return;
+	}
+
+	// Same mode switch as a right click on the map, so Cut and Copy work from the panel too.
+	if (g_gui.IsDrawingMode()) {
+		g_gui.SetSelectionMode();
+	}
+
+	// The clicked row becomes the editor selection first, so every action works on exactly that item.
+	item_list->SetSelection(*row);
+	ApplyListSelection();
+	if (!current_tile) {
+		return;
+	}
+
+	// Copy the target now: a mutating action replaces the tile and refreshes this panel.
+	const Position position = current_tile->getPosition();
+	const wxPoint menu_point = from_keyboard ? item_list->RowMenuAnchor(*row) : click_point;
+
+	MapPopupMenu menu(*editor);
+	menu.Update();
+	const int menu_id = item_list->GetPopupMenuSelectionFromUser(menu, menu_point);
+	if (menu_id == wxID_NONE || g_gui.GetCurrentEditor() != editor) {
+		return;
+	}
+
+	TileContextActions::Execute(
+		menu_id,
+		TileContextTarget {
+			.editor = *editor,
+			.floor = position.z,
+			.paste_position = position,
+			.script_position = position,
+			.dialog_position = item_list->ClientToScreen(menu_point),
+		}
+	);
+	editor->actionQueue->resetTimer();
 }
 
 void BrowseFieldList::OnClickUp(wxCommandEvent& event) {

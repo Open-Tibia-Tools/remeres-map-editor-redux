@@ -264,3 +264,11 @@ set_target_properties(test_tile_stack_rows PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_tile_stack_rows PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_tile_stack_rows PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_tile_stack_rows COMMAND test_tile_stack_rows)
+
+# --- Unit test for the shared tile context menu model (map canvas and Tile Properties) ---
+add_executable(test_tile_context_menu tests/test_tile_context_menu.cpp)
+set_target_properties(test_tile_context_menu PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_tile_context_menu PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_tile_context_menu PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_tile_context_menu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_tile_context_menu COMMAND test_tile_context_menu)

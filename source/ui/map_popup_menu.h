@@ -9,7 +9,8 @@
 
 class Editor;
 
-// Right-click popup menu
+// Tile context menu for the current editor selection. Shared by the map canvas and the
+// Tile Properties item list; entries come from TileContextMenu::Build, actions run through TileContextActions.
 class MapPopupMenu : public wxMenu {
 public:
 	MapPopupMenu(Editor& editor);

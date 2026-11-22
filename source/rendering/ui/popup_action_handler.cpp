@@ -35,7 +35,8 @@ namespace {
 	void CommitTileChange(Editor& editor, std::unique_ptr<Tile> tile, ActionIdentifier type) {
 		std::unique_ptr<Action> action = editor.actionQueue->createAction(type);
 		action->addChange(std::make_unique<Change>(std::move(tile)));
-		editor.actionQueue->addAction(std::move(action));
+		// Editor::addAction also notifies listeners such as the Tile Properties panel, which must drop the replaced tile.
+		editor.addAction(std::move(action));
 		g_gui.RefreshView();
 	}
 
