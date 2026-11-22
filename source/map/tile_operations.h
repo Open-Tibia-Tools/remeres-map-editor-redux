@@ -38,7 +38,10 @@ namespace TileOperations {
 	void deselectGround(Tile* tile);
 	void markSelectionChanged(Tile* tile);
 
-	std::vector<std::unique_ptr<Item>> popSelectedItems(Tile* tile, bool ignoreTileSelected = false);
+	std::vector<std::unique_ptr<Item>> popSelectedItems(Tile* tile);
+	// Removes exactly `item` (the ground or one stacked item) from the tile and returns it.
+	// Derived tile state is recalculated. Returns nullptr when the item is not on the tile.
+	std::unique_ptr<Item> removeItem(Tile* tile, const Item* item);
 	ItemVector getSelectedItems(Tile* tile, bool unzoomed = false);
 	Item* getTopSelectedItem(Tile* tile);
 
