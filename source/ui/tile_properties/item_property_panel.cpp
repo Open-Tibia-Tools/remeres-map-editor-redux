@@ -18,7 +18,8 @@ ItemPropertyPanel::ItemPropertyPanel(wxWindow* parent) :
 
 	wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
 
-	item_info_label = new wxStaticText(this, wxID_ANY, "");
+	// Long item names are cut with an ellipsis instead of widening the pane; the tooltip shows the full text.
+	item_info_label = new wxStaticText(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxST_NO_AUTORESIZE | wxST_ELLIPSIZE_END);
 	item_info_label->SetFont(item_info_label->GetFont().Bold());
 	main_sizer->Add(item_info_label, wxSizerFlags().Expand().Border(wxALL, 5));
 
@@ -74,6 +75,7 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 		} else {
 			item_info_label->SetLabelText(wxstr(std::format("{} - {}", item->getID(), item->getName())));
 		}
+		item_info_label->SetToolTip(item_info_label->GetLabelText());
 		action_id_spin->SetValue(item->getActionID());
 		unique_id_spin->SetValue(item->getUniqueID());
 		action_id_spin->Enable(true);
@@ -149,6 +151,7 @@ void ItemPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {
 		}
 	} else {
 		item_info_label->SetLabelText("");
+		item_info_label->UnsetToolTip();
 		action_id_spin->SetValue(0);
 		unique_id_spin->SetValue(0);
 		action_id_spin->Enable(false);

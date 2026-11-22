@@ -320,6 +320,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/splash_properties_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/properties/depot_properties_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/tile_properties/tile_properties_panel.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/tile_properties/tile_properties_width.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/tile_properties/browse_field_list.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/tile_properties/spawn_creature_panel.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/tile_properties/map_flags_panel.h

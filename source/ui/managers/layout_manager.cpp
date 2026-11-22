@@ -292,6 +292,8 @@ void LayoutManager::LoadPerspective() {
 			const wxString layout = wxstr(g_settings.getString(Config::TILE_PROPERTIES_LAYOUT));
 			if (!layout.empty()) {
 				g_gui.aui_manager->LoadPaneInfo(layout, info);
+				// Saved layouts carry the minimum width of the version that wrote them.
+				info.MinSize(g_gui.tile_properties_panel->GetMinSize());
 				EnsurePaneOnScreen(info);
 			}
 		}

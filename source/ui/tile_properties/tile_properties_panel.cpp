@@ -20,9 +20,12 @@
 #include "ui/tile_properties/door_property_panel.h"
 #include "ui/tile_properties/spawn_property_panel.h"
 #include "ui/tile_properties/creature_property_panel.h"
+#include "ui/tile_properties/tile_properties_width.h"
 #include "map/tile.h"
 #include "game/spawn.h"
 #include "game/creature.h"
+
+#include <vector>
 
 TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize),
@@ -100,6 +103,9 @@ TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 	splitter->SplitVertically(left_panel, right_panel, FromDIP(250));
 	splitter->SetMinimumPaneSize(FromDIP(150));
 
+	// Every section is still shown here, so the measurement covers all of them.
+	UpdateMinSize();
+
 	HideAllPropertyPanels();
 	placeholder_text->Show();
 
@@ -109,6 +115,22 @@ TilePropertiesPanel::TilePropertiesPanel(wxWindow* parent) :
 }
 
 TilePropertiesPanel::~TilePropertiesPanel() {
+}
+
+void TilePropertiesPanel::UpdateMinSize() {
+	std::vector<int> section_widths;
+	for (wxSizerItem* item : right_sizer->GetChildren()) {
+		section_widths.push_back(item->CalcMin().GetWidth());
+	}
+	const int right_min = TilePropertiesWidth::WidestSection(section_widths);
+	const int left_min = left_panel->GetBestSize().GetWidth();
+
+	// wxSplitterWindow keeps each pane at its own minimum width when the sash moves or the pane shrinks.
+	left_panel->SetMinSize(wxSize(left_min, wxDefaultCoord));
+	right_panel->SetMinSize(wxSize(right_min, wxDefaultCoord));
+
+	const int min_width = TilePropertiesWidth::SplitterMinWidth(left_min, right_min, splitter->GetSashSize(), splitter->GetBorderSize());
+	SetMinSize(wxSize(min_width, FromDIP(180)));
 }
 
 void TilePropertiesPanel::SetTile(Tile* tile, Map* map) {

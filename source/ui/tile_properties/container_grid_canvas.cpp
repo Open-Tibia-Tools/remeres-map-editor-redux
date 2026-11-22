@@ -14,6 +14,17 @@
 #include "ui/theme.h"
 #include "rendering/indicators/indicator_drawing_utils.h"
 
+#include <algorithm>
+
+namespace {
+	constexpr int kLargeColumns = 6;
+	constexpr int kSmallColumns = 12;
+	constexpr float kLargeSlotSize = 38.0f;
+	constexpr float kSmallSlotSize = 22.0f;
+	// Both icon sizes fit in this width, so switching them never needs a wider pane.
+	constexpr float kWidestRow = std::max(kLargeColumns * kLargeSlotSize, kSmallColumns * kSmallSlotSize);
+} // namespace
+
 ContainerGridCanvas::ContainerGridCanvas(wxWindow* parent, bool large) :
 	NanoVGCanvas(parent, wxID_ANY, 0),
 	m_container(nullptr),
@@ -22,7 +33,7 @@ ContainerGridCanvas::ContainerGridCanvas(wxWindow* parent, bool large) :
 	m_selected_index(-1),
 	m_cols(0),
 	m_rows(0),
-	m_slot_size(large ? 38.0f : 22.0f),
+	m_slot_size(large ? kLargeSlotSize : kSmallSlotSize),
 	m_padding(1.0f) {
 
 	Bind(wxEVT_MOTION, &ContainerGridCanvas::OnMotion, this);
@@ -45,7 +56,7 @@ void ContainerGridCanvas::SetContainer(Item* container) {
 void ContainerGridCanvas::SetLargeSprites(bool large) {
 	if (m_large != large) {
 		m_large = large;
-		m_slot_size = (m_large ? 38.0f : 22.0f);
+		m_slot_size = m_large ? kLargeSlotSize : kSmallSlotSize;
 		RecalculateLayout();
 		Refresh();
 	}
@@ -66,7 +77,7 @@ void ContainerGridCanvas::RecalculateLayout() {
 		Container* container = m_container->asContainer();
 		int capacity = static_cast<int>(container->getVolume());
 
-		m_cols = m_large ? 6 : 12;
+		m_cols = m_large ? kLargeColumns : kSmallColumns;
 
 		if (capacity > 0) {
 			m_rows = (capacity + m_cols - 1) / m_cols;
@@ -80,7 +91,8 @@ void ContainerGridCanvas::RecalculateLayout() {
 }
 
 wxSize ContainerGridCanvas::DoGetBestClientSize() const {
-	int width = static_cast<int>(std::ceil(m_cols * m_slot_size));
+	// Before the first layout, report the widest row so the Tile Properties pane can reserve it.
+	int width = static_cast<int>(std::ceil(m_cols == 0 ? kWidestRow : m_cols * m_slot_size));
 	int height = static_cast<int>(std::ceil(m_rows * m_slot_size));
 	return FromDIP(wxSize(width, height));
 }

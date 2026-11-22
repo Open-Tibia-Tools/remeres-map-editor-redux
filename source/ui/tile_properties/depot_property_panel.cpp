@@ -18,6 +18,8 @@ DepotPropertyPanel::DepotPropertyPanel(wxWindow* parent) :
 
 	depot_id_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Depot Town");
 	depot_id_field = new wxChoice(depot_id_sizer->GetStaticBox(), wxID_ANY);
+	// Town names are loaded with the map; a fixed minimum keeps a long one from widening the pane.
+	depot_id_field->SetMinSize(wxSize(FromDIP(120), wxDefaultCoord));
 	depot_id_sizer->Add(depot_id_field, wxSizerFlags().Expand().Border(wxALL, FromDIP(5)));
 	GetSizer()->Add(depot_id_sizer, wxSizerFlags().Expand().Border(wxALL, FromDIP(5)));
 
