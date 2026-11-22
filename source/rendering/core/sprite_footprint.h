@@ -18,10 +18,15 @@ namespace rme::rendering {
 // Alpha above which a texel counts as visible for the sprite part footprint.
 inline constexpr uint8_t kSpriteFootprintAlphaThreshold = 32;
 
-// How many tiles a footprint can reach up/left of its anchor: MAX_SPRITE_PARTS standard parts
-// shifted by up to one tile of draw offset and elevation. Callers scanning for anchors pad the
-// scanned area right/down by this much; marks beyond it are clipped.
-inline constexpr int kSpriteFootprintReachTiles = static_cast<int>(MAX_SPRITE_PARTS);
+// Largest part the atlas accepts and a client may encode in DAT/protobuf data.
+inline constexpr int kMaxSpritePartPixels = 64;
+
+// How many tiles a footprint can reach up/left of its anchor: MAX_SPRITE_PARTS parts
+// of up to 64 px plus one tile of draw offset. Callers scanning for anchors pad the
+// scanned area right/down by this much; marks beyond it are clipped. Elevation is
+// not part of the bound: an elevation larger than one tile can still clip at the
+// right/bottom edge of the viewport.
+inline constexpr int kSpriteFootprintReachTiles = (static_cast<int>(MAX_SPRITE_PARTS) * kMaxSpritePartPixels + TILE_SIZE) / TILE_SIZE + 1;
 
 static_assert(MAX_SPRITE_PARTS <= 16, "SpritePartFootprint stores one 16-bit column mask per row");
 
@@ -37,13 +42,26 @@ struct SpritePartFootprint {
 	std::array<uint16_t, MAX_SPRITE_PARTS> opaque_columns_by_row {};
 
 	[[nodiscard]] bool isOpaque(int column, int row) const noexcept {
+		if (column < 0 || row < 0 || column >= static_cast<int>(columns) || row >= static_cast<int>(rows)) {
+			return false;
+		}
 		return (opaque_columns_by_row[static_cast<size_t>(row)] >> column) & 1u;
 	}
 
 	void markOpaque(int column, int row) noexcept {
+		if (column < 0 || row < 0 || column >= static_cast<int>(columns) || row >= static_cast<int>(rows)) {
+			return;
+		}
 		opaque_columns_by_row[static_cast<size_t>(row)] |= static_cast<uint16_t>(1u << column);
 	}
 };
+
+// Whether a sprite can draw outside its anchor tile and therefore needs a footprint
+// for the pathing overlay. Composite dimensions cover sprites whose width/height is
+// one but whose image is 64 px (drawn one tile up-left).
+[[nodiscard]] constexpr bool NeedsSpriteFootprint(int width, int height, int composite_width, int composite_height) noexcept {
+	return width > 1 || height > 1 || composite_width > TILE_SIZE || composite_height > TILE_SIZE;
+}
 
 // True when any RGBA texel (4 bytes per pixel) has alpha above `threshold`.
 [[nodiscard]] inline bool HasOpaqueTexel(std::span<const uint8_t> rgba, uint8_t threshold) noexcept {

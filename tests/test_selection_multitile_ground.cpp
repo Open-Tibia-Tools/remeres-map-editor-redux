@@ -1,9 +1,12 @@
 #include "rendering/ui/pick_candidate_order.h"
 #include "rendering/ui/selection_geometry.h"
+#include "rendering/core/item_render_rules.h"
+#include "app/definitions.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <vector>
+#include <utility>
 
 // Pixel-perfect picking visits candidate anchor tiles south-east of the clicked tile and converts the
 // click into each candidate's local pixel space (pixel - offset * TILE_SIZE). These cases pin the
@@ -159,4 +162,42 @@ TEST_CASE("a range of zero only visits the clicked tile", "[selection][pick_orde
 	REQUIRE(visited.size() == 1);
 	REQUIRE(visited.front().dx == 0);
 	REQUIRE(visited.front().dy == 0);
+}
+
+TEST_CASE("within one diagonal candidates follow the chunk-bake painter order", "[selection][pick_order]") {
+	std::vector<std::pair<int, int>> order;
+	PickCandidateOrder::ForEachOnDiagonal(4, 2, [&](int dx, int dy) {
+		order.emplace_back(dx, dy);
+	});
+	REQUIRE(order == std::vector<std::pair<int, int>> { { 2, 0 }, { 1, 1 }, { 0, 2 } });
+}
+
+TEST_CASE("common item depth steps are clamped", "[selection][render_rules]") {
+	using rme::rendering::CommonItemElevationStep;
+
+	REQUIRE(CommonItemElevationStep(-1) == 0);
+	REQUIRE(CommonItemElevationStep(0) == 0);
+	REQUIRE(CommonItemElevationStep(2) == 2);
+	REQUIRE(CommonItemElevationStep(3) == 3);
+	REQUIRE(CommonItemElevationStep(9) == 3);
+}
+
+TEST_CASE("item sublayers and sprite draw offsets use the shared rules", "[selection][render_rules]") {
+	using rme::rendering::RenderSublayer;
+	using rme::rendering::ResolveItemSublayer;
+
+	REQUIRE(ResolveItemSublayer(true, true) == RenderSublayer::BottomItem);
+	REQUIRE(ResolveItemSublayer(false, true) == RenderSublayer::TopItem);
+	REQUIRE(ResolveItemSublayer(false, false) == RenderSublayer::CommonItem);
+
+	REQUIRE(ClampSpriteDrawOffset(0u) == 0);
+	REQUIRE(ClampSpriteDrawOffset(8u) == 8);
+	REQUIRE(ClampSpriteDrawOffset(static_cast<std::uint32_t>(TILE_SIZE)) == TILE_SIZE);
+	REQUIRE(ClampSpriteDrawOffset(static_cast<std::uint32_t>(TILE_SIZE) + 1u) == TILE_SIZE);
+
+	int elevation = 0;
+	rme::rendering::AdvanceItemElevation(elevation, 16, false);
+	REQUIRE(elevation == 0);
+	rme::rendering::AdvanceItemElevation(elevation, 16, true);
+	REQUIRE(elevation == 16);
 }

@@ -8,6 +8,7 @@
 #include "rendering/indicators/technical_item_registry.h"
 #include "rendering/core/render_depth.h"
 #include "rendering/core/game_sprite.h"
+#include "rendering/core/item_render_rules.h"
 #include "rendering/core/sprite_footprint.h"
 #include "util/phase_profiler.h"
 #include "map/map.h"
@@ -51,17 +52,21 @@ namespace {
 		return item.isBlocking() && !TechnicalItemRegistry::IsInvisibleWall(item.getID(), item.getClientID());
 	}
 
-	GameSprite* GetMultiTileSprite(const Item& item) {
+	GameSprite* GetFootprintSprite(const Item& item) {
 		GameSprite* sprite = item.getSprite();
-		return (sprite && (sprite->width > 1 || sprite->height > 1)) ? sprite : nullptr;
+		if (!sprite) {
+			return nullptr;
+		}
+		const ImageDimensions composite = sprite->getCompositePixelSize();
+		return rme::rendering::NeedsSpriteFootprint(sprite->width, sprite->height, composite.width, composite.height) ? sprite : nullptr;
 	}
 
-	bool HasMultiTileBlockingSprite(const Tile& tile) {
-		if (tile.ground && IsPathBlockingItem(*tile.ground) && GetMultiTileSprite(*tile.ground)) {
+	bool HasFootprintBlockingSprite(const Tile& tile) {
+		if (tile.ground && IsPathBlockingItem(*tile.ground) && GetFootprintSprite(*tile.ground)) {
 			return true;
 		}
 		for (const auto& item : tile.items) {
-			if (item && IsPathBlockingItem(*item) && GetMultiTileSprite(*item)) {
+			if (item && IsPathBlockingItem(*item) && GetFootprintSprite(*item)) {
 				return true;
 			}
 		}
@@ -77,7 +82,7 @@ namespace {
 			if (!IsPathBlockingItem(item)) {
 				return;
 			}
-			GameSprite* sprite = GetMultiTileSprite(item);
+			GameSprite* sprite = GetFootprintSprite(item);
 			if (!sprite) {
 				return;
 			}
@@ -101,8 +106,8 @@ namespace {
 				continue;
 			}
 			visitItem(*item, elevation);
-			if (const GameSprite* sprite = item->getSprite(); sprite && sprite->hasElevation()) {
-				elevation += sprite->draw_height;
+			if (const GameSprite* sprite = item->getSprite()) {
+				rme::rendering::AdvanceItemElevation(elevation, sprite->draw_height, sprite->hasElevation());
 			}
 		}
 	}
@@ -455,61 +460,64 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	blocking_border_quads_.clear();
 	blocking_border_quads_.reserve(visible_tiles_estimate);
 
-	const auto classify = [this](const Tile* t, int x, int y) -> uint8_t {
-		if (!t || !IsTilePathBlocking(t)) {
-			return 0;
-		}
-		if (HasMultiTileBlockingSprite(*t)) {
-			blocking_footprint_anchors_.push_back({ t, x, y });
-		}
-		return 1;
-	};
+	{
+		rme::prof::Scope mask_scope(rme::prof::Phase::BlockingMask);
+		const auto classify = [this](const Tile* t, int x, int y) -> uint8_t {
+			if (!t || !IsTilePathBlocking(t)) {
+				return 0;
+			}
+			if (HasFootprintBlockingSprite(*t)) {
+				blocking_footprint_anchors_.push_back({ t, x, y });
+			}
+			return 1;
+		};
 
-	SpatialHashGrid::CellCursor secondary_cursor;
-	SpatialHashGrid::CellCursor primary_cursor;
-	auto fetchRow = [&](int ry) {
-		uint8_t* out = blocking_mask_.data() + static_cast<size_t>(ry - min_y) * static_cast<size_t>(row_width);
-		if (secondary_map) {
-			for (int x = min_x; x <= max_x; ++x) {
-				const Tile* t = secondary_map->getTile(x, ry, z, secondary_cursor);
-				if (!t) {
-					t = map.getTile(x, ry, z, primary_cursor);
+		SpatialHashGrid::CellCursor secondary_cursor;
+		SpatialHashGrid::CellCursor primary_cursor;
+		auto fetchRow = [&](int ry) {
+			uint8_t* out = blocking_mask_.data() + static_cast<size_t>(ry - min_y) * static_cast<size_t>(row_width);
+			if (secondary_map) {
+				for (int x = min_x; x <= max_x; ++x) {
+					const Tile* t = secondary_map->getTile(x, ry, z, secondary_cursor);
+					if (!t) {
+						t = map.getTile(x, ry, z, primary_cursor);
+					}
+					out[x - min_x] = classify(t, x, ry);
 				}
-				out[x - min_x] = classify(t, x, ry);
+				return;
 			}
-			return;
-		}
-		const int ly = ry & 3;
-		for (int x = min_x; x <= max_x;) {
-			const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
-			if (!floor) {
-				const int span_end = std::min(max_x, x | primary_cursor.empty_span_mask);
-				std::fill(out + (x - min_x), out + (span_end - min_x + 1), uint8_t { 0 });
-				x = span_end + 1;
-				continue;
+			const int ly = ry & 3;
+			for (int x = min_x; x <= max_x;) {
+				const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
+				if (!floor) {
+					const int span_end = std::min(max_x, x | primary_cursor.empty_span_mask);
+					std::fill(out + (x - min_x), out + (span_end - min_x + 1), uint8_t { 0 });
+					x = span_end + 1;
+					continue;
+				}
+				const int node_end = std::min(max_x, x | 3);
+				for (; x <= node_end; ++x) {
+					const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
+					out[x - min_x] = classify(t, x, ry);
+				}
 			}
-			const int node_end = std::min(max_x, x | 3);
-			for (; x <= node_end; ++x) {
-				const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
-				out[x - min_x] = classify(t, x, ry);
-			}
-		}
-	};
+		};
 
-	for (int y = min_y; y <= max_y; ++y) {
-		fetchRow(y);
-	}
+		for (int y = min_y; y <= max_y; ++y) {
+			fetchRow(y);
+		}
 
-	// Display-only union: the opaque parts of multi-tile blocking sprites wash the tiles they are
-	// drawn on. No work when no such sprite is anchored in the mask area.
-	for (const BlockingFootprintAnchor& anchor : blocking_footprint_anchors_) {
-		ForEachBlockingFootprintTile(*anchor.tile, [&](int dx, int dy) {
-			const int mx = anchor.x + dx - min_x;
-			const int my = anchor.y + dy - min_y;
-			if (mx >= 0 && mx < row_width && my >= 0 && my < row_count) {
-				blocking_mask_[static_cast<size_t>(my) * static_cast<size_t>(row_width) + static_cast<size_t>(mx)] = 1;
-			}
-		});
+		// Display-only union: the opaque parts of multi-tile blocking sprites wash the tiles they are
+		// drawn on. No work when no such sprite is anchored in the mask area.
+		for (const BlockingFootprintAnchor& anchor : blocking_footprint_anchors_) {
+			ForEachBlockingFootprintTile(*anchor.tile, [&](int dx, int dy) {
+				const int mx = anchor.x + dx - min_x;
+				const int my = anchor.y + dy - min_y;
+				if (mx >= 0 && mx < row_width && my >= 0 && my < row_count) {
+					blocking_mask_[static_cast<size_t>(my) * static_cast<size_t>(row_width) + static_cast<size_t>(mx)] = 1;
+				}
+			});
+		}
 	}
 
 	const int offset = (z <= GROUND_LAYER)

@@ -95,7 +95,8 @@ public:
 	SpriteLayoutMetrics getPlainLayoutMetrics(int subtype, int pattern_x, int pattern_y, int pattern_z, int frame);
 	SpriteLayoutMetrics getOutfitLayoutMetrics(int dir, int addon, int pattern_z, int frame);
 	// Union part geometry and opaque-part mask over all frames, patterns and layers. Built lazily
-	// on first use (decodes each image once), then cached until invalidateMetricCaches().
+	// on first use (decodes each image once), retried at most 3 times if pixels are temporarily
+	// unavailable, then cached until invalidateMetricCaches().
 	[[nodiscard]] const rme::rendering::SpritePartFootprint& getPartFootprint();
 	void invalidateMetricCaches();
 

@@ -152,7 +152,7 @@ private:
 
 	// Blocking wash mask of one floor, row-major over the viewport plus a one-tile ring and the
 	// sprite footprint reach (right/down): 1 = washed. Logical blocking tiles plus the opaque
-	// sprite parts of their multi-tile blocking items; borders follow this union.
+	// sprite parts of their blocking items; borders follow this union.
 	std::vector<uint8_t> blocking_mask_;
 	struct BlockingFootprintAnchor {
 		const Tile* tile = nullptr;

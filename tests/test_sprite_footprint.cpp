@@ -19,6 +19,7 @@ using rme::rendering::ForEachSpriteFootprintTile;
 using rme::rendering::HasOpaqueTexel;
 using rme::rendering::kSpriteFootprintAlphaThreshold;
 using rme::rendering::kSpriteFootprintReachTiles;
+using rme::rendering::NeedsSpriteFootprint;
 using rme::rendering::SpritePartFootprint;
 
 namespace {
@@ -96,6 +97,15 @@ namespace {
 		const SpriteShape shape { .width = width, .height = height };
 		FakeImageSource source(shape.imageCount());
 		source.opaque.assign(shape.imageCount(), true);
+		return Build(shape, source);
+	}
+
+	SpritePartFootprint FullyOpaqueSized(int width, int height, int part_pixels) {
+		const SpriteShape shape { .width = width, .height = height };
+		FakeImageSource source(shape.imageCount());
+		source.opaque.assign(shape.imageCount(), true);
+		source.widths.assign(shape.imageCount(), part_pixels);
+		source.heights.assign(shape.imageCount(), part_pixels);
 		return Build(shape, source);
 	}
 
@@ -203,8 +213,62 @@ TEST_CASE("16x16 sprite covers the maximum footprint within the reach", "[footpr
 		min_x = std::min(min_x, x);
 		min_y = std::min(min_y, y);
 	}
-	REQUIRE(min_x == -kSpriteFootprintReachTiles);
-	REQUIRE(min_y == -kSpriteFootprintReachTiles);
+	REQUIRE(min_x >= -kSpriteFootprintReachTiles);
+	REQUIRE(min_y >= -kSpriteFootprintReachTiles);
+}
+
+TEST_CASE("a 1x1 sprite with a 64 px image covers two by two tiles", "[footprint]") {
+	const SpritePartFootprint footprint = FullyOpaqueSized(1, 1, 64);
+	REQUIRE(NeedsSpriteFootprint(1, 1, 64, 64));
+	REQUIRE(FootprintTiles(footprint, -32, -32) == TileSet { { 0, 0 }, { -1, 0 }, { 0, -1 }, { -1, -1 } });
+}
+
+TEST_CASE("a normal 1x1 sprite still only needs its anchor tile", "[footprint]") {
+	REQUIRE_FALSE(NeedsSpriteFootprint(1, 1, TILE_SIZE, TILE_SIZE));
+	const SpritePartFootprint footprint = FullyOpaqueSized(1, 1, TILE_SIZE);
+	REQUIRE(FootprintTiles(footprint) == TileSet { { 0, 0 } });
+}
+
+TEST_CASE("sprite footprint eligibility follows width, height and composite size", "[footprint]") {
+	REQUIRE(NeedsSpriteFootprint(2, 1, TILE_SIZE, TILE_SIZE));
+	REQUIRE(NeedsSpriteFootprint(1, 2, TILE_SIZE, TILE_SIZE));
+	REQUIRE(NeedsSpriteFootprint(1, 1, TILE_SIZE, TILE_SIZE) == false);
+	REQUIRE(NeedsSpriteFootprint(1, 1, TILE_SIZE, TILE_SIZE * 2));
+}
+
+TEST_CASE("a 16x16 sprite with 64 px parts stays within the scan reach", "[footprint]") {
+	const SpritePartFootprint footprint = FullyOpaqueSized(16, 16, 64);
+	const TileSet tiles = FootprintTiles(footprint, -32, -32);
+	REQUIRE(tiles.size() == 1024);
+
+	int min_x = 0;
+	int min_y = 0;
+	for (const auto& [x, y] : tiles) {
+		min_x = std::min(min_x, x);
+		min_y = std::min(min_y, y);
+	}
+	REQUIRE(min_x == -31);
+	REQUIRE(min_y == -31);
+	REQUIRE(min_x >= -kSpriteFootprintReachTiles);
+	REQUIRE(min_y >= -kSpriteFootprintReachTiles);
+}
+
+TEST_CASE("footprint opacity accessors reject out-of-range columns and rows", "[footprint]") {
+	SpritePartFootprint footprint;
+	footprint.columns = 2;
+	footprint.rows = 2;
+	footprint.markOpaque(1, 1);
+	REQUIRE(footprint.isOpaque(1, 1));
+	REQUIRE_FALSE(footprint.isOpaque(-1, 0));
+	REQUIRE_FALSE(footprint.isOpaque(0, -1));
+	REQUIRE_FALSE(footprint.isOpaque(2, 0));
+	REQUIRE_FALSE(footprint.isOpaque(0, 2));
+	footprint.markOpaque(-1, 0);
+	footprint.markOpaque(0, -1);
+	footprint.markOpaque(2, 0);
+	footprint.markOpaque(0, 2);
+	REQUIRE_FALSE(footprint.isOpaque(-1, 0));
+	REQUIRE_FALSE(footprint.isOpaque(2, 0));
 }
 
 TEST_CASE("sprites wider than the part limit are clipped like the layout", "[footprint]") {

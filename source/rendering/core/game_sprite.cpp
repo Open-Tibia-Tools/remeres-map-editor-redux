@@ -66,8 +66,8 @@ namespace {
 			}
 			const std::unique_ptr<uint8_t[]> rgba = image->getRGBAData();
 			if (!rgba) {
-				// Pixels unavailable: keep the part in the footprint rather than hide a drawn part,
-				// and do not let the caller cache this provisional result.
+				// Pixels unavailable: keep the part in the footprint rather than hide a drawn part.
+				// The caller retries a bounded number of frames before caching the conservative result.
 				had_unavailable_pixels_ = true;
 				return true;
 			}
