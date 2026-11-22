@@ -29,6 +29,7 @@ public:
 	void OnClickUp(wxCommandEvent& event);
 	void OnClickDown(wxCommandEvent& event);
 	void OnClickDelete(wxCommandEvent& event);
+	void UpdateButtons(int selection);
 
 protected:
 	TilePropertiesListBox* item_list;
