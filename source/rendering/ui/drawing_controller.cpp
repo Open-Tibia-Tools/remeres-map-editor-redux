@@ -140,6 +140,10 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 						const CreaturePlacement::Result placement = creature_brush->checkPlacement(&editor.map, mouse_map_pos);
 						if (placement != CreaturePlacement::Result::Allowed) {
 							g_status.SetStatusText(CreaturePlacement::Describe(placement));
+							showing_placement_rejection = true;
+						} else if (showing_placement_rejection) {
+							g_status.SetStatusText("");
+							showing_placement_rejection = false;
 						}
 					}
 

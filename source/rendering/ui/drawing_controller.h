@@ -44,6 +44,8 @@ private:
 	bool drawing;
 	bool dragging_draw;
 	bool replace_dragging;
+	// A rejected creature placement is shown in the status bar; the next allowed one clears it.
+	bool showing_placement_rejection = false;
 
 	Position last_draw_pos;
 };
