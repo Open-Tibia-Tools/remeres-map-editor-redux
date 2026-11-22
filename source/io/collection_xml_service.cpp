@@ -3,6 +3,7 @@
 
 #include "app/managers/version_manager.h"
 #include "brushes/brush.h"
+#include "brushes/creature/creature_brush.h"
 #include "editor/operations/collection_extractor_service.h"
 #include "game/creatures.h"
 #include "game/materials.h"
@@ -280,16 +281,23 @@ bool CollectionXmlService::SaveTilesetXml(
 		}
 
 		AppendMissingTilesetEntries(root, brushNames, itemIds);
-		SortTilesetEntries(root, [](std::string_view name) {
+		const bool sorted = SortTilesetEntries(root, [](std::string_view name) {
 			if (const Brush* brush = g_brushes.getBrush(name)) {
-				return CollectionBrushLookup { ClassifyCollectionBrush(*brush), brush->getID() };
+				return CollectionBrushLookup { ClassifyCollectionBrush(*brush), GetBrushSortID(brush) };
 			}
 			// Same fallback as the tileset loaders: a <brush> may name a creature whose brush is not created yet.
-			if (g_creatures[std::string(name)]) {
-				return CollectionBrushLookup { CollectionBrushCategory::Creature, 0 };
+			if (const CreatureType* type = g_creatures[std::string(name)]) {
+				if (type->brush) {
+					return CollectionBrushLookup { CollectionBrushCategory::Creature, GetBrushSortID(type->brush) };
+				}
+				return CollectionBrushLookup { CollectionBrushCategory::Creature, GetCreatureSortID(*type) };
 			}
 			return CollectionBrushLookup {};
 		});
+		if (!sorted) {
+			outErrorMessage = std::format("Failed to allocate memory while sorting tileset '{}'", tilesetName);
+			return false;
+		}
 
 		if (!doc.save_file(filePath.wstring().c_str(), "    ", pugi::format_default, pugi::encoding_utf8)) {
 			outErrorMessage = std::format("Failed to save tileset XML to '{}'", filePath.string());

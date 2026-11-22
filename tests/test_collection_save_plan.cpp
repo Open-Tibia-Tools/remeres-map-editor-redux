@@ -104,7 +104,7 @@ namespace {
 		}
 		const std::vector<std::string> names = PlannedBrushNames(brushes, plan);
 		AppendMissingTilesetEntries(root, names, plan.itemIds);
-		SortTilesetEntries(root, Resolver(brushes));
+		REQUIRE(SortTilesetEntries(root, Resolver(brushes)));
 		return Serialize(doc);
 	}
 
@@ -222,7 +222,7 @@ TEST_CASE("save counts match the plan in every mode", "[collection]") {
 	}
 }
 
-TEST_CASE("brushes are ordered by category, case-insensitive name and id", "[collection]") {
+TEST_CASE("brushes are ordered by category, then ID, then name", "[collection]") {
 	std::vector<TestBrush> brushes = {
 		{ "zebra rug", 1, CollectionBrushCategory::Carpet, {} },
 		{ "wooden table", 2, CollectionBrushCategory::Table, {} },
@@ -239,7 +239,7 @@ TEST_CASE("brushes are ordered by category, case-insensitive name and id", "[col
 		{ "bench", 13, CollectionBrushCategory::Doodad, {} },
 	};
 	const std::vector<std::string> expected = {
-		"dirt", "Grass", "grass", "sand", "stone wall", "bench", "Bush", "zebra rug", "wooden table", "archway", "Rat", "house", "mystery"
+		"sand", "Grass", "dirt", "grass", "stone wall", "Bush", "bench", "zebra rug", "wooden table", "archway", "Rat", "house", "mystery"
 	};
 
 	std::ranges::sort(brushes, [](const TestBrush& a, const TestBrush& b) { return a.id < b.id; });
@@ -251,7 +251,7 @@ TEST_CASE("brushes are ordered by category, case-insensitive name and id", "[col
 	} while (brushes.front().id != 1);
 }
 
-TEST_CASE("same-name brushes fall back to the brush id", "[collection]") {
+TEST_CASE("case-variant names are ordered by ID", "[collection]") {
 	const std::vector<TestBrush> brushes = {
 		{ "Grass", 20, CollectionBrushCategory::Ground, {} },
 		{ "grass", 10, CollectionBrushCategory::Ground, {} },
@@ -259,6 +259,36 @@ TEST_CASE("same-name brushes fall back to the brush id", "[collection]") {
 	const auto infos = Infos(brushes);
 	const auto plan = BuildCollectionSavePlan({}, infos, CollectionInclusionMode::BrushesOnly);
 	REQUIRE(PlannedBrushNames(brushes, plan) == std::vector<std::string> { "grass", "Grass" });
+}
+
+TEST_CASE("ID orders brushes inside a category before their names", "[collection]") {
+	const std::vector<TestBrush> brushes = {
+		{ "alpha", 30, CollectionBrushCategory::Ground, {} },
+		{ "zeta", 10, CollectionBrushCategory::Ground, {} },
+	};
+	const auto infos = Infos(brushes);
+	const auto plan = BuildCollectionSavePlan({}, infos, CollectionInclusionMode::BrushesOnly);
+	REQUIRE(PlannedBrushNames(brushes, plan) == std::vector<std::string> { "zeta", "alpha" });
+}
+
+TEST_CASE("equal sort IDs fall back to the case-insensitive name", "[collection]") {
+	const std::vector<TestBrush> brushes = {
+		{ "Zeta", 0, CollectionBrushCategory::Other, {} },
+		{ "alpha", 0, CollectionBrushCategory::Other, {} },
+	};
+	const auto infos = Infos(brushes);
+	const auto plan = BuildCollectionSavePlan({}, infos, CollectionInclusionMode::BrushesOnly);
+	REQUIRE(PlannedBrushNames(brushes, plan) == std::vector<std::string> { "alpha", "Zeta" });
+}
+
+TEST_CASE("equal sort IDs and case-insensitive names fall back to the exact name", "[collection]") {
+	const std::vector<TestBrush> brushes = {
+		{ "grass", 5, CollectionBrushCategory::Other, {} },
+		{ "Grass", 5, CollectionBrushCategory::Other, {} },
+	};
+	const auto infos = Infos(brushes);
+	const auto plan = BuildCollectionSavePlan({}, infos, CollectionInclusionMode::BrushesOnly);
+	REQUIRE(PlannedBrushNames(brushes, plan) == std::vector<std::string> { "Grass", "grass" });
 }
 
 TEST_CASE("saved tileset has no item covered by an included brush", "[collection][xml]") {
@@ -320,7 +350,7 @@ TEST_CASE("tileset output does not depend on staging order", "[collection][xml]"
 	}
 }
 
-TEST_CASE("tileset brush nodes sort case-insensitively with an id tie-breaker", "[collection][xml]") {
+TEST_CASE("tileset brush nodes sort by ID within a category", "[collection][xml]") {
 	const std::vector<TestBrush> known = {
 		{ "grass", 30, CollectionBrushCategory::Ground, {} },
 		{ "Grass", 20, CollectionBrushCategory::Ground, {} },
@@ -336,13 +366,13 @@ TEST_CASE("tileset brush nodes sort case-insensitively with an id tie-breaker", 
     <brush name="Grass"/>
 </tileset>)"));
 	pugi::xml_node root = doc.child("tileset");
-	SortTilesetEntries(root, Resolver(known));
+	REQUIRE(SortTilesetEntries(root, Resolver(known)));
 
 	REQUIRE(Entries(root) == std::vector<XmlEntry> {
 		{ "brush", "Grass" },
 		{ "brush", "grass" },
-		{ "brush", "apple tree" },
 		{ "brush", "Bush" },
+		{ "brush", "apple tree" },
 	});
 }
 
@@ -375,13 +405,13 @@ TEST_CASE("append merges into an unsorted tileset without losing entries", "[col
 	const std::vector<std::string> newBrushes = { "rug", "bush", "grass", "dirt", "Rat" };
 	const std::vector<uint16_t> newItems = { 302, 900, 100, 0 };
 	AppendMissingTilesetEntries(root, newBrushes, newItems);
-	SortTilesetEntries(root, Resolver(known));
+	REQUIRE(SortTilesetEntries(root, Resolver(known)));
 
 	REQUIRE(Entries(root) == std::vector<XmlEntry> {
 		{ "#comment", " hand-written note " },
 		{ "unknown", "" },
-		{ "brush", "dirt" },
 		{ "brush", "grass" },
+		{ "brush", "dirt" },
 		{ "brush", "stone wall" },
 		{ "brush", "bush" },
 		{ "brush", "rug" },
@@ -396,6 +426,6 @@ TEST_CASE("append merges into an unsorted tileset without losing entries", "[col
 	// Appending the same content again changes nothing.
 	const std::string once = Serialize(doc);
 	AppendMissingTilesetEntries(root, newBrushes, newItems);
-	SortTilesetEntries(root, Resolver(known));
+	REQUIRE(SortTilesetEntries(root, Resolver(known)));
 	REQUIRE(Serialize(doc) == once);
 }

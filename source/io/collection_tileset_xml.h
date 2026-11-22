@@ -91,8 +91,10 @@ inline void AppendMissingTilesetEntries(pugi::xml_node root, std::span<const std
 //   1. comments and unknown nodes, in their original relative order;
 //   2. <brush> and <creature> nodes, by CollectionBrushLess (creature nodes are in the Creature group);
 //   3. <item> nodes, ascending by first id, then by last id of their range.
-// Nodes are deep-copied in the new order and the originals removed, so every attribute and child node survives.
-inline void SortTilesetEntries(pugi::xml_node root, const CollectionBrushResolver& resolve) {
+// Nodes are deep-copied in the new order and the originals removed. pugixml reports only top-level copy
+// failures, so deep-copy allocation failures inside children cannot be detected here.
+// Returns false when a copy could not be appended; the original order is then left untouched.
+[[nodiscard]] inline bool SortTilesetEntries(pugi::xml_node root, const CollectionBrushResolver& resolve) {
 	enum class Group : uint8_t {
 		Other,
 		Brush,
@@ -133,7 +135,7 @@ inline void SortTilesetEntries(pugi::xml_node root, const CollectionBrushResolve
 			return a.group < b.group;
 		}
 		if (a.group == Group::Brush) {
-			return CollectionBrushLess({ a.brush.category, a.name, a.brush.id }, { b.brush.category, b.name, b.brush.id });
+			return CollectionBrushLess({ a.brush.category, a.brush.id, a.name }, { b.brush.category, b.brush.id, b.name });
 		}
 		if (a.group == Group::Item) {
 			return a.range < b.range;
@@ -142,12 +144,28 @@ inline void SortTilesetEntries(pugi::xml_node root, const CollectionBrushResolve
 	});
 
 	// The bundled pugixml has no append_move; the sort keys above view the originals, so copy everything before removing.
+	std::vector<pugi::xml_node> copies;
+	copies.reserve(entries.size());
+	bool copiedAll = true;
 	for (const Entry& entry : entries) {
-		root.append_copy(entry.node);
+		const pugi::xml_node copy = root.append_copy(entry.node);
+		if (!copy) {
+			copiedAll = false;
+			break;
+		}
+		copies.push_back(copy);
+	}
+	if (!copiedAll) {
+		// Allocation failure: drop the appended copies and keep the original order instead of losing entries.
+		for (const pugi::xml_node copy : copies) {
+			root.remove_child(copy);
+		}
+		return false;
 	}
 	for (const Entry& entry : entries) {
 		root.remove_child(entry.node);
 	}
+	return true;
 }
 
 } // namespace rme::collection

@@ -63,11 +63,11 @@ enum class CollectionInclusionMode : uint8_t {
 	return mode != CollectionInclusionMode::ItemsOnly;
 }
 
-// Sort key of one brush entry in a saved tileset.
+// Sort key of one brush entry in a saved tileset: category, numeric sort id, then name.
 struct CollectionBrushSortKey {
 	CollectionBrushCategory category = CollectionBrushCategory::Other;
-	std::string_view name;
 	uint32_t id = 0;
+	std::string_view name;
 };
 
 [[nodiscard]] constexpr char CollectionAsciiLower(char c) {
@@ -94,16 +94,16 @@ struct CollectionBrushSortKey {
 	return CompareCollectionNamesIgnoreCase(a, b) == 0;
 }
 
-// Strict weak order of brush entries: category, case-insensitive name, brush id, then exact name.
+// Strict weak order of brush entries: category, numeric sort id, case-insensitive name, then exact name.
 [[nodiscard]] constexpr bool CollectionBrushLess(const CollectionBrushSortKey& a, const CollectionBrushSortKey& b) {
 	if (a.category != b.category) {
 		return a.category < b.category;
 	}
-	if (const int cmp = CompareCollectionNamesIgnoreCase(a.name, b.name); cmp != 0) {
-		return cmp < 0;
-	}
 	if (a.id != b.id) {
 		return a.id < b.id;
+	}
+	if (const int cmp = CompareCollectionNamesIgnoreCase(a.name, b.name); cmp != 0) {
+		return cmp < 0;
 	}
 	return a.name < b.name;
 }
@@ -111,6 +111,7 @@ struct CollectionBrushSortKey {
 // A staged brush as seen by the save plan. Views must outlive the BuildCollectionSavePlan call.
 struct CollectionBrushInfo {
 	std::string_view name;
+	// GetBrushSortID value (palette "Sort by ID": look/outfit id, brush id fallback).
 	uint32_t id = 0;
 	CollectionBrushCategory category = CollectionBrushCategory::Other;
 	// Item ids the brush draws (Brush::getRelatedItems); duplicates are allowed.
@@ -163,7 +164,7 @@ struct CollectionSavePlan {
 		std::ranges::stable_sort(plan.brushIndices, [stagedBrushes](size_t a, size_t b) {
 			const CollectionBrushInfo& lhs = stagedBrushes[a];
 			const CollectionBrushInfo& rhs = stagedBrushes[b];
-			return CollectionBrushLess({ lhs.category, lhs.name, lhs.id }, { rhs.category, rhs.name, rhs.id });
+			return CollectionBrushLess({ lhs.category, lhs.id, lhs.name }, { rhs.category, rhs.id, rhs.name });
 		});
 	}
 

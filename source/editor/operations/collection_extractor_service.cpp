@@ -122,7 +122,7 @@ CollectionSaveSelection CollectionExtractorService::BuildSaveSelection(
 	for (size_t i = 0; i < brushes.size(); ++i) {
 		infos.push_back({
 			.name = names[i],
-			.id = brushes[i]->getID(),
+			.id = GetBrushSortID(brushes[i]),
 			.category = ClassifyCollectionBrush(*brushes[i]),
 			.coveredItemIds = related[i],
 		});
