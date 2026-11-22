@@ -2,6 +2,7 @@
 #include "rendering/core/floor_visibility_mode.h"
 #include "ui/main_menubar.h"
 #include "ui/gui.h"
+#include "ui/tool_options_window.h"
 #include "app/preferences.h"
 #include "map/map.h"
 #include <format>
@@ -226,6 +227,10 @@ void ViewSettingsHandler::OnToggleAutomagic(wxCommandEvent& WXUNUSED(event)) {
 		g_gui.SetStatusText("Automagic enabled.");
 	} else {
 		g_gui.SetStatusText("Automagic disabled.");
+	}
+	// The autoborder scope row in the tool options is only shown while automagic is on.
+	if (g_gui.tool_options) {
+		g_gui.tool_options->ReloadSettings();
 	}
 }
 

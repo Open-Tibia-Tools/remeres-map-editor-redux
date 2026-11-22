@@ -39,6 +39,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/brushes/doodad/doodad_brush_loader.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/doodad/doodad_brush_types.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/ground/auto_border.h
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/ground/border_update_policy.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/ground/ground_border_calculator.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/ground/ground_brush.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/ground/ground_brush_loader.h

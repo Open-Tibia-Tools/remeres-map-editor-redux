@@ -19,6 +19,7 @@
 #define RME_GROUND_BRUSH_H
 
 #include "brushes/brush.h"
+#include "brushes/ground/border_update_policy.h"
 
 //=============================================================================
 
@@ -80,8 +81,18 @@ public:
 		return 0;
 	}
 
-	static void doBorders(BaseMap* map, Tile* tile);
+	static void doBorders(BaseMap* map, Tile* tile, const BorderUpdate::Options& options = {});
 	static const BorderBlock* getBrushTo(GroundBrush* first, GroundBrush* second);
+
+	// Border item ids this brush generates: every tile of its autoborders, of its
+	// optional border and the results (with_id) of its specific cases. Shared
+	// <border id> definitions make an id owned by every brush that references them.
+	[[nodiscard]] const BorderUpdate::BorderOwnership& getBorderOwnership() const {
+		return border_ownership;
+	}
+	// True when `border` is one of this brush's autoborders or its optional border.
+	[[nodiscard]] bool usesAutoBorder(const AutoBorder* border) const;
+	[[nodiscard]] bool ownsBorderBlock(const BorderBlock* block) const;
 
 	int32_t getZ() const override {
 		return z_order;
@@ -142,6 +153,11 @@ protected: // Members
 	std::vector<std::unique_ptr<BorderBlock>> borders;
 	std::vector<ItemChanceBlock> border_items;
 	int total_chance;
+
+	// Cache for getBorderOwnership(); rebuilt after every load() since loading is the
+	// only place that changes borders and optional_border.
+	BorderUpdate::BorderOwnership border_ownership;
+	void rebuildBorderOwnership();
 
 public: // Static global members
 	static uint32_t border_types[256];

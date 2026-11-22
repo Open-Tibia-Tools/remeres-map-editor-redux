@@ -6,6 +6,7 @@
 #define RME_TILE_OPERATIONS_H
 
 #include "game/item.h"
+#include "brushes/ground/border_update_policy.h"
 #include <memory>
 #include <vector>
 
@@ -15,7 +16,7 @@ class WallBrush;
 class House;
 
 namespace TileOperations {
-	void borderize(Tile* tile, BaseMap* map);
+	void borderize(Tile* tile, BaseMap* map, const BorderUpdate::Options& options = {});
 	void cleanBorders(Tile* tile);
 
 	void wallize(Tile* tile, BaseMap* map);
