@@ -13,8 +13,12 @@ public:
 	explicit MonsterBrush(CreatureType* type);
 	~MonsterBrush() override = default;
 
-	bool canDraw(BaseMap* map, const Position& position) const override;
 	void draw_creature(BaseMap* map, Tile* tile) override;
+
+protected:
+	bool placesNpc() const override {
+		return false;
+	}
 };
 
 #endif

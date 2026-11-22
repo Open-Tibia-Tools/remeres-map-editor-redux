@@ -17,17 +17,6 @@ MonsterBrush::MonsterBrush(CreatureType* type) :
 	CreatureBrush(type) {
 }
 
-bool MonsterBrush::canDraw(BaseMap* map, const Position& position) const {
-	Tile* tile = map->getTile(position);
-	if (creature_type && tile && !tile->isBlocking()) {
-		if (tile->getLocation()->getSpawnCount() != 0 || g_settings.getInteger(Config::AUTO_CREATE_SPAWN)) {
-			// Monsters cannot be placed in protection zones
-			return !tile->isPZ();
-		}
-	}
-	return false;
-}
-
 void MonsterBrush::draw_creature(BaseMap* map, Tile* tile) {
 	if (!canDraw(map, tile->getPosition())) {
 		return;

@@ -19,6 +19,7 @@
 #define RME_CREATURE_BRUSH_H
 
 #include "brushes/brush.h"
+#include "brushes/creature/creature_placement.h"
 #include "game/creature.h"
 
 class Sprite;
@@ -33,6 +34,8 @@ public:
 
 
 	bool canDraw(BaseMap* map, const Position& position) const override;
+	// Why placing this brush's creature at `position` is or is not allowed; canDraw() is its Allowed case.
+	CreaturePlacement::Result checkPlacement(BaseMap* map, const Position& position) const;
 	void draw(BaseMap* map, Tile* tile, void* parameter) override;
 	virtual void draw_creature(BaseMap* map, Tile* tile);
 	void undraw(BaseMap* map, Tile* tile) override;
@@ -67,6 +70,9 @@ public:
 	}
 
 protected:
+	// Whether this brush places an NPC (allowed in protection zones) or a monster.
+	virtual bool placesNpc() const;
+
 	CreatureType* creature_type;
 	mutable std::unique_ptr<Sprite> creature_sprite_wrapper;
 	Direction current_direction = SOUTH;

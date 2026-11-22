@@ -13,6 +13,7 @@
 #include "ui/gui.h"
 #include "brushes/brush_utility.h"
 #include "app/settings.h"
+#include "ui/managers/status_manager.h"
 
 // Brushes
 #include "brushes/doodad/doodad_brush.h"
@@ -131,6 +132,14 @@ void DrawingController::HandleClick(const Position& mouse_map_pos, bool shift_do
 							if (!tile || !tile->spawn) {
 								will_show_spawn = true;
 							}
+						}
+					}
+
+					if (const CreatureBrush* creature_brush = brush->as<CreatureBrush>()) {
+						// Explain a rejected placement instead of silently doing nothing.
+						const CreaturePlacement::Result placement = creature_brush->checkPlacement(&editor.map, mouse_map_pos);
+						if (placement != CreaturePlacement::Result::Allowed) {
+							g_status.SetStatusText(CreaturePlacement::Describe(placement));
 						}
 					}
 

@@ -17,17 +17,6 @@ NpcBrush::NpcBrush(CreatureType* type) :
 	CreatureBrush(type) {
 }
 
-bool NpcBrush::canDraw(BaseMap* map, const Position& position) const {
-	Tile* tile = map->getTile(position);
-	if (creature_type && tile && !tile->isBlocking()) {
-		if (tile->getLocation()->getSpawnCount() != 0 || g_settings.getInteger(Config::AUTO_CREATE_SPAWN)) {
-			// NPCs can be placed in protection zones as well as outside
-			return true;
-		}
-	}
-	return false;
-}
-
 void NpcBrush::draw_creature(BaseMap* map, Tile* tile) {
 	if (!canDraw(map, tile->getPosition())) {
 		return;
