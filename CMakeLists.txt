@@ -305,6 +305,14 @@ target_link_libraries(test_selection_multitile_ground PRIVATE Catch2::Catch2With
 target_include_directories(test_selection_multitile_ground PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_selection_multitile_ground COMMAND test_selection_multitile_ground)
 
+# --- Unit test for the magic wand flood fill and border ring ---
+add_executable(test_magic_wand tests/test_magic_wand.cpp)
+set_target_properties(test_magic_wand PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_magic_wand PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_magic_wand PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_magic_wand PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_magic_wand COMMAND test_magic_wand)
+
 # --- Unit test for the pathing overlay sprite footprint ---
 add_executable(test_sprite_footprint tests/test_sprite_footprint.cpp)
 set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD 23)

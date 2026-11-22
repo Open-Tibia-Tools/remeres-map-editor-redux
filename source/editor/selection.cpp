@@ -464,13 +464,29 @@ void Selection::finish(SessionFlags flags) {
 	}
 	busy = false;
 
-	// Notify Lua scripts only if we're on the main thread and the selection actually changed
-	if (selectionChanged && !(flags & (INTERNAL | SUBTHREAD))) {
-		if (g_luaScripts.isInitialized()) {
-			g_luaScripts.emit("selectionChange");
-		}
+	// Notify Lua scripts only if we're on the main thread
+	if (!(flags & (INTERNAL | SUBTHREAD))) {
+		notifyScriptsIfChanged();
 	}
 	selectionChanged = false;
+}
+
+void Selection::commitPreparedAction(std::unique_ptr<Action> action) {
+	ASSERT(!busy);
+	ASSERT(action->getType() == ACTION_SELECT);
+	// Only what this action commits may trigger the notification, not leftovers from undo/redo.
+	selectionChanged = false;
+	if (action->size() > 0) {
+		editor.addAction(std::move(action), 2);
+	}
+	notifyScriptsIfChanged();
+	selectionChanged = false;
+}
+
+void Selection::notifyScriptsIfChanged() {
+	if (selectionChanged && g_luaScripts.isInitialized()) {
+		g_luaScripts.emit("selectionChange");
+	}
 }
 
 void Selection::addListener(uintptr_t id, std::function<void(size_t)> callback) {

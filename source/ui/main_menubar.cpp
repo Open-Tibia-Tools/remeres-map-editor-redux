@@ -398,6 +398,10 @@ void MainMenuBar::OnSelectionMethodChange(wxCommandEvent& event) {
 	viewSettingsHandler->OnSelectionMethodChange(event);
 }
 
+void MainMenuBar::OnToggleMagicWand(wxCommandEvent& event) {
+	viewSettingsHandler->OnToggleMagicWand(event);
+}
+
 void MainMenuBar::OnCopy(wxCommandEvent& WXUNUSED(event)) {
 	g_gui.DoCopy();
 }

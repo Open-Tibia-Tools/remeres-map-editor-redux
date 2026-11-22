@@ -46,6 +46,7 @@ public:
 	void Reset() {
 		dragging = false;
 		boundbox_selection = false;
+		magic_wand_click = false;
 		last_click_pixel = {};
 	}
 
@@ -62,6 +63,7 @@ private:
 
 	bool dragging;
 	bool boundbox_selection;
+	bool magic_wand_click = false; // The press was consumed by the magic wand; the release does nothing.
 
 	Position drag_start_pos;
 	SelectionPixelOffset last_click_pixel;

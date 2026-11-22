@@ -8,6 +8,7 @@
 #include "app/preferences.h"
 #include "ui/managers/recent_files_manager.h"
 #include "util/image_manager.h"
+#include "editor/operations/magic_wand.h"
 
 void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<std::string, std::unique_ptr<MenuBar::Action>>& actions) {
 	using namespace MenuBar;
@@ -68,6 +69,7 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	MAKE_ACTION_ICON(SELECT_MODE_VISIBLE, wxITEM_RADIO, ICON_EYE, OnSelectionTypeChange);
 	MAKE_ACTION_ICON(SELECT_METHOD_STANDARD, wxITEM_RADIO, ICON_WAND_MAGIC_SPARKLES, OnSelectionMethodChange);
 	MAKE_ACTION_ICON(SELECT_METHOD_PIXEL_PERFECT, wxITEM_RADIO, ICON_BULLSEYE, OnSelectionMethodChange);
+	MAKE_ACTION_ICON(SELECT_MAGIC_WAND, wxITEM_CHECK, ICON_WAND_MAGIC, OnToggleMagicWand);
 
 	MAKE_ACTION_ICON(AUTOMAGIC, wxITEM_CHECK, ICON_WAND_SPARKLES, OnToggleAutomagic);
 	MAKE_ACTION_ICON(BORDERIZE_SELECTION, wxITEM_NORMAL, ICON_BORDER_ALL, OnBorderizeSelection);
@@ -295,6 +297,7 @@ void MenuBarActionManager::UpdateState(MainMenuBar* mb) {
 		mb->CheckItem(SHOW_SPAWNS, g_settings.getBoolean(Config::SHOW_SPAWNS));
 		mb->CheckItem(SHOW_LIGHTS, g_settings.getBoolean(Config::SHOW_LIGHTS));
 	}
+	mb->CheckItem(SELECT_MAGIC_WAND, MagicWand::IsToolEnabled());
 
 	mb->EnableItem(WIN_MINIMAP, loaded);
 	mb->EnableItem(WIN_TOOL_OPTIONS, loaded);

@@ -8,6 +8,7 @@
 #include "rendering/ui/map_display.h"
 #include "editor/editor.h"
 #include "editor/action_queue.h"
+#include "editor/operations/magic_wand.h"
 #include "map/map.h"
 #include "map/tile.h"
 #include "game/item.h"
@@ -35,6 +36,8 @@ SelectionController::~SelectionController() {
 
 void SelectionController::HandleClick(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, bool shift_down, bool ctrl_down, bool alt_down) {
 	last_click_pixel = pixel_offset;
+	// A wand press whose release went elsewhere (outside the canvas, over the progress bar) must not swallow this click's release.
+	magic_wand_click = false;
 	const bool pixel_mode = SelectionPicker::ActiveMethod() == SelectionMethod::PixelPerfect;
 
 	if (ctrl_down && alt_down) {
@@ -65,6 +68,11 @@ void SelectionController::HandleClick(const Position& mouse_map_pos, const Selec
 			// Start dragging
 			dragging = true;
 			drag_start_pos = mouse_map_pos;
+		} else if (!shift_down && !alt_down && MagicWand::IsToolEnabled()) {
+			// Shift keeps the rectangle selection available while the wand is on.
+			Reset();
+			magic_wand_click = true;
+			MagicWand::Select(editor, mouse_map_pos, ctrl_down);
 		} else {
 			boundbox_selection = false;
 			if (shift_down) {
@@ -202,6 +210,11 @@ void SelectionController::HandleDrag(const Position& mouse_map_pos, bool shift_d
 }
 
 void SelectionController::HandleRelease(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down) {
+	if (magic_wand_click) {
+		Reset();
+		editor.actionQueue->resetTimer();
+		return;
+	}
 	int move_x = canvas->last_click_map_x - mouse_map_pos.x;
 	int move_y = canvas->last_click_map_y - mouse_map_pos.y;
 	int move_z = canvas->last_click_map_z - mouse_map_pos.z;

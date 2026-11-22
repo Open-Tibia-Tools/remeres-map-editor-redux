@@ -47,23 +47,6 @@ MapTabbook::~MapTabbook() {
 	;
 }
 
-void MapTabbook::CycleTab(bool forward) {
-	if (!notebook) {
-		return;
-	}
-
-	int32_t pageCount = notebook->GetPageCount();
-	int32_t currentSelection = notebook->GetSelection();
-
-	int32_t selection;
-	if (forward) {
-		selection = (currentSelection + 1) % pageCount;
-	} else {
-		selection = (currentSelection - 1 + pageCount) % pageCount;
-	}
-	notebook->SetSelection(selection);
-}
-
 void MapTabbook::OnNotebookPageClose(wxAuiNotebookEvent& evt) {
 	EditorTab* editorTab = GetTab(evt.GetInt());
 

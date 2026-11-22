@@ -424,6 +424,7 @@ void Settings::IO(IOMode mode) {
 	Int(SELECTION_TYPE, SELECT_CURRENT_FLOOR);
 	Bool(COMPENSATED_SELECT, true);
 	Bool(PIXEL_PERFECT_SELECTION, false);
+	Bool(MAGIC_WAND_SELECTION, false);
 	Float(SCROLL_SPEED, 3.5f);
 	Float(ZOOM_SPEED, 1.4f);
 	Bool(SWITCH_MOUSEBUTTONS, false);

@@ -4,6 +4,7 @@
 #include "ui/gui.h"
 #include "app/preferences.h"
 #include "map/map.h"
+#include "editor/operations/magic_wand.h"
 #include <format>
 
 ViewSettingsHandler::ViewSettingsHandler(MainMenuBar* menuBar) :
@@ -247,4 +248,8 @@ void ViewSettingsHandler::OnSelectionMethodChange(wxCommandEvent& WXUNUSED(event
 	const bool pixel_perfect = menuBar->IsItemChecked(SELECT_METHOD_PIXEL_PERFECT);
 	g_settings.setInteger(Config::PIXEL_PERFECT_SELECTION, pixel_perfect ? 1 : 0);
 	g_gui.RefreshView();
+}
+
+void ViewSettingsHandler::OnToggleMagicWand(wxCommandEvent& WXUNUSED(event)) {
+	MagicWand::SetToolEnabled(menuBar->IsItemChecked(MenuBar::SELECT_MAGIC_WAND));
 }

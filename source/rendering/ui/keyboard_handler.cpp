@@ -25,6 +25,7 @@
 #include "editor/hotkey_manager.h"
 #include "editor/editor.h"
 #include "editor/operations/selection_operations.h"
+#include "editor/operations/magic_wand.h"
 #include "brushes/brush.h"
 #include "brushes/town/town_temple_brush.h"
 #include "rendering/ui/popup_action_handler.h"
@@ -71,11 +72,11 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 			break;
 		}
 		case WXK_TAB: {
-			if (event.ShiftDown()) {
-				g_gui.CycleTab(false);
-			} else {
-				g_gui.CycleTab(true);
+			if (event.GetModifiers() != wxMOD_NONE) {
+				event.Skip();
+				break;
 			}
+			MagicWand::SetToolEnabled(!MagicWand::IsToolEnabled());
 			break;
 		}
 		case WXK_DELETE: {
