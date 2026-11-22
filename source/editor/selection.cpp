@@ -120,6 +120,22 @@ void Selection::add(Tile* tile, Item* item) {
 	}
 }
 
+void Selection::setSingleItem(Tile* tile, Item* item) {
+	ASSERT(tile);
+	ASSERT(item);
+	// Row-scoped surfaces call this synchronously, outside any selection session.
+	ASSERT(!busy);
+
+	start(INTERNAL);
+	clear();
+	if (!item->isSelected()) {
+		item->select();
+	}
+	TileOperations::updateSelectionState(tile);
+	addInternal(tile);
+	finish(INTERNAL);
+}
+
 void Selection::add(Tile* tile, Spawn* spawn) {
 	ASSERT(tile);
 	ASSERT(spawn);
