@@ -225,6 +225,36 @@ Brush* Brushes::getBrush(std::string_view name) const {
 	return nullptr;
 }
 
+uint32_t GetBrushSortID(const Brush* brush) {
+	if (!brush) {
+		return 0;
+	}
+	if (const auto* raw = dynamic_cast<const RAWBrush*>(brush)) {
+		return raw->getItemID();
+	}
+	if (const auto* creature = dynamic_cast<const CreatureBrush*>(brush)) {
+		if (const CreatureType* type = creature->getType()) {
+			if (const uint32_t id = GetCreatureSortID(*type); id != 0) {
+				return id;
+			}
+		}
+	}
+	if (brush->getLookID() != 0) {
+		return static_cast<uint32_t>(brush->getLookID());
+	}
+	return brush->getID();
+}
+
+uint32_t GetCreatureSortID(const CreatureType& type) {
+	if (type.outfit.lookType != 0) {
+		return static_cast<uint32_t>(type.outfit.lookType);
+	}
+	if (type.outfit.lookItem != 0) {
+		return static_cast<uint32_t>(type.outfit.lookItem);
+	}
+	return 0;
+}
+
 // Brush
 uint32_t Brush::id_counter = 0;
 Brush::Brush() :
