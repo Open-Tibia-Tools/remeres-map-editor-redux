@@ -59,6 +59,7 @@ void ViewSettingsHandler::LoadValues() {
 	menuBar->CheckItem(SHOW_TECHNICAL_ITEMS, g_settings.getBoolean(Config::SHOW_TECHNICAL_ITEMS));
 	menuBar->CheckItem(SHOW_INVALID_TILES, g_settings.getBoolean(Config::SHOW_INVALID_TILES));
 	menuBar->CheckItem(SHOW_INVALID_ZONES, g_settings.getBoolean(Config::SHOW_INVALID_ZONES));
+	menuBar->CheckItem(SHOW_MISSING_GROUND, g_settings.getBoolean(Config::SHOW_MISSING_GROUND));
 	menuBar->CheckItem(SHOW_WAYPOINTS, g_settings.getBoolean(Config::SHOW_WAYPOINTS));
 	const bool show_all_floors = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
 	const auto floor_visibility_mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
@@ -161,6 +162,7 @@ void ViewSettingsHandler::OnChangeViewSettings(wxCommandEvent& event) {
 	g_settings.setInteger(Config::SHOW_TOWNS, menuBar->IsItemChecked(SHOW_TOWNS));
 
 	g_settings.setInteger(Config::SHOW_INVALID_ZONES, menuBar->IsItemChecked(SHOW_INVALID_ZONES));
+	g_settings.setInteger(Config::SHOW_MISSING_GROUND, menuBar->IsItemChecked(SHOW_MISSING_GROUND));
 	g_settings.setInteger(Config::ALWAYS_SHOW_ZONES, menuBar->IsItemChecked(ALWAYS_SHOW_ZONES));
 
 	if (supports_zones) {

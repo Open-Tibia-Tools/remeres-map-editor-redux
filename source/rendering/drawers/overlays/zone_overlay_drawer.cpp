@@ -15,6 +15,7 @@
 #include "game/spawn.h"
 #include "game/waypoints.h"
 #include "app/settings.h"
+#include "map/missing_ground.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -780,6 +781,68 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 			sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, q.flags, q.depth);
 		}
 		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+	}
+}
+
+namespace {
+	// Translucent amber, distinct from the red/orange invalid-tile and magenta invalid-zone markers.
+	constexpr float kMissingGroundTint[4] = { 1.0f, 0.8f, 0.0f, 0.45f };
+} // namespace
+
+void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
+                                               int z,
+                                               const RenderView& view,
+                                               const Map& map,
+                                               const DrawingOptions& options,
+                                               const AtlasManager& atlas) {
+	if (options.ingame || !options.show_missing_ground || view.zoom > kZoomLODCutoff) {
+		return;
+	}
+
+	const AtlasRegion* white_pixel = atlas.getWhitePixel();
+	if (!white_pixel) {
+		return;
+	}
+
+	const ViewBounds bounds = view.getBoundsForFloor(z);
+	const int offset = (z <= GROUND_LAYER)
+		? (GROUND_LAYER - z) * TILE_SIZE
+		: TILE_SIZE * (view.floor - z);
+	const int base_screen_x = -view.view_scroll_x - offset;
+	const int base_screen_y = -view.view_scroll_y - offset;
+
+	const auto has_ground = [&map, z](int x, int y) {
+		if (x < 0 || y < 0) {
+			return false;
+		}
+		const Tile* tile = map.getTile(x, y, z);
+		return tile && tile->ground;
+	};
+
+	SpatialHashGrid::CellCursor cursor;
+	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
+		const float draw_y = static_cast<float>(y * TILE_SIZE + base_screen_y);
+		const int ly = y & 3;
+		for (int x = bounds.start_x; x <= bounds.end_x;) {
+			const Floor* floor = map.getFloor(x, y, z, cursor);
+			if (!floor) {
+				x = std::min(bounds.end_x, x | cursor.empty_span_mask) + 1;
+				continue;
+			}
+			const int node_end = std::min(bounds.end_x, x | 3);
+			for (; x <= node_end; ++x) {
+				const Tile* tile = floor->locs[((x & 3) << 2) + ly].get();
+				// Cheap reject before the neighbour lookups.
+				if (!tile || tile->ground || tile->items.empty()) {
+					continue;
+				}
+				if (!MissingGround::IsHole(!tile->items.empty(), tile->ground != nullptr, MissingGround::CountGroundedNeighbours(x, y, has_ground))) {
+					continue;
+				}
+				const float draw_x = static_cast<float>(x * TILE_SIZE + base_screen_x);
+				sprite_batch.draw(draw_x, draw_y, 32.0f, 32.0f, *white_pixel, kMissingGroundTint[0], kMissingGroundTint[1], kMissingGroundTint[2], kMissingGroundTint[3]);
+			}
+		}
 	}
 }
 

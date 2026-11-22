@@ -178,6 +178,7 @@
 		<item name="Show Technical Items" hotkey="Shift+T" action="SHOW_TECHNICAL_ITEMS" help="Shows some of special items that are not visible in game."/>
 		<item name="Show Invalid Tiles" hotkey="" action="SHOW_INVALID_TILES" help="Show preserved invalid OTBM content as tile overlays."/>
 		<item name="Show Invalid Zones" hotkey="" action="SHOW_INVALID_ZONES" help="Show invalid tile flags and opaque OTBM tile fragments as magenta overlays."/>
+		<item name="Show Missing Ground" hotkey="" action="SHOW_MISSING_GROUND" help="Highlight tiles with items but no ground inside a grounded area (at least 3 of 4 neighbours have ground)."/>
 		<separator/>
 		<item name="Show creatures" hotkey="F" action="SHOW_CREATURES" help="Show creatures on the map."/>
 		<item name="Show spawns" hotkey="S" action="SHOW_SPAWNS" help="Show spawns on the map."/>

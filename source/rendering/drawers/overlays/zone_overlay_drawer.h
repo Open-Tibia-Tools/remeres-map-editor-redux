@@ -86,6 +86,15 @@ public:
 	                             const DrawingOptions& options,
 	                             const AtlasManager& atlas);
 
+	// "Show missing ground": tints holes in grounded areas (see map/missing_ground.h). Only the
+	// map itself is checked, not the paste preview.
+	void drawFloorMissingGround(SpriteBatch& sprite_batch,
+	                            int z,
+	                            const RenderView& view,
+	                            const Map& map,
+	                            const DrawingOptions& options,
+	                            const AtlasManager& atlas);
+
 	void drawFloorBadges(SpriteBatch& sprite_batch,
 	                     int z,
 	                     const RenderView& view,

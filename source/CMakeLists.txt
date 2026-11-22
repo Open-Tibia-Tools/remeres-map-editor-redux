@@ -150,6 +150,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/live/live_socket.h
     ${CMAKE_CURRENT_LIST_DIR}/live/live_tab.h
     ${CMAKE_CURRENT_LIST_DIR}/map/basemap.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/missing_ground.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_storage_format.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_allocator.h

@@ -220,6 +220,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 		if (zone_overlay_drawer && !options.ingame) {
+			zone_overlay_drawer->drawFloorMissingGround(sprite_batch, map_z, view, map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorWaypoints(sprite_batch, map_z, view, map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
@@ -271,6 +272,7 @@ void MapLayerDrawer::Draw(SpriteBatch& sprite_batch, int map_z, LiveClient* live
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 		if (zone_overlay_drawer && !options.ingame) {
+			zone_overlay_drawer->drawFloorMissingGround(sprite_batch, map_z, view, map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorWaypoints(sprite_batch, map_z, view, map, options, ctx.atlas);
 			zone_overlay_drawer->drawFloorBadges(sprite_batch, map_z, view, map, secondary_map, options, ctx.atlas);
 			sprite_batch.flush(ctx.atlas);
