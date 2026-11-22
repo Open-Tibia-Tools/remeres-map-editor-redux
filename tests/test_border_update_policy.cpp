@@ -442,3 +442,50 @@ TEST_CASE("specific case matching looks past clip items and needs every conditio
 		REQUIRE(ids(items) == std::vector<uint32_t> { 101, 3000 });
 	}
 }
+
+TEST_CASE("rewrite verdicts name the reason a scoped update keeps an item", "[border_update]") {
+	using BorderUpdate::RewriteVerdict;
+	const Brushes brushes;
+	const std::array<const BorderOwnership*, 1> b_in_context { &brushes.b };
+	const SnowAndSea snow_and_sea;
+	const std::array<const BorderOwnership*, 1> sea_in_context { &snow_and_sea.sea };
+
+	REQUIRE(BorderUpdate::ExplainRewrite(101, brushes.a, b_in_context) == RewriteVerdict::Rewritable);
+	REQUIRE(BorderUpdate::ExplainRewrite(201, brushes.a, b_in_context) == RewriteVerdict::NotOwnedByActive);
+	REQUIRE(BorderUpdate::ExplainRewrite(500, brushes.a, b_in_context) == RewriteVerdict::SharedWithContext);
+	REQUIRE(BorderUpdate::ExplainRewrite(500, brushes.a, {}) == RewriteVerdict::Rewritable);
+	REQUIRE(BorderUpdate::ExplainRewrite(6652, snow_and_sea.snow, sea_in_context) == RewriteVerdict::JointBorder);
+
+	// The yes/no form agrees with the verdict for every id.
+	for (const uint32_t id : { 101u, 102u, 201u, 500u, 701u, 900u, 9999u }) {
+		REQUIRE(BorderUpdate::IsRewritableByActive(id, brushes.a, b_in_context) == (BorderUpdate::ExplainRewrite(id, brushes.a, b_in_context) == RewriteVerdict::Rewritable));
+	}
+}
+
+TEST_CASE("specific case outcome tells applied, unmatched and protected apart", "[border_update]") {
+	using BorderUpdate::SpecificCaseOutcome;
+	const Brushes brushes;
+	const std::array<const BorderOwnership*, 1> context { &brushes.b };
+	const auto can_rewrite = [&](uint32_t id) { return BorderUpdate::IsRewritableByActive(id, brushes.a, context); };
+	const FakeSpecificCase fuse_own { .items_to_match = { 101, 102 }, .to_replace_id = 101, .with_id = 701 };
+
+	auto applied = tile(border(101), border(102), normal(3000));
+	REQUIRE(BorderUpdate::ApplySpecificCase<FakeTraits>(applied, fuse_own, can_rewrite) == SpecificCaseOutcome::Applied);
+	REQUIRE(ids(applied) == std::vector<uint32_t> { 701, 3000 });
+
+	auto unmatched = tile(border(101), normal(3000));
+	REQUIRE(BorderUpdate::ApplySpecificCase<FakeTraits>(unmatched, fuse_own, can_rewrite) == SpecificCaseOutcome::NotMatched);
+	REQUIRE(ids(unmatched) == std::vector<uint32_t> { 101, 3000 });
+
+	auto protected_items = tile(border(500), border(101), normal(3000));
+	const FakeSpecificCase touches_shared { .items_to_match = { 500, 101 }, .delete_all = true };
+	REQUIRE(BorderUpdate::ApplySpecificCase<FakeTraits>(protected_items, touches_shared, can_rewrite) == SpecificCaseOutcome::Protected);
+	REQUIRE(ids(protected_items) == std::vector<uint32_t> { 500, 101, 3000 });
+}
+
+TEST_CASE("ownership ids are listed in ascending order without duplicates", "[border_update]") {
+	ItemIdSet set;
+	set.insertAll(std::array<uint32_t, 5> { 300, 0, 100, 300, 200 });
+	const auto values = set.values();
+	REQUIRE(std::vector<uint32_t>(values.begin(), values.end()) == std::vector<uint32_t> { 100, 200, 300 });
+}

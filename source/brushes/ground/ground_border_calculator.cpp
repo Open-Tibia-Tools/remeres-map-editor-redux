@@ -88,7 +88,7 @@ namespace {
 
 } // namespace
 
-void GroundBorderCalculator::calculate(BaseMap* map, Tile* tile, const BorderUpdate::Options& options) {
+void GroundBorderCalculator::calculate(BaseMap* map, Tile* tile, const BorderUpdate::Options& options, GroundBorderTrace* trace) {
 	static const auto extractGroundBrushFromTile = [](BaseMap* map, int x, int y, int z) -> GroundBrush* {
 		Tile* tile = map->getTile(x, y, z);
 		if (tile) {
@@ -98,6 +98,12 @@ void GroundBorderCalculator::calculate(BaseMap* map, Tile* tile, const BorderUpd
 	};
 
 	ASSERT(tile);
+
+	if (trace) {
+		*trace = GroundBorderTrace {};
+		trace->classic = options.isClassic();
+		trace->optional_border_before = tile->hasOptionalBorder();
+	}
 
 	GroundBrush* borderBrush;
 	if (tile->ground) {
@@ -347,9 +353,22 @@ void GroundBorderCalculator::calculate(BaseMap* map, Tile* tile, const BorderUpd
 		visited = true;
 	}
 
+	if (trace) {
+		trace->tile_brush = borderBrush;
+		for (size_t i = 0; i < offsets.size(); ++i) {
+			trace->neighbours[i] = neighbours[i].second;
+		}
+	}
+
 	if (!options.isClassic()) {
-		applyWithOptions(tile, borderBrush, neighbours, borderList, specificList, options);
+		applyWithOptions(tile, borderBrush, neighbours, borderList, specificList, options, trace);
 		return;
+	}
+
+	if (trace) {
+		for (const auto& item : tile->items) {
+			trace->before.push_back({ .id = item->getID(), .is_border = item->isBorder(), .is_border_layer = item->isBorderLayer(), .removed = item->isBorder() });
+		}
 	}
 
 	// Clean current borders
@@ -366,6 +385,12 @@ void GroundBorderCalculator::calculate(BaseMap* map, Tile* tile, const BorderUpd
 	auto [first, last] = std::ranges::unique(specificList);
 	specificList.erase(first, last);
 
+	if (trace) {
+		for (const GroundBrush::BorderCluster& borderCluster : borderList) {
+			trace->clusters.push_back({ .border = borderCluster.border, .alignment = borderCluster.alignment, .z = borderCluster.z });
+		}
+	}
+
 	TileOperations::cleanBorders(tile);
 
 	while (!borderList.empty()) {
@@ -375,11 +400,19 @@ void GroundBorderCalculator::calculate(BaseMap* map, Tile* tile, const BorderUpd
 			continue;
 		}
 
-		forEachBorderPiece(*borderCluster.border, borderCluster.alignment, [tile](uint32_t item_id) {
+		forEachBorderPiece(*borderCluster.border, borderCluster.alignment, [tile, trace](uint32_t item_id) {
+			if (trace) {
+				trace->generated.push_back({ .id = item_id });
+			}
 			TileOperations::addBorderItem(tile, Item::Create(item_id));
 		});
 
 		borderList.pop_back();
+	}
+
+	if (trace) {
+		// Front insertion stacks the pieces in reverse generation order.
+		std::ranges::reverse(trace->generated);
 	}
 
 	for (const GroundBrush::BorderBlock* borderBlock : specificList) {
@@ -403,6 +436,14 @@ void GroundBorderCalculator::calculate(BaseMap* map, Tile* tile, const BorderUpd
 						++matches;
 					}
 				}
+			}
+
+			if (trace) {
+				trace->specific_cases.push_back({
+					.block = borderBlock,
+					.case_index = static_cast<std::size_t>(&specificCaseBlockPtr - borderBlock->specific_cases.data()),
+					.outcome = matches >= specificCaseBlock->items_to_match.size() ? BorderUpdate::SpecificCaseOutcome::Applied : BorderUpdate::SpecificCaseOutcome::NotMatched,
+				});
 			}
 
 			if (matches >= specificCaseBlock->items_to_match.size()) {
@@ -451,7 +492,8 @@ void GroundBorderCalculator::applyWithOptions(
 	std::span<const std::pair<bool, GroundBrush*>, 8> neighbours,
 	std::vector<GroundBrush::BorderCluster>& borderList,
 	std::vector<const GroundBrush::BorderBlock*>& specificList,
-	const BorderUpdate::Options& options
+	const BorderUpdate::Options& options,
+	GroundBorderTrace* trace
 ) {
 	const GroundBrush* active = options.preservesOtherBrushes() ? options.active_brush : nullptr;
 
@@ -467,6 +509,9 @@ void GroundBorderCalculator::applyWithOptions(
 		const BorderUpdate::BorderOwnership* ownership = &brush->getBorderOwnership();
 		const auto owners_end = owners.begin() + owner_count;
 		if (std::find(owners.begin(), owners_end, ownership) == owners_end) {
+			if (trace && owner_count > 0) {
+				trace->context_brushes.push_back(brush);
+			}
 			owners[owner_count++] = ownership;
 		}
 	};
@@ -483,6 +528,19 @@ void GroundBorderCalculator::applyWithOptions(
 		return !active || BorderUpdate::IsRewritableByActive(item_id, active->getBorderOwnership(), context);
 	};
 
+	if (trace) {
+		for (const auto& item : tile->items) {
+			GroundBorderTrace::ExistingItem& entry = trace->before.emplace_back();
+			entry.id = item->getID();
+			entry.is_border = item->isBorder();
+			entry.is_border_layer = item->isBorderLayer();
+			if (entry.is_border && active) {
+				entry.verdict = BorderUpdate::ExplainRewrite(entry.id, active->getBorderOwnership(), context);
+			}
+			entry.removed = entry.is_border && canRewrite(entry.id);
+		}
+	}
+
 	BorderUpdate::RemoveRewritableBorders<TileItemTraits>(tile->items, canRewrite);
 
 	// Same ordering as the classic path.
@@ -496,10 +554,20 @@ void GroundBorderCalculator::applyWithOptions(
 
 	// CurrentBrushOnly generates only the active brush's own autoborders; a seam
 	// drawn with another brush's border is that brush's to recalculate.
+	const auto generatesCluster = [active](const GroundBrush::BorderCluster& borderCluster) {
+		return borderCluster.border && (!active || active->usesAutoBorder(borderCluster.border));
+	};
+
+	if (trace) {
+		for (const GroundBrush::BorderCluster& borderCluster : borderList) {
+			trace->clusters.push_back({ .border = borderCluster.border, .alignment = borderCluster.alignment, .z = borderCluster.z, .generated = generatesCluster(borderCluster) });
+		}
+	}
+
 	std::vector<std::unique_ptr<Item>> generated;
 	while (!borderList.empty()) {
 		const GroundBrush::BorderCluster& borderCluster = borderList.back();
-		if (borderCluster.border && (!active || active->usesAutoBorder(borderCluster.border))) {
+		if (generatesCluster(borderCluster)) {
 			forEachBorderPiece(*borderCluster.border, borderCluster.alignment, [&generated](uint32_t item_id) {
 				if (std::unique_ptr<Item> item = Item::Create(item_id)) {
 					ASSERT(item->isBorder());
@@ -515,16 +583,28 @@ void GroundBorderCalculator::applyWithOptions(
 	std::ranges::reverse(generated);
 	// A scoped update keeps other brushes' pieces, so it must not stack a piece
 	// that a kept item already shows.
-	BorderUpdate::InsertGenerated<TileItemTraits>(tile->items, generated, options.placement, [&](uint32_t item_id) {
+	const auto isRepresented = [&](uint32_t item_id) {
 		return active && BorderUpdate::IsRepresentedOnTile<TileItemTraits>(item_id, tile->items, active_and_context);
-	});
+	};
+	if (trace) {
+		// Same tile state the splice below sees.
+		for (const auto& item : generated) {
+			trace->generated.push_back({ .id = item->getID(), .skipped = isRepresented(item->getID()) });
+		}
+		trace->insertion_index = BorderUpdate::InsertionIndex<TileItemTraits>(tile->items, options.placement);
+	}
+	BorderUpdate::InsertGenerated<TileItemTraits>(tile->items, generated, options.placement, isRepresented);
 
 	for (const GroundBrush::BorderBlock* borderBlock : specificList) {
-		if (active && !active->ownsBorderBlock(borderBlock)) {
-			continue;
-		}
-		for (const auto& specificCaseBlock : borderBlock->specific_cases) {
-			BorderUpdate::ApplySpecificCase<TileItemTraits>(tile->items, *specificCaseBlock, canRewrite);
+		const bool owned = !active || active->ownsBorderBlock(borderBlock);
+		for (std::size_t i = 0; i < borderBlock->specific_cases.size(); ++i) {
+			std::optional<BorderUpdate::SpecificCaseOutcome> outcome;
+			if (owned) {
+				outcome = BorderUpdate::ApplySpecificCase<TileItemTraits>(tile->items, *borderBlock->specific_cases[i], canRewrite);
+			}
+			if (trace) {
+				trace->specific_cases.push_back({ .block = borderBlock, .case_index = i, .owned_by_active = owned, .outcome = outcome });
+			}
 		}
 	}
 

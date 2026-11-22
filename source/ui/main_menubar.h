@@ -146,6 +146,7 @@ namespace MenuBar {
 		WIN_INGAME_PREVIEW,
 		WIN_BRUSH_ITEMS,
 		WIN_TILE_PROPERTIES,
+		WIN_AUTOBORDER_DEBUG,
 		WIN_SEARCH_RESULTS,
 		NEW_PALETTE,
 		SHOW_PALETTE,
@@ -312,6 +313,7 @@ public:
 	void OnIngamePreviewWindow(wxCommandEvent& event);
 	void OnBrushItemsWindow(wxCommandEvent& event);
 	void OnTilePropertiesWindow(wxCommandEvent& event);
+	void OnAutoborderDebugWindow(wxCommandEvent& event);
 	void OnSearchResultsWindow(wxCommandEvent& event);
 	void OnNewPalette(wxCommandEvent& event);
 	void OnShowPalette(wxCommandEvent& event);

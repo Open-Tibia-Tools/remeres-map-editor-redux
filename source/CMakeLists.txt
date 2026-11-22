@@ -419,6 +419,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_list_box.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_types.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/map_statistics_dialog.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/autoborder_debug_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/live_dialogs.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/menubar_loader.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_window.h
@@ -842,6 +843,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_info_panel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/welcome/startup_list_box.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/map_statistics_dialog.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/autoborder_debug_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/live_dialogs.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/menubar_loader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/util/common.cpp

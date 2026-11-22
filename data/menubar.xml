@@ -222,6 +222,7 @@
 		<item name="Brush Options" action="WIN_TOOL_OPTIONS" help="Displays the brush options window."/>
 		<item name="Brush Items" action="WIN_BRUSH_ITEMS" help="Displays the brush items window."/>
 		<item name="Tile Properties" action="WIN_TILE_PROPERTIES" help="Displays the tile properties panel."/>
+		<item name="Autoborder Debug" action="WIN_AUTOBORDER_DEBUG" help="Shows how the autoborder of the current ground brush decides on the tile under the cursor."/>
 		<item name="Search Results" action="WIN_SEARCH_RESULTS" help="Displays the search results window."/>
 		<item name="In-game Preview" action="WIN_INGAME_PREVIEW" help="Displays the in-game preview window."/>
 		<item name="New Palette" action="NEW_PALETTE" help="Creates a new palette."/>

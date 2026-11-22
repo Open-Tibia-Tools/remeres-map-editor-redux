@@ -23,6 +23,7 @@
 #include "ui/tool_options_window.h"
 #include "ui/tile_properties/tile_properties_panel.h"
 #include "ui/brush_items/brush_items_window.h"
+#include "ui/autoborder_debug_window.h"
 #include "ui/managers/search_manager.h"
 
 #include "map/map_statistics.h"
@@ -602,6 +603,10 @@ void MainMenuBar::OnTilePropertiesWindow(wxCommandEvent& event) {
 		}
 		g_gui.aui_manager->Update();
 	}
+}
+
+void MainMenuBar::OnAutoborderDebugWindow(wxCommandEvent& WXUNUSED(event)) {
+	AutoborderDebugWindow::Toggle(frame);
 }
 
 

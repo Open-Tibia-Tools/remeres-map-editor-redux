@@ -99,6 +99,11 @@ namespace BorderUpdate {
 			return ids.size();
 		}
 
+		// Sorted ascending.
+		[[nodiscard]] std::span<const uint32_t> values() const noexcept {
+			return ids;
+		}
+
 	private:
 		std::vector<uint32_t> ids;
 	};
@@ -144,9 +149,17 @@ namespace BorderUpdate {
 	// they are preserved instead of risking another brush's only visual border.
 	// A specific-case result whose replaced piece or any matched source is owned
 	// by a context brush is a joint border and is preserved for the same reason.
-	[[nodiscard]] inline bool IsRewritableByActive(uint32_t id, const BorderOwnership& active, std::span<const BorderOwnership* const> context) {
+	enum class RewriteVerdict : uint8_t {
+		Rewritable,
+		NotOwnedByActive, // The active brush never generates this id.
+		SharedWithContext, // A context brush owns the same id.
+		JointBorder, // A specific-case result fused with a context brush's piece.
+	};
+
+	// The removal rule with its reason; IsRewritableByActive is its yes/no form.
+	[[nodiscard]] inline RewriteVerdict ExplainRewrite(uint32_t id, const BorderOwnership& active, std::span<const BorderOwnership* const> context) {
 		if (!active.contains(id)) {
-			return false;
+			return RewriteVerdict::NotOwnedByActive;
 		}
 		const auto owned_by_context = [&context](uint32_t item_id) {
 			return std::ranges::any_of(context, [item_id](const BorderOwnership* other) {
@@ -154,11 +167,16 @@ namespace BorderUpdate {
 			});
 		};
 		if (owned_by_context(id)) {
-			return false;
+			return RewriteVerdict::SharedWithContext;
 		}
-		return std::ranges::none_of(active.fused, [&](const FusedBorder& entry) {
+		const bool joint = std::ranges::any_of(active.fused, [&](const FusedBorder& entry) {
 			return entry.result_id == id && (owned_by_context(entry.replaced_id) || std::ranges::any_of(entry.sources, owned_by_context));
 		});
+		return joint ? RewriteVerdict::JointBorder : RewriteVerdict::Rewritable;
+	}
+
+	[[nodiscard]] inline bool IsRewritableByActive(uint32_t id, const BorderOwnership& active, std::span<const BorderOwnership* const> context) {
+		return ExplainRewrite(id, active, context) == RewriteVerdict::Rewritable;
 	}
 
 	// True when a generated piece `id` is already shown on the tile: as a brush
@@ -217,6 +235,12 @@ namespace BorderUpdate {
 		generated.clear();
 	}
 
+	enum class SpecificCaseOutcome : uint8_t {
+		Applied, // Every condition matched and the case ran.
+		NotMatched, // Fewer matches than conditions; the tile is unchanged.
+		Protected, // A matched item may not be rewritten; the tile is unchanged.
+	};
+
 	// Applies one specific case block (borders.xml <specific>) to `items`.
 	// Matching reads every brush border in the leading border-layer run, whoever
 	// owns it. The case is applied whole or not at all: when any matched item is
@@ -224,7 +248,7 @@ namespace BorderUpdate {
 	// neither fuse another brush's piece nor drop the active brush's piece that
 	// the fused result would have stood for.
 	template <typename Traits, typename T, typename Block, typename CanRewrite>
-	void ApplySpecificCase(std::vector<T>& items, const Block& block, CanRewrite&& can_rewrite) {
+	SpecificCaseOutcome ApplySpecificCase(std::vector<T>& items, const Block& block, CanRewrite&& can_rewrite) {
 		std::size_t matches = 0;
 		for (const T& item : items) {
 			if (!Traits::isBorderLayer(item)) {
@@ -249,14 +273,14 @@ namespace BorderUpdate {
 		}
 
 		if (matches < block.items_to_match.size()) {
-			return;
+			return SpecificCaseOutcome::NotMatched;
 		}
 
 		const bool touches_protected_item = std::ranges::any_of(items, [&](const T& item) {
 			return Traits::isBorder(item) && !can_rewrite(Traits::id(item)) && std::ranges::find(block.items_to_match, Traits::id(item)) != block.items_to_match.end();
 		});
 		if (touches_protected_item) {
-			return;
+			return SpecificCaseOutcome::Protected;
 		}
 
 		// In delete_all mode the border counts as replaced already.
@@ -288,6 +312,7 @@ namespace BorderUpdate {
 				++it;
 			}
 		}
+		return SpecificCaseOutcome::Applied;
 	}
 
 } // namespace BorderUpdate
