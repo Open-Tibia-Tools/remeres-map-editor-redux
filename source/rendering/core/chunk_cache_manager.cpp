@@ -28,6 +28,7 @@
 #include "rendering/shaders/chunk_shader.h"
 #include "rendering/indicators/technical_item_registry.h"
 #include "rendering/core/render_depth.h"
+#include "rendering/core/item_render_rules.h"
 #include <spdlog/spdlog.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
@@ -743,6 +744,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			// items are not drawn at this zoom: the item pass is the dominant cost of a
 			// pan/zoom bake burst.
 			int elev = 0;
+			int common_step = 0;
 			if (bake_items) {
 				for (const auto& item : tile->items) {
 					if (!item || item->isBorderLayer()) {
@@ -756,13 +758,17 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 					const uint16_t item_client_id = it ? it.clientId() : 0;
 					const uint16_t item_server_id = item->getID();
 
-					rme::rendering::RenderSublayer sublayer = rme::rendering::RenderSublayer::CommonItem;
-					if (item->isAlwaysOnBottom()) {
-						sublayer = rme::rendering::RenderSublayer::BottomItem;
-					} else if (it && it.hasFlag(ItemFlag::TopEffect)) {
-						sublayer = rme::rendering::RenderSublayer::TopItem;
+					const rme::rendering::RenderSublayer sublayer = rme::rendering::ResolveItemSublayer(
+						item->isAlwaysOnBottom(),
+						it && it.hasFlag(ItemFlag::TopEffect)
+					);
+					const int common_layer = sublayer == rme::rendering::RenderSublayer::CommonItem
+						? rme::rendering::CommonItemElevationStep(common_step)
+						: 0;
+					const float item_depth = rme::rendering::calculateTileDepth(x, y, sublayer, common_layer);
+					if (sublayer == rme::rendering::RenderSublayer::CommonItem) {
+						++common_step;
 					}
-					const float item_depth = rme::rendering::calculateTileDepth(x, y, sublayer, elev > 0 ? 1 : 0);
 
 					const auto tech_type = (ctx.options.show_tech_items && !ctx.options.ingame)
 						? rme::rendering::TechnicalItemRegistry::Classify(item_server_id, item_client_id)
@@ -822,7 +828,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 						x, y, z);
 
 					if (ispr->hasElevation()) {
-						elev += ispr->draw_height;
+						rme::rendering::AdvanceItemElevation(elev, ispr->draw_height, true);
 					}
 				}
 			} // bake_items

@@ -167,6 +167,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/map/spatial_change_tracker.h
     ${CMAKE_CURRENT_LIST_DIR}/map/tile.h
     ${CMAKE_CURRENT_LIST_DIR}/map/tile_operations.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/tile_stack_rows.h
     ${CMAKE_CURRENT_LIST_DIR}/net/net_connection.h
     ${CMAKE_CURRENT_LIST_DIR}/net/process_com.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/all_items/all_items_palette.h
@@ -202,6 +203,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_archive.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_decoder.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_layout_calculator.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_footprint.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/template_image.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_preloader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_buffer.h
@@ -216,6 +218,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/pixel_buffer_object.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/primitive_renderer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_depth.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/item_render_rules.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_interaction_state.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_timer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_view.h
@@ -281,6 +284,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/popup_action_handler.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/screenshot_controller.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/selection_controller.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/pick_candidate_order.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/selection_geometry.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/selection_picker.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/tooltip_drawer.h
@@ -378,6 +382,14 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/menubar/palette_menu_handler.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/main_toolbar.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/map_popup_menu.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/context_menu_item_facts.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/context_menu_presentation.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/item_context_actions.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/item_context_menu_model.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/item_popup_menu.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/tile_context_actions.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/tile_context_menu_model.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/tile_item_actions.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/map_tab.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/map_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/numbertextctrl.h
@@ -796,6 +808,12 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/managers/vsync_policy.cpp
 
     ${CMAKE_CURRENT_LIST_DIR}/ui/map_popup_menu.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/context_menu_item_facts.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/context_menu_presentation.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/item_context_actions.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/item_popup_menu.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/tile_context_actions.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ui/tile_item_actions.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/map_tab.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/map_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/numbertextctrl.cpp

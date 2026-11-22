@@ -272,3 +272,43 @@ set_target_properties(test_collection_save_plan PROPERTIES CXX_STANDARD_REQUIRED
 target_link_libraries(test_collection_save_plan PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_collection_save_plan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_collection_save_plan COMMAND test_collection_save_plan)
+
+# --- Unit test for the shared tile context menu model (map canvas and Tile Properties) ---
+add_executable(test_tile_context_menu tests/test_tile_context_menu.cpp)
+set_target_properties(test_tile_context_menu PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_tile_context_menu PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_tile_context_menu PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_tile_context_menu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_tile_context_menu COMMAND test_tile_context_menu)
+
+# --- Unit test for the item-scoped context menu model (Tile Properties list) ---
+add_executable(test_item_context_menu tests/test_item_context_menu.cpp)
+set_target_properties(test_item_context_menu PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_item_context_menu PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_item_context_menu PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_item_context_menu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_item_context_menu COMMAND test_item_context_menu)
+
+# --- Unit test for minimap dirty rect bounds ---
+add_executable(test_minimap_rect tests/test_minimap_rect.cpp)
+set_target_properties(test_minimap_rect PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_minimap_rect PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_minimap_rect PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_minimap_rect PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_minimap_rect COMMAND test_minimap_rect)
+
+# --- Unit test for pixel-perfect picking of multi-tile grounds ---
+add_executable(test_selection_multitile_ground tests/test_selection_multitile_ground.cpp)
+set_target_properties(test_selection_multitile_ground PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_selection_multitile_ground PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_selection_multitile_ground PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_selection_multitile_ground PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_selection_multitile_ground COMMAND test_selection_multitile_ground)
+
+# --- Unit test for the pathing overlay sprite footprint ---
+add_executable(test_sprite_footprint tests/test_sprite_footprint.cpp)
+set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_sprite_footprint PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_sprite_footprint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_sprite_footprint COMMAND test_sprite_footprint)
