@@ -136,6 +136,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/header_serialization_otbm.h
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/waypoint_serialization_otbm.h
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/tile_serialization_otbm.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/otbm/tfs_tile_zones.h
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/town_serialization_otbm.h
     ${CMAKE_CURRENT_LIST_DIR}/io/otbm/fast_otbm_reader.h
     ${CMAKE_CURRENT_LIST_DIR}/io/compression/gzip_stream.h

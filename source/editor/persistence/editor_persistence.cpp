@@ -141,17 +141,28 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 			backup_npc = map_path + nstr(converter.GetName()) + ".xml~";
 			createBackup(map_path + editor.map.getNpcFilename(), backup_npc);
 		}
-
-		converter.SetFullName(wxstr(editor.map.getZoneFilename()));
-		if (converter.FileExists()) {
-			backup_zone = map_path + nstr(converter.GetName()) + ".xml~";
-			createBackup(map_path + editor.map.getZoneFilename(), backup_zone);
-		}
 	} else {
 		converter.SetFullName(wxstr(editor.map.getSpawnFilename()));
 		if (converter.FileExists()) {
 			backup_spawn = map_path + nstr(converter.GetName()) + ".xml~";
 			createBackup(map_path + editor.map.getSpawnFilename(), backup_spawn);
+		}
+	}
+
+	// An OTBM 1-4 map with TFS tile zones writes its zone file under the name it is saved with,
+	// so back up (and on failure restore or remove) that file, not the one it was loaded from.
+	std::string zone_backup_target;
+	if (editor.map.supportsZones()) {
+		const std::string zone_save_name = (editor.map.usesTfsTileZones() && !editor.map.zones.empty())
+			? IOMapOTBM::TfsZoneFileName(FileName(wxstr(savefile)))
+			: editor.map.getZoneFilename();
+		if (!zone_save_name.empty()) {
+			zone_backup_target = map_path + zone_save_name;
+			converter.SetFullName(wxstr(zone_save_name));
+			if (converter.FileExists()) {
+				backup_zone = map_path + nstr(converter.GetName()) + ".xml~";
+				createBackup(zone_backup_target, backup_zone);
+			}
 		}
 	}
 
@@ -227,13 +238,14 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 				if (!editor.map.getNpcFilename().empty()) {
 					restoreBackup(backup_npc, map_path + editor.map.getNpcFilename());
 				}
-				if (!editor.map.getZoneFilename().empty()) {
-					restoreBackup(backup_zone, map_path + editor.map.getZoneFilename());
-				}
 			} else {
 				if (!editor.map.getSpawnFilename().empty()) {
 					restoreBackup(backup_spawn, map_path + editor.map.getSpawnFilename());
 				}
+			}
+			if (!zone_backup_target.empty()) {
+				// Without a backup this removes the zone file the failed save wrote
+				restoreBackup(backup_zone, zone_backup_target);
 			}
 			if (!editor.map.getWaypointFilename().empty()) {
 				restoreBackup(backup_waypoint, map_path + editor.map.getWaypointFilename());
@@ -562,7 +574,7 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 	importHouses(editor, imported_map, offset, house_import_type, town_id_map, house_id_map);
 
 	std::unordered_map<uint16_t, uint16_t> zone_id_map;
-	if (editor.map.getVersion().otbm == MAP_OTBM_5 && imported_map.getVersion().otbm == MAP_OTBM_5) {
+	if (editor.map.supportsZones() && imported_map.supportsZones()) {
 		zone_id_map.reserve(imported_map.zones.size());
 		for (const auto& imported_zone : imported_map.zones) {
 			if (const auto* existing = editor.map.findZone(imported_zone.name)) {
@@ -662,7 +674,7 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 
 		import_tile->spawn.reset();
 
-		if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+		if (editor.map.supportsZones()) {
 			if (import_tile->hasZones()) {
 				std::vector<uint16_t> remapped_zones;
 				for (const uint16_t zid : import_tile->getZoneIds()) {
@@ -697,7 +709,7 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 		editor.map.addSpawn(tile);
 	}
 
-	if (editor.map.getVersion().otbm == MAP_OTBM_5) {
+	if (editor.map.supportsZones()) {
 		editor.map.rebuildZoneIndex();
 	}
 

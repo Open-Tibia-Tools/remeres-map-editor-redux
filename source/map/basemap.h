@@ -87,6 +87,10 @@ public:
 	[[nodiscard]] virtual bool supportsZones() const noexcept {
 		return false;
 	}
+	// Canary / Crystal Server map format: separate monster and npc spawns, creature weights
+	[[nodiscard]] virtual bool isOtbm5() const noexcept {
+		return false;
+	}
 	MapIterator begin();
 	MapIterator end();
 	auto tiles() {
