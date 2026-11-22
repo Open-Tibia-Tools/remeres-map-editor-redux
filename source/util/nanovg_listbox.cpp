@@ -350,7 +350,7 @@ void NanoVGListBox::OnKeyDown(wxKeyEvent& event) {
 			// Let's stick to single selection logic which covers most use cases here.
 			// If it's multiple selection, we might just scroll to it?
 		} else {
-			m_selection = next;
+			SetSelection(next);
 			SendSelectionEvent();
 		}
 		EnsureVisible(next);
