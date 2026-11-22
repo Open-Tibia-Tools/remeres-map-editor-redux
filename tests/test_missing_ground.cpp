@@ -3,6 +3,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <array>
+#include <set>
+#include <utility>
 #include <string_view>
 
 using MissingGround::CountGroundedNeighbours;
@@ -37,12 +39,12 @@ TEST_CASE("only ungrounded tiles with items can be holes", "[missing_ground]") {
 }
 
 TEST_CASE("neighbours are the four orthogonal tiles", "[missing_ground]") {
-	int asked = 0;
+	std::set<std::pair<int, int>> asked;
 	const int count = CountGroundedNeighbours(5, 5, [&asked](int x, int y) {
-		++asked;
+		asked.insert({ x, y });
 		return (x == 5 && y == 4) || (x == 6 && y == 5) || (x == 4 && y == 4);
 	});
-	REQUIRE(asked == 4);
+	REQUIRE(asked == std::set<std::pair<int, int>> { { 5, 4 }, { 6, 5 }, { 5, 6 }, { 4, 5 } });
 	REQUIRE(count == 2); // (4, 4) is diagonal and not counted
 }
 
