@@ -149,7 +149,7 @@ void CollectionStudioWindow::InitLayout() {
 	};
 
 	m_optionsPanel = new rme::ui::CollectionOptionsPanel(this, std::move(callbacks));
-	m_optionsPanel->SetMinSize(wxSize(260, -1));
+	m_optionsPanel->SetMinSize(FromDIP(wxSize(320, -1)));
 	rootSizer->Add(m_optionsPanel, wxSizerFlags().Expand().Border(wxALL, 6));
 
 	SetSizer(rootSizer);

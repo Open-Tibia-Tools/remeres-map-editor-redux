@@ -105,7 +105,7 @@ void CollectionOptionsPanel::InitUI() {
 
 	wxBoxSizer* onlyUncoveredSizer = new wxBoxSizer(wxHORIZONTAL);
 	onlyUncoveredSizer->AddSpacer(Theme::Grid(4));
-	m_onlyUncoveredCheck = new wxCheckBox(includeBox->GetStaticBox(), wxID_ANY, "Only items not covered by brushes (0 covered)");
+	m_onlyUncoveredCheck = new wxCheckBox(includeBox->GetStaticBox(), wxID_ANY, "Only items not covered by brushes");
 	m_onlyUncoveredCheck->SetValue(true);
 	m_onlyUncoveredCheck->SetToolTip("Skip items that an included brush already draws, so the tileset gets no duplicate entries");
 	onlyUncoveredSizer->Add(m_onlyUncoveredCheck);
@@ -115,7 +115,7 @@ void CollectionOptionsPanel::InitUI() {
 	m_includeBrushesCheck->SetValue(true);
 	includeBox->Add(m_includeBrushesCheck, wxSizerFlags().Border(wxALL, 6));
 
-	m_saveSummaryLabel = new wxStaticText(includeBox->GetStaticBox(), wxID_ANY, "Will save 0 of 0 items and 0 brushes");
+	m_saveSummaryLabel = new wxStaticText(includeBox->GetStaticBox(), wxID_ANY, "");
 	m_saveSummaryLabel->SetFont(m_saveSummaryLabel->GetFont().Smaller());
 	includeBox->Add(m_saveSummaryLabel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
 
@@ -125,7 +125,7 @@ void CollectionOptionsPanel::InitUI() {
 	wxStaticBoxSizer* pathBox = new wxStaticBoxSizer(wxVERTICAL, this, "Target File");
 	m_filePathLabel = new wxStaticText(pathBox->GetStaticBox(), wxID_ANY, "Target: tilesets/collections/...");
 	m_filePathLabel->SetFont(m_filePathLabel->GetFont().Smaller());
-	m_filePathLabel->Wrap(240);
+	m_filePathLabel->Wrap(FromDIP(288));
 	pathBox->Add(m_filePathLabel, wxSizerFlags().Expand().Border(wxALL, 6));
 
 	rootSizer->Add(pathBox, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 6));
@@ -303,19 +303,34 @@ std::optional<rme::collection::CollectionInclusionMode> CollectionOptionsPanel::
 }
 
 void CollectionOptionsPanel::UpdateInclusionControls() {
-	m_onlyUncoveredCheck->Enable(m_includeItemsCheck->GetValue() && m_includeBrushesCheck->GetValue());
+	const bool includeItems = m_includeItemsCheck->GetValue();
+	const bool includeBrushes = m_includeBrushesCheck->GetValue();
+	m_onlyUncoveredCheck->Enable(includeItems && includeBrushes);
 
 	m_includeItemsCheck->SetLabelText(wxstr(std::format("Include Items ({})", m_itemCount)));
-	m_onlyUncoveredCheck->SetLabelText(wxstr(std::format("Only items not covered by brushes ({} covered)", m_coveredItemCount)));
 	m_includeBrushesCheck->SetLabelText(wxstr(std::format("Include Brushes ({})", m_brushCount)));
+	m_onlyUncoveredCheck->SetToolTip(wxstr(std::format(
+		"{} of {} staged items are covered by the staged brushes",
+		m_coveredItemCount,
+		m_itemCount
+	)));
 
 	rme::collection::CollectionSaveCounts counts;
-	if (const auto mode = GetInclusionMode()) {
+	const auto mode = GetInclusionMode();
+	if (mode) {
 		counts = rme::collection::ComputeCollectionSaveCounts(*mode, m_itemCount, m_coveredItemCount, m_brushCount);
 	}
-	m_saveSummaryLabel->SetLabelText(
-		wxstr(std::format("Will save {} of {} items and {} brushes", counts.items, m_itemCount, counts.brushes))
+
+	std::string summary = std::format(
+		"Items saved: {} of {}\nBrushes saved: {}",
+		counts.items,
+		m_itemCount,
+		counts.brushes
 	);
+	if (mode == rme::collection::CollectionInclusionMode::BrushesAndUncoveredItems) {
+		summary += std::format("\nCovered by brushes: {}", m_coveredItemCount);
+	}
+	m_saveSummaryLabel->SetLabelText(wxstr(summary));
 	Layout();
 }
 
@@ -343,7 +358,7 @@ void CollectionOptionsPanel::UpdateFilePreview() {
 	auto rel = std::filesystem::relative(filePath, palettesPath.parent_path(), ec);
 	std::string displayRel = ec ? filePath.string() : rel.generic_string();
 	m_filePathLabel->SetLabelText(wxstr(std::format("Target ({}):\n{}", pal, displayRel)));
-	m_filePathLabel->Wrap(240);
+	m_filePathLabel->Wrap(FromDIP(288));
 	Layout();
 }
 
