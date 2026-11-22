@@ -344,10 +344,10 @@ namespace TileOperations {
 		TileOperations::updateSelectionState(tile);
 	}
 
-	std::vector<std::unique_ptr<Item>> popSelectedItems(Tile* tile, bool ignoreTileSelected) {
+	std::vector<std::unique_ptr<Item>> popSelectedItems(Tile* tile) {
 		std::vector<std::unique_ptr<Item>> pop_items;
 
-		if (!ignoreTileSelected && !tile->isSelected()) {
+		if (!tile->isSelected()) {
 			return pop_items;
 		}
 
@@ -361,6 +361,28 @@ namespace TileOperations {
 
 		TileOperations::update(tile);
 		return pop_items;
+	}
+
+	std::unique_ptr<Item> removeItem(Tile* tile, const Item* item) {
+		if (!tile || !item) {
+			return nullptr;
+		}
+
+		if (tile->ground.get() == item) {
+			std::unique_ptr<Item> removed = std::move(tile->ground);
+			tile->setGround(nullptr);
+			return removed;
+		}
+
+		const auto it = std::ranges::find_if(tile->items, [item](const std::unique_ptr<Item>& candidate) { return candidate.get() == item; });
+		if (it == tile->items.end()) {
+			return nullptr;
+		}
+
+		std::unique_ptr<Item> removed = std::move(*it);
+		tile->items.erase(it);
+		TileOperations::update(tile);
+		return removed;
 	}
 
 	ItemVector getSelectedItems(Tile* tile, bool unzoomed) {
