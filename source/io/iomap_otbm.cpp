@@ -339,6 +339,10 @@ bool IOMapOTBM::loadMapFromDisk(Map& map, const FileName& filename) {
 	return true;
 }
 
+std::string IOMapOTBM::TfsZoneFileName(const FileName& map_file) {
+	return nstr(map_file.GetName() + "-zones.xml");
+}
+
 bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 	if (size < 4) {
 		return false;
@@ -657,6 +661,10 @@ bool IOMapOTBM::loadMapFast(Map& map, const uint8_t* data, size_t size) {
 	for (const auto& [zone_id, positions] : aggregated_zones) {
 		map.zone_index.addTilesBulk(zone_id, positions);
 	}
+	// A file that already has TFS zone lists keeps that format even with the option off.
+	if (readsTfsTileZones() && !aggregated_zones.empty()) {
+		tfs_tile_zones = true;
+	}
 
 	// Keep the bar open (and the message current) for the companion files that
 	// loadMapFromDisk reads next; it closes it once they are done.
@@ -691,7 +699,7 @@ bool IOMapOTBM::saveMapToDisk(Map& map, const FileName& identifier) {
 		}
 	} else if (map.usesTfsTileZones() && !map.zones.empty()) {
 		// OTBM 1-4 headers cannot reference a zone file, so the names go to the file the loader looks for by default
-		map.zonefile = nstr(identifier.GetName() + "-zones.xml");
+		map.zonefile = TfsZoneFileName(identifier);
 	}
 
 	const bool is_compressed = (map.getCompression() == OtbmCompression::Gzip);

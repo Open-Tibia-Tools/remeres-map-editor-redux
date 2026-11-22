@@ -149,14 +149,20 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 		}
 	}
 
-	// Saving can rename the zone file of an OTBM 1-4 map, so remember where the backup belongs
+	// An OTBM 1-4 map with TFS tile zones writes its zone file under the name it is saved with,
+	// so back up (and on failure restore or remove) that file, not the one it was loaded from.
 	std::string zone_backup_target;
 	if (editor.map.supportsZones()) {
-		converter.SetFullName(wxstr(editor.map.getZoneFilename()));
-		if (converter.FileExists()) {
-			zone_backup_target = map_path + editor.map.getZoneFilename();
-			backup_zone = map_path + nstr(converter.GetName()) + ".xml~";
-			createBackup(zone_backup_target, backup_zone);
+		const std::string zone_save_name = (editor.map.usesTfsTileZones() && !editor.map.zones.empty())
+			? IOMapOTBM::TfsZoneFileName(FileName(wxstr(savefile)))
+			: editor.map.getZoneFilename();
+		if (!zone_save_name.empty()) {
+			zone_backup_target = map_path + zone_save_name;
+			converter.SetFullName(wxstr(zone_save_name));
+			if (converter.FileExists()) {
+				backup_zone = map_path + nstr(converter.GetName()) + ".xml~";
+				createBackup(zone_backup_target, backup_zone);
+			}
 		}
 	}
 
@@ -237,9 +243,9 @@ bool EditorPersistence::saveMap(Editor& editor, FileName filename, bool showdial
 					restoreBackup(backup_spawn, map_path + editor.map.getSpawnFilename());
 				}
 			}
-			if (editor.map.supportsZones() && !editor.map.getZoneFilename().empty()) {
+			if (!zone_backup_target.empty()) {
 				// Without a backup this removes the zone file the failed save wrote
-				restoreBackup(backup_zone, zone_backup_target.empty() ? map_path + editor.map.getZoneFilename() : zone_backup_target);
+				restoreBackup(backup_zone, zone_backup_target);
 			}
 			if (!editor.map.getWaypointFilename().empty()) {
 				restoreBackup(backup_waypoint, map_path + editor.map.getWaypointFilename());

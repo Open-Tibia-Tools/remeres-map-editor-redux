@@ -189,7 +189,7 @@ void TileSerializationOTBM::readTileArea(
 				case OTBM_ATTR_TILE_FLAGS: {
 					uint32_t flags = 0;
 					if (tileNode.stream.getU32(flags)) {
-						if (iomap.tfs_tile_zones && (flags & TfsTileZones::kZoneFlag)) {
+						if (iomap.readsTfsTileZones() && (flags & TfsTileZones::kZoneFlag)) {
 							const bool complete = TfsTileZones::ReadZoneList(tileNode.stream, [tile](uint16_t zone_id) {
 								tile->addZone(zone_id);
 							});

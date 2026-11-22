@@ -110,8 +110,18 @@ public:
 	bool saveMap(Map& map, const FileName& identifier) override;
 
 	// OTBM 1-4 tile zones in the TFS-ZONES format (see io/otbm/tfs_tile_zones.h).
-	// On load it follows Config::TFS_TILE_ZONES, on save the map being written.
+	// On load it follows Config::TFS_TILE_ZONES and is also set when the file already has zone
+	// lists; on save it follows the map being written.
 	bool tfs_tile_zones = false;
+
+	// Zone lists are read from every OTBM 1-4 file whatever the option says: the flag has no other
+	// meaning, and skipping the list would misread the rest of the tile.
+	[[nodiscard]] bool readsTfsTileZones() const noexcept {
+		return version.otbm < MAP_OTBM_5;
+	}
+
+	// Zone file of an OTBM 1-4 map with TFS tile zones: next to the map and named after it.
+	[[nodiscard]] static std::string TfsZoneFileName(const FileName& map_file);
 
 	[[nodiscard]] bool hasZones() const noexcept {
 		return version.otbm == MAP_OTBM_5 || tfs_tile_zones;
