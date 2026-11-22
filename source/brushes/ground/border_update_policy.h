@@ -142,8 +142,8 @@ namespace BorderUpdate {
 	// 8 neighbours, i.e. every brush that can justify a border on that tile) owns
 	// the same id. Item ids shared with such a brush cannot be attributed, so
 	// they are preserved instead of risking another brush's only visual border.
-	// A specific-case result whose replaced piece is owned by a context brush is
-	// a joint border and is preserved for the same reason.
+	// A specific-case result whose replaced piece or any matched source is owned
+	// by a context brush is a joint border and is preserved for the same reason.
 	[[nodiscard]] inline bool IsRewritableByActive(uint32_t id, const BorderOwnership& active, std::span<const BorderOwnership* const> context) {
 		if (!active.contains(id)) {
 			return false;
@@ -157,7 +157,7 @@ namespace BorderUpdate {
 			return false;
 		}
 		return std::ranges::none_of(active.fused, [&](const FusedBorder& entry) {
-			return entry.result_id == id && owned_by_context(entry.replaced_id);
+			return entry.result_id == id && (owned_by_context(entry.replaced_id) || std::ranges::any_of(entry.sources, owned_by_context));
 		});
 	}
 

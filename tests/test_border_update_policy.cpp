@@ -219,6 +219,21 @@ TEST_CASE("a specific-case result fused with another brush's piece is a joint bo
 	REQUIRE_FALSE(BorderUpdate::IsRewritableByActive(6652, brushes.sea, {}));
 }
 
+TEST_CASE("a fused result that only matched another brush's piece is a joint border too", "[border_update]") {
+	// The specific case replaces the snow's own edge (61) and matches the sea's edge (52) as a
+	// condition, so the sea piece is only a source, not the replaced item.
+	BorderOwnership snow;
+	snow.items.insertAll(std::array<uint32_t, 2> { 61, 62 });
+	snow.items.insert(6652);
+	snow.fused.push_back({ .result_id = 6652, .replaced_id = 61, .sources = { 52 } });
+	BorderOwnership sea;
+	sea.items.insertAll(std::array<uint32_t, 2> { 51, 52 });
+	const std::array<const BorderOwnership*, 1> sea_in_context { &sea };
+
+	REQUIRE_FALSE(BorderUpdate::IsRewritableByActive(6652, snow, sea_in_context));
+	REQUIRE(BorderUpdate::IsRewritableByActive(6652, snow, {}));
+}
+
 TEST_CASE("current brush only removes the active brush's items and keeps the rest in place", "[border_update]") {
 	const Brushes brushes;
 	const std::array<const BorderOwnership*, 1> context { &brushes.b };
