@@ -37,6 +37,9 @@ public:
 	void HideAllPropertyPanels();
 
 protected:
+	// Sizes the pane so the list and the widest property section fit side by side.
+	void UpdateMinSize();
+
 	wxSplitterWindow* splitter;
 	wxPanel* left_panel;
 	wxBoxSizer* left_sizer;

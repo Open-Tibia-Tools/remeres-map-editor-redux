@@ -101,8 +101,20 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 			.CloseButton(true)
 			.MaximizeButton(true)
 			.BestSize(358, 500)
-			.MinSize(FromDIP(wxSize(220, 180)))
+			.MinSize(g_gui.tile_properties_panel->GetMinSize())
 	);
+	// The panel gets this after wxWidgets rescaled its minimum, docked or floating.
+	// The AUI pane keeps the old pixels and would push them back onto the panel at the next layout.
+	g_gui.tile_properties_panel->Bind(wxEVT_DPI_CHANGED, [](wxDPIChangedEvent& event) {
+		event.Skip();
+		if (!g_gui.aui_manager) {
+			return;
+		}
+		wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_gui.tile_properties_panel);
+		if (info.IsOk()) {
+			info.MinSize(g_gui.tile_properties_panel->GetMinSize());
+		}
+	});
 	g_gui.brush_items_window = new BrushItemsWindow(this);
 	g_gui.aui_manager->AddPane(g_gui.brush_items_window,
 		wxAuiPaneInfo()
