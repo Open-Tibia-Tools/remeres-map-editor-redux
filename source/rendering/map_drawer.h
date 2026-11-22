@@ -39,6 +39,7 @@
 #include "rendering/drawers/overlays/door_indicator_drawer.h"
 #include "rendering/drawers/overlays/grid_drawer.h"
 #include "rendering/drawers/overlays/hook_indicator_drawer.h"
+#include "rendering/drawers/overlays/lasso_overlay_drawer.h"
 #include "rendering/drawers/overlays/lua_overlay_drawer.h"
 #include "rendering/drawers/overlays/marker_drawer.h"
 #include "rendering/drawers/overlays/preview_drawer.h"
@@ -74,6 +75,7 @@ class MapDrawer {
 	CreatureNameDrawer creature_name_drawer;
 	HookIndicatorDrawer hook_indicator_drawer;
 	DoorIndicatorDrawer door_indicator_drawer;
+	LassoOverlayDrawer lasso_overlay_drawer;
 	ItemDrawer item_drawer;
 	MarkerDrawer marker_drawer;
 	PreviewDrawer preview_drawer;
@@ -101,6 +103,7 @@ public:
 	void DrawHookIndicators(NVGcontext* vg);
 	void DrawDoorIndicators(NVGcontext* vg);
 	void DrawUIOverlays(NVGcontext* vg);
+	void DrawLassoOverlay(NVGcontext* vg, std::span<const LassoScreenPoint> points, LassoScreenPoint cursor, const LassoOverlayStyle& style);
 	void ClearFrameOverlays();
 	void DrawCreatureNames(NVGcontext* vg);
 	bool hasOverlays();

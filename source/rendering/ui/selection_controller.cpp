@@ -21,6 +21,10 @@
 #include "ui/dialog_helper.h"
 #include "rendering/core/floor_visibility_mode.h"
 #include "rendering/core/map_view_math.h"
+#include "rendering/ui/selection_floor_scope.h"
+#include "editor/lasso_geometry.h"
+
+#include <optional>
 
 SelectionController::SelectionController(MapCanvas* canvas, Editor& editor) :
 	canvas(canvas),
@@ -503,115 +507,237 @@ void SelectionController::HandleDoubleClick(const Position& mouse_map_pos) {
 }
 
 void SelectionController::ExecuteBoundboxSelection(const Position& start_pos, const Position& end_pos, int floor) {
-	int start_x = start_pos.x;
-	int start_y = start_pos.y;
-	int end_x = end_pos.x;
-	int end_y = end_pos.y;
-
-	if (start_x > end_x) {
-		std::swap(start_x, end_x);
-	}
-	if (start_y > end_y) {
-		std::swap(start_y, end_y);
-	}
-
-	int numtiles = 0;
-	int threadcount = std::max(g_settings.getInteger(Config::WORKER_THREADS), 1);
-
-	int s_x = 0, s_y = 0, s_z = 0;
-	int e_x = 0, e_y = 0, e_z = 0;
-
-	switch (g_settings.getInteger(Config::SELECTION_TYPE)) {
-		case SELECT_CURRENT_FLOOR: {
-			s_z = e_z = floor;
-			s_x = start_x;
-			s_y = start_y;
-			e_x = end_x;
-			e_y = end_y;
-			numtiles = (e_x - s_x + 1) * (e_y - s_y + 1);
-			break;
-		}
-		case SELECT_ALL_FLOORS: {
-			s_x = start_x;
-			s_y = start_y;
-			s_z = MAP_MAX_LAYER;
-			e_x = end_x;
-			e_y = end_y;
-			e_z = floor;
-
-			if (g_settings.getInteger(Config::COMPENSATED_SELECT)) {
-				s_x -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
-				s_y -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
-
-				e_x -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
-				e_y -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
-			}
-
-			numtiles = (s_z - e_z + 1) * (e_x - s_x + 1) * (e_y - s_y + 1);
-			break;
-		}
-		case SELECT_VISIBLE_FLOORS: {
-			s_x = start_x;
-			s_y = start_y;
-			const bool show_all_floors = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
-			const auto mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
-			const auto range = BuildFloorVisibilityRange(floor, show_all_floors, mode);
-			s_z = std::max({range.start_floor, range.end_floor, floor});
-			e_z = std::max(std::min(range.start_floor, range.end_floor), floor);
-			e_x = end_x;
-			e_y = end_y;
-
-			if (g_settings.getInteger(Config::COMPENSATED_SELECT)) {
-				s_x -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
-				s_y -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
-
-				e_x -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
-				e_y -= (floor < GROUND_LAYER ? GROUND_LAYER - floor : 0);
-			}
-
-			numtiles = (s_z - e_z + 1) * (e_x - s_x + 1) * (e_y - s_y + 1);
-			break;
-		}
-	}
-
-	if (numtiles < 500) {
-		// No point in threading for such a small set.
-		threadcount = 1;
-	}
-	// Subdivide the selection area
-	// We know it's a square, just split it into several areas
-	int width = e_x - s_x;
-	if (width < threadcount) {
-		threadcount = std::min(1, width);
-	}
-	// Let's divide!
-	int remainder = width;
-	int cleared = 0;
-	std::vector<std::unique_ptr<SelectionThread>> threads;
-	if (width == 0) {
-		threads.push_back(std::make_unique<SelectionThread>(editor, Position(s_x, s_y, s_z), Position(s_x, e_y, e_z)));
-	} else {
-		for (int i = 0; i < threadcount; ++i) {
-			int chunksize = width / threadcount;
-			// The last threads takes all the remainder
-			if (i == threadcount - 1) {
-				chunksize = remainder;
-			}
-			threads.push_back(std::make_unique<SelectionThread>(editor, Position(s_x + cleared, s_y, s_z), Position(s_x + cleared + chunksize, e_y, e_z)));
-			cleared += chunksize;
-			remainder -= chunksize;
-		}
-	}
-	ASSERT(cleared == width);
-	ASSERT(remainder == 0);
+	const SelectionTileRect rect {
+		.min_x = std::min(start_pos.x, end_pos.x),
+		.min_y = std::min(start_pos.y, end_pos.y),
+		.max_x = std::max(start_pos.x, end_pos.x),
+		.max_y = std::max(start_pos.y, end_pos.y),
+	};
+	std::vector<std::unique_ptr<SelectionThread>> threads = CreateSelectionThreads(ComputeFloorScope(rect, floor), nullptr, 0, false);
 
 	editor.selection.start(); // Start a selection session
+	RunSelectionThreads(std::move(threads));
+	editor.selection.finish(); // Finish the selection session
+	editor.selection.updateSelectionCount();
+}
+
+static_assert(static_cast<int>(SelectionFloorScopeType::CurrentFloor) == SELECT_CURRENT_FLOOR);
+static_assert(static_cast<int>(SelectionFloorScopeType::AllFloors) == SELECT_ALL_FLOORS);
+static_assert(static_cast<int>(SelectionFloorScopeType::VisibleFloors) == SELECT_VISIBLE_FLOORS);
+
+SelectionFloorScope SelectionController::ComputeFloorScope(const SelectionTileRect& rect, int floor) const {
+	const bool show_all_floors = g_settings.getBoolean(Config::SHOW_ALL_FLOORS);
+	const auto mode = SanitizeFloorVisibilityMode(g_settings.getInteger(Config::FLOOR_VISIBILITY_MODE));
+	return ComputeSelectionFloorScope(
+		rect,
+		floor,
+		static_cast<SelectionFloorScopeType>(g_settings.getInteger(Config::SELECTION_TYPE)),
+		g_settings.getInteger(Config::COMPENSATED_SELECT) != 0,
+		BuildFloorVisibilityRange(floor, show_all_floors, mode)
+	);
+}
+
+std::vector<std::unique_ptr<SelectionThread>> SelectionController::CreateSelectionThreads(const SelectionFloorScope& scope, const LassoPolygon* polygon, int polygon_offset, bool deselect) const {
+	std::vector<std::unique_ptr<SelectionThread>> threads;
+	for (const SelectionBand& band : ComputeSelectionBands(scope, g_settings.getInteger(Config::WORKER_THREADS))) {
+		const Position band_start(band.start_x, scope.start_y, scope.start_z);
+		const Position band_end(band.end_x, scope.end_y, scope.end_z);
+		if (polygon) {
+			threads.push_back(std::make_unique<SelectionThread>(editor, band_start, band_end, *polygon, polygon_offset, deselect));
+		} else {
+			threads.push_back(std::make_unique<SelectionThread>(editor, band_start, band_end));
+		}
+	}
+	return threads;
+}
+
+void SelectionController::RunSelectionThreads(std::vector<std::unique_ptr<SelectionThread>> threads) {
 	for (auto& thread : threads) {
 		thread->Start();
 	}
 	for (auto& thread : threads) {
 		editor.selection.join(std::move(thread));
 	}
+}
+
+bool SelectionController::CanStartLasso() const {
+	return g_gui.IsSelectionMode() && !canvas->isPasting() && !dragging && !boundbox_selection && !canvas->screendragging;
+}
+
+SelectionController::LassoViewport SelectionController::CaptureLassoViewport() const {
+	LassoViewport viewport;
+	int screensize_x = 0;
+	int screensize_y = 0;
+	canvas->GetViewBox(&viewport.view_x, &viewport.view_y, &screensize_x, &screensize_y);
+	viewport.zoom = canvas->GetZoom();
+	viewport.floor = canvas->GetFloor();
+	return viewport;
+}
+
+bool SelectionController::HandleLassoButtonDown(LassoButton button, LassoScreenPoint point, LassoModifiers mods) {
+	const bool can_start = button == LassoButton::Left && !lasso.IsActive() && CanStartLasso();
+	const LassoEvent event = lasso.OnButtonDown(button, point, mods, can_start, canvas->FromDIP(LassoGesture::kSampleSpacingDip));
+	ApplyLassoEvent(event);
+	return IsLassoEventConsumed(event);
+}
+
+bool SelectionController::HandleLassoButtonUp(LassoButton button, LassoScreenPoint point, LassoModifiers mods) {
+	const LassoEvent event = lasso.OnButtonUp(button, point, mods);
+	ApplyLassoEvent(event);
+	return IsLassoEventConsumed(event);
+}
+
+bool SelectionController::HandleLassoMotion(LassoScreenPoint point, LassoModifiers mods, bool left_down) {
+	const LassoEvent event = lasso.OnMotion(point, mods, left_down);
+	ApplyLassoEvent(event);
+	return IsLassoEventConsumed(event);
+}
+
+bool SelectionController::HandleLassoKeyDown(int key_code, LassoModifiers mods) {
+	if (!lasso.IsActive()) {
+		return false;
+	}
+
+	// Every key is consumed while the lasso is active: navigation is frozen, and not skipping the
+	// Alt auto-repeat keeps WM_SYSKEYDOWN away from DefWindowProc (no menu bar activation).
+	switch (key_code) {
+		case WXK_ESCAPE:
+			ApplyLassoEvent(lasso.Cancel());
+			return true;
+		case WXK_ALT:
+			mods.alt = true;
+			break;
+		case WXK_SHIFT:
+			mods.shift = true;
+			break;
+		case WXK_CONTROL:
+			mods.ctrl = true;
+			break;
+		default:
+			break;
+	}
+	ApplyLassoEvent(lasso.OnModifierKey(mods));
+	return true;
+}
+
+bool SelectionController::HandleLassoKeyUp(int key_code, LassoModifiers mods) {
+	if (!lasso.IsActive()) {
+		return false;
+	}
+
+	switch (key_code) {
+		case WXK_ALT:
+			ApplyLassoEvent(lasso.OnAltReleased(mods));
+			return true;
+		case WXK_SHIFT:
+			mods.shift = false;
+			break;
+		case WXK_CONTROL:
+			mods.ctrl = false;
+			break;
+		default:
+			break;
+	}
+	ApplyLassoEvent(lasso.OnModifierKey(mods));
+	return true;
+}
+
+void SelectionController::CancelLasso() {
+	ApplyLassoEvent(lasso.Cancel());
+}
+
+void SelectionController::ApplyLassoEvent(LassoEvent event) {
+	switch (event) {
+		case LassoEvent::Ignored:
+			return;
+		case LassoEvent::Started:
+			lasso_viewport = CaptureLassoViewport();
+			break;
+		case LassoEvent::Committed:
+			// The points are screen coordinates; applying them after the view moved would select
+			// a different area than the one drawn.
+			if (CaptureLassoViewport() != lasso_viewport) {
+				g_gui.SetStatusText("Lasso cancelled: the view changed while drawing.");
+			} else {
+				ExecuteLassoSelection(lasso.Points(), lasso.Mode());
+				g_gui.SetStatusText("Lasso selection applied.");
+			}
+			break;
+		case LassoEvent::Discarded:
+			g_gui.SetStatusText("Lasso discarded: it needs at least 3 points enclosing an area.");
+			break;
+		case LassoEvent::Cancelled:
+			g_gui.SetStatusText("Lasso cancelled.");
+			break;
+		case LassoEvent::Consumed:
+			break;
+	}
+
+	if (lasso.IsActive()) {
+		std::string status = FormatLassoStatus(lasso.Mode(), lasso.Points().size(), lasso.IsAtPointLimit());
+		if (status != lasso_status) {
+			g_gui.SetStatusText(wxstr(status));
+			lasso_status = std::move(status);
+		}
+	} else {
+		lasso_status.clear();
+	}
+	SyncLassoMouseCapture();
+
+	if (event == LassoEvent::Committed) {
+		canvas->RequestSharedMapRefresh();
+	} else {
+		canvas->RequestLocalRefresh();
+	}
+}
+
+void SelectionController::SyncLassoMouseCapture() {
+	const bool wants_capture = lasso.IsLeftDown();
+	if (wants_capture && !canvas->HasCapture()) {
+		canvas->CaptureMouse();
+	} else if (!wants_capture && canvas->HasCapture()) {
+		canvas->ReleaseMouse();
+	}
+}
+
+void SelectionController::ExecuteLassoSelection(std::span<const LassoScreenPoint> points, LassoMode mode) {
+	std::vector<LassoPoint> tile_points;
+	tile_points.reserve(points.size());
+	for (const LassoScreenPoint& point : points) {
+		const MainMapPixelPosition position = canvas->ScreenToMapPixel(point.x, point.y);
+		tile_points.push_back({
+			.x = position.map_x + static_cast<double>(position.pixel_x) / TILE_SIZE,
+			.y = position.map_y + static_cast<double>(position.pixel_y) / TILE_SIZE,
+		});
+	}
+
+	const LassoPolygon polygon(tile_points);
+	// Compensated selection shifts lower floors by up to this many tiles, so the polygon may reach
+	// past the map edge in current-floor space and still cover tiles on those floors (box selection
+	// does not clamp either).
+	const int floor_shift = std::max(0, -ComputeFloorScope(SelectionTileRect {}, canvas->GetFloor()).StartOffset(SelectionTileRect {}));
+	const std::optional<LassoTileBounds> bounds = ComputeLassoTileBounds(polygon, editor.map.getWidth() + floor_shift, editor.map.getHeight() + floor_shift);
+	const bool replace = mode == LassoMode::Replace;
+	if (!bounds && !replace) {
+		return;
+	}
+
+	editor.selection.start(); // One session, so Replace's clear and the new tiles undo together
+	if (replace) {
+		editor.selection.clear();
+		editor.selection.commit();
+	}
+	if (bounds) {
+		const SelectionTileRect rect {
+			.min_x = bounds->min_x,
+			.min_y = bounds->min_y,
+			.max_x = bounds->max_x,
+			.max_y = bounds->max_y,
+		};
+		const SelectionFloorScope scope = ComputeFloorScope(rect, canvas->GetFloor());
+		RunSelectionThreads(CreateSelectionThreads(scope, &polygon, scope.StartOffset(rect), mode == LassoMode::Subtract));
+	}
 	editor.selection.finish(); // Finish the selection session
 	editor.selection.updateSelectionCount();
+	editor.actionQueue->resetTimer();
 }

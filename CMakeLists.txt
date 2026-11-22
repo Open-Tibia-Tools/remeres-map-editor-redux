@@ -256,3 +256,27 @@ set_target_properties(test_subtype_pattern PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_subtype_pattern PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_subtype_pattern PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_subtype_pattern COMMAND test_subtype_pattern)
+
+# --- Unit test for lasso polygon/tile geometry ---
+add_executable(test_lasso_geometry tests/test_lasso_geometry.cpp)
+set_target_properties(test_lasso_geometry PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_lasso_geometry PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_lasso_geometry PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_lasso_geometry PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_lasso_geometry COMMAND test_lasso_geometry)
+
+# --- Unit test for lasso gesture state machine ---
+add_executable(test_lasso_gesture tests/test_lasso_gesture.cpp)
+set_target_properties(test_lasso_gesture PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_lasso_gesture PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_lasso_gesture PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_lasso_gesture PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_lasso_gesture COMMAND test_lasso_gesture)
+
+# --- Unit test for box/lasso selection floor scope ---
+add_executable(test_selection_floor_scope tests/test_selection_floor_scope.cpp)
+set_target_properties(test_selection_floor_scope PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_selection_floor_scope PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_selection_floor_scope PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_selection_floor_scope PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_selection_floor_scope COMMAND test_selection_floor_scope)
