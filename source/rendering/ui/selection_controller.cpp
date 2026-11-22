@@ -566,9 +566,8 @@ bool SelectionController::CanStartLasso() const {
 
 SelectionController::LassoViewport SelectionController::CaptureLassoViewport() const {
 	LassoViewport viewport;
-	int screensize_x = 0;
-	int screensize_y = 0;
-	canvas->GetViewBox(&viewport.view_x, &viewport.view_y, &screensize_x, &screensize_y);
+	canvas->GetViewBox(&viewport.view_x, &viewport.view_y, &viewport.screen_width, &viewport.screen_height);
+	viewport.content_scale = canvas->GetContentScaleFactor();
 	viewport.zoom = canvas->GetZoom();
 	viewport.floor = canvas->GetFloor();
 	return viewport;

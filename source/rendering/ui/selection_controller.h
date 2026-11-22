@@ -81,6 +81,10 @@ private:
 	struct LassoViewport {
 		int view_x = 0;
 		int view_y = 0;
+		// A resize or DPI change maps the same screen points to other tiles.
+		int screen_width = 0;
+		int screen_height = 0;
+		double content_scale = 1.0;
 		double zoom = 1.0;
 		int floor = 0;
 
