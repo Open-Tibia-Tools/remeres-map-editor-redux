@@ -30,6 +30,8 @@
 #include <memory>
 #include <optional>
 
+#include "rendering/ui/lasso_gesture.h"
+
 struct NVGcontext;
 struct DrawingOptions;
 
@@ -72,6 +74,9 @@ public:
 	void OnWheel(wxMouseEvent& event);
 	void OnGainMouse(wxMouseEvent& event);
 	void OnLoseMouse(wxMouseEvent& event);
+	void OnKillFocus(wxFocusEvent& event);
+	void OnMouseCaptureLost(wxMouseCaptureLostEvent& event);
+	void OnSize(wxSizeEvent& event);
 
 	// Mouse events handlers (called by the above)
 	void OnMouseActionRelease(wxMouseEvent& event);
@@ -102,6 +107,9 @@ public:
 	virtual void UpdateZoomStatus();
 	void SyncCursorHoverState();
 	void UpdateCursor();
+
+	// Discards an active lasso without touching the selection (tab switch, map reset, mode change).
+	void CancelLasso();
 
 	virtual void ChangeFloor(int new_floor);
 	int GetFloor() const {
@@ -174,6 +182,8 @@ private:
 	void QueueNativeRefresh(bool immediate);
 	void EnsureNanoVG();
 	void DrawOverlays(NVGcontext* vg, const DrawingOptions& options);
+	// Mouse position clamped to the client area, so lasso points stay inside the visible view.
+	LassoScreenPoint ToLassoPoint(const wxMouseEvent& event) const;
 
 	MapWindow* GetMapWindow() const;
 	BaseMap* GetSecondaryMap() const;

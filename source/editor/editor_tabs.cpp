@@ -21,6 +21,7 @@
 #include "editor/editor.h"
 #include "editor/managers/editor_manager.h"
 #include "live/live_tab.h"
+#include "rendering/ui/map_display.h"
 #include "ui/managers/status_manager.h"
 
 EditorTab::EditorTab() {
@@ -115,6 +116,10 @@ void MapTabbook::OnNotebookPageChanged(wxAuiNotebookEvent& evt) {
 	}
 
 	if (oldMapTab) {
+		// A lasso drawn in the old tab must never be applied after the switch.
+		if (MapCanvas* old_canvas = oldMapTab->GetCanvas()) {
+			old_canvas->CancelLasso();
+		}
 		oldMapTab->VisibilityCheck();
 	}
 	if (newMapTab) {

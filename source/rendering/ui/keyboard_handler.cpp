@@ -19,6 +19,7 @@
 #include "rendering/ui/keyboard_handler.h"
 #include "rendering/ui/zoom_controller.h"
 #include "rendering/ui/navigation_controller.h"
+#include "rendering/ui/selection_controller.h"
 #include "rendering/ui/map_display.h"
 #include "ui/map_window.h"
 #include "ui/gui.h"
@@ -31,6 +32,11 @@
 #include "rendering/ui/popup_action_handler.h"
 
 void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
+	// An active lasso consumes every key (Escape cancels, Shift/Ctrl pick the mode).
+	if (canvas->selection_controller && canvas->selection_controller->HandleLassoKeyDown(event.GetKeyCode(), ToLassoModifiers(event))) {
+		return;
+	}
+
 	switch (event.GetKeyCode()) {
 		case WXK_NUMPAD_ADD:
 		case WXK_PAGEUP:
@@ -140,6 +146,11 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 
 void KeyboardHandler::OnKeyUp(MapCanvas* canvas, wxKeyEvent& event) {
 	canvas->keyCode = WXK_NONE;
+	// The Alt key-up finalizes the lasso. Key-up events are never skipped here, so on MSW the
+	// WM_SYSKEYUP does not reach DefWindowProc and Alt does not activate the menu bar.
+	if (canvas->selection_controller) {
+		canvas->selection_controller->HandleLassoKeyUp(event.GetKeyCode(), ToLassoModifiers(event));
+	}
 }
 
 void KeyboardHandler::HandleFloorChange(MapCanvas* canvas, int keycode) {
