@@ -336,3 +336,11 @@ set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_sprite_footprint PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_sprite_footprint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_sprite_footprint COMMAND test_sprite_footprint)
+
+# --- Unit test for the detected palette rules ---
+add_executable(test_detected_item_rules tests/test_detected_item_rules.cpp source/palette/detected/detected_item_rules.cpp)
+set_target_properties(test_detected_item_rules PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_detected_item_rules PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_detected_item_rules PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_detected_item_rules PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_detected_item_rules COMMAND test_detected_item_rules)

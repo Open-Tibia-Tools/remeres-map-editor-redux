@@ -8,6 +8,7 @@
 #include <spdlog/spdlog.h>
 
 #include "ui/gui.h"
+#include "palette/detected/detected_palettes.h"
 #include "util/file_system.h"
 #include "game/sprites.h"
 #include "game/materials.h"
@@ -160,6 +161,7 @@ bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& wa
 	g_loading.SetLoadDone(70, "Finishing...");
 	g_brushes.init();
 	g_materials.ensureAllRawBrushes();
+	AddDetectedPalettes();
 
 	RegisterCreaturesFromOpenMaps();
 

@@ -173,6 +173,8 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/net/net_connection.h
     ${CMAKE_CURRENT_LIST_DIR}/net/process_com.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/all_items/all_items_palette.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/detected/detected_item_rules.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/detected/detected_palettes.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_brushlist.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_common.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/hardcoded_palette_registry.h
@@ -633,6 +635,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/net/net_connection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/net/process_com.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/all_items/all_items_palette.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/detected/detected_item_rules.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/detected/detected_palettes.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_brushlist.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/palette_common.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/hardcoded_palette_registry.cpp

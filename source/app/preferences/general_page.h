@@ -21,6 +21,7 @@ private:
 	wxCheckBox* update_check_on_startup_chkbox = nullptr;
 	wxCheckBox* only_one_instance_chkbox = nullptr;
 	wxCheckBox* enable_tileset_editing_chkbox = nullptr;
+	wxCheckBox* show_detected_palettes_chkbox = nullptr;
 
 	wxSpinCtrl* undo_size_spin = nullptr;
 	wxSpinCtrl* undo_mem_size_spin = nullptr;

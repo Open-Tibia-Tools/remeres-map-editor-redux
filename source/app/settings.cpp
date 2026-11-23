@@ -404,6 +404,7 @@ void Settings::IO(IOMode mode) {
 	Bool(GOTO_WEBSITE_ON_BOOT, false);
 	Bool(USE_UPDATER, true);
 	Bool(AUTOCHECK_FOR_UPDATES, false);
+	Bool(SHOW_DETECTED_PALETTES, true);
 
 	section("Version");
 	Int(VERSION_ID, 0);

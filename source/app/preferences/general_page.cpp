@@ -82,6 +82,12 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Show palette editing tools for customizing tileset organization.",
 		g_settings.getBoolean(Config::SHOW_TILESET_EDITOR)
 	);
+	show_detected_palettes_chkbox = PreferencesLayout::AddCheckBoxRow(
+		safety_section,
+		"Show detected palettes",
+		"Add runtime palettes with items the materials XML does not cover yet. Applies on the next client data load; nothing is written to the data files.",
+		g_settings.getBoolean(Config::SHOW_DETECTED_PALETTES)
+	);
 	page_sizer->Add(safety_section, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
 
 	auto* performance_section = new PreferencesSectionPanel(
@@ -162,6 +168,7 @@ void GeneralPage::Apply() {
 	g_settings.setInteger(Config::ALWAYS_MAKE_BACKUP, always_make_backup_chkbox->GetValue());
 	g_settings.setInteger(Config::USE_UPDATER, update_check_on_startup_chkbox->GetValue());
 	g_settings.setInteger(Config::ONLY_ONE_INSTANCE, only_one_instance_chkbox->GetValue());
+	g_settings.setInteger(Config::SHOW_DETECTED_PALETTES, show_detected_palettes_chkbox->GetValue());
 	g_settings.setInteger(Config::UNDO_SIZE, undo_size_spin->GetValue());
 	g_settings.setInteger(Config::UNDO_MEM_SIZE, undo_mem_size_spin->GetValue());
 	g_settings.setInteger(Config::WORKER_THREADS, worker_threads_spin->GetValue());
