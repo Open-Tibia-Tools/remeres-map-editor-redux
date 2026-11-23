@@ -453,38 +453,42 @@ void Selection::finish(SessionFlags flags) {
 			session = nullptr;
 
 			tmp->addAndCommitAction(std::move(subsession));
+			// The committed batch is the only reliable witness: the nested INTERNAL session
+			// inside Action::commit resets selectionChanged.
+			const bool changed = tmp->size() > 0;
 			editor.addBatch(std::move(tmp), 2);
 
 			session = nullptr;
 			subsession = nullptr;
+			busy = false;
+			selectionChanged = false;
+			notifyScripts(changed);
+			return;
 		}
 	} else {
 		flush();
 		deferred = false;
 	}
 	busy = false;
-
-	// Notify Lua scripts only if we're on the main thread
-	if (!(flags & (INTERNAL | SUBTHREAD))) {
-		notifyScriptsIfChanged();
-	}
 	selectionChanged = false;
 }
 
 void Selection::commitPreparedAction(std::unique_ptr<Action> action) {
 	ASSERT(!busy);
 	ASSERT(action->getType() == ACTION_SELECT);
-	// Only what this action commits may trigger the notification, not leftovers from undo/redo.
-	selectionChanged = false;
-	if (action->size() > 0) {
+	// The action itself says whether anything was selected or deselected; the flag cannot be
+	// trusted across Action::commit's nested INTERNAL session (see finish()). A live client
+	// discards the action without committing it, so nothing changed there.
+	const bool changed = !editor.live_manager.IsClient() && action->size() > 0;
+	if (changed) {
 		editor.addAction(std::move(action), 2);
 	}
-	notifyScriptsIfChanged();
 	selectionChanged = false;
+	notifyScripts(changed);
 }
 
-void Selection::notifyScriptsIfChanged() {
-	if (selectionChanged && g_luaScripts.isInitialized()) {
+void Selection::notifyScripts(bool changed) {
+	if (changed && g_luaScripts.isInitialized()) {
 		g_luaScripts.emit("selectionChange");
 	}
 }

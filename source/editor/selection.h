@@ -139,7 +139,7 @@ public:
 private:
 	void flush();
 	void recalculateBounds() const;
-	void notifyScriptsIfChanged();
+	void notifyScripts(bool changed);
 
 	bool busy;
 	bool deferred;
