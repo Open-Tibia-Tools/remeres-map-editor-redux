@@ -86,6 +86,9 @@ struct DrawingOptions {
 	bool highlight_items;
 	bool highlight_locked_doors;
 	bool show_blocking;
+	// Draw the top-left part of multi-part grounds with an empty anchor part (mountain 919)
+	// on the anchor tile too. Baked into the chunk cache.
+	bool flatten_multi_tile_ground;
 	bool show_tooltips;
 
 	bool show_as_minimap;

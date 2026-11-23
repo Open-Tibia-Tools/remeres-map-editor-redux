@@ -150,16 +150,9 @@ private:
 	std::vector<PendingSpawnQuad> spawn_borders_;
 	std::vector<PendingSpawnQuad> spawn_badges_;
 
-	// Blocking wash mask of one floor, row-major over the viewport plus a one-tile ring and the
-	// sprite footprint reach (right/down): 1 = washed. Logical blocking tiles plus the opaque
-	// sprite parts of their blocking items; borders follow this union.
+	// Blocking wash mask of one floor, row-major over the viewport plus a one-tile ring:
+	// 1 = IsTilePathBlocking(). Borders follow this mask.
 	std::vector<uint8_t> blocking_mask_;
-	struct BlockingFootprintAnchor {
-		const Tile* tile = nullptr;
-		int x = 0;
-		int y = 0;
-	};
-	std::vector<BlockingFootprintAnchor> blocking_footprint_anchors_;
 	std::vector<PendingBorderQuad> blocking_border_quads_;
 
 	std::vector<uint32_t> house_row_prev_;

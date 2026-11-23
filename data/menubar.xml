@@ -185,6 +185,7 @@
 		<item name="Show houses" hotkey="Ctrl+H" action="SHOW_HOUSES" help="Show houses on the map."/>
 		<item name="Show zones" hotkey="Shift+Z" action="SHOW_ZONES" help="Show OTBM 5 zones (Canary / Crystal Server) as colored areas."/>
 		<item name="Show pathing" hotkey="O" action="SHOW_PATHING" help="Show blocking tiles."/>
+		<item name="Flatten Multi-Tile Ground" hotkey="" action="FLATTEN_MULTI_TILE_GROUND" help="Fill the empty anchor tile of multi-tile grounds (like mountains) with their top-left sprite part."/>
 		<item name="Show towns" hotkey="" action="SHOW_TOWNS" help="Show temple positions."/>
 		<item name="Show waypoints" hotkey="Shift+W" action="SHOW_WAYPOINTS" help="Show waypoints."/>
 		<separator/>

@@ -7,9 +7,6 @@
 #include "rendering/indicators/zone_colors.h"
 #include "rendering/indicators/technical_item_registry.h"
 #include "rendering/core/render_depth.h"
-#include "rendering/core/game_sprite.h"
-#include "rendering/core/item_render_rules.h"
-#include "rendering/core/sprite_footprint.h"
 #include "util/phase_profiler.h"
 #include "map/map.h"
 #include "map/basemap.h"
@@ -44,75 +41,6 @@ bool IsTilePathBlocking(const Tile* t) noexcept {
 	}
 	return false;
 }
-
-namespace {
-
-	// An item counted as blocking by IsTilePathBlocking().
-	bool IsPathBlockingItem(const Item& item) noexcept {
-		return item.isBlocking() && !TechnicalItemRegistry::IsInvisibleWall(item.getID(), item.getClientID());
-	}
-
-	GameSprite* GetFootprintSprite(const Item& item) {
-		GameSprite* sprite = item.getSprite();
-		if (!sprite) {
-			return nullptr;
-		}
-		const ImageDimensions composite = sprite->getCompositePixelSize();
-		return rme::rendering::NeedsSpriteFootprint(sprite->width, sprite->height, composite.width, composite.height) ? sprite : nullptr;
-	}
-
-	bool HasFootprintBlockingSprite(const Tile& tile) {
-		if (tile.ground && IsPathBlockingItem(*tile.ground) && GetFootprintSprite(*tile.ground)) {
-			return true;
-		}
-		for (const auto& item : tile.items) {
-			if (item && IsPathBlockingItem(*item) && GetFootprintSprite(*item)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	// Visits the tile offsets (relative to `tile`) covered by the opaque sprite parts of every
-	// multi-tile blocking item on `tile`, placed with the draw offset and item elevation of the
-	// tile render path. 1x1 sprites are skipped: their wash stays the logical tile alone.
-	template <typename Visitor>
-	void ForEachBlockingFootprintTile(const Tile& tile, Visitor&& visit) {
-		const auto visitItem = [&visit](const Item& item, int elevation) {
-			if (!IsPathBlockingItem(item)) {
-				return;
-			}
-			GameSprite* sprite = GetFootprintSprite(item);
-			if (!sprite) {
-				return;
-			}
-			const auto [draw_offset_x, draw_offset_y] = sprite->getDrawOffset();
-			ForEachSpriteFootprintTile(sprite->getPartFootprint(), -elevation - draw_offset_x, -elevation - draw_offset_y, visit);
-		};
-
-		if (tile.ground) {
-			visitItem(*tile.ground, 0);
-		}
-		int elevation = 0;
-		for (const auto& item : tile.items) {
-			if (!item || item->isInvalidOTBMItem() || !item->getDefinition()) {
-				continue;
-			}
-			if (item->isBorderLayer()) {
-				visitItem(*item, 0);
-				continue;
-			}
-			if (item->isMetaItem()) {
-				continue;
-			}
-			visitItem(*item, elevation);
-			if (const GameSprite* sprite = item->getSprite()) {
-				rme::rendering::AdvanceItemElevation(elevation, sprite->draw_height, sprite->hasElevation());
-			}
-		}
-	}
-
-} // namespace
 
 void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
                                   int z,
@@ -445,31 +373,24 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	const ViewBounds bounds = view.getBoundsForFloor(z);
 	const float floor_alpha = 1.0f;
 
-	// Mask area: the viewport plus a one-tile ring for the border tests, extended right/down by
-	// the footprint reach so multi-tile sprites anchored just outside still wash visible tiles.
+	// Mask area: the viewport plus a one-tile ring for the border tests.
 	const int min_x = bounds.start_x - 1;
-	const int max_x = bounds.end_x + 1 + kSpriteFootprintReachTiles;
+	const int max_x = bounds.end_x + 1;
 	const int min_y = bounds.start_y - 1;
-	const int max_y = bounds.end_y + 1 + kSpriteFootprintReachTiles;
+	const int max_y = bounds.end_y + 1;
 	const int row_width = max_x - min_x + 1;
 	const int row_count = max_y - min_y + 1;
 	const size_t visible_tiles_estimate = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
 
 	blocking_mask_.resize(static_cast<size_t>(row_width) * static_cast<size_t>(row_count));
-	blocking_footprint_anchors_.clear();
 	blocking_border_quads_.clear();
 	blocking_border_quads_.reserve(visible_tiles_estimate);
 
 	{
 		rme::prof::Scope mask_scope(rme::prof::Phase::BlockingMask);
-		const auto classify = [this](const Tile* t, int x, int y) -> uint8_t {
-			if (!t || !IsTilePathBlocking(t)) {
-				return 0;
-			}
-			if (HasFootprintBlockingSprite(*t)) {
-				blocking_footprint_anchors_.push_back({ t, x, y });
-			}
-			return 1;
+		// Only the logical tile washes: a multi-tile sprite blocks its anchor tile alone.
+		const auto classify = [](const Tile* t) -> uint8_t {
+			return IsTilePathBlocking(t) ? 1 : 0;
 		};
 
 		SpatialHashGrid::CellCursor secondary_cursor;
@@ -482,7 +403,7 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 					if (!t) {
 						t = map.getTile(x, ry, z, primary_cursor);
 					}
-					out[x - min_x] = classify(t, x, ry);
+					out[x - min_x] = classify(t);
 				}
 				return;
 			}
@@ -498,25 +419,13 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 				const int node_end = std::min(max_x, x | 3);
 				for (; x <= node_end; ++x) {
 					const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
-					out[x - min_x] = classify(t, x, ry);
+					out[x - min_x] = classify(t);
 				}
 			}
 		};
 
 		for (int y = min_y; y <= max_y; ++y) {
 			fetchRow(y);
-		}
-
-		// Display-only union: the opaque parts of multi-tile blocking sprites wash the tiles they are
-		// drawn on. No work when no such sprite is anchored in the mask area.
-		for (const BlockingFootprintAnchor& anchor : blocking_footprint_anchors_) {
-			ForEachBlockingFootprintTile(*anchor.tile, [&](int dx, int dy) {
-				const int mx = anchor.x + dx - min_x;
-				const int my = anchor.y + dy - min_y;
-				if (mx >= 0 && mx < row_width && my >= 0 && my < row_count) {
-					blocking_mask_[static_cast<size_t>(my) * static_cast<size_t>(row_width) + static_cast<size_t>(mx)] = 1;
-				}
-			});
 		}
 	}
 

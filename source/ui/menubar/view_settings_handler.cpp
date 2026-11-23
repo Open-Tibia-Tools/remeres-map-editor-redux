@@ -80,6 +80,7 @@ void ViewSettingsHandler::LoadValues() {
 	menuBar->CheckItem(SHOW_HOUSES, g_settings.getBoolean(Config::SHOW_HOUSES));
 	menuBar->CheckItem(SHOW_ZONES, supports_zones && g_settings.getBoolean(Config::SHOW_ZONES));
 	menuBar->CheckItem(SHOW_PATHING, g_settings.getBoolean(Config::SHOW_BLOCKING));
+	menuBar->CheckItem(FLATTEN_MULTI_TILE_GROUND, g_settings.getBoolean(Config::FLATTEN_MULTI_TILE_GROUND));
 	menuBar->CheckItem(SHOW_TOOLTIPS, g_settings.getBoolean(Config::SHOW_TOOLTIPS));
 	menuBar->CheckItem(SHOW_PREVIEW, g_settings.getBoolean(Config::SHOW_PREVIEW));
 	menuBar->CheckItem(SHOW_WALL_HOOKS, g_settings.getBoolean(Config::SHOW_WALL_HOOKS));
@@ -155,6 +156,7 @@ void ViewSettingsHandler::OnChangeViewSettings(wxCommandEvent& event) {
 	g_settings.setInteger(Config::HIGHLIGHT_ITEMS, menuBar->IsItemChecked(HIGHLIGHT_ITEMS));
 	g_settings.setInteger(Config::HIGHLIGHT_LOCKED_DOORS, menuBar->IsItemChecked(HIGHLIGHT_LOCKED_DOORS));
 	g_settings.setInteger(Config::SHOW_BLOCKING, menuBar->IsItemChecked(SHOW_PATHING));
+	g_settings.setInteger(Config::FLATTEN_MULTI_TILE_GROUND, menuBar->IsItemChecked(FLATTEN_MULTI_TILE_GROUND));
 	g_settings.setInteger(Config::SHOW_TOOLTIPS, menuBar->IsItemChecked(SHOW_TOOLTIPS));
 	g_settings.setInteger(Config::SHOW_PREVIEW, menuBar->IsItemChecked(SHOW_PREVIEW));
 	g_settings.setInteger(Config::SHOW_WALL_HOOKS, menuBar->IsItemChecked(SHOW_WALL_HOOKS));

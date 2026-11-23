@@ -84,6 +84,7 @@ namespace IngamePreview {
 		options.SetIngame();
 		options.show_lights = lighting_enabled;
 		options.show_shade = g_settings.getBoolean(Config::SHOW_SHADE);
+		options.flatten_multi_tile_ground = g_settings.getBoolean(Config::FLATTEN_MULTI_TILE_GROUND);
 		options.server_light = SpriteLight {
 			.intensity = light_intensity,
 			.color = server_light_color

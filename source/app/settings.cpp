@@ -384,6 +384,7 @@ void Settings::IO(IOMode mode) {
 	Bool(SHOW_HOUSES, true);
 	Bool(SHOW_ZONES, true);
 	Bool(SHOW_BLOCKING, false);
+	Bool(FLATTEN_MULTI_TILE_GROUND, true);
 	Bool(SHOW_TOOLTIPS, true);
 	Bool(SHOW_ONLY_TILEFLAGS, false);
 	Bool(SHOW_ONLY_MODIFIED_TILES, false);

@@ -46,16 +46,6 @@ namespace {
 		explicit SpriteImageAlphaSource(const GameSprite& sprite) :
 			sprite_(sprite) { }
 
-		int width(size_t index) const {
-			const Image* image = sprite_.spriteList[index];
-			return image ? static_cast<int>(image->getDimensions().width) : TILE_SIZE;
-		}
-
-		int height(size_t index) const {
-			const Image* image = sprite_.spriteList[index];
-			return image ? static_cast<int>(image->getDimensions().height) : TILE_SIZE;
-		}
-
 		bool isOpaque(size_t index) const {
 			if (index < sprite_.sprite_ids.size() && sprite_.sprite_ids[index] == 0) {
 				return false;

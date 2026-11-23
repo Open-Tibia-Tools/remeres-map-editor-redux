@@ -198,6 +198,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon_registry.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/game_sprite.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/ground_flatten.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics_assembler.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/image.h
@@ -658,6 +659,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/icons/editor_icon_registry.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/game_sprite.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/ground_flatten.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/graphics_assembler.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/image.cpp

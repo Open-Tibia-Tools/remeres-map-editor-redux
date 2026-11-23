@@ -42,6 +42,7 @@ void DrawingOptions::SetDefault() {
 	highlight_items = false;
 	highlight_locked_doors = true;
 	show_blocking = false;
+	flatten_multi_tile_ground = true;
 	show_tooltips = false;
 	show_as_minimap = false;
 	show_only_colors = false;
@@ -116,6 +117,7 @@ void DrawingOptions::SetIngame() {
 	highlight_items = false;
 	highlight_locked_doors = false;
 	show_blocking = false;
+	flatten_multi_tile_ground = true;
 	show_tooltips = false;
 	show_as_minimap = false;
 	show_only_colors = false;
@@ -153,6 +155,7 @@ void DrawingOptions::MarkSettingDirty(uint32_t key) noexcept {
 		case Config::SHOW_EXTRA:
 		case Config::EXT_HOUSE_SHADER:
 		case Config::EXT_PATHING_SHADER:
+		case Config::FLATTEN_MULTI_TILE_GROUND:
 			chunk_bake_dirty_ = true;
 			break;
 
@@ -194,6 +197,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const bool new_highlight_items = settings.getBoolean(Config::HIGHLIGHT_ITEMS);
 	const bool new_highlight_locked_doors = settings.getBoolean(Config::HIGHLIGHT_LOCKED_DOORS);
 	const bool new_show_blocking = settings.getBoolean(Config::SHOW_BLOCKING);
+	const bool new_flatten_multi_tile_ground = settings.getBoolean(Config::FLATTEN_MULTI_TILE_GROUND);
 	const bool new_show_tooltips = settings.getBoolean(Config::SHOW_TOOLTIPS);
 	const bool new_show_as_minimap = settings.getBoolean(Config::SHOW_AS_MINIMAP);
 	const bool new_show_only_colors = settings.getBoolean(Config::SHOW_ONLY_TILEFLAGS);
@@ -252,6 +256,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 		new_show_items != show_items ||
 		new_show_as_minimap != show_as_minimap ||
 		new_show_tech_items != show_tech_items ||
+		new_flatten_multi_tile_ground != flatten_multi_tile_ground ||
 		new_ingame != ingame) {
 		chunk_bake_dirty_ = true;
 	}
@@ -289,6 +294,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	highlight_items = new_highlight_items;
 	highlight_locked_doors = new_highlight_locked_doors;
 	show_blocking = new_show_blocking;
+	flatten_multi_tile_ground = new_flatten_multi_tile_ground;
 	show_tooltips = new_show_tooltips;
 	show_as_minimap = new_show_as_minimap;
 	show_only_colors = new_show_only_colors;

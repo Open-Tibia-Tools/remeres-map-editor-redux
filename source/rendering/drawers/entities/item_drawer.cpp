@@ -10,6 +10,7 @@
 #include "rendering/drawers/entities/sprite_drawer.h"
 #include "rendering/drawers/entities/creature_drawer.h"
 #include "rendering/core/drawing_options.h"
+#include "rendering/core/ground_flatten.h"
 #include "rendering/core/render_view.h"
 #include "rendering/utilities/pattern_calculator.h"
 #include "map/tile.h"
@@ -207,6 +208,15 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 				y_offset += composite_metrics.row_heights[cy];
 			}
 			x_offset += composite_metrics.column_widths[cx];
+		}
+
+		if (const auto flatten_part = rme::rendering::ResolveGroundFlattenPart(options, it.isGroundTile(), *spr)) {
+			for (int cf = 0; cf != spr->layers; cf++) {
+				const AtlasRegion* region = spr->getAtlasRegion(flatten_part->column, flatten_part->row, cf, subtype, pattern_x, pattern_y, pattern_z, frame);
+				if (region) {
+					sprite_drawer->glBlitAtlasQuad(sprite_batch, screenx, screeny, region, DrawColor(red, green, blue, alpha), params.house_id, params.zone_flags, params.depth);
+				}
+			}
 		}
 	}
 

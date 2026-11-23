@@ -8,6 +8,7 @@
 #include "rendering/core/atlas_manager.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/game_sprite.h"
+#include "rendering/core/ground_flatten.h"
 #include "rendering/core/render_frame_context.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/drawing_options.h"
@@ -93,9 +94,10 @@ namespace {
 	// Visits the atlas regions of one sprite occurrence in bake order, with their draw positions.
 	// With allow_upload=false the bake reports a not-yet-loaded sprite as a null region instead
 	// of loading it inline, so asset loading happens on the sprite preloader's workers and never
-	// blocks the render thread.
+	// blocks the render thread. `anchor_part` (Flatten Multi-Tile Ground) is visited once more per
+	// layer at the anchor position, after the regular parts.
 	template <typename Visitor>
-	void forEachSpriteRegion(GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, bool allow_upload, Visitor&& visit) {
+	void forEachSpriteRegion(GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, bool allow_upload, std::optional<rme::rendering::SpritePart> anchor_part, Visitor&& visit) {
 		const int raw_subtype = pat.subtype.value_or(-1);
 		if (spr->width == 1 && spr->height == 1 && spr->layers == 1) {
 			const AtlasRegion* reg = nullptr;
@@ -120,6 +122,12 @@ namespace {
 				y_offset += composite_metrics.row_heights[cy];
 			}
 			x_offset += composite_metrics.column_widths[cx];
+		}
+
+		if (anchor_part) {
+			for (int cf = 0; cf < spr->layers; ++cf) {
+				visit(spr->getAtlasRegion(anchor_part->column, anchor_part->row, cf, raw_subtype, pat.x, pat.y, pat.z, pat.frame, allow_upload), draw_base_x, draw_base_y);
+			}
 		}
 	}
 
@@ -366,8 +374,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 		}
 	};
 
-	auto emitSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE, bool upload = false) {
-		forEachSpriteRegion(spr, pat, draw_base_x, draw_base_y, upload || allow_upload, [&](const AtlasRegion* reg, int draw_x, int draw_y) {
+	auto emitSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE, bool upload = false, std::optional<rme::rendering::SpritePart> flatten_part = std::nullopt) {
+		forEachSpriteRegion(spr, pat, draw_base_x, draw_base_y, upload || allow_upload, flatten_part, [&](const AtlasRegion* reg, int draw_x, int draw_y) {
 			if (!reg) {
 				// Not uploaded yet. The caller queued it to the sprite preloader, so the chunk
 				// is simply re-baked once it becomes available.
@@ -379,9 +387,9 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 	};
 
 	// Map items and grounds animate; their runs are tracked so frame changes can be patched in place.
-	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE, bool upload = false, int map_pos_x = 0, int map_pos_y = 0, int map_pos_z = 0) {
+	auto pushSpriteInstances = [&](GameSprite* spr, const SpritePatterns& pat, int draw_base_x, int draw_base_y, float rf, float gf, float bf, float af, float house_id = 0.0f, float depth = 0.0f, float flags = TILE_INSTANCE_FLAG_TEXTURE, bool upload = false, int map_pos_x = 0, int map_pos_y = 0, int map_pos_z = 0, std::optional<rme::rendering::SpritePart> flatten_part = std::nullopt) {
 		const size_t first_instance = bake_buffer_.size();
-		emitSpriteInstances(spr, pat, draw_base_x, draw_base_y, rf, gf, bf, af, house_id, depth, flags, upload);
+		emitSpriteInstances(spr, pat, draw_base_x, draw_base_y, rf, gf, bf, af, house_id, depth, flags, upload, flatten_part);
 		if (!spr->isAnimated()) {
 			return;
 		}
@@ -436,6 +444,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 			.pattern_y = static_cast<int16_t>(pat.y),
 			.pattern_z = static_cast<int16_t>(pat.z),
 			.subtype = static_cast<int16_t>(pat.subtype.value_or(-1)),
+			.flatten_column = static_cast<int8_t>(flatten_part ? flatten_part->column : -1),
+			.flatten_row = static_cast<int8_t>(flatten_part ? flatten_part->row : -1),
 		});
 	};
 
@@ -646,7 +656,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 							ground_depth,
 							TILE_INSTANCE_FLAG_TEXTURE + TILE_INSTANCE_FLAG_IS_GROUND,
 							/*upload=*/true,
-							x, y, z);
+							x, y, z,
+							rme::rendering::ResolveGroundFlattenPart(ctx.options, git.isGroundTile(), *gspr));
 					}
 				}
 			}
@@ -943,7 +954,10 @@ bool ChunkCacheManager::refreshAnimatedFrames(CachedChunk& chunk, long elapsed_t
 
 		uint32_t written = 0;
 		bool layout_changed = false;
-		forEachSpriteRegion(spr, pat, run.draw_x, run.draw_y, true, [&](const AtlasRegion* reg, int draw_x, int draw_y) {
+		const std::optional<rme::rendering::SpritePart> flatten_part = run.flatten_column >= 0
+			? std::optional<rme::rendering::SpritePart>(rme::rendering::SpritePart { .column = run.flatten_column, .row = run.flatten_row })
+			: std::nullopt;
+		forEachSpriteRegion(spr, pat, run.draw_x, run.draw_y, true, flatten_part, [&](const AtlasRegion* reg, int draw_x, int draw_y) {
 			if (!isBakeableRegion(reg)) {
 				return;
 			}

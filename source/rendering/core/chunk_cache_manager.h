@@ -46,6 +46,10 @@ struct AnimatedSpriteRun {
 	int16_t pattern_y = 0;
 	int16_t pattern_z = 0;
 	int16_t subtype = -1;
+	// Flatten Multi-Tile Ground part repeated at the anchor (-1 = none); the in-place frame patch
+	// must visit the same regions the bake emitted.
+	int8_t flatten_column = -1;
+	int8_t flatten_row = -1;
 };
 
 struct CachedChunk {
