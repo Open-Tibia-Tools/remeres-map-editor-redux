@@ -39,6 +39,7 @@
 #include "rendering/ui/screenshot_controller.h"
 #include "rendering/utilities/tile_describer.h"
 #include "rendering/core/coordinate_mapper.h"
+#include "rendering/drawers/overlays/lasso_tile_outline_drawer.h"
 #include "rendering/ui/map_display.h"
 #include "util/image_manager.h"
 #include <wx/textctrl.h>
@@ -145,11 +146,16 @@ MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
 	Bind(wxEVT_MOUSEWHEEL, &MapCanvas::OnWheel, this);
 	Bind(wxEVT_ENTER_WINDOW, &MapCanvas::OnGainMouse, this);
 	Bind(wxEVT_LEAVE_WINDOW, &MapCanvas::OnLoseMouse, this);
+	Bind(wxEVT_KILL_FOCUS, &MapCanvas::OnKillFocus, this);
+	Bind(wxEVT_MOUSE_CAPTURE_LOST, &MapCanvas::OnMouseCaptureLost, this);
+	Bind(wxEVT_SIZE, &MapCanvas::OnSize, this);
 
 	Bind(wxEVT_PAINT, &MapCanvas::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, &MapCanvas::OnEraseBackground, this);
 	Bind(wxEVT_IDLE, &MapCanvas::OnIdle, this);
 	Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+		// Screen-space lasso points and the cached tile preview become stale on a DPI change.
+		CancelLasso();
 		Refresh(false);
 		event.Skip();
 	});
@@ -247,7 +253,8 @@ void MapCanvas::EnsureNanoVG() {
 }
 
 void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
-	if (!vg || (drawer && !drawer->hasOverlays())) {
+	const LassoGesture* lasso = selection_controller && selection_controller->GetLasso().IsActive() ? &selection_controller->GetLasso() : nullptr;
+	if (!vg || (drawer && !drawer->hasOverlays() && !lasso)) {
 		return;
 	}
 
@@ -273,6 +280,25 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 		drawer->DrawDoorIndicators(vg);
 	}
 	drawer->DrawUIOverlays(vg);
+	// When the tile outline is visible it IS the preview (same visual as box selection):
+	// dashed white lines + white shade. The freehand path overlay is suppressed.
+	const bool lasso_outline_visible = selection_controller && selection_controller->HasLassoOutline() && !options.ingame;
+	if (lasso_outline_visible) {
+		MainMapViewport vp;
+		GetViewBox(&vp.view_scroll_x, &vp.view_scroll_y, &vp.pixel_width, &vp.pixel_height);
+		vp.zoom = GetZoom();
+		vp.floor = GetFloor();
+		vp.scale_factor = GetContentScaleFactor();
+		const LassoTileOutlineDrawer tile_outline_drawer;
+		tile_outline_drawer.draw(vg, selection_controller->GetLassoOutlineSegments(), vp.floor, vp);
+	} else if (lasso) {
+		// Click-vertex handles and rubber band before the polygon closes (no outline yet).
+		const LassoOverlayStyle style {
+			.line_width = static_cast<float>(FromDIP(2)),
+			.handle_radius = static_cast<float>(FromDIP(3)),
+		};
+		drawer->DrawLassoOverlay(vg, lasso->Points(), lasso->HandleVertices(), lasso->Cursor(), style);
+	}
 
 	TextRenderer::EndFrame(vg);
 
@@ -343,6 +369,7 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 			};
 		}
 		if (selection_controller) {
+			selection_controller->ValidateLassoPreviewView();
 			interaction.drag_start_position = selection_controller->GetDragStartPosition();
 		}
 		if (drawing_controller) {
@@ -551,7 +578,44 @@ void MapCanvas::SyncCursorHoverState() {
 	}
 }
 
+LassoScreenPoint MapCanvas::ToLassoPoint(const wxMouseEvent& event) const {
+	const wxSize client = GetClientSize();
+	return LassoScreenPoint {
+		.x = std::clamp(event.GetX(), 0, std::max(client.x - 1, 0)),
+		.y = std::clamp(event.GetY(), 0, std::max(client.y - 1, 0)),
+	};
+}
+
+void MapCanvas::CancelLasso() {
+	if (selection_controller) {
+		selection_controller->CancelLasso();
+	}
+}
+
+void MapCanvas::OnKillFocus(wxFocusEvent& event) {
+	// Without focus the Alt key-up never reaches the canvas, so the lasso can only be discarded.
+	CancelLasso();
+	event.Skip();
+}
+
+void MapCanvas::OnMouseCaptureLost(wxMouseCaptureLostEvent& event) {
+	CancelLasso();
+}
+
+void MapCanvas::OnSize(wxSizeEvent& event) {
+	// The lasso is stored in screen space; a resize would map it to other tiles.
+	CancelLasso();
+	event.Skip();
+}
+
 void MapCanvas::OnMouseMove(wxMouseEvent& event) {
+	if (selection_controller && selection_controller->HandleLassoMotion(ToLassoPoint(event), ToLassoModifiers(event), event.LeftIsDown())) {
+		// Navigation is frozen while the lasso is active.
+		cursor_x = event.GetX();
+		cursor_y = event.GetY();
+		return;
+	}
+
 	NavigationController::HandleMouseDrag(this, event);
 
 	cursor_x = event.GetX();
@@ -595,6 +659,12 @@ void MapCanvas::OnMouseLeftClick(wxMouseEvent& event) {
 }
 
 void MapCanvas::OnMouseLeftDoubleClick(wxMouseEvent& event) {
+	// A quick second click arrives as a double click; for the lasso it is just another vertex.
+	// Focus the canvas like a single click does, so the Alt key-up reaches it.
+	SetFocus();
+	if (selection_controller && selection_controller->HandleLassoButtonDown(LassoButton::Left, ToLassoPoint(event), ToLassoModifiers(event))) {
+		return;
+	}
 	if (!g_gui.IsSelectionMode()) {
 		return;
 	}
@@ -605,6 +675,9 @@ void MapCanvas::OnMouseLeftDoubleClick(wxMouseEvent& event) {
 }
 
 void MapCanvas::OnMouseCenterClick(wxMouseEvent& event) {
+	if (selection_controller && selection_controller->HandleLassoButtonDown(LassoButton::Middle, ToLassoPoint(event), ToLassoModifiers(event))) {
+		return;
+	}
 	if (g_settings.getInteger(Config::SWITCH_MOUSEBUTTONS)) {
 		OnMousePropertiesClick(event);
 	} else {
@@ -613,6 +686,9 @@ void MapCanvas::OnMouseCenterClick(wxMouseEvent& event) {
 }
 
 void MapCanvas::OnMouseCenterRelease(wxMouseEvent& event) {
+	if (selection_controller && selection_controller->HandleLassoButtonUp(LassoButton::Middle, ToLassoPoint(event), ToLassoModifiers(event))) {
+		return;
+	}
 	if (g_settings.getInteger(Config::SWITCH_MOUSEBUTTONS)) {
 		OnMousePropertiesRelease(event);
 	} else {
@@ -621,6 +697,10 @@ void MapCanvas::OnMouseCenterRelease(wxMouseEvent& event) {
 }
 
 void MapCanvas::OnMouseRightClick(wxMouseEvent& event) {
+	// Right click cancels an active lasso; its release is swallowed so no popup menu opens.
+	if (selection_controller && selection_controller->HandleLassoButtonDown(LassoButton::Right, ToLassoPoint(event), ToLassoModifiers(event))) {
+		return;
+	}
 	if (g_settings.getInteger(Config::SWITCH_MOUSEBUTTONS)) {
 		OnMouseCameraClick(event);
 	} else {
@@ -629,6 +709,9 @@ void MapCanvas::OnMouseRightClick(wxMouseEvent& event) {
 }
 
 void MapCanvas::OnMouseRightRelease(wxMouseEvent& event) {
+	if (selection_controller && selection_controller->HandleLassoButtonUp(LassoButton::Right, ToLassoPoint(event), ToLassoModifiers(event))) {
+		return;
+	}
 	if (g_settings.getInteger(Config::SWITCH_MOUSEBUTTONS)) {
 		OnMouseCameraRelease(event);
 	} else {
@@ -640,6 +723,11 @@ void MapCanvas::OnMouseActionClick(wxMouseEvent& event) {
 	SetFocus();
 	if (auto* map_window = GetMapWindow()) {
 		map_window->ResumeMinimapTrackingToCurrentView();
+	}
+
+	// Alt+Left (without Ctrl) starts the lasso; Ctrl+Alt+Left below stays smart pick.
+	if (selection_controller && selection_controller->HandleLassoButtonDown(LassoButton::Left, ToLassoPoint(event), ToLassoModifiers(event))) {
+		return;
 	}
 
 	const MainMapPixelPosition click = ScreenToMapPixel(event.GetX(), event.GetY());
@@ -679,6 +767,10 @@ void MapCanvas::OnMouseActionClick(wxMouseEvent& event) {
 }
 
 void MapCanvas::OnMouseActionRelease(wxMouseEvent& event) {
+	if (selection_controller && selection_controller->HandleLassoButtonUp(LassoButton::Left, ToLassoPoint(event), ToLassoModifiers(event))) {
+		return;
+	}
+
 	int mouse_map_x, mouse_map_y;
 	ScreenToMap(event.GetX(), event.GetY(), &mouse_map_x, &mouse_map_y);
 
@@ -789,6 +881,10 @@ void MapCanvas::OnMousePropertiesRelease(wxMouseEvent& event) {
 }
 
 void MapCanvas::OnWheel(wxMouseEvent& event) {
+	if (selection_controller && selection_controller->GetLasso().IsActive()) {
+		// Navigation is frozen while the lasso is active: its points are in screen space.
+		return;
+	}
 	if (event.ControlDown()) {
 		NavigationController::HandleWheel(this, event);
 	} else if (event.AltDown()) {
@@ -830,6 +926,7 @@ void MapCanvas::ChangeFloor(int new_floor) {
 }
 
 void MapCanvas::EnterDrawingMode() {
+	CancelLasso();
 	dragging = false;
 	boundbox_selection = false;
 	EndPasting();
@@ -855,6 +952,7 @@ void MapCanvas::EndPasting() {
 }
 
 void MapCanvas::Reset() {
+	CancelLasso();
 	cursor_x = 0;
 	cursor_y = 0;
 
