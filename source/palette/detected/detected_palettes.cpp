@@ -6,6 +6,7 @@
 
 #include "app/main.h"
 #include "app/settings.h"
+#include "brushes/ground/ground_brush.h"
 #include "brushes/raw/raw_brush.h"
 #include "game/materials.h"
 #include "item_definitions/core/item_definition_store.h"
@@ -19,8 +20,13 @@
 
 namespace {
 
+	bool HasAnyBorder(const GroundBrush& brush) {
+		return brush.hasOuterBorder() || brush.hasInnerBorder() || brush.hasOptionalBorder() || !brush.getBorders().empty();
+	}
+
 	DetectedItemFacts CollectFacts(const ItemDefinitionView& item) {
 		const ItemEditorData& editor = item.editorData();
+		const GroundBrush* ground_brush = editor.brush ? editor.brush->as<GroundBrush>() : nullptr;
 		return DetectedItemFacts {
 			.server_id = item.serverId(),
 			.client_id = item.clientId(),
@@ -29,6 +35,9 @@ namespace {
 			.ground_border_piece = item.hasFlag(ItemFlag::AlwaysOnBottom) && item.attribute(ItemAttributeKey::AlwaysOnTopOrder) == 1,
 			.registered_border = item.hasFlag(ItemFlag::IsBorder),
 			.brush_owned = editor.brush != nullptr || editor.doodad_brush != nullptr || editor.collection_brush != nullptr,
+			.unpassable = item.hasFlag(ItemFlag::Unpassable),
+			.ground_brush_owned = ground_brush != nullptr,
+			.ground_brush_has_border = ground_brush != nullptr && HasAnyBorder(*ground_brush),
 		};
 	}
 
@@ -60,6 +69,8 @@ void AddDetectedPalettes() {
 	}
 
 	DetectedTileset unregistered_borders { .name = "Unregistered borders" };
+	DetectedTileset grounds_without_brush { .name = "Grounds without ground brush" };
+	DetectedTileset brushes_without_border { .name = "Ground brushes without border" };
 
 	for (const ServerItemId id : g_item_definitions.allIds()) {
 		if (id < 100) {
@@ -70,12 +81,29 @@ void AddDetectedPalettes() {
 			continue;
 		}
 		const DetectedItemFacts facts = CollectFacts(item);
+		DetectedTileset* target = nullptr;
 		if (IsUnregisteredBorder(facts)) {
+			target = &unregistered_borders;
+		} else {
+			switch (ClassifyGroundBorder(facts)) {
+				case GroundBorderState::NoGroundBrush:
+					target = &grounds_without_brush;
+					break;
+				case GroundBorderState::BrushWithoutBorder:
+					target = &brushes_without_border;
+					break;
+				case GroundBorderState::NotAFloor:
+				case GroundBorderState::Bordered:
+					break;
+			}
+		}
+		if (target) {
 			if (RAWBrush* brush = g_materials.ensureRawBrush(id)) {
-				unregistered_borders.brushes.push_back(brush);
+				target->brushes.push_back(brush);
 			}
 		}
 	}
 
 	AddPalette("Detected Borders", { std::move(unregistered_borders) });
+	AddPalette("Detected Grounds", { std::move(grounds_without_brush), std::move(brushes_without_border) });
 }

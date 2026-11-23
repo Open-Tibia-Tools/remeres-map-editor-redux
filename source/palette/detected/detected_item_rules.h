@@ -22,9 +22,27 @@ struct DetectedItemFacts {
 	bool registered_border = false;
 	// Owned by a ground, wall, carpet, table, door, doodad or collection brush.
 	bool brush_owned = false;
+	// DAT "unpassable" (block solid).
+	bool unpassable = false;
+	// Owned by a ground brush, and whether that brush has any border rule (inner, outer,
+	// optional or a specific border block).
+	bool ground_brush_owned = false;
+	bool ground_brush_has_border = false;
 };
 
 // A ground border piece that no border and no brush in the materials XML refers to.
 [[nodiscard]] bool IsUnregisteredBorder(const DetectedItemFacts& item);
+
+enum class GroundBorderState {
+	NotAFloor,
+	Bordered,
+	// In a ground brush that has no border rule at all.
+	BrushWithoutBorder,
+	// In no ground brush.
+	NoGroundBrush,
+};
+
+// Walkable ground items only: unpassable grounds (water, mountains) are NotAFloor.
+[[nodiscard]] GroundBorderState ClassifyGroundBorder(const DetectedItemFacts& item);
 
 #endif
