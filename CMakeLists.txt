@@ -336,3 +336,11 @@ set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_sprite_footprint PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_sprite_footprint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_sprite_footprint COMMAND test_sprite_footprint)
+
+# --- Unit test for the load-warnings.log block formatter ---
+add_executable(test_load_warnings_log tests/test_load_warnings_log.cpp source/util/load_warnings_log.cpp)
+set_target_properties(test_load_warnings_log PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_load_warnings_log PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_load_warnings_log PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_load_warnings_log PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_load_warnings_log COMMAND test_load_warnings_log)

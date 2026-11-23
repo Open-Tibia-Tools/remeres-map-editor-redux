@@ -103,7 +103,7 @@ void FileMenuHandler::OnReloadDataFiles(wxCommandEvent& WXUNUSED(event)) {
 	std::vector<std::string> warnings;
 	g_version.LoadVersion(g_version.GetCurrentVersionID(), error, warnings, true);
 	DialogUtil::PopupDialog("Error", error, wxOK);
-	DialogUtil::ListDialog("Warnings", warnings);
+	DialogUtil::LoadWarningsDialog("Warnings", warnings);
 }
 
 void FileMenuHandler::OnMissingItemsReport(wxCommandEvent& WXUNUSED(event)) {

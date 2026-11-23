@@ -11,6 +11,15 @@
 #include "util/image_manager.h"
 
 #include "app/application.h"
+#include "app/settings.h"
+#include "util/file_system.h"
+#include "util/load_warnings_log.h"
+
+#include <spdlog/spdlog.h>
+#include <wx/datetime.h>
+
+#include <filesystem>
+#include <fstream>
 
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
@@ -68,6 +77,26 @@ long DialogUtil::PopupDialog(wxWindow* parent, wxString title, wxString text, lo
 long DialogUtil::PopupDialog(wxString title, wxString text, long style, wxString configsavename, uint32_t configsavevalue) {
 	// Need access to main frame for parent.
 	return PopupDialog(static_cast<wxApp*>(wxTheApp)->GetTopWindow(), title, text, style, configsavename, configsavevalue);
+}
+
+void DialogUtil::LoadWarningsDialog(const wxString& title, const std::vector<std::string>& warnings) {
+	if (warnings.empty()) {
+		return;
+	}
+	if (g_settings.getBoolean(Config::SHOW_LOAD_WARNINGS_DIALOG)) {
+		ListDialog(nullptr, title, warnings);
+		return;
+	}
+
+	const wxString log_path = FileSystem::GetExecDirectory() + wxString::FromUTF8(kLoadWarningsLogFileName.data(), kLoadWarningsLogFileName.size());
+	const std::string block = FormatLoadWarningsBlock(wxDateTime::Now().FormatISOCombined(' ').utf8_string(), title.utf8_string(), warnings);
+	std::ofstream log(std::filesystem::path(log_path.ToStdWstring()), std::ios::app | std::ios::binary);
+	if (!log || !log.write(block.data(), static_cast<std::streamsize>(block.size()))) {
+		spdlog::error("Could not write load warnings to {}, showing them instead", log_path.utf8_string());
+		ListDialog(nullptr, title, warnings);
+		return;
+	}
+	spdlog::warn("{}: {} warnings written to {}", title.utf8_string(), warnings.size(), log_path.utf8_string());
 }
 
 void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<std::string>& param_items) {

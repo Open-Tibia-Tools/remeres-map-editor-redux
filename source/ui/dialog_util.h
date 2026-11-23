@@ -17,6 +17,11 @@ public:
 		ListDialog(nullptr, title, vec);
 	}
 
+	// Warnings produced while loading client data or a map. Shown in a ListDialog, or, when
+	// Config::SHOW_LOAD_WARNINGS_DIALOG is off, appended to load-warnings.log next to the
+	// executable so the load is not blocked.
+	static void LoadWarningsDialog(const wxString& title, const std::vector<std::string>& warnings);
+
 	static void ShowTextBox(wxWindow* parent, wxString title, wxString contents);
 	static void ShowTextBox(const wxString& title, const wxString& contents) {
 		ShowTextBox(nullptr, title, contents);

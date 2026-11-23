@@ -392,9 +392,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 					DialogUtil::PopupDialog("Error", error, wxOK);
 					return false;
 				}
-				if (!warnings.empty()) {
-					DialogUtil::ListDialog("Warnings", warnings);
-				}
+				DialogUtil::LoadWarningsDialog("Warnings", warnings);
 			} else {
 				return false;
 			}
@@ -414,7 +412,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& load
 
 	mapTab->GetView()->FitToMap();
 	g_status.UpdateTitle();
-	DialogUtil::ListDialog("Map loader errors", mapTab->GetMap()->getWarnings());
+	DialogUtil::LoadWarningsDialog("Map loader errors", mapTab->GetMap()->getWarnings());
 	g_gui.root->DoQueryImportCreatures();
 
 	g_gui.FitViewToMap(mapTab);
