@@ -67,6 +67,8 @@ public:
 	virtual void OnUpdateBrushSize(BrushShape shape, int size);
 	// Updates the content of the palette (eg. houses, creatures)
 	virtual void OnUpdate(Map* map);
+	// Quick Tilesets favorites changed: reloads the Favorites page.
+	void OnFavoritesChanged();
 
 	[[nodiscard]] wxChoicebook* GetChoicebook() const noexcept { return choicebook; }
 
@@ -75,6 +77,10 @@ public:
 	void OnPageChanged(wxChoicebookEvent& event);
 	// Forward key events to the parent window (The Map Window)
 	void OnKey(wxKeyEvent& event);
+	// Brush grid events: context menu, drag start and single picks (Quick Tilesets).
+	void OnBrushContextMenu(wxContextMenuEvent& event);
+	void OnBrushBeginDrag(wxCommandEvent& event);
+	void OnBrushPicked(wxCommandEvent& event);
 	void OnClose(wxCloseEvent&);
 	void OnSize(wxSizeEvent& event);
 	void SetHorizontalLayout(bool horizontal);

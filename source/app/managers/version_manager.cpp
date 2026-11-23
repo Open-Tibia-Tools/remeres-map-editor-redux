@@ -17,6 +17,7 @@
 #include "ui/managers/loading_manager.h"
 #include "ui/tool_options_window.h"
 #include "ui/brush_items/brush_items_window.h"
+#include "palette/quick_tilesets/quick_tilesets.h"
 #include "item_definitions/core/asset_bundle_loader.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "app/settings.h"
@@ -87,6 +88,7 @@ bool VersionManager::LoadVersion(ClientVersionID version, wxString& error, std::
 		UnnamedRenderingLock();
 		g_gui.DestroyPalettes();
 		g_gui.DestroyMinimap();
+		QuickTilesets::DestroyWindow();
 
 		// Destroy the previous version
 		UnloadVersion();
@@ -314,6 +316,8 @@ void VersionManager::RegisterCreaturesFromOpenMaps() {
 
 void VersionManager::UnloadVersion(bool full_clear) {
 	UnnamedRenderingLock();
+	// Its grids point at brushes of this version.
+	QuickTilesets::DestroyWindow();
 	g_gui.ReleaseAllChunkCaches();
 	g_gui.gfx.clear();
 	if (g_gui.tool_options) {

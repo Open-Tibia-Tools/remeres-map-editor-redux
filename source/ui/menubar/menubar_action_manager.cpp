@@ -148,6 +148,7 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	MAKE_ACTION_ICON(WIN_TOOL_OPTIONS, wxITEM_NORMAL, ICON_SLIDERS, OnToolOptionsWindow);
 	MAKE_ACTION_ICON(WIN_INGAME_PREVIEW, wxITEM_NORMAL, ICON_GAMEPAD, OnIngamePreviewWindow);
 	MAKE_ACTION_ICON(WIN_BRUSH_ITEMS, wxITEM_NORMAL, ICON_BOXES_STACKED, OnBrushItemsWindow);
+	MAKE_ACTION_ICON(WIN_QUICK_TILESETS, wxITEM_NORMAL, ICON_LAYER_GROUP, OnQuickTilesetsWindow);
 	MAKE_ACTION_ICON(WIN_TILE_PROPERTIES, wxITEM_NORMAL, ICON_LIST, OnTilePropertiesWindow);
 	MAKE_ACTION_ICON(WIN_SEARCH_RESULTS, wxITEM_NORMAL, ICON_SEARCH, OnSearchResultsWindow);
 	MAKE_ACTION_ICON(NEW_PALETTE, wxITEM_NORMAL, ICON_PLUS, OnNewPalette);
@@ -300,6 +301,7 @@ void MenuBarActionManager::UpdateState(MainMenuBar* mb) {
 	mb->EnableItem(WIN_TOOL_OPTIONS, loaded);
 	mb->EnableItem(WIN_INGAME_PREVIEW, loaded);
 	mb->EnableItem(WIN_BRUSH_ITEMS, loaded);
+	mb->EnableItem(WIN_QUICK_TILESETS, loaded);
 	mb->EnableItem(WIN_TILE_PROPERTIES, loaded);
 	mb->EnableItem(WIN_SEARCH_RESULTS, true);
 	mb->EnableItem(NEW_PALETTE, loaded);

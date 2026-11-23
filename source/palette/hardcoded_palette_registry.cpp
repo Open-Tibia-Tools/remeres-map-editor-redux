@@ -2,6 +2,7 @@
 
 #include "app/main.h"
 #include "palette/all_items/all_items_palette.h"
+#include "palette/favorites/favorites_palette.h"
 #include "palette/house/house_palette.h"
 #include "palette/palette_waypoints.h"
 #include "palette/palette_zones.h"
@@ -56,6 +57,13 @@ PalettePanel* createAllItemsPanel(wxWindow* parent) {
 void updateAllItemsMap(PalettePanel* /*panel*/, Map* /*map*/) {
 }
 
+PalettePanel* createFavoritesPanel(wxWindow* parent) {
+	return new FavoritesPalette(parent);
+}
+
+void updateFavoritesMap(PalettePanel* /*panel*/, Map* /*map*/) {
+}
+
 } // namespace
 
 const std::vector<HardcodedPaletteProvider>& GetHardcodedPaletteProviders() {
@@ -65,6 +73,8 @@ const std::vector<HardcodedPaletteProvider>& GetHardcodedPaletteProviders() {
 		{ "Waypoint", createWaypointPanel, updateWaypointMap },
 		{ "Zone", createZonePanel, updateZoneMap },
 		{ "Town", createTownPanel, updateTownMap },
+		// Last, so a brush is found on its real page before Favorites.
+		{ "Favorites", createFavoritesPanel, updateFavoritesMap },
 	};
 	return providers;
 }

@@ -18,6 +18,9 @@
 #include "brushes/zone/zone_brush.h"
 #include "palette/panels/brush_palette_panel.h"
 #include "palette/all_items/all_items_palette.h"
+#include "palette/controls/virtual_brush_grid.h"
+#include "palette/favorites/favorites_palette.h"
+#include "palette/quick_tilesets/quick_tilesets.h"
 #include "ui/managers/layout_manager.h"
 #include "rendering/ui/map_display.h"
 #include "game/materials.h"
@@ -120,6 +123,10 @@ PaletteWindow::PaletteWindow(wxWindow* parent, const PaletteCatalog& catalog) :
 	Bind(wxEVT_CHOICEBOOK_PAGE_CHANGED, &PaletteWindow::OnPageChanged, this, PALETTE_CHOICEBOOK);
 	Bind(wxEVT_CLOSE_WINDOW, &PaletteWindow::OnClose, this);
 	Bind(wxEVT_KEY_DOWN, &PaletteWindow::OnKey, this);
+	// Brush grids of every page (brush pages, All items, Favorites) report here.
+	Bind(wxEVT_CONTEXT_MENU, &PaletteWindow::OnBrushContextMenu, this);
+	Bind(EVT_VIRTUAL_BRUSH_GRID_BEGIN_DRAG, &PaletteWindow::OnBrushBeginDrag, this);
+	Bind(EVT_VIRTUAL_BRUSH_GRID_PICKED, &PaletteWindow::OnBrushPicked, this);
 	Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
 		Refresh();
 		Update();
@@ -291,6 +298,8 @@ void PaletteWindow::SetBrushIndicators(bool dogEar) {
 			bpp->SetBrushIndicators(dogEar);
 		} else if (auto* aip = dynamic_cast<AllItemsPalette*>(panel)) {
 			aip->SetBrushIndicators(dogEar);
+		} else if (auto* favorites = dynamic_cast<FavoritesPalette*>(panel)) {
+			favorites->SetBrushIndicators(dogEar);
 		}
 	}
 }
@@ -301,6 +310,8 @@ void PaletteWindow::SetGridSpacing(int spacing) {
 			bpp->SetGridSpacing(spacing);
 		} else if (auto* aip = dynamic_cast<AllItemsPalette*>(panel)) {
 			aip->SetGridSpacing(spacing);
+		} else if (auto* favorites = dynamic_cast<FavoritesPalette*>(panel)) {
+			favorites->SetGridSpacing(spacing);
 		}
 	}
 }
@@ -648,6 +659,37 @@ void PaletteWindow::OnUpdate(Map* map) {
 void PaletteWindow::OnKey(wxKeyEvent& event) {
 	if (g_gui.GetCurrentTab() != nullptr) {
 		g_gui.GetCurrentMapTab()->GetEventHandler()->QueueEvent(event.Clone());
+	}
+}
+
+void PaletteWindow::OnBrushContextMenu(wxContextMenuEvent& event) {
+	// Search fields and the house/zone/town/waypoint lists keep their own menus.
+	auto* grid = dynamic_cast<VirtualBrushGrid*>(event.GetEventObject());
+	if (!grid) {
+		event.Skip();
+		return;
+	}
+	const wxPoint position = event.GetPosition() == wxDefaultPosition ? grid->GetSelectedCellPosition() : grid->ScreenToClient(event.GetPosition());
+	const std::vector<Brush*> brushes = grid->GetSelectedBrushes();
+	QuickTilesets::ShowBrushContextMenu(grid, position, brushes, {});
+}
+
+void PaletteWindow::OnBrushBeginDrag(wxCommandEvent& event) {
+	if (auto* grid = dynamic_cast<VirtualBrushGrid*>(event.GetEventObject())) {
+		const std::vector<Brush*> brushes = grid->GetSelectedBrushes();
+		QuickTilesets::BeginDrag(grid, brushes, {});
+	}
+}
+
+void PaletteWindow::OnBrushPicked(wxCommandEvent& event) {
+	QuickTilesets::RememberUserPick(static_cast<Brush*>(event.GetClientData()));
+}
+
+void PaletteWindow::OnFavoritesChanged() {
+	for (const HardcodedPage& page : hardcoded_pages) {
+		if (auto* favorites = dynamic_cast<FavoritesPalette*>(page.panel)) {
+			favorites->OnFavoritesChanged();
+		}
 	}
 }
 

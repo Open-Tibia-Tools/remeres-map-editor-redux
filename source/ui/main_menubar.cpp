@@ -61,6 +61,7 @@
 
 #include "editor/operations/search_operations.h"
 #include "editor/operations/clean_operations.h"
+#include "palette/quick_tilesets/quick_tilesets.h"
 
 MainMenuBar::MainMenuBar(MainFrame* frame) :
 	frame(frame) {
@@ -590,6 +591,10 @@ void MainMenuBar::OnBrushItemsWindow(wxCommandEvent& event) {
 		}
 		g_gui.aui_manager->Update();
 	}
+}
+
+void MainMenuBar::OnQuickTilesetsWindow(wxCommandEvent& event) {
+	QuickTilesets::ToggleWindow();
 }
 
 void MainMenuBar::OnTilePropertiesWindow(wxCommandEvent& event) {

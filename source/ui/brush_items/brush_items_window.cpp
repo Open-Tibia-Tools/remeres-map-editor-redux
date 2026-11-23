@@ -9,14 +9,18 @@
 #include "game/materials.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "palette/controls/tileset_grid_toolbar.h"
+#include "palette/quick_tilesets/brush_reference.h"
+#include "palette/quick_tilesets/quick_tilesets.h"
 #include "rendering/indicators/technical_item_registry.h"
 #include "ui/gui.h"
 #include "ui/theme.h"
 #include "util/common.h"
 #include "util/grid_cell_renderer.h"
+#include "util/image_manager.h"
 
 #include <wx/sizer.h>
 #include <wx/stattext.h>
+#include <wx/tglbtn.h>
 
 #include <unordered_set>
 #include <algorithm>
@@ -366,10 +370,42 @@ void BrushItemsWindow::BuildUI() {
 	m_bottomCard->Show(false);
 	mainSizer->Add(m_bottomCard, wxSizerFlags().Expand());
 
+	// Favorite toggle for the source brush shown in this window (Quick Tilesets favorites).
+	m_favoriteToggle = new wxToggleButton(this, wxID_ANY, "Favorite");
+	m_favoriteToggle->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_STAR));
+	m_favoriteToggle->SetToolTip("Show this brush on the Favorites palette page");
+	m_favoriteToggle->Show(false);
+	m_favoriteToggle->Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent&) {
+		QuickTilesets::ToggleFavorite(const_cast<Brush*>(m_currentSourceBrush));
+		UpdateFavoriteToggle();
+	});
+	mainSizer->Add(m_favoriteToggle, wxSizerFlags().Expand().Border(wxALL, FromDIP(2)));
+
 	SetSizer(mainSizer);
 }
 
+void BrushItemsWindow::OnFavoritesChanged() {
+	UpdateFavoriteToggle();
+}
+
+void BrushItemsWindow::UpdateFavoriteToggle() {
+	if (!m_favoriteToggle) {
+		return;
+	}
+	const bool collectable = m_currentSourceBrush && QuickTilesets::IsCollectable(QuickTilesets::ClassifyBrush(*m_currentSourceBrush));
+	if (m_favoriteToggle->IsShown() != collectable) {
+		m_favoriteToggle->Show(collectable);
+		Layout();
+	}
+	m_favoriteToggle->SetValue(collectable && QuickTilesets::IsFavorite(m_currentSourceBrush));
+}
+
 void BrushItemsWindow::SetActiveBrush(const Brush* brush) {
+	ApplyActiveBrush(brush);
+	UpdateFavoriteToggle();
+}
+
+void BrushItemsWindow::ApplyActiveBrush(const Brush* brush) {
 	if (!brush) {
 		m_currentSourceBrush = nullptr;
 		m_lastSourceBrushName.clear();
