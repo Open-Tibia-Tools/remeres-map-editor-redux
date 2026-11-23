@@ -46,10 +46,28 @@ namespace {
 		return item->getTableBrush() == table || table->ownsItem(item->getID());
 	}
 
+	// Brush names and client item names are written by different people ("Stone Wall" vs
+	// "stone wall"), so identity comparisons ignore ASCII case.
+	bool NamesEqual(std::string_view a, std::string_view b) {
+		if (a.size() != b.size()) {
+			return false;
+		}
+		for (size_t index = 0; index < a.size(); ++index) {
+			const unsigned char left = static_cast<unsigned char>(a[index]);
+			const unsigned char right = static_cast<unsigned char>(b[index]);
+			const unsigned char lower_left = left >= 'A' && left <= 'Z' ? left + ('a' - 'A') : left;
+			const unsigned char lower_right = right >= 'A' && right <= 'Z' ? right + ('a' - 'A') : right;
+			if (lower_left != lower_right) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	bool ItemInFamily(const Item& item, const std::string& key) {
 		const std::string_view name = item.getDefinition().name();
 		if (!name.empty()) {
-			return name == key;
+			return NamesEqual(name, key);
 		}
 		// "#<id>" keys stand for nameless items; never group them by an empty name.
 		return key.size() > 1 && key.front() == '#' && std::format("#{}", item.getID()) == key;
@@ -74,7 +92,7 @@ namespace {
 	}
 
 	bool ItemNamed(const Item& item, std::string_view name) {
-		return !name.empty() && item.getDefinition().name() == name;
+		return !name.empty() && NamesEqual(item.getDefinition().name(), name);
 	}
 
 	// Name matching spans entity kinds: a wall, a doodad and a raw item that share a definition

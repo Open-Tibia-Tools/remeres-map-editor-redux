@@ -270,8 +270,8 @@ TEST_CASE("ground plan is clamped by the viewport", "[magic_wand][plan]") {
 TEST_CASE("same-name item family scans the visible floor", "[magic_wand][plan]") {
 	World world;
 	world.Define(500, "Stone Tile");
-	world.Define(501, "Stone Tile");
-	world.Define(502, "Stone Tile");
+	world.Define(501, "stone tile");
+	world.Define(502, "STONE TILE");
 	world.Define(503, "Wheat");
 
 	world.Put(0, 0, 500);
@@ -337,8 +337,8 @@ TEST_CASE("same-name entities of other kinds join a connected selection", "[magi
 	World world;
 	WallBrush wall;
 	DoodadBrush doodad;
-	wall.setName("stone wall");
-	doodad.setName("stone wall");
+	wall.setName("Stone Wall");
+	doodad.setName("Stone Wall");
 
 	world.Define(1200, "stone wall", ITEM_GROUP_NONE, flagMask(ItemFlag::IsWall), &wall);
 	world.Define(1201, "stone wall", ITEM_GROUP_NONE, 0, nullptr, &doodad);
@@ -355,7 +355,7 @@ TEST_CASE("same-name entities of other kinds join a connected selection", "[magi
 
 	Tile& doodad_tile = world.At(1, 0);
 	TileOperations::deselect(&doodad_tile);
-	MagicWand::SelectMatching(doodad_tile, &wall, false, "stone wall");
+	MagicWand::SelectMatching(doodad_tile, &wall, false, "Stone Wall");
 	REQUIRE(doodad_tile.items[0]->isSelected());
 }
 
