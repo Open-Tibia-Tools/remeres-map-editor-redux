@@ -249,6 +249,46 @@ TEST_CASE("visible floors with show-all off is the current floor only", "[select
 	REQUIRE(scope.tile_count == 4);
 }
 
+TEST_CASE("current floor offset matches the replayed thread offset", "[selection][floor_scope]") {
+	const SelectionTileRect rect { .min_x = 100, .min_y = 200, .max_x = 110, .max_y = 205 };
+
+	for (int floor = 0; floor <= MAP_MAX_LAYER; ++floor) {
+		for (int type = 0; type <= 2; ++type) {
+			for (const bool compensated : { false, true }) {
+				for (const bool show_all_floors : { false, true }) {
+					for (const FloorVisibilityMode mode : { FloorVisibilityMode::ClientVisible, FloorVisibilityMode::AllVisible }) {
+						const auto range = BuildFloorVisibilityRange(floor, show_all_floors, mode);
+						const SelectionFloorScope scope = ComputeSelectionFloorScope(rect, floor, static_cast<SelectionFloorScopeType>(type), compensated, range);
+						INFO("floor " << floor << " type " << type << " compensated " << compensated << " all " << show_all_floors);
+						REQUIRE(ComputeSelectionFloorShift(static_cast<SelectionFloorScopeType>(type), compensated, floor) == -scope.StartOffset(rect));
+					}
+				}
+			}
+		}
+	}
+}
+
+TEST_CASE("visible floors without all floors keeps the compensated pre-shift", "[selection][floor_scope]") {
+	const SelectionTileRect rect { .min_x = 100, .min_y = 200, .max_x = 110, .max_y = 205 };
+	const int floor = 3; // Above ground: 4 tiles of compensation.
+	const auto range = BuildFloorVisibilityRange(floor, false, FloorVisibilityMode::ClientVisible);
+	const SelectionFloorScope scope = ComputeSelectionFloorScope(rect, floor, SelectionFloorScopeType::VisibleFloors, true, range);
+
+	REQUIRE(scope.start_z == floor);
+	REQUIRE(scope.end_z == floor);
+	REQUIRE(scope.start_x == 96);
+	REQUIRE(scope.StartOffset(rect) == -4);
+
+	const auto compensated = ReplayThreadOffsets(scope, rect, true);
+	REQUIRE(compensated.size() == 1);
+	REQUIRE(compensated.front() == std::pair { floor, -4 });
+
+	const SelectionFloorScope uncompensated = ComputeSelectionFloorScope(rect, floor, SelectionFloorScopeType::VisibleFloors, false, range);
+	const auto offsets = ReplayThreadOffsets(uncompensated, rect, false);
+	REQUIRE(offsets.size() == 1);
+	REQUIRE(offsets.front() == std::pair { floor, 0 });
+}
+
 TEST_CASE("bands split the width and share border columns", "[selection][floor_scope]") {
 	SelectionFloorScope scope;
 	scope.start_x = 0;

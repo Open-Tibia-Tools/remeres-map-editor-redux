@@ -621,12 +621,12 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 							rme::collectTileSprites(gspr, g_pat.x, g_pat.y, g_pat.z, g_pat.frame);
 						}
 
-						uint8_t r = gr, g = gg, b = gb;
-						if (tile->ground->isSelected()) {
-							r >>= 1;
-							g >>= 1;
-							b >>= 1;
-						}
+					uint8_t r = gr, g = gg, b = gb;
+					if (tile->ground->isSelected()) {
+						r >>= 1;
+						g >>= 1;
+						b >>= 1;
+					}
 
 						const auto [g_off_x, g_off_y] = gspr->getDrawOffset();
 						const int ground_x = x * 32 - g_off_x;
@@ -1049,7 +1049,6 @@ void ChunkCacheManager::renderFloorTerrain(
 	shader_.SetInt("uAtlasLUT", SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 	shader_.SetVec4("uGlobalTint", glm::vec4(1.0f));
 	rme::rendering::shaders::SetChunkShaderUniforms(shader_, ctx.current_house_id, ctx.options);
-
 	atlas.bind(0);
 	atlas.bindLUT(SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 
@@ -1262,7 +1261,6 @@ void ChunkCacheManager::renderFloorItems(
 	shader_.SetInt("uAtlasLUT", SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 	shader_.SetVec4("uGlobalTint", glm::vec4(1.0f));
 	rme::rendering::shaders::SetChunkShaderUniforms(shader_, ctx.current_house_id, ctx.options);
-
 	atlas.bind(0);
 	atlas.bindLUT(SpriteAtlasLUT::TEXTURE_UNIT_INDEX);
 

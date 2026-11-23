@@ -103,7 +103,7 @@ public:
 	void DrawHookIndicators(NVGcontext* vg);
 	void DrawDoorIndicators(NVGcontext* vg);
 	void DrawUIOverlays(NVGcontext* vg);
-	void DrawLassoOverlay(NVGcontext* vg, std::span<const LassoScreenPoint> points, LassoScreenPoint cursor, const LassoOverlayStyle& style);
+	void DrawLassoOverlay(NVGcontext* vg, std::span<const LassoScreenPoint> points, std::span<const std::uint8_t> handle_vertices, LassoScreenPoint cursor, const LassoOverlayStyle& style);
 	void ClearFrameOverlays();
 	void DrawCreatureNames(NVGcontext* vg);
 	bool hasOverlays();

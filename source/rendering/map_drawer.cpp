@@ -396,8 +396,8 @@ void MapDrawer::DrawUIOverlays(NVGcontext* vg) {
 	lua_overlay_drawer.DrawUI(vg, view, options);
 }
 
-void MapDrawer::DrawLassoOverlay(NVGcontext* vg, std::span<const LassoScreenPoint> points, LassoScreenPoint cursor, const LassoOverlayStyle& style) {
-	lasso_overlay_drawer.draw(vg, points, cursor, style);
+void MapDrawer::DrawLassoOverlay(NVGcontext* vg, std::span<const LassoScreenPoint> points, std::span<const std::uint8_t> handle_vertices, LassoScreenPoint cursor, const LassoOverlayStyle& style) {
+	lasso_overlay_drawer.draw(vg, points, handle_vertices, cursor, style);
 }
 
 void MapDrawer::DrawCreatureNames(NVGcontext* vg) {

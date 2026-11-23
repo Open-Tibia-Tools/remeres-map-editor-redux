@@ -39,6 +39,7 @@
 #include "rendering/ui/screenshot_controller.h"
 #include "rendering/utilities/tile_describer.h"
 #include "rendering/core/coordinate_mapper.h"
+#include "rendering/drawers/overlays/lasso_tile_outline_drawer.h"
 #include "rendering/ui/map_display.h"
 #include "util/image_manager.h"
 #include <wx/textctrl.h>
@@ -147,11 +148,14 @@ MapCanvas::MapCanvas(wxWindow* parent, Editor& editor, int* attriblist) :
 	Bind(wxEVT_LEAVE_WINDOW, &MapCanvas::OnLoseMouse, this);
 	Bind(wxEVT_KILL_FOCUS, &MapCanvas::OnKillFocus, this);
 	Bind(wxEVT_MOUSE_CAPTURE_LOST, &MapCanvas::OnMouseCaptureLost, this);
+	Bind(wxEVT_SIZE, &MapCanvas::OnSize, this);
 
 	Bind(wxEVT_PAINT, &MapCanvas::OnPaint, this);
 	Bind(wxEVT_ERASE_BACKGROUND, &MapCanvas::OnEraseBackground, this);
 	Bind(wxEVT_IDLE, &MapCanvas::OnIdle, this);
 	Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+		// Screen-space lasso points and the cached tile preview become stale on a DPI change.
+		CancelLasso();
 		Refresh(false);
 		event.Skip();
 	});
@@ -261,11 +265,6 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
-	if (lasso) {
-		// The lasso fill is concave; NanoVG fills it through the stencil buffer, which the map
-		// pass does not clear.
-		glClear(GL_STENCIL_BUFFER_BIT);
-	}
 	TextRenderer::BeginFrame(vg, GetSize().x, GetSize().y, GetContentScaleFactor());
 
 	if (options.show_creatures) {
@@ -281,12 +280,24 @@ void MapCanvas::DrawOverlays(NVGcontext* vg, const DrawingOptions& options) {
 		drawer->DrawDoorIndicators(vg);
 	}
 	drawer->DrawUIOverlays(vg);
-	if (lasso) {
+	// When the tile outline is visible it IS the preview (same visual as box selection):
+	// dashed white lines + white shade. The freehand path overlay is suppressed.
+	const bool lasso_outline_visible = selection_controller && selection_controller->HasLassoOutline() && !options.ingame;
+	if (lasso_outline_visible) {
+		MainMapViewport vp;
+		GetViewBox(&vp.view_scroll_x, &vp.view_scroll_y, &vp.pixel_width, &vp.pixel_height);
+		vp.zoom = GetZoom();
+		vp.floor = GetFloor();
+		vp.scale_factor = GetContentScaleFactor();
+		const LassoTileOutlineDrawer tile_outline_drawer;
+		tile_outline_drawer.draw(vg, selection_controller->GetLassoOutlineSegments(), vp.floor, vp);
+	} else if (lasso) {
+		// Click-vertex handles and rubber band before the polygon closes (no outline yet).
 		const LassoOverlayStyle style {
 			.line_width = static_cast<float>(FromDIP(2)),
 			.handle_radius = static_cast<float>(FromDIP(3)),
 		};
-		drawer->DrawLassoOverlay(vg, lasso->Points(), lasso->Cursor(), style);
+		drawer->DrawLassoOverlay(vg, lasso->Points(), lasso->HandleVertices(), lasso->Cursor(), style);
 	}
 
 	TextRenderer::EndFrame(vg);
@@ -358,6 +369,7 @@ void MapCanvas::OnPaint(wxPaintEvent& event) {
 			};
 		}
 		if (selection_controller) {
+			selection_controller->ValidateLassoPreviewView();
 			interaction.drag_start_position = selection_controller->GetDragStartPosition();
 		}
 		if (drawing_controller) {
@@ -588,6 +600,12 @@ void MapCanvas::OnKillFocus(wxFocusEvent& event) {
 
 void MapCanvas::OnMouseCaptureLost(wxMouseCaptureLostEvent& event) {
 	CancelLasso();
+}
+
+void MapCanvas::OnSize(wxSizeEvent& event) {
+	// The lasso is stored in screen space; a resize would map it to other tiles.
+	CancelLasso();
+	event.Skip();
 }
 
 void MapCanvas::OnMouseMove(wxMouseEvent& event) {

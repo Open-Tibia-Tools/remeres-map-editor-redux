@@ -34,8 +34,7 @@ SelectionController::SelectionController(MapCanvas* canvas, Editor& editor) :
 	drag_start_pos(Position()) {
 }
 
-SelectionController::~SelectionController() {
-}
+SelectionController::~SelectionController() = default;
 
 void SelectionController::HandleClick(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, bool shift_down, bool ctrl_down, bool alt_down) {
 	last_click_pixel = pixel_offset;
@@ -651,8 +650,10 @@ void SelectionController::ApplyLassoEvent(LassoEvent event) {
 			return;
 		case LassoEvent::Started:
 			lasso_viewport = CaptureLassoViewport();
+			ClearLassoPreview();
 			break;
 		case LassoEvent::Committed:
+			ClearLassoPreview();
 			// The points are screen coordinates; applying them after the view moved would select
 			// a different area than the one drawn.
 			if (CaptureLassoViewport() != lasso_viewport) {
@@ -663,9 +664,11 @@ void SelectionController::ApplyLassoEvent(LassoEvent event) {
 			}
 			break;
 		case LassoEvent::Discarded:
+			ClearLassoPreview();
 			g_gui.SetStatusText("Lasso discarded: it needs at least 3 points enclosing an area.");
 			break;
 		case LassoEvent::Cancelled:
+			ClearLassoPreview();
 			g_gui.SetStatusText("Lasso cancelled.");
 			break;
 		case LassoEvent::Consumed:
@@ -673,15 +676,26 @@ void SelectionController::ApplyLassoEvent(LassoEvent event) {
 	}
 
 	if (lasso.IsActive()) {
-		std::string status = FormatLassoStatus(lasso.Mode(), lasso.Points().size(), lasso.IsAtPointLimit());
-		if (status != lasso_status) {
-			g_gui.SetStatusText(wxstr(status));
-			lasso_status = std::move(status);
+		const LassoMode mode = lasso.Mode();
+		const std::size_t point_count = lasso.Points().size();
+		const bool at_point_limit = lasso.IsAtPointLimit();
+		if (!lasso_status_valid || mode != lasso_status_mode || point_count != lasso_status_points || at_point_limit != lasso_status_at_limit) {
+			lasso_status_mode = mode;
+			lasso_status_points = point_count;
+			lasso_status_at_limit = at_point_limit;
+			lasso_status_valid = true;
+			g_gui.SetStatusText(wxstr(FormatLassoStatus(mode, point_count, at_point_limit)));
 		}
 	} else {
-		lasso_status.clear();
+		lasso_status_valid = false;
 	}
 	SyncLassoMouseCapture();
+
+	// Build here (input event), not in the render loop; the preview computes NanoVG tile-outline
+	// segments only, it never touches the chunk cache or any VBO.
+	if (lasso.IsActive()) {
+		UpdateLassoPreview();
+	}
 
 	if (event == LassoEvent::Committed) {
 		canvas->RequestSharedMapRefresh();
@@ -699,22 +713,118 @@ void SelectionController::SyncLassoMouseCapture() {
 	}
 }
 
-void SelectionController::ExecuteLassoSelection(std::span<const LassoScreenPoint> points, LassoMode mode) {
-	std::vector<LassoPoint> tile_points;
-	tile_points.reserve(points.size());
+LassoPoint SelectionController::ConvertLassoPoint(const LassoScreenPoint& point) const {
+	const MainMapPixelPosition position = canvas->ScreenToMapPixel(point.x, point.y);
+	return LassoPoint {
+		.x = position.map_x + static_cast<double>(position.pixel_x) / TILE_SIZE,
+		.y = position.map_y + static_cast<double>(position.pixel_y) / TILE_SIZE,
+	};
+}
+
+void SelectionController::FillLassoPolygonPoints(std::span<const LassoScreenPoint> points) {
+	lasso_tile_points.clear();
+	lasso_tile_points.reserve(points.size());
 	for (const LassoScreenPoint& point : points) {
-		const MainMapPixelPosition position = canvas->ScreenToMapPixel(point.x, point.y);
-		tile_points.push_back({
-			.x = position.map_x + static_cast<double>(position.pixel_x) / TILE_SIZE,
-			.y = position.map_y + static_cast<double>(position.pixel_y) / TILE_SIZE,
-		});
+		lasso_tile_points.push_back(ConvertLassoPoint(point));
+	}
+	lasso_tile_points_converted = points.size();
+}
+
+void SelectionController::UpdateLassoTilePoints(std::span<const LassoScreenPoint> points, bool append_cursor, const LassoScreenPoint& cursor) {
+	if (points.size() < lasso_tile_points_converted) {
+		// The gesture restarted; the cached conversions belong to another polygon.
+		lasso_tile_points.clear();
+		lasso_tile_points_converted = 0;
+	}
+	lasso_tile_points.resize(points.size());
+	for (std::size_t i = lasso_tile_points_converted; i < points.size(); ++i) {
+		lasso_tile_points[i] = ConvertLassoPoint(points[i]);
+	}
+	lasso_tile_points_converted = points.size();
+	lasso_tile_points.resize(points.size() + (append_cursor ? 1 : 0));
+	if (append_cursor) {
+		lasso_tile_points[points.size()] = ConvertLassoPoint(cursor);
+	}
+}
+
+void SelectionController::ClearLassoPreview() {
+	lasso_preview_polygon.reset();
+	lasso_preview_points = 0;
+	lasso_preview_cursor = {};
+	lasso_tile_points_converted = 0;
+	outline_scratch.clear();
+}
+
+void SelectionController::ValidateLassoPreviewView() {
+	if (!lasso.IsActive() || !lasso_preview_polygon.has_value()) {
+		return;
+	}
+	if (CaptureLassoViewport() == lasso_viewport) {
+		return;
 	}
 
-	const LassoPolygon polygon(tile_points);
+	// External navigation (menu zoom/floor/scroll) invalidates the preview. Do not rebuild here:
+	// this runs in the render loop and must not allocate. Reset the key so the next input can
+	// rebuild the preview if the view returns.
+	ClearLassoPreview();
+}
+
+void SelectionController::UpdateLassoPreview() {
+	if (!lasso.IsActive()) {
+		if (lasso_preview_polygon.has_value()) {
+			ClearLassoPreview();
+		}
+		return;
+	}
+
+	const std::span<const LassoScreenPoint> points = lasso.Points();
+	// OnAltReleased appends this cursor to the applied polygon; include it in the preview too so
+	// click-vertex lassos show exactly the tiles that will be selected.
+	const LassoScreenPoint cursor = lasso.Cursor();
+	const bool append_cursor = points.size() < LassoGesture::kMaxPoints && (points.empty() || points.back() != cursor);
+	const std::size_t preview_point_count = points.size() + (append_cursor ? 1 : 0);
+	const LassoScreenPoint preview_cursor = append_cursor ? cursor : points.back();
+
+	if (preview_point_count == lasso_preview_points && preview_cursor == lasso_preview_cursor) {
+		return;
+	}
+
+	// The gesture is screen-space; a resize, DPI change or external navigation invalidates it.
+	if (CaptureLassoViewport() != lasso_viewport) {
+		// Reset the rebuild key so a later input can recover if the view returns.
+		ClearLassoPreview();
+		return;
+	}
+
+	lasso_preview_points = preview_point_count;
+	lasso_preview_cursor = preview_cursor;
+
+	if (preview_point_count < 3 || !HasLassoAreaWithCursor(points, cursor, append_cursor)) {
+		// The gesture is discarded on release, so the real selection will not change.
+		ClearLassoPreview();
+		return;
+	}
+
+	UpdateLassoTilePoints(points, append_cursor, cursor);
+	LassoPolygon polygon(lasso_tile_points);
+	lasso_preview_polygon = std::move(polygon);
+
+	// Compute the tile-set boundary: O(perimeter), no chunk-cache or VBO interaction.
+	LassoOutline::Compute(*lasso_preview_polygon, editor.map.getWidth(), editor.map.getHeight(), outline_scratch);
+}
+
+void SelectionController::ExecuteLassoSelection(std::span<const LassoScreenPoint> points, LassoMode mode) {
+	FillLassoPolygonPoints(points);
+	const LassoPolygon polygon(lasso_tile_points);
 	// Compensated selection shifts lower floors by up to this many tiles, so the polygon may reach
 	// past the map edge in current-floor space and still cover tiles on those floors (box selection
 	// does not clamp either).
-	const int floor_shift = std::max(0, -ComputeFloorScope(SelectionTileRect {}, canvas->GetFloor()).StartOffset(SelectionTileRect {}));
+	const int floor = canvas->GetFloor();
+	const int floor_shift = ComputeSelectionFloorShift(
+		static_cast<SelectionFloorScopeType>(g_settings.getInteger(Config::SELECTION_TYPE)),
+		g_settings.getInteger(Config::COMPENSATED_SELECT) != 0,
+		floor
+	);
 	const std::optional<LassoTileBounds> bounds = ComputeLassoTileBounds(polygon, editor.map.getWidth() + floor_shift, editor.map.getHeight() + floor_shift);
 	const bool replace = mode == LassoMode::Replace;
 	if (!bounds && !replace) {
@@ -733,7 +843,7 @@ void SelectionController::ExecuteLassoSelection(std::span<const LassoScreenPoint
 			.max_x = bounds->max_x,
 			.max_y = bounds->max_y,
 		};
-		const SelectionFloorScope scope = ComputeFloorScope(rect, canvas->GetFloor());
+		const SelectionFloorScope scope = ComputeFloorScope(rect, floor);
 		RunSelectionThreads(CreateSelectionThreads(scope, &polygon, scope.StartOffset(rect), mode == LassoMode::Subtract));
 	}
 	editor.selection.finish(); // Finish the selection session

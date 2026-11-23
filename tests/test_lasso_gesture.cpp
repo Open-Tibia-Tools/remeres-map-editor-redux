@@ -102,6 +102,29 @@ TEST_CASE("drag, click more vertices, release Alt", "[lasso][gesture]") {
 	REQUIRE(gesture.OnAltReleased(kNone) == LassoEvent::Committed);
 }
 
+TEST_CASE("Alt release commits the rubber-band cursor", "[lasso][gesture]") {
+	LassoGesture gesture;
+	REQUIRE(Press(gesture, 0, 0) == LassoEvent::Started);
+	REQUIRE(Release(gesture, 0, 0) == LassoEvent::Consumed);
+	REQUIRE(Press(gesture, 40, 0) == LassoEvent::Consumed);
+	REQUIRE(Release(gesture, 40, 0) == LassoEvent::Consumed);
+	REQUIRE(Press(gesture, 40, 40) == LassoEvent::Consumed);
+	REQUIRE(Release(gesture, 40, 40) == LassoEvent::Consumed);
+	REQUIRE(gesture.OnMotion({ 0, 40 }, kAlt, false) == LassoEvent::Consumed);
+	REQUIRE(gesture.OnAltReleased(kNone) == LassoEvent::Committed);
+	REQUIRE(gesture.Points().size() == 4);
+	REQUIRE(gesture.Points().back() == LassoScreenPoint { 0, 40 });
+
+	// The cursor can also give a collinear sampled path a non-zero area; the drawn rubber band is
+	// part of the applied polygon, so it commits instead of being discarded.
+	LassoGesture collinear;
+	REQUIRE(Press(collinear, 0, 0) == LassoEvent::Started);
+	REQUIRE(collinear.OnMotion({ 20, 20 }, kAlt, true) == LassoEvent::Consumed);
+	REQUIRE(collinear.OnMotion({ 40, 40 }, kAlt, true) == LassoEvent::Consumed);
+	REQUIRE(collinear.OnMotion({ 0, 40 }, kAlt, false) == LassoEvent::Consumed);
+	REQUIRE(collinear.OnAltReleased(kNone) == LassoEvent::Committed);
+}
+
 TEST_CASE("Alt release with the left button down commits and swallows the release", "[lasso][gesture]") {
 	LassoGesture gesture;
 	DragTriangle(gesture);
@@ -187,6 +210,40 @@ TEST_CASE("point count is capped", "[lasso][gesture]") {
 	REQUIRE(gesture.Points().size() == LassoGesture::kMaxPoints);
 	REQUIRE(gesture.IsAtPointLimit());
 	REQUIRE(gesture.OnAltReleased(kNone) == LassoEvent::Committed);
+}
+
+TEST_CASE("pending cursor can give the lasso its area", "[lasso][gesture]") {
+	REQUIRE_FALSE(HasLassoAreaWithCursor(std::span<const LassoScreenPoint> {}, { 10, 10 }, true));
+
+	const LassoScreenPoint one[] = { { 0, 0 } };
+	REQUIRE_FALSE(HasLassoAreaWithCursor(one, { 10, 10 }, true));
+
+	const LassoScreenPoint two[] = { { 0, 0 }, { 10, 0 } };
+	REQUIRE(HasLassoAreaWithCursor(two, { 0, 10 }, true));
+	REQUIRE_FALSE(HasLassoAreaWithCursor(two, { 20, 0 }, true)); // still collinear
+	REQUIRE_FALSE(HasLassoAreaWithCursor(two, { 0, 10 }, false)); // cursor not appended
+
+	const LassoScreenPoint collinear[] = { { 0, 0 }, { 10, 10 }, { 20, 20 } };
+	REQUIRE(HasLassoAreaWithCursor(collinear, { 0, 20 }, true));
+	REQUIRE_FALSE(HasLassoArea(collinear));
+	REQUIRE_FALSE(HasLassoAreaWithCursor(collinear, { 0, 20 }, false));
+}
+
+TEST_CASE("handles exist only for click-vertex lassos", "[lasso][gesture]") {
+	LassoGesture clicks;
+	REQUIRE(Press(clicks, 0, 0) == LassoEvent::Started);
+	REQUIRE(clicks.HandleVertices().size() == 1);
+	REQUIRE(clicks.HandleVertices()[0] != 0);
+	REQUIRE(Release(clicks, 0, 0) == LassoEvent::Consumed);
+	REQUIRE(Press(clicks, 20, 0) == LassoEvent::Consumed);
+	REQUIRE(clicks.HandleVertices().size() == 2);
+	REQUIRE(clicks.HandleVertices()[1] != 0);
+
+	LassoGesture drag;
+	REQUIRE(Press(drag, 0, 0) == LassoEvent::Started);
+	REQUIRE(drag.OnMotion({ 40, 0 }, kAlt, true) == LassoEvent::Consumed);
+	REQUIRE(drag.Points().size() == 2);
+	REQUIRE(drag.HandleVertices().empty());
 }
 
 TEST_CASE("status text names mode, point count and the Alt hint", "[lasso][gesture]") {

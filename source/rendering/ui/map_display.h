@@ -76,6 +76,7 @@ public:
 	void OnLoseMouse(wxMouseEvent& event);
 	void OnKillFocus(wxFocusEvent& event);
 	void OnMouseCaptureLost(wxMouseCaptureLostEvent& event);
+	void OnSize(wxSizeEvent& event);
 
 	// Mouse events handlers (called by the above)
 	void OnMouseActionRelease(wxMouseEvent& event);

@@ -105,6 +105,31 @@ enum class LassoEvent {
 	return false;
 }
 
+// Same as HasLassoArea for the polygon closed through the pending rubber-band cursor. `append`
+// must match whether the caller will add the cursor as a final vertex (false at the point cap or
+// when the cursor duplicates the last sampled point).
+[[nodiscard]] constexpr bool HasLassoAreaWithCursor(std::span<const LassoScreenPoint> points, LassoScreenPoint cursor, bool append) noexcept {
+	if (!append) {
+		return HasLassoArea(points);
+	}
+	if (points.empty()) {
+		return false;
+	}
+	if (HasLassoArea(points)) {
+		return true;
+	}
+	if (points.size() < 2) {
+		return false;
+	}
+	const LassoScreenPoint& origin = points.front();
+	const LassoScreenPoint& last = points.back();
+	const std::int64_t ax = last.x - origin.x;
+	const std::int64_t ay = last.y - origin.y;
+	const std::int64_t bx = cursor.x - origin.x;
+	const std::int64_t by = cursor.y - origin.y;
+	return ax * by - ay * bx != 0;
+}
+
 [[nodiscard]] inline std::string FormatLassoStatus(LassoMode mode, std::size_t point_count, bool at_point_limit) {
 	// U+2014 EM DASH, spelled as UTF-8 bytes so the literal does not depend on the source charset.
 	return std::format("[{}] {} {}{} \xE2\x80\x94 Release Alt to apply", LassoModeLabel(mode), point_count, point_count == 1 ? "point" : "points", at_point_limit ? " (limit reached)" : "");
@@ -118,6 +143,7 @@ public:
 
 	LassoGesture() {
 		points.reserve(kMaxPoints);
+		click_vertices.reserve(kMaxPoints);
 	}
 
 	[[nodiscard]] bool IsActive() const noexcept {
@@ -128,6 +154,11 @@ public:
 	}
 	[[nodiscard]] std::span<const LassoScreenPoint> Points() const noexcept {
 		return points;
+	}
+	// 1 for vertices placed by a click, 0 for freehand drag samples. Empty for a freehand lasso,
+	// so the overlay draws no handles while dragging; click-vertex lassos keep their handles.
+	[[nodiscard]] std::span<const std::uint8_t> HandleVertices() const noexcept {
+		return freehand ? std::span<const std::uint8_t> {} : std::span<const std::uint8_t>(click_vertices);
 	}
 	[[nodiscard]] LassoScreenPoint Cursor() const noexcept {
 		return cursor;
@@ -170,7 +201,7 @@ public:
 		UpdateModifiers(mods);
 		cursor = p;
 		left_down = true;
-		AppendPoint(p);
+		AppendPoint(p, true);
 		return LassoEvent::Consumed;
 	}
 
@@ -214,7 +245,8 @@ public:
 			const std::int64_t dx = p.x - points.back().x;
 			const std::int64_t dy = p.y - points.back().y;
 			if (dx * dx + dy * dy >= sample_spacing_sq) {
-				AppendPoint(p);
+				freehand = true;
+				AppendPoint(p, false);
 			}
 		}
 		return LassoEvent::Consumed;
@@ -238,6 +270,9 @@ public:
 			return LassoEvent::Ignored;
 		}
 		UpdateModifiers(mods);
+		// The rubber band is the last visible edge; commit the point it ends at, not the older
+		// sampled point, so the applied polygon matches the drawn gesture.
+		AppendPoint(cursor, false);
 		if (points.size() < 3 || !HasLassoArea(points)) {
 			return End(LassoEvent::Discarded);
 		}
@@ -258,7 +293,10 @@ private:
 		const std::int64_t spacing = sample_spacing_px > 1 ? sample_spacing_px : 1;
 		sample_spacing_sq = spacing * spacing;
 		points.clear();
+		click_vertices.clear();
 		points.push_back(p);
+		click_vertices.push_back(1);
+		freehand = false;
 		at_point_limit = false;
 		cursor = p;
 		left_down = true;
@@ -270,6 +308,8 @@ private:
 		active = false;
 		left_down = false;
 		points.clear();
+		click_vertices.clear();
+		freehand = false;
 		at_point_limit = false;
 		return result;
 	}
@@ -278,7 +318,7 @@ private:
 		mode = LassoModeFromModifiers(mods.shift, mods.ctrl);
 	}
 
-	void AppendPoint(LassoScreenPoint p) {
+	void AppendPoint(LassoScreenPoint p, bool from_click) {
 		if (!points.empty() && points.back() == p) {
 			return;
 		}
@@ -287,6 +327,7 @@ private:
 			return;
 		}
 		points.push_back(p);
+		click_vertices.push_back(from_click ? 1 : 0);
 	}
 
 	bool& SwallowFlag(LassoButton button) {
@@ -294,11 +335,13 @@ private:
 	}
 
 	std::vector<LassoScreenPoint> points;
+	std::vector<std::uint8_t> click_vertices;
 	LassoScreenPoint cursor;
 	LassoMode mode = LassoMode::Replace;
 	std::int64_t sample_spacing_sq = 1;
 	bool active = false;
 	bool left_down = false;
+	bool freehand = false;
 	bool at_point_limit = false;
 	std::array<bool, 3> swallow_release {};
 };

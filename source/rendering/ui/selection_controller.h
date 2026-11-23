@@ -6,10 +6,12 @@
 #define RME_RENDERING_UI_SELECTION_CONTROLLER_H_
 
 #include <wx/event.h>
+#include <cstddef>
 #include <memory>
+#include <optional>
 #include <span>
-#include <string>
 #include <vector>
+#include "editor/lasso_tile_outline.h"
 #include "map/position.h"
 #include "rendering/ui/lasso_gesture.h"
 #include "rendering/ui/selection_picker.h"
@@ -18,7 +20,6 @@ class MapCanvas;
 class Editor;
 class Tile;
 class SelectionThread;
-class LassoPolygon;
 struct SelectionFloorScope;
 struct SelectionTileRect;
 
@@ -76,6 +77,17 @@ public:
 		return lasso;
 	}
 
+	// Rebuilds the lasso tile outline on input events. No mask, no chunk-cache interaction.
+	void UpdateLassoPreview();
+	// Cheap render-loop guard: drop a polygon built for a different view without allocating.
+	void ValidateLassoPreviewView();
+	[[nodiscard]] std::span<const LassoTileSegment> GetLassoOutlineSegments() const noexcept {
+		return outline_scratch.segments;
+	}
+	[[nodiscard]] bool HasLassoOutline() const noexcept {
+		return lasso_preview_polygon.has_value();
+	}
+
 private:
 	// View state the screen-space lasso points depend on; navigation is frozen while drawing.
 	struct LassoViewport {
@@ -95,7 +107,11 @@ private:
 	[[nodiscard]] LassoViewport CaptureLassoViewport() const;
 	void ApplyLassoEvent(LassoEvent event);
 	void SyncLassoMouseCapture();
-	void ExecuteLassoSelection(std::span<const LassoScreenPoint> points, LassoMode mode);
+	void FillLassoPolygonPoints(std::span<const LassoScreenPoint> points);
+	[[nodiscard]] LassoPoint ConvertLassoPoint(const LassoScreenPoint& point) const;
+	// Converts only the points appended since the last call; a cursor move costs O(delta).
+	void UpdateLassoTilePoints(std::span<const LassoScreenPoint> points, bool append_cursor, const LassoScreenPoint& cursor);
+	void ClearLassoPreview();	void ExecuteLassoSelection(std::span<const LassoScreenPoint> points, LassoMode mode);
 
 	[[nodiscard]] SelectionFloorScope ComputeFloorScope(const SelectionTileRect& rect, int floor) const;
 	[[nodiscard]] std::vector<std::unique_ptr<SelectionThread>> CreateSelectionThreads(const SelectionFloorScope& scope, const LassoPolygon* polygon, int polygon_offset, bool deselect) const;
@@ -119,7 +135,18 @@ private:
 
 	LassoGesture lasso;
 	LassoViewport lasso_viewport;
-	std::string lasso_status; // Last status text shown while drawing
+	std::optional<LassoPolygon> lasso_preview_polygon;
+	std::size_t lasso_preview_points = 0;
+	LassoScreenPoint lasso_preview_cursor {};
+	std::vector<LassoPoint> lasso_tile_points; // Reused screen -> polygon-tile conversion
+	std::size_t lasso_tile_points_converted = 0; // Sampled points already converted this gesture
+	LassoOutline::Scratch outline_scratch; // Reused boundary computation buffers
+
+	// Cached status key; the formatted string is only rebuilt when one of these changes.
+	LassoMode lasso_status_mode = LassoMode::Replace;
+	std::size_t lasso_status_points = 0;
+	bool lasso_status_at_limit = false;
+	bool lasso_status_valid = false;
 };
 
 #endif

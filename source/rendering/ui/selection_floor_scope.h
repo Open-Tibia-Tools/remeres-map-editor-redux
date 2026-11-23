@@ -109,6 +109,22 @@ struct SelectionBand {
 	return scope;
 }
 
+// Distance the selection rectangle may extend past the map edge on the current floor so the
+// compensated lower floors still cover the whole area. Box and lasso selection do not clamp.
+[[nodiscard]] constexpr int ComputeSelectionFloorShift(SelectionFloorScopeType type, bool compensated, int floor) noexcept {
+	if (!compensated || floor >= GROUND_LAYER) {
+		return 0;
+	}
+	switch (type) {
+		case SelectionFloorScopeType::AllFloors:
+		case SelectionFloorScopeType::VisibleFloors:
+			return GROUND_LAYER - floor;
+		case SelectionFloorScopeType::CurrentFloor:
+		default:
+			return 0;
+	}
+}
+
 // Splits the scope into worker bands along x, exactly as the box selection always did.
 [[nodiscard]] inline std::vector<SelectionBand> ComputeSelectionBands(const SelectionFloorScope& scope, int worker_threads) {
 	int threadcount = std::max(worker_threads, 1);

@@ -31,7 +31,12 @@ struct MainMapPixelPosition {
 
 class MainMapViewMath {
 public:
-	static int GetFloorTileOffset(int floor);
+	[[nodiscard]] static int GetFloorTileOffset(int floor) {
+		if (floor <= GROUND_LAYER) {
+			return GROUND_LAYER - floor;
+		}
+		return 0;
+	}
 	static int WorldTileToScrollPixel(int tile, int floor);
 	static MainMapVisibleRect GetVisibleRect(const MainMapViewport& viewport);
 	static MainMapPixelPosition ScreenToMapPixel(
@@ -51,6 +56,22 @@ public:
 		const MainMapViewport& viewport,
 		int* screen_x,
 		int* screen_y);
+	// Float variant without ceil quantization, for overlay drawers that need sub-DIP grid lines.
+	// Uses the uniform zoom * scale_factor divisor; the negative-delta asymmetry of MapToScreen
+	// is a round-trip pairing artifact and does not apply to overlays drawn inside the viewport.
+	[[nodiscard]] static void MapTileToScreenDIP(
+		int tile_x,
+		int tile_y,
+		int floor,
+		const MainMapViewport& viewport,
+		double* screen_x,
+		double* screen_y) {
+		const int floor_offset = GetFloorTileOffset(floor);
+		const double raw_x = (static_cast<double>(tile_x - floor_offset) * TILE_SIZE - viewport.view_scroll_x);
+		const double raw_y = (static_cast<double>(tile_y - floor_offset) * TILE_SIZE - viewport.view_scroll_y);
+		*screen_x = raw_x / (viewport.zoom * viewport.scale_factor);
+		*screen_y = raw_y / (viewport.zoom * viewport.scale_factor);
+	}
 };
 
 #endif

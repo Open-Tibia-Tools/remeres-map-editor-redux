@@ -1,7 +1,13 @@
 #include "editor/lasso_geometry.h"
+#include "editor/lasso_tile_outline.h"
+#include "rendering/core/map_view_math.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
 
+#include <algorithm>
+#include <cmath>
+#include <random>
 #include <set>
 #include <utility>
 #include <vector>
@@ -22,14 +28,37 @@ namespace {
 		return tiles;
 	}
 
+	// Reference point test straight from the even-odd rule, without row buckets.
+	bool ReferenceContainsPoint(const LassoPolygon& polygon, const LassoPoint& p) {
+		const auto vertices = polygon.Vertices();
+		if (vertices.size() < 3) {
+			return false;
+		}
+		bool inside = false;
+		for (std::size_t i = 0; i < vertices.size(); ++i) {
+			const LassoPoint& a = vertices[i];
+			const LassoPoint& b = vertices[(i + 1) % vertices.size()];
+			if (LassoGeometry::OnSegment(p, a, b)) {
+				return true;
+			}
+			if ((a.y > p.y) != (b.y > p.y)) {
+				const double crossing_x = a.x + (p.y - a.y) * (b.x - a.x) / (b.y - a.y);
+				if (p.x < crossing_x) {
+					inside = !inside;
+				}
+			}
+		}
+		return inside;
+	}
+
 	// Reference tile test straight from the rule, without row buckets.
 	bool ReferenceIntersectsTile(const LassoPolygon& polygon, int x, int y) {
 		const LassoPoint corners[4] = { { double(x), double(y) }, { x + 1.0, double(y) }, { x + 1.0, y + 1.0 }, { double(x), y + 1.0 } };
-		if (polygon.ContainsPoint({ x + 0.5, y + 0.5 })) {
+		if (ReferenceContainsPoint(polygon, { x + 0.5, y + 0.5 })) {
 			return true;
 		}
 		for (const LassoPoint& corner : corners) {
-			if (polygon.ContainsPoint(corner)) {
+			if (ReferenceContainsPoint(polygon, corner)) {
 				return true;
 			}
 		}
@@ -47,6 +76,22 @@ namespace {
 			}
 		}
 		return false;
+	}
+
+	// Seeded random polygon with occasional duplicate vertices (degenerate edges).
+	std::vector<LassoPoint> RandomPolygon(std::mt19937& rng, int vertex_count) {
+		std::uniform_real_distribution<double> coord(0.0, 64.0);
+		std::uniform_int_distribution<int> duplicate(0, 5);
+		std::vector<LassoPoint> points;
+		points.reserve(static_cast<std::size_t>(vertex_count));
+		for (int i = 0; i < vertex_count; ++i) {
+			if (!points.empty() && duplicate(rng) == 0) {
+				points.push_back(points.back());
+			} else {
+				points.push_back({ coord(rng), coord(rng) });
+			}
+		}
+		return points;
 	}
 
 	const std::vector<LassoPoint> kSquare = { { 2.0, 2.0 }, { 6.0, 2.0 }, { 6.0, 6.0 }, { 2.0, 6.0 } };
@@ -217,4 +262,126 @@ TEST_CASE("segment intersection is closed", "[lasso][geometry]") {
 	REQUIRE(SegmentsIntersect({ 0, 0 }, { 3, 0 }, { 2, 0 }, { 5, 0 })); // collinear overlap
 	REQUIRE_FALSE(SegmentsIntersect({ 0, 0 }, { 1, 0 }, { 2, 0 }, { 3, 0 }));
 	REQUIRE_FALSE(SegmentsIntersect({ 0, 0 }, { 1, 1 }, { 0, 1 }, { 0.25, 0.875 }));
+}
+
+TEST_CASE("tile outline matches the brute-force boundary", "[lasso][outline]") {
+	std::mt19937 rng(20261126);
+	for (int iteration = 0; iteration < 80; ++iteration) {
+		const std::vector<LassoPoint> points = RandomPolygon(rng, 3 + iteration % 10);
+		const LassoPolygon polygon(points);
+		LassoOutline::Scratch scratch;
+		LassoOutline::Compute(polygon, 0, 0, scratch); // no clamp
+		const auto& actual = scratch.segments;
+
+		// Brute-force reference: iterate the polygon's tile bbox + 1, emit sides where
+		// membership differs between neighbours.
+		std::vector<LassoTileSegment> expected;
+		const int min_x = static_cast<int>(std::floor(polygon.MinX())) - 2;
+		const int max_x = static_cast<int>(std::ceil(polygon.MaxX())) + 2;
+		const int min_y = static_cast<int>(std::floor(polygon.MinY())) - 2;
+		const int max_y = static_cast<int>(std::ceil(polygon.MaxY())) + 2;
+		for (int y = min_y; y <= max_y; ++y) {
+			for (int x = min_x; x <= max_x; ++x) {
+				if (!polygon.IntersectsTile(x, y)) {
+					continue;
+				}
+				if (!polygon.IntersectsTile(x - 1, y)) {
+					expected.push_back({ .x = x, .y = y, .horizontal = 0, .reversed = 1 });
+				}
+				if (!polygon.IntersectsTile(x + 1, y)) {
+					expected.push_back({ .x = x + 1, .y = y, .horizontal = 0, .reversed = 0 });
+				}
+				if (!polygon.IntersectsTile(x, y - 1)) {
+					expected.push_back({ .x = x, .y = y, .horizontal = 1, .reversed = 0 });
+				}
+				if (!polygon.IntersectsTile(x, y + 1)) {
+					expected.push_back({ .x = x, .y = y + 1, .horizontal = 1, .reversed = 1 });
+				}
+			}
+		}
+		std::sort(expected.begin(), expected.end());
+		std::vector<LassoTileSegment> sorted_actual(actual);
+		std::sort(sorted_actual.begin(), sorted_actual.end());
+		REQUIRE(sorted_actual == expected);
+	}
+}
+
+TEST_CASE("tile outline degenerates and clamps", "[lasso][outline]") {
+	const std::vector<LassoPoint> two = { { 2.0, 2.0 }, { 6.0, 2.0 } };
+	const LassoPolygon degenerate(two);
+	LassoOutline::Scratch scratch;
+	LassoOutline::Compute(degenerate, 100, 100, scratch);
+	REQUIRE(scratch.segments.empty());
+
+	// A square at (2,2)-(6,6) clamped to a 4x4 map should still emit its sides.
+	const LassoPolygon square(kSquare);
+	LassoOutline::Compute(square, 4, 4, scratch);
+	REQUIRE_FALSE(scratch.segments.empty());
+	// Every segment must be within the clamped map bounds.
+	for (const auto& s : scratch.segments) {
+		if (s.horizontal == 0) {
+			REQUIRE(s.x >= 0);
+			REQUIRE(s.x <= 4);
+			REQUIRE(s.y >= 0);
+			REQUIRE(s.y < 4);
+		} else {
+			REQUIRE(s.x >= 0);
+			REQUIRE(s.x < 4);
+			REQUIRE(s.y >= 0);
+			REQUIRE(s.y <= 4);
+		}
+	}
+}
+
+TEST_CASE("tile outline segments chain into closed loops", "[lasso][outline]") {
+	// A polygon entirely inside tile (0, 0) selects exactly that tile: 4 boundary segments.
+	const std::vector<LassoPoint> square = { { 0.1, 0.1 }, { 0.9, 0.1 }, { 0.9, 0.9 }, { 0.1, 0.9 } };
+	const LassoPolygon polygon(square);
+	LassoOutline::Scratch scratch;
+	LassoOutline::Compute(polygon, 0, 0, scratch);
+	REQUIRE(scratch.segments.size() == 4);
+
+	// Verify each segment's direction: left=up(reversed), right=down(forward),
+	// top=right(forward), bottom=left(reversed).
+	uint8_t found[4] = {};
+	for (const auto& seg : scratch.segments) {
+		if (seg.horizontal == 0 && seg.x == 0) {
+			REQUIRE(seg.reversed == 1); // left edge walks up
+			found[0] = 1;
+		} else if (seg.horizontal == 0 && seg.x == 1) {
+			REQUIRE(seg.reversed == 0); // right edge walks down
+			found[1] = 1;
+		} else if (seg.horizontal == 1 && seg.y == 0) {
+			REQUIRE(seg.reversed == 0); // top edge walks right
+			found[2] = 1;
+		} else if (seg.horizontal == 1 && seg.y == 1) {
+			REQUIRE(seg.reversed == 1); // bottom edge walks left
+			found[3] = 1;
+		}
+	}
+	REQUIRE(found[0] == 1);
+	REQUIRE(found[1] == 1);
+	REQUIRE(found[2] == 1);
+	REQUIRE(found[3] == 1);
+}
+
+TEST_CASE("MapTileToScreenDIP converts without ceil quantization", "[lasso][outline]") {
+	MainMapViewport viewport;
+	viewport.view_scroll_x = 100;
+	viewport.view_scroll_y = 50;
+	viewport.zoom = 2.0;
+	viewport.scale_factor = 1.0;
+	viewport.floor = 7; // GROUND_LAYER: offset 0
+
+	double sx, sy;
+	MainMapViewMath::MapTileToScreenDIP(5, 3, 7, viewport, &sx, &sy);
+	// (5 * 32 - 100) / (2 * 1) = 60 / 2 = 30
+	REQUIRE(sx == Catch::Approx(30.0));
+	REQUIRE(sy == Catch::Approx((3 * 32 - 50) / 2.0));
+
+	// Underground floor: GetFloorTileOffset(5) = 2, so tile 5 on floor 5 renders at tile (5-2)=3.
+	viewport.floor = 5;
+	MainMapViewMath::MapTileToScreenDIP(5, 3, 5, viewport, &sx, &sy);
+	REQUIRE(sx == Catch::Approx((3 * 32 - 100) / 2.0));
+	REQUIRE(sy == Catch::Approx((1 * 32 - 50) / 2.0));
 }

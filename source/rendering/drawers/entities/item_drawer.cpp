@@ -79,7 +79,7 @@ void ItemDrawer::BlitItem(SpriteBatch& sprite_batch, SpriteDrawer* sprite_drawer
 
 	if (!options.ingame) {
 		bool is_selected = item->isSelected();
-		if (!is_selected && !ephemeral && options.transient_selection_bounds) {
+		if (!ephemeral && !is_selected && options.transient_selection_bounds) {
 			is_selected = options.transient_selection_bounds->contains(pos.x, pos.y);
 		}
 		if (is_selected) {
