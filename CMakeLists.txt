@@ -60,6 +60,21 @@ find_package(Lua REQUIRED)
 find_package(sol2 CONFIG REQUIRED)
 find_package(cpr CONFIG REQUIRED)
 find_package(WebP CONFIG REQUIRED)
+find_package(NanoSVG CONFIG QUIET)
+
+# A static wxWidgets references NanoSVG, but its link list puts libnanosvg.a before the wx
+# archives, so GNU ld drops it. Whole-archive the files themselves (the imported targets
+# would clash with the plain nanosvgrast -> nanosvg dependency). MSVC does not care about order.
+function(rme_link_nanosvg target)
+	if(NOT TARGET NanoSVG::nanosvgrast)
+		return()
+	endif()
+	if(MSVC)
+		target_link_libraries(${target} PRIVATE NanoSVG::nanosvgrast NanoSVG::nanosvg)
+	else()
+		target_link_libraries(${target} PRIVATE "-Wl,--whole-archive" "$<TARGET_FILE:NanoSVG::nanosvgrast>" "$<TARGET_FILE:NanoSVG::nanosvg>" "-Wl,--no-whole-archive")
+	endif()
+endfunction()
 find_package(Catch2 3 CONFIG REQUIRED)
 
 # nanovg: try vcpkg/Conan first, fallback to ext/nanovg
@@ -132,6 +147,8 @@ else()
 	target_link_libraries(rme PRIVATE ${wxWidgets_LIBRARIES})
 endif()
 
+rme_link_nanosvg(rme)
+
 # Include directories (for legacy find modules)
 target_include_directories(rme PRIVATE
 	${Boost_INCLUDE_DIRS}
@@ -199,6 +216,8 @@ if(TARGET wxWidgets::wxWidgets)
 else()
 	target_link_libraries(test_universal_rotator PRIVATE ${wxWidgets_LIBRARIES})
 endif()
+
+rme_link_nanosvg(test_universal_rotator)
 
 target_include_directories(test_universal_rotator PRIVATE
 	${Boost_INCLUDE_DIRS}
