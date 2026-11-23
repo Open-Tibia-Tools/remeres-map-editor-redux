@@ -262,7 +262,7 @@ public:
 
 	void OnSelectionTypeChange(wxCommandEvent& event);
 	void OnSelectionMethodChange(wxCommandEvent& event);
-	void OnToggleMagicWand(wxCommandEvent& event);
+	void OnMagicWandInfo(wxCommandEvent& event);
 
 	void OnCopy(wxCommandEvent& event);
 	void OnCut(wxCommandEvent& event);

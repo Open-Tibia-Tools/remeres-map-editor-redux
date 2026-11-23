@@ -1,34 +1,40 @@
-# Magic wand selection: connected positions and one-step select actions
+# Magic wand selection: picked targets, visible-area plans and one-step select actions
 
 ## 1. Pattern & Key Files
 
-- `source/editor/connected_positions.h`: pure geometry (no map, tile or wx). `collect` is a four-connected, single-floor flood with a membership predicate and a cancel callback. `borderRing` returns the eight-neighbour ring around a patch.
-- `source/editor/operations/magic_wand.{h,cpp}`: picks the target (doodad > wall > ground), collects positions, then builds one `ACTION_SELECT`. Also holds the global toggle (`Config::MAGIC_WAND_SELECTION`).
-- `source/rendering/ui/selection_controller.cpp`: a click without Shift or Alt runs the wand while the toggle is on. The release is consumed.
-- `source/rendering/ui/keyboard_handler.cpp`: Tab on the map toggles the tool. `Selection > Selection Method > Magic Wand (Tab)` mirrors it.
-- `tests/test_magic_wand.cpp`: Catch2 cases for the flood and the ring.
+- `source/editor/operations/magic_wand_plan.{h,cpp}`: pure decision layer. `ResolveTarget` turns a `WandHit` from `SelectionPicker` into a typed target (ground/wall/carpet/table/doodad brush, same-name item family or creature name), `BuildPlan` collects positions, `SelectMatching`/`SameSelection` decide what changes on a tile.
+- `source/editor/operations/magic_wand.cpp`: the apply half. One `ACTION_SELECT`, one `Change` per changed tile, committed through `Selection::commitPreparedAction`.
+- `source/editor/connected_positions.h` + `source/map/position_rect.h`: flood fill and border ring, both bounded by a `PositionRect`.
+- `source/rendering/ui/selection_controller.cpp` / `keyboard_handler.cpp` / `map_display.cpp`: hold-Tab gesture, picker hit, visible rect, release consumption.
+- `tests/test_magic_wand_plan.cpp`: target resolution, families, collectors, viewport, cancellation and item-level selection.
 
 ## 2. When to Use It
 
-- Use `ConnectedPositions` for any "spread from a click" feature and keep map access in the predicate. Unit-test the geometry, not the predicate.
-- When one tile needs several items selected at once, build the `ACTION_SELECT` yourself: take one `deepCopy` per tile, select on the copy, call `addChange` once, then commit with `Selection::commitPreparedAction`. That call keeps the Lua `selectionChange` event in step with `finish()`.
-- Do not loop `Selection::add(tile, item)` inside a `start()`/`finish()` session for that. Each call copies the live tile, so only the last item of a tile survives. With `BORDER_IS_GROUND`, it also selects grounds you did not ask for.
+- Hold **Tab** and click: the target is whatever `SelectionPicker` reports under the cursor, so Pixel Perfect and Standard selection both work and the click order matches what the user sees (top item before ground). Held Tab owns the click in **drawing mode too**, so a brush never paints while it is down.
+- Ctrl adds to the selection. In selection mode Shift still drags a rectangle and Alt still draws a lasso; in drawing mode the wand always runs. Tab is a held modifier, not a toggle.
+- Reach for `ConnectedPositions` for any "spread from a click" feature and keep map access in the caller's lookup.
+- Build one `ACTION_SELECT` yourself when a tile needs several entities selected: one `deepCopy`, select on the copy, one `addChange`.
 
 ## 3. Minimal Usage
 
 ```cpp
-auto patch = ConnectedPositions::collect(origin,
-    [&](const Position& p) { const Tile* t = map.getTile(p); return t && t->getGroundBrush() == ground; },
-    [&](size_t found) { return progress.Tick("Finding connected tiles...", found); });
-if (!patch) return; // cancelled: nothing changed
-const PositionVector ring = ConnectedPositions::borderRing(*patch);
+const auto target = MagicWand::ResolveTarget(hit); // WandHit from SelectionPicker
+if (!target || !hit.tile) return;                   // nothing selectable under the cursor
+const auto plan = MagicWand::BuildPlan(*target, lookup, hit.tile->getPosition(), viewport,
+    [&](std::string_view phase, size_t done, size_t total) { return progress.Tick(phase, done, total); });
+if (!plan) return; // cancelled: nothing changed
 ```
 
 ## 4. Invariants & Pitfalls
 
-- Collect positions while the progress bar may pump events. Fetch `Tile*` only afterwards, and commit without pumping again.
-- A live client gets no progress bar, because pumping socket events could close its editor mid-search.
+- Every search is clamped to the visible floor rectangle plus a 2-tile tolerance (and the +1 tile from the client-size corner), including the border ring.
+- Selection identity is the entity name (brush name, item definition name or creature name). A wall, a doodad and a raw item that share a name join the same connected selection; brush ownership still covers its own variants and borders.
+- Doodads, creatures and same-name item families are scattered, so they scan the whole visible rectangle; ground, wall, carpet and table brushes flood four-connected.
+- Items without a brush (raw, decorations, identical-looking variants) are matched by `ItemDefinitionView::name()`; nameless items fall back to their id so unrelated items never group.
+- Doodads can live in `Tile::ground` (`Tile::addItem` moves ground-typed items there): target resolution, collection and selection all check both slots.
+- Spawns are deliberately out of scope; a spawn hit resolves the tile's top item instead.
+- Collect positions while the progress bar may pump events; fetch `Tile*` only afterwards and never keep a map iterator across a tick. The doodad/creature scan iterates the visible rectangle, never `map.tiles()`.
+- A live client gets no progress bar (pumping socket events could close its editor); closing any bar broadcasts the live-server operation as finished.
 - Cancelling returns before any `Action` exists, so the previous selection stays.
-- Replace mode also adds deselect copies for previously selected tiles outside the target. `TileOperations::deselect` on those copies drops their spawn/creature selection too.
-- `ACTION_SELECT` changes stay local: they are not sent to live peers and do not mark the map modified.
-- Doodads are not connected by nature. The doodad target scans the whole current floor once.
+- `Selection::commitPreparedAction`/`finish` decide the Lua `selectionChange` event from the committed action size, not from the flag: `Action::commit` runs a nested INTERNAL session that clears it.
+- The replace tool lists only entities whose `isSelected()` is set, and its Selection scope replaces only those entities: the context menu seeds rules from the selected items, and the engine (preview and execution) ignores unselected ground and stack items on the touched tiles. A container brings its contents into scope. Rectangle selections select the whole tile, so their result is unchanged.

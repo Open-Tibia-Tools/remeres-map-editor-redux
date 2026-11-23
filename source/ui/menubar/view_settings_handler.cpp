@@ -4,7 +4,6 @@
 #include "ui/gui.h"
 #include "app/preferences.h"
 #include "map/map.h"
-#include "editor/operations/magic_wand.h"
 #include <format>
 
 ViewSettingsHandler::ViewSettingsHandler(MainMenuBar* menuBar) :
@@ -250,6 +249,6 @@ void ViewSettingsHandler::OnSelectionMethodChange(wxCommandEvent& WXUNUSED(event
 	g_gui.RefreshView();
 }
 
-void ViewSettingsHandler::OnToggleMagicWand(wxCommandEvent& WXUNUSED(event)) {
-	MagicWand::SetToolEnabled(menuBar->IsItemChecked(MenuBar::SELECT_MAGIC_WAND));
+void ViewSettingsHandler::OnMagicWandInfo(wxCommandEvent& WXUNUSED(event)) {
+	g_gui.SetStatusText("Magic wand: hold Tab and click a ground, wall, carpet, table, doodad, creature or item. Ctrl adds to the selection. Works in drawing mode too.");
 }

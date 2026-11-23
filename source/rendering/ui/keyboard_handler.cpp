@@ -26,7 +26,6 @@
 #include "editor/hotkey_manager.h"
 #include "editor/editor.h"
 #include "editor/operations/selection_operations.h"
-#include "editor/operations/magic_wand.h"
 #include "brushes/brush.h"
 #include "brushes/town/town_temple_brush.h"
 #include "rendering/ui/popup_action_handler.h"
@@ -82,7 +81,8 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 				event.Skip();
 				break;
 			}
-			MagicWand::SetToolEnabled(!MagicWand::IsToolEnabled());
+			// Held modifier: while down, a canvas click runs one magic wand selection.
+			canvas->SetWandHeld(true);
 			break;
 		}
 		case WXK_DELETE: {
@@ -146,6 +146,9 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 
 void KeyboardHandler::OnKeyUp(MapCanvas* canvas, wxKeyEvent& event) {
 	canvas->keyCode = WXK_NONE;
+	if (event.GetKeyCode() == WXK_TAB) {
+		canvas->SetWandHeld(false);
+	}
 	// The Alt key-up finalizes the lasso. Key-up events are never skipped here, so on MSW the
 	// WM_SYSKEYUP does not reach DefWindowProc and Alt does not activate the menu bar.
 	if (canvas->selection_controller) {

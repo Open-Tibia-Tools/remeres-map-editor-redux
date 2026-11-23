@@ -6,6 +6,7 @@
 #define RME_EDITOR_CONNECTED_POSITIONS_H
 
 #include "map/position.h"
+#include "map/position_rect.h"
 
 #include <array>
 #include <cstdint>
@@ -24,10 +25,19 @@ namespace ConnectedPositions {
 	// Four-connected flood fill on the origin's floor. `belongs(position)` decides membership;
 	// non-members stop the flood, so a void or foreign tile is a wall. `keep_going(found_count)`
 	// is called after every accepted position; returning false cancels and yields std::nullopt.
+	// When `bounds` is set the flood never leaves it, which keeps a wand search inside the viewport.
 	template <typename Belongs, typename KeepGoing>
-	[[nodiscard]] std::optional<PositionVector> collect(const Position& origin, Belongs&& belongs, KeepGoing&& keep_going) {
+	[[nodiscard]] std::optional<PositionVector> collect(
+		const Position& origin,
+		Belongs&& belongs,
+		KeepGoing&& keep_going,
+		const PositionRect* bounds = nullptr
+	) {
 		PositionVector found;
 		if (!origin.isValid()) {
+			return found;
+		}
+		if (bounds && !bounds->contains(origin)) {
 			return found;
 		}
 
@@ -46,7 +56,10 @@ namespace ConnectedPositions {
 			}
 			for (const Position& step : steps) {
 				const Position next = position + step;
-				if (next.isValid() && visited.insert(planarKey(next)).second) {
+				if (!next.isValid() || (bounds && !bounds->contains(next))) {
+					continue;
+				}
+				if (visited.insert(planarKey(next)).second) {
 					pending.push_back(next);
 				}
 			}
@@ -56,7 +69,7 @@ namespace ConnectedPositions {
 
 	// Positions eight-adjacent to the patch that are not part of it, each listed once.
 	// All patch positions are expected on one floor.
-	[[nodiscard]] inline PositionVector borderRing(std::span<const Position> patch) {
+	[[nodiscard]] inline PositionVector borderRing(std::span<const Position> patch, const PositionRect* bounds = nullptr) {
 		std::unordered_set<uint64_t> in_patch;
 		in_patch.reserve(patch.size());
 		for (const Position& position : patch) {
@@ -72,7 +85,7 @@ namespace ConnectedPositions {
 						continue;
 					}
 					const Position next(position.x + dx, position.y + dy, position.z);
-					if (!next.isValid()) {
+					if (!next.isValid() || (bounds && !bounds->contains(next))) {
 						continue;
 					}
 					const uint64_t key = planarKey(next);

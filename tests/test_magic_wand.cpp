@@ -128,3 +128,29 @@ TEST_CASE("border ring skips positions outside the map", "[magic_wand]") {
 	const PositionVector ring = ConnectedPositions::borderRing(patch);
 	REQUIRE(KeysOf(ring) == std::set<Key> { { 1, 0, 7 }, { 0, 1, 7 }, { 1, 1, 7 } });
 }
+
+TEST_CASE("flood never leaves the bounds", "[magic_wand]") {
+	std::set<Key> members;
+	for (int x = 10; x <= 14; ++x) {
+		members.insert({ x, 10, 7 });
+	}
+	const PositionRect bounds { 10, 10, 11, 10 };
+	const auto found = ConnectedPositions::collect(Position(10, 10, 7), InSet(members), Always(), &bounds);
+	REQUIRE(found);
+	REQUIRE(KeysOf(*found) == std::set<Key> { { 10, 10, 7 }, { 11, 10, 7 } });
+}
+
+TEST_CASE("flood from a member outside the bounds is empty", "[magic_wand]") {
+	const std::set<Key> members { { 10, 10, 7 }, { 11, 10, 7 } };
+	const PositionRect bounds { 11, 10, 12, 10 };
+	const auto found = ConnectedPositions::collect(Position(10, 10, 7), InSet(members), Always(), &bounds);
+	REQUIRE(found);
+	REQUIRE(found->empty());
+}
+
+TEST_CASE("border ring drops positions outside the bounds", "[magic_wand]") {
+	const PositionVector patch { Position(10, 10, 7) };
+	const PositionRect bounds { 10, 10, 11, 11 };
+	const PositionVector ring = ConnectedPositions::borderRing(patch, &bounds);
+	REQUIRE(KeysOf(ring) == std::set<Key> { { 11, 10, 7 }, { 10, 11, 7 }, { 11, 11, 7 } });
+}

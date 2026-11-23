@@ -27,6 +27,50 @@
 
 #include <optional>
 
+namespace {
+
+	constexpr int kWandViewportTolerance = 2;
+
+	MagicWand::WandHit ToWandHit(const SelectionHit& hit) {
+		MagicWand::WandHit wand;
+		wand.tile = hit.tile;
+		switch (hit.kind) {
+			case SelectionHitKind::Ground:
+				wand.kind = MagicWand::HitKind::Ground;
+				wand.item = hit.item;
+				break;
+			case SelectionHitKind::Item:
+				wand.kind = MagicWand::HitKind::Item;
+				wand.item = hit.item;
+				break;
+			case SelectionHitKind::Creature:
+				wand.kind = MagicWand::HitKind::Creature;
+				wand.creature = hit.creature;
+				break;
+			case SelectionHitKind::Spawn:
+			case SelectionHitKind::None:
+				// Spawns are outside the wand's scope; the tile decides instead.
+				break;
+		}
+		return wand;
+	}
+
+	// Bounding box of the visible part of `floor`, plus a small tolerance so a selection that
+	// continues past the edge still has its border ring and edge tiles handled.
+	PositionRect VisibleFloorRect(MapCanvas& canvas, int floor) {
+		const wxSize size = canvas.GetClientSize();
+		int left = 0;
+		int top = 0;
+		int right = 0;
+		int bottom = 0;
+		canvas.ScreenToMap(0, 0, floor, &left, &top);
+		canvas.ScreenToMap(size.x, size.y, floor, &right, &bottom);
+		const PositionRect rect = PositionRect::fromCorners(Position(left, top, floor), Position(right, bottom, floor));
+		return rect.expanded(kWandViewportTolerance).clampedToMap();
+	}
+
+} // namespace
+
 SelectionController::SelectionController(MapCanvas* canvas, Editor& editor) :
 	canvas(canvas),
 	editor(editor),
@@ -71,11 +115,6 @@ void SelectionController::HandleClick(const Position& mouse_map_pos, const Selec
 			// Start dragging
 			dragging = true;
 			drag_start_pos = mouse_map_pos;
-		} else if (!shift_down && !alt_down && MagicWand::IsToolEnabled()) {
-			// Shift keeps the rectangle selection available while the wand is on.
-			Reset();
-			magic_wand_click = true;
-			MagicWand::Select(editor, mouse_map_pos, ctrl_down);
 		} else {
 			boundbox_selection = false;
 			if (shift_down) {
@@ -183,6 +222,26 @@ void SelectionController::HandleClick(const Position& mouse_map_pos, const Selec
 			}
 		}
 	}
+}
+
+void SelectionController::HandleWandClick(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, bool ctrl_down) {
+	// Held Tab owns the left press in every mode, so a drawing-mode click can never paint.
+	Reset();
+	magic_wand_click = true;
+	MagicWand::WandHit wand = ToWandHit(PickAt(mouse_map_pos, pixel_offset));
+	if (!wand.tile) {
+		wand.tile = editor.map.getTile(mouse_map_pos);
+	}
+	MagicWand::Select(editor, wand, VisibleFloorRect(*canvas, mouse_map_pos.z), ctrl_down);
+}
+
+bool SelectionController::ConsumeWandRelease() {
+	if (!magic_wand_click) {
+		return false;
+	}
+	Reset();
+	editor.actionQueue->resetTimer();
+	return true;
 }
 
 void SelectionController::HandleDrag(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down) {
@@ -501,7 +560,14 @@ void SelectionController::HandlePropertiesRelease(const Position& mouse_map_pos,
 	boundbox_selection = false;
 }
 
-void SelectionController::HandleDoubleClick(const Position& mouse_map_pos) {
+void SelectionController::HandleDoubleClick(const Position& mouse_map_pos, bool shift_down, bool alt_down) {
+	if (canvas->IsWandHeld() && !shift_down && !alt_down) {
+		// The first press of the double click already ran the wand; only its release is consumed.
+		Reset();
+		magic_wand_click = true;
+		return;
+	}
+
 	dragging = false;
 	boundbox_selection = false;
 	if (g_settings.getInteger(Config::DOUBLECLICK_PROPERTIES)) {

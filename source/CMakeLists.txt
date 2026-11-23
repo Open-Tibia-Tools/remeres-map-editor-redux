@@ -549,6 +549,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/draw_operations.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/selection_operations.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/magic_wand.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/magic_wand_plan.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/map_version_changer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/unreachable_cleaner.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/spawn_validator.cpp

@@ -6,7 +6,6 @@
 
 #include "ui/tile_context_actions.h"
 
-#include <set>
 #include <vector>
 
 #include "editor/editor.h"
@@ -21,32 +20,19 @@
 #include "ui/gui.h"
 #include "ui/gui_ids.h"
 #include "ui/map_tab.h"
+#include "ui/replace_tool/map_item_collector.h"
 #include "ui/tile_properties/tile_properties_panel.h"
 
 namespace {
 
 	void ShowAdvancedReplace(Editor& editor) {
-		std::set<uint16_t> uniqueIds;
-		for (Tile* tile : editor.selection.getTiles()) {
-			if (tile->ground) {
-				uint16_t id = tile->ground->getID();
-				if (id != 0) {
-					uniqueIds.insert(id);
-				}
-			}
-			for (const auto& item : tile->items) {
-				uint16_t id = item->getID();
-				if (id != 0) {
-					uniqueIds.insert(id);
-				}
-			}
-		}
-
-		if (uniqueIds.empty()) {
+		// Only the entities that are actually selected: a wand selection marks single items, so
+		// seeding rules with every ground and item of the touched tiles would be wrong.
+		const std::vector<uint16_t> sortedIds = rme::replace_tool::MapItemCollector::CollectSelectedItemIds(editor.selection.getTiles());
+		if (sortedIds.empty()) {
 			return;
 		}
 
-		std::vector<uint16_t> sortedIds(uniqueIds.begin(), uniqueIds.end());
 		MapTab* tab = g_gui.GetCurrentMapTab();
 		if (tab) {
 			tab->ShowAdvancedReplaceForSelection(sortedIds);

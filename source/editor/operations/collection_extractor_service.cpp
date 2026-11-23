@@ -151,25 +151,24 @@ CollectionStagingContent CollectionExtractorService::ExtractFromSelection(Editor
 	content.itemIds = rme::replace_tool::MapItemCollector::CollectSelectionItemIds(editor);
 	std::ranges::sort(content.itemIds);
 
-	// 2. Composite brushes from selection tiles
+	// 2. Composite brushes from the selected entities (same rule as the item IDs above, so staged
+	// IDs and staged brushes cannot disagree).
 	std::vector<Brush*> candidates;
 	for (Tile* tile : editor->selection.getTiles()) {
 		if (!tile) {
 			continue;
 		}
 
-		if (tile->hasGround()) {
+		if (tile->ground && tile->ground->isSelected()) {
 			if (GroundBrush* gb = tile->getGroundBrush()) {
 				candidates.push_back(gb);
-			} else if (tile->ground) {
-				if (Brush* b = tile->ground->getBrush()) {
-					candidates.push_back(b);
-				}
+			} else if (Brush* b = tile->ground->getBrush()) {
+				candidates.push_back(b);
 			}
 		}
 
 		for (const auto& item : tile->items) {
-			if (!item) {
+			if (!item || !item->isSelected()) {
 				continue;
 			}
 			if (Brush* b = item->getBrush()) {
@@ -180,7 +179,7 @@ CollectionStagingContent CollectionExtractorService::ExtractFromSelection(Editor
 			}
 		}
 
-		if (tile->creature) {
+		if (tile->creature && tile->creature->isSelected()) {
 			CreatureBrush* cb = tile->creature->getBrush();
 			if (!cb) {
 				if (CreatureType* ct = g_creatures[tile->creature->getName()]) {
