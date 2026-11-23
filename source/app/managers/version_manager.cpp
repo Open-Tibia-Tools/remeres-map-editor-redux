@@ -127,8 +127,6 @@ const ClientVersion& VersionManager::GetCurrentVersion() const {
 bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& warnings) {
 	g_gui.gfx.client_version = getLoadedVersion();
 
-	// OTFI loading removed. Metadata and sprite files are configured via clients.toml or defaults in ClientVersion.
-
 	g_loading.CreateLoadBar("Loading asset files");
 	g_loading.SetLoadDone(0, "Loading canonical asset bundle...");
 

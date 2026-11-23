@@ -26,7 +26,10 @@
 
 #include "app/main.h"
 #include "app/settings.h"
+#include "app/otfi_descriptor.h"
 #include "item_definitions/core/item_definition_types.h"
+
+#include <optional>
 
 using ClientVersionID = std::string;
 using OtbVersionID = int;
@@ -455,6 +458,21 @@ public:
 		return sprites_path;
 	}
 
+	// Set by hasValidPaths() when the assets folder holds an .otfi file. It is never saved
+	// back to clients.toml.
+	const std::optional<OtfiDescriptor>& getOtfi() const {
+		return otfi;
+	}
+
+	// DAT/SPR feature flags for loading: the .otfi file when one was found, else clients.toml.
+	struct DatSprFeatures {
+		bool extended = false;
+		bool transparency = false;
+		bool frame_durations = false;
+		bool frame_groups = false;
+	};
+	DatSprFeatures getEffectiveDatSprFeatures() const;
+
 private:
 	bool is_dirty = false;
 
@@ -500,6 +518,7 @@ private:
 	FileName client_path;
 	wxFileName metadata_path;
 	wxFileName sprites_path;
+	std::optional<OtfiDescriptor> otfi;
 	std::string description;
 	ItemDefinitionMode item_definition_mode = ItemDefinitionMode::DatOtb;
 

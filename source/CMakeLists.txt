@@ -2,6 +2,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/app/application.h
     ${CMAKE_CURRENT_LIST_DIR}/app/client_asset_detector.h
     ${CMAKE_CURRENT_LIST_DIR}/app/client_version.h
+    ${CMAKE_CURRENT_LIST_DIR}/app/otfi_descriptor.h
     ${CMAKE_CURRENT_LIST_DIR}/app/definitions.h
     ${CMAKE_CURRENT_LIST_DIR}/app/extension.h
     ${CMAKE_CURRENT_LIST_DIR}/app/main.h
@@ -484,6 +485,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/app/application.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/client_asset_detector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/client_version.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/app/otfi_descriptor.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/extension.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/preferences/preferences_layout.cpp

@@ -484,10 +484,11 @@ bool DatItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatCatalo
 	}
 
 	catalog = {};
-	catalog.is_extended = input.client_version->isExtended();
-	catalog.has_transparency = input.client_version->isTransparent();
-	catalog.has_frame_durations = input.client_version->hasFrameDurations();
-	catalog.has_frame_groups = input.client_version->hasFrameGroups();
+	const auto features = input.client_version->getEffectiveDatSprFeatures();
+	catalog.is_extended = features.extended;
+	catalog.has_transparency = features.transparency;
+	catalog.has_frame_durations = features.frame_durations;
+	catalog.has_frame_groups = features.frame_groups;
 
 	if (!file.getU32(catalog.signature)) {
 		error = "Failed to read DAT signature.";

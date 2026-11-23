@@ -34,6 +34,12 @@
 #include <wx/dir.h>
 #include <wx/filename.h>
 
+#include <spdlog/spdlog.h>
+
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+
 // Static methods to load/save
 
 ClientVersion::VersionList ClientVersion::client_versions;
@@ -476,20 +482,60 @@ FileName ClientVersion::getLocalDataPath() const {
 	return f;
 }
 
+namespace {
+
+	std::optional<OtfiDescriptor> loadOtfi(const FileName& client_path) {
+		wxDir dir(client_path.GetFullPath());
+		wxString otfi_name;
+		if (!dir.IsOpened() || !dir.GetFirst(&otfi_name, "*.otfi", wxDIR_FILES)) {
+			return std::nullopt;
+		}
+
+		const wxFileName otfi_path(client_path.GetFullPath(), otfi_name);
+		std::ifstream file(std::filesystem::path(otfi_path.GetFullPath().ToStdWstring()), std::ios::binary);
+		if (!file) {
+			spdlog::warn("Could not open {}, using clients.toml settings", otfi_path.GetFullPath().utf8_string());
+			return std::nullopt;
+		}
+		const std::string text((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+		std::string error;
+		auto otfi = ParseOtfi(text, error);
+		if (!otfi) {
+			spdlog::warn("Ignoring {}: {}", otfi_path.GetFullPath().utf8_string(), error);
+			return std::nullopt;
+		}
+		spdlog::info(
+			"Using {}: extended={} transparency={} frame-durations={} frame-groups={} metadata-file={} sprites-file={}",
+			otfi_path.GetFullPath().utf8_string(), otfi->extended, otfi->transparency, otfi->frame_durations, otfi->frame_groups, otfi->metadata_file, otfi->sprites_file
+		);
+		return otfi;
+	}
+
+} // namespace
+
+ClientVersion::DatSprFeatures ClientVersion::getEffectiveDatSprFeatures() const {
+	if (otfi) {
+		return { otfi->extended, otfi->transparency, otfi->frame_durations, otfi->frame_groups };
+	}
+	return { is_extended, is_transparent, has_frame_durations, has_frame_groups };
+}
+
 bool ClientVersion::hasValidPaths() {
 	if (!client_path.DirExists()) {
 		return false;
 	}
 
-	wxDir dir(client_path.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
+	otfi = isProtobuf() ? std::nullopt : loadOtfi(client_path);
+	if (otfi) {
+		metadata_path = wxFileName(client_path.GetFullPath(), wxString::FromUTF8(otfi->metadata_file));
+		sprites_path = wxFileName(client_path.GetFullPath(), wxString::FromUTF8(otfi->sprites_file));
+	} else {
+		metadata_path = wxFileName(client_path.GetFullPath(), wxString(metadata_file));
+		sprites_path = wxFileName(client_path.GetFullPath(), wxString(sprites_file));
+	}
 
-	// OTFI loading removed (deprecated)
-	// Metadata and sprites paths are now set in loadVersionsFromTOML or defaulted.
-	// We just verify they exist here.
-	metadata_path = wxFileName(client_path.GetFullPath(), wxString(metadata_file));
-	sprites_path = wxFileName(client_path.GetFullPath(), wxString(sprites_file));
-
-	if (!metadata_path.FileExists() || !sprites_path.FileExists()) {
+	if (!otfi && (!metadata_path.FileExists() || !sprites_path.FileExists())) {
 		// protobuf should stick to catalog-content.json and the appearances file it references,
 		// whose hashed name changes with every client update
 		if (isProtobuf()) {
