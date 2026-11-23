@@ -2,6 +2,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <vector>
+
 namespace {
 	DetectedItemFacts BorderPiece() {
 		DetectedItemFacts item;
@@ -62,4 +64,49 @@ TEST_CASE("unpassable grounds, meta items and non-grounds are not floors", "[det
 	CHECK(ClassifyGroundBorder(meta) == GroundBorderState::NotAFloor);
 
 	CHECK(ClassifyGroundBorder(DetectedItemFacts {}) == GroundBorderState::NotAFloor);
+}
+
+TEST_CASE("unpassable missile-blocking grounds and border pieces nobody uses are mountain pieces", "[detected]") {
+	DetectedItemFacts rock;
+	rock.ground = true;
+	rock.unpassable = true;
+	rock.block_missiles = true;
+	CHECK(ClassifyUnregisteredMountain(rock) == MountainPiece::Ground);
+
+	DetectedItemFacts side;
+	side.ground_border_piece = true;
+	side.unpassable = true;
+	side.block_missiles = true;
+	CHECK(ClassifyUnregisteredMountain(side) == MountainPiece::Border);
+
+	auto owned = rock;
+	owned.brush_owned = true;
+	CHECK(ClassifyUnregisteredMountain(owned) == MountainPiece::None);
+
+	auto registered = side;
+	registered.registered_border = true;
+	CHECK(ClassifyUnregisteredMountain(registered) == MountainPiece::None);
+
+	auto water = rock;
+	water.block_missiles = false;
+	CHECK(ClassifyUnregisteredMountain(water) == MountainPiece::None);
+
+	DetectedItemFacts wall;
+	wall.unpassable = true;
+	wall.block_missiles = true;
+	CHECK(ClassifyUnregisteredMountain(wall) == MountainPiece::None);
+}
+
+TEST_CASE("broken mountain brushes are described", "[detected]") {
+	const std::vector<MountainBrushItem> fine = { { 919, true, true } };
+	CHECK(DescribeBrokenMountainBrush("mountain", fine).empty());
+	CHECK(DescribeBrokenMountainBrush("Icy Mountain", {}) == "it has no ground items");
+
+	const std::vector<MountainBrushItem> missing = { { 919, true, true }, { 30000, false, false } };
+	CHECK(DescribeBrokenMountainBrush("dirt mountain ground", missing) == "item 30000 does not exist");
+
+	const std::vector<MountainBrushItem> not_ground = { { 1234, true, false } };
+	CHECK(DescribeBrokenMountainBrush("mountain", not_ground) == "item 1234 is not a ground");
+
+	CHECK(DescribeBrokenMountainBrush("grass", {}).empty());
 }

@@ -14,6 +14,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <format>
+
 #include <string>
 #include <utility>
 #include <vector>
@@ -38,6 +40,7 @@ namespace {
 			.unpassable = item.hasFlag(ItemFlag::Unpassable),
 			.ground_brush_owned = ground_brush != nullptr,
 			.ground_brush_has_border = ground_brush != nullptr && HasAnyBorder(*ground_brush),
+			.block_missiles = item.hasFlag(ItemFlag::BlockMissiles),
 		};
 	}
 
@@ -61,16 +64,43 @@ namespace {
 		}
 	}
 
+	// Ground brushes named "mountain" that cannot paint are reported and kept out of the
+	// palettes for this session. The brush itself stays registered, so maps that use its
+	// items still load and render.
+	void DropBrokenMountainBrushes(std::vector<std::string>& warnings) {
+		for (const auto& [name, owned] : g_brushes.getMap()) {
+			const GroundBrush* ground = owned ? owned->as<GroundBrush>() : nullptr;
+			if (!ground) {
+				continue;
+			}
+			std::vector<MountainBrushItem> items;
+			for (const auto& block : ground->getBorderItems()) {
+				const ItemDefinitionView item = g_item_definitions.get(block.id);
+				items.push_back(MountainBrushItem { .server_id = block.id, .exists = static_cast<bool>(item), .ground = item && item.isGroundTile() });
+			}
+			const std::string reason = DescribeBrokenMountainBrush(ground->getName(), items);
+			if (reason.empty()) {
+				continue;
+			}
+			const size_t removed = g_materials.paletteCatalog().removeBrushFromTilesets(ground);
+			warnings.push_back(std::format("Mountain brush \"{}\" is broken ({}); hidden from {} tileset(s)", ground->getName(), reason, removed));
+		}
+	}
+
 } // namespace
 
-void AddDetectedPalettes() {
+void AddDetectedPalettes(std::vector<std::string>& warnings) {
 	if (!g_settings.getBoolean(Config::SHOW_DETECTED_PALETTES)) {
 		return;
 	}
 
+	DropBrokenMountainBrushes(warnings);
+
 	DetectedTileset unregistered_borders { .name = "Unregistered borders" };
 	DetectedTileset grounds_without_brush { .name = "Grounds without ground brush" };
 	DetectedTileset brushes_without_border { .name = "Ground brushes without border" };
+	DetectedTileset mountain_grounds { .name = "Unregistered mountain grounds" };
+	DetectedTileset mountain_borders { .name = "Unregistered mountain borders" };
 
 	for (const ServerItemId id : g_item_definitions.allIds()) {
 		if (id < 100) {
@@ -82,9 +112,20 @@ void AddDetectedPalettes() {
 		}
 		const DetectedItemFacts facts = CollectFacts(item);
 		DetectedTileset* target = nullptr;
-		if (IsUnregisteredBorder(facts)) {
+		switch (ClassifyUnregisteredMountain(facts)) {
+			case MountainPiece::Ground:
+				target = &mountain_grounds;
+				break;
+			case MountainPiece::Border:
+				target = &mountain_borders;
+				break;
+			case MountainPiece::None:
+				break;
+		}
+		if (!target && IsUnregisteredBorder(facts)) {
 			target = &unregistered_borders;
-		} else {
+		}
+		if (!target) {
 			switch (ClassifyGroundBorder(facts)) {
 				case GroundBorderState::NoGroundBrush:
 					target = &grounds_without_brush;
@@ -106,4 +147,5 @@ void AddDetectedPalettes() {
 
 	AddPalette("Detected Borders", { std::move(unregistered_borders) });
 	AddPalette("Detected Grounds", { std::move(grounds_without_brush), std::move(brushes_without_border) });
+	AddPalette("Detected Mountains", { std::move(mountain_grounds), std::move(mountain_borders) });
 }

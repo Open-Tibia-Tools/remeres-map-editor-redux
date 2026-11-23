@@ -161,7 +161,7 @@ bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& wa
 	g_loading.SetLoadDone(70, "Finishing...");
 	g_brushes.init();
 	g_materials.ensureAllRawBrushes();
-	AddDetectedPalettes();
+	AddDetectedPalettes(warnings);
 
 	RegisterCreaturesFromOpenMaps();
 

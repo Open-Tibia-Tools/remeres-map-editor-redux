@@ -6,6 +6,9 @@
 #define RME_PALETTE_DETECTED_DETECTED_ITEM_RULES_H_
 
 #include <cstdint>
+#include <span>
+#include <string>
+#include <string_view>
 
 // What the detected palettes need to know about one item, taken from the loaded DAT/OTB flags
 // and from the brushes built out of the materials XML. Kept free of editor globals so the rules
@@ -28,6 +31,8 @@ struct DetectedItemFacts {
 	// optional or a specific border block).
 	bool ground_brush_owned = false;
 	bool ground_brush_has_border = false;
+	// DAT "block missiles".
+	bool block_missiles = false;
 };
 
 // A ground border piece that no border and no brush in the materials XML refers to.
@@ -44,5 +49,27 @@ enum class GroundBorderState {
 
 // Walkable ground items only: unpassable grounds (water, mountains) are NotAFloor.
 [[nodiscard]] GroundBorderState ClassifyGroundBorder(const DetectedItemFacts& item);
+
+enum class MountainPiece {
+	None,
+	// Unpassable, missile-blocking ground (the stock "mountain" brush uses 919).
+	Ground,
+	// Unpassable, missile-blocking ground border piece (mountain sides and corners).
+	Border,
+};
+
+// A mountain piece that no brush or border uses yet.
+[[nodiscard]] MountainPiece ClassifyUnregisteredMountain(const DetectedItemFacts& item);
+
+struct MountainBrushItem {
+	uint32_t server_id = 0;
+	bool exists = false;
+	bool ground = false;
+};
+
+// Why a ground brush whose name contains "mountain" cannot paint correctly, or an empty
+// string when it is fine: it has no items, or an item id is missing from the item
+// definitions, or an item is not a ground. Other brushes always return an empty string.
+[[nodiscard]] std::string DescribeBrokenMountainBrush(std::string_view brush_name, std::span<const MountainBrushItem> items);
 
 #endif

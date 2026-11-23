@@ -52,6 +52,18 @@ void PaletteCatalog::addDynamicPalette(DynamicPaletteDefinition palette) {
 	}
 }
 
+size_t PaletteCatalog::removeBrushFromTilesets(const Brush* brush) {
+	size_t removed_from = 0;
+	for (auto& palette : palettes) {
+		for (auto& tileset : palette.tilesets) {
+			if (std::erase(tileset.brushes, brush) > 0) {
+				++removed_from;
+			}
+		}
+	}
+	return removed_from;
+}
+
 void PaletteCatalog::setTilesetBrushes(std::string_view paletteName, std::string_view tilesetName, std::vector<Brush*> brushes) {
 	auto it = std::ranges::find_if(palettes, [paletteName](const auto& existing) {
 		return as_lower_str(existing.name) == as_lower_str(std::string(paletteName));

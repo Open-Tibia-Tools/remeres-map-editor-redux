@@ -41,6 +41,8 @@ public:
 	void clear();
 	void addDynamicPalette(DynamicPaletteDefinition palette);
 	void setTilesetBrushes(std::string_view paletteName, std::string_view tilesetName, std::vector<Brush*> brushes);
+	// Drops the brush from every tileset; returns how many tilesets held it.
+	size_t removeBrushFromTilesets(const Brush* brush);
 	void prepareCreatureImportTargets();
 	[[nodiscard]] PaletteBrushRegistrationResult registerImportedCreatureBrush(Brush* brush, bool isNpc);
 
