@@ -67,7 +67,8 @@ void MainMapViewMath::ScreenToMap(int screen_x, int screen_y, const MainMapViewp
 	*map_y = position.map_y;
 }
 
-void MainMapViewMath::MapToScreen(int map_x, int map_y, int map_z, const MainMapViewport& viewport, int* screen_x, int* screen_y) {	map_x -= GetFloorTileOffset(map_z);
+void MainMapViewMath::MapToScreen(int map_x, int map_y, int map_z, const MainMapViewport& viewport, int* screen_x, int* screen_y) {
+	map_x -= GetFloorTileOffset(map_z);
 	map_y -= GetFloorTileOffset(map_z);
 
 	const double raw_x = static_cast<double>(map_x * TILE_SIZE - viewport.view_scroll_x);
