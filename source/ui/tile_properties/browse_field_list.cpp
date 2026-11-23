@@ -4,13 +4,18 @@
 
 #include "map/tile_operations.h"
 #include "app/main.h"
+#include "map/tile_stack_rows.h"
 #include "ui/tile_properties/browse_field_list.h"
+#include "ui/context_menu_item_facts.h"
+#include "ui/item_context_actions.h"
+#include "ui/item_context_menu_model.h"
+#include "ui/item_popup_menu.h"
+#include "ui/tile_item_actions.h"
 #include "map/tile.h"
 #include "map/map.h"
 #include "ui/gui.h"
 #include "editor/editor.h"
 #include "editor/action_queue.h"
-#include "ui/tile_properties/tile_properties_panel.h"
 #include "util/image_manager.h"
 #include "util/nanovg_listbox.h"
 #include "rendering/core/graphics.h"
@@ -34,6 +39,10 @@ public:
 	void OnDrawItem(NVGcontext* vg, const wxRect& rect, size_t index) override;
 	int OnMeasureItem(size_t index) const override;
 	Item* GetItem(size_t index) const;
+
+	int RowAtClientPoint(const wxPoint& point) const;
+	// Client point a context menu for `row` opens at: the left edge of the row, vertically centred.
+	wxPoint RowMenuAnchor(int row) const;
 
 protected:
 	std::vector<Item*> items;
@@ -136,6 +145,15 @@ Item* TilePropertiesListBox::GetItem(size_t index) const {
 	return nullptr;
 }
 
+int TilePropertiesListBox::RowAtClientPoint(const wxPoint& point) const {
+	return HitTest(point.x, point.y + GetScrollPosition());
+}
+
+wxPoint TilePropertiesListBox::RowMenuAnchor(int row) const {
+	const wxRect rect = GetItemRect(row);
+	return wxPoint(rect.GetLeft(), rect.GetTop() - GetScrollPosition() + rect.GetHeight() / 2);
+}
+
 // ----------------------------------------------------------------------------
 
 BrowseFieldList::BrowseFieldList(wxWindow* parent) :
@@ -172,6 +190,7 @@ BrowseFieldList::BrowseFieldList(wxWindow* parent) :
 
 	// Events
 	item_list->Bind(wxEVT_LISTBOX, &BrowseFieldList::OnItemSelected, this);
+	item_list->Bind(wxEVT_CONTEXT_MENU, &BrowseFieldList::OnContextMenu, this);
 	btn_up->Bind(wxEVT_BUTTON, &BrowseFieldList::OnClickUp, this);
 	btn_down->Bind(wxEVT_BUTTON, &BrowseFieldList::OnClickDown, this);
 	btn_delete->Bind(wxEVT_BUTTON, &BrowseFieldList::OnClickDelete, this);
@@ -194,64 +213,92 @@ void BrowseFieldList::SetTile(Tile* tile, Map* map) {
 void BrowseFieldList::SelectItem(Item* item) {
 	item_list->SelectItem(item);
 	int selection = item_list->GetSelection();
-	if (selection != wxNOT_FOUND) {
-		btn_up->Enable(selection > 0);
-		btn_down->Enable(selection < item_list->GetItemCount() - 1);
-		btn_delete->Enable(true);
-	} else {
-		btn_up->Enable(false);
-		btn_down->Enable(false);
-		btn_delete->Enable(false);
-	}
+	UpdateButtons(selection);
 }
 
 void BrowseFieldList::OnItemSelected(wxCommandEvent& event) {
+	ApplyListSelection();
+	event.Skip(); // Let parent handle property panel swap if needed
+}
+
+void BrowseFieldList::ApplyListSelection() {
 	int selection = item_list->GetSelection();
 	Item* selected_item = nullptr;
+	UpdateButtons(selection);
 	if (selection != wxNOT_FOUND) {
-		btn_up->Enable(selection > 0);
-		btn_down->Enable(selection < item_list->GetItemCount() - 1);
-		btn_delete->Enable(true);
 		selected_item = item_list->GetItem(selection);
-	} else {
-		btn_up->Enable(false);
-		btn_down->Enable(false);
-		btn_delete->Enable(false);
 	}
 
 	if (on_item_selected_cb) {
 		on_item_selected_cb(selected_item);
 	}
 
-	// Issue #3: Sync selection with the editor
+	// Issue #3: Sync selection with the editor. A panel row is one item, so no
+	// BORDER_IS_GROUND expansion: the commands act on exactly this row.
 	Editor* editor = g_gui.GetCurrentEditor();
 	if (editor && current_tile && selected_item) {
-		editor->selection.start(Selection::INTERNAL);
-		editor->selection.clear();
-		editor->selection.add(current_tile, selected_item);
-		editor->selection.finish(Selection::INTERNAL);
+		editor->selection.setSingleItem(current_tile, selected_item);
+	}
+}
+
+void BrowseFieldList::OnContextMenu(wxContextMenuEvent& event) {
+	Editor* editor = g_gui.GetCurrentEditor();
+	if (!editor || !current_tile || current_map != &editor->map) {
+		return;
 	}
 
-	event.Skip(); // Let parent handle property panel swap if needed
+	// A keyboard-opened menu (Shift+F10 / Menu key) has no position and acts on the selected row.
+	const bool from_keyboard = event.GetPosition() == wxDefaultPosition;
+	const wxPoint click_point = from_keyboard ? wxDefaultPosition : item_list->ScreenToClient(event.GetPosition());
+	const int hit_row = from_keyboard ? wxNOT_FOUND : item_list->RowAtClientPoint(click_point);
+	const bool has_ground = current_tile->ground != nullptr;
+	const auto row = TileStackRows::ContextMenuRow(
+		from_keyboard, hit_row, item_list->GetSelection(), has_ground, current_tile->items.size()
+	);
+	if (!row) {
+		return;
+	}
+
+	// Same mode switch as a right click on the map, so Copy works from the panel too.
+	if (g_gui.IsDrawingMode()) {
+		g_gui.SetSelectionMode();
+	}
+
+	// The clicked row becomes the editor selection first, so every command works on exactly that item.
+	item_list->SetSelection(*row);
+	ApplyListSelection();
+	Item* item = item_list->GetItem(*row);
+	if (!current_tile || !item) {
+		return;
+	}
+
+	const Position position = current_tile->getPosition();
+	const wxPoint menu_point = from_keyboard ? item_list->RowMenuAnchor(*row) : click_point;
+
+	ItemPopupMenu menu;
+	menu.Update(ItemContextMenu::Facts { .item = ContextMenu::CollectItemFacts(*item) });
+	const int menu_id = item_list->GetPopupMenuSelectionFromUser(menu, menu_point);
+	if (menu_id == wxID_NONE || g_gui.GetCurrentEditor() != editor) {
+		return;
+	}
+
+	ItemContextActions::Execute(menu_id, *editor, position, *row);
+	editor->actionQueue->resetTimer();
 }
 
 void BrowseFieldList::OnClickUp(wxCommandEvent& event) {
-	int selection = item_list->GetSelection();
-	if (selection == wxNOT_FOUND || selection <= 0) {
-		return;
-	}
-
 	if (!current_tile) {
 		return;
 	}
-	int index_in_items = selection - (current_tile->ground ? 1 : 0);
-	if (index_in_items <= 0) {
+	const int selection = item_list->GetSelection();
+	const bool has_ground = current_tile->ground != nullptr;
+	if (!TileStackRows::CanMoveUp(selection, has_ground, current_tile->items.size())) {
 		return;
 	}
+	const auto index_in_items = TileStackRows::Resolve(selection, has_ground, current_tile->items.size())->item_index;
 
 	Editor* editor = g_gui.GetCurrentEditor();
-	if (editor && current_tile) {
-		Position pos = current_tile->getPosition();
+	if (editor) {
 		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, editor->map);
 		std::swap(new_tile->items[index_in_items], new_tile->items[index_in_items - 1]);
 		new_tile->items[index_in_items - 1]->select();
@@ -263,21 +310,18 @@ void BrowseFieldList::OnClickUp(wxCommandEvent& event) {
 }
 
 void BrowseFieldList::OnClickDown(wxCommandEvent& event) {
-	int selection = item_list->GetSelection();
-	if (selection == wxNOT_FOUND) {
-		return;
-	}
-
 	if (!current_tile) {
 		return;
 	}
-	int index_in_items = selection - (current_tile->ground ? 1 : 0);
-	if (index_in_items < 0 || index_in_items >= (int)current_tile->items.size() - 1) {
+	const int selection = item_list->GetSelection();
+	const bool has_ground = current_tile->ground != nullptr;
+	if (!TileStackRows::CanMoveDown(selection, has_ground, current_tile->items.size())) {
 		return;
 	}
+	const auto index_in_items = TileStackRows::Resolve(selection, has_ground, current_tile->items.size())->item_index;
 
 	Editor* editor = g_gui.GetCurrentEditor();
-	if (editor && current_tile) {
+	if (editor) {
 		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, editor->map);
 		std::swap(new_tile->items[index_in_items], new_tile->items[index_in_items + 1]);
 		new_tile->items[index_in_items + 1]->select();
@@ -288,37 +332,24 @@ void BrowseFieldList::OnClickDown(wxCommandEvent& event) {
 	}
 }
 
-void BrowseFieldList::OnClickDelete(wxCommandEvent& event) {
-	int selection = item_list->GetSelection();
-	if (selection == wxNOT_FOUND) {
-		return;
-	}
-
-	if (current_tile->ground && selection == 0) {
-		return;
-	}
-
-	int index_in_items = selection - (current_tile->ground ? 1 : 0);
-	if (index_in_items < 0 || index_in_items >= (int)current_tile->items.size()) {
+void BrowseFieldList::OnClickDelete(wxCommandEvent& WXUNUSED(event)) {
+	if (!current_tile) {
 		return;
 	}
 
 	Editor* editor = g_gui.GetCurrentEditor();
-	if (editor && current_tile) {
-		Position pos = current_tile->getPosition();
-		std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(current_tile, editor->map);
-		new_tile->items.erase(new_tile->items.begin() + index_in_items);
-
-		if (index_in_items > 0) {
-			new_tile->items[index_in_items - 1]->select();
-		} else if (new_tile->ground) {
-			new_tile->ground->select();
-		} else if (!new_tile->items.empty()) {
-			new_tile->items[0]->select();
-		}
-
-		std::unique_ptr<Action> action = editor->actionQueue->createAction(ACTION_CHANGE_PROPERTIES);
-		action->addChange(std::make_unique<Change>(std::move(new_tile)));
-		editor->addAction(std::move(action));
+	if (!editor) {
+		return;
 	}
+
+	TileItemActions::DeleteRow(*editor, current_tile, item_list->GetSelection());
+}
+
+void BrowseFieldList::UpdateButtons(int selection) {
+	const bool has_tile = current_tile != nullptr;
+	const bool has_ground = has_tile && current_tile->ground != nullptr;
+	const std::size_t item_count = has_tile ? current_tile->items.size() : 0;
+	btn_up->Enable(TileStackRows::CanMoveUp(selection, has_ground, item_count));
+	btn_down->Enable(TileStackRows::CanMoveDown(selection, has_ground, item_count));
+	btn_delete->Enable(TileStackRows::Resolve(selection, has_ground, item_count).has_value());
 }

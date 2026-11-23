@@ -1,5 +1,6 @@
 #include "app/settings.h"
 #include "app/main.h"
+#include "brushes/brush.h"
 #include "palette/controls/virtual_brush_grid.h"
 #include "palette/palette_window.h"
 #include "palette/panels/brush_palette_panel.h"
@@ -8,10 +9,7 @@
 
 #include <nanovg.h>
 
-#include "brushes/raw/raw_brush.h"
-#include "brushes/creature/creature_brush.h"
 #include "rendering/indicators/indicator_drawing_utils.h"
-#include "game/creatures.h"
 #include "ui/find_item_window_model.h"
 
 #include <algorithm>
@@ -21,29 +19,6 @@ namespace {
 	static constexpr int TIMER_INTERVAL = 16;
 	static constexpr float INTER_THRESHOLD = 0.01f;
 	static constexpr float INTER_FACTOR = 0.2f;
-
-	uint32_t GetBrushSortID(const Brush* brush) {
-		if (!brush) {
-			return 0;
-		}
-		if (const auto* raw = dynamic_cast<const RAWBrush*>(brush)) {
-			return raw->getItemID();
-		}
-		if (const auto* cb = dynamic_cast<const CreatureBrush*>(brush)) {
-			if (cb->getType()) {
-				if (cb->getType()->outfit.lookType != 0) {
-					return static_cast<uint32_t>(cb->getType()->outfit.lookType);
-				}
-				if (cb->getType()->outfit.lookItem != 0) {
-					return static_cast<uint32_t>(cb->getType()->outfit.lookItem);
-				}
-			}
-		}
-		if (brush->getLookID() != 0) {
-			return static_cast<uint32_t>(brush->getLookID());
-		}
-		return brush->getID();
-	}
 }
 
 VirtualBrushGrid::VirtualBrushGrid(wxWindow* parent, const DynamicTilesetDefinition* _tileset, int iconSizePx) :

@@ -308,6 +308,35 @@ GroundBrush* Item::getGroundBrush() const {
 	return nullptr;
 }
 
+Brush* Item::getCollectionBrush() const {
+	if (Brush* explicit_brush = getDefinition().editorData().collection_brush) {
+		return explicit_brush;
+	}
+
+	// Collections are recorded on the brushes themselves (Brush::setCollection), not on the item.
+	// Mirror the canvas rule: a ground prefers its ground brush, a stack item its wall/table/carpet/
+	// doodad brush, and the RAW brush is the fallback. Only the RAW branch skips the visibility
+	// check, matching the canvas action.
+	struct Candidate {
+		Brush* brush;
+		bool require_visible;
+	};
+	const Candidate candidates[] = {
+		{ getWallBrush(), true },
+		{ getTableBrush(), true },
+		{ getCarpetBrush(), true },
+		{ getDoodadBrush(), true },
+		{ getGroundBrush(), true },
+		{ getRAWBrush(), false },
+	};
+	for (const Candidate& candidate : candidates) {
+		if (candidate.brush && (!candidate.require_visible || candidate.brush->visibleInPalette()) && candidate.brush->hasCollection()) {
+			return candidate.brush;
+		}
+	}
+	return nullptr;
+}
+
 TableBrush* Item::getTableBrush() const {
 	const auto definition = getDefinition();
 	if (definition.hasFlag(ItemFlag::IsTable) && definition.editorData().brush && definition.editorData().brush->is<TableBrush>()) {
