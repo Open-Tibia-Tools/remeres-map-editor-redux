@@ -312,3 +312,6 @@ rme_add_catch2_test(test_walk_animation tests/test_walk_animation.cpp)
 
 # --- Unit test for Autoborder UI state, preview preconditions, and labels ---
 rme_add_catch2_test(test_autoborder_state tests/test_autoborder_state.cpp)
+
+# --- Unit test for the load-warnings.log block formatter ---
+rme_add_catch2_test(test_load_warnings_log tests/test_load_warnings_log.cpp source/util/load_warnings_log.cpp)
