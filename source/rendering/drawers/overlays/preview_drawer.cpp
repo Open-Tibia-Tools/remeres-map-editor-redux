@@ -185,9 +185,11 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 		}
 
 		// Draw highlight on the specific tile under mouse
-		// This helps user see where they are pointing in the "chaos"
+		// This helps user see where they are pointing in the "chaos".
+		// Not while pasting: the ghosted copy buffer already is the cursor, and a full 32x32 wash
+		// would hide what is actually carried (small items, multi-tile sprites).
 		Position mousePos(view.mouse_map_x, view.mouse_map_y, view.floor);
-		if (mousePos.z == map_z) {
+		if (!is_pasting && mousePos.z == map_z) {
 			// Use correct offset logic
 			int offset;
 			if (map_z <= GROUND_LAYER) {

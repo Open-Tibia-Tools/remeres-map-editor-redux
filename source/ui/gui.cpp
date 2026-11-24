@@ -620,9 +620,6 @@ Editor* GUI::GetCurrentEditor() {
 MapTab* GUI::GetCurrentMapTab() const {
 	return g_editors.GetCurrentMapTab();
 }
-void GUI::CycleTab(bool forward) {
-	g_editors.CycleTab(forward);
-}
 bool GUI::CloseLiveEditors(LiveSocket* sock) {
 	return g_editors.CloseLiveEditors(sock);
 }

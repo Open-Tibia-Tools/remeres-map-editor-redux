@@ -88,6 +88,23 @@ void TableBrush::getRelatedItems(std::vector<uint16_t>& items_out) {
 	}
 }
 
+bool TableBrush::ownsItem(uint32_t item_id) const {
+	if (item_id == 0) {
+		return false;
+	}
+	for (int i = 0; i < TableBrushItems::TABLE_ALIGNMENT_COUNT; ++i) {
+		if (!items.hasItems(i)) {
+			continue;
+		}
+		for (const auto& entry : items.getItems(i).items) {
+			if (entry.item_id == item_id) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 void TableBrush::doTables(BaseMap* map, Tile* tile) {
 	TableBorderCalculator::doTables(map, tile);
 }

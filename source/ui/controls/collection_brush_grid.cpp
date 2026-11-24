@@ -2,8 +2,6 @@
 #include "ui/controls/collection_brush_grid.h"
 
 #include "brushes/brush.h"
-#include "brushes/raw/raw_brush.h"
-#include "brushes/creature/creature_brush.h"
 #include "rendering/indicators/indicator_drawing_utils.h"
 #include "ui/gui.h"
 #include "util/common.h"
@@ -17,29 +15,6 @@ namespace {
 	constexpr int kAnimInterval = 20;
 	constexpr float kAnimThreshold = 0.01f;
 	constexpr float kAnimFactor = 0.3f;
-
-	uint32_t GetBrushSortID(const Brush* brush) {
-		if (!brush) {
-			return 0;
-		}
-		if (const auto* raw = dynamic_cast<const RAWBrush*>(brush)) {
-			return raw->getItemID();
-		}
-		if (const auto* cb = dynamic_cast<const CreatureBrush*>(brush)) {
-			if (cb->getType()) {
-				if (cb->getType()->outfit.lookType != 0) {
-					return static_cast<uint32_t>(cb->getType()->outfit.lookType);
-				}
-				if (cb->getType()->outfit.lookItem != 0) {
-					return static_cast<uint32_t>(cb->getType()->outfit.lookItem);
-				}
-			}
-		}
-		if (brush->getLookID() != 0) {
-			return static_cast<uint32_t>(brush->getLookID());
-		}
-		return brush->getID();
-	}
 }
 
 CollectionBrushGrid::CollectionBrushGrid(wxWindow* parent, wxWindowID id) :

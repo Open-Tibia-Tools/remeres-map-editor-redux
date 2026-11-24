@@ -93,10 +93,6 @@ MapTab* EditorManager::GetCurrentMapTab() const {
 	return nullptr;
 }
 
-void EditorManager::CycleTab(bool forward) {
-	g_gui.tabbook->CycleTab(forward);
-}
-
 bool EditorManager::CloseLiveEditors(LiveSocket* sock) {
 	for (int i = 0; i < g_gui.tabbook->GetTabCount(); ++i) {
 		auto* mapTab = dynamic_cast<MapTab*>(g_gui.tabbook->GetTab(i));
