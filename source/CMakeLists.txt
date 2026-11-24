@@ -193,6 +193,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/walk_animation.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/atlas_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_cache_manager.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/chunk_tile_mask.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/coordinate_mapper.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/map_view_math.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/drawing_options.h

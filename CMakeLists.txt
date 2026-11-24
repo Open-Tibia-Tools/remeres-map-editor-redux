@@ -334,3 +334,6 @@ rme_add_catch2_test(test_autoborder_state tests/test_autoborder_state.cpp)
 
 # --- Unit test for the load-warnings.log block formatter ---
 rme_add_catch2_test(test_load_warnings_log tests/test_load_warnings_log.cpp source/util/load_warnings_log.cpp)
+
+# --- Unit test for the per-chunk tile mask (Show Light Strength overlay) ---
+rme_add_catch2_test(test_chunk_tile_mask tests/test_chunk_tile_mask.cpp)
