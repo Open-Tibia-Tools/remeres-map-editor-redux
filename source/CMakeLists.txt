@@ -82,6 +82,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/minimap_exporter_internal.h
 
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor_tabs.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/tab_close_decision.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/lasso_geometry.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/lasso_tile_outline.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/selection.h
@@ -310,6 +311,8 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/outfit_color_palette.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/sortable_list_box.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/modern_button.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/controls/themed_button.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/theme_contrast.h
 
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/client_mismatch_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/floor_below_offset_dialog.h

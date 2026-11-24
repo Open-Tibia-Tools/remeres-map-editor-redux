@@ -1,7 +1,9 @@
 #ifndef RME_CLIENT_MISMATCH_DIALOG_H_
 #define RME_CLIENT_MISMATCH_DIALOG_H_
 
-#include "app/main.h"
+#include <wx/dialog.h>
+
+#include <cstdint>
 
 class ClientVersion;
 
@@ -13,16 +15,16 @@ enum class ClientMismatchChoice {
 
 class ClientMismatchDialog : public wxDialog {
 public:
-	ClientMismatchDialog(
-		wxWindow* parent,
-		const ClientVersion& current,
-		const ClientVersion& target,
-		uint32_t otb_major,
-		int open_map_count
-	);
-	~ClientMismatchDialog() override = default;
+    ClientMismatchDialog(
+        wxWindow* parent, const ClientVersion& current, const ClientVersion& target, uint32_t otb_major, int real_open_map_count,
+        bool target_has_valid_paths
+    );
+    ~ClientMismatchDialog() override = default;
 
-	[[nodiscard]] ClientMismatchChoice GetChoice() const { return choice; }
+    [[nodiscard]] ClientMismatchChoice GetChoice() const
+    {
+        return choice;
+    }
 
 private:
 	void OnForceLoad(wxCommandEvent& evt);

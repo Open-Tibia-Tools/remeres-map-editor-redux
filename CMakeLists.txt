@@ -340,3 +340,12 @@ rme_add_catch2_test(test_chunk_tile_mask tests/test_chunk_tile_mask.cpp)
 
 # --- Unit test for the copy position formats and the position paste parser ---
 rme_add_catch2_test(test_position_format tests/test_position_format.cpp source/map/position_format.cpp)
+
+# --- Unit test for map version mismatch loading decisions ---
+rme_add_catch2_test(test_map_load_decision tests/test_map_load_decision.cpp)
+
+# --- Unit test for notebook tab close decisions ---
+rme_add_catch2_test(test_tab_close_decision tests/test_tab_close_decision.cpp)
+
+# --- Unit test for theme WCAG contrast button text selection ---
+rme_add_catch2_test(test_theme_contrast tests/test_theme_contrast.cpp)

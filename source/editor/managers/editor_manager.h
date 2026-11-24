@@ -8,6 +8,7 @@
 #include "app/main.h"
 #include "editor/persistence/map_load_options.h"
 
+class ClientVersion;
 class Map;
 class Editor;
 class EditorTab;
@@ -24,7 +25,8 @@ public:
 	int GetTabCount() const;
 	bool IsAnyEditorOpen() const;
 	bool IsEditorOpen() const;
-	void CloseCurrentEditor();
+    void CloseTab(int idx);
+    void CloseCurrentEditor();
 	Editor* GetCurrentEditor();
 	MapTab* GetCurrentMapTab() const;
 	bool CloseLiveEditors(LiveSocket* sock);
@@ -35,7 +37,9 @@ public:
 	Map& GetCurrentMap();
 	int GetOpenMapCount();
 	bool ShouldSave();
-	bool SaveCurrentMap(FileName filename, bool showdialog);
+    bool ShouldSave(const Editor& editor) const;
+    bool SaveMap(Editor& editor, MapTab* mapTab, FileName filename, bool showdialog);
+    bool SaveCurrentMap(FileName filename, bool showdialog);
 	bool NewMap();
 	void OpenMap();
 	void SaveMap();
@@ -55,6 +59,10 @@ public:
 	bool CanRedo();
 	bool DoUndo();
 	bool DoRedo();
+
+private:
+    int CountRealOpenMaps() const;
+    bool SwitchClientVersionForLoad(ClientVersion& target);
 };
 
 extern EditorManager g_editors;
