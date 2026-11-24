@@ -547,7 +547,7 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 		DialogUtil::PopupDialog("Error", "Error loading map!\n" + imported_map.getError(), wxOK | wxICON_INFORMATION);
 		return false;
 	}
-	DialogUtil::ListDialog("Warning", imported_map.getWarnings());
+	DialogUtil::LoadWarningsDialog(g_gui.root, "Warning", imported_map.getWarnings());
 
 	Position offset(import_x_offset, import_y_offset, 0);
 

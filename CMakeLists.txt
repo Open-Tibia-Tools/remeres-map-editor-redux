@@ -60,6 +60,21 @@ find_package(Lua REQUIRED)
 find_package(sol2 CONFIG REQUIRED)
 find_package(cpr CONFIG REQUIRED)
 find_package(WebP CONFIG REQUIRED)
+find_package(NanoSVG CONFIG QUIET)
+
+# A static wxWidgets references NanoSVG, but its link list puts libnanosvg.a before the wx
+# archives, so GNU ld drops it. Whole-archive the files themselves (the imported targets
+# would clash with the plain nanosvgrast -> nanosvg dependency). MSVC does not care about order.
+function(rme_link_nanosvg target)
+	if(NOT TARGET NanoSVG::nanosvgrast)
+		return()
+	endif()
+	if(MSVC)
+		target_link_libraries(${target} PRIVATE NanoSVG::nanosvgrast NanoSVG::nanosvg)
+	else()
+		target_link_libraries(${target} PRIVATE "-Wl,--whole-archive" "$<TARGET_FILE:NanoSVG::nanosvgrast>" "$<TARGET_FILE:NanoSVG::nanosvg>" "-Wl,--no-whole-archive")
+	endif()
+endfunction()
 find_package(Catch2 3 CONFIG REQUIRED)
 
 # nanovg: try vcpkg/Conan first, fallback to ext/nanovg
@@ -132,6 +147,8 @@ else()
 	target_link_libraries(rme PRIVATE ${wxWidgets_LIBRARIES})
 endif()
 
+rme_link_nanosvg(rme)
+
 # Include directories (for legacy find modules)
 target_include_directories(rme PRIVATE
 	${Boost_INCLUDE_DIRS}
@@ -183,108 +200,140 @@ target_link_libraries(rme PRIVATE ${LUA_LIBRARIES})
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT "rme")
 
+# --- Shared setup for unit tests that need the whole editor source tree (tiles, items, brushes) ---
+# application.cpp is excluded so its main() does not conflict with the test entry point; the test
+# file provides the wxGetApp()/Application::Unload stubs.
+function(rme_add_full_editor_test target)
+	set(test_sources ${rme_SRC})
+	list(REMOVE_ITEM test_sources "${CMAKE_CURRENT_SOURCE_DIR}/source/app/application.cpp")
+
+	add_executable(${target} ${rme_H} ${test_sources} ${ARGN})
+	target_link_libraries(${target} PRIVATE rme_proto)
+	set_target_properties(${target} PROPERTIES CXX_STANDARD 23)
+	set_target_properties(${target} PROPERTIES CXX_STANDARD_REQUIRED ON)
+	target_compile_definitions(${target} PRIVATE WXWIN_COMPATIBILITY_3_3 NANOVG_GL3)
+	target_precompile_headers(${target} PRIVATE source/app/main.h)
+
+	if(TARGET wxWidgets::wxWidgets)
+		target_link_libraries(${target} PRIVATE wxWidgets::wxWidgets)
+	else()
+		target_link_libraries(${target} PRIVATE ${wxWidgets_LIBRARIES})
+	endif()
+
+	rme_link_nanosvg(${target})
+
+	target_include_directories(${target} PRIVATE
+		${Boost_INCLUDE_DIRS}
+		${OPENGL_INCLUDE_DIR}
+		${ZLIB_INCLUDE_DIR}
+		${Protobuf_INCLUDE_DIRS}
+		${LIBLZMA_INCLUDE_DIRS}
+		${CMAKE_CURRENT_BINARY_DIR}
+		${LUA_INCLUDE_DIR}
+		${CMAKE_CURRENT_SOURCE_DIR}/source
+	)
+
+	if(TARGET Boost::boost)
+		target_link_libraries(${target} PRIVATE Boost::boost Boost::thread Boost::system)
+	else()
+		target_link_libraries(${target} PRIVATE ${Boost_LIBRARIES})
+	endif()
+
+	if(TARGET ZLIB::ZLIB)
+		target_link_libraries(${target} PRIVATE ZLIB::ZLIB)
+	else()
+		target_link_libraries(${target} PRIVATE ${ZLIB_LIBRARIES})
+	endif()
+
+	if(TARGET protobuf::libprotobuf)
+		target_link_libraries(${target} PRIVATE protobuf::libprotobuf)
+	else()
+		target_link_libraries(${target} PRIVATE ${Protobuf_LIBRARIES})
+	endif()
+
+	if(TARGET LibLZMA::LibLZMA)
+		target_link_libraries(${target} PRIVATE LibLZMA::LibLZMA)
+	else()
+		target_link_libraries(${target} PRIVATE ${LIBLZMA_LIBRARIES})
+	endif()
+
+	target_link_libraries(${target} PRIVATE ${OPENGL_LIBRARIES})
+	target_link_libraries(${target} PRIVATE glad::glad)
+	target_link_libraries(${target} PRIVATE glm::glm)
+	target_link_libraries(${target} PRIVATE nanovg::nanovg)
+	target_link_libraries(${target} PRIVATE spdlog::spdlog)
+	target_link_libraries(${target} PRIVATE tomlplusplus::tomlplusplus)
+	target_link_libraries(${target} PRIVATE sol2::sol2)
+	target_link_libraries(${target} PRIVATE cpr::cpr)
+	target_link_libraries(${target} PRIVATE WebP::webp)
+	target_link_libraries(${target} PRIVATE ${LUA_LIBRARIES})
+endfunction()
+
+# --- Shared registration for standalone Catch2 suites that only need the source tree ---
+function(rme_add_catch2_test target)
+	add_executable(${target} ${ARGN})
+	set_target_properties(${target} PROPERTIES CXX_STANDARD 23)
+	set_target_properties(${target} PROPERTIES CXX_STANDARD_REQUIRED ON)
+	target_link_libraries(${target} PRIVATE Catch2::Catch2WithMain)
+	target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+	add_test(NAME ${target} COMMAND ${target})
+endfunction()
+
 # --- Unit test for universal rotator ---
-set(TEST_ROTATOR_SRC ${rme_SRC})
-list(REMOVE_ITEM TEST_ROTATOR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/source/app/application.cpp")
+rme_add_full_editor_test(test_universal_rotator tests/test_universal_rotator.cpp)
 
-add_executable(test_universal_rotator ${rme_H} ${TEST_ROTATOR_SRC} tests/test_universal_rotator.cpp)
-target_link_libraries(test_universal_rotator PRIVATE rme_proto)
-set_target_properties(test_universal_rotator PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_universal_rotator PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_compile_definitions(test_universal_rotator PRIVATE WXWIN_COMPATIBILITY_3_3 NANOVG_GL3)
-target_precompile_headers(test_universal_rotator PRIVATE source/app/main.h)
-
-if(TARGET wxWidgets::wxWidgets)
-	target_link_libraries(test_universal_rotator PRIVATE wxWidgets::wxWidgets)
-else()
-	target_link_libraries(test_universal_rotator PRIVATE ${wxWidgets_LIBRARIES})
-endif()
-
-target_include_directories(test_universal_rotator PRIVATE
-	${Boost_INCLUDE_DIRS}
-	${OPENGL_INCLUDE_DIR}
-	${ZLIB_INCLUDE_DIR}
-	${Protobuf_INCLUDE_DIRS}
-	${LIBLZMA_INCLUDE_DIRS}
-	${CMAKE_CURRENT_BINARY_DIR}
-	${LUA_INCLUDE_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}/source
-)
-
-if(TARGET Boost::boost)
-	target_link_libraries(test_universal_rotator PRIVATE Boost::boost Boost::thread Boost::system)
-else()
-	target_link_libraries(test_universal_rotator PRIVATE ${Boost_LIBRARIES})
-endif()
-
-if(TARGET ZLIB::ZLIB)
-	target_link_libraries(test_universal_rotator PRIVATE ZLIB::ZLIB)
-else()
-	target_link_libraries(test_universal_rotator PRIVATE ${ZLIB_LIBRARIES})
-endif()
-
-if(TARGET protobuf::libprotobuf)
-	target_link_libraries(test_universal_rotator PRIVATE protobuf::libprotobuf)
-else()
-	target_link_libraries(test_universal_rotator PRIVATE ${Protobuf_LIBRARIES})
-endif()
-
-if(TARGET LibLZMA::LibLZMA)
-	target_link_libraries(test_universal_rotator PRIVATE LibLZMA::LibLZMA)
-else()
-	target_link_libraries(test_universal_rotator PRIVATE ${LIBLZMA_LIBRARIES})
-endif()
-
-target_link_libraries(test_universal_rotator PRIVATE ${OPENGL_LIBRARIES})
-target_link_libraries(test_universal_rotator PRIVATE glad::glad)
-target_link_libraries(test_universal_rotator PRIVATE glm::glm)
-target_link_libraries(test_universal_rotator PRIVATE nanovg::nanovg)
-target_link_libraries(test_universal_rotator PRIVATE spdlog::spdlog)
-target_link_libraries(test_universal_rotator PRIVATE tomlplusplus::tomlplusplus)
-target_link_libraries(test_universal_rotator PRIVATE sol2::sol2)
-target_link_libraries(test_universal_rotator PRIVATE cpr::cpr)
-target_link_libraries(test_universal_rotator PRIVATE WebP::webp)
-target_link_libraries(test_universal_rotator PRIVATE ${LUA_LIBRARIES})
+# --- Unit tests for the magic wand plan and item-level selection (real tiles, items and brushes) ---
+rme_add_full_editor_test(test_magic_wand_plan tests/test_magic_wand_plan.cpp)
+target_link_libraries(test_magic_wand_plan PRIVATE Catch2::Catch2WithMain)
 
 enable_testing()
 add_test(NAME test_universal_rotator COMMAND test_universal_rotator)
+add_test(NAME test_magic_wand_plan COMMAND test_magic_wand_plan)
 
 # --- Unit test for subtype pattern mapping ---
-add_executable(test_subtype_pattern tests/test_subtype_pattern.cpp)
-set_target_properties(test_subtype_pattern PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_subtype_pattern PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_subtype_pattern PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_subtype_pattern PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_subtype_pattern COMMAND test_subtype_pattern)
+rme_add_catch2_test(test_subtype_pattern tests/test_subtype_pattern.cpp)
 
 # --- Unit test for tile stack row mapping (Tile Properties item list) ---
-add_executable(test_tile_stack_rows tests/test_tile_stack_rows.cpp)
-set_target_properties(test_tile_stack_rows PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_tile_stack_rows PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_tile_stack_rows PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_tile_stack_rows PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_tile_stack_rows COMMAND test_tile_stack_rows)
+rme_add_catch2_test(test_tile_stack_rows tests/test_tile_stack_rows.cpp)
+
+# --- Unit test for lasso polygon/tile geometry ---
+rme_add_catch2_test(test_lasso_geometry tests/test_lasso_geometry.cpp)
+
+# --- Unit test for lasso gesture state machine ---
+rme_add_catch2_test(test_lasso_gesture tests/test_lasso_gesture.cpp)
+
+# --- Unit test for box/lasso selection floor scope ---
+rme_add_catch2_test(test_selection_floor_scope tests/test_selection_floor_scope.cpp)
+
+# --- Unit test for collection tileset save plan and ordering ---
+rme_add_catch2_test(test_collection_save_plan tests/test_collection_save_plan.cpp)
+
+# --- Unit test for the shared tile context menu model (map canvas and Tile Properties) ---
+rme_add_catch2_test(test_tile_context_menu tests/test_tile_context_menu.cpp)
+
+# --- Unit test for the item-scoped context menu model (Tile Properties list) ---
+rme_add_catch2_test(test_item_context_menu tests/test_item_context_menu.cpp)
+
+# --- Unit test for minimap dirty rect bounds ---
+rme_add_catch2_test(test_minimap_rect tests/test_minimap_rect.cpp)
 
 # --- Unit test for pixel-perfect picking of multi-tile grounds ---
-add_executable(test_selection_multitile_ground tests/test_selection_multitile_ground.cpp)
-set_target_properties(test_selection_multitile_ground PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_selection_multitile_ground PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_selection_multitile_ground PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_selection_multitile_ground PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_selection_multitile_ground COMMAND test_selection_multitile_ground)
+rme_add_catch2_test(test_selection_multitile_ground tests/test_selection_multitile_ground.cpp)
+
+# --- Unit test for the magic wand flood fill and border ring ---
+rme_add_catch2_test(test_magic_wand tests/test_magic_wand.cpp)
 
 # --- Unit test for the pathing overlay sprite footprint ---
-add_executable(test_sprite_footprint tests/test_sprite_footprint.cpp)
-set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_sprite_footprint PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_sprite_footprint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_sprite_footprint COMMAND test_sprite_footprint)
+rme_add_catch2_test(test_sprite_footprint tests/test_sprite_footprint.cpp)
+
+# --- Unit test for outfit walk animation frames ---
+rme_add_catch2_test(test_walk_animation tests/test_walk_animation.cpp)
+
+# --- Unit test for Autoborder UI state, preview preconditions, and labels ---
+rme_add_catch2_test(test_autoborder_state tests/test_autoborder_state.cpp)
+
+# --- Unit test for the load-warnings.log block formatter ---
+rme_add_catch2_test(test_load_warnings_log tests/test_load_warnings_log.cpp source/util/load_warnings_log.cpp)
 
 # --- Unit test for the per-chunk tile mask (Show Light Strength overlay) ---
-add_executable(test_chunk_tile_mask tests/test_chunk_tile_mask.cpp)
-set_target_properties(test_chunk_tile_mask PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_chunk_tile_mask PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_chunk_tile_mask PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_chunk_tile_mask PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_chunk_tile_mask COMMAND test_chunk_tile_mask)
+rme_add_catch2_test(test_chunk_tile_mask tests/test_chunk_tile_mask.cpp)

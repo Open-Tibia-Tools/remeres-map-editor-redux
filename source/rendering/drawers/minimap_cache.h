@@ -22,7 +22,7 @@ struct FloorCachePage {
 
 class MinimapCache {
 public:
-	static constexpr int PageSize = 512;
+	static constexpr int PageSize = kMinimapPageSize;
 
 	struct VisiblePage {
 		GLuint texture_id = 0;

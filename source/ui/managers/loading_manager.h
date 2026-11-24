@@ -80,6 +80,9 @@ public:
 	}
 
 private:
+	// Sends a live-server operation update to every map tab that hosts a server.
+	void BroadcastOperation(int32_t percent);
+
 	wxString progressText;
 	wxGenericProgressDialog* progressBar;
 	// Informational sibling of the progress bar (no gauge, no cancel button).

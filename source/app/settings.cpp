@@ -404,6 +404,7 @@ void Settings::IO(IOMode mode) {
 	Bool(GOTO_WEBSITE_ON_BOOT, false);
 	Bool(USE_UPDATER, true);
 	Bool(AUTOCHECK_FOR_UPDATES, false);
+	Bool(SHOW_LOAD_WARNINGS_DIALOG, true);
 
 	section("Version");
 	Int(VERSION_ID, 0);
@@ -424,6 +425,8 @@ void Settings::IO(IOMode mode) {
 	Int(SELECTION_TYPE, SELECT_CURRENT_FLOOR);
 	Bool(COMPENSATED_SELECT, true);
 	Bool(PIXEL_PERFECT_SELECTION, false);
+	// 0 = viewport scan, 1 = connected neighbours; see MagicWand::SearchMode.
+	Int(MAGIC_WAND_MODE, 0);
 	Float(SCROLL_SPEED, 3.5f);
 	Float(ZOOM_SPEED, 1.4f);
 	Bool(SWITCH_MOUSEBUTTONS, false);

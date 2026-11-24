@@ -109,9 +109,7 @@ bool EditorFactory::EnsureVersion(ClientVersionID version) {
 	wxString error;
 	std::vector<std::string> warnings;
 	if (g_version.LoadVersion(version, error, warnings)) {
-		if (!warnings.empty()) {
-			DialogUtil::ListDialog("Warnings", warnings);
-		}
+		DialogUtil::LoadWarningsDialog("Warnings", warnings);
 		return true;
 	} else {
 		DialogUtil::PopupDialog("Error", error, wxOK);

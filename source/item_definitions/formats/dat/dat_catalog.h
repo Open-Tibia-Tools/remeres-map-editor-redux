@@ -26,6 +26,27 @@ struct DatSpriteDimensions {
 	uint16_t height = 32;
 };
 
+// Frame group type byte written before each outfit frame group in DAT files with frame groups (10.57+).
+enum DatFrameGroupType : uint8_t {
+	DAT_FRAME_GROUP_IDLE = 0,
+	DAT_FRAME_GROUP_MOVING = 1,
+};
+
+// Sprite layout of one outfit frame group. Outfits from clients with frame groups keep their
+// standing group in DatCatalogEntry and their walking group here.
+struct DatFrameGroup {
+	uint8_t height = 0;
+	uint8_t width = 0;
+	uint8_t layers = 0;
+	uint8_t pattern_x = 0;
+	uint8_t pattern_y = 0;
+	uint8_t pattern_z = 0;
+	uint8_t frames = 0;
+	uint32_t numsprites = 0;
+	std::vector<uint32_t> sprite_ids;
+	std::optional<DatAnimationInfo> animation;
+};
+
 struct DatCatalogEntry {
 	uint32_t client_id = 0;
 	DatItemFragment item_fragment;
@@ -45,6 +66,7 @@ struct DatCatalogEntry {
 	SpriteLight light {};
 	std::vector<uint32_t> sprite_ids;
 	std::optional<DatAnimationInfo> animation;
+	std::optional<DatFrameGroup> walking_group;
 
 	[[nodiscard]] bool valid() const {
 		return client_id != 0;
