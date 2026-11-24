@@ -6,6 +6,7 @@
 
 #include "app/main.h"
 #include "ui/main_frame.h"
+#include "ui/managers/status_manager.h"
 
 #include "ui/dialog_util.h"
 #include "app/application.h"
@@ -63,10 +64,11 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	}
 
 	wxStatusBar* statusbar = CreateStatusBar(1, wxSTB_DEFAULT_STYLE & ~wxSTB_SIZEGRIP);
-	statusbar->SetFieldsCount(4);
-	// FPS | tile description (stretch) | coordinates | floor/zoom
-	const int status_widths[4] = { FromDIP(80), -1, FromDIP(150), FromDIP(160) };
-	statusbar->SetStatusWidths(4, status_widths);
+	statusbar->SetFieldsCount(5);
+	// FPS | tile description (stretch) | coordinates | floor/zoom | automagic state
+	const int status_widths[5] = { FromDIP(80), -1, FromDIP(150), FromDIP(160), FromDIP(130) };
+	statusbar->SetStatusWidths(5, status_widths);
+	statusbar->SetStatusText(StatusManager::AutomagicStatusLabel(), 4);
 
 	m_activity_indicator = new wxActivityIndicator(statusbar, wxID_ANY);
 	m_activity_indicator->Hide();

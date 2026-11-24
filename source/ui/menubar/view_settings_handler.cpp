@@ -2,6 +2,7 @@
 #include "rendering/core/floor_visibility_mode.h"
 #include "ui/main_menubar.h"
 #include "ui/gui.h"
+#include "ui/managers/status_manager.h"
 #include "app/preferences.h"
 #include "map/map.h"
 #include <format>
@@ -227,6 +228,7 @@ void ViewSettingsHandler::OnToggleAutomagic(wxCommandEvent& WXUNUSED(event)) {
 	} else {
 		g_gui.SetStatusText("Automagic disabled.");
 	}
+	g_status.UpdateAutomagicIndicator();
 }
 
 void ViewSettingsHandler::OnSelectionTypeChange(wxCommandEvent& WXUNUSED(event)) {
