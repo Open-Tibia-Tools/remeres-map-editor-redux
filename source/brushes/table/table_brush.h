@@ -65,6 +65,9 @@ public:
 		return items;
 	}
 
+	// True when the item id belongs to this brush (any alignment group).
+	[[nodiscard]] bool ownsItem(uint32_t item_id) const;
+
 	[[nodiscard]] uint16_t getPlacementItemId() const {
 		if (items.hasItems(0)) {
 			const auto& tn = items.getItems(0);

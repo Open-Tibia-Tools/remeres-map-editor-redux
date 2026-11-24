@@ -73,6 +73,9 @@ public:
 		return m_items;
 	}
 
+	// True when the item id belongs to this brush (any alignment group).
+	[[nodiscard]] bool ownsItem(uint32_t item_id) const;
+
 protected:
 	uint16_t getRandomCarpet(BorderType alignment);
 

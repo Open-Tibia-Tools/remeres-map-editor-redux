@@ -163,3 +163,26 @@ void GroundBrush::getRelatedItems(std::vector<uint16_t>& items) {
 		}
 	}
 }
+
+bool GroundBrush::ownsBorderItem(uint32_t item_id) const {
+	if (item_id == 0) {
+		return false;
+	}
+	const auto in_border = [item_id](const AutoBorder* border) {
+		return border && std::ranges::find(border->tiles, item_id) != border->tiles.end();
+	};
+	if (in_border(optional_border)) {
+		return true;
+	}
+	for (const auto& block : borders) {
+		if (in_border(block->autoborder)) {
+			return true;
+		}
+		for (const auto& specific : block->specific_cases) {
+			if (specific->to_replace_id == item_id || specific->with_id == item_id) {
+				return true;
+			}
+		}
+	}
+	return false;
+}

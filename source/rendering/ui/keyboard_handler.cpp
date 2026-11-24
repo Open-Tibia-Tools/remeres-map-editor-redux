@@ -77,11 +77,12 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 			break;
 		}
 		case WXK_TAB: {
-			if (event.ShiftDown()) {
-				g_gui.CycleTab(false);
-			} else {
-				g_gui.CycleTab(true);
+			if (event.GetModifiers() != wxMOD_NONE) {
+				event.Skip();
+				break;
 			}
+			// Held modifier: while down, a canvas click runs one magic wand selection.
+			canvas->SetWandHeld(true);
 			break;
 		}
 		case WXK_DELETE: {
@@ -133,6 +134,14 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 				g_gui.SetStatusText("Temple placement cancelled.");
 				break;
 			}
+			// ESC clears the whole selection on every floor: the keyboard twin of right-clicking
+			// empty ground, but without needing a click position. An active lasso consumed ESC
+			// earlier (it cancels the gesture), and open dialogs never reach the canvas.
+			if (canvas->selection_controller) {
+				canvas->selection_controller->ClearSelection();
+				canvas->RequestSharedMapRefresh();
+				break;
+			}
 			event.Skip();
 			break;
 		}
@@ -145,6 +154,9 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 
 void KeyboardHandler::OnKeyUp(MapCanvas* canvas, wxKeyEvent& event) {
 	canvas->keyCode = WXK_NONE;
+	if (event.GetKeyCode() == WXK_TAB) {
+		canvas->SetWandHeld(false);
+	}
 	// The Alt key-up finalizes the lasso. Key-up events are never skipped here, so on MSW the
 	// WM_SYSKEYUP does not reach DefWindowProc and Alt does not activate the menu bar.
 	if (canvas->selection_controller) {

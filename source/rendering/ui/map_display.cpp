@@ -594,7 +594,9 @@ void MapCanvas::CancelLasso() {
 
 void MapCanvas::OnKillFocus(wxFocusEvent& event) {
 	// Without focus the Alt key-up never reaches the canvas, so the lasso can only be discarded.
+	// Same for the Tab key-up that disarms the magic wand.
 	CancelLasso();
+	SetWandHeld(false);
 	event.Skip();
 }
 
@@ -643,6 +645,11 @@ void MapCanvas::OnMouseMove(wxMouseEvent& event) {
 		RequestLocalRefresh();
 	}
 
+	if (IsWandHeld()) {
+		// The left button is owned by the wand press, so no selection or brush drag may run.
+		return;
+	}
+
 	if (g_gui.IsSelectionMode()) {
 		selection_controller->HandleDrag(Position(mouse_map_x, mouse_map_y, floor), event.ShiftDown(), event.ControlDown(), event.AltDown());
 	} else { // Drawing mode
@@ -665,12 +672,17 @@ void MapCanvas::OnMouseLeftDoubleClick(wxMouseEvent& event) {
 	if (selection_controller && selection_controller->HandleLassoButtonDown(LassoButton::Left, ToLassoPoint(event), ToLassoModifiers(event))) {
 		return;
 	}
-	if (!g_gui.IsSelectionMode()) {
+	const bool wand_double_click = IsWandHeld() && (!g_gui.IsSelectionMode() || (!event.ShiftDown() && !event.AltDown()));
+	if (!g_gui.IsSelectionMode() && !wand_double_click) {
 		return;
 	}
 	const MainMapPixelPosition click = ScreenToMapPixel(event.GetX(), event.GetY());
 	if (selection_controller) {
-		selection_controller->HandleDoubleClick(Position(click.map_x, click.map_y, floor));
+		selection_controller->HandleDoubleClick(
+			Position(click.map_x, click.map_y, floor),
+			event.ShiftDown(),
+			event.AltDown()
+		);
 	}
 }
 
@@ -737,6 +749,16 @@ void MapCanvas::OnMouseActionClick(wxMouseEvent& event) {
 	if (event.ControlDown() && event.AltDown()) {
 		Tile* tile = editor.map.getTile(mouse_map_x, mouse_map_y, floor);
 		BrushSelector::SelectSmartBrush(editor, tile);
+	} else if (IsWandHeld() && (!g_gui.IsSelectionMode() || (!event.ShiftDown() && !event.AltDown()))) {
+		// Held Tab owns the click in every mode: in selection mode Shift keeps the rectangle and
+		// Alt keeps the lasso, in drawing mode the wand never lets a brush paint.
+		if (selection_controller) {
+			selection_controller->HandleWandClick(
+				Position(mouse_map_x, mouse_map_y, floor),
+				SelectionPixelOffset { .x = click.pixel_x, .y = click.pixel_y },
+				event.ControlDown()
+			);
+		}
 	} else if (g_gui.IsSelectionMode()) {
 		if (selection_controller) {
 			selection_controller->HandleClick(Position(mouse_map_x, mouse_map_y, floor), SelectionPixelOffset { .x = click.pixel_x, .y = click.pixel_y }, event.ShiftDown(), event.ControlDown(), event.AltDown());
@@ -768,6 +790,11 @@ void MapCanvas::OnMouseActionClick(wxMouseEvent& event) {
 
 void MapCanvas::OnMouseActionRelease(wxMouseEvent& event) {
 	if (selection_controller && selection_controller->HandleLassoButtonUp(LassoButton::Left, ToLassoPoint(event), ToLassoModifiers(event))) {
+		return;
+	}
+	if (selection_controller && selection_controller->ConsumeWandRelease()) {
+		RequestSharedMapRefresh();
+		g_gui.UpdateMinimap();
 		return;
 	}
 
