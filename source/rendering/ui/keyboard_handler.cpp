@@ -134,6 +134,14 @@ void KeyboardHandler::OnKeyDown(MapCanvas* canvas, wxKeyEvent& event) {
 				g_gui.SetStatusText("Temple placement cancelled.");
 				break;
 			}
+			// ESC clears the whole selection on every floor: the keyboard twin of right-clicking
+			// empty ground, but without needing a click position. An active lasso consumed ESC
+			// earlier (it cancels the gesture), and open dialogs never reach the canvas.
+			if (canvas->selection_controller) {
+				canvas->selection_controller->ClearSelection();
+				canvas->RequestSharedMapRefresh();
+				break;
+			}
 			event.Skip();
 			break;
 		}

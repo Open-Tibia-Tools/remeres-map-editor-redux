@@ -36,12 +36,29 @@ namespace {
 
 } // namespace
 
-TEST_CASE("flood takes only four-connected members", "[magic_wand]") {
-	// (10,10)-(11,10)-(11,11) are connected; (12,12) only touches diagonally.
+TEST_CASE("flood takes diagonal members too", "[magic_wand]") {
+	// (12,12) only touches (11,11) diagonally, and diagonals count as neighbours.
 	const std::set<Key> members { { 10, 10, 7 }, { 11, 10, 7 }, { 11, 11, 7 }, { 12, 12, 7 } };
 	const auto found = ConnectedPositions::collect(Position(10, 10, 7), InSet(members), Always());
 	REQUIRE(found);
-	REQUIRE(KeysOf(*found) == std::set<Key> { { 10, 10, 7 }, { 11, 10, 7 }, { 11, 11, 7 } });
+	REQUIRE(KeysOf(*found) == members);
+}
+
+TEST_CASE("flood fills a whole checkerboard", "[magic_wand]") {
+	// Same-ground tiles on a checkerboard only ever touch diagonally; the wand must still
+	// select all of them as one patch.
+	std::set<Key> members;
+	for (int y = 0; y < 4; ++y) {
+		for (int x = 0; x < 4; ++x) {
+			if ((x + y) % 2 == 0) {
+				members.insert({ 100 + x, 100 + y, 7 });
+			}
+		}
+	}
+	REQUIRE(members.size() == 8);
+	const auto found = ConnectedPositions::collect(Position(100, 100, 7), InSet(members), Always());
+	REQUIRE(found);
+	REQUIRE(KeysOf(*found) == members);
 }
 
 TEST_CASE("flood stops at a gap", "[magic_wand]") {

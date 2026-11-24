@@ -22,10 +22,12 @@ namespace ConnectedPositions {
 		return (static_cast<uint64_t>(static_cast<uint32_t>(position.y)) << 32) | static_cast<uint32_t>(position.x);
 	}
 
-	// Four-connected flood fill on the origin's floor. `belongs(position)` decides membership;
-	// non-members stop the flood, so a void or foreign tile is a wall. `keep_going(found_count)`
-	// is called after every accepted position; returning false cancels and yields std::nullopt.
-	// When `bounds` is set the flood never leaves it, which keeps a wand search inside the viewport.
+	// Eight-connected flood fill on the origin's floor: diagonally touching tiles count as
+	// neighbours, so a checkerboard of the same ground is one connected patch. `belongs(position)`
+	// decides membership; non-members stop the flood, so a void or foreign tile is a wall.
+	// `keep_going(found_count)` is called after every accepted position; returning false cancels
+	// and yields std::nullopt. When `bounds` is set the flood never leaves it, which keeps a wand
+	// search inside the viewport.
 	template <typename Belongs, typename KeepGoing>
 	[[nodiscard]] std::optional<PositionVector> collect(
 		const Position& origin,
@@ -41,7 +43,16 @@ namespace ConnectedPositions {
 			return found;
 		}
 
-		const std::array<Position, 4> steps { Position(1, 0, 0), Position(-1, 0, 0), Position(0, 1, 0), Position(0, -1, 0) };
+		const std::array<Position, 8> steps {
+			Position(1, 0, 0),
+			Position(1, 1, 0),
+			Position(0, 1, 0),
+			Position(-1, 1, 0),
+			Position(-1, 0, 0),
+			Position(-1, -1, 0),
+			Position(0, -1, 0),
+			Position(1, -1, 0),
+		};
 		std::unordered_set<uint64_t> visited { planarKey(origin) };
 		PositionVector pending { origin };
 		while (!pending.empty()) {

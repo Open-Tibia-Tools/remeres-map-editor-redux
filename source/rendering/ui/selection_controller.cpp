@@ -232,7 +232,8 @@ void SelectionController::HandleWandClick(const Position& mouse_map_pos, const S
 	if (!wand.tile) {
 		wand.tile = editor.map.getTile(mouse_map_pos);
 	}
-	MagicWand::Select(editor, wand, VisibleFloorRect(*canvas, mouse_map_pos.z), ctrl_down);
+	const MagicWand::SearchMode mode = MagicWand::SanitizeSearchMode(g_settings.getInteger(Config::MAGIC_WAND_MODE));
+	MagicWand::Select(editor, wand, VisibleFloorRect(*canvas, mouse_map_pos.z), ctrl_down, mode);
 }
 
 bool SelectionController::ConsumeWandRelease() {

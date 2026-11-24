@@ -22,6 +22,7 @@ public:
 	virtual ~ReplaceToolWindow();
 
 	void DetachEditor();
+
 	void InitializeWithIDs(const std::vector<uint16_t>& ids);
 
 	// LibraryPanel::Listener

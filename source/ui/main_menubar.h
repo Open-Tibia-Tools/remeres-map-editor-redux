@@ -73,7 +73,8 @@ namespace MenuBar {
 		SELECT_MODE_VISIBLE,
 		SELECT_METHOD_STANDARD,
 		SELECT_METHOD_PIXEL_PERFECT,
-		SELECT_MAGIC_WAND,
+		SELECT_MAGIC_WAND_VIEWPORT,
+		SELECT_MAGIC_WAND_NEIGHBOUR,
 		AUTOMAGIC,
 		BORDERIZE_SELECTION,
 		BORDERIZE_MAP,
@@ -262,7 +263,7 @@ public:
 
 	void OnSelectionTypeChange(wxCommandEvent& event);
 	void OnSelectionMethodChange(wxCommandEvent& event);
-	void OnMagicWandInfo(wxCommandEvent& event);
+	void OnMagicWandModeChange(wxCommandEvent& event);
 
 	void OnCopy(wxCommandEvent& event);
 	void OnCut(wxCommandEvent& event);

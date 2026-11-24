@@ -398,8 +398,8 @@ void MainMenuBar::OnSelectionMethodChange(wxCommandEvent& event) {
 	viewSettingsHandler->OnSelectionMethodChange(event);
 }
 
-void MainMenuBar::OnMagicWandInfo(wxCommandEvent& event) {
-	viewSettingsHandler->OnMagicWandInfo(event);
+void MainMenuBar::OnMagicWandModeChange(wxCommandEvent& event) {
+	viewSettingsHandler->OnMagicWandModeChange(event);
 }
 
 void MainMenuBar::OnCopy(wxCommandEvent& WXUNUSED(event)) {

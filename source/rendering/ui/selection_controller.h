@@ -52,6 +52,10 @@ public:
 		return boundbox_selection;
 	}
 
+	// Clears the whole selection (every floor) as one undoable step. The keyboard ESC path
+	// shares it with the click handlers.
+	void ClearSelection();
+
 	void StartDragging(const Position& start_pos) {
 		dragging = true;
 		drag_start_pos = start_pos;
@@ -124,7 +128,6 @@ private:
 	[[nodiscard]] SelectionHit PickAt(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset) const;
 	[[nodiscard]] bool IsHitSelected(const SelectionHit& hit) const;
 	void ApplyHit(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, const SelectionHit& hit, bool toggle);
-	void ClearSelection();
 	void ExecuteBoundboxSelection(const Position& start_pos, const Position& end_pos, int floor);
 
 	MapCanvas* canvas;
