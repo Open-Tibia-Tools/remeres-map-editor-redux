@@ -114,14 +114,8 @@ GUI::GUI() :
 	hotkeys_enabled(true) {
 }
 
-GUI::~GUI() {
-	spdlog::info("GUI destructor started");
-	spdlog::default_logger()->flush();
-
-	// aui_manager and tabbook are owned by MainFrame, we don't delete them here.
-	spdlog::info("GUI destructor finished");
-	spdlog::default_logger()->flush();
-}
+// aui_manager and tabbook are owned by MainFrame, we don't delete them here.
+GUI::~GUI() = default;
 
 // OpenGL context management moved to GLContextManager
 
@@ -195,7 +189,7 @@ void GUI::SetDrawingMode() {
 
 	if (GetCurrentBrush() && GetCurrentBrush()->is<DoodadBrush>()) {
 		SetCurrentMapSecondaryMap(g_doodad_preview.GetBufferMap());
-	} else if (GetCurrentBrush() && GetCurrentBrush()->needBorders() && g_settings.getInteger(Config::USE_AUTOMAGIC)) {
+	} else if (GetCurrentBrush() && GetCurrentBrush()->supportsAutoborder() && g_settings.getInteger(Config::USE_AUTOMAGIC)) {
 		// We'll set the map, but it might be empty until first mouse move
 		SetCurrentMapSecondaryMap(g_autoborder_preview.GetBufferMap());
 	} else {
@@ -619,9 +613,6 @@ Editor* GUI::GetCurrentEditor() {
 }
 MapTab* GUI::GetCurrentMapTab() const {
 	return g_editors.GetCurrentMapTab();
-}
-void GUI::CycleTab(bool forward) {
-	g_editors.CycleTab(forward);
 }
 bool GUI::CloseLiveEditors(LiveSocket* sock) {
 	return g_editors.CloseLiveEditors(sock);

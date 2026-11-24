@@ -39,7 +39,8 @@ namespace IngamePreview {
 		walk_source_pos(0, 0, GROUND_LAYER),
 		walk_offset_x(0),
 		walk_offset_y(0),
-		animation_phase(0),
+		walk_progress(-1.0f),
+		walk_step_count(0),
 		speed(220),
 		last_step_time(0),
 		walk_lock_timer(0),
@@ -263,10 +264,8 @@ namespace IngamePreview {
 		}
 
 		if (!is_walking) {
-			if (animation_phase != 0) {
-				spdlog::debug("UpdateWalk: Resetting animation_phase from {} to 0 (not walking)", animation_phase);
-				animation_phase = 0;
-			}
+			walk_progress = -1.0f;
+			walk_step_count = 0;
 			return;
 		}
 
@@ -277,7 +276,8 @@ namespace IngamePreview {
 			is_walking = false;
 			walk_offset_x = 0;
 			walk_offset_y = 0;
-			animation_phase = 0;
+			walk_progress = -1.0f;
+			walk_step_count = walk_queue.empty() ? 0 : walk_step_count + 1;
 			last_step_time = now;
 
 			// Check for teleports
@@ -339,9 +339,8 @@ namespace IngamePreview {
 			walk_offset_x = -offset_pixels;
 		}
 
-		// 1-2 animation loop (Tibia standard walk is Frame 1 and Frame 2)
-		// We use 4 as a multiplier to make it feel a bit faster/standard
-		animation_phase = 1 + (static_cast<int>(progress * 4.0f) % 2);
+		// The creature drawer picks the walk frame for the outfit from the step progress.
+		walk_progress = static_cast<float>(walk_step_count) + std::max(0.0f, progress);
 	}
 
 	void IngamePreviewCanvas::SetCameraPosition(const Position& pos) {
@@ -403,11 +402,6 @@ namespace IngamePreview {
 	void IngamePreviewCanvas::Render(Editor* current_editor) {
 		if (!IsShownOnScreen() || !current_editor) {
 			return;
-		}
-
-		// DEBUG: Check if animation_phase is non-zero when not walking
-		if (animation_phase != 0 && !is_walking) {
-			spdlog::warn("Render: animation_phase={} but is_walking=false! This shouldn't happen.", animation_phase);
 		}
 
 		if (m_glContext) {
@@ -472,7 +466,7 @@ namespace IngamePreview {
 		renderer->SetLightIntensity(light_intensity);
 		renderer->SetServerLightColor(server_light_color);
 		renderer->SetName(preview_name_str);
-		renderer->Render(vg, current_editor->map, view_x, view_y, view_w, view_h, camera_pos, calculated_zoom, lighting_enabled, client_brightness_percent, preview_outfit, preview_direction, animation_phase, walk_offset_x, walk_offset_y);
+		renderer->Render(vg, current_editor->map, view_x, view_y, view_w, view_h, camera_pos, calculated_zoom, lighting_enabled, client_brightness_percent, preview_outfit, preview_direction, walk_progress, walk_offset_x, walk_offset_y);
 
 		SwapBuffers();
 	}

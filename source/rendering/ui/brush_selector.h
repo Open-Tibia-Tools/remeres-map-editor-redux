@@ -21,6 +21,7 @@
 class Editor;
 class Selection;
 class Tile;
+class Item;
 
 /**
  * @brief Handles brush selection from popup menu context.
@@ -42,6 +43,14 @@ public:
 	static void SelectCreatureBrush(Selection& selection);
 	static void SelectSpawnBrush();
 	static void SelectSmartBrush(Editor& editor, Tile* tile);
+
+	// Item-scoped variants for surfaces that act on one row (Tile Properties). They read the
+	// brush from `item` itself instead of the tile's top wall/table/carpet.
+	static void SelectWallBrush(const Item& item);
+	static void SelectCarpetBrush(const Item& item);
+	static void SelectTableBrush(const Item& item);
+	static void SelectGroundBrush(const Item& item);
+	static void SelectCollectionBrush(const Item& item);
 
 private:
 	BrushSelector() = delete;

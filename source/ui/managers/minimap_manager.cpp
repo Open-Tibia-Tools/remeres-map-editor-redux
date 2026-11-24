@@ -39,18 +39,11 @@ MinimapManager::MinimapManager() :
 }
 
 MinimapManager::~MinimapManager() {
-	spdlog::debug("MinimapManager destructor started");
-	spdlog::default_logger()->flush();
-
 	// Root window will destroy minimap window if it's a child.
 	// But we should detach it from aui_manager if it exists.
 	if (minimap && g_gui.aui_manager) {
-		spdlog::debug("MinimapManager destructor - detaching minimap from aui_manager");
-		spdlog::default_logger()->flush();
 		g_gui.aui_manager->DetachPane(minimap);
 	}
-	spdlog::debug("MinimapManager destructor finished");
-	spdlog::default_logger()->flush();
 }
 
 MinimapManager::InvalidationKey MinimapManager::makeKey(const Map& map) {

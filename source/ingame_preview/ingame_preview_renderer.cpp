@@ -45,7 +45,7 @@ namespace IngamePreview {
 
 	IngamePreviewRenderer::~IngamePreviewRenderer() = default;
 
-	void IngamePreviewRenderer::Render(NVGcontext* vg, const BaseMap& map, int viewport_x, int viewport_y, int viewport_width, int viewport_height, const Position& camera_pos, float zoom, bool lighting_enabled, uint8_t client_brightness_percent, const Outfit& preview_outfit, Direction preview_direction, int animation_phase, int offset_x, int offset_y) {
+	void IngamePreviewRenderer::Render(NVGcontext* vg, const BaseMap& map, int viewport_x, int viewport_y, int viewport_width, int viewport_height, const Position& camera_pos, float zoom, bool lighting_enabled, uint8_t client_brightness_percent, const Outfit& preview_outfit, Direction preview_direction, float walk_progress, int offset_x, int offset_y) {
 		// CRITICAL: Update animation time for all sprite animations to work
 		g_gui.gfx.updateTime();
 
@@ -207,7 +207,7 @@ namespace IngamePreview {
 
 				creature_drawer->BlitCreature(*sprite_batch, sprite_drawer.get(), draw_x, draw_y, preview_outfit, preview_direction, CreatureDrawOptions {
 					.ingame = true,
-					.animationPhase = animation_phase,
+					.walkProgress = walk_progress,
 					.light_buffer = draw_lights ? light_buffer.get() : nullptr,
 					.view = &view,
 					.preview_local_player = true,

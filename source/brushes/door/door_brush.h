@@ -24,6 +24,9 @@ public:
 	bool oneSizeFitsAll() const override {
 		return true;
 	}
+	bool supportsAutoborder() const override {
+		return true;
+	}
 
 	void getRelatedItems(std::vector<uint16_t>& items) override;
 

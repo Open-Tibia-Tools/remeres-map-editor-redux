@@ -9,6 +9,12 @@
 #include "brushes/brush.h"
 #include "brushes/raw/raw_brush.h"
 #include "brushes/ground/ground_brush.h"
+#include "brushes/wall/wall_brush.h"
+#include "brushes/doodad/doodad_brush.h"
+#include "brushes/carpet/carpet_brush.h"
+#include "brushes/table/table_brush.h"
+#include "brushes/door/door_brush.h"
+#include "brushes/house/house_brush.h"
 #include "brushes/creature/creature_brush.h"
 #include "brushes/spawn/spawn_brush.h"
 #include "brushes/managers/brush_manager.h"
@@ -16,6 +22,8 @@
 #include "ui/replace_tool/map_item_collector.h"
 
 #include <algorithm>
+#include <string>
+#include <utility>
 
 namespace rme::collection {
 
@@ -61,6 +69,78 @@ void CollectionStagingContent::Clear() {
 	brushes.clear();
 }
 
+CollectionBrushCategory ClassifyCollectionBrush(const Brush& brush) {
+	if (brush.is<GroundBrush>()) {
+		return CollectionBrushCategory::Ground;
+	}
+	if (brush.is<WallBrush>()) {
+		return CollectionBrushCategory::Wall;
+	}
+	if (brush.is<DoodadBrush>()) {
+		return CollectionBrushCategory::Doodad;
+	}
+	if (brush.is<CarpetBrush>()) {
+		return CollectionBrushCategory::Carpet;
+	}
+	if (brush.is<TableBrush>()) {
+		return CollectionBrushCategory::Table;
+	}
+	if (brush.is<DoorBrush>()) {
+		return CollectionBrushCategory::Door;
+	}
+	if (brush.is<CreatureBrush>()) {
+		return CollectionBrushCategory::Creature;
+	}
+	if (brush.is<HouseBrush>()) {
+		return CollectionBrushCategory::House;
+	}
+	return CollectionBrushCategory::Other;
+}
+
+CollectionSaveSelection CollectionExtractorService::BuildSaveSelection(
+	const CollectionStagingContent& staging,
+	CollectionInclusionMode mode
+) {
+	std::vector<Brush*> brushes;
+	brushes.reserve(staging.brushes.size());
+	for (Brush* brush : staging.brushes) {
+		if (brush) {
+			brushes.push_back(brush);
+		}
+	}
+
+	std::vector<std::string> names;
+	std::vector<std::vector<uint16_t>> related(brushes.size());
+	names.reserve(brushes.size());
+	for (size_t i = 0; i < brushes.size(); ++i) {
+		names.push_back(brushes[i]->getName());
+		brushes[i]->getRelatedItems(related[i]);
+	}
+
+	std::vector<CollectionBrushInfo> infos;
+	infos.reserve(brushes.size());
+	for (size_t i = 0; i < brushes.size(); ++i) {
+		infos.push_back({
+			.name = names[i],
+			.id = GetBrushSortID(brushes[i]),
+			.category = ClassifyCollectionBrush(*brushes[i]),
+			.coveredItemIds = related[i],
+		});
+	}
+
+	CollectionSavePlan plan = BuildCollectionSavePlan(staging.itemIds, infos, mode);
+
+	CollectionSaveSelection selection;
+	selection.itemIds = std::move(plan.itemIds);
+	selection.brushes.reserve(plan.brushIndices.size());
+	for (const size_t index : plan.brushIndices) {
+		selection.brushes.push_back(brushes[index]);
+	}
+	selection.stagedItemCount = plan.stagedItemCount;
+	selection.coveredItemCount = plan.coveredItemCount;
+	return selection;
+}
+
 CollectionStagingContent CollectionExtractorService::ExtractFromSelection(Editor* editor) {
 	CollectionStagingContent content;
 	if (!editor) {
@@ -71,25 +151,24 @@ CollectionStagingContent CollectionExtractorService::ExtractFromSelection(Editor
 	content.itemIds = rme::replace_tool::MapItemCollector::CollectSelectionItemIds(editor);
 	std::ranges::sort(content.itemIds);
 
-	// 2. Composite brushes from selection tiles
+	// 2. Composite brushes from the selected entities (same rule as the item IDs above, so staged
+	// IDs and staged brushes cannot disagree).
 	std::vector<Brush*> candidates;
 	for (Tile* tile : editor->selection.getTiles()) {
 		if (!tile) {
 			continue;
 		}
 
-		if (tile->hasGround()) {
+		if (tile->ground && tile->ground->isSelected()) {
 			if (GroundBrush* gb = tile->getGroundBrush()) {
 				candidates.push_back(gb);
-			} else if (tile->ground) {
-				if (Brush* b = tile->ground->getBrush()) {
-					candidates.push_back(b);
-				}
+			} else if (Brush* b = tile->ground->getBrush()) {
+				candidates.push_back(b);
 			}
 		}
 
 		for (const auto& item : tile->items) {
-			if (!item) {
+			if (!item || !item->isSelected()) {
 				continue;
 			}
 			if (Brush* b = item->getBrush()) {
@@ -100,7 +179,7 @@ CollectionStagingContent CollectionExtractorService::ExtractFromSelection(Editor
 			}
 		}
 
-		if (tile->creature) {
+		if (tile->creature && tile->creature->isSelected()) {
 			CreatureBrush* cb = tile->creature->getBrush();
 			if (!cb) {
 				if (CreatureType* ct = g_creatures[tile->creature->getName()]) {
