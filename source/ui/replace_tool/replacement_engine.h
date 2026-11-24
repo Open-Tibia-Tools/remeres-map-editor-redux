@@ -7,10 +7,26 @@
 #include <random>
 #include <vector>
 
+class Item;
+
 enum class ReplaceScope {
 	Selection,
 	Viewport,
 	AllMap
+};
+
+/**
+ * Which entities a replace run may touch.
+ *
+ * Selection scope follows the item-level selection: a rectangle selects every entity of a tile
+ * (TileOperations::select), while a standard click, Ctrl-click or magic wand selection marks
+ * single entities. A selected container brings its contents into scope; an unselected one does
+ * not.
+ */
+struct ReplaceScopePolicy {
+	bool selection_only = false;
+
+	[[nodiscard]] bool Allows(const Item& item) const;
 };
 
 class ReplacementEngine {

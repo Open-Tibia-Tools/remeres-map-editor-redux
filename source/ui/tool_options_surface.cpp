@@ -1,4 +1,5 @@
 #include "ui/tool_options_surface.h"
+#include "ui/autoborder_ui_state.h"
 #include "ui/dialogs/floor_below_offset_dialog.h"
 
 #include "app/settings.h"
@@ -30,8 +31,11 @@
 
 #include <algorithm>
 #include <format>
+#include <type_traits>
 #include <wx/spinctrl.h>
 #include <wx/tglbtn.h>
+
+static_assert(std::is_same_v<Settings::ObserverId, uint64_t>);
 
 namespace {
 	constexpr int BRUSH_ICON_SIZE = 32;
@@ -96,6 +100,20 @@ ToolOptionsSurface::ToolOptionsSurface(wxWindow* parent) :
 	wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL) {
 	BuildUi();
 	ReloadSettings();
+	settings_observer_id = g_settings.addObserver([this](uint32_t key) {
+		if (key == Config::USE_AUTOMAGIC && !IsMutatingUi() && enable_autoborder_checkbox) {
+			SetMutatingUi(true);
+			enable_autoborder_checkbox->SetValue(g_settings.getBoolean(Config::USE_AUTOMAGIC));
+			SetMutatingUi(false);
+		}
+	});
+}
+
+ToolOptionsSurface::~ToolOptionsSurface() {
+	if (settings_observer_id != 0) {
+		g_settings.removeObserver(settings_observer_id);
+		settings_observer_id = 0;
+	}
 }
 
 void ToolOptionsSurface::BuildUi() {
@@ -224,6 +242,7 @@ void ToolOptionsSurface::BuildUi() {
 	weight_panel->SetSizer(weight_row);
 	other_sizer->Add(weight_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(6)));
 
+	enable_autoborder_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Enable Autoborder (A)");
 	preview_border_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Preview Border");
 
 	draw_below_panel = new wxPanel(other_sizer->GetStaticBox(), wxID_ANY);
@@ -239,6 +258,7 @@ void ToolOptionsSurface::BuildUi() {
 	lock_doors_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Lock Doors (Shift)");
 	randomize_doodads_checkbox = new wxCheckBox(other_sizer->GetStaticBox(), wxID_ANY, "Randomize Doodads");
 	randomize_doodads_checkbox->SetValue(g_settings.getBoolean(Config::RANDOMIZE_DOODADS));
+	other_sizer->Add(enable_autoborder_checkbox, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxTOP, FromDIP(6)));
 	other_sizer->Add(preview_border_checkbox, wxSizerFlags().Expand().Border(wxALL, FromDIP(6)));
 	other_sizer->Add(draw_below_panel, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6)));
 	other_sizer->Add(lock_doors_checkbox, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(6)));
@@ -250,6 +270,7 @@ void ToolOptionsSurface::BuildUi() {
 	size_y_slider->Bind(wxEVT_SLIDER, &ToolOptionsSurface::OnSizeYChanged, this);
 	exact_button->Bind(wxEVT_TOGGLEBUTTON, &ToolOptionsSurface::OnExactToggled, this);
 	aspect_button->Bind(wxEVT_TOGGLEBUTTON, &ToolOptionsSurface::OnAspectToggled, this);
+	enable_autoborder_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnEnableAutoborderToggled, this);
 	preview_border_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnPreviewBorderToggled, this);
 	draw_on_floor_below_checkbox->Bind(wxEVT_CHECKBOX, &ToolOptionsSurface::OnDrawOnFloorBelowToggled, this);
 	draw_on_floor_below_config_button->Bind(wxEVT_BUTTON, &ToolOptionsSurface::OnDrawOnFloorBelowConfigClicked, this);
@@ -389,6 +410,7 @@ void ToolOptionsSurface::RefreshFromState() {
 	size_y_slider->SetValue(state.size_y);
 	exact_button->SetValue(state.exact);
 	aspect_button->SetValue(state.aspect_locked);
+	enable_autoborder_checkbox->SetValue(g_settings.getBoolean(Config::USE_AUTOMAGIC));
 	preview_border_checkbox->SetValue(g_settings.getInteger(Config::SHOW_AUTOBORDER_PREVIEW));
 	draw_on_floor_below_checkbox->SetValue(g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW));
 	draw_on_floor_below_config_button->Enable(g_settings.getBoolean(Config::DRAW_ON_FLOOR_BELOW));
@@ -416,13 +438,13 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 	const bool show_tools = !tool_buttons.empty();
 	const bool show_size = HasBrushSizeControls();
 	const bool show_thickness = HasThicknessControl();
-	const bool show_preview_border = HasPreviewBorderControl();
+	const bool show_autoborder = HasAutoborderControls();
 	const bool show_draw_on_floor_below = HasDrawOnFloorBelowControl();
 	const bool show_lock_doors = HasLockDoorsControl();
 	const bool show_spawn_controls = HasSpawnControls();
 	const bool show_weight = HasWeightControl();
 	const bool show_randomize_doodads = HasRandomizeDoodadsControl();
-	const bool show_other = show_thickness || show_preview_border || show_draw_on_floor_below || show_lock_doors || show_spawn_controls || show_weight || show_randomize_doodads;
+	const bool show_other = show_thickness || show_autoborder || show_draw_on_floor_below || show_lock_doors || show_spawn_controls || show_weight || show_randomize_doodads;
 
 	main_sizer->Show(main_tools_sizer, show_tools, true);
 	main_sizer->Show(size_sizer, show_size, true);
@@ -433,6 +455,7 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 	DetachWindowIfPresent(other_sizer, place_spawn_with_creature_checkbox);
 	DetachWindowIfPresent(other_sizer, spawn_size_panel);
 	DetachWindowIfPresent(other_sizer, weight_panel);
+	DetachWindowIfPresent(other_sizer, enable_autoborder_checkbox);
 	DetachWindowIfPresent(other_sizer, preview_border_checkbox);
 	DetachWindowIfPresent(other_sizer, draw_below_panel);
 	DetachWindowIfPresent(other_sizer, lock_doors_checkbox);
@@ -449,7 +472,8 @@ void ToolOptionsSurface::UpdateSectionVisibility() {
 		}
 		AddWindowToSizer(other_sizer, place_spawn_with_creature_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 	}
-	if (show_preview_border) {
+	if (show_autoborder) {
+		AddWindowToSizer(other_sizer, enable_autoborder_checkbox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(6));
 		AddWindowToSizer(other_sizer, preview_border_checkbox, 0, wxEXPAND | wxALL, FromDIP(6));
 	}
 	if (show_draw_on_floor_below) {
@@ -547,8 +571,8 @@ void ToolOptionsSurface::OnRandomizeDoodadsToggled(wxCommandEvent& WXUNUSED(even
 	g_gui.FocusCurrentMapCanvas();
 }
 
-bool ToolOptionsSurface::HasPreviewBorderControl() const {
-	return active_brush && active_brush->needBorders();
+bool ToolOptionsSurface::HasAutoborderControls() const {
+	return rme::ui::ShouldShowAutoborderControls(active_brush && active_brush->supportsAutoborder());
 }
 
 bool ToolOptionsSurface::HasDrawOnFloorBelowControl() const {
@@ -803,12 +827,29 @@ void ToolOptionsSurface::OnAspectToggled(wxCommandEvent& event) {
 	g_gui.FocusCurrentMapCanvas();
 }
 
+void ToolOptionsSurface::OnEnableAutoborderToggled(wxCommandEvent& event) {
+	if (IsMutatingUi()) {
+		return;
+	}
+
+	g_gui.SetAutoborderEnabled(event.IsChecked());
+	g_gui.FocusCurrentMapCanvas();
+}
+
 void ToolOptionsSurface::OnPreviewBorderToggled(wxCommandEvent& event) {
 	if (IsMutatingUi()) {
 		return;
 	}
 
 	g_settings.setInteger(Config::SHOW_AUTOBORDER_PREVIEW, event.IsChecked());
+	if (MapTab* map_tab = g_gui.GetCurrentMapTab()) {
+		if (auto* canvas = map_tab->GetCanvas()) {
+			const Position cursor_pos = canvas->GetCursorPosition();
+			if (cursor_pos.isValid()) {
+				g_gui.UpdateAutoborderPreview(cursor_pos);
+			}
+		}
+	}
 	g_gui.RefreshView();
 	g_gui.FocusCurrentMapCanvas();
 }

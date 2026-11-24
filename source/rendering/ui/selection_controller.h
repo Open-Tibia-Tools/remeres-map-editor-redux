@@ -37,11 +37,13 @@ public:
 	~SelectionController();
 
 	void HandleClick(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, bool shift_down, bool ctrl_down, bool alt_down);
+	void HandleWandClick(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, bool ctrl_down);
+	bool ConsumeWandRelease();
 	void HandleDrag(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down);
 	void HandleRelease(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down);
 	void HandlePropertiesClick(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, bool shift_down, bool ctrl_down, bool alt_down);
 	void HandlePropertiesRelease(const Position& mouse_map_pos, bool shift_down, bool ctrl_down, bool alt_down);
-	void HandleDoubleClick(const Position& mouse_map_pos);
+	void HandleDoubleClick(const Position& mouse_map_pos, bool shift_down, bool alt_down);
 
 	bool IsDragging() const {
 		return dragging;
@@ -49,6 +51,10 @@ public:
 	bool IsBoundboxSelection() const {
 		return boundbox_selection;
 	}
+
+	// Clears the whole selection (every floor) as one undoable step. The keyboard ESC path
+	// shares it with the click handlers.
+	void ClearSelection();
 
 	void StartDragging(const Position& start_pos) {
 		dragging = true;
@@ -62,6 +68,7 @@ public:
 	void Reset() {
 		dragging = false;
 		boundbox_selection = false;
+		magic_wand_click = false;
 		last_click_pixel = {};
 	}
 
@@ -121,7 +128,6 @@ private:
 	[[nodiscard]] SelectionHit PickAt(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset) const;
 	[[nodiscard]] bool IsHitSelected(const SelectionHit& hit) const;
 	void ApplyHit(const Position& mouse_map_pos, const SelectionPixelOffset& pixel_offset, const SelectionHit& hit, bool toggle);
-	void ClearSelection();
 	void ExecuteBoundboxSelection(const Position& start_pos, const Position& end_pos, int floor);
 
 	MapCanvas* canvas;
@@ -129,6 +135,7 @@ private:
 
 	bool dragging;
 	bool boundbox_selection;
+	bool magic_wand_click = false; // The press was consumed by the magic wand; the release does nothing.
 
 	Position drag_start_pos;
 	SelectionPixelOffset last_click_pixel;

@@ -70,6 +70,20 @@ void CarpetBrush::getRelatedItems(std::vector<uint16_t>& items_out) {
 	}
 }
 
+bool CarpetBrush::ownsItem(uint32_t item_id) const {
+	if (item_id == 0) {
+		return false;
+	}
+	for (const auto& group : m_items.getGroups()) {
+		for (const auto& item : group.items) {
+			if (item.id == item_id) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 void CarpetBrush::doCarpets(BaseMap* map, Tile* tile) {
 	CarpetBorderCalculator::calculate(map, tile);
 }

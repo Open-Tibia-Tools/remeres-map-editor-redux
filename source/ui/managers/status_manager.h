@@ -14,6 +14,9 @@ public:
 	void UpdateTitle();
 	void SetStatusText(const wxString& text, int field = 1, int duration_ms = 3500);
 	bool HasActiveMessage() const;
+	// Shows the Autoborder state in its own status bar field.
+	void UpdateAutoborderIndicator();
+	static wxString AutoborderStatusLabel();
 
 private:
 	std::chrono::steady_clock::time_point message_expiry_{};
