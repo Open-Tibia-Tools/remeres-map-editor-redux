@@ -99,6 +99,11 @@ public:
 	void commit();
 	void finish(SessionFlags flags = NONE);
 
+	// Commits an ACTION_SELECT prepared outside a session (one Change per tile, possibly several
+	// items selected on it) as its own undo step and notifies scripts the way finish() does.
+	// Use it when Selection::add would need several calls for one tile inside a session.
+	void commitPreparedAction(std::unique_ptr<Action> action);
+
 	// Joins the selection instance in this thread with this instance
 	// Ownership of the thread is transferred to join
 	void join(std::unique_ptr<SelectionThread> thread);
@@ -134,6 +139,7 @@ public:
 private:
 	void flush();
 	void recalculateBounds() const;
+	void notifyScripts(bool changed);
 
 	bool busy;
 	bool deferred;

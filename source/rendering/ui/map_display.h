@@ -111,6 +111,15 @@ public:
 	// Discards an active lasso without touching the selection (tab switch, map reset, mode change).
 	void CancelLasso();
 
+	// Tab is a held modifier for the magic wand: while down, a canvas click runs one wand
+	// selection. It never toggles anything and is cleared when the canvas loses focus.
+	void SetWandHeld(bool held) {
+		wand_held = held;
+	}
+	[[nodiscard]] bool IsWandHeld() const {
+		return wand_held;
+	}
+
 	virtual void ChangeFloor(int new_floor);
 	int GetFloor() const {
 		return floor;
@@ -189,6 +198,7 @@ private:
 	BaseMap* GetSecondaryMap() const;
 	bool renderer_initialized = false;
 	bool hover_preview_active_ = false;
+	bool wand_held = false;
 };
 
 #endif

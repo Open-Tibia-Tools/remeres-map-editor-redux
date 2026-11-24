@@ -74,19 +74,26 @@ std::vector<uint16_t> MapItemCollector::CollectSelectionItemIds(Editor* editor) 
 	if (!editor) {
 		return {};
 	}
+	return CollectSelectedItemIds(editor->selection.getTiles());
+}
 
+std::vector<uint16_t> MapItemCollector::CollectSelectedItemIds(const std::vector<Tile*>& tiles) {
 	std::set<uint16_t> uniqueIds;
-	for (Tile* tile : editor->selection.getTiles()) {
-		if (tile) {
-			if (tile->ground) {
-				uniqueIds.insert(tile->ground->getID());
-			}
-			for (const auto& item : tile->items) {
+	for (Tile* tile : tiles) {
+		if (!tile) {
+			continue;
+		}
+		// Item-level selection: the wand and a standard click mark single entities, a rectangle
+		// marks the whole tile (TileOperations::select selects every entity), so both work.
+		if (tile->ground && tile->ground->isSelected()) {
+			uniqueIds.insert(tile->ground->getID());
+		}
+		for (const auto& item : tile->items) {
+			if (item->isSelected()) {
 				uniqueIds.insert(item->getID());
 			}
 		}
 	}
-
 	return { uniqueIds.begin(), uniqueIds.end() };
 }
 

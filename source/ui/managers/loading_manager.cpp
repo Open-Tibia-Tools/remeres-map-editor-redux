@@ -94,6 +94,21 @@ void LoadingManager::SetLoadScale(int32_t from, int32_t to) {
 	progressTo = to;
 }
 
+void LoadingManager::BroadcastOperation(int32_t percent) {
+	if (!g_gui.tabbook) {
+		return;
+	}
+	for (int32_t index = 0; index < g_gui.tabbook->GetTabCount(); ++index) {
+		auto* mapTab = dynamic_cast<MapTab*>(g_gui.tabbook->GetTab(index));
+		if (mapTab && mapTab->GetEditor()) {
+			LiveServer* server = mapTab->GetEditor()->live_manager.GetServer();
+			if (server) {
+				server->updateOperation(percent);
+			}
+		}
+	}
+}
+
 bool LoadingManager::SetLoadDone(int32_t done, const wxString& newMessage) {
 	if (done == 100) {
 		if (progressBar) {
@@ -128,17 +143,7 @@ bool LoadingManager::SetLoadDone(int32_t done, const wxString& newMessage) {
 		}
 	}
 
-	if (g_gui.tabbook) {
-		for (int32_t index = 0; index < g_gui.tabbook->GetTabCount(); ++index) {
-			auto* mapTab = dynamic_cast<MapTab*>(g_gui.tabbook->GetTab(index));
-			if (mapTab && mapTab->GetEditor()) {
-				LiveServer* server = mapTab->GetEditor()->live_manager.GetServer();
-				if (server) {
-					server->updateOperation(newProgress);
-				}
-			}
-		}
-	}
+	BroadcastOperation(newProgress);
 
 	return skip;
 }
@@ -183,6 +188,7 @@ bool LoadingManager::PollCancellation() {
 }
 
 void LoadingManager::DestroyLoadBar() {
+	const bool had_progress_bar = progressBar != nullptr;
 	if (progressBar) {
 		progressBar->Show(false);
 		currentProgress = -1;
@@ -211,4 +217,9 @@ void LoadingManager::DestroyLoadBar() {
 	// run with no dialog must not inherit it.
 	cancelled = false;
 	cancellable = false;
+
+	// Live clients only leave "Server Operation in Progress" on a 100% update.
+	if (had_progress_bar) {
+		BroadcastOperation(100);
+	}
 }
