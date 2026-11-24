@@ -6,6 +6,8 @@
 #define RME_PALETTE_CONTROLS_BRUSH_GRID_SELECTION_H_
 
 #include <algorithm>
+#include <cstddef>
+#include <optional>
 #include <span>
 #include <unordered_set>
 #include <vector>
@@ -38,8 +40,8 @@ public:
 		bool can_drag = false;
 	};
 
-	// Left button pressed on `display[index]` (index < 0 or out of range: empty space).
-	PressResult Press(std::span<Brush* const> display, int index, Modifier modifier, Commit commit = Commit::OnPress) {
+	// Left button pressed on `display[*index]` (nullopt or out of range: empty space).
+	PressResult Press(std::span<Brush* const> display, std::optional<size_t> index, Modifier modifier, Commit commit = Commit::OnPress) {
 		pending_collapse_ = nullptr;
 		const Brush* hit = At(display, index);
 		if (!hit) {
@@ -90,7 +92,7 @@ public:
 
 	// Right button pressed: a cell outside the selection becomes the only member (it does not
 	// become the current brush), a cell inside keeps the group for the context menu.
-	void PressContext(std::span<Brush* const> display, int index) {
+	void PressContext(std::span<Brush* const> display, std::optional<size_t> index) {
 		pending_collapse_ = nullptr;
 		const Brush* hit = At(display, index);
 		if (hit && !Contains(hit)) {
@@ -143,8 +145,8 @@ public:
 	}
 
 private:
-	[[nodiscard]] static const Brush* At(std::span<Brush* const> display, int index) {
-		return (index >= 0 && static_cast<size_t>(index) < display.size()) ? display[static_cast<size_t>(index)] : nullptr;
+	[[nodiscard]] static const Brush* At(std::span<Brush* const> display, std::optional<size_t> index) {
+		return (index && *index < display.size()) ? display[*index] : nullptr;
 	}
 
 	void SelectRange(std::span<Brush* const> display, const Brush* hit) {

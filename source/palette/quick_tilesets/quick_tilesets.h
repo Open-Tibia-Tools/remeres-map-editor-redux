@@ -10,7 +10,6 @@
 #include <wx/gdicmn.h>
 
 #include <functional>
-#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -55,22 +54,19 @@ namespace QuickTilesets {
 		Layout, // active tab or splitter position: saved, nothing to refresh
 	};
 
+	// Loads the state of the current client version on first use; false without a client version.
+	bool EnsureLoaded();
 	// The loaded version's state (empty without a client version).
 	[[nodiscard]] const State& GetState();
 	[[nodiscard]] std::string_view LoadedVersion();
 	// Applies and saves a change, then refreshes what shows it. Returns whether it changed.
 	bool Apply(const std::function<bool(State&)>& change, ChangeScope scope);
+	// Inserts `items` into tab `id` before the entry `before` (see Insert); returns whether it changed.
+	bool InsertIntoTab(std::string_view id, std::span<const Item> items, std::string_view before = {}, bool reorder = false);
 	// Asks for a name and creates a tab; returns its id, or empty when cancelled.
 	[[nodiscard]] std::string CreateTabInteractive(wxWindow* parent);
 
-	// Drag payload: client version, source tab and references.
-	struct DragPayload {
-		std::string version;
-		std::string tab;
-		std::vector<Item> items;
-	};
-	[[nodiscard]] const char* DragFormatId();
-	[[nodiscard]] std::optional<DragPayload> ParseDragPayload(std::string_view data);
+	// A drag started by BeginDrag() is running.
 	[[nodiscard]] bool IsDragging();
 
 	// "&" shows as a mnemonic in menus and notebook tabs.

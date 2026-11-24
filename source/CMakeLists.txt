@@ -189,7 +189,11 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/brush_collection_menu_model.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/brush_collection_policy.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/brush_reference.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tileset_drag_payload.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tileset_drop_target.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tileset_json.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tileset_model.h
+    ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tileset_page.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tileset_store.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tilesets.h
     ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tilesets_window.h
@@ -655,8 +659,12 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/palette/controls/virtual_brush_grid.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/favorites/favorites_palette.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/brush_reference.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tileset_drag_payload.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tileset_drop_target.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tileset_page.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tileset_store.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tilesets.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tilesets_context_menu.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/quick_tilesets/quick_tilesets_window.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/controls/tileset_grid_toolbar.cpp
     ${CMAKE_CURRENT_LIST_DIR}/palette/controls/palette_search_ctrl.cpp

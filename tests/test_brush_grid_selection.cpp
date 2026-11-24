@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <array>
+#include <optional>
 #include <vector>
 
 // Brush is only used through pointers here; the test addresses stand in for brushes.
@@ -101,7 +102,7 @@ TEST_CASE("a click on empty space collapses to the primary brush", "[brush_grid_
 	Fixture f;
 	f.selection.Press(f.display, 1, Modifier::None);
 	f.selection.Press(f.display, 4, Modifier::Toggle);
-	REQUIRE(f.selection.Press(f.display, -1, Modifier::None).picked == nullptr);
+	REQUIRE(f.selection.Press(f.display, std::nullopt, Modifier::None).picked == nullptr);
 	REQUIRE(f.selected() == std::vector<Brush*> { f.at(1) });
 
 	// With a modifier, empty space changes nothing.
@@ -121,6 +122,11 @@ TEST_CASE("a right click outside the selection replaces it without a pick", "[br
 	f.selection.PressContext(f.display, 5);
 	REQUIRE(f.selected() == std::vector<Brush*> { f.at(5) });
 	REQUIRE(f.selection.Primary() == f.at(1));
+
+	// Empty space (no cell, or past the last one) keeps the selection.
+	f.selection.PressContext(f.display, std::nullopt);
+	f.selection.PressContext(f.display, 99);
+	REQUIRE(f.selected() == std::vector<Brush*> { f.at(5) });
 }
 
 TEST_CASE("reset selects one brush or none", "[brush_grid_selection]") {

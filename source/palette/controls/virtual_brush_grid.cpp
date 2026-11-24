@@ -108,16 +108,20 @@ void VirtualBrushGrid::RefreshBrushList() {
 	}
 
 	m_selection.Remap(m_display_brushes);
-	SyncSelectedIndex();
+	SyncSelection();
 }
 
-void VirtualBrushGrid::SyncSelectedIndex() {
+void VirtualBrushGrid::SyncSelection() {
 	selected_index = -1;
 	if (const Brush* primary = m_selection.Primary()) {
 		const auto it = std::ranges::find(m_display_brushes, primary);
 		if (it != m_display_brushes.end()) {
 			selected_index = static_cast<int>(it - m_display_brushes.begin());
 		}
+	}
+	m_selectedFlags.assign(m_display_brushes.size(), 0);
+	for (size_t i = 0; i < m_display_brushes.size(); ++i) {
+		m_selectedFlags[i] = m_selection.Contains(m_display_brushes[i]) ? 1 : 0;
 	}
 }
 
@@ -281,7 +285,7 @@ void VirtualBrushGrid::DrawBrushItem(NVGcontext* vg, int i, const wxRect& rect) 
 		return;
 	}
 
-	const bool selected = m_selection.Contains(brush);
+	const bool selected = static_cast<size_t>(i) < m_selectedFlags.size() && m_selectedFlags[static_cast<size_t>(i)] != 0;
 	const bool hovered = (i == hover_index);
 	const bool listMode = display_mode == DisplayMode::List;
 
@@ -396,12 +400,20 @@ int VirtualBrushGrid::HitTest(int x, int y) const {
 	}
 }
 
+std::optional<size_t> VirtualBrushGrid::CellAt(int x, int y) const {
+	const int index = HitTest(x, y);
+	if (index < 0 || static_cast<size_t>(index) >= m_display_brushes.size()) {
+		return std::nullopt;
+	}
+	return static_cast<size_t>(index);
+}
+
 void VirtualBrushGrid::OnMouseDown(wxMouseEvent& event) {
-	const int index = HitTest(event.GetX(), event.GetY());
+	const std::optional<size_t> index = CellAt(event.GetX(), event.GetY());
 	// Search results only become current on release (they jump to their own page then).
 	const auto commit = m_hasOverrideBrushes ? BrushGridSelection::Commit::OnRelease : BrushGridSelection::Commit::OnPress;
 	const BrushGridSelection::PressResult result = m_selection.Press(m_display_brushes, index, ModifierOf(event), commit);
-	SyncSelectedIndex();
+	SyncSelection();
 
 	m_dragArmed = result.can_drag;
 	m_dragStarted = false;
@@ -427,7 +439,7 @@ void VirtualBrushGrid::OnMouseUp(wxMouseEvent& event) {
 	m_dragStarted = false;
 
 	if (Brush* collapsed = const_cast<Brush*>(m_selection.Release(dragged))) {
-		SyncSelectedIndex();
+		SyncSelection();
 		if (m_hasOverrideBrushes) {
 			m_pendingSearchPick = collapsed;
 		} else {
@@ -436,8 +448,8 @@ void VirtualBrushGrid::OnMouseUp(wxMouseEvent& event) {
 	}
 
 	// A search result jumps only when the button is released on the cell it was pressed on.
-	const bool released_on_pressed = m_pressIndex != -1 && HitTest(event.GetX(), event.GetY()) == m_pressIndex;
-	m_pressIndex = -1;
+	const bool released_on_pressed = m_pressIndex && CellAt(event.GetX(), event.GetY()) == m_pressIndex;
+	m_pressIndex.reset();
 	Brush* const search_pick = std::exchange(m_pendingSearchPick, nullptr);
 	if (search_pick && !dragged && released_on_pressed) {
 		CommitSearchPick(search_pick);
@@ -448,7 +460,8 @@ void VirtualBrushGrid::OnMouseUp(wxMouseEvent& event) {
 }
 
 void VirtualBrushGrid::OnRightDown(wxMouseEvent& event) {
-	m_selection.PressContext(m_display_brushes, HitTest(event.GetX(), event.GetY()));
+	m_selection.PressContext(m_display_brushes, CellAt(event.GetX(), event.GetY()));
+	SyncSelection();
 	Refresh();
 	// wxGTK only sends wxEVT_CONTEXT_MENU when the right button press is not handled.
 	event.Skip();
@@ -500,7 +513,7 @@ void VirtualBrushGrid::CommitSearchPick(Brush* brush) {
 	}
 
 	m_selection.Reset(brush);
-	SyncSelectedIndex();
+	SyncSelection();
 	SendPicked(brush);
 	if (pw) {
 		const std::string preferredPal = currentBrushPalettePanel ? currentBrushPalettePanel->GetName().ToStdString() : "";
@@ -623,7 +636,7 @@ void VirtualBrushGrid::EnsureSelectedVisible() {
 void VirtualBrushGrid::SelectFirstBrush() {
 	if (!m_display_brushes.empty()) {
 		m_selection.Reset(m_display_brushes.front());
-		selected_index = 0;
+		SyncSelection();
 		Refresh();
 	}
 }
@@ -639,7 +652,7 @@ bool VirtualBrushGrid::SelectBrush(const Brush* brush) {
 	for (size_t i = 0; i < m_display_brushes.size(); ++i) {
 		if (m_display_brushes[i] == brush) {
 			m_selection.Reset(m_display_brushes[i]);
-			selected_index = static_cast<int>(i);
+			SyncSelection();
 
 			// The palette page holding this grid may be hidden right now (it is
 			// switched to after the brush is found), so its layout can be stale.
@@ -659,7 +672,7 @@ bool VirtualBrushGrid::SelectBrush(const Brush* brush) {
 		}
 	}
 	m_selection.Reset(nullptr);
-	selected_index = -1;
+	SyncSelection();
 	Refresh();
 	return false;
 }
@@ -670,14 +683,14 @@ std::vector<Brush*> VirtualBrushGrid::GetSelectedBrushes() const {
 
 void VirtualBrushGrid::ClearSelection() {
 	m_selection.Reset(nullptr);
-	selected_index = -1;
+	SyncSelection();
 	m_pendingSearchPick = nullptr;
 	Refresh();
 }
 
 Brush* VirtualBrushGrid::BrushAt(int x, int y) const {
-	const int index = HitTest(x, y);
-	return index >= 0 ? m_display_brushes[static_cast<size_t>(index)] : nullptr;
+	const std::optional<size_t> index = CellAt(x, y);
+	return index ? m_display_brushes[*index] : nullptr;
 }
 
 wxPoint VirtualBrushGrid::GetSelectedCellPosition() const {

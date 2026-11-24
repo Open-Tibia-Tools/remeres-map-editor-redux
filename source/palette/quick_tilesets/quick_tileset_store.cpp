@@ -4,6 +4,8 @@
 
 #include "palette/quick_tilesets/quick_tileset_store.h"
 
+#include "palette/quick_tilesets/quick_tileset_json.h"
+
 #include <wx/file.h>
 #include <wx/filefn.h>
 

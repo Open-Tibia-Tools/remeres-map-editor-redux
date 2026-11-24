@@ -1,5 +1,7 @@
 #include "palette/quick_tilesets/brush_collection_menu_model.h"
 #include "palette/quick_tilesets/brush_collection_policy.h"
+#include "palette/quick_tilesets/quick_tileset_drag_payload.h"
+#include "palette/quick_tilesets/quick_tileset_json.h"
 #include "palette/quick_tilesets/quick_tileset_model.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -247,6 +249,19 @@ TEST_CASE("documents of another schema are rejected", "[quick_tilesets][model][j
 	REQUIRE_THROWS(ValidateDocument(nlohmann::json::array()));
 	REQUIRE_THROWS(ValidateDocument(nlohmann::json { { "schema", 2 }, { "versions", nlohmann::json::object() } }));
 	REQUIRE_THROWS(ValidateDocument(nlohmann::json { { "schema", 1 }, { "versions", nlohmann::json::array() } }));
+}
+
+TEST_CASE("drag payloads round trip and reject foreign data", "[quick_tilesets][drag]") {
+	const DragPayload payload { .version = "1310", .tab = "port", .items = { Raw(5), Named("ground") } };
+	const auto parsed = ParseDragPayload(EncodeDragPayload(payload));
+	REQUIRE(parsed);
+	REQUIRE(parsed->version == payload.version);
+	REQUIRE(parsed->tab == payload.tab);
+	REQUIRE(parsed->items == payload.items);
+
+	REQUIRE_FALSE(ParseDragPayload("not json"));
+	REQUIRE_FALSE(ParseDragPayload(R"({"tab":"port","items":[]})"));
+	REQUIRE_FALSE(ParseDragPayload(R"({"version":"1310","items":[{"key":"bad"}]})"));
 }
 
 TEST_CASE("only standalone brushes are collected", "[quick_tilesets][policy]") {

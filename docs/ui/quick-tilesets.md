@@ -2,18 +2,21 @@
 
 ## 1. Pattern & Key Files
 
-- `palette/quick_tilesets/quick_tileset_model.h` — pure model (Recent 20/60, sets, favorites, tab ops, JSON).
+- `palette/quick_tilesets/quick_tileset_model.h` — pure model (Recent 20/60, sets, favorites, tab ops), no JSON.
+- `palette/quick_tilesets/quick_tileset_json.h` — JSON codec and file document; included only by the store, the drag payload and tests.
 - `palette/quick_tilesets/brush_collection_policy.h`, `brush_collection_menu_model.h` — pure decisions: which brushes are collected, which context menu entries exist.
 - `palette/quick_tilesets/brush_reference.{h,cpp}` — `Brush*` ↔ `"r:<id>" / "c:<name>" / "b:<name>"`; resolving creates lazy RAW/creature brushes.
 - `palette/quick_tilesets/quick_tileset_store.{h,cpp}` — `quick-tilesets.json` in `FileSystem::GetLocalDataDirectory()`, one section per client version.
-- `palette/quick_tilesets/quick_tilesets.{h,cpp}` — facade: pane lifetime, Recent feed, favorites, context menu dispatcher, drag & drop.
-- `palette/quick_tilesets/quick_tilesets_window.{h,cpp}` — the AUI pane (Recent + user sets, Brushes/RAW grids).
+- `palette/quick_tilesets/quick_tilesets.{h,cpp}` — facade: pane lifetime, Recent feed, favorites, `Apply`, drag source; `quick_tilesets_context_menu.cpp` — brush context menu.
+- `palette/quick_tilesets/quick_tileset_drag_payload.{h,cpp}` (pure), `quick_tileset_drop_target.{h,cpp}` — drag data and the drop target.
+- `palette/quick_tilesets/quick_tilesets_window.{h,cpp}` — the AUI pane; `quick_tileset_page.{h,cpp}` — one page (Brushes/RAW grids).
 - `palette/favorites/favorites_palette.{h,cpp}` — "Favorites" palette page; toggle in `BrushItemsWindow`.
 
 ## 2. When to Use It
 
 - Feed Recent only from user picks: `EVT_VIRTUAL_BRUSH_GRID_PICKED` (grid click, search commit). Do not call `RememberUserPick` from `BrushManager::SelectBrush`: Lua, toolbars, eyedroppers and hotkeys would flood the list and the file.
-- Change state only through `QuickTilesets::Apply(change, scope)`; the scope decides what refreshes.
+- Change state only through `QuickTilesets::Apply(change, scope)` (or `InsertIntoTab`); the scope decides what refreshes.
+- Include `quick_tileset_json.h` only where JSON is read or written, never from a header other code includes.
 - Keep `VirtualBrushGrid` free of this feature: it sends `wxEVT_CONTEXT_MENU`, `..._BEGIN_DRAG` and `..._PICKED`; `PaletteWindow` and the pane handle them.
 - Don't store `Brush*` across a client version change: the pane is destroyed with the version.
 

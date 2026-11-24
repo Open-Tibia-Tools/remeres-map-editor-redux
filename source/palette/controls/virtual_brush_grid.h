@@ -7,6 +7,9 @@
 #include "palette/panels/brush_panel.h"
 #include "palette/controls/brush_grid_selection.h"
 
+#include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <vector>
 
 // A single user pick (click, or the search jump on release). Client data is the picked Brush*;
@@ -107,8 +110,12 @@ protected:
 	// Search results (override brushes) jump to the brush's own palette page.
 	void CommitSearchPick(Brush* brush);
 	void SendPicked(Brush* brush);
-	void SyncSelectedIndex();
+	// Recomputes selected_index and m_selectedFlags from m_selection. Called after every change of
+	// the selection or the displayed list, so painting never searches the selection.
+	void SyncSelection();
 	int HitTest(int x, int y) const;
+	// Display index of the brush cell at (x, y), or nullopt for empty space.
+	[[nodiscard]] std::optional<size_t> CellAt(int x, int y) const;
 	wxRect GetItemRect(int index) const;
 	void DrawBrushItem(NVGcontext* vg, int index, const wxRect& rect);
 
@@ -117,12 +124,14 @@ protected:
 	// Display index of the current (primary) brush, -1 when it is not shown.
 	int selected_index;
 	BrushGridSelection m_selection;
+	// One entry per display index: 1 when that brush is a selection member (read while painting).
+	std::vector<uint8_t> m_selectedFlags;
 	// Drag state of the left button: armed on a selected cell, started past the drag threshold.
 	bool m_dragArmed = false;
 	bool m_dragStarted = false;
 	wxPoint m_dragOrigin;
-	// Display index of the cell under the last left press, -1 when none.
-	int m_pressIndex = -1;
+	// Display index of the cell under the last left press, nullopt when none.
+	std::optional<size_t> m_pressIndex;
 	// A search result picked on press; it jumps on release unless a drag starts.
 	Brush* m_pendingSearchPick = nullptr;
 	int hover_index;

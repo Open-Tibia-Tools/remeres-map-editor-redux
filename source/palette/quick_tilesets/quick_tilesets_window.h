@@ -14,9 +14,9 @@ namespace QuickTilesets {
 
 	struct DragPayload;
 
-	// The "Quick Tilesets" pane: a notebook with Recent and the user sets, each page split into a
-	// Brushes and a RAW grid. Content comes from the facade (quick_tilesets.h); refreshes are
-	// coalesced and wait for a running drag to finish.
+	// The "Quick Tilesets" pane: a notebook with Recent and the user sets. Each page
+	// (quick_tileset_page.h) is split into a Brushes and a RAW grid. Content comes from the facade
+	// (quick_tilesets.h); refreshes are coalesced and wait for a running drag to finish.
 	class QuickTilesetsWindow : public wxPanel {
 	public:
 		explicit QuickTilesetsWindow(wxWindow* parent);
@@ -25,8 +25,6 @@ namespace QuickTilesets {
 		void QueueRefresh(bool rebuild_tabs);
 
 	private:
-		class Page;
-
 		void Rebuild();
 		void RefreshPages();
 		void ShowTabList(wxButton* anchor);

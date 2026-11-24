@@ -8,8 +8,8 @@
 #include "app/managers/version_manager.h"
 #include "palette/managers/palette_manager.h"
 #include "palette/palette_window.h"
-#include "palette/quick_tilesets/brush_collection_menu_model.h"
 #include "palette/quick_tilesets/brush_reference.h"
+#include "palette/quick_tilesets/quick_tileset_drag_payload.h"
 #include "palette/quick_tilesets/quick_tileset_store.h"
 #include "palette/quick_tilesets/quick_tilesets_window.h"
 #include "ui/brush_items/brush_items_window.h"
@@ -19,7 +19,6 @@
 
 #include <wx/aui/aui.h>
 #include <wx/dnd.h>
-#include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/textdlg.h>
 
@@ -49,22 +48,6 @@ namespace QuickTilesets {
 			});
 		}
 
-		// Loads the state of the current client version on first use; false without a version.
-		bool EnsureLoaded() {
-			if (!g_version.IsVersionLoaded()) {
-				return false;
-			}
-			const std::string current = g_version.GetCurrentVersionID();
-			if (g_store.IsLoaded() && g_store.Version() == current) {
-				return true;
-			}
-			g_error_reported = false;
-			if (auto error = g_store.Load(StoragePath(), current)) {
-				ReportError(*error);
-			}
-			return true;
-		}
-
 		void NotifyFavoritesChanged() {
 			for (PaletteWindow* palette : g_palettes.GetPalettes()) {
 				palette->OnFavoritesChanged();
@@ -74,48 +57,22 @@ namespace QuickTilesets {
 			}
 		}
 
-		void RunMenuCommand(const BrushMenu::Entry& entry, const std::vector<Item>& items, const std::vector<std::string>& tab_ids, std::string_view tab_id, wxWindow* parent) {
-			using BrushMenu::Command;
-			const auto insert_into = [&items](const std::string& id) {
-				Apply([&](State& state) {
-					Tab* tab = FindTab(state, id);
-					if (!tab) {
-						return false;
-					}
-					const auto previous = tab->items;
-					Insert(*tab, items);
-					return tab->items != previous;
-				}, ChangeScope::Items);
-			};
-
-			switch (entry.command) {
-				case Command::AddFavorites:
-					Apply([&](State& state) { return AddFavorites(state, items); }, ChangeScope::Favorites);
-					break;
-				case Command::RemoveFavorites:
-					Apply([&](State& state) { return RemoveFavorites(state, items); }, ChangeScope::Favorites);
-					break;
-				case Command::AddToTab:
-					if (entry.tab_index < tab_ids.size()) {
-						insert_into(tab_ids[entry.tab_index]);
-					}
-					break;
-				case Command::NewTab:
-					if (const std::string id = CreateTabInteractive(parent); !id.empty()) {
-						insert_into(id);
-						ShowWindow();
-					}
-					break;
-				case Command::RemoveFromTab:
-					Apply([&](State& state) {
-						Tab* tab = FindTab(state, tab_id);
-						return tab && RemoveFromTab(*tab, items);
-					}, ChangeScope::Items);
-					break;
-			}
-		}
-
 	} // namespace
+
+	bool EnsureLoaded() {
+		if (!g_version.IsVersionLoaded()) {
+			return false;
+		}
+		const std::string current = g_version.GetCurrentVersionID();
+		if (g_store.IsLoaded() && g_store.Version() == current) {
+			return true;
+		}
+		g_error_reported = false;
+		if (auto error = g_store.Load(StoragePath(), current)) {
+			ReportError(*error);
+		}
+		return true;
+	}
 
 	void EnsureWindow() {
 		if (g_window || !g_gui.aui_manager || !g_gui.root || !EnsureLoaded()) {
@@ -217,60 +174,6 @@ namespace QuickTilesets {
 		}
 	}
 
-	void ShowBrushContextMenu(wxWindow* parent, wxPoint position, std::span<Brush* const> brushes, std::string_view tab_id) {
-		if (!parent || !EnsureLoaded()) {
-			return;
-		}
-		const std::vector<Item> items = MakeReferences(brushes);
-		if (items.empty()) {
-			return;
-		}
-
-		const State& state = g_store.GetState();
-		BrushMenu::Facts facts {
-			.selection_count = items.size(),
-			.all_favorite = AllFavorite(state, items),
-			.tab_names = {},
-			.inside_user_tab = !tab_id.empty() && FindTab(state, tab_id) != nullptr,
-		};
-		std::vector<std::string> tab_ids;
-		for (const Tab& tab : state.tabs) {
-			facts.tab_names.push_back(tab.name);
-			tab_ids.push_back(tab.id);
-		}
-		const std::vector<BrushMenu::Entry> entries = BrushMenu::Build(facts);
-
-		constexpr int kFirstId = wxID_HIGHEST + 1;
-		wxMenu menu;
-		auto* tab_menu = new wxMenu;
-		bool tab_menu_attached = false;
-		for (size_t index = 0; index < entries.size(); ++index) {
-			const BrushMenu::Entry& entry = entries[index];
-			if (entry.in_tab_submenu && !tab_menu_attached) {
-				menu.AppendSubMenu(tab_menu, BrushMenu::kTabSubmenuLabel);
-				tab_menu_attached = true;
-			}
-			wxMenu& target = entry.in_tab_submenu ? *tab_menu : menu;
-			if (entry.separator_before) {
-				target.AppendSeparator();
-			}
-			target.Append(kFirstId + static_cast<int>(index), wxstr(EscapeMnemonics(entry.label)));
-		}
-		if (!tab_menu_attached) {
-			delete tab_menu;
-		}
-
-		const int chosen = parent->GetPopupMenuSelectionFromUser(menu, position);
-		if (chosen == wxID_NONE) {
-			return;
-		}
-		const size_t index = static_cast<size_t>(chosen - kFirstId);
-		if (index < entries.size()) {
-			const std::string tab(tab_id);
-			RunMenuCommand(entries[index], items, tab_ids, tab, parent);
-		}
-	}
-
 	void BeginDrag(wxWindow* source, std::span<Brush* const> brushes, std::string_view source_tab) {
 		if (!source || !EnsureLoaded()) {
 			return;
@@ -279,11 +182,11 @@ namespace QuickTilesets {
 		if (items.empty()) {
 			return;
 		}
-		const std::string payload = nlohmann::json {
-			{ "version", g_store.Version() },
-			{ "tab", std::string(source_tab) },
-			{ "items", items },
-		}.dump();
+		const std::string payload = EncodeDragPayload(DragPayload {
+			.version = g_store.Version(),
+			.tab = std::string(source_tab),
+			.items = items,
+		});
 
 		wxCustomDataObject data { wxDataFormat(DragFormatId()) };
 		data.SetData(payload.size(), payload.data());
@@ -337,6 +240,18 @@ namespace QuickTilesets {
 		return true;
 	}
 
+	bool InsertIntoTab(std::string_view id, std::span<const Item> items, std::string_view before, bool reorder) {
+		return Apply([&](State& state) {
+			Tab* tab = FindTab(state, id);
+			if (!tab) {
+				return false;
+			}
+			const auto previous = tab->items;
+			Insert(*tab, items, before, reorder);
+			return tab->items != previous;
+		}, ChangeScope::Items);
+	}
+
 	std::string CreateTabInteractive(wxWindow* parent) {
 		wxTextEntryDialog dialog(parent, "Name of the new set:", "Add Quick Tileset");
 		if (dialog.ShowModal() != wxID_OK) {
@@ -348,23 +263,6 @@ namespace QuickTilesets {
 			return {};
 		}
 		return id;
-	}
-
-	const char* DragFormatId() {
-		return "application/x-rme-quick-tileset-v1";
-	}
-
-	std::optional<DragPayload> ParseDragPayload(std::string_view data) {
-		try {
-			const nlohmann::json json = nlohmann::json::parse(data);
-			return DragPayload {
-				.version = json.at("version").get<std::string>(),
-				.tab = json.value("tab", std::string {}),
-				.items = json.at("items").get<std::vector<Item>>(),
-			};
-		} catch (const std::exception&) {
-			return std::nullopt;
-		}
 	}
 
 	bool IsDragging() {

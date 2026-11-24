@@ -16,7 +16,9 @@
 ## 3. Minimal Usage
 
 ```cpp
-const auto result = m_selection.Press(m_display_brushes, HitTest(x, y), ModifierOf(event));
+// CellAt() returns std::nullopt for empty space.
+const auto result = m_selection.Press(m_display_brushes, CellAt(x, y), ModifierOf(event));
+SyncSelection();
 if (result.picked) {
 	CommitPick(const_cast<Brush*>(result.picked)); // focuses the map if it already is current
 }
@@ -32,3 +34,4 @@ if (const Brush* collapsed = m_selection.Release(drag_started)) { /* single pick
 - Right-click selects the hit cell only when it is outside the group, and must `Skip()` (wxGTK sends `wxEVT_CONTEXT_MENU` only for unhandled right presses).
 - `BEGIN_DRAG` is sent synchronously from `OnMotion`; the drop source loop consumes the release.
 - The primary brush stays a member while hidden by a filter, so it is highlighted again when shown.
+- Call `SyncSelection()` after every selection or display-list change. It rebuilds `selected_index` and the per-cell flags that the paint loop reads, so painting never searches the member set.
