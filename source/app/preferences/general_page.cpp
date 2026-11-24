@@ -1,7 +1,5 @@
 #include "app/preferences/general_page.h"
 
-#include <array>
-
 #include "app/main.h"
 #include "app/preferences/preferences_layout.h"
 #include "app/settings.h"

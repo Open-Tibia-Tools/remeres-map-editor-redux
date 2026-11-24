@@ -39,8 +39,9 @@ public:
 	void CheckRange();
 
 protected:
+    bool TryBefore(wxEvent& event) override;
 
-	long minval, maxval, lastval;
+    long minval, maxval, lastval;
 };
 
 #endif

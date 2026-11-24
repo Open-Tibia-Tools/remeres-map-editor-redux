@@ -136,17 +136,31 @@ namespace {
 		}
 	};
 
-	// The inside of a Lua table or JSON object: "key = value" or "key: value" pairs, where
-	// the key may be quoted. A trailing separator is allowed, as Lua allows it.
-	std::optional<Position> ParseKeyed(std::string_view body) {
-		std::vector<std::string_view> parts = Split(body, ',');
-		if (parts.size() > 1 && Trim(parts.back()).empty()) {
-			parts.pop_back();
-		}
+    struct ParsedPosition {
+        Position position;
+        std::optional<Position> range_end;
+    };
 
-		KeyedValues values;
-		for (std::string_view part : parts) {
-			part = Trim(part);
+    std::optional<ParsedPosition> AsSinglePosition(std::optional<Position> position)
+    {
+        if (!position) {
+            return std::nullopt;
+        }
+        return ParsedPosition {*position, std::nullopt};
+    }
+
+    // The inside of a Lua table or JSON object: "key = value" or "key: value" pairs, where
+    // the key may be quoted. A trailing separator is allowed, as Lua allows it.
+    std::optional<ParsedPosition> ParseKeyed(std::string_view body)
+    {
+        std::vector<std::string_view> parts = Split(body, ',');
+        if (parts.size() > 1 && Trim(parts.back()).empty()) {
+            parts.pop_back();
+        }
+
+        KeyedValues values;
+        for (std::string_view part : parts) {
+            part = Trim(part);
 			const size_t separator = part.find_first_of("=:");
 			if (separator == std::string_view::npos) {
 				return std::nullopt;
@@ -161,53 +175,58 @@ namespace {
 				return std::nullopt;
 			}
 			*slot = value;
-		}
+        }
 
-		const bool any_range = values.fromx || values.tox || values.fromy || values.toy || values.fromz || values.toz;
+        const bool any_range = values.fromx || values.tox || values.fromy || values.toy || values.fromz || values.toz;
 		if (values.x && values.y && values.z && !any_range) {
-			return Position(*values.x, *values.y, *values.z);
-		}
+            return ParsedPosition {Position(*values.x, *values.y, *values.z), std::nullopt};
+        }
 
-		if (values.x || values.y || !values.fromx || !values.tox || !values.fromy || !values.toy) {
+        if (values.x || values.y || !values.fromx || !values.tox || !values.fromy || !values.toy) {
+            return std::nullopt;
+        }
+        const bool single_floor = values.z && !values.fromz && !values.toz;
+        const bool floor_range = !values.z && values.fromz && values.toz;
+        if (!single_floor && !floor_range) {
 			return std::nullopt;
 		}
-		const bool single_floor = values.z && !values.fromz && !values.toz;
-		const bool floor_range = !values.z && values.fromz && values.toz;
-		if (!single_floor && !floor_range) {
-			return std::nullopt;
-		}
-		const int z = single_floor ? *values.z : std::min(*values.fromz, *values.toz);
-		return Position(std::min(*values.fromx, *values.tox), std::min(*values.fromy, *values.toy), z);
-	}
+        const int from_z = single_floor ? *values.z : std::min(*values.fromz, *values.toz);
+        const int to_z = single_floor ? *values.z : std::max(*values.fromz, *values.toz);
+        return ParsedPosition {
+            Position(std::min(*values.fromx, *values.tox), std::min(*values.fromy, *values.toy), from_z),
+            Position(std::max(*values.fromx, *values.tox), std::max(*values.fromy, *values.toy), to_z),
+        };
+    }
 
-	std::optional<Position> ParseUnbounded(std::string_view text) {
-		text = Trim(text);
-		if (text.empty()) {
-			return std::nullopt;
-		}
+    std::optional<ParsedPosition> ParseUnbounded(std::string_view text)
+    {
+        text = Trim(text);
+        if (text.empty()) {
+            return std::nullopt;
+        }
 
-		std::string_view inner = text;
-		if (StripEnclosing(inner, '{', '}')) {
-			if (inner.find_first_of("=:") != std::string_view::npos) {
+        std::string_view inner = text;
+        if (StripEnclosing(inner, '{', '}')) {
+            if (inner.find_first_of("=:") != std::string_view::npos) {
 				return ParseKeyed(inner);
 			}
-			return ParseTriple(inner);
-		}
+            return AsSinglePosition(ParseTriple(inner));
+        }
 
-		constexpr std::string_view kConstructor = "position";
-		if (text.size() > kConstructor.size() && Lower(text.substr(0, kConstructor.size())) == kConstructor) {
-			inner = Trim(text.substr(kConstructor.size()));
-			if (!StripEnclosing(inner, '(', ')')) {
+        constexpr std::string_view kConstructor = "position";
+        if (text.size() > kConstructor.size() && Lower(text.substr(0, kConstructor.size())) == kConstructor) {
+            inner = Trim(text.substr(kConstructor.size()));
+            if (!StripEnclosing(inner, '(', ')')) {
 				return std::nullopt;
 			}
-			return ParseTriple(inner);
-		}
+            return AsSinglePosition(ParseTriple(inner));
+        }
 
-		if (StripEnclosing(inner, '(', ')') || StripEnclosing(inner, '[', ']')) {
-			return ParseTriple(inner);
-		}
-		return ParseTriple(text);
-	}
+        if (StripEnclosing(inner, '(', ')') || StripEnclosing(inner, '[', ']')) {
+            return AsSinglePosition(ParseTriple(inner));
+        }
+        return AsSinglePosition(ParseTriple(text));
+    }
 
 } // namespace
 
@@ -240,9 +259,9 @@ std::string FormatPositionRange(const Position& from, const Position& to) {
 }
 
 std::optional<Position> ParsePosition(std::string_view text, const PositionBounds& bounds) {
-	const std::optional<Position> position = ParseUnbounded(text);
-	if (!position || !bounds.contains(*position)) {
-		return std::nullopt;
-	}
-	return position;
+    const std::optional<ParsedPosition> parsed = ParseUnbounded(text);
+    if (!parsed || !bounds.contains(parsed->position) || (parsed->range_end && !bounds.contains(*parsed->range_end))) {
+        return std::nullopt;
+    }
+    return parsed->position;
 }

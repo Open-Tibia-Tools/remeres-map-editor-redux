@@ -17,13 +17,14 @@
 
 #include "app/main.h"
 
-#include "ui/main_menubar.h"
+#include "ui/brush_items/brush_items_window.h"
 #include "ui/dialog_util.h"
 #include "ui/gui.h"
-#include "ui/tool_options_window.h"
-#include "ui/tile_properties/tile_properties_panel.h"
-#include "ui/brush_items/brush_items_window.h"
+#include "ui/main_menubar.h"
 #include "ui/managers/search_manager.h"
+#include "ui/numbertextctrl.h"
+#include "ui/tile_properties/tile_properties_panel.h"
+#include "ui/tool_options_window.h"
 
 #include "map/map_statistics.h"
 #include "map/map_search.h"
@@ -411,7 +412,11 @@ void MainMenuBar::OnCut(wxCommandEvent& WXUNUSED(event)) {
 }
 
 void MainMenuBar::OnPaste(wxCommandEvent& WXUNUSED(event)) {
-	g_gui.PreparePaste();
+    if (NumberTextCtrl* focused = dynamic_cast<NumberTextCtrl*>(wxWindow::FindFocus())) {
+        focused->Paste();
+        return;
+    }
+    g_gui.PreparePaste();
 }
 
 void MainMenuBar::OnToggleAutomagic(wxCommandEvent& event) {

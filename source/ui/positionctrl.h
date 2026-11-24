@@ -47,8 +47,9 @@ public:
 		z_field->SetIntValue(value);
 	}
 	void SetPosition(Position pos);
+    void CheckRange();
 
-	bool Enable(bool enable = true);
+    bool Enable(bool enable = true);
 
 protected:
 	NumberTextCtrl* x_field;

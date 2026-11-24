@@ -71,6 +71,10 @@ TEST_CASE("a copied range pastes as its from corner", "[position_format]") {
 	REQUIRE(Is(Parse("{toy = 40, z = 7, tox = 30, fromy = 20, fromx = 10}"), 10, 20, 7));
 	// A normal map y used to be read as the floor and rejected.
 	REQUIRE(Is(Parse("{fromx = 1000, tox = 1010, fromy = 1500, toy = 1510, z = 7}"), 1000, 1500, 7));
+    REQUIRE(Is(Parse("{fromx = 30, tox = 10, fromy = 40, toy = 20, fromz = 8, toz = 6}"), 10, 20, 6));
+    REQUIRE_FALSE(Parse("{fromx = 10, tox = 2048, fromy = 20, toy = 40, z = 7}"));
+    REQUIRE_FALSE(Parse("{fromx = 10, tox = 30, fromy = 20, toy = 2048, z = 7}"));
+    REQUIRE_FALSE(Parse("{fromx = 10, tox = 30, fromy = 20, toy = 40, fromz = 6, toz = 16}"));
 }
 
 TEST_CASE("text that is not exactly one position is rejected", "[position_format]") {
@@ -122,4 +126,8 @@ TEST_CASE("number input keeps whole integers only", "[number_input]") {
 	REQUIRE(ResolveNumberInput("12a", 0, 2047, 10) == 10);
 	REQUIRE(ResolveNumberInput("99999999999999999999", 0, 2047, 10) == 10);
 	REQUIRE(ResolveNumberInput("9999999999", 0, 2047, 10) == 2047);
+    REQUIRE(ResolveNumberInput("", 10, 20, 5) == 10);
+    REQUIRE(ResolveNumberInput("abc", 10, 20, 50) == 20);
+    REQUIRE(ResolveNumberInput("5", 10, 5, 7) == 10);
+    REQUIRE(ResolveNumberInput("", 10, 5, 7) == 10);
 }

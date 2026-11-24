@@ -4,14 +4,13 @@
 
 #include "app/main.h"
 
-#include "map/tile.h"
-#include "game/item.h"
 #include "game/complexitem.h"
-#include "game/town.h"
-#include "game/house.h"
-#include "map/map.h"
-#include "editor/editor.h"
 #include "game/creature.h"
+#include "game/house.h"
+#include "game/item.h"
+#include "game/town.h"
+#include "map/map.h"
+#include "map/tile.h"
 
 #include "ui/gui.h"
 #include "ui/dialog_util.h"
@@ -30,19 +29,23 @@
 // Item Properties Window
 
 ItemPropertiesWindow::ItemPropertiesWindow(wxWindow* win_parent, const Map* map, const Tile* tile_parent, Item* item, wxPoint pos) :
-	ObjectPropertiesWindowBase(win_parent, "Item Properties", map, tile_parent, item, pos),
-	count_field(nullptr),
-	action_id_field(nullptr),
-	unique_id_field(nullptr),
-	door_id_field(nullptr),
-	tier_field(nullptr) {
-	ASSERT(edit_item);
+    ObjectPropertiesWindowBase(win_parent, "Item Properties", map, tile_parent, item, pos),
+    count_field(nullptr),
+    action_id_field(nullptr),
+    unique_id_field(nullptr),
+    door_id_field(nullptr),
+    tier_field(nullptr),
+    x_field(nullptr),
+    y_field(nullptr),
+    z_field(nullptr)
+{
+    ASSERT(edit_item);
 
-	Bind(wxEVT_SET_FOCUS, &ItemPropertiesWindow::OnFocusChange, this);
-	Bind(wxEVT_BUTTON, &ItemPropertiesWindow::OnClickOK, this, wxID_OK);
-	Bind(wxEVT_BUTTON, &ItemPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
+    Bind(wxEVT_SET_FOCUS, &ItemPropertiesWindow::OnFocusChange, this);
+    Bind(wxEVT_BUTTON, &ItemPropertiesWindow::OnClickOK, this, wxID_OK);
+    Bind(wxEVT_BUTTON, &ItemPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
 
-	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
+    wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
 
 	wxString description;
 	if (dynamic_cast<Door*>(edit_item)) {
@@ -153,14 +156,16 @@ void ItemPropertiesWindow::createTeleportFields(wxFlexGridSizer* subsizer, wxWin
 		// wxTE_PROCESS_ENTER, so Enter still confirms the dialog.
 		const int map_width = edit_map->getWidth();
 		const int map_height = edit_map->getHeight();
-		x_field = new NumberTextCtrl(parent, wxID_ANY, teleport->getX(), 0, std::max(map_width - 1, 0), 0, "X", wxDefaultPosition, FromDIP(wxSize(-1, 20)));
-		x_field->SetToolTip("X Coordinate");
+        const wxSize xySize = FromDIP(wxSize(60, 20));
+        const wxSize zSize = FromDIP(wxSize(35, 20));
+        x_field = new NumberTextCtrl(parent, wxID_ANY, teleport->getX(), 0, std::max(map_width - 1, 0), 0, "X", wxDefaultPosition, xySize);
+        x_field->SetToolTip("X Coordinate");
 		possizer->Add(x_field, wxSizerFlags(3).Expand());
-		y_field = new NumberTextCtrl(parent, wxID_ANY, teleport->getY(), 0, std::max(map_height - 1, 0), 0, "Y", wxDefaultPosition, FromDIP(wxSize(-1, 20)));
-		y_field->SetToolTip("Y Coordinate");
+        y_field = new NumberTextCtrl(parent, wxID_ANY, teleport->getY(), 0, std::max(map_height - 1, 0), 0, "Y", wxDefaultPosition, xySize);
+        y_field->SetToolTip("Y Coordinate");
 		possizer->Add(y_field, wxSizerFlags(3).Expand());
-		z_field = new NumberTextCtrl(parent, wxID_ANY, teleport->getZ(), 0, MAP_MAX_LAYER, 0, "Z", wxDefaultPosition, FromDIP(wxSize(-1, 20)));
-		z_field->SetToolTip("Z Coordinate (Layer)");
+        z_field = new NumberTextCtrl(parent, wxID_ANY, teleport->getZ(), 0, MAP_MAX_LAYER, 0, "Z", wxDefaultPosition, zSize);
+        z_field->SetToolTip("Z Coordinate (Layer)");
 		possizer->Add(z_field, wxSizerFlags(2).Expand());
 		BindPositionPaste(x_field, y_field, z_field, [map_width, map_height] {
 			return PositionBounds { map_width, map_height };

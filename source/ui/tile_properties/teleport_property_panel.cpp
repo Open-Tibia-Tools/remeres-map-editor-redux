@@ -15,6 +15,8 @@
 #include "ui/numbertextctrl.h"
 #include "ui/position_paste.h"
 
+#include <wx/weakref.h>
+
 #include <algorithm>
 
 TeleportPropertyPanel::TeleportPropertyPanel(wxWindow* parent) :
@@ -43,27 +45,52 @@ TeleportPropertyPanel::TeleportPropertyPanel(wxWindow* parent) :
 	GetSizer()->Add(dest_sizer, wxSizerFlags().Expand().Border(wxALL, FromDIP(5)));
 
 	for (NumberTextCtrl* field : { x_field, y_field, z_field }) {
-		field->Bind(wxEVT_TEXT, [this](wxCommandEvent& event) {
-			user_edited = true;
-			event.Skip();
-		});
-		field->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent& event) {
-			event.Skip();
-			CommitDestination(false);
-		});
-		field->Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& event) {
-			event.Skip();
-			CommitDestination(false);
-		});
-	}
-	BindPositionPaste(x_field, y_field, z_field, [this] {
-		return current_map ? PositionBounds { current_map->getWidth(), current_map->getHeight() } : PositionBounds {};
-	}, [this](const Position&) {
-		CommitDestination(true);
-	});
+        field->Bind(wxEVT_TEXT, &TeleportPropertyPanel::OnFieldText, this);
+        field->Bind(wxEVT_TEXT_ENTER, &TeleportPropertyPanel::OnFieldEnter, this);
+        field->Bind(wxEVT_KILL_FOCUS, &TeleportPropertyPanel::OnFieldKillFocus, this);
+    }
+    const wxWeakRef<TeleportPropertyPanel> self(this);
+    BindPositionPaste(
+        x_field, y_field, z_field,
+        [self] {
+            const Editor* editor = g_gui.GetCurrentEditor();
+            return (self && editor && self->current_map == &editor->map) ? PositionBounds {editor->map.getWidth(), editor->map.getHeight()}
+                                                                         : PositionBounds {};
+        },
+        [self](const Position&) {
+            if (self) {
+                self->CommitDestination(true);
+            }
+        }
+    );
 }
 
 TeleportPropertyPanel::~TeleportPropertyPanel() {
+    for (NumberTextCtrl* field : {x_field, y_field, z_field}) {
+        if (field) {
+            field->Unbind(wxEVT_TEXT, &TeleportPropertyPanel::OnFieldText, this);
+            field->Unbind(wxEVT_TEXT_ENTER, &TeleportPropertyPanel::OnFieldEnter, this);
+            field->Unbind(wxEVT_KILL_FOCUS, &TeleportPropertyPanel::OnFieldKillFocus, this);
+        }
+    }
+}
+
+void TeleportPropertyPanel::OnFieldText(wxCommandEvent& event)
+{
+    user_edited = true;
+    event.Skip();
+}
+
+void TeleportPropertyPanel::OnFieldEnter(wxCommandEvent& event)
+{
+    event.Skip();
+    CommitDestination(false);
+}
+
+void TeleportPropertyPanel::OnFieldKillFocus(wxFocusEvent& event)
+{
+    event.Skip();
+    CommitDestination(false);
 }
 
 void TeleportPropertyPanel::SetItem(Item* item, Tile* tile, Map* map) {

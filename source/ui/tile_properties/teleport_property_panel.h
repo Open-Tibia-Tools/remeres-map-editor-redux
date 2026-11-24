@@ -17,20 +17,24 @@ public:
 	void SetItem(Item* item, Tile* tile, Map* map) override;
 
 protected:
-	// Applies the destination in the fields as one undoable change, if it differs from the
-	// teleport's current one. Runs on Enter and when a field loses focus after the user typed
-	// in it, and after a paste (force).
-	void CommitDestination(bool force);
+    void OnFieldText(wxCommandEvent& event);
+    void OnFieldEnter(wxCommandEvent& event);
+    void OnFieldKillFocus(wxFocusEvent& event);
 
-	wxStaticBoxSizer* dest_sizer;
-	NumberTextCtrl* x_field;
-	NumberTextCtrl* y_field;
-	NumberTextCtrl* z_field;
-	// Where the shown tile was when SetItem ran, to check that it is still the live tile.
-	Position tile_position;
-	// Set by typing in a field, cleared when SetItem loads a teleport. A focus change alone
-	// must not write a destination that the fields only clamped to the map size.
-	bool user_edited = false;
+    // Applies the destination in the fields as one undoable change, if it differs from the
+    // teleport's current one. Runs on Enter and when a field loses focus after the user typed
+    // in it, and after a paste (force).
+    void CommitDestination(bool force);
+
+    wxStaticBoxSizer* dest_sizer = nullptr;
+    NumberTextCtrl* x_field = nullptr;
+    NumberTextCtrl* y_field = nullptr;
+    NumberTextCtrl* z_field = nullptr;
+    // Where the shown tile was when SetItem ran, to check that it is still the live tile.
+    Position tile_position;
+    // Set by typing in a field, cleared when SetItem loads a teleport. A focus change alone
+    // must not write a destination that the fields only clamped to the map size.
+    bool user_edited = false;
 };
 
 #endif

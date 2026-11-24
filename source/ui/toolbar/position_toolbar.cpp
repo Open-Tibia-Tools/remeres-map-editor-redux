@@ -1,14 +1,16 @@
-#include "ui/dialog_util.h"
 //////////////////////////////////////////////////////////////////////
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
-#include "ui/toolbar/position_toolbar.h"
+
+#include "editor/editor.h"
+#include "map/position_format.h"
+#include "ui/dialog_util.h"
 #include "ui/gui.h"
 #include "ui/gui_ids.h"
-#include "editor/editor.h"
 #include "ui/position_paste.h"
+#include "ui/toolbar/position_toolbar.h"
 #include "util/image_manager.h"
 #include <wx/artprov.h>
 #include <algorithm>
@@ -74,19 +76,32 @@ void PositionToolBar::Update() {
 	toolbar->Refresh();
 }
 
-void PositionToolBar::OnGoClick(wxCommandEvent& event) {
-	if (!g_gui.IsEditorOpen()) {
-		return;
-	}
+void PositionToolBar::GoToEnteredPosition()
+{
+    Editor* editor = g_gui.GetCurrentEditor();
+    if (!editor) {
+        return;
+    }
 
-	if (event.GetId() == TOOLBAR_POSITION_GO) {
-		Position pos(x_control->GetIntValue(), y_control->GetIntValue(), z_control->GetIntValue());
-		if (pos.isValid()) {
-			g_gui.SetScreenCenterPosition(pos);
-		} else {
-			DialogUtil::ShowRichToolTip("Invalid Coordinates", "Coordinates are out of bounds for the current map.", go_button, nullptr, wxICON_WARNING);
-		}
-	}
+    x_control->CheckRange();
+    y_control->CheckRange();
+    z_control->CheckRange();
+    const Position pos(x_control->GetIntValue(), y_control->GetIntValue(), z_control->GetIntValue());
+    const PositionBounds bounds {editor->map.getWidth(), editor->map.getHeight()};
+    if (bounds.contains(pos)) {
+        g_gui.SetScreenCenterPosition(pos);
+    } else {
+        DialogUtil::ShowRichToolTip(
+            "Invalid Coordinates", "Coordinates are out of bounds for the current map.", go_button, nullptr, wxICON_WARNING
+        );
+    }
+}
+
+void PositionToolBar::OnGoClick(wxCommandEvent& event)
+{
+    if (event.GetId() == TOOLBAR_POSITION_GO) {
+        GoToEnteredPosition();
+    }
 }
 
 void PositionToolBar::OnKeyUp(wxKeyEvent& event) {
@@ -101,12 +116,7 @@ void PositionToolBar::OnKeyUp(wxKeyEvent& event) {
 			go_button->SetFocus();
 		}
 	} else if (event.GetKeyCode() == WXK_NUMPAD_ENTER || event.GetKeyCode() == WXK_RETURN) {
-		Position pos(x_control->GetIntValue(), y_control->GetIntValue(), z_control->GetIntValue());
-		if (pos.isValid()) {
-			g_gui.SetScreenCenterPosition(pos);
-		} else {
-			DialogUtil::ShowRichToolTip("Invalid Coordinates", "Coordinates are out of bounds for the current map.", go_button, nullptr, wxICON_WARNING);
-		}
-	}
-	event.Skip();
+        GoToEnteredPosition();
+    }
+    event.Skip();
 }

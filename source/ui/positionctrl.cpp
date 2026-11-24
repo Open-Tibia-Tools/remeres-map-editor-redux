@@ -62,6 +62,13 @@ void PositionCtrl::SetPosition(Position pos) {
 	z_field->SetIntValue(pos.z);
 }
 
+void PositionCtrl::CheckRange()
+{
+    x_field->CheckRange();
+    y_field->CheckRange();
+    z_field->CheckRange();
+}
+
 bool PositionCtrl::Enable(bool enable) {
 	return (x_field->Enable(enable) && y_field->Enable(enable) && z_field->Enable(enable));
 }

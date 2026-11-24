@@ -25,11 +25,13 @@ public:
 	static const wxString PANE_NAME;
 
 private:
-	wxAuiToolBar* toolbar;
-	NumberTextCtrl* x_control;
-	NumberTextCtrl* y_control;
-	NumberTextCtrl* z_control;
-	wxButton* go_button;
+    void GoToEnteredPosition();
+
+    wxAuiToolBar* toolbar;
+    NumberTextCtrl* x_control;
+    NumberTextCtrl* y_control;
+    NumberTextCtrl* z_control;
+    wxButton* go_button;
 };
 
 #endif

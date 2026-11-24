@@ -15,8 +15,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include <algorithm>
-
 #include "map/tile_operations.h"
 #include "app/main.h"
 #include "rendering/ui/clipboard_handler.h"

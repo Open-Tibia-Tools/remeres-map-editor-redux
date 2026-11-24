@@ -238,16 +238,17 @@ void EditTownDialog::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 
-	Position new_temple = temple_position->GetPosition();
-	if (!new_temple.isValid() || new_temple.x > map->getWidth() || new_temple.y > map->getHeight()) {
-		DialogUtil::PopupDialog(this, "Error", "Invalid temple position specified.", wxOK);
-		return;
-	}
+    temple_position->CheckRange();
+    Position new_temple = temple_position->GetPosition();
+    if (!new_temple.isValid() || new_temple.x > map->getWidth() || new_temple.y > map->getHeight()) {
+        DialogUtil::PopupDialog(this, "Error", "Invalid temple position specified.", wxOK);
+        return;
+    }
 
-	uint32_t new_id = static_cast<uint32_t>(id_field->GetValue());
+    uint32_t new_id = static_cast<uint32_t>(id_field->GetValue());
 
-	if (is_new_) {
-		// Check for duplicate ID
+    if (is_new_) {
+        // Check for duplicate ID
 		if (map->towns.getTown(new_id) != nullptr) {
 			DialogUtil::PopupDialog(this, "Error", wxstr(std::format("A town with ID {} already exists.", new_id)), wxOK);
 			return;
@@ -258,9 +259,9 @@ void EditTownDialog::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		town->setID(new_id);
 		EndModal(wxID_OK);
 		return;
-	}
+    }
 
-	// Editing existing town
+    // Editing existing town
 	uint32_t old_id = town->getID();
 	bool cascade_houses = false;
 
