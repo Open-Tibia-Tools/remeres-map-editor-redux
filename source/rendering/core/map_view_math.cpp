@@ -4,14 +4,6 @@
 #include <algorithm>
 #include <cmath>
 
-int MainMapViewMath::GetFloorTileOffset(int floor) {
-	if (floor <= GROUND_LAYER) {
-		return GROUND_LAYER - floor;
-	}
-
-	return 0;
-}
-
 int MainMapViewMath::WorldTileToScrollPixel(int tile, int floor) {
 	return (tile - GetFloorTileOffset(floor)) * TILE_SIZE;
 }

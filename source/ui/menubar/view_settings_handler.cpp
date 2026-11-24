@@ -1,4 +1,5 @@
 #include "ui/menubar/view_settings_handler.h"
+#include "editor/operations/magic_wand_plan.h"
 #include "rendering/core/floor_visibility_mode.h"
 #include "ui/main_menubar.h"
 #include "ui/gui.h"
@@ -48,6 +49,10 @@ void ViewSettingsHandler::LoadValues() {
 	const bool pixel_perfect = g_settings.getBoolean(Config::PIXEL_PERFECT_SELECTION);
 	menuBar->CheckItem(SELECT_METHOD_STANDARD, !pixel_perfect);
 	menuBar->CheckItem(SELECT_METHOD_PIXEL_PERFECT, pixel_perfect);
+
+	const MagicWand::SearchMode wand_mode = MagicWand::SanitizeSearchMode(g_settings.getInteger(Config::MAGIC_WAND_MODE));
+	menuBar->CheckItem(SELECT_MAGIC_WAND_VIEWPORT, wand_mode == MagicWand::SearchMode::Viewport);
+	menuBar->CheckItem(SELECT_MAGIC_WAND_NEIGHBOUR, wand_mode == MagicWand::SearchMode::Neighbour);
 
 	menuBar->CheckItem(AUTOMAGIC, g_settings.getBoolean(Config::USE_AUTOMAGIC));
 
@@ -252,4 +257,17 @@ void ViewSettingsHandler::OnSelectionMethodChange(wxCommandEvent& WXUNUSED(event
 	const bool pixel_perfect = menuBar->IsItemChecked(SELECT_METHOD_PIXEL_PERFECT);
 	g_settings.setInteger(Config::PIXEL_PERFECT_SELECTION, pixel_perfect ? 1 : 0);
 	g_gui.RefreshView();
+}
+
+void ViewSettingsHandler::OnMagicWandModeChange(wxCommandEvent& WXUNUSED(event)) {
+	using namespace MenuBar;
+	// The two items form their own radio group, so checking one unchecks the other; the
+	// checked one is the new wand mode.
+	if (menuBar->IsItemChecked(SELECT_MAGIC_WAND_NEIGHBOUR)) {
+		g_settings.setInteger(Config::MAGIC_WAND_MODE, static_cast<int>(MagicWand::SearchMode::Neighbour));
+		g_gui.SetStatusText("Magic wand: selects only the entities connected to the click.");
+	} else {
+		g_settings.setInteger(Config::MAGIC_WAND_MODE, static_cast<int>(MagicWand::SearchMode::Viewport));
+		g_gui.SetStatusText("Magic wand: selects everything that belongs to the entity in the visible area.");
+	}
 }

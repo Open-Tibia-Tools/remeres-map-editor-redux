@@ -73,6 +73,8 @@ public:
 	void draw(BaseMap* map, Tile* tile, void* parameter) override;
 	void undraw(BaseMap* map, Tile* tile) override;
 	void getRelatedItems(std::vector<uint16_t>& items) override;
+	// True when the item is a piece of one of this ground's borders (optional, autoborders or specific cases).
+	[[nodiscard]] bool ownsBorderItem(uint32_t item_id) const;
 
 	[[nodiscard]] uint16_t getPlacementItemId() const {
 		if (!border_items.empty()) {

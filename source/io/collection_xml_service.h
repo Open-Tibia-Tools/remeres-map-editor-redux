@@ -88,6 +88,8 @@ public:
 	 *     <item id="..."/>
 	 * </tileset>
 	 * If appendToExisting is true, merges with any existing entries in the file.
+	 * The final file is sorted deterministically in both modes: brush categories, then
+	 * GetBrushSortID, then name; items ascending by id. Comments and unknown nodes are kept.
 	 */
 	static bool SaveTilesetXml(
 		const std::filesystem::path& filePath,

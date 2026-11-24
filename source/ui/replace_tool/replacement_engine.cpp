@@ -15,6 +15,10 @@
 
 ReplacementEngine::ReplacementEngine() : rng(std::random_device {}()) { }
 
+bool ReplaceScopePolicy::Allows(const Item& item) const {
+	return !selection_only || item.isSelected();
+}
+
 const ReplacementTarget* ReplacementEngine::ResolveReplacement(const ReplacementRule& rule) {
 	if (rule.targets.empty()) {
 		return nullptr;
@@ -55,9 +59,11 @@ std::map<uint16_t, const ReplacementRule*> buildRuleMap(const std::vector<Replac
 
 // Visits the ground item, every top-level item and all items nested in
 // containers of the given tile (iterative, no deep recursion).
-// The visitor returns true when the item was affected.
+// `policy` decides which top-level entities are in scope; a container that is
+// in scope brings its contents with it. The visitor returns true when the item
+// was affected.
 template <typename VisitFn>
-size_t forEachReplaceableItem(Tile* tile, VisitFn&& visit)
+size_t forEachReplaceableItem(Tile* tile, VisitFn&& visit, const ReplaceScopePolicy& policy)
 requires std::invocable<VisitFn&, Item*> {
 	if (!tile) {
 		return 0;
@@ -65,13 +71,16 @@ requires std::invocable<VisitFn&, Item*> {
 
 	size_t visited = 0;
 
-	if (tile->ground) {
+	if (tile->ground && policy.Allows(*tile->ground)) {
 		visit(tile->ground.get());
 		++visited;
 	}
 
 	std::vector<Container*> pendingContainers;
 	for (const auto& item : tile->items) {
+		if (!policy.Allows(*item)) {
+			continue;
+		}
 		visit(item.get());
 		++visited;
 
@@ -94,21 +103,6 @@ requires std::invocable<VisitFn&, Item*> {
 	}
 
 	return visited;
-}
-
-template <typename RuleMapT>
-uint32_t countMatchesOnTile(Tile* tile, const RuleMapT& ruleMap) {
-	if (!tile) {
-		return 0;
-	}
-
-	uint32_t matches = 0;
-	forEachReplaceableItem(tile, [&](Item* item) {
-		if (ruleMap.contains(item->getID())) {
-			++matches;
-		}
-	});
-	return matches;
 }
 
 std::vector<Tile*> collectScopeTiles(Editor* editor, ReplaceScope scope, const std::vector<Position>* posVec) {
@@ -189,6 +183,8 @@ void ReplacementEngine::ExecuteReplacement(Editor* editor, const std::vector<Rep
 	if (ruleMap.empty()) {
 		return;
 	}
+	// Selection scope only touches entities that are actually selected.
+	const ReplaceScopePolicy policy { scope == ReplaceScope::Selection };
 
 	// One undoable action for the whole execution. Every affected tile is
 	// modified on a deep copy and swapped in whole, which pairs cleanly with
@@ -235,7 +231,7 @@ void ReplacementEngine::ExecuteReplacement(Editor* editor, const std::vector<Rep
 			}
 			++replaced;
 			return true;
-		});
+		}, policy);
 
 		for (const uint16_t id : toAdd) {
 			if (id != 0) {
@@ -306,12 +302,14 @@ std::vector<uint32_t> ReplacementEngine::CountMatchesByRule(Editor* editor, cons
 		return perRule;
 	}
 
+	// The preview has to follow the same entity scope as the execution.
+	const ReplaceScopePolicy policy { scope == ReplaceScope::Selection };
 	for (Tile* tile : collectScopeTiles(editor, scope, posVec)) {
 		forEachReplaceableItem(tile, [&](Item* item) {
 			if (const auto it = ruleIndices.find(item->getID()); it != ruleIndices.end()) {
 				++perRule[it->second];
 			}
-		});
+		}, policy);
 	}
 
 	return perRule;
