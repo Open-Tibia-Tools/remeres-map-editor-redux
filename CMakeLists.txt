@@ -61,6 +61,7 @@ find_package(sol2 CONFIG REQUIRED)
 find_package(cpr CONFIG REQUIRED)
 find_package(WebP CONFIG REQUIRED)
 find_package(Catch2 3 CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # nanovg: try vcpkg/Conan first, fallback to ext/nanovg
 find_package(nanovg CONFIG QUIET)
@@ -336,3 +337,19 @@ set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_sprite_footprint PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_sprite_footprint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_sprite_footprint COMMAND test_sprite_footprint)
+
+# --- Unit test for the Quick Tilesets model, JSON, drag payload, collection policy and brush menu model ---
+add_executable(test_quick_tileset_model tests/test_quick_tileset_model.cpp source/palette/quick_tilesets/quick_tileset_drag_payload.cpp)
+set_target_properties(test_quick_tileset_model PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_quick_tileset_model PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_quick_tileset_model PRIVATE Catch2::Catch2WithMain nlohmann_json::nlohmann_json)
+target_include_directories(test_quick_tileset_model PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_quick_tileset_model COMMAND test_quick_tileset_model)
+
+# --- Unit test for the brush grid multi-selection model ---
+add_executable(test_brush_grid_selection tests/test_brush_grid_selection.cpp)
+set_target_properties(test_brush_grid_selection PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_brush_grid_selection PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_brush_grid_selection PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_brush_grid_selection PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_brush_grid_selection COMMAND test_brush_grid_selection)

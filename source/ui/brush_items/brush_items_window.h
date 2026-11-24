@@ -14,6 +14,7 @@
 
 class Brush;
 class TilesetGridToolbar;
+class wxToggleButton;
 class wxStaticText;
 
 class BrushItemsGrid : public VirtualItemGrid {
@@ -80,9 +81,13 @@ public:
 	void SetActiveBrush(const Brush* brush);
 	void RefreshItems();
 	void OnBottomCardClicked();
+	// Quick Tilesets favorites changed: re-syncs the Favorite toggle.
+	void OnFavoritesChanged();
 
 private:
 	void BuildUI();
+	void ApplyActiveBrush(const Brush* brush);
+	void UpdateFavoriteToggle();
 
 	const Brush* m_currentSourceBrush = nullptr;
 	std::string m_lastSourceBrushName;
@@ -91,6 +96,7 @@ private:
 	BrushItemsGrid* m_grid = nullptr;
 	BrushBottomCardWidget* m_bottomCard = nullptr;
 	wxStaticText* m_emptyLabel = nullptr;
+	wxToggleButton* m_favoriteToggle = nullptr;
 };
 
 #endif // RME_UI_BRUSH_ITEMS_WINDOW_H_

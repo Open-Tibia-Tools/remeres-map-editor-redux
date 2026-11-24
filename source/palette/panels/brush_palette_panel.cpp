@@ -1,4 +1,5 @@
 #include "palette/panels/brush_palette_panel.h"
+#include "palette/controls/virtual_brush_grid.h"
 #include "ui/gui.h"
 #include "game/materials.h"
 #include "palette/palette_window.h"
@@ -846,6 +847,12 @@ void BrushPalettePanel::CommitFilter() {
 	if (!brush) {
 		return;
 	}
+
+	// Same notification as a click in a brush grid (Quick Tilesets' Recent listens to it).
+	wxCommandEvent picked(EVT_VIRTUAL_BRUSH_GRID_PICKED, GetId());
+	picked.SetEventObject(this);
+	picked.SetClientData(brush);
+	ProcessWindowEvent(picked);
 
 	if (m_filterAll && pw) {
 		pw->JumpToBrush(brush, palette_name);

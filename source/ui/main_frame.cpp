@@ -27,6 +27,7 @@
 #include "app/updater.h"
 #include "ui/tile_properties/tile_properties_panel.h"
 #include "ui/brush_items/brush_items_window.h"
+#include "palette/quick_tilesets/quick_tilesets.h"
 #include <wx/stattext.h>
 #include <wx/slider.h>
 
@@ -431,6 +432,7 @@ void MainFrame::OnExit(wxCloseEvent& event) {
 
 		closing.SetText("Closing windows...");
 		g_minimap.Destroy();
+		QuickTilesets::DestroyWindow();
 		g_search.DestroySearchWindow();
 		LuaDialog::DestroyDockPanelsForShutdown();
 

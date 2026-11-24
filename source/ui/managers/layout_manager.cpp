@@ -10,6 +10,7 @@
 #include "palette/palette_window.h"
 #include "palette/house/house_palette.h"
 #include "palette/managers/palette_manager.h"
+#include "palette/quick_tilesets/quick_tilesets.h"
 
 #include "rendering/ui/minimap_window.h"
 #include "ui/main_menubar.h"
@@ -208,6 +209,18 @@ void LayoutManager::LoadPerspective() {
 			wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(g_minimap.GetWindow());
 			EnsurePaneOnScreen(info);
 		}
+
+		// The Quick Tilesets pane holds data of the loaded client version.
+		QuickTilesets::EnsureWindow();
+		if (wxWindow* quick_tilesets = QuickTilesets::GetWindow()) {
+			wxAuiPaneInfo& info = g_gui.aui_manager->GetPane(quick_tilesets);
+			const wxString layout = wxstr(g_settings.getString(Config::QUICK_TILESETS_LAYOUT));
+			if (info.IsOk() && !layout.empty()) {
+				g_gui.aui_manager->LoadPaneInfo(layout, info);
+				EnsurePaneOnScreen(info);
+			}
+		}
+
 		g_status.UpdateTitle();
 		g_gui.root->UpdateMenubar();
 	}
@@ -372,6 +385,11 @@ void LayoutManager::SavePerspective() {
 	if (g_gui.brush_items_window) {
 		wxString s = SavePaneInfoWithCurrentSize(*g_gui.aui_manager, g_gui.brush_items_window);
 		g_settings.setString(Config::BRUSH_ITEMS_LAYOUT, nstr(s));
+	}
+
+	if (wxWindow* quick_tilesets = QuickTilesets::GetWindow()) {
+		wxString s = SavePaneInfoWithCurrentSize(*g_gui.aui_manager, quick_tilesets);
+		g_settings.setString(Config::QUICK_TILESETS_LAYOUT, nstr(s));
 	}
 
 	if (LuaScriptsWindow* scripts = LuaScriptsWindow::Get()) {
