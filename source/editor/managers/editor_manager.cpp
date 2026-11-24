@@ -95,10 +95,6 @@ MapTab* EditorManager::GetCurrentMapTab() const {
 	return nullptr;
 }
 
-void EditorManager::CycleTab(bool forward) {
-	g_gui.tabbook->CycleTab(forward);
-}
-
 bool EditorManager::CloseLiveEditors(LiveSocket* sock) {
 	for (int i = 0; i < g_gui.tabbook->GetTabCount(); ++i) {
 		auto* mapTab = dynamic_cast<MapTab*>(g_gui.tabbook->GetTab(i));
@@ -447,9 +443,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& init
 					DialogUtil::PopupDialog("Error", error, wxOK);
 					return false;
 				}
-				if (!warnings.empty()) {
-					DialogUtil::ListDialog("Warnings", warnings);
-				}
+				DialogUtil::LoadWarningsDialog(g_gui.root, "Warnings", warnings);
 			} else {
 				return false;
 			}
@@ -473,7 +467,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& init
 
 	mapTab->GetView()->FitToMap();
 	g_status.UpdateTitle();
-	DialogUtil::ListDialog("Map loader errors", mapTab->GetMap()->getWarnings());
+	DialogUtil::LoadWarningsDialog(g_gui.root, "Map loader errors", mapTab->GetMap()->getWarnings());
 	g_gui.root->DoQueryImportCreatures();
 
 	g_gui.FitViewToMap(mapTab);

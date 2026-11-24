@@ -11,6 +11,12 @@
 #include "util/image_manager.h"
 
 #include "app/application.h"
+#include "app/settings.h"
+#include "util/file_system.h"
+#include "util/load_warnings_log.h"
+
+#include <spdlog/spdlog.h>
+#include <wx/datetime.h>
 
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
@@ -19,33 +25,8 @@
 #include <wx/stattext.h>
 
 #include <format>
-#include <span>
-#include <string_view>
 
 namespace {
-// The dialogs receive lines that may still contain embedded newlines; split
-// them so every entry is one line the user can select and copy.
-std::vector<wxString> SplitDialogItems(std::span<const std::string> items) {
-	std::vector<wxString> lines;
-	for (std::string_view item : items) {
-		while (!item.empty()) {
-			const size_t pos = item.find('\n');
-			std::string_view line = (pos == std::string_view::npos) ? item : item.substr(0, pos);
-			if (line.ends_with('\r')) {
-				// CRLF input would otherwise keep a stray carriage return that
-				// the join re-adds, producing "\r\r\n" in copied/exported text.
-				line.remove_suffix(1);
-			}
-			lines.push_back(wxstr(line));
-			if (pos == std::string_view::npos) {
-				break;
-			}
-			item.remove_prefix(pos + 1);
-		}
-	}
-	return lines;
-}
-
 wxString JoinDialogItems(const std::vector<wxString>& lines) {
 	wxString joined;
 	for (const wxString& line : lines) {
@@ -54,33 +35,23 @@ wxString JoinDialogItems(const std::vector<wxString>& lines) {
 	}
 	return joined;
 }
-} // namespace
 
-long DialogUtil::PopupDialog(wxWindow* parent, wxString title, wxString text, long style, wxString configsavename, uint32_t configsavevalue) {
-	if (text.empty()) {
-		return wxID_ANY;
-	}
-
-	wxMessageDialog dlg(parent, text, title, style);
-	return dlg.ShowModal();
-}
-
-long DialogUtil::PopupDialog(wxString title, wxString text, long style, wxString configsavename, uint32_t configsavevalue) {
-	// Need access to main frame for parent.
-	return PopupDialog(static_cast<wxApp*>(wxTheApp)->GetTopWindow(), title, text, style, configsavename, configsavevalue);
-}
-
-void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<std::string>& param_items) {
+void ShowListDialogImpl(wxWindow* parent, wxString title, const std::vector<std::string>& param_items, bool offer_suppress_warnings) {
 	if (param_items.empty()) {
 		return;
 	}
 
-	const std::vector<wxString> lines = SplitDialogItems(param_items);
-	if (lines.empty()) {
+	const std::vector<std::string> raw_lines = SplitNonEmptyWarningLines(param_items);
+	if (raw_lines.empty()) {
 		return;
 	}
 
-	// Create the window
+	std::vector<wxString> lines;
+	lines.reserve(raw_lines.size());
+	for (const std::string& raw_line : raw_lines) {
+		lines.push_back(wxstr(raw_line));
+	}
+
 	wxDialog* dlg = new wxDialog(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxRESIZE_BORDER | wxCAPTION | wxCLOSE_BOX);
 
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
@@ -124,6 +95,12 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 		}
 		feedback->SetLabelText(wxstr(std::format("Copied {} line(s) to the clipboard.", picked.size())));
 	};
+
+	wxCheckBox* suppress_checkbox = nullptr;
+	if (offer_suppress_warnings) {
+		suppress_checkbox = new wxCheckBox(dlg, wxID_ANY, "Don't show this dialog again (log warnings to load-warnings.log)");
+		sizer->Add(suppress_checkbox, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, dlg->FromDIP(4)));
+	}
 
 	wxSizer* action_sizer = new wxBoxSizer(wxHORIZONTAL);
 
@@ -188,7 +165,58 @@ void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<
 
 	// Show the window
 	dlg->ShowModal();
+	if (suppress_checkbox && suppress_checkbox->GetValue()) {
+		g_settings.setInteger(Config::SHOW_LOAD_WARNINGS_DIALOG, 0);
+		g_settings.save();
+	}
 	dlg->Destroy();
+}
+} // namespace
+
+long DialogUtil::PopupDialog(wxWindow* parent, wxString title, wxString text, long style, wxString configsavename, uint32_t configsavevalue) {
+	if (text.empty()) {
+		return wxID_ANY;
+	}
+
+	wxMessageDialog dlg(parent, text, title, style);
+	return dlg.ShowModal();
+}
+
+long DialogUtil::PopupDialog(wxString title, wxString text, long style, wxString configsavename, uint32_t configsavevalue) {
+	// Need access to main frame for parent.
+	return PopupDialog(static_cast<wxApp*>(wxTheApp)->GetTopWindow(), title, text, style, configsavename, configsavevalue);
+}
+
+void DialogUtil::LoadWarningsDialog(wxWindow* parent, const wxString& title, const std::vector<std::string>& warnings) {
+	if (SplitNonEmptyWarningLines(warnings).empty()) {
+		return;
+	}
+	if (g_settings.getBoolean(Config::SHOW_LOAD_WARNINGS_DIALOG)) {
+		ShowListDialogImpl(parent, title, warnings, true);
+		return;
+	}
+
+	const LoadWarningsLogResult result = TryAppendLoadWarnings(
+		FileSystem::GetLoadWarningsLogPaths(),
+		wxDateTime::Now().FormatISOCombined(' ').utf8_string(),
+		title.utf8_string(),
+		warnings
+	);
+	switch (result.status) {
+		case LoadWarningsLogStatus::Empty:
+			return;
+		case LoadWarningsLogStatus::Written:
+			spdlog::warn("{}: {} warning(s) written to {}", title.utf8_string(), result.line_count, FileSystem::PathToUtf8(result.path));
+			return;
+		case LoadWarningsLogStatus::Failed:
+			spdlog::error("Could not write load warnings to {}, showing them instead", FileSystem::PathToUtf8(result.path));
+			ShowListDialogImpl(parent, title, warnings, false);
+			return;
+	}
+}
+
+void DialogUtil::ListDialog(wxWindow* parent, wxString title, const std::vector<std::string>& param_items) {
+	ShowListDialogImpl(parent, std::move(title), param_items, false);
 }
 
 void DialogUtil::ShowTextBox(wxWindow* parent, wxString title, wxString content) {

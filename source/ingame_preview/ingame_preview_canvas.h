@@ -87,7 +87,8 @@ namespace IngamePreview {
 		Position walk_source_pos;
 		int walk_offset_x;
 		int walk_offset_y;
-		int animation_phase;
+		float walk_progress; // Steps walked plus progress through the current step, negative while standing
+		int walk_step_count; // Steps completed without stopping
 
 		// New Movement Support
 		struct MoveRequest {

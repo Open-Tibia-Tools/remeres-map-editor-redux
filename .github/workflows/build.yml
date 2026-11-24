@@ -98,6 +98,9 @@ jobs:
             -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
           cmake --build build --parallel
 
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
       - name: Show ccache stats
         run: ccache --show-stats
 
@@ -222,6 +225,9 @@ jobs:
       - name: Build RME
         run: |
           cmake --build build --parallel
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
 
       - name: Package Windows distribution
         run: |

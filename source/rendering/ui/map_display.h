@@ -30,6 +30,8 @@
 #include <memory>
 #include <optional>
 
+#include "rendering/ui/lasso_gesture.h"
+
 struct NVGcontext;
 struct DrawingOptions;
 
@@ -72,6 +74,9 @@ public:
 	void OnWheel(wxMouseEvent& event);
 	void OnGainMouse(wxMouseEvent& event);
 	void OnLoseMouse(wxMouseEvent& event);
+	void OnKillFocus(wxFocusEvent& event);
+	void OnMouseCaptureLost(wxMouseCaptureLostEvent& event);
+	void OnSize(wxSizeEvent& event);
 
 	// Mouse events handlers (called by the above)
 	void OnMouseActionRelease(wxMouseEvent& event);
@@ -102,6 +107,18 @@ public:
 	virtual void UpdateZoomStatus();
 	void SyncCursorHoverState();
 	void UpdateCursor();
+
+	// Discards an active lasso without touching the selection (tab switch, map reset, mode change).
+	void CancelLasso();
+
+	// Tab is a held modifier for the magic wand: while down, a canvas click runs one wand
+	// selection. It never toggles anything and is cleared when the canvas loses focus.
+	void SetWandHeld(bool held) {
+		wand_held = held;
+	}
+	[[nodiscard]] bool IsWandHeld() const {
+		return wand_held;
+	}
 
 	virtual void ChangeFloor(int new_floor);
 	int GetFloor() const {
@@ -174,11 +191,14 @@ private:
 	void QueueNativeRefresh(bool immediate);
 	void EnsureNanoVG();
 	void DrawOverlays(NVGcontext* vg, const DrawingOptions& options);
+	// Mouse position clamped to the client area, so lasso points stay inside the visible view.
+	LassoScreenPoint ToLassoPoint(const wxMouseEvent& event) const;
 
 	MapWindow* GetMapWindow() const;
 	BaseMap* GetSecondaryMap() const;
 	bool renderer_initialized = false;
 	bool hover_preview_active_ = false;
+	bool wand_held = false;
 };
 
 #endif

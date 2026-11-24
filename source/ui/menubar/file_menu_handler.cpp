@@ -75,7 +75,7 @@ void FileMenuHandler::OnImportMonsterData(wxCommandEvent& WXUNUSED(event)) {
 			std::vector<std::string> warnings;
 			bool ok = g_creatures.importXMLFromOT(FileName(paths[i]), error, warnings);
 			if (ok) {
-				DialogUtil::ListDialog("Monster loader errors", warnings);
+				DialogUtil::LoadWarningsDialog(frame, "Monster loader errors", warnings);
 			} else {
 				DialogUtil::PopupDialog(g_gui.root, "Error", "Error OT data file \"" + paths[i] + "\".\n" + error, wxOK | wxICON_INFORMATION);
 			}
@@ -103,7 +103,7 @@ void FileMenuHandler::OnReloadDataFiles(wxCommandEvent& WXUNUSED(event)) {
 	std::vector<std::string> warnings;
 	g_version.LoadVersion(g_version.GetCurrentVersionID(), error, warnings, true);
 	DialogUtil::PopupDialog("Error", error, wxOK);
-	DialogUtil::ListDialog("Warnings", warnings);
+	DialogUtil::LoadWarningsDialog(frame, "Warnings", warnings);
 }
 
 void FileMenuHandler::OnMissingItemsReport(wxCommandEvent& WXUNUSED(event)) {

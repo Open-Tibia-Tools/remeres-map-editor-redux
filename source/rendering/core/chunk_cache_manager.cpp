@@ -32,12 +32,27 @@
 #include <spdlog/spdlog.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 
 namespace {
 
 	using ChunkFloors = std::array<std::array<const Floor*, 4>, 4>;
+
+	// Superset of the tiles the Show Light Strength overlay draws on: the overlay itself
+	// still skips hidden pickupables when Show Items is off.
+	bool tileHasLightSource(const Tile& tile) {
+		if (tile.ground && tile.ground->hasLight() && tile.ground->getLight().intensity > 0) {
+			return true;
+		}
+		for (const auto& item : tile.items) {
+			if (item && item->hasLight() && item->getLight().intensity > 0) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	// A 16x16 chunk always lies inside one 64x64 grid cell, so a single cell lookup resolves its 4x4 nodes.
 	bool gatherChunkFloors(const Map& map, int32_t cx, int32_t cy, int32_t z, ChunkFloors& floors) {
@@ -327,7 +342,8 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 	uint16_t creature_step_ms = 0;
 	bake_buffer_.clear();
 	scratch_sync_slots_.clear();
-	chunk.clearDynamicTiles();
+	chunk.dynamic_tile_mask.clear();
+	chunk.light_tile_mask.clear();
 	chunk.animated_sprites.clear();
 	chunk.animated_runs.clear();
 
@@ -588,7 +604,10 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 
 			if ((tile->creature && ctx.options.show_creatures && !only_colors) || tile->hasInvalidZones() ||
 				(tile->ground && tile->ground->isInvalidOTBMItem())) {
-				chunk.markDynamicTile(tx, ty);
+				chunk.dynamic_tile_mask.mark(tx, ty);
+			}
+			if (tileHasLightSource(*tile)) {
+				chunk.light_tile_mask.mark(tx, ty);
 			}
 
 			const float tile_house_id = tile->isHouseTile() ? static_cast<float>(tile->getHouseID()) : 0.0f;
@@ -751,7 +770,7 @@ void ChunkCacheManager::bakeChunk(CachedChunk& chunk, const Map& map, const Rend
 						continue;
 					}
 					if (item->isInvalidOTBMItem()) {
-						chunk.markDynamicTile(tx, ty);
+						chunk.dynamic_tile_mask.mark(tx, ty);
 						continue;
 					}
 					const ItemDefinitionView it = item->getDefinition();
@@ -1399,7 +1418,7 @@ void ChunkCacheManager::renderDynamicOverlays(
 		return;
 	}
 
-	if (active_floor_ != map_z) {
+	if (active_floor_ != map_z || active_visible_chunks_.empty()) {
 		return;
 	}
 
@@ -1411,15 +1430,21 @@ void ChunkCacheManager::renderDynamicOverlays(
 
 	const int base_draw_x = -ctx.view.view_scroll_x - offset;
 	const int base_draw_y = -ctx.view.view_scroll_y - offset;
+	const bool show_light_strength = ctx.options.show_light_str && !ctx.options.ingame;
 
 	// Direct iteration of active visible chunks gathered in renderFloor!
 	// Zero O(W x H) bounding box iteration, zero hash map lookups.
 	for (const CachedChunk* chunk_ptr : active_visible_chunks_) {
-		if (!chunk_ptr || !chunk_ptr->hasDynamicTiles()) {
+		if (!chunk_ptr) {
+			continue;
+		}
+		const auto& chunk = *chunk_ptr;
+		const bool draw_dynamic = chunk.dynamic_tile_mask.any();
+		const bool draw_lights = show_light_strength && chunk.light_tile_mask.any();
+		if (!draw_dynamic && !draw_lights) {
 			continue;
 		}
 
-		const auto& chunk = *chunk_ptr;
 		const int chunk_base_x = chunk.coord.cx * CHUNK_SIZE;
 		const int chunk_base_y = chunk.coord.cy * CHUNK_SIZE;
 
@@ -1427,71 +1452,54 @@ void ChunkCacheManager::renderDynamicOverlays(
 		if (!gatherChunkFloors(map, chunk.coord.cx, chunk.coord.cy, map_z, floors)) {
 			continue;
 		}
-		ChunkFloors floors_above {};
-		if (map_z == GROUND_LAYER + 1) {
-			gatherChunkFloors(map, chunk.coord.cx, chunk.coord.cy, GROUND_LAYER, floors_above);
-		}
 
-		for (size_t w = 0; w < 4; ++w) {
-			uint64_t word = chunk.dynamic_tile_mask[w];
-			while (word != 0) {
-				const int bit = std::countr_zero(word);
-				const int tile_idx = static_cast<int>(w * 64 + bit);
-				const int tx = tile_idx & 15;
-				const int ty = tile_idx >> 4;
+		if (draw_dynamic) {
+			ChunkFloors floors_above {};
+			if (map_z == GROUND_LAYER + 1) {
+				gatherChunkFloors(map, chunk.coord.cx, chunk.coord.cy, GROUND_LAYER, floors_above);
+			}
 
+			chunk.dynamic_tile_mask.forEach([&](int tx, int ty) {
 				const int x = chunk_base_x + tx;
 				const int y = chunk_base_y + ty;
-
 				const int draw_x = x * TILE_SIZE + base_draw_x;
 				const int draw_y = y * TILE_SIZE + base_draw_y;
 
-				if (ctx.view.IsPixelVisible(draw_x, draw_y)) {
-					const TileLocation* loc = chunkTileLocation(floors, tx, ty);
-					ASSERT(loc == map.getTileL(x, y, map_z));
-					if (loc) {
-						const TileLocation* loc_above = chunkTileLocation(floors_above, tx, ty);
-						const Tile* tile_above = loc_above ? loc_above->get() : nullptr;
-						ASSERT(tile_above == ((map_z == GROUND_LAYER + 1) ? map.getTile(x, y, GROUND_LAYER) : nullptr));
-						tile_renderer.RenderDynamicPasses(sprite_batch, loc, ctx, draw_x, draw_y, tile_above);
-					}
+				if (!ctx.view.IsPixelVisible(draw_x, draw_y)) {
+					return;
 				}
-
-				word &= word - 1; // Clear lowest set bit
-			}
+				const TileLocation* loc = chunkTileLocation(floors, tx, ty);
+				ASSERT(loc == map.getTileL(x, y, map_z));
+				if (loc) {
+					const TileLocation* loc_above = chunkTileLocation(floors_above, tx, ty);
+					const Tile* tile_above = loc_above ? loc_above->get() : nullptr;
+					ASSERT(tile_above == ((map_z == GROUND_LAYER + 1) ? map.getTile(x, y, GROUND_LAYER) : nullptr));
+					tile_renderer.RenderDynamicPasses(sprite_batch, loc, ctx, draw_x, draw_y, tile_above);
+				}
+			});
 		}
-	}
 
-	// Show > Show Light Strength (Shift+K). Light sources are usually static
-	// items, which only exist in the baked chunks, so draw the indicators for
-	// every visible tile while the option is on.
-	if (ctx.options.show_light_str && !ctx.options.ingame) {
-		for (const CachedChunk* chunk_ptr : active_visible_chunks_) {
-			if (!chunk_ptr) {
-				continue;
-			}
-			const auto& chunk = *chunk_ptr;
-			ChunkFloors floors;
-			if (!gatherChunkFloors(map, chunk.coord.cx, chunk.coord.cy, map_z, floors)) {
-				continue;
-			}
-			for (int ty = 0; ty < CHUNK_SIZE; ++ty) {
-				for (int tx = 0; tx < CHUNK_SIZE; ++tx) {
-					const TileLocation* loc = chunkTileLocation(floors, tx, ty);
-					const Tile* tile = loc ? loc->get() : nullptr;
-					if (!tile) {
-						continue;
-					}
-					if (ctx.options.show_only_modified && !tile->isModified()) {
-						continue;
-					}
-					const int draw_x = (chunk.coord.cx * CHUNK_SIZE + tx) * TILE_SIZE + base_draw_x;
-					const int draw_y = (chunk.coord.cy * CHUNK_SIZE + ty) * TILE_SIZE + base_draw_y;
-					if (ctx.view.IsPixelVisible(draw_x, draw_y)) {
-						tile_renderer.RenderLightStrength(sprite_batch, *tile, ctx, draw_x, draw_y);
-					}
+		// Show > Show Light Strength (Shift+K). Light sources are usually static
+		// items, which only exist in the baked chunks, so the indicators are drawn
+		// here. Only the tiles the bake marked as light sources are visited; a
+		// chunk without lights costs one test.
+		if (draw_lights) {
+			chunk.light_tile_mask.forEach([&](int tx, int ty) {
+				const int draw_x = (chunk_base_x + tx) * TILE_SIZE + base_draw_x;
+				const int draw_y = (chunk_base_y + ty) * TILE_SIZE + base_draw_y;
+				if (!ctx.view.IsPixelVisible(draw_x, draw_y)) {
+					return;
 				}
-			}
+				const TileLocation* loc = chunkTileLocation(floors, tx, ty);
+				const Tile* tile = loc ? loc->get() : nullptr;
+				if (!tile) {
+					return;
+				}
+				if (ctx.options.show_only_modified && !tile->isModified()) {
+					return;
+				}
+				tile_renderer.RenderLightStrength(sprite_batch, *tile, ctx, draw_x, draw_y);
+			});
 		}
 	}
 }

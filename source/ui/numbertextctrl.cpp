@@ -17,20 +17,24 @@
 
 #include "app/main.h"
 #include "ui/numbertextctrl.h"
+#include "util/number_input.h"
 #include <format>
 
-NumberTextCtrl::NumberTextCtrl(wxWindow* parent, wxWindowID id, long value, long minvalue, long maxvalue, const wxPoint& pos, const wxSize& sz, long style, const wxString& name) :
-	wxTextCtrl(parent, id, wxstr(std::format("{}", value)), pos, sz, style, wxTextValidator(wxFILTER_NUMERIC), name),
-	minval(minvalue), maxval(maxvalue), lastval(value) {
-	Bind(wxEVT_KILL_FOCUS, &NumberTextCtrl::OnKillFocus, this);
-	Bind(wxEVT_TEXT_ENTER, &NumberTextCtrl::OnTextEnter, this);
+NumberTextCtrl::NumberTextCtrl(
+    wxWindow* parent, wxWindowID id, long value, long minvalue, long maxvalue, const wxPoint& pos, const wxSize& sz, long style,
+    const wxString& name
+) :
+    NumberTextCtrl(parent, id, value, minvalue, maxvalue, style, name, pos, sz)
+{
 }
 
 NumberTextCtrl::NumberTextCtrl(wxWindow* parent, wxWindowID id, long value, long minvalue, long maxvalue, long style, const wxString& name, const wxPoint& pos, const wxSize& sz) :
 	wxTextCtrl(parent, id, wxstr(std::format("{}", value)), pos, sz, style, wxTextValidator(wxFILTER_NUMERIC), name),
 	minval(minvalue), maxval(maxvalue), lastval(value) {
 	Bind(wxEVT_KILL_FOCUS, &NumberTextCtrl::OnKillFocus, this);
-	Bind(wxEVT_TEXT_ENTER, &NumberTextCtrl::OnTextEnter, this);
+    if (HasFlag(wxTE_PROCESS_ENTER)) {
+        Bind(wxEVT_TEXT_ENTER, &NumberTextCtrl::OnTextEnter, this);
+    }
 }
 
 NumberTextCtrl::~NumberTextCtrl() {
@@ -46,7 +50,18 @@ void NumberTextCtrl::OnTextEnter(wxCommandEvent& evt) {
 	CheckRange();
 }
 
+bool NumberTextCtrl::TryBefore(wxEvent& event)
+{
+    // Bypass wxTextValidator::OnPaste so BindPositionPaste receives the unmodified clipboard
+    // text via wxEVT_TEXT_PASTE before the validator strips non-numeric chars and consumes it.
+    if (event.GetEventType() == wxEVT_TEXT_PASTE) {
+        return wxEvtHandler::TryBefore(event);
+    }
+    return wxTextCtrl::TryBefore(event);
+}
+
 void NumberTextCtrl::SetIntValue(long value) {
+	lastval = value;
 	wxString sv;
 	sv << value;
 	// Will generate events
@@ -78,31 +93,15 @@ void NumberTextCtrl::SetMaxValue(long value) {
 }
 
 void NumberTextCtrl::CheckRange() {
-	wxString text = GetValue();
+	const wxString text = GetValue();
+
+	// Text that is not one whole number (for example a pasted position that was not
+	// accepted as one) restores the last value instead of gluing its digits together.
+	const long v = static_cast<long>(ResolveNumberInput(text.utf8_string(), minval, maxval, lastval));
+	lastval = v;
+
 	wxString ntext;
-
-	for (auto ch : text) {
-		if (ch >= '0' && ch <= '9') {
-			ntext.Append(ch);
-		}
-	}
-
-	// Check that value is in range
-	long v;
-	if (ntext.size() != 0 && ntext.ToLong(&v)) {
-		if (v < minval) {
-			v = minval;
-		} else if (v > maxval) {
-			v = maxval;
-		}
-
-		ntext.clear();
-		ntext << v;
-		lastval = v;
-	} else {
-		ntext.clear();
-		ntext << lastval;
-	}
+	ntext << v;
 
 	// Check if there was any change
 	if (ntext != text) {

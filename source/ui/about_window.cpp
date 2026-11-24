@@ -22,6 +22,7 @@
 
 #include "ui/about_window.h"
 #include "util/image_manager.h"
+#include <filesystem>
 #include <fstream>
 #include <typeinfo>
 #include <memory>
@@ -128,7 +129,9 @@ void AboutWindow::OnClickLicense(wxCommandEvent& WXUNUSED(event)) {
 		return;
 	}
 	path.SetFullName("COPYING.txt");
-	std::ifstream gpl(path.GetFullPath().ToStdWstring());
+	// std::filesystem::path keeps non-ASCII install paths intact on every platform;
+	// std::ifstream only takes a std::wstring as an MSVC extension.
+	std::ifstream gpl(std::filesystem::path(path.GetFullPath().ToStdWstring()));
 
 	std::string gpl_str;
 	char ch;

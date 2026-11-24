@@ -19,28 +19,29 @@
 #include "ui/positionctrl.h"
 #include "ui/numbertextctrl.h"
 #include "map/position.h"
+#include "ui/position_paste.h"
 
-PositionCtrl::PositionCtrl(wxWindow* parent, const wxString& label, int x, int y, int z, int maxx /*= MAP_MAX_WIDTH*/, int maxy /*= MAP_MAX_HEIGHT*/, int maxz /*= MAP_MAX_LAYER*/) :
+#include <algorithm>
+
+PositionCtrl::PositionCtrl(wxWindow* parent, const wxString& label, int x, int y, int z, int map_width /*= MAP_MAX_WIDTH*/, int map_height /*= MAP_MAX_HEIGHT*/, int maxz /*= MAP_MAX_LAYER*/) :
 	wxStaticBoxSizer(wxHORIZONTAL, parent, label) {
 	const wxSize xySize = parent ? parent->FromDIP(wxSize(60, 20)) : wxSize(60, 20);
 	const wxSize zSize = parent ? parent->FromDIP(wxSize(35, 20)) : wxSize(35, 20);
-	x_field = new NumberTextCtrl(GetStaticBox(), wxID_ANY, x, 0, maxx, wxTE_PROCESS_ENTER, "X", wxDefaultPosition, xySize);
+	x_field = new NumberTextCtrl(GetStaticBox(), wxID_ANY, x, 0, std::max(map_width - 1, 0), wxTE_PROCESS_ENTER, "X", wxDefaultPosition, xySize);
 	x_field->SetToolTip("X Coordinate");
-	x_field->Bind(wxEVT_TEXT_PASTE, &PositionCtrl::OnClipboardText, this);
 	Add(x_field, wxSizerFlags(2).Expand().Border(wxLEFT | wxBOTTOM, 5));
 
-	y_field = new NumberTextCtrl(GetStaticBox(), wxID_ANY, y, 0, maxy, wxTE_PROCESS_ENTER, "Y", wxDefaultPosition, xySize);
+	y_field = new NumberTextCtrl(GetStaticBox(), wxID_ANY, y, 0, std::max(map_height - 1, 0), wxTE_PROCESS_ENTER, "Y", wxDefaultPosition, xySize);
 	y_field->SetToolTip("Y Coordinate");
-	y_field->Bind(wxEVT_TEXT_PASTE, &PositionCtrl::OnClipboardText, this);
 	Add(y_field, wxSizerFlags(2).Expand().Border(wxLEFT | wxBOTTOM, 5));
 
 	z_field = new NumberTextCtrl(GetStaticBox(), wxID_ANY, z, 0, maxz, wxTE_PROCESS_ENTER, "Z", wxDefaultPosition, zSize);
 	z_field->SetToolTip("Z Coordinate (Layer)");
-	z_field->Bind(wxEVT_TEXT_PASTE, &PositionCtrl::OnClipboardText, this);
 	Add(z_field, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, 5));
 
-	maxWidth = maxx;
-	maxHeight = maxy;
+	BindPositionPaste(x_field, y_field, z_field, [map_width, map_height] {
+		return PositionBounds { map_width, map_height };
+	});
 }
 
 PositionCtrl::~PositionCtrl() {
@@ -61,17 +62,13 @@ void PositionCtrl::SetPosition(Position pos) {
 	z_field->SetIntValue(pos.z);
 }
 
-bool PositionCtrl::Enable(bool enable) {
-	return (x_field->Enable(enable) && y_field->Enable(enable) && z_field->Enable(enable));
+void PositionCtrl::CheckRange()
+{
+    x_field->CheckRange();
+    y_field->CheckRange();
+    z_field->CheckRange();
 }
 
-void PositionCtrl::OnClipboardText(wxClipboardTextEvent& evt) {
-	Position position;
-	if (posFromClipboard(position, maxWidth, maxHeight)) {
-		x_field->SetIntValue(position.x);
-		y_field->SetIntValue(position.y);
-		z_field->SetIntValue(position.z);
-	} else {
-		evt.Skip();
-	}
+bool PositionCtrl::Enable(bool enable) {
+	return (x_field->Enable(enable) && y_field->Enable(enable) && z_field->Enable(enable));
 }

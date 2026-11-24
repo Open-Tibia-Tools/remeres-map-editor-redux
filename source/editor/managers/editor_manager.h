@@ -27,7 +27,6 @@ public:
 	void CloseCurrentEditor();
 	Editor* GetCurrentEditor();
 	MapTab* GetCurrentMapTab() const;
-	void CycleTab(bool forward = true);
 	bool CloseLiveEditors(LiveSocket* sock);
 	bool CloseAllEditors();
 	void NewMapView();

@@ -6,6 +6,7 @@
 #include "util/file_system.h"
 // #include "utility/file_name.h"
 #include "app/settings.h"
+#include "util/load_warnings_log.h"
 #include <wx/stdpaths.h>
 
 wxString FileSystem::m_dataDirectory;
@@ -135,12 +136,29 @@ wxString FileSystem::GetFoundDataDirectory() {
 	return m_dataDirectory;
 }
 
-std::filesystem::path FileSystem::GetConfigSavePath() {
+namespace {
+	std::filesystem::path WxDirToStdPath(const wxString& dir) {
 #ifdef _WIN32
-	return std::filesystem::path(GetExecDirectory().ToStdWstring()) / "config.toml";
+		return std::filesystem::path(dir.ToStdWstring());
 #else
-	return std::filesystem::path(std::string(GetExecDirectory().ToUTF8())) / "config.toml";
+		return std::filesystem::path(std::string(dir.ToUTF8()));
 #endif
+	}
+} // namespace
+
+std::filesystem::path FileSystem::GetConfigSavePath() {
+	return WxDirToStdPath(GetExecDirectory()) / "config.toml";
+}
+
+std::vector<std::filesystem::path> FileSystem::GetLoadWarningsLogPaths() {
+	std::vector<std::filesystem::path> paths;
+	if (const wxString exec_dir = GetExecDirectory(); !exec_dir.empty()) {
+		paths.push_back(WxDirToStdPath(exec_dir) / kLoadWarningsLogFileName);
+	}
+	if (const wxString local_dir = GetLocalDirectory(); !local_dir.empty()) {
+		paths.push_back(WxDirToStdPath(local_dir) / kLoadWarningsLogFileName);
+	}
+	return paths;
 }
 
 std::filesystem::path FileSystem::GetConfigFilePath() {

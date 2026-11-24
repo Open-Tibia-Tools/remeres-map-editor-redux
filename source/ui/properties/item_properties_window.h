@@ -24,6 +24,7 @@
 #include "ui/properties/object_properties_base.h"
 
 class ContainerItemButton;
+class NumberTextCtrl;
 class ContainerItemPopupMenu;
 
 class ItemPropertiesWindow : public ObjectPropertiesWindowBase {
@@ -32,7 +33,6 @@ public:
 	~ItemPropertiesWindow() override;
 
 	void OnFocusChange(wxFocusEvent&);
-	void OnChar(wxKeyEvent& evt);
 
 	void OnClickOK(wxCommandEvent&);
 	void OnClickCancel(wxCommandEvent&);
@@ -46,9 +46,9 @@ protected:
 	wxSpinCtrl* tier_field;
 
 	// teleport
-	wxSpinCtrl* x_field;
-	wxSpinCtrl* y_field;
-	wxSpinCtrl* z_field;
+	NumberTextCtrl* x_field;
+	NumberTextCtrl* y_field;
+	NumberTextCtrl* z_field;
 
 private:
 	void createHeaderFields(wxFlexGridSizer* sizer, wxWindow* parent);

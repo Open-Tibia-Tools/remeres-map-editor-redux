@@ -225,6 +225,7 @@ public:
 	// Brushes
 	void FillDoodadPreviewBuffer();
 	void UpdateAutoborderPreview(Position pos);
+	void SetAutoborderEnabled(bool enabled);
 	// Selects the currently seleceted brush in the active palette
 	void SelectBrush();
 	// Updates the palette AND selects the brush
@@ -318,7 +319,6 @@ public:
 	void CloseCurrentEditor();
 	Editor* GetCurrentEditor();
 	MapTab* GetCurrentMapTab() const;
-	void CycleTab(bool forward = true);
 	bool CloseLiveEditors(LiveSocket* sock);
 	bool CloseAllEditors();
 	void NewMapView();
