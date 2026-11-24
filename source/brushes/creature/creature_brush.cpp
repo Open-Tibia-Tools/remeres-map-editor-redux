@@ -81,19 +81,26 @@ std::string CreatureBrush::getName() const {
 }
 
 bool CreatureBrush::canDraw(BaseMap* map, const Position& position) const {
-	Tile* tile = map->getTile(position);
-	if (creature_type && tile && !tile->isBlocking()) {
-		if (tile->getLocation()->getSpawnCount() != 0 || g_settings.getInteger(Config::AUTO_CREATE_SPAWN)) {
-			if (tile->isPZ()) {
-				if (creature_type->isNpc) {
-					return true;
-				}
-			} else {
-				return true;
-			}
-		}
+	return checkPlacement(map, position) == CreaturePlacement::Result::Allowed;
+}
+
+bool CreatureBrush::placesNpc() const {
+	return creature_type && creature_type->isNpc;
+}
+
+CreaturePlacement::Result CreatureBrush::checkPlacement(BaseMap* map, const Position& position) const {
+	const Tile* tile = map ? map->getTile(position) : nullptr;
+	CreaturePlacement::Input input;
+	input.has_creature_type = creature_type != nullptr;
+	input.has_tile = tile != nullptr;
+	if (tile) {
+		input.tile_blocking = tile->isBlocking();
+		input.inside_spawn = tile->getLocation()->getSpawnCount() != 0;
+		input.protection_zone = tile->isPZ();
 	}
-	return false;
+	input.auto_create_spawn = g_settings.getBoolean(Config::AUTO_CREATE_SPAWN);
+	input.is_npc = placesNpc();
+	return CreaturePlacement::Check(input);
 }
 
 void CreatureBrush::undraw(BaseMap* map, Tile* tile) {

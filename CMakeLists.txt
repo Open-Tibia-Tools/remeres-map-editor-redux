@@ -356,3 +356,11 @@ set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_sprite_footprint PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_sprite_footprint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_sprite_footprint COMMAND test_sprite_footprint)
+
+# --- Unit test for creature brush placement rules ---
+add_executable(test_creature_placement tests/test_creature_placement.cpp)
+set_target_properties(test_creature_placement PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_creature_placement PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_creature_placement PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_creature_placement PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_creature_placement COMMAND test_creature_placement)

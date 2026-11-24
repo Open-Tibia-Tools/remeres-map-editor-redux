@@ -32,6 +32,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/brushes/carpet/carpet_brush_loader.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/carpet/carpet_border_calculator.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/creature/creature_brush.h
+    ${CMAKE_CURRENT_LIST_DIR}/brushes/creature/creature_placement.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/creature/monster_brush.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/creature/npc_brush.h
     ${CMAKE_CURRENT_LIST_DIR}/brushes/doodad/doodad_brush.h

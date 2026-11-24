@@ -13,8 +13,12 @@ public:
 	explicit NpcBrush(CreatureType* type);
 	~NpcBrush() override = default;
 
-	bool canDraw(BaseMap* map, const Position& position) const override;
 	void draw_creature(BaseMap* map, Tile* tile) override;
+
+protected:
+	bool placesNpc() const override {
+		return true;
+	}
 };
 
 #endif
