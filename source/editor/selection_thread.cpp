@@ -22,11 +22,25 @@
 #include "map/map.h"
 #include "app/settings.h"
 #include "editor/action.h"
+#include "editor/lasso_geometry.h"
+#include "map/tile.h"
 
 SelectionThread::SelectionThread(Editor& editor, Position start, Position end) :
 	editor(editor),
 	start(start),
 	end(end),
+	selection(editor),
+	result(nullptr) {
+	////
+}
+
+SelectionThread::SelectionThread(Editor& editor, Position start, Position end, const LassoPolygon& polygon, int polygon_offset, bool deselect) :
+	editor(editor),
+	start(start),
+	end(end),
+	polygon(&polygon),
+	polygon_offset(polygon_offset),
+	deselect(deselect),
 	selection(editor),
 	result(nullptr) {
 	////
@@ -51,12 +65,22 @@ void SelectionThread::Work() {
 	for (int z = start.z; z >= end.z; --z) {
 		for (int x = start.x; x <= end.x; ++x) {
 			for (int y = start.y; y <= end.y; ++y) {
+				if (polygon && !polygon->IntersectsTile(x - polygon_offset, y - polygon_offset)) {
+					continue;
+				}
+
 				Tile* tile = editor.map.getTile(x, y, z);
 				if (!tile) {
 					continue;
 				}
 
-				selection.add(tile);
+				if (deselect) {
+					if (tile->isSelected()) {
+						selection.remove(tile);
+					}
+				} else {
+					selection.add(tile);
+				}
 			}
 		}
 		if (z <= GROUND_LAYER && g_settings.getInteger(Config::COMPENSATED_SELECT)) {
@@ -64,6 +88,7 @@ void SelectionThread::Work() {
 			++start.y;
 			++end.x;
 			++end.y;
+			++polygon_offset;
 		}
 	}
 	// Access wrapper to get subsession

@@ -35,7 +35,6 @@ public:
 	int GetTabCount();
 	int GetTabIndex(wxWindow* tab);
 	int GetSelection();
-	void CycleTab(bool forward = true);
 	wxWindow* GetCurrentPage();
 	EditorTab* GetCurrentTab();
 	EditorTab* GetTab(int idx);

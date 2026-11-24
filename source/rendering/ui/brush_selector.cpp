@@ -34,6 +34,19 @@
 #include "brushes/creature/creature_brush.h"
 #include "brushes/door/door_brush.h"
 
+namespace {
+
+	void SelectBrushPreservingSize(Brush* brush) {
+		if (!brush) {
+			return;
+		}
+		const auto sizeState = g_brush_manager.GetBrushSizeState();
+		g_gui.SelectBrush(brush);
+		g_gui.RestoreBrushSizeState(sizeState);
+	}
+
+} // namespace
+
 void BrushSelector::SelectRAWBrush(Selection& selection) {
 	if (selection.size() != 1) {
 		return;
@@ -179,54 +192,88 @@ void BrushSelector::SelectCollectionBrush(Selection& selection) {
 		return;
 	}
 
-	const auto sizeState = g_brush_manager.GetBrushSizeState();
+	// A single selected item/ground resolves to its own brush, exactly like the per-item menu.
+	// Multi-item selections fall back to the stack scan below.
+	const ItemVector selected_items = TileOperations::getSelectedItems(tile);
+	if (selected_items.size() == 1) {
+		if (Brush* brush = selected_items.front()->getCollectionBrush()) {
+			SelectBrushPreservingSize(brush);
+			return;
+		}
+	}
+
 	for (const auto& item : tile->items) {
 		if (item->isWall()) {
 			WallBrush* wb = item->getWallBrush();
 			if (wb && wb->visibleInPalette() && wb->hasCollection()) {
-				g_gui.SelectBrush(wb);
-				g_gui.RestoreBrushSizeState(sizeState);
+				SelectBrushPreservingSize(wb);
 				return;
 			}
 		}
 		if (item->isTable()) {
 			TableBrush* tb = item->getTableBrush();
 			if (tb && tb->visibleInPalette() && tb->hasCollection()) {
-				g_gui.SelectBrush(tb);
-				g_gui.RestoreBrushSizeState(sizeState);
+				SelectBrushPreservingSize(tb);
 				return;
 			}
 		}
 		if (item->isCarpet()) {
 			CarpetBrush* cb = item->getCarpetBrush();
 			if (cb && cb->visibleInPalette() && cb->hasCollection()) {
-				g_gui.SelectBrush(cb);
-				g_gui.RestoreBrushSizeState(sizeState);
+				SelectBrushPreservingSize(cb);
 				return;
 			}
 		}
 		if (Brush* db = item->getDoodadBrush()) {
-			if (db && db->visibleInPalette() && db->hasCollection()) {
-				g_gui.SelectBrush(db);
-				g_gui.RestoreBrushSizeState(sizeState);
+			if (db->visibleInPalette() && db->hasCollection()) {
+				SelectBrushPreservingSize(db);
 				return;
 			}
 		}
 		if (item->isSelected()) {
 			RAWBrush* rb = item->getRAWBrush();
 			if (rb && rb->hasCollection()) {
-				g_gui.SelectBrush(rb);
-				g_gui.RestoreBrushSizeState(sizeState);
+				SelectBrushPreservingSize(rb);
 				return;
 			}
 		}
 	}
 	GroundBrush* gb = tile->getGroundBrush();
 	if (gb && gb->visibleInPalette() && gb->hasCollection()) {
-		g_gui.SelectBrush(gb);
-		g_gui.RestoreBrushSizeState(sizeState);
-		return;
+		SelectBrushPreservingSize(gb);
 	}
+}
+
+void BrushSelector::SelectWallBrush(const Item& item) {
+	WallBrush* wb = item.getWallBrush();
+	if (wb && wb->visibleInPalette()) {
+		SelectBrushPreservingSize(wb);
+	}
+}
+
+void BrushSelector::SelectCarpetBrush(const Item& item) {
+	CarpetBrush* cb = item.getCarpetBrush();
+	if (cb && cb->visibleInPalette()) {
+		SelectBrushPreservingSize(cb);
+	}
+}
+
+void BrushSelector::SelectTableBrush(const Item& item) {
+	TableBrush* tb = item.getTableBrush();
+	if (tb && tb->visibleInPalette()) {
+		SelectBrushPreservingSize(tb);
+	}
+}
+
+void BrushSelector::SelectGroundBrush(const Item& item) {
+	GroundBrush* gb = item.getGroundBrush();
+	if (gb && gb->visibleInPalette()) {
+		SelectBrushPreservingSize(gb);
+	}
+}
+
+void BrushSelector::SelectCollectionBrush(const Item& item) {
+	SelectBrushPreservingSize(item.getCollectionBrush());
 }
 
 void BrushSelector::SelectCreatureBrush(Selection& selection) {
