@@ -68,17 +68,17 @@ NormalImage* GraphicsAssembler::ensureImage(GraphicManager& manager, const DatCa
 	return static_cast<NormalImage*>(slot.get());
 }
 
-void GraphicsAssembler::installAnimation(GameSprite& sprite, const DatCatalogEntry& entry) {
-	if (entry.frames <= 1) {
+void GraphicsAssembler::installAnimation(GameSprite& sprite, uint8_t frames, const DatAnimationInfo* animation_info) {
+	if (frames <= 1) {
 		sprite.animation_data.reset();
 		return;
 	}
 
 	rme::rendering::SpriteAnimationData data;
-	data.frame_count = entry.frames;
+	data.frame_count = frames;
 
-	if (entry.animation.has_value() && !entry.animation->frame_durations.empty()) {
-		const auto& animation = *entry.animation;
+	if (animation_info && !animation_info->frame_durations.empty()) {
+		const auto& animation = *animation_info;
 		data.start_frame = animation.start_frame;
 		data.loop_count = static_cast<int8_t>(animation.loop_count);
 		data.is_async = animation.asynchronous;
@@ -140,22 +140,67 @@ bool GraphicsAssembler::installSpriteEntry(GraphicManager& manager, const DatCat
 	sprite_ptr->minimap_color = entry.minimap_color;
 	sprite_ptr->has_light = entry.has_light;
 	sprite_ptr->light = entry.light;
-	installAnimation(*sprite_ptr, entry);
+	installAnimation(*sprite_ptr, entry.frames, entry.animation ? &*entry.animation : nullptr);
 
-	sprite_ptr->sprite_ids = entry.sprite_ids;
-	sprite_ptr->spriteList.clear();
-	sprite_ptr->spriteList.reserve(entry.sprite_ids.size());
-	for (uint32_t sprite_id : entry.sprite_ids) {
-		NormalImage* image = ensureImage(manager, catalog, sprite_archive, sprite_id);
-		if (!image) {
-			warnings.push_back(std::format("GraphicsAssembler: sprite {} references out-of-range image {}.", entry.client_id, sprite_id));
-			return false;
-		}
-		sprite_ptr->spriteList.push_back(image);
+	if (!installImages(manager, catalog, sprite_archive, *sprite_ptr, entry.sprite_ids, warnings)) {
+		return false;
 	}
 	sprite_ptr->updateSimpleStatus();
 
+	if (entry.walking_group) {
+		// The walking group is optional: a broken one downgrades the outfit to the standing
+		// sprite's classic walk frames instead of dropping the whole entry (the failing sprite
+		// id is already reported through `warnings`).
+		(void)installWalkingGroup(manager, catalog, sprite_archive, *sprite_ptr, entry, warnings);
+	}
+
 	manager.sprite_space[entry.client_id] = std::move(sprite);
+	return true;
+}
+
+bool GraphicsAssembler::installImages(GraphicManager& manager, const DatCatalog& catalog, const std::shared_ptr<SpriteArchive>& sprite_archive, GameSprite& sprite, const std::vector<uint32_t>& sprite_ids, std::vector<std::string>& warnings) {
+	sprite.sprite_ids = sprite_ids;
+	sprite.spriteList.clear();
+	sprite.spriteList.reserve(sprite_ids.size());
+	for (uint32_t sprite_id : sprite_ids) {
+		NormalImage* image = ensureImage(manager, catalog, sprite_archive, sprite_id);
+		if (!image) {
+			warnings.push_back(std::format("GraphicsAssembler: sprite {} references out-of-range image {}.", sprite.id, sprite_id));
+			return false;
+		}
+		sprite.spriteList.push_back(image);
+	}
+	return true;
+}
+
+bool GraphicsAssembler::installWalkingGroup(GraphicManager& manager, const DatCatalog& catalog, const std::shared_ptr<SpriteArchive>& sprite_archive, GameSprite& sprite, const DatCatalogEntry& entry, std::vector<std::string>& warnings) {
+	const DatFrameGroup& group = *entry.walking_group;
+	auto walking = std::make_unique<GameSprite>();
+
+	// Offsets, elevation and light are object flags shared by every frame group.
+	walking->id = entry.client_id;
+	walking->height = group.height;
+	walking->width = group.width;
+	walking->layers = group.layers;
+	walking->pattern_x = group.pattern_x;
+	walking->pattern_y = group.pattern_y;
+	walking->pattern_z = group.pattern_z;
+	walking->frames = group.frames;
+	walking->numsprites = group.numsprites;
+	walking->draw_height = entry.draw_height;
+	walking->drawoffset_x = entry.drawoffset_x;
+	walking->drawoffset_y = entry.drawoffset_y;
+	walking->minimap_color = entry.minimap_color;
+	walking->has_light = entry.has_light;
+	walking->light = entry.light;
+	installAnimation(*walking, group.frames, group.animation ? &*group.animation : nullptr);
+
+	if (!installImages(manager, catalog, sprite_archive, *walking, group.sprite_ids, warnings)) {
+		return false;
+	}
+	walking->updateSimpleStatus();
+
+	sprite.walking_group = std::move(walking);
 	return true;
 }
 

@@ -18,6 +18,7 @@
 #include "app/main.h"
 
 #include "ui/dialog_util.h"
+#include "ui/gui.h"
 #include "app/managers/version_manager.h"
 #include "live/live_client.h"
 #include "live/live_tab.h"
@@ -431,7 +432,13 @@ void LiveClient::parseChangeClientVersion(NetworkMessage& message) {
 
 	wxString error;
 	std::vector<std::string> warnings;
-	g_version.LoadVersion(clientVersion, error, warnings);
+	if (!g_version.LoadVersion(clientVersion, error, warnings)) {
+		DialogUtil::LoadWarningsDialog(g_gui.root, "Warnings", warnings);
+		logMessage("Failed to load client version: " + error);
+		close();
+		return;
+	}
+	DialogUtil::LoadWarningsDialog(g_gui.root, "Warnings", warnings);
 
 	sendReady();
 }

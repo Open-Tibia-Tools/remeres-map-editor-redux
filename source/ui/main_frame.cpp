@@ -6,6 +6,7 @@
 
 #include "app/main.h"
 #include "ui/main_frame.h"
+#include "ui/managers/status_manager.h"
 
 #include "ui/dialog_util.h"
 #include "app/application.h"
@@ -63,10 +64,11 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	}
 
 	wxStatusBar* statusbar = CreateStatusBar(1, wxSTB_DEFAULT_STYLE & ~wxSTB_SIZEGRIP);
-	statusbar->SetFieldsCount(4);
-	// FPS | tile description (stretch) | coordinates | floor/zoom
-	const int status_widths[4] = { FromDIP(80), -1, FromDIP(150), FromDIP(160) };
-	statusbar->SetStatusWidths(4, status_widths);
+	statusbar->SetFieldsCount(5);
+	// FPS | tile description (stretch) | coordinates | floor/zoom | autoborder state
+	const int status_widths[5] = { FromDIP(80), -1, FromDIP(150), FromDIP(160), FromDIP(130) };
+	statusbar->SetStatusWidths(5, status_widths);
+	statusbar->SetStatusText(StatusManager::AutoborderStatusLabel(), 4);
 
 	m_activity_indicator = new wxActivityIndicator(statusbar, wxID_ANY);
 	m_activity_indicator->Hide();
@@ -382,7 +384,7 @@ bool MainFrame::DoQueryImportCreatures() {
 						std::vector<std::string> warnings;
 						bool ok = g_creatures.importXMLFromOT(FileName(paths[i]), error, warnings);
 						if (ok) {
-							DialogUtil::ListDialog("Monster loader errors", warnings);
+							DialogUtil::LoadWarningsDialog(g_gui.root, "Monster loader errors", warnings);
 						} else {
 							DialogUtil::PopupDialog(g_gui.root, "Error", "Error OT data file \"" + paths[i] + "\".\n" + error, wxOK | wxICON_INFORMATION);
 						}

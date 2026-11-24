@@ -183,6 +183,13 @@ public:
 	std::vector<NormalImage*> spriteList;
 	std::vector<std::unique_ptr<TemplateImage>> instanced_templates; // Templates that use this sprite
 
+	// Walking frame group of an outfit from a client with frame groups (10.57+); null when the
+	// outfit has none and walks with frames 1..n-1 of this sprite.
+	[[nodiscard]] GameSprite* getWalkingGroup() const noexcept {
+		return walking_group.get();
+	}
+	std::unique_ptr<GameSprite> walking_group;
+
 	friend class GraphicManager;
 	friend class GraphicsAssembler;
 	friend class SpriteIconService;

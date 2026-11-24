@@ -18,6 +18,9 @@
 #include "brushes/ground/ground_brush.h"
 #include "brushes/table/table_brush.h"
 #include "brushes/carpet/carpet_brush.h"
+#include "ui/autoborder_ui_state.h"
+
+#include <array>
 
 AutoborderPreviewManager g_autoborder_preview;
 
@@ -44,8 +47,25 @@ void AutoborderPreviewManager::Update(Editor& editor, const Position& pos, bool 
 	PositionVector tilestodraw;
 	PositionVector tilestoborder;
 
-	// Use BrushUtility to get affected tiles based on shape
-	BrushUtility::GetTilesToDraw(pos.x, pos.y, pos.z, &tilestodraw, &tilestoborder);
+	if (brush && brush->is<DoorBrush>()) {
+		if (pos.isValid()) {
+			tilestodraw.push_back(pos);
+			const std::array<Position, 4> neighbors = { {
+				{ pos.x, pos.y - 1, pos.z },
+				{ pos.x - 1, pos.y, pos.z },
+				{ pos.x + 1, pos.y, pos.z },
+				{ pos.x, pos.y + 1, pos.z },
+			} };
+			for (const Position& neighbor : neighbors) {
+				if (neighbor.isValid()) {
+					tilestoborder.push_back(neighbor);
+				}
+			}
+		}
+	} else {
+		// Use BrushUtility to get affected tiles based on shape
+		BrushUtility::GetTilesToDraw(pos.x, pos.y, pos.z, &tilestodraw, &tilestoborder);
+	}
 
 	SimulateBrush(editor, pos, tilestodraw, alt_pressed);
 	ApplyBorders(tilestodraw, tilestoborder);
@@ -54,7 +74,7 @@ void AutoborderPreviewManager::Update(Editor& editor, const Position& pos, bool 
 
 bool AutoborderPreviewManager::CheckPreconditions(const Position& pos) {
 	Brush* brush = g_gui.GetCurrentBrush();
-	if (!g_settings.getInteger(Config::USE_AUTOMAGIC) || !brush || !brush->needBorders()) {
+	if (!g_settings.getInteger(Config::USE_AUTOMAGIC) || !brush || !brush->supportsAutoborder()) {
 		if (preview_buffer_map->size() > 0) {
 			Clear();
 		}
@@ -98,11 +118,16 @@ void AutoborderPreviewManager::SimulateBrush(Editor& editor, const Position& pos
 		return;
 	}
 
-	bool is_wall = brush->is<WallBrush>() || brush->is<DoorBrush>();
-	bool is_ground = brush->is<GroundBrush>();
+	const bool is_wall = brush->is<WallBrush>();
+	const bool is_door = brush->is<DoorBrush>();
+	const bool is_ground = brush->is<GroundBrush>();
 
 	// Apply draw
 	for (const auto& p : tilestodraw) {
+		if (is_door && !brush->canDraw(preview_buffer_map.get(), p)) {
+			continue;
+		}
+
 		Tile* tile = preview_buffer_map->getTile(p);
 		if (!tile) {
 			// If tile didn't exist in source, we need to create it in buffer
@@ -112,7 +137,7 @@ void AutoborderPreviewManager::SimulateBrush(Editor& editor, const Position& pos
 		// Safety check: tile should always have a valid location
 		ASSERT(tile->getLocation() != nullptr);
 
-		if (is_wall) {
+		if (rme::ui::ShouldCleanWallsInAutoborderPreview(is_wall, is_door)) {
 			TileOperations::cleanWalls(tile);
 		} else if (is_ground) {
 			TileOperations::cleanBorders(tile);
@@ -128,6 +153,9 @@ void AutoborderPreviewManager::SimulateBrush(Editor& editor, const Position& pos
 				std::pair<bool, GroundBrush*> param(true, nullptr);
 				brush->draw(preview_buffer_map.get(), tile, &param);
 			}
+		} else if (is_door) {
+			bool open_alt = alt_pressed;
+			brush->draw(preview_buffer_map.get(), tile, &open_alt);
 		} else {
 			brush->draw(preview_buffer_map.get(), tile, nullptr);
 		}
@@ -173,8 +201,10 @@ void AutoborderPreviewManager::ApplyBorders(const std::vector<Position>& tilesto
 		process_tile(p);
 	}
 
-	for (const auto& p : tilestodraw) {
-		process_tile(p);
+	if (rme::ui::ShouldApplyPreviewBordersToDrawnTiles(brush->is<DoorBrush>())) {
+		for (const auto& p : tilestodraw) {
+			process_tile(p);
+		}
 	}
 }
 

@@ -38,7 +38,7 @@ namespace IngamePreview {
 		/**
 		 * Render the preview.
 		 */
-		void Render(NVGcontext* vg, const BaseMap& map, int viewport_x, int viewport_y, int viewport_width, int viewport_height, const Position& camera_pos, float zoom, bool lighting_enabled, uint8_t client_brightness_percent, const Outfit& preview_outfit, Direction preview_direction, int animation_phase, int offset_x, int offset_y);
+		void Render(NVGcontext* vg, const BaseMap& map, int viewport_x, int viewport_y, int viewport_width, int viewport_height, const Position& camera_pos, float zoom, bool lighting_enabled, uint8_t client_brightness_percent, const Outfit& preview_outfit, Direction preview_direction, float walk_progress, int offset_x, int offset_y);
 
 		void SetLightIntensity(uint8_t intensity) {
 			light_intensity = intensity;
