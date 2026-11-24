@@ -89,7 +89,7 @@ namespace QuickTilesets {
 
 			hint_ = new wxStaticText(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
 			hint_->SetForegroundColour(Theme::Get(Theme::Role::Text));
-			layout->Add(hint_, wxSizerFlags().Expand().Border(wxALL, FromDIP(4)));
+			layout->Add(hint_, wxSizerFlags().Expand().Border(wxALL, Theme::Grid(1)));
 			SetSizer(layout);
 
 			split_->Bind(wxEVT_SPLITTER_SASH_POS_CHANGED, [this](wxSplitterEvent& event) {
@@ -157,7 +157,7 @@ namespace QuickTilesets {
 			auto* sizer = new wxBoxSizer(wxVERTICAL);
 			auto* label = new wxStaticText(panel, wxID_ANY, title);
 			label->SetForegroundColour(Theme::Get(Theme::Role::Text));
-			sizer->Add(label, wxSizerFlags().Border(wxALL, FromDIP(4)));
+			sizer->Add(label, wxSizerFlags().Border(wxALL, Theme::Grid(1)));
 
 			grid = new VirtualBrushGrid(panel, &set, kGridIconSize);
 			grid->SetMinSize(FromDIP(wxSize(60, 60)));
@@ -237,16 +237,13 @@ namespace QuickTilesets {
 		auto* row = new wxBoxSizer(wxHORIZONTAL);
 
 		auto* add = new wxButton(this, wxID_ANY, "+ Quick Tileset");
-		add->SetToolTip("Create a new set");
-		row->Add(add, wxSizerFlags(1).Border(wxALL, FromDIP(3)));
+		row->Add(add, wxSizerFlags(1).Border(wxALL, Theme::Grid(1)));
 
-		auto* list = new wxButton(this, wxID_ANY, wxString::FromUTF8("▾"), wxDefaultPosition, FromDIP(wxSize(32, -1)));
-		list->SetToolTip("List of all sets");
-		row->Add(list, wxSizerFlags().Border(wxALL, FromDIP(3)));
+		auto* list = new wxButton(this, wxID_ANY, wxString::FromUTF8("Sets ▾"));
+		row->Add(list, wxSizerFlags().Border(wxALL, Theme::Grid(1)));
 
-		auto* edit = new wxButton(this, wxID_ANY, "...", wxDefaultPosition, FromDIP(wxSize(32, -1)));
-		edit->SetToolTip("Set and window options");
-		row->Add(edit, wxSizerFlags().Border(wxALL, FromDIP(3)));
+		auto* edit = new wxButton(this, wxID_ANY, "Options");
+		row->Add(edit, wxSizerFlags().Border(wxALL, Theme::Grid(1)));
 
 		layout->Add(row, wxSizerFlags().Expand());
 		book_ = new wxNotebook(this, wxID_ANY);

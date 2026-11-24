@@ -57,6 +57,7 @@ FavoritesPalette::FavoritesPalette(wxWindow* parent, wxWindowID id) :
 	actions.filter_committed = [this]() {
 		if (grid) {
 			grid->SelectFirstBrush();
+			grid->CommitSelectedBrush();
 		}
 	};
 	actions.filter_cleared = [this]() {

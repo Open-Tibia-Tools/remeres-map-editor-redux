@@ -70,6 +70,8 @@ public:
 	// Rebuilds the list from the tileset now (a reorder keeps the size, so it is not noticed
 	// otherwise); keeps the selection and the scroll position.
 	void ReloadBrushes();
+	// Makes the selected brush current like a click on it (used by a committed search).
+	void CommitSelectedBrush();
 
 protected:
 	/**
@@ -100,8 +102,8 @@ protected:
 	void RefreshBrushList();
 	void ApplySort();
 	// Makes `brush` current: activates the palette, sends EVT_VIRTUAL_BRUSH_GRID_PICKED and
-	// selects it (or focuses the map when it already was current).
-	void CommitPick(Brush* brush, bool was_current);
+	// selects it (when it already is the current brush, it only sends the event and focuses the map).
+	void CommitPick(Brush* brush);
 	// Search results (override brushes) jump to the brush's own palette page.
 	void CommitSearchPick(Brush* brush);
 	void SendPicked(Brush* brush);
@@ -119,6 +121,8 @@ protected:
 	bool m_dragArmed = false;
 	bool m_dragStarted = false;
 	wxPoint m_dragOrigin;
+	// Display index of the cell under the last left press, -1 when none.
+	int m_pressIndex = -1;
 	// A search result picked on press; it jumps on release unless a drag starts.
 	Brush* m_pendingSearchPick = nullptr;
 	int hover_index;

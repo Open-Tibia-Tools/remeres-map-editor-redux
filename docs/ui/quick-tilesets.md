@@ -30,7 +30,8 @@ QuickTilesets::Apply([&](QuickTilesets::State& state) {
 
 ## 4. Invariants & Pitfalls
 
-- Every change saves synchronously: the file is re-read and only the current client version's section is replaced (other versions and a second editor instance keep their data), then committed with `wxTempFile`.
+- Every change saves synchronously: the file is re-read and only the current client version's section is replaced, then committed with `wxTempFile`. Other client versions in the file keep their data.
+- There is no lock between editor instances. Two instances on the same client version overwrite each other's section (the last save wins), and two saves at the same moment can lose the other version's update.
 - A file that cannot be read or parsed is never overwritten: the store is read-only and the error is shown once. A failed save also switches to read-only; later changes stay in memory.
 - References that the loaded data does not have are kept in the set and counted in the hint.
 - Lifetime: `EnsureWindow()` from `LayoutManager::LoadPerspective` (version loaded), `DestroyWindow()` in `VersionManager::LoadVersion`, `UnloadVersion` and `MainFrame::OnExit` before `aui_manager->UnInit`. Layout is `Config::QUICK_TILESETS_LAYOUT`.

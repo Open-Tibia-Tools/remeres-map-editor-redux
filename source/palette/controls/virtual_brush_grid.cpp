@@ -398,7 +398,6 @@ int VirtualBrushGrid::HitTest(int x, int y) const {
 
 void VirtualBrushGrid::OnMouseDown(wxMouseEvent& event) {
 	const int index = HitTest(event.GetX(), event.GetY());
-	Brush* const previous = GetSelectedBrush();
 	// Search results only become current on release (they jump to their own page then).
 	const auto commit = m_hasOverrideBrushes ? BrushGridSelection::Commit::OnRelease : BrushGridSelection::Commit::OnPress;
 	const BrushGridSelection::PressResult result = m_selection.Press(m_display_brushes, index, ModifierOf(event), commit);
@@ -407,6 +406,7 @@ void VirtualBrushGrid::OnMouseDown(wxMouseEvent& event) {
 	m_dragArmed = result.can_drag;
 	m_dragStarted = false;
 	m_dragOrigin = event.GetPosition();
+	m_pressIndex = index;
 	m_pendingSearchPick = nullptr;
 
 	if (Brush* picked = const_cast<Brush*>(result.picked)) {
@@ -414,7 +414,7 @@ void VirtualBrushGrid::OnMouseDown(wxMouseEvent& event) {
 			// Jumping rebuilds this list, so it waits for the release (a drag may start first).
 			m_pendingSearchPick = picked;
 		} else {
-			CommitPick(picked, picked == previous);
+			CommitPick(picked);
 		}
 	}
 	// Not skipped: on MSW the default handling would take the focus back from the map canvas.
@@ -426,18 +426,20 @@ void VirtualBrushGrid::OnMouseUp(wxMouseEvent& event) {
 	m_dragArmed = false;
 	m_dragStarted = false;
 
-	Brush* const previous = GetSelectedBrush();
 	if (Brush* collapsed = const_cast<Brush*>(m_selection.Release(dragged))) {
 		SyncSelectedIndex();
 		if (m_hasOverrideBrushes) {
 			m_pendingSearchPick = collapsed;
 		} else {
-			CommitPick(collapsed, collapsed == previous);
+			CommitPick(collapsed);
 		}
 	}
 
+	// A search result jumps only when the button is released on the cell it was pressed on.
+	const bool released_on_pressed = m_pressIndex != -1 && HitTest(event.GetX(), event.GetY()) == m_pressIndex;
+	m_pressIndex = -1;
 	Brush* const search_pick = std::exchange(m_pendingSearchPick, nullptr);
-	if (search_pick && !dragged) {
+	if (search_pick && !dragged && released_on_pressed) {
 		CommitSearchPick(search_pick);
 		return; // the jump may have rebuilt or hidden this grid
 	}
@@ -459,8 +461,18 @@ void VirtualBrushGrid::SendPicked(Brush* brush) {
 	ProcessWindowEvent(picked);
 }
 
-void VirtualBrushGrid::CommitPick(Brush* brush, bool was_current) {
-	if (was_current) {
+void VirtualBrushGrid::CommitSelectedBrush() {
+	if (Brush* brush = GetSelectedBrush()) {
+		CommitPick(brush);
+	}
+}
+
+void VirtualBrushGrid::CommitPick(Brush* brush) {
+	// Compared with the application's brush, not this grid's selection: another page or
+	// window may have changed the brush since this grid last picked. A click on the current
+	// brush still counts as a user pick (Recent), but only focuses the map.
+	if (brush == g_gui.GetCurrentBrush()) {
+		SendPicked(brush);
 		g_gui.FocusCurrentMapCanvas();
 		return;
 	}
