@@ -250,6 +250,16 @@ function(rme_add_full_editor_test target)
 	target_link_libraries(${target} PRIVATE ${LUA_LIBRARIES})
 endfunction()
 
+# --- Shared registration for standalone Catch2 suites that only need the source tree ---
+function(rme_add_catch2_test target)
+	add_executable(${target} ${ARGN})
+	set_target_properties(${target} PROPERTIES CXX_STANDARD 23)
+	set_target_properties(${target} PROPERTIES CXX_STANDARD_REQUIRED ON)
+	target_link_libraries(${target} PRIVATE Catch2::Catch2WithMain)
+	target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+	add_test(NAME ${target} COMMAND ${target})
+endfunction()
+
 # --- Unit test for universal rotator ---
 rme_add_full_editor_test(test_universal_rotator tests/test_universal_rotator.cpp)
 
@@ -262,105 +272,40 @@ add_test(NAME test_universal_rotator COMMAND test_universal_rotator)
 add_test(NAME test_magic_wand_plan COMMAND test_magic_wand_plan)
 
 # --- Unit test for subtype pattern mapping ---
-add_executable(test_subtype_pattern tests/test_subtype_pattern.cpp)
-set_target_properties(test_subtype_pattern PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_subtype_pattern PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_subtype_pattern PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_subtype_pattern PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_subtype_pattern COMMAND test_subtype_pattern)
+rme_add_catch2_test(test_subtype_pattern tests/test_subtype_pattern.cpp)
 
 # --- Unit test for tile stack row mapping (Tile Properties item list) ---
-add_executable(test_tile_stack_rows tests/test_tile_stack_rows.cpp)
-set_target_properties(test_tile_stack_rows PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_tile_stack_rows PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_tile_stack_rows PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_tile_stack_rows PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_tile_stack_rows COMMAND test_tile_stack_rows)
+rme_add_catch2_test(test_tile_stack_rows tests/test_tile_stack_rows.cpp)
 
 # --- Unit test for lasso polygon/tile geometry ---
-add_executable(test_lasso_geometry tests/test_lasso_geometry.cpp)
-set_target_properties(test_lasso_geometry PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_lasso_geometry PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_lasso_geometry PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_lasso_geometry PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_lasso_geometry COMMAND test_lasso_geometry)
+rme_add_catch2_test(test_lasso_geometry tests/test_lasso_geometry.cpp)
 
 # --- Unit test for lasso gesture state machine ---
-add_executable(test_lasso_gesture tests/test_lasso_gesture.cpp)
-set_target_properties(test_lasso_gesture PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_lasso_gesture PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_lasso_gesture PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_lasso_gesture PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_lasso_gesture COMMAND test_lasso_gesture)
+rme_add_catch2_test(test_lasso_gesture tests/test_lasso_gesture.cpp)
 
 # --- Unit test for box/lasso selection floor scope ---
-add_executable(test_selection_floor_scope tests/test_selection_floor_scope.cpp)
-set_target_properties(test_selection_floor_scope PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_selection_floor_scope PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_selection_floor_scope PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_selection_floor_scope PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_selection_floor_scope COMMAND test_selection_floor_scope)
+rme_add_catch2_test(test_selection_floor_scope tests/test_selection_floor_scope.cpp)
 
 # --- Unit test for collection tileset save plan and ordering ---
-add_executable(test_collection_save_plan tests/test_collection_save_plan.cpp)
-set_target_properties(test_collection_save_plan PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_collection_save_plan PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_collection_save_plan PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_collection_save_plan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_collection_save_plan COMMAND test_collection_save_plan)
+rme_add_catch2_test(test_collection_save_plan tests/test_collection_save_plan.cpp)
 
 # --- Unit test for the shared tile context menu model (map canvas and Tile Properties) ---
-add_executable(test_tile_context_menu tests/test_tile_context_menu.cpp)
-set_target_properties(test_tile_context_menu PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_tile_context_menu PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_tile_context_menu PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_tile_context_menu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_tile_context_menu COMMAND test_tile_context_menu)
+rme_add_catch2_test(test_tile_context_menu tests/test_tile_context_menu.cpp)
 
 # --- Unit test for the item-scoped context menu model (Tile Properties list) ---
-add_executable(test_item_context_menu tests/test_item_context_menu.cpp)
-set_target_properties(test_item_context_menu PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_item_context_menu PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_item_context_menu PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_item_context_menu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_item_context_menu COMMAND test_item_context_menu)
+rme_add_catch2_test(test_item_context_menu tests/test_item_context_menu.cpp)
 
 # --- Unit test for minimap dirty rect bounds ---
-add_executable(test_minimap_rect tests/test_minimap_rect.cpp)
-set_target_properties(test_minimap_rect PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_minimap_rect PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_minimap_rect PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_minimap_rect PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_minimap_rect COMMAND test_minimap_rect)
+rme_add_catch2_test(test_minimap_rect tests/test_minimap_rect.cpp)
 
 # --- Unit test for pixel-perfect picking of multi-tile grounds ---
-add_executable(test_selection_multitile_ground tests/test_selection_multitile_ground.cpp)
-set_target_properties(test_selection_multitile_ground PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_selection_multitile_ground PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_selection_multitile_ground PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_selection_multitile_ground PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_selection_multitile_ground COMMAND test_selection_multitile_ground)
+rme_add_catch2_test(test_selection_multitile_ground tests/test_selection_multitile_ground.cpp)
 
 # --- Unit test for the magic wand flood fill and border ring ---
-add_executable(test_magic_wand tests/test_magic_wand.cpp)
-set_target_properties(test_magic_wand PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_magic_wand PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_magic_wand PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_magic_wand PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_magic_wand COMMAND test_magic_wand)
+rme_add_catch2_test(test_magic_wand tests/test_magic_wand.cpp)
 
 # --- Unit test for the pathing overlay sprite footprint ---
-add_executable(test_sprite_footprint tests/test_sprite_footprint.cpp)
-set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_sprite_footprint PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_sprite_footprint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_sprite_footprint COMMAND test_sprite_footprint)
+rme_add_catch2_test(test_sprite_footprint tests/test_sprite_footprint.cpp)
 
 # --- Unit test for outfit walk animation frames ---
-add_executable(test_walk_animation tests/test_walk_animation.cpp)
-set_target_properties(test_walk_animation PROPERTIES CXX_STANDARD 23)
-set_target_properties(test_walk_animation PROPERTIES CXX_STANDARD_REQUIRED ON)
-target_link_libraries(test_walk_animation PRIVATE Catch2::Catch2WithMain)
-target_include_directories(test_walk_animation PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
-add_test(NAME test_walk_animation COMMAND test_walk_animation)
+rme_add_catch2_test(test_walk_animation tests/test_walk_animation.cpp)

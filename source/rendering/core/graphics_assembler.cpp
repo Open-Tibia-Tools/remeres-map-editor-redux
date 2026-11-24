@@ -147,8 +147,11 @@ bool GraphicsAssembler::installSpriteEntry(GraphicManager& manager, const DatCat
 	}
 	sprite_ptr->updateSimpleStatus();
 
-	if (entry.walking_group && !installWalkingGroup(manager, catalog, sprite_archive, *sprite_ptr, entry, warnings)) {
-		return false;
+	if (entry.walking_group) {
+		// The walking group is optional: a broken one downgrades the outfit to the standing
+		// sprite's classic walk frames instead of dropping the whole entry (the failing sprite
+		// id is already reported through `warnings`).
+		(void)installWalkingGroup(manager, catalog, sprite_archive, *sprite_ptr, entry, warnings);
 	}
 
 	manager.sprite_space[entry.client_id] = std::move(sprite);

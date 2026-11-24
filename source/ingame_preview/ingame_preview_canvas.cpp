@@ -7,7 +7,6 @@
 #include "rendering/ui/map_display.h"
 #include "rendering/core/light_defaults.h"
 #include "rendering/core/text_renderer.h"
-#include "rendering/core/walk_animation.h"
 #include <algorithm>
 #include <cmath>
 #include <spdlog/spdlog.h>
@@ -403,11 +402,6 @@ namespace IngamePreview {
 	void IngamePreviewCanvas::Render(Editor* current_editor) {
 		if (!IsShownOnScreen() || !current_editor) {
 			return;
-		}
-
-		// DEBUG: Check if walk_progress is set when not walking
-		if (WalkAnimation::IsWalking(walk_progress) && !is_walking) {
-			spdlog::warn("Render: walk_progress={} but is_walking=false! This shouldn't happen.", walk_progress);
 		}
 
 		if (m_glContext) {
