@@ -85,7 +85,7 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 	show_load_warnings_dialog_chkbox = PreferencesLayout::AddCheckBoxRow(
 		safety_section,
 		"Show load warnings in a dialog",
-		"When off, warnings from loading client data and maps are appended to load-warnings.log next to the editor executable instead of blocking the load.",
+		"When off, warnings from loading client data and maps are appended to load-warnings.log next to the editor executable (or in the user data directory if read-only) instead of blocking the load.",
 		g_settings.getBoolean(Config::SHOW_LOAD_WARNINGS_DIALOG)
 	);
 	page_sizer->Add(safety_section, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));

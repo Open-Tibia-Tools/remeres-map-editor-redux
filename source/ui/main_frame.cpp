@@ -384,7 +384,7 @@ bool MainFrame::DoQueryImportCreatures() {
 						std::vector<std::string> warnings;
 						bool ok = g_creatures.importXMLFromOT(FileName(paths[i]), error, warnings);
 						if (ok) {
-							DialogUtil::ListDialog("Monster loader errors", warnings);
+							DialogUtil::LoadWarningsDialog(g_gui.root, "Monster loader errors", warnings);
 						} else {
 							DialogUtil::PopupDialog(g_gui.root, "Error", "Error OT data file \"" + paths[i] + "\".\n" + error, wxOK | wxICON_INFORMATION);
 						}
