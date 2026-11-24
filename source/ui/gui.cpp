@@ -114,14 +114,8 @@ GUI::GUI() :
 	hotkeys_enabled(true) {
 }
 
-GUI::~GUI() {
-	spdlog::info("GUI destructor started");
-	spdlog::default_logger()->flush();
-
-	// aui_manager and tabbook are owned by MainFrame, we don't delete them here.
-	spdlog::info("GUI destructor finished");
-	spdlog::default_logger()->flush();
-}
+// aui_manager and tabbook are owned by MainFrame, we don't delete them here.
+GUI::~GUI() = default;
 
 // OpenGL context management moved to GLContextManager
 
