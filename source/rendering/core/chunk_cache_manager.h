@@ -19,8 +19,6 @@ class Map;
 class AtlasManager;
 class SpriteBatch;
 class TileRenderer;
-#include <array>
-#include <bit>
 #include <chrono>
 #include <cstdint>
 
@@ -84,20 +82,7 @@ struct CachedChunk {
 	std::vector<AnimatedSpriteRun> animated_runs;
 	// CPU copy of the instance buffer, kept only while animated_runs is non-empty so frames can be patched in place.
 	std::vector<TileInstance> animated_shadow;
-	std::array<uint64_t, 4> dynamic_tile_mask = {0, 0, 0, 0};
-
-	[[nodiscard]] bool hasDynamicTiles() const noexcept {
-		return (dynamic_tile_mask[0] | dynamic_tile_mask[1] | dynamic_tile_mask[2] | dynamic_tile_mask[3]) != 0;
-	}
-
-	void clearDynamicTiles() noexcept {
-		dynamic_tile_mask.fill(0);
-	}
-
-	void markDynamicTile(int tx, int ty) noexcept {
-		const int idx = ty * 16 + tx;
-		dynamic_tile_mask[idx >> 6] |= (uint64_t{1} << (idx & 63));
-	}
+	ChunkTileMask dynamic_tile_mask;
 
 	// Tiles whose ground or items emit light, for the Show Light Strength overlay. Built on
 	// every bake whatever the option is, because toggling the option does not re-bake.
@@ -138,7 +123,7 @@ struct CachedChunk {
 		other.instance_count = 0;
 		other.terrain_instance_count = 0;
 		other.item_instance_count = 0;
-		other.dynamic_tile_mask.fill(0);
+		other.dynamic_tile_mask.clear();
 		other.light_tile_mask.clear();
 	}
 
@@ -173,7 +158,7 @@ struct CachedChunk {
 			other.instance_count = 0;
 			other.terrain_instance_count = 0;
 			other.item_instance_count = 0;
-			other.dynamic_tile_mask.fill(0);
+			other.dynamic_tile_mask.clear();
 			other.light_tile_mask.clear();
 		}
 		return *this;
@@ -209,6 +194,7 @@ struct ChunkRenderStats {
 class ChunkCacheManager {
 public:
 	static constexpr int CHUNK_SIZE = 16;
+	static_assert(ChunkTileMask::kSide == CHUNK_SIZE);
 	static constexpr uint64_t PRUNE_INTERVAL_FRAMES = 120;         // 2.0 seconds at 60 FPS
 	static constexpr int VIEWPORT_MARGIN_CHUNKS = 32;              // 512 tiles
 	// Per-frame bake time budget. A pan or zoom-out can make dozens of chunks
