@@ -225,13 +225,7 @@ void ViewSettingsHandler::OnToolbars(wxCommandEvent& event) {
 
 void ViewSettingsHandler::OnToggleAutomagic(wxCommandEvent& WXUNUSED(event)) {
 	using namespace MenuBar;
-	g_settings.setInteger(Config::USE_AUTOMAGIC, menuBar->IsItemChecked(AUTOMAGIC));
-	g_settings.setInteger(Config::BORDER_IS_GROUND, menuBar->IsItemChecked(AUTOMAGIC));
-	if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
-		g_gui.SetStatusText("Automagic enabled.");
-	} else {
-		g_gui.SetStatusText("Automagic disabled.");
-	}
+	g_gui.SetAutoborderEnabled(menuBar->IsItemChecked(AUTOMAGIC));
 }
 
 void ViewSettingsHandler::OnSelectionTypeChange(wxCommandEvent& WXUNUSED(event)) {

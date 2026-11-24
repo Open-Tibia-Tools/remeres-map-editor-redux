@@ -309,3 +309,6 @@ rme_add_catch2_test(test_sprite_footprint tests/test_sprite_footprint.cpp)
 
 # --- Unit test for outfit walk animation frames ---
 rme_add_catch2_test(test_walk_animation tests/test_walk_animation.cpp)
+
+# --- Unit test for Autoborder UI state, preview preconditions, and labels ---
+rme_add_catch2_test(test_autoborder_state tests/test_autoborder_state.cpp)

@@ -225,6 +225,7 @@ public:
 	// Brushes
 	void FillDoodadPreviewBuffer();
 	void UpdateAutoborderPreview(Position pos);
+	void SetAutoborderEnabled(bool enabled);
 	// Selects the currently seleceted brush in the active palette
 	void SelectBrush();
 	// Updates the palette AND selects the brush

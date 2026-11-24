@@ -531,25 +531,27 @@ void DrawOperations::draw(Editor& editor, const PositionVector& tilestodraw, Pos
 		// Commit changes to map
 		batch->addAndCommitAction(std::move(action));
 
-		// Do borders!
-		action = editor.actionQueue->createAction(batch.get());
-		for (const auto& borderPos : tilestoborder) {
-			Tile* tile = editor.map.getTile(borderPos);
-			if (brush->is<TableBrush>()) {
-				if (tile && tile->hasTable()) {
-					std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
-					TileOperations::tableize(new_tile.get(), &editor.map);
-					action->addChange(std::make_unique<Change>(std::move(new_tile)));
-				}
-			} else if (brush->is<CarpetBrush>()) {
-				if (tile && tile->hasCarpet()) {
-					std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
-					TileOperations::carpetize(new_tile.get(), &editor.map);
-					action->addChange(std::make_unique<Change>(std::move(new_tile)));
+		if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
+			// Do borders!
+			action = editor.actionQueue->createAction(batch.get());
+			for (const auto& borderPos : tilestoborder) {
+				Tile* tile = editor.map.getTile(borderPos);
+				if (brush->is<TableBrush>()) {
+					if (tile && tile->hasTable()) {
+						std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
+						TileOperations::tableize(new_tile.get(), &editor.map);
+						action->addChange(std::make_unique<Change>(std::move(new_tile)));
+					}
+				} else if (brush->is<CarpetBrush>()) {
+					if (tile && tile->hasCarpet()) {
+						std::unique_ptr<Tile> new_tile = TileOperations::deepCopy(tile, editor.map);
+						TileOperations::carpetize(new_tile.get(), &editor.map);
+						action->addChange(std::make_unique<Change>(std::move(new_tile)));
+					}
 				}
 			}
+			batch->addAndCommitAction(std::move(action));
 		}
-		batch->addAndCommitAction(std::move(action));
 
 		editor.addBatch(std::move(batch), 2);
 	} else if (brush->is<WallBrush>()) {
