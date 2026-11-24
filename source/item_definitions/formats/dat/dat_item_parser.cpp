@@ -192,7 +192,26 @@ namespace {
 			}
 			case DatFlagDisplacement:
 				if (format >= DAT_FORMAT_755) {
-					return file.getU16(entry.drawoffset_x) && file.getU16(entry.drawoffset_y);
+					uint16_t raw_x = 0;
+					uint16_t raw_y = 0;
+					if (!file.getU16(raw_x) || !file.getU16(raw_y)) {
+						return false;
+					}
+					const int clamped_x = ClampSpriteDrawOffset(raw_x);
+					const int clamped_y = ClampSpriteDrawOffset(raw_y);
+					if (static_cast<uint32_t>(clamped_x) != raw_x || static_cast<uint32_t>(clamped_y) != raw_y) {
+						warnings.push_back(std::format(
+							"DAT catalog: displacement {},{} exceeds one tile for client id {}; clamping to {},{}.",
+							raw_x,
+							raw_y,
+							entry.client_id,
+							clamped_x,
+							clamped_y
+						));
+					}
+					entry.drawoffset_x = static_cast<uint16_t>(clamped_x);
+					entry.drawoffset_y = static_cast<uint16_t>(clamped_y);
+					return true;
 				}
 				entry.drawoffset_x = 8;
 				entry.drawoffset_y = 8;

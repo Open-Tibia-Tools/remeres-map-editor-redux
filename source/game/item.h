@@ -309,8 +309,9 @@ public:
 	RAWBrush* getRAWBrush() const {
 		return getDefinition().editorData().raw_brush;
 	}
+	Brush* getCollectionBrush() const;
 	bool hasCollectionBrush() const {
-		return getDefinition().editorData().collection_brush != nullptr;
+		return getCollectionBrush() != nullptr;
 	}
 	uint16_t borderBaseGroundId() const {
 		return static_cast<uint16_t>(getDefinition().attribute(ItemAttributeKey::BorderBaseGroundId));

@@ -143,6 +143,10 @@
 			<item name="Standard Selection" action="SELECT_METHOD_STANDARD" help="Select the top entity on the clicked tile."/>
 			<item name="Pixel Perfect Selection" action="SELECT_METHOD_PIXEL_PERFECT" help="Use sprite hit testing to select the exact item visible under the cursor."/>
 		</menu>
+		<menu name="Magic Wand Selection (Tab)">
+			<item name="Magic Wand (Viewport)" action="SELECT_MAGIC_WAND_VIEWPORT" help="Hold Tab and click an entity to select everything that belongs to it in the visible area, adjacent or not: every matching ground with its border pieces, wall, carpet, table, doodad, creature or item name. Ctrl adds to the selection. Works in drawing mode too; in selection mode Shift still drags a rectangle and Alt still draws a lasso."/>
+			<item name="Magic Wand (Neighbour)" action="SELECT_MAGIC_WAND_NEIGHBOUR" help="Hold Tab and click an entity to select only the part connected to it: the ground patch with the border pieces around it, the wall, carpet or table run, or the same-name items touching the click. Ctrl adds to the selection. Works in drawing mode too; in selection mode Shift still drags a rectangle and Alt still draws a lasso."/>
+		</menu>
 		<separator/>
 		<item name="Borderize Selection" action="BORDERIZE_SELECTION" help="Creates automatic borders in the entire selected area."/>
 		<item name="Randomize Selection" action="RANDOMIZE_SELECTION" help="Randomizes the ground tiles of the selected area."/>

@@ -25,10 +25,16 @@
 
 class Editor;
 class Action;
+class LassoPolygon;
 
 class SelectionThread {
 public:
+	// Selects every tile in the range (box selection).
 	SelectionThread(Editor& editor, Position start, Position end);
+	// Selects (or deselects) only the tiles that intersect the polygon. The polygon is shared by
+	// all workers, must outlive the thread and is never modified. polygon_offset is the offset of
+	// the start floor's tiles relative to polygon space; it follows the compensated floor shift.
+	SelectionThread(Editor& editor, Position start, Position end, const LassoPolygon& polygon, int polygon_offset, bool deselect);
 	virtual ~SelectionThread();
 
 	void Start();
@@ -40,6 +46,9 @@ protected:
 
 	Editor& editor;
 	Position start, end;
+	const LassoPolygon* polygon = nullptr;
+	int polygon_offset = 0;
+	bool deselect = false;
 	Selection selection;
 	std::unique_ptr<Action> result;
 

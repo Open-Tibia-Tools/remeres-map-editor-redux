@@ -11,6 +11,8 @@
 class MapCanvas;
 class Editor;
 
+// Map canvas adapter for the shared tile context menu: forwards the popup menu commands to
+// TileContextActions with the canvas floor, cursor and last right-click position.
 class MapMenuHandler {
 public:
 	MapMenuHandler(MapCanvas* canvas, Editor& editor);
@@ -18,39 +20,9 @@ public:
 
 	void BindEvents();
 
-	void OnCut(wxCommandEvent& event);
-	void OnCopy(wxCommandEvent& event);
-	void OnCopyPosition(wxCommandEvent& event);
-	void OnCopyServerId(wxCommandEvent& event);
-	void OnCopyClientId(wxCommandEvent& event);
-	void OnCopyName(wxCommandEvent& event);
-	void OnBrowseTile(wxCommandEvent& event);
-	void OnTileProperties(wxCommandEvent& event);
-	void OnScriptMenu(wxCommandEvent& event);
-	void OnPaste(wxCommandEvent& event);
-	void OnDelete(wxCommandEvent& event);
-
-	void OnGotoDestination(wxCommandEvent& event);
-	void OnRotateItem(wxCommandEvent& event);
-	void OnSwitchDoor(wxCommandEvent& event);
-
-	void OnSelectRAWBrush(wxCommandEvent& event);
-	void OnSelectGroundBrush(wxCommandEvent& event);
-	void OnSelectDoodadBrush(wxCommandEvent& event);
-	void OnSelectDoorBrush(wxCommandEvent& event);
-	void OnSelectWallBrush(wxCommandEvent& event);
-	void OnSelectCarpetBrush(wxCommandEvent& event);
-	void OnSelectTableBrush(wxCommandEvent& event);
-	void OnSelectCreatureBrush(wxCommandEvent& event);
-	void OnSelectSpawnBrush(wxCommandEvent& event);
-	void OnSelectHouseBrush(wxCommandEvent& event);
-	void OnSelectCollectionBrush(wxCommandEvent& event);
-
-	void OnProperties(wxCommandEvent& event);
-	void OnAdvancedReplace(wxCommandEvent& event);
-	void OnAddToCollection(wxCommandEvent& event);
-
 private:
+	void OnMenuCommand(wxCommandEvent& event);
+
 	MapCanvas* canvas;
 	Editor& editor;
 };
