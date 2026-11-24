@@ -337,3 +337,6 @@ rme_add_catch2_test(test_load_warnings_log tests/test_load_warnings_log.cpp sour
 
 # --- Unit test for the per-chunk tile mask (Show Light Strength overlay) ---
 rme_add_catch2_test(test_chunk_tile_mask tests/test_chunk_tile_mask.cpp)
+
+# --- Unit test for the copy position formats and the position paste parser ---
+rme_add_catch2_test(test_position_format tests/test_position_format.cpp source/map/position_format.cpp)

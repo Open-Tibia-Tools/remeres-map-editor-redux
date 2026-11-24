@@ -15,8 +15,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////
 
-#include <algorithm>
-
 #include "map/tile_operations.h"
 #include "app/main.h"
 #include "rendering/ui/clipboard_handler.h"
@@ -25,16 +23,8 @@
 #include "map/tile.h"
 #include "game/item.h"
 #include "editor/selection.h"
+#include "map/position_format.h"
 #include "app/settings.h"
-
-namespace {
-constexpr int kMinCopyPositionFormat = 0;
-constexpr int kMaxCopyPositionFormat = 4;
-
-int ClampCopyPositionFormat(int format) {
-	return std::clamp(format, kMinCopyPositionFormat, kMaxCopyPositionFormat);
-}
-}
 
 void ClipboardHandler::copy(Editor& editor, int floor) {
 	if (g_gui.IsSelectionMode()) {
@@ -67,44 +57,13 @@ void ClipboardHandler::copyPosition(const Selection& selection) {
 	Position minPos = selection.minPosition();
 	Position maxPos = selection.maxPosition();
 
-	std::ostringstream clip;
-	if (minPos != maxPos) {
-		clip << "{";
-		clip << "fromx = " << minPos.x << ", ";
-		clip << "tox = " << maxPos.x << ", ";
-		clip << "fromy = " << minPos.y << ", ";
-		clip << "toy = " << maxPos.y << ", ";
-		if (minPos.z != maxPos.z) {
-			clip << "fromz = " << minPos.z << ", ";
-			clip << "toz = " << maxPos.z;
-		} else {
-			clip << "z = " << minPos.z;
-		}
-		clip << "}";
-	} else {
-		switch (ClampCopyPositionFormat(g_settings.getInteger(Config::COPY_POSITION_FORMAT))) {
-			case 0:
-				clip << "{x = " << minPos.x << ", y = " << minPos.y << ", z = " << minPos.z << "}";
-				break;
-			case 1:
-				clip << "{\"x\":" << minPos.x << ",\"y\":" << minPos.y << ",\"z\":" << minPos.z << "}";
-				break;
-			case 2:
-				clip << minPos.x << ", " << minPos.y << ", " << minPos.z;
-				break;
-			case 3:
-				clip << "(" << minPos.x << ", " << minPos.y << ", " << minPos.z << ")";
-				break;
-			case 4:
-			default:
-				clip << "Position(" << minPos.x << ", " << minPos.y << ", " << minPos.z << ")";
-				break;
-		}
-	}
+	const std::string clip = minPos != maxPos
+		? FormatPositionRange(minPos, maxPos)
+		: FormatPosition(minPos, PositionFormatFromSetting(g_settings.getInteger(Config::COPY_POSITION_FORMAT)));
 
 	if (wxTheClipboard->Open()) {
 		wxTextDataObject* obj = new wxTextDataObject();
-		obj->SetText(wxstr(clip.str()));
+		obj->SetText(wxstr(clip));
 		wxTheClipboard->SetData(obj);
 
 		wxTheClipboard->Close();
