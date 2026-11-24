@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <optional>
 #include <wx/string.h>
 #include <wx/filename.h>
 
@@ -324,6 +325,12 @@ public:
 		metadata_file = v;
 	}
 
+	// Highest item client id of the unmodified Tibia client for this version (clients.toml
+	// stockItemCount). Client ids above it are custom items.
+	std::optional<uint32_t> getStockItemCount() const {
+		return stock_item_count;
+	}
+
 	std::string getSpritesFile() const {
 		return sprites_file;
 	}
@@ -502,6 +509,7 @@ private:
 	wxFileName sprites_path;
 	std::string description;
 	ItemDefinitionMode item_definition_mode = ItemDefinitionMode::DatOtb;
+	std::optional<uint32_t> stock_item_count;
 
 private:
 	static void loadVersionsFromTOML(const std::string& configPath);

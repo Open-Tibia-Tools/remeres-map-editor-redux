@@ -6,6 +6,7 @@
 #define RME_PALETTE_DETECTED_DETECTED_ITEM_RULES_H_
 
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -33,6 +34,8 @@ struct DetectedItemFacts {
 	bool ground_brush_has_border = false;
 	// DAT "block missiles".
 	bool block_missiles = false;
+	// Owned by a wall brush or flagged as a wall piece.
+	bool wall = false;
 };
 
 // A ground border piece that no border and no brush in the materials XML refers to.
@@ -57,6 +60,20 @@ enum class MountainPiece {
 	// Unpassable, missile-blocking ground border piece (mountain sides and corners).
 	Border,
 };
+
+enum class CustomItemKind {
+	Stock,
+	Object,
+	Ground,
+	Border,
+	Wall,
+};
+
+// Custom items are the ones whose client id is above the stock client's highest item id
+// (clients.toml stockItemCount; 11703 for 8.60). Every stock item has a client id at or below
+// it, so none can be classified as custom. Without a stock count, nothing is custom.
+// Custom items are split by kind so construction pieces do not mix with objects.
+[[nodiscard]] CustomItemKind ClassifyCustomItem(const DetectedItemFacts& item, std::optional<uint32_t> stock_item_count);
 
 // A mountain piece that no brush or border uses yet.
 [[nodiscard]] MountainPiece ClassifyUnregisteredMountain(const DetectedItemFacts& item);

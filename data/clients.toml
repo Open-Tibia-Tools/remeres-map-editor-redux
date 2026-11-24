@@ -350,6 +350,7 @@ frameDurations = false
 frameGroups = false
 metadataFile = 'Tibia.dat'
 name = '8.60'
+stockItemCount = 11703
 otbId = 20
 otbMajor = 3
 otbmVersions = [ 3 ]

@@ -110,3 +110,28 @@ TEST_CASE("broken mountain brushes are described", "[detected]") {
 
 	CHECK(DescribeBrokenMountainBrush("grass", {}).empty());
 }
+
+TEST_CASE("only client ids above the stock count are custom, split by kind", "[detected]") {
+	DetectedItemFacts item;
+	item.client_id = 11703;
+	CHECK(ClassifyCustomItem(item, 11703u) == CustomItemKind::Stock);
+	item.client_id = 11704;
+	CHECK(ClassifyCustomItem(item, 11703u) == CustomItemKind::Object);
+	CHECK(ClassifyCustomItem(item, std::nullopt) == CustomItemKind::Stock);
+
+	auto ground = item;
+	ground.ground = true;
+	CHECK(ClassifyCustomItem(ground, 11703u) == CustomItemKind::Ground);
+
+	auto border = item;
+	border.ground_border_piece = true;
+	CHECK(ClassifyCustomItem(border, 11703u) == CustomItemKind::Border);
+
+	auto wall = item;
+	wall.wall = true;
+	CHECK(ClassifyCustomItem(wall, 11703u) == CustomItemKind::Wall);
+
+	auto meta = item;
+	meta.meta = true;
+	CHECK(ClassifyCustomItem(meta, 11703u) == CustomItemKind::Stock);
+}

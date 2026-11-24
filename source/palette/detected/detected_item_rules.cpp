@@ -22,6 +22,22 @@ GroundBorderState ClassifyGroundBorder(const DetectedItemFacts& item) {
 	return item.ground_brush_has_border ? GroundBorderState::Bordered : GroundBorderState::BrushWithoutBorder;
 }
 
+CustomItemKind ClassifyCustomItem(const DetectedItemFacts& item, std::optional<uint32_t> stock_item_count) {
+	if (item.meta || !stock_item_count || item.client_id <= *stock_item_count) {
+		return CustomItemKind::Stock;
+	}
+	if (item.ground) {
+		return CustomItemKind::Ground;
+	}
+	if (item.ground_border_piece || item.registered_border) {
+		return CustomItemKind::Border;
+	}
+	if (item.wall) {
+		return CustomItemKind::Wall;
+	}
+	return CustomItemKind::Object;
+}
+
 MountainPiece ClassifyUnregisteredMountain(const DetectedItemFacts& item) {
 	if (item.meta || item.brush_owned || item.registered_border || !item.unpassable || !item.block_missiles) {
 		return MountainPiece::None;

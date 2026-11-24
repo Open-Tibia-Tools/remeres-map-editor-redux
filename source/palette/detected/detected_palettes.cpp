@@ -5,6 +5,7 @@
 #include "palette/detected/detected_palettes.h"
 
 #include "app/main.h"
+#include "app/managers/version_manager.h"
 #include "app/settings.h"
 #include "brushes/ground/ground_brush.h"
 #include "brushes/raw/raw_brush.h"
@@ -41,6 +42,7 @@ namespace {
 			.ground_brush_owned = ground_brush != nullptr,
 			.ground_brush_has_border = ground_brush != nullptr && HasAnyBorder(*ground_brush),
 			.block_missiles = item.hasFlag(ItemFlag::BlockMissiles),
+			.wall = item.hasFlag(ItemFlag::IsWall),
 		};
 	}
 
@@ -101,6 +103,12 @@ void AddDetectedPalettes(std::vector<std::string>& warnings) {
 	DetectedTileset brushes_without_border { .name = "Ground brushes without border" };
 	DetectedTileset mountain_grounds { .name = "Unregistered mountain grounds" };
 	DetectedTileset mountain_borders { .name = "Unregistered mountain borders" };
+	DetectedTileset custom_objects { .name = "Objects" };
+	DetectedTileset custom_grounds { .name = "Grounds" };
+	DetectedTileset custom_borders { .name = "Borders" };
+	DetectedTileset custom_walls { .name = "Walls" };
+	const ClientVersion* version = g_version.getLoadedVersion();
+	const std::optional<uint32_t> stock_item_count = version ? version->getStockItemCount() : std::nullopt;
 
 	for (const ServerItemId id : g_item_definitions.allIds()) {
 		if (id < 100) {
@@ -111,6 +119,23 @@ void AddDetectedPalettes(std::vector<std::string>& warnings) {
 			continue;
 		}
 		const DetectedItemFacts facts = CollectFacts(item);
+		DetectedTileset* custom_target = nullptr;
+		switch (ClassifyCustomItem(facts, stock_item_count)) {
+			case CustomItemKind::Object:
+				custom_target = &custom_objects;
+				break;
+			case CustomItemKind::Ground:
+				custom_target = &custom_grounds;
+				break;
+			case CustomItemKind::Border:
+				custom_target = &custom_borders;
+				break;
+			case CustomItemKind::Wall:
+				custom_target = &custom_walls;
+				break;
+			case CustomItemKind::Stock:
+				break;
+		}
 		DetectedTileset* target = nullptr;
 		switch (ClassifyUnregisteredMountain(facts)) {
 			case MountainPiece::Ground:
@@ -138,14 +163,26 @@ void AddDetectedPalettes(std::vector<std::string>& warnings) {
 					break;
 			}
 		}
+		if (!target && !custom_target) {
+			continue;
+		}
+		RAWBrush* brush = g_materials.ensureRawBrush(id);
+		if (!brush) {
+			continue;
+		}
 		if (target) {
-			if (RAWBrush* brush = g_materials.ensureRawBrush(id)) {
-				target->brushes.push_back(brush);
-			}
+			target->brushes.push_back(brush);
+		}
+		if (custom_target) {
+			custom_target->brushes.push_back(brush);
 		}
 	}
 
 	AddPalette("Detected Borders", { std::move(unregistered_borders) });
 	AddPalette("Detected Grounds", { std::move(grounds_without_brush), std::move(brushes_without_border) });
 	AddPalette("Detected Mountains", { std::move(mountain_grounds), std::move(mountain_borders) });
+	if (!stock_item_count) {
+		spdlog::info("Custom Items palette skipped: no stockItemCount in clients.toml for this client");
+	}
+	AddPalette("Custom Items", { std::move(custom_objects), std::move(custom_grounds), std::move(custom_borders), std::move(custom_walls) });
 }

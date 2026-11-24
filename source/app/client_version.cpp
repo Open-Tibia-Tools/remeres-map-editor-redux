@@ -204,6 +204,9 @@ void ClientVersion::loadVersionsFromTOML(const std::string& configName) {
 			cv_ptr->is_extended = client["extended"].value_or(version >= 860);
 			cv_ptr->has_frame_durations = client["frameDurations"].value_or(version >= 1050);
 			cv_ptr->has_frame_groups = client["frameGroups"].value_or(version >= 1057);
+			if (const auto stock_items = client["stockItemCount"].value<int64_t>(); stock_items && *stock_items > 0) {
+				cv_ptr->stock_item_count = static_cast<uint32_t>(*stock_items);
+			}
 
 			if (!cv_ptr->data_versions.empty()) {
 				cv_ptr->data_versions[0] = client_data;
@@ -293,6 +296,9 @@ bool ClientVersion::saveVersions() {
 		db_obj.insert_or_assign("frameDurations", version->has_frame_durations);
 		db_obj.insert_or_assign("frameGroups", version->has_frame_groups);
 		db_obj.insert_or_assign("dataDirectory", nstr(version->data_path));
+		if (version->stock_item_count) {
+			db_obj.insert_or_assign("stockItemCount", static_cast<int64_t>(*version->stock_item_count));
+		}
 
 		if (!version->data_versions.empty()) {
 			db_obj.insert_or_assign("datSignature", fmt::format("{:X}", version->data_versions[0].datSignature));
@@ -700,6 +706,7 @@ std::unique_ptr<ClientVersion> ClientVersion::clone() const {
 	new_cv->client_path = client_path;
 	new_cv->description = description;
 	new_cv->item_definition_mode = item_definition_mode;
+	new_cv->stock_item_count = stock_item_count;
 	return new_cv;
 }
 
