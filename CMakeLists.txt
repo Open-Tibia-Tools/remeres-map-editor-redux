@@ -336,3 +336,11 @@ set_target_properties(test_sprite_footprint PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test_sprite_footprint PRIVATE Catch2::Catch2WithMain)
 target_include_directories(test_sprite_footprint PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
 add_test(NAME test_sprite_footprint COMMAND test_sprite_footprint)
+
+# --- Unit test for Autoborder UI state, preview preconditions, and labels ---
+add_executable(test_autoborder_state tests/test_autoborder_state.cpp)
+set_target_properties(test_autoborder_state PROPERTIES CXX_STANDARD 23)
+set_target_properties(test_autoborder_state PROPERTIES CXX_STANDARD_REQUIRED ON)
+target_link_libraries(test_autoborder_state PRIVATE Catch2::Catch2WithMain)
+target_include_directories(test_autoborder_state PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source)
+add_test(NAME test_autoborder_state COMMAND test_autoborder_state)

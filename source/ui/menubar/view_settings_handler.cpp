@@ -2,7 +2,6 @@
 #include "rendering/core/floor_visibility_mode.h"
 #include "ui/main_menubar.h"
 #include "ui/gui.h"
-#include "ui/managers/status_manager.h"
 #include "app/preferences.h"
 #include "map/map.h"
 #include <format>
@@ -221,14 +220,7 @@ void ViewSettingsHandler::OnToolbars(wxCommandEvent& event) {
 
 void ViewSettingsHandler::OnToggleAutomagic(wxCommandEvent& WXUNUSED(event)) {
 	using namespace MenuBar;
-	g_settings.setInteger(Config::USE_AUTOMAGIC, menuBar->IsItemChecked(AUTOMAGIC));
-	g_settings.setInteger(Config::BORDER_IS_GROUND, menuBar->IsItemChecked(AUTOMAGIC));
-	if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
-		g_gui.SetStatusText("Automagic enabled.");
-	} else {
-		g_gui.SetStatusText("Automagic disabled.");
-	}
-	g_status.UpdateAutomagicIndicator();
+	g_gui.SetAutoborderEnabled(menuBar->IsItemChecked(AUTOMAGIC));
 }
 
 void ViewSettingsHandler::OnSelectionTypeChange(wxCommandEvent& WXUNUSED(event)) {

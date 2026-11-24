@@ -149,6 +149,12 @@ public:
 		return false;
 	}
 
+	// Whether this brush participates in Autoborder (Automagic) toggling and preview.
+	// Separate from needBorders(), which controls area tile-collection in DrawingController.
+	virtual bool supportsAutoborder() const {
+		return needBorders();
+	}
+
 	virtual bool canDrag() const {
 		return false;
 	}

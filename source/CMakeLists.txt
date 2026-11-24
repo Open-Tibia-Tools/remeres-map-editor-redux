@@ -440,6 +440,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/map_statistics_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/live_dialogs.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/menubar_loader.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/autoborder_ui_state.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_window.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/tool_options_surface.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/brush_items/brush_items_window.h

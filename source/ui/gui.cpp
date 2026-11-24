@@ -195,7 +195,7 @@ void GUI::SetDrawingMode() {
 
 	if (GetCurrentBrush() && GetCurrentBrush()->is<DoodadBrush>()) {
 		SetCurrentMapSecondaryMap(g_doodad_preview.GetBufferMap());
-	} else if (GetCurrentBrush() && GetCurrentBrush()->needBorders() && g_settings.getInteger(Config::USE_AUTOMAGIC)) {
+	} else if (GetCurrentBrush() && GetCurrentBrush()->supportsAutoborder() && g_settings.getInteger(Config::USE_AUTOMAGIC)) {
 		// We'll set the map, but it might be empty until first mouse move
 		SetCurrentMapSecondaryMap(g_autoborder_preview.GetBufferMap());
 	} else {

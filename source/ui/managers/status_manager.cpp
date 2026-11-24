@@ -4,6 +4,7 @@
 
 #include "app/main.h"
 #include "ui/managers/status_manager.h"
+#include "ui/autoborder_ui_state.h"
 #include "ui/gui.h"
 #include "editor/editor_tabs.h"
 #include "app/settings.h"
@@ -23,13 +24,13 @@ bool StatusManager::HasActiveMessage() const {
 	return std::chrono::steady_clock::now() < message_expiry_;
 }
 
-wxString StatusManager::AutomagicStatusLabel() {
-	return g_settings.getBoolean(Config::USE_AUTOMAGIC) ? "Auto border: ON (A)" : "Auto border: off (A)";
+wxString StatusManager::AutoborderStatusLabel() {
+	return wxstr(rme::ui::AutoborderStatusLabel(g_settings.getBoolean(Config::USE_AUTOMAGIC)));
 }
 
-void StatusManager::UpdateAutomagicIndicator() {
+void StatusManager::UpdateAutoborderIndicator() {
 	if (g_gui.root) {
-		g_gui.root->SetStatusText(AutomagicStatusLabel(), 4);
+		g_gui.root->SetStatusText(AutoborderStatusLabel(), 4);
 	}
 }
 

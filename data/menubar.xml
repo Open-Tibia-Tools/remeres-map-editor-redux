@@ -64,7 +64,7 @@
 		<item name="Replace Items..." hotkey="Ctrl+Shift+F" action="REPLACE_ITEMS" help="Replaces all occurrences of one item with another."/>
 		<separator/>
 		<menu name="Border Options">
-			<item name="Border Automagic" hotkey="A" action="AUTOMAGIC" help="Turns on all automatic border functions."/>
+			<item name="Autoborder" hotkey="A" action="AUTOMAGIC" help="Turns on all automatic border functions."/>
 			<separator/>
 			<item name="Borderize Selection" hotkey="Ctrl+B" action="BORDERIZE_SELECTION" help="Creates automatic borders in the entire selected area."/>
 			<item name="Borderize Map" action="BORDERIZE_MAP" help="Reborders the entire map."/>
