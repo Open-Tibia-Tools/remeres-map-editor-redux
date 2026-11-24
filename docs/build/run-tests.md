@@ -4,7 +4,7 @@
 
 - `run_tests.bat` (repo root): sets up the same MSVC x64 environment as `build_ninja.bat`, builds **every** target (`rme` + all test executables) with Ninja and runs the full CTest suite. Exits non-zero on any compile error or test failure.
 - `build_ninja.bat`: configures the build directory and builds only the `rme` target; it does not compile tests.
-- Test targets and `add_test()` registrations live in the root `CMakeLists.txt`; full-editor test executables share the `rme_add_full_editor_test()` CMake function.
+- Test targets and `add_test()` registrations live in the root `CMakeLists.txt`; full-editor test executables share the `rme_add_full_editor_test()` CMake function, and every standalone Catch2 suite registers through the one-line `rme_add_catch2_test(target sources...)` helper (C++23, Catch2WithMain, `source/` include, CTest entry) instead of a hand-copied block - new suites add exactly one line.
 
 ## 2. When to Use It (Do's & Don'ts)
 

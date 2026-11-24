@@ -24,7 +24,8 @@ struct RenderFrameContext;
 struct CreatureDrawOptions {
 	DrawColor color;
 	bool ingame = false;
-	int animationPhase = 0;
+	// Walking creature: steps walked plus progress through the current step (see WalkAnimation). Negative while standing.
+	float walkProgress = -1.0f;
 	Position map_pos;
 	std::optional<MapBounds> transient_selection_bounds;
 	LightBuffer* light_buffer = nullptr;
