@@ -71,7 +71,8 @@ jobs:
       - name: Run OpenCode PR Review
         uses: dceoy/opencode-action@cda16d479232f0998a3046425dc43747f1c4c66e # v1.1.0
         env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          # Free opencode/*-free models use public access when OPENCODE_API_KEY is unset;
+          # passing an expired Console key triggers "Reconnect OpenCode Console to continue."
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: opencode/deepseek-v4.1-flash-free
