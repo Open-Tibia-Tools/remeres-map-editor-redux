@@ -48,8 +48,7 @@ public:
 
 protected:
 	EditorTab* GetInternalTab(int idx);
-	wxAuiNotebook* notebook;
-	std::map<wxWindow*, EditorTab*> conv;
+    wxAuiNotebook* notebook;
 };
 
 class EditorTab {

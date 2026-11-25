@@ -13,23 +13,25 @@
 #include "util/file_system.h"
 #include "editor/hotkey_manager.h"
 
-#include "game/sprites.h"
-#include "editor/editor.h"
-#include "ui/dialogs/goto_position_dialog.h"
-#include "palette/palette_window.h"
 #include "app/preferences.h"
+#include "app/updater.h"
+#include "editor/editor.h"
+#include "editor/managers/editor_manager.h"
+#include "game/sprites.h"
+#include "palette/palette_window.h"
+#include "rendering/ui/minimap_window.h"
+#include "ui/about_window.h"
+#include "ui/brush_items/brush_items_window.h"
+#include "ui/dialogs/goto_position_dialog.h"
+#include "ui/main_menubar.h"
+#include "ui/map_tab.h"
 #include "ui/result_window.h"
+#include "ui/tile_properties/tile_properties_panel.h"
+#include <wx/slider.h>
+#include <wx/stattext.h>
 #include "lua/lua_dialog.h"
 #include "lua/lua_script_manager.h"
 #include "lua/lua_scripts_window.h"
-#include "rendering/ui/minimap_window.h"
-#include "ui/about_window.h"
-#include "ui/main_menubar.h"
-#include "app/updater.h"
-#include "ui/tile_properties/tile_properties_panel.h"
-#include "ui/brush_items/brush_items_window.h"
-#include <wx/stattext.h>
-#include <wx/slider.h>
 
 #include "game/materials.h"
 #include "map/map.h"
@@ -302,12 +304,20 @@ bool MainFrame::DoQuerySave(bool doclose) {
 		return true;
 	}
 
-	if (!DoQuerySaveTileset()) {
+    Editor* editor = g_gui.GetCurrentEditor();
+    if (!editor) {
+        return true;
+    }
+    return DoQuerySave(*editor, g_editors.GetCurrentMapTab(), doclose);
+}
+
+bool MainFrame::DoQuerySave(Editor& editor, MapTab* map_tab, bool doclose)
+{
+    if (!DoQuerySaveTileset()) {
 		return false;
 	}
 
-	Editor& editor = *g_gui.GetCurrentEditor();
-	if (editor.live_manager.IsClient()) {
+    if (editor.live_manager.IsClient()) {
 		long ret = DialogUtil::PopupDialog(
 			"Disconnect",
 			"Do you want to disconnect?",
@@ -319,8 +329,8 @@ bool MainFrame::DoQuerySave(bool doclose) {
 		}
 
 		editor.live_manager.CloseServer();
-		return DoQuerySave(doclose);
-	} else if (editor.live_manager.IsServer()) {
+        return DoQuerySave(editor, map_tab, doclose);
+    } else if (editor.live_manager.IsServer()) {
 		long ret = DialogUtil::PopupDialog(
 			"Shutdown",
 			"Do you want to shut down the server? (any clients will be disconnected)",
@@ -332,40 +342,45 @@ bool MainFrame::DoQuerySave(bool doclose) {
 		}
 
 		editor.live_manager.CloseServer();
-		return DoQuerySave(doclose);
-	} else if (g_gui.ShouldSave()) {
-		long ret = DialogUtil::PopupDialog(
-			"Save changes",
-			"Do you want to save your changes to \"" + wxstr(g_gui.GetCurrentMap().getName()) + "\"?",
-			wxYES | wxNO | wxCANCEL
-		);
+        return DoQuerySave(editor, map_tab, doclose);
+    } else if (g_editors.ShouldSave(editor)) {
+        long ret = DialogUtil::PopupDialog(
+            "Save changes", "Do you want to save your changes to \"" + wxstr(editor.map.getName()) + "\"?", wxYES | wxNO | wxCANCEL
+        );
 
-		if (ret == wxID_YES) {
-			if (g_gui.GetCurrentMap().hasFile()) {
-				if (!g_gui.SaveCurrentMap(true)) {
-					// The save failed or was cancelled: keep the map open
+        if (ret == wxID_YES) {
+            if (editor.map.hasFile()) {
+                if (!g_editors.SaveMap(editor, map_tab, FileName(""), true)) {
+                    // The save failed or was cancelled: keep the map open
 					// instead of closing it and losing the changes.
 					return false;
-				}
-			} else {
-				wxFileDialog file(this, "Save...", "", "", "*.otbm", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+                }
+            } else {
+                wxFileDialog file(this, "Save...", "", "", "*.otbm", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 				int32_t result = file.ShowModal();
 				if (result != wxID_OK) {
 					return false;
 				}
-				if (!g_gui.SaveCurrentMap(file.GetPath(), true)) {
-					return false;
-				}
-			}
-		} else if (ret == wxID_CANCEL) {
+                if (!g_editors.SaveMap(editor, map_tab, file.GetPath(), true)) {
+                    return false;
+                }
+            }
+        } else if (ret == wxID_CANCEL) {
 			return false;
 		}
-	}
+    }
 
-	if (doclose) {
+    if (doclose) {
 		UnnamedRenderingLock();
-		g_gui.CloseCurrentEditor();
-	}
+        if (map_tab && g_gui.tabbook) {
+            const int tab_idx = g_gui.tabbook->GetTabIndex(map_tab->GetWindow());
+            if (tab_idx != wxNOT_FOUND) {
+                g_editors.CloseTab(tab_idx);
+            }
+        } else {
+            g_gui.CloseCurrentEditor();
+        }
+    }
 
 	return true;
 }

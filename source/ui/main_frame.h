@@ -9,8 +9,10 @@
 
 #include <chrono>
 
+class Editor;
 class MainMenuBar;
 class MainToolBar;
+class MapTab;
 class wxActivityIndicator;
 
 class MainFrame : public wxFrame {
@@ -21,7 +23,8 @@ public:
 	void UpdateMenubar();
 	bool DoQueryClose();
 	bool DoQuerySave(bool doclose = true);
-	bool DoQuerySaveTileset(bool doclose = true);
+    bool DoQuerySave(Editor& editor, MapTab* map_tab, bool doclose = true);
+    bool DoQuerySaveTileset(bool doclose = true);
 	bool DoQueryImportCreatures();
 	bool LoadMap(FileName name);
 

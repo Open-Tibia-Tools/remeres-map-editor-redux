@@ -18,6 +18,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/app/settings.h
     ${CMAKE_CURRENT_LIST_DIR}/app/threads.h
     ${CMAKE_CURRENT_LIST_DIR}/app/updater.h
+    ${CMAKE_CURRENT_LIST_DIR}/app/managers/prepared_version_load.h
     ${CMAKE_CURRENT_LIST_DIR}/app/managers/version_manager.h
 
     ${CMAKE_CURRENT_LIST_DIR}/brushes/brush.h
@@ -77,10 +78,13 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/editor_persistence.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_backup_service.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_load_options.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_load_decision.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/switch_client_preflight.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/minimap_exporter.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/minimap_exporter_internal.h
 
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor_tabs.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/tab_close_decision.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/lasso_geometry.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/lasso_tile_outline.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/selection.h
@@ -309,7 +313,11 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/outfit_color_palette.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/sortable_list_box.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/modern_button.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/controls/themed_button.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/theme_contrast.h
 
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/client_mismatch_dialog.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/client_mismatch_presentation.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/floor_below_offset_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/goto_position_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.h
@@ -752,6 +760,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/sortable_list_box.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/controls/modern_button.cpp
 
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/client_mismatch_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/floor_below_offset_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/goto_position_dialog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.cpp
