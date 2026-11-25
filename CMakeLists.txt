@@ -323,9 +323,6 @@ rme_add_catch2_test(test_selection_multitile_ground tests/test_selection_multiti
 # --- Unit test for the magic wand flood fill and border ring ---
 rme_add_catch2_test(test_magic_wand tests/test_magic_wand.cpp)
 
-# --- Unit test for the pathing overlay sprite footprint ---
-rme_add_catch2_test(test_sprite_footprint tests/test_sprite_footprint.cpp)
-
 # --- Unit test for outfit walk animation frames ---
 rme_add_catch2_test(test_walk_animation tests/test_walk_animation.cpp)
 
@@ -355,3 +352,4 @@ rme_add_catch2_test(test_client_mismatch_presentation tests/test_client_mismatch
 
 # --- Unit test for non-destructive switch client preflight evaluation ---
 rme_add_catch2_test(test_switch_client_preflight tests/test_switch_client_preflight.cpp)
+rme_add_catch2_test(test_blocking_overlay tests/test_blocking_overlay.cpp)

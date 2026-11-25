@@ -9,20 +9,21 @@
 
 namespace rme::rendering {
 
-// Single source of truth for the item depth rules shared by the tile renderer,
-// the chunk-cache baker, the selection picker and the pathing overlay.
+    // Single source of truth for the item depth rules shared by the tile renderer,
+    // the chunk-cache baker and the selection picker.
 
-// Resolves the render layer of a stacked item from its definition flags.
-// Border items are handled by the terrain/border passes and are never passed here.
-[[nodiscard]] constexpr RenderSublayer ResolveItemSublayer(bool always_on_bottom, bool top_effect) noexcept {
-	if (always_on_bottom) {
-		return RenderSublayer::BottomItem;
-	}
-	if (top_effect) {
-		return RenderSublayer::TopItem;
-	}
-	return RenderSublayer::CommonItem;
-}
+    // Resolves the render layer of a stacked item from its definition flags.
+    // Border items are handled by the terrain/border passes and are never passed here.
+    [[nodiscard]] constexpr RenderSublayer ResolveItemSublayer(bool always_on_bottom, bool top_effect) noexcept
+    {
+        if (always_on_bottom) {
+            return RenderSublayer::BottomItem;
+        }
+        if (top_effect) {
+            return RenderSublayer::TopItem;
+        }
+        return RenderSublayer::CommonItem;
+    }
 
 // Common items receive one of four depth steps (0..3) depending on their position
 // in the stack. Values outside that range are clamped, so a caller counter cannot
@@ -44,9 +45,6 @@ constexpr void AdvanceItemElevation(int& elevation_px, int draw_height, bool dra
 		elevation_px += draw_height;
 	}
 }
-
-// Draw offsets are normalized by ClampSpriteDrawOffset() in app/definitions.h
-// before DAT/protobuf values reach the renderer.
 
 } // namespace rme::rendering
 

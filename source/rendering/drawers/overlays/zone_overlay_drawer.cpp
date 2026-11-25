@@ -1,27 +1,26 @@
 #include "rendering/drawers/overlays/zone_overlay_drawer.h"
-#include "rendering/core/sprite_batch.h"
-#include "rendering/core/render_view.h"
-#include "rendering/core/drawing_options.h"
-#include "rendering/core/atlas_manager.h"
-#include "rendering/indicators/zone_flags.h"
-#include "rendering/indicators/zone_colors.h"
-#include "rendering/indicators/technical_item_registry.h"
-#include "rendering/core/render_depth.h"
-#include "rendering/core/game_sprite.h"
-#include "rendering/core/item_render_rules.h"
-#include "rendering/core/sprite_footprint.h"
-#include "util/phase_profiler.h"
-#include "map/map.h"
-#include "map/basemap.h"
-#include "map/tile.h"
+#include "app/settings.h"
 #include "game/item.h"
 #include "game/spawn.h"
 #include "game/waypoints.h"
-#include "app/settings.h"
+#include "map/basemap.h"
+#include "map/map.h"
+#include "map/tile.h"
+#include "rendering/core/atlas_manager.h"
+#include "rendering/core/drawing_options.h"
+#include "rendering/core/render_depth.h"
+#include "rendering/core/render_view.h"
+#include "rendering/core/sprite_batch.h"
+#include "rendering/drawers/overlays/blocking_overlay_rules.h"
+#include "rendering/indicators/technical_item_registry.h"
+#include "rendering/indicators/zone_colors.h"
+#include "rendering/indicators/zone_flags.h"
+#include "util/phase_profiler.h"
 #include <algorithm>
 #include <cmath>
-#include <vector>
 #include <limits>
+#include <span>
+#include <vector>
 
 namespace rme::rendering {
 
@@ -44,75 +43,6 @@ bool IsTilePathBlocking(const Tile* t) noexcept {
 	}
 	return false;
 }
-
-namespace {
-
-	// An item counted as blocking by IsTilePathBlocking().
-	bool IsPathBlockingItem(const Item& item) noexcept {
-		return item.isBlocking() && !TechnicalItemRegistry::IsInvisibleWall(item.getID(), item.getClientID());
-	}
-
-	GameSprite* GetFootprintSprite(const Item& item) {
-		GameSprite* sprite = item.getSprite();
-		if (!sprite) {
-			return nullptr;
-		}
-		const ImageDimensions composite = sprite->getCompositePixelSize();
-		return rme::rendering::NeedsSpriteFootprint(sprite->width, sprite->height, composite.width, composite.height) ? sprite : nullptr;
-	}
-
-	bool HasFootprintBlockingSprite(const Tile& tile) {
-		if (tile.ground && IsPathBlockingItem(*tile.ground) && GetFootprintSprite(*tile.ground)) {
-			return true;
-		}
-		for (const auto& item : tile.items) {
-			if (item && IsPathBlockingItem(*item) && GetFootprintSprite(*item)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	// Visits the tile offsets (relative to `tile`) covered by the opaque sprite parts of every
-	// multi-tile blocking item on `tile`, placed with the draw offset and item elevation of the
-	// tile render path. 1x1 sprites are skipped: their wash stays the logical tile alone.
-	template <typename Visitor>
-	void ForEachBlockingFootprintTile(const Tile& tile, Visitor&& visit) {
-		const auto visitItem = [&visit](const Item& item, int elevation) {
-			if (!IsPathBlockingItem(item)) {
-				return;
-			}
-			GameSprite* sprite = GetFootprintSprite(item);
-			if (!sprite) {
-				return;
-			}
-			const auto [draw_offset_x, draw_offset_y] = sprite->getDrawOffset();
-			ForEachSpriteFootprintTile(sprite->getPartFootprint(), -elevation - draw_offset_x, -elevation - draw_offset_y, visit);
-		};
-
-		if (tile.ground) {
-			visitItem(*tile.ground, 0);
-		}
-		int elevation = 0;
-		for (const auto& item : tile.items) {
-			if (!item || item->isInvalidOTBMItem() || !item->getDefinition()) {
-				continue;
-			}
-			if (item->isBorderLayer()) {
-				visitItem(*item, 0);
-				continue;
-			}
-			if (item->isMetaItem()) {
-				continue;
-			}
-			visitItem(*item, elevation);
-			if (const GameSprite* sprite = item->getSprite()) {
-				rme::rendering::AdvanceItemElevation(elevation, sprite->draw_height, sprite->hasElevation());
-			}
-		}
-	}
-
-} // namespace
 
 void ZoneOverlayDrawer::drawFloor(SpriteBatch& sprite_batch,
                                   int z,
@@ -445,137 +375,97 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	const ViewBounds bounds = view.getBoundsForFloor(z);
 	const float floor_alpha = 1.0f;
 
-	// Mask area: the viewport plus a one-tile ring for the border tests, extended right/down by
-	// the footprint reach so multi-tile sprites anchored just outside still wash visible tiles.
-	const int min_x = bounds.start_x - 1;
-	const int max_x = bounds.end_x + 1 + kSpriteFootprintReachTiles;
-	const int min_y = bounds.start_y - 1;
-	const int max_y = bounds.end_y + 1 + kSpriteFootprintReachTiles;
-	const int row_width = max_x - min_x + 1;
-	const int row_count = max_y - min_y + 1;
-	const size_t visible_tiles_estimate = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
+    const int min_x = bounds.start_x - 1;
+    const int max_x = bounds.end_x + 1;
+    const int row_width = max_x - min_x + 1;
+    const size_t visible_tiles_estimate
+        = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
 
-	blocking_mask_.resize(static_cast<size_t>(row_width) * static_cast<size_t>(row_count));
-	blocking_footprint_anchors_.clear();
-	blocking_border_quads_.clear();
-	blocking_border_quads_.reserve(visible_tiles_estimate);
+    blocking_border_quads_.clear();
+    blocking_border_quads_.reserve(visible_tiles_estimate);
 
-	{
-		rme::prof::Scope mask_scope(rme::prof::Phase::BlockingMask);
-		const auto classify = [this](const Tile* t, int x, int y) -> uint8_t {
-			if (!t || !IsTilePathBlocking(t)) {
-				return 0;
-			}
-			if (HasFootprintBlockingSprite(*t)) {
-				blocking_footprint_anchors_.push_back({ t, x, y });
-			}
-			return 1;
-		};
+    SpatialHashGrid::CellCursor secondary_cursor;
+    SpatialHashGrid::CellCursor primary_cursor;
+    auto fetchRow = [&](int ry, std::vector<uint8_t>& row) {
+        row.resize(row_width);
+        const std::span<uint8_t> row_span(row);
+        if (secondary_map) {
+            for (int x = min_x; x <= max_x; ++x) {
+                const Tile* t = secondary_map->getTile(x, ry, z, secondary_cursor);
+                if (!t) {
+                    t = map.getTile(x, ry, z, primary_cursor);
+                }
+                row_span[static_cast<size_t>(x - min_x)] = (t && IsTilePathBlocking(t)) ? 1 : 0;
+            }
+            return;
+        }
+        const int ly = ry & 3;
+        for (int x = min_x; x <= max_x;) {
+            const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
+            if (!floor) {
+                const int span_end = std::min(max_x, x | primary_cursor.empty_span_mask);
+                FillBlockingSpan(row_span, min_x, x, span_end, uint8_t {0});
+                x = span_end + 1;
+                continue;
+            }
+            const int node_end = std::min(max_x, x | 3);
+            for (; x <= node_end; ++x) {
+                const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
+                row_span[static_cast<size_t>(x - min_x)] = (t && IsTilePathBlocking(t)) ? 1 : 0;
+            }
+        }
+    };
 
-		SpatialHashGrid::CellCursor secondary_cursor;
-		SpatialHashGrid::CellCursor primary_cursor;
-		auto fetchRow = [&](int ry) {
-			uint8_t* out = blocking_mask_.data() + static_cast<size_t>(ry - min_y) * static_cast<size_t>(row_width);
-			if (secondary_map) {
-				for (int x = min_x; x <= max_x; ++x) {
-					const Tile* t = secondary_map->getTile(x, ry, z, secondary_cursor);
-					if (!t) {
-						t = map.getTile(x, ry, z, primary_cursor);
-					}
-					out[x - min_x] = classify(t, x, ry);
-				}
-				return;
-			}
-			const int ly = ry & 3;
-			for (int x = min_x; x <= max_x;) {
-				const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
-				if (!floor) {
-					const int span_end = std::min(max_x, x | primary_cursor.empty_span_mask);
-					std::fill(out + (x - min_x), out + (span_end - min_x + 1), uint8_t { 0 });
-					x = span_end + 1;
-					continue;
-				}
-				const int node_end = std::min(max_x, x | 3);
-				for (; x <= node_end; ++x) {
-					const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
-					out[x - min_x] = classify(t, x, ry);
-				}
-			}
-		};
+    fetchRow(bounds.start_y - 1, blocking_row_prev_);
+    fetchRow(bounds.start_y, blocking_row_curr_);
 
-		for (int y = min_y; y <= max_y; ++y) {
-			fetchRow(y);
-		}
+    const int offset = (z <= GROUND_LAYER) ? (GROUND_LAYER - z) * TILE_SIZE : TILE_SIZE * (view.floor - z);
+    const int base_screen_x = -view.view_scroll_x - offset;
+    const int base_screen_y = -view.view_scroll_y - offset;
 
-		// Display-only union: the opaque parts of multi-tile blocking sprites wash the tiles they are
-		// drawn on. No work when no such sprite is anchored in the mask area.
-		for (const BlockingFootprintAnchor& anchor : blocking_footprint_anchors_) {
-			ForEachBlockingFootprintTile(*anchor.tile, [&](int dx, int dy) {
-				const int mx = anchor.x + dx - min_x;
-				const int my = anchor.y + dy - min_y;
-				if (mx >= 0 && mx < row_width && my >= 0 && my < row_count) {
-					blocking_mask_[static_cast<size_t>(my) * static_cast<size_t>(row_width) + static_cast<size_t>(mx)] = 1;
-				}
-			});
-		}
-	}
+    for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
+        fetchRow(y + 1, blocking_row_next_);
+        const float fy = static_cast<float>(y * TILE_SIZE + base_screen_y);
 
-	const int offset = (z <= GROUND_LAYER)
-		? (GROUND_LAYER - z) * TILE_SIZE
-		: TILE_SIZE * (view.floor - z);
-	const int base_screen_x = -view.view_scroll_x - offset;
-	const int base_screen_y = -view.view_scroll_y - offset;
+        for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
+            const int idx = x - min_x;
+            if (!blocking_row_curr_[idx]) {
+                continue;
+            }
 
-	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
-		const uint8_t* row_curr = blocking_mask_.data() + static_cast<size_t>(y - min_y) * static_cast<size_t>(row_width);
-		const uint8_t* row_prev = row_curr - row_width;
-		const uint8_t* row_next = row_curr + row_width;
-		const float fy = static_cast<float>(y * TILE_SIZE + base_screen_y);
+            const BlockingNeighbors neighbors {
+                .north = !blocking_row_prev_[idx],
+                .south = !blocking_row_next_[idx],
+                .west = !blocking_row_curr_[idx - 1],
+                .east = !blocking_row_curr_[idx + 1],
+            };
+            const uint32_t border_flags = ComputeBlockingBorderFlags(neighbors);
+            const uint32_t tile_zone_flags = ComputeBlockingTileRenderFlags(border_flags, options.zone_blocking_blend_mode);
 
-		for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
-			const int idx = x - min_x;
-			if (!row_curr[idx]) {
-				continue;
-			}
+            const float fx = static_cast<float>(x * TILE_SIZE + base_screen_x);
+            const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
 
-			uint32_t tile_zone_flags = ZONE_FLAG_BLOCKING;
-			if (options.zone_blocking_blend_mode == 1) {
-				tile_zone_flags |= ZONE_FLAG_MULTIPLICATIVE;
-			}
-			const bool bN = !row_prev[idx];
-			const bool bS = !row_next[idx];
-			const bool bW = !row_curr[idx - 1];
-			const bool bE = !row_curr[idx + 1];
+            sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha, 0.0f, tile_zone_flags, depth);
 
-			if (bN) tile_zone_flags |= ZONE_FLAG_BLOCK_BORDER_N;
-			if (bS) tile_zone_flags |= ZONE_FLAG_BLOCK_BORDER_S;
-			if (bW) tile_zone_flags |= ZONE_FLAG_BLOCK_BORDER_W;
-			if (bE) tile_zone_flags |= ZONE_FLAG_BLOCK_BORDER_E;
+            if (options.show_zone_borders && border_flags != 0) {
+                blocking_border_quads_.push_back({fx, fy, MakeBlockingBorderPassFlags(tile_zone_flags), depth});
+            }
+        }
 
-			const float fx = static_cast<float>(x * TILE_SIZE + base_screen_x);
-			const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
+        std::swap(blocking_row_prev_, blocking_row_curr_);
+        std::swap(blocking_row_curr_, blocking_row_next_);
+    }
 
-			sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-			                  0.0f, tile_zone_flags, depth);
+    if (options.zone_blocking_blend_mode == 1) {
+        sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+    }
 
-			if (options.show_zone_borders && (bN || bS || bW || bE)) {
-				uint32_t border_flags = (tile_zone_flags & ~ZONE_FLAG_MULTIPLICATIVE) | ZONE_FLAG_BORDER_PASS;
-				blocking_border_quads_.push_back({ fx, fy, border_flags, depth });
-			}
-		}
-	}
-
-	if (options.zone_blocking_blend_mode == 1) {
-		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
-	}
-
-	if (!blocking_border_quads_.empty()) {
-		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
-		for (const auto& q : blocking_border_quads_) {
-			sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-			                  0.0f, q.flags, q.depth);
-		}
-	}
+    if (!blocking_border_quads_.empty()) {
+        sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+        for (const auto& q : blocking_border_quads_) {
+            sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha, 0.0f, q.flags, q.depth);
+        }
+    }
 }
 
 void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,
