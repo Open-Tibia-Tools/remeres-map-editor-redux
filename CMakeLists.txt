@@ -352,3 +352,4 @@ rme_add_catch2_test(test_client_mismatch_presentation tests/test_client_mismatch
 
 # --- Unit test for non-destructive switch client preflight evaluation ---
 rme_add_catch2_test(test_switch_client_preflight tests/test_switch_client_preflight.cpp)
+rme_add_catch2_test(test_blocking_overlay tests/test_blocking_overlay.cpp)

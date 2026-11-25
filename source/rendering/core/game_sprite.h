@@ -92,37 +92,44 @@ public:
 	}
 	uint8_t getMiniMapColor() const;
 	SpriteLayoutMetrics getPlainLayoutMetrics(int subtype, int pattern_x, int pattern_y, int pattern_z, int frame);
-	SpriteLayoutMetrics getOutfitLayoutMetrics(int dir, int addon, int pattern_z, int frame);
-	void invalidateMetricCaches();
+    SpriteLayoutMetrics getOutfitLayoutMetrics(int dir, int addon, int pattern_z, int frame);
+    void invalidateMetricCaches();
 
-	bool hasLight() const noexcept {
-		return has_light;
-	}
-	const SpriteLight& getLight() const noexcept {
-		return light;
-	}
+    bool hasLight() const noexcept
+    {
+        return has_light;
+    }
+    const SpriteLight& getLight() const noexcept
+    {
+        return light;
+    }
 
-	[[nodiscard]] bool isAnimated() const noexcept {
-		return frames > 1 && animation_data.has_value();
-	}
-	[[nodiscard]] uint16_t getFrameStepMs() const noexcept {
-		return animation_data ? animation_data->shortest_step_ms : 0;
-	}
-	[[nodiscard]] int getAnimationFrame(int64_t elapsed_ms, int tile_x = 0, int tile_y = 0, int tile_z = 0) const noexcept {
-		if (!animation_data) {
-			return 0;
-		}
-		return rme::rendering::SpriteAnimation::getFrame(*animation_data, elapsed_ms, tile_x, tile_y, tile_z);
-	}
-	[[nodiscard]] bool hasElevation() const noexcept {
-		return draw_height > 0;
-	}
+    [[nodiscard]] bool isAnimated() const noexcept
+    {
+        return frames > 1 && animation_data.has_value();
+    }
+    [[nodiscard]] uint16_t getFrameStepMs() const noexcept
+    {
+        return animation_data ? animation_data->shortest_step_ms : 0;
+    }
+    [[nodiscard]] int getAnimationFrame(int64_t elapsed_ms, int tile_x = 0, int tile_y = 0, int tile_z = 0) const noexcept
+    {
+        if (!animation_data) {
+            return 0;
+        }
+        return rme::rendering::SpriteAnimation::getFrame(*animation_data, elapsed_ms, tile_x, tile_y, tile_z);
+    }
+    [[nodiscard]] bool hasElevation() const noexcept
+    {
+        return draw_height > 0;
+    }
 
-	// Helper for SpritePreloader to decompress data off-thread
-	[[nodiscard]] static std::unique_ptr<uint8_t[]> Decompress(std::span<const uint8_t> dump, bool use_alpha, int id = 0);
+    // Helper for SpritePreloader to decompress data off-thread
+    [[nodiscard]] static std::unique_ptr<uint8_t[]> Decompress(std::span<const uint8_t> dump, bool use_alpha, int id = 0);
 
-	static void ColorizeTemplatePixels(uint8_t* dest, const uint8_t* mask, size_t pixelCount, int lookHead, int lookBody, int lookLegs, int lookFeet, bool destHasAlpha);
-
+    static void ColorizeTemplatePixels(
+        uint8_t* dest, const uint8_t* mask, size_t pixelCount, int lookHead, int lookBody, int lookLegs, int lookFeet, bool destHasAlpha
+    );
 
 private:
 	using PlainLayoutCacheKey = ::PlainLayoutCacheKey;
@@ -220,7 +227,7 @@ protected:
 	mutable std::array<PlainLayoutCacheEntry, LAYOUT_CACHE_CAPACITY> plain_layout_cache_entries_ {};
 	mutable uint8_t plain_layout_cache_count_ = 0;
 	mutable std::array<OutfitLayoutCacheEntry, LAYOUT_CACHE_CAPACITY> outfit_layout_cache_entries_ {};
-	mutable uint8_t outfit_layout_cache_count_ = 0;
+    mutable uint8_t outfit_layout_cache_count_ = 0;
 };
 
 #endif

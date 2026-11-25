@@ -182,17 +182,18 @@ TEST_CASE("common item depth steps are clamped", "[selection][render_rules]") {
 	REQUIRE(CommonItemElevationStep(9) == 3);
 }
 
-TEST_CASE("item sublayers and elevation use the shared rules", "[selection][render_rules]") {
-	using rme::rendering::RenderSublayer;
-	using rme::rendering::ResolveItemSublayer;
+TEST_CASE("item sublayers and elevation use the shared rules", "[selection][render_rules]")
+{
+    using rme::rendering::RenderSublayer;
+    using rme::rendering::ResolveItemSublayer;
 
-	REQUIRE(ResolveItemSublayer(true, true) == RenderSublayer::BottomItem);
-	REQUIRE(ResolveItemSublayer(false, true) == RenderSublayer::TopItem);
-	REQUIRE(ResolveItemSublayer(false, false) == RenderSublayer::CommonItem);
+    REQUIRE(ResolveItemSublayer(true, true) == RenderSublayer::BottomItem);
+    REQUIRE(ResolveItemSublayer(false, true) == RenderSublayer::TopItem);
+    REQUIRE(ResolveItemSublayer(false, false) == RenderSublayer::CommonItem);
 
-	int elevation = 0;
-	rme::rendering::AdvanceItemElevation(elevation, 16, false);
-	REQUIRE(elevation == 0);
-	rme::rendering::AdvanceItemElevation(elevation, 16, true);
-	REQUIRE(elevation == 16);
+    int elevation = 0;
+    rme::rendering::AdvanceItemElevation(elevation, 16, false);
+    REQUIRE(elevation == 0);
+    rme::rendering::AdvanceItemElevation(elevation, 16, true);
+    REQUIRE(elevation == 16);
 }

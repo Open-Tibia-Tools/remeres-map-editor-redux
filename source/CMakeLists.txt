@@ -123,6 +123,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/otb/otb_item_format.h
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/otb/otb_item_parser.h
 	${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/protobuf/protobuf_item_parser.h
+	${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/protobuf/protobuf_shift_bounds.h
     ${CMAKE_CURRENT_LIST_DIR}/item_definitions/formats/xml/xml_item_parser.h
 
     ${CMAKE_CURRENT_LIST_DIR}/ingame_preview/floor_visibility_calculator.h
@@ -275,6 +276,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/marker_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/preview_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/selection_drawer.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/blocking_overlay_rules.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/overlays/zone_overlay_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/floor_drawer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/drawers/tiles/shade_drawer.h
@@ -304,6 +306,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/ui/zoom_controller.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/fps_counter.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/light_drawer.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/icons/sprite_icon_bounds.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/icons/sprite_icon_service.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/utilities/tile_describer.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/about_window.h
