@@ -18,8 +18,8 @@ Don't:
 const int tab_idx = evt.GetSelection();
 const auto decision = DecideTabCloseAction({ tab_idx, GetTabCount(), kind, has_changed, live_connected });
 if (decision.action == TabCloseAction::CloseThroughManager) {
+	evt.Veto();
 	if (!decision.prompt_save || g_gui.root->DoQuerySave(*mapTab->GetEditor(), mapTab, false)) {
-		evt.Veto();
 		g_editors.CloseTab(GetTabIndex(mapTab->GetWindow()));
 	}
 }
