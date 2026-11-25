@@ -3,131 +3,164 @@
 #include "app/client_version.h"
 #include "ui/controls/themed_button.h"
 #include "ui/dialogs/client_mismatch_dialog.h"
+#include "ui/dialogs/client_mismatch_presentation.h"
 #include "ui/theme.h"
+#include "ui/theme_contrast.h"
 #include "util/common.h"
 #include "util/image_manager.h"
 
 #include <wx/button.h>
+#include <wx/panel.h>
 #include <wx/sizer.h>
 #include <wx/statbmp.h>
-#include <wx/statbox.h>
 #include <wx/statline.h>
 #include <wx/stattext.h>
 
 #include <format>
 
 ClientMismatchDialog::ClientMismatchDialog(
-    wxWindow* parent, const ClientVersion& current, const ClientVersion& target, uint32_t otb_major, int real_open_map_count,
-    bool target_has_valid_paths
+    wxWindow* parent, const ClientVersion& current, const ClientVersion& target, const MapVersion& map_ver, std::string_view map_filename,
+    int real_open_map_count
 ) :
     wxDialog(parent, wxID_ANY, "Map Version Mismatch", wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE)
 {
-    SetBackgroundColour(Theme::Get(Theme::Role::Surface));
+    const wxColour surface_bg = Theme::Get(Theme::Role::Surface);
+    SetBackgroundColour(surface_bg);
 
     const int outer = Theme::Grid(4);
     const int gap_sm = Theme::Grid(1);
     const int gap_md = Theme::Grid(2);
     const int gap_lg = Theme::Grid(3);
-    const int wrap_width = Theme::Grid(98);
     const bool can_switch = current.getID() != target.getID();
+
+    const ClientMismatchPresentation pres = BuildClientMismatchPresentation(
+        ClientMismatchVersionSummary {
+            .name = current.getName(),
+            .otbm_id = static_cast<int>(current.getPrefferedMapVersionID()),
+            .otb_major = static_cast<uint32_t>(current.getOTBVersion().format_version),
+            .otb_minor = current.getProtocolID(),
+        },
+        ClientMismatchVersionSummary {
+            .name = target.getName(),
+            .otbm_id = static_cast<int>(map_ver.otbm),
+            .otb_major = map_ver.items_major,
+            .otb_minor = map_ver.client,
+        },
+        map_filename, real_open_map_count, can_switch
+    );
 
     wxBoxSizer* top_sizer = new wxBoxSizer(wxVERTICAL);
 
-    // Header row with warning icon and summary
-    wxBoxSizer* header_sizer = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticBitmap* icon = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, FromDIP(wxSize(32, 32))));
-    header_sizer->Add(icon, wxSizerFlags().CenterVertical().Border(wxRIGHT, gap_lg));
+    const wxColour raised_bg = Theme::Get(Theme::Role::RaisedSurface);
+    const wxColour text_fg = Theme::Get(Theme::Role::Text);
+    const wxColour subtle_fg = Theme::Get(Theme::Role::TextSubtle);
+    const wxSize card_min_size = FromDIP(wxSize(195, -1));
 
-    wxBoxSizer* title_sizer = new wxBoxSizer(wxVERTICAL);
-    wxStaticText* title_text = new wxStaticText(this, wxID_ANY, "The map was created for a different client version.");
-    title_text->SetFont(Theme::GetFont(10, true));
-    title_text->SetForegroundColour(Theme::Get(Theme::Role::Text));
-    title_text->Wrap(wrap_width);
-    title_sizer->Add(title_text, wxSizerFlags().Border(wxBOTTOM, gap_sm));
+    auto build_card = [&](Theme::Role border_role, const std::string& header_label, Theme::Role header_role,
+                          const std::string& version_name, const std::string& version_meta) {
+        wxPanel* border_panel = new wxPanel(this, wxID_ANY);
+        border_panel->SetBackgroundColour(Theme::Get(border_role));
+        border_panel->SetMinSize(card_min_size);
 
-    wxStaticText* subtitle_text
-        = new wxStaticText(this, wxID_ANY, "Choose whether to switch the editor client or load the map using active client assets.");
-    subtitle_text->SetFont(Theme::GetFont(9, false));
-    subtitle_text->SetForegroundColour(Theme::Get(Theme::Role::TextSubtle));
-    subtitle_text->Wrap(wrap_width);
-    title_sizer->Add(subtitle_text, wxSizerFlags());
+        wxPanel* inner_panel = new wxPanel(border_panel, wxID_ANY);
+        inner_panel->SetBackgroundColour(raised_bg);
 
-    header_sizer->Add(title_sizer, wxSizerFlags(1).CenterVertical());
-    top_sizer->Add(header_sizer, wxSizerFlags().Expand().Border(wxALL, outer));
+        wxBoxSizer* card_sizer = new wxBoxSizer(wxVERTICAL);
 
-    // Version details and impact summary
-    wxStaticBoxSizer* details_box = new wxStaticBoxSizer(wxVERTICAL, this, "Version Details");
-    wxWindow* box = details_box->GetStaticBox();
+        wxStaticText* header_text
+            = new wxStaticText(inner_panel, wxID_ANY, wxstr(header_label), wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
+        header_text->SetFont(Theme::GetFont(8, true));
+        header_text->SetForegroundColour(Theme::Get(header_role));
+        header_text->SetBackgroundColour(raised_bg);
+        card_sizer->Add(header_text, wxSizerFlags().Expand().Border(wxBOTTOM, gap_sm));
 
-    wxFlexGridSizer* grid = new wxFlexGridSizer(0, 2, gap_sm, gap_lg);
-    grid->AddGrowableCol(1, 1);
+        wxBoxSizer* row_sizer = new wxBoxSizer(wxHORIZONTAL);
+        wxStaticText* name_text = new wxStaticText(inner_panel, wxID_ANY, wxstr(version_name));
+        name_text->SetFont(Theme::GetFont(11, true));
+        name_text->SetForegroundColour(text_fg);
+        name_text->SetBackgroundColour(raised_bg);
+        row_sizer->Add(name_text, wxSizerFlags().Align(wxALIGN_BOTTOM).Border(wxRIGHT, gap_md));
 
-    auto add_detail_row = [&](const wxString& label, const wxString& value, Theme::Role value_role, bool bold_value) {
-        wxStaticText* key_text = new wxStaticText(box, wxID_ANY, label);
-        key_text->SetFont(Theme::GetFont(9, false));
-        key_text->SetForegroundColour(Theme::Get(Theme::Role::TextSubtle));
-        grid->Add(key_text, wxSizerFlags().Align(wxALIGN_TOP));
+        row_sizer->AddStretchSpacer(1);
 
-        wxStaticText* val_text = new wxStaticText(box, wxID_ANY, value);
-        val_text->SetFont(Theme::GetFont(9, bold_value));
-        val_text->SetForegroundColour(Theme::Get(value_role));
-        grid->Add(val_text, wxSizerFlags().Expand());
+        wxStaticText* meta_text = new wxStaticText(inner_panel, wxID_ANY, wxstr(version_meta));
+        meta_text->SetFont(Theme::GetFont(8, false));
+        meta_text->SetForegroundColour(subtle_fg);
+        meta_text->SetBackgroundColour(raised_bg);
+        row_sizer->Add(meta_text, wxSizerFlags().Align(wxALIGN_BOTTOM));
+
+        card_sizer->Add(row_sizer, wxSizerFlags().Expand());
+
+        wxBoxSizer* inner_pad = new wxBoxSizer(wxVERTICAL);
+        inner_pad->Add(card_sizer, wxSizerFlags(1).Expand().Border(wxALL, gap_lg));
+        inner_panel->SetSizer(inner_pad);
+
+        wxBoxSizer* border_sizer = new wxBoxSizer(wxVERTICAL);
+        border_sizer->Add(inner_panel, wxSizerFlags(1).Expand().Border(wxALL, 1));
+        border_panel->SetSizer(border_sizer);
+        return border_panel;
     };
 
-    add_detail_row("Map client:", wxstr(std::format("{} (OTB v{})", target.getName(), otb_major)), Theme::Role::Text, true);
-    add_detail_row("Active client:", wxstr(current.getName()), Theme::Role::Text, true);
-    if (can_switch && !target_has_valid_paths) {
-        add_detail_row("Target assets:", "Not configured (folder selection required on switch)", Theme::Role::TextSubtle, false);
+    // Comparison row: Loaded Client -> Map File
+    wxFlexGridSizer* cards_grid = new wxFlexGridSizer(1, 3, 0, gap_md);
+    cards_grid->AddGrowableCol(0, 1);
+    cards_grid->AddGrowableCol(2, 1);
+
+    wxPanel* loaded_card
+        = build_card(Theme::Role::CardBorder, pres.loaded_header, Theme::Role::TextSubtle, pres.loaded_name, pres.loaded_meta);
+    wxStaticBitmap* arrow_bmp = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_ARROW_RIGHT, FromDIP(wxSize(14, 14))));
+    wxPanel* map_card = build_card(Theme::Role::Accent, pres.map_header, Theme::Role::Accent, pres.map_name, pres.map_meta);
+
+    cards_grid->Add(loaded_card, wxSizerFlags(1).Expand());
+    cards_grid->Add(arrow_bmp, wxSizerFlags().Center());
+    cards_grid->Add(map_card, wxSizerFlags(1).Expand());
+    top_sizer->Add(cards_grid, wxSizerFlags().Expand().Border(wxALL, outer));
+
+    if (pres.show_tabs_warning) {
+        const ThemeRgb warn_rgb = PickAccessibleForeground(
+            ToThemeRgb(surface_bg), ToThemeRgb(Theme::Get(Theme::Role::Warning)), ToThemeRgb(Theme::Get(Theme::Role::Error))
+        );
+        const wxColour warn_colour(warn_rgb.r, warn_rgb.g, warn_rgb.b);
+
+        wxBoxSizer* warn_sizer = new wxBoxSizer(wxHORIZONTAL);
+        wxStaticBitmap* warn_icon
+            = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, FromDIP(wxSize(16, 16))));
+        warn_sizer->Add(warn_icon, wxSizerFlags().CenterVertical().Border(wxRIGHT, gap_sm));
+
+        wxStaticText* warn_text = new wxStaticText(this, wxID_ANY, wxstr(pres.tabs_warning_text));
+        warn_text->SetFont(Theme::GetFont(9, false));
+        warn_text->SetForegroundColour(warn_colour);
+        warn_text->SetBackgroundColour(surface_bg);
+        warn_sizer->Add(warn_text, wxSizerFlags().CenterVertical());
+
+        top_sizer->Add(warn_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, outer));
     }
 
-    details_box->Add(grid, wxSizerFlags().Expand().Border(wxALL, gap_md));
-
-    wxStaticText* force_warn = new wxStaticText(
-        box, wxID_ANY, "Force-loading preserves open tabs, but mismatched client assets may omit or substitute items and sprites."
-    );
-    force_warn->SetFont(Theme::GetFont(8, false));
-    force_warn->SetForegroundColour(Theme::Get(Theme::Role::Warning));
-    force_warn->Wrap(wrap_width - outer);
-    details_box->Add(force_warn, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, gap_md));
-
-    if (can_switch && real_open_map_count > 0) {
-        const std::string switch_warn_text = (real_open_map_count == 1)
-            ? "Switching client version will close 1 open map tab."
-            : std::format("Switching client version will close {} open map tabs.", real_open_map_count);
-        wxStaticText* switch_warn = new wxStaticText(box, wxID_ANY, wxstr(switch_warn_text));
-        switch_warn->SetFont(Theme::GetFont(8, false));
-        switch_warn->SetForegroundColour(Theme::Get(Theme::Role::Warning));
-        switch_warn->Wrap(wrap_width - outer);
-        details_box->Add(switch_warn, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, gap_md));
-    }
-
-    top_sizer->Add(details_box, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, outer));
-
-    // Separated single-row color-coded action bar
     top_sizer->Add(
         new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL),
         wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT, outer)
     );
 
-    const std::string force_label = std::format("Force Load ({})", current.getName());
-    wxButton* force_btn = new wxButton(this, wxID_YES, wxstr(force_label), wxDefaultPosition, FromDIP(wxSize(-1, 30)));
-    force_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_BOLT));
-    force_btn->SetFont(Theme::GetFont(9, true));
-    force_btn->SetToolTip("Opens the map in a new tab using active client assets. Existing tabs stay open.");
-    ApplyThemeButtonStyle(force_btn, Theme::Role::Warning);
-
-    const std::string switch_label = std::format("Switch to {}{}", target.getName(), (can_switch && !target_has_valid_paths) ? "..." : "");
-    wxButton* switch_btn = new wxButton(this, wxID_NO, wxstr(switch_label), wxDefaultPosition, FromDIP(wxSize(-1, 30)));
+    // Equal-width Style C footer: Switch Client | Force Load (always default) | Cancel
+    wxButton* switch_btn = new wxButton(this, wxID_NO, "Switch Client", wxDefaultPosition, FromDIP(wxSize(-1, 30)));
     switch_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_ROTATE));
-    switch_btn->SetFont(Theme::GetFont(9, true));
-    if (can_switch) {
-        switch_btn->SetToolTip("Switches RME client version to match the map. Closes currently open map tabs.");
-        ApplyThemeButtonStyle(switch_btn, Theme::Role::PrimaryButton, Theme::Role::TextOnAccent);
+    switch_btn->SetFont(Theme::GetFont(9, false));
+    if (pres.switch_enabled) {
+        switch_btn->SetToolTip(wxstr(std::format("Switch active client version to {} (closes all open map tabs).", target.getName())));
+        ApplyThemeButtonStyle(switch_btn, Theme::Role::SecondaryButton, Theme::Role::Text);
     } else {
         switch_btn->Enable(false);
         switch_btn->SetToolTip("The resolved target client is already active with incompatible item definitions.");
         ApplyThemeButtonStyle(switch_btn, Theme::Role::ButtonDisabled, Theme::Role::TextSubtle);
     }
+
+    wxButton* force_btn = new wxButton(this, wxID_YES, "Force Load", wxDefaultPosition, FromDIP(wxSize(-1, 30)));
+    force_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_BOLT));
+    force_btn->SetFont(Theme::GetFont(9, true));
+    force_btn->SetToolTip(wxstr(std::format("Open this map using the currently loaded {} client assets.", current.getName())));
+    ApplyThemeButtonStyle(force_btn, Theme::Role::PrimaryButton, Theme::Role::TextOnAccent);
+    force_btn->SetDefault();
+    force_btn->SetFocus();
 
     wxButton* cancel_btn = new wxButton(this, wxID_CANCEL, "Cancel", wxDefaultPosition, FromDIP(wxSize(-1, 30)));
     cancel_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
@@ -135,27 +168,17 @@ ClientMismatchDialog::ClientMismatchDialog(
     cancel_btn->SetToolTip("Cancel opening this map.");
     ApplyThemeButtonStyle(cancel_btn, Theme::Role::SecondaryButton, Theme::Role::Text);
 
-    const bool switch_is_default = can_switch && real_open_map_count == 0;
-    if (switch_is_default) {
-        switch_btn->SetDefault();
-        switch_btn->SetFocus();
-    } else {
-        force_btn->SetDefault();
-        force_btn->SetFocus();
-    }
-
-    wxBoxSizer* footer_sizer = new wxBoxSizer(wxHORIZONTAL);
-    footer_sizer->Add(force_btn, wxSizerFlags().CenterVertical().Border(wxRIGHT, gap_md));
-    footer_sizer->Add(switch_btn, wxSizerFlags().CenterVertical());
-    footer_sizer->AddStretchSpacer(1);
-    footer_sizer->Add(cancel_btn, wxSizerFlags().CenterVertical().Border(wxLEFT, gap_lg));
-    top_sizer->Add(footer_sizer, wxSizerFlags().Expand().Border(wxALL, outer));
+    wxGridSizer* footer_grid = new wxGridSizer(1, 3, 0, gap_md);
+    footer_grid->Add(switch_btn, wxSizerFlags().Expand());
+    footer_grid->Add(force_btn, wxSizerFlags().Expand());
+    footer_grid->Add(cancel_btn, wxSizerFlags().Expand());
+    top_sizer->Add(footer_grid, wxSizerFlags().Expand().Border(wxALL, outer));
 
     SetSizerAndFit(top_sizer);
     Centre(wxBOTH);
 
-	force_btn->Bind(wxEVT_BUTTON, &ClientMismatchDialog::OnForceLoad, this);
-	switch_btn->Bind(wxEVT_BUTTON, &ClientMismatchDialog::OnSwitchVersion, this);
+    force_btn->Bind(wxEVT_BUTTON, &ClientMismatchDialog::OnForceLoad, this);
+    switch_btn->Bind(wxEVT_BUTTON, &ClientMismatchDialog::OnSwitchVersion, this);
 	cancel_btn->Bind(wxEVT_BUTTON, &ClientMismatchDialog::OnCancel, this);
 
 	wxIcon dlg_icon;

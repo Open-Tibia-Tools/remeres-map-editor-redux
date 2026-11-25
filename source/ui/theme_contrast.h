@@ -59,4 +59,13 @@ namespace rme::ui::detail {
     return best;
 }
 
+[[nodiscard]] inline ThemeRgb
+PickAccessibleForeground(ThemeRgb background, ThemeRgb preferred, ThemeRgb fallback, double min_ratio = 4.5) noexcept
+{
+    if (ComputeWcagContrastRatio(background, preferred) >= min_ratio) {
+        return preferred;
+    }
+    return fallback;
+}
+
 #endif

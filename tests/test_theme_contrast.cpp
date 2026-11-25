@@ -39,8 +39,24 @@ TEST_CASE("PickBestContrastCandidate selects white text on PrimaryButton and dar
     REQUIRE(primary_fg.b == kTextOnAccent.b);
 
     const std::array<ThemeRgb, 3> light_candidates {kLightText, kLightBg, kTextOnAccent};
-    const ThemeRgb secondary_light_fg = PickBestContrastCandidate(ThemeRgb {236, 239, 244}, light_candidates);
+    const ThemeRgb secondary_light_fg = PickBestContrastCandidate(ThemeRgb {224, 228, 236}, light_candidates);
     REQUIRE(secondary_light_fg.r == kLightText.r);
     REQUIRE(secondary_light_fg.g == kLightText.g);
     REQUIRE(secondary_light_fg.b == kLightText.b);
+}
+
+TEST_CASE("PickAccessibleForeground keeps high-contrast Warning on Dark and falls back on Light", "[theme_contrast]")
+{
+    // Dark theme Surface (45, 45, 48) + Warning (240, 185, 64) passes >= 4.5
+    const ThemeRgb dark_warn = PickAccessibleForeground(ThemeRgb {45, 45, 48}, ThemeRgb {240, 185, 64}, ThemeRgb {200, 50, 50});
+    REQUIRE(dark_warn.r == 240);
+    REQUIRE(dark_warn.g == 185);
+    REQUIRE(dark_warn.b == 64);
+
+    // Light theme Surface (240, 240, 240) + Warning (180, 120, 0) < 4.5 -> falls back to Error (200, 0, 0)
+    const ThemeRgb light_warn = PickAccessibleForeground(ThemeRgb {240, 240, 240}, ThemeRgb {180, 120, 0}, ThemeRgb {200, 0, 0});
+    REQUIRE(light_warn.r == 200);
+    REQUIRE(light_warn.g == 0);
+    REQUIRE(light_warn.b == 0);
+    REQUIRE(ComputeWcagContrastRatio(ThemeRgb {240, 240, 240}, light_warn) >= 4.5);
 }

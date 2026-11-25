@@ -315,6 +315,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/ui/theme_contrast.h
 
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/client_mismatch_dialog.h
+    ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/client_mismatch_presentation.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/floor_below_offset_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/goto_position_dialog.h
     ${CMAKE_CURRENT_LIST_DIR}/ui/dialogs/remove_unreachable_dialog.h

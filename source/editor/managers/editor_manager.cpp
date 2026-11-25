@@ -460,7 +460,7 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& init
         }
 
         if (decision.resolution == MapLoadResolution::PromptMismatch) {
-            ClientMismatchDialog dlg(g_gui.root, *current, *target, ver.items_major, CountRealOpenMaps(), target->hasValidPaths());
+            ClientMismatchDialog dlg(g_gui.root, *current, *target, ver, fileName.GetFullName().utf8_string(), CountRealOpenMaps());
             dlg.ShowModal();
 
             const ClientMismatchChoice choice = dlg.GetChoice();

@@ -3,9 +3,10 @@
 
 #include <wx/dialog.h>
 
-#include <cstdint>
+#include <string_view>
 
 class ClientVersion;
+struct MapVersion;
 
 enum class ClientMismatchChoice {
 	ForceLoadActive,
@@ -16,8 +17,8 @@ enum class ClientMismatchChoice {
 class ClientMismatchDialog : public wxDialog {
 public:
     ClientMismatchDialog(
-        wxWindow* parent, const ClientVersion& current, const ClientVersion& target, uint32_t otb_major, int real_open_map_count,
-        bool target_has_valid_paths
+        wxWindow* parent, const ClientVersion& current, const ClientVersion& target, const MapVersion& map_ver,
+        std::string_view map_filename, int real_open_map_count
     );
     ~ClientMismatchDialog() override = default;
 

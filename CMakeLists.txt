@@ -349,3 +349,6 @@ rme_add_catch2_test(test_tab_close_decision tests/test_tab_close_decision.cpp)
 
 # --- Unit test for theme WCAG contrast button text selection ---
 rme_add_catch2_test(test_theme_contrast tests/test_theme_contrast.cpp)
+
+# --- Unit test for mismatch dialog presentation formatting ---
+rme_add_catch2_test(test_client_mismatch_presentation tests/test_client_mismatch_presentation.cpp)
