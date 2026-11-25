@@ -219,7 +219,7 @@ jobs:
             [string[]]($env:PATH -split ';'),
             [System.StringComparer]::OrdinalIgnoreCase
           )
-          cmd /c "`"$vcvars`" >nul 2>&1 && set" | ForEach-Object {
+          cmd /c "call `"$vcvars`" >nul 2>&1 && set" | ForEach-Object {
             if ($_ -match '^([^=]+)=(.*)$') {
               $name = $matches[1]
               $value = $matches[2]
@@ -347,6 +347,9 @@ jobs:
          needs.build-windows.result == 'success')
       )
     runs-on: ubuntu-26.04
+    concurrency:
+      group: release-${{ inputs.run_id || github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: write
       actions: read
@@ -369,16 +372,36 @@ jobs:
               echo "::error::Invalid run_id '${DISPATCH_RUN_ID}'; expected numeric workflow run ID."
               exit 1
             fi
-            run_json="$(gh run view "${DISPATCH_RUN_ID}" --repo "${GH_REPO}" --json headSha,number,conclusion)"
+            run_json="$(gh run view "${DISPATCH_RUN_ID}" --repo "${GH_REPO}" --json headSha,number,conclusion,event,headBranch,workflowName)"
+            workflow_name="$(jq -r '.workflowName' <<< "${run_json}")"
+            event_name="$(jq -r '.event' <<< "${run_json}")"
+            head_branch="$(jq -r '.headBranch' <<< "${run_json}")"
             conclusion="$(jq -r '.conclusion' <<< "${run_json}")"
+            if [ "${workflow_name}" != "Build RME" ]; then
+              echo "::error::Target run ${DISPATCH_RUN_ID} belongs to '${workflow_name}', expected 'Build RME'."
+              exit 1
+            fi
+            if [ "${event_name}" = "pull_request" ] || [ "${event_name}" = "pull_request_target" ]; then
+              echo "::error::Refusing to publish artifacts from pull-request run ${DISPATCH_RUN_ID} (event '${event_name}')."
+              exit 1
+            fi
+            if [[ "${head_branch}" != "master" && "${head_branch}" != "main" && ! "${head_branch}" =~ ^(v|alpha) ]]; then
+              echo "::error::Target run ${DISPATCH_RUN_ID} branch/tag '${head_branch}' is not eligible for release."
+              exit 1
+            fi
             if [ "${conclusion}" != "success" ]; then
               echo "::error::Target run ${DISPATCH_RUN_ID} has conclusion '${conclusion}', expected 'success'."
               exit 1
             fi
             target_sha="$(jq -r '.headSha' <<< "${run_json}")"
             target_run_number="$(jq -r '.number' <<< "${run_json}")"
-            tag_name="alpha-${target_run_number}"
-            release_name="RME Alpha #${target_run_number}"
+            if [[ "${head_branch}" =~ ^(v|alpha) ]] && [ "${event_name}" = "push" ]; then
+              tag_name="${head_branch}"
+              release_name="RME ${head_branch}"
+            else
+              tag_name="alpha-${target_run_number}"
+              release_name="RME Alpha #${target_run_number}"
+            fi
           else
             target_sha="${CURRENT_SHA}"
             if [[ "${CURRENT_REF}" == refs/tags/* ]]; then

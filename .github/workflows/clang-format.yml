@@ -41,17 +41,21 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
           if [ "${EVENT_NAME}" = "pull_request" ]; then
             git fetch origin "${BASE_REF}"
             base_sha="$(git merge-base "origin/${BASE_REF}" HEAD)"
           else
-            if ! git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+            if [ -n "${BEFORE_SHA}" ] && [ "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ] && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+              base_sha="${BEFORE_SHA}"
+            elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+              base_sha="$(git rev-parse HEAD~1)"
+            else
               echo "Initial commit detected; skipping diff-only clang-format check."
               exit 0
             fi
-            base_sha="$(git rev-parse HEAD~1)"
           fi
 
           mapfile -t changed_files < <(git diff --name-only --diff-filter=ACMR "${base_sha}" HEAD -- ':(glob)source/**/*.cpp' ':(glob)source/**/*.h' ':(glob)source/**/*.hpp')
@@ -67,7 +71,7 @@ jobs:
 
           if grep -qE '^diff --git ' <<< "${diff_output}"; then
             printf '%s\n' "${diff_output}"
-            echo "::error::Formatting mismatch on modified lines. Run 'git clang-format' on your changes."
+            echo "::error::Formatting mismatch on modified lines. Run 'git clang-format ${base_sha} -- source/' to fix."
             exit 1
           fi
 
