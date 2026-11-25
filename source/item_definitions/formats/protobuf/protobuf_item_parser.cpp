@@ -5,8 +5,6 @@
 #include "app/definitions.h"
 #include "util/json.h"
 
-#include <spdlog/spdlog.h>
-
 #include <fstream>
 #include <format>
 #include <limits>
@@ -143,28 +141,6 @@ namespace {
 		return metadata.empty() ? std::string {} : metadata.dump();
 	}
 
-	void applySpriteShift(const AppearanceFlags& flags, DatCatalogEntry& entry) {
-		if (!flags.has_shift()) {
-			return;
-		}
-		const std::uint32_t raw_x = flags.shift().x();
-		const std::uint32_t raw_y = flags.shift().y();
-		const int clamped_x = ClampSpriteDrawOffset(raw_x);
-		const int clamped_y = ClampSpriteDrawOffset(raw_y);
-		if (static_cast<std::uint32_t>(clamped_x) != raw_x || static_cast<std::uint32_t>(clamped_y) != raw_y) {
-			spdlog::warn(
-				"Protobuf appearances: displacement {},{} exceeds one tile for client id {}; clamping to {},{}.",
-				raw_x,
-				raw_y,
-				entry.client_id,
-				clamped_x,
-				clamped_y
-			);
-		}
-		entry.drawoffset_x = static_cast<uint16_t>(clamped_x);
-		entry.drawoffset_y = static_cast<uint16_t>(clamped_y);
-	}
-
 	void applyCommonFlags(const AppearanceFlags& flags, DatCatalogEntry& entry) {
 		auto& fragment = entry.item_fragment;
 		fragment.flags = flagMask(ItemFlag::Replaceable);
@@ -259,7 +235,8 @@ namespace {
 		entry.draw_height = flags.has_height() ? static_cast<uint16_t>(flags.height().elevation()) : 0;
 		entry.minimap_color = flags.has_automap() ? static_cast<uint16_t>(flags.automap().color()) : 0;
 		if (flags.has_shift()) {
-			applySpriteShift(flags, entry);
+			entry.drawoffset_x = static_cast<uint16_t>(flags.shift().x());
+			entry.drawoffset_y = static_cast<uint16_t>(flags.shift().y());
 		}
 		if (flags.has_light()) {
 			entry.has_light = true;
@@ -362,7 +339,10 @@ namespace {
 		}
 
 		if (appearance.has_flags()) {
-			applySpriteShift(appearance.flags(), entry);
+			if (appearance.flags().has_shift()) {
+				entry.drawoffset_x = static_cast<uint16_t>(appearance.flags().shift().x());
+				entry.drawoffset_y = static_cast<uint16_t>(appearance.flags().shift().y());
+			}
 		}
 
 		if (appearance.has_flags() && apply_item_flags) {

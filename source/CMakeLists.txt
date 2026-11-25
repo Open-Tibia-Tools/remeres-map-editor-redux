@@ -213,7 +213,6 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_archive.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_decoder.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_layout_calculator.h
-    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_footprint.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/template_image.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/sprite_preloader.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_buffer.h

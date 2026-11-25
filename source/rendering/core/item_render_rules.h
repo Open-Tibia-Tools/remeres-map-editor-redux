@@ -10,7 +10,7 @@
 namespace rme::rendering {
 
 // Single source of truth for the item depth rules shared by the tile renderer,
-// the chunk-cache baker, the selection picker and the pathing overlay.
+// the chunk-cache baker and the selection picker.
 
 // Resolves the render layer of a stacked item from its definition flags.
 // Border items are handled by the terrain/border passes and are never passed here.
@@ -44,9 +44,6 @@ constexpr void AdvanceItemElevation(int& elevation_px, int draw_height, bool dra
 		elevation_px += draw_height;
 	}
 }
-
-// Draw offsets are normalized by ClampSpriteDrawOffset() in app/definitions.h
-// before DAT/protobuf values reach the renderer.
 
 } // namespace rme::rendering
 

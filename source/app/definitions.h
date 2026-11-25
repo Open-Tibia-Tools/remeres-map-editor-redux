@@ -137,12 +137,6 @@ constexpr std::size_t MAX_SPRITE_PARTS = 16;
 // The size of the tile in pixels
 constexpr int TILE_SIZE = 32;
 
-// Sprite shifts are client data. A value above one tile would break the bounded
-// footprint reach used by the pathing overlay, so clamp defensively at parse time.
-constexpr int ClampSpriteDrawOffset(std::uint32_t value) noexcept {
-	return value > static_cast<std::uint32_t>(TILE_SIZE) ? TILE_SIZE : static_cast<int>(value);
-}
-
 // Safety margin to respect the Painter's Algorithm for large items (up to 6x6) and draw offsets.
 constexpr int PAINTERS_ALGORITHM_SAFETY_MARGIN_PIXELS = TILE_SIZE * 6;
 
