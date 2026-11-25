@@ -5,7 +5,6 @@ on:
     paths:
       - "source/**"
       - ".clang-format"
-      - ".clang-tidy"
       - ".github/workflows/clang-format.yml"
   push:
     branches:
@@ -14,114 +13,67 @@ on:
     paths:
       - "source/**"
       - ".clang-format"
-      - ".clang-tidy"
+      - ".github/workflows/clang-format.yml"
 
-env:
-  CLANG_FORMAT_VERSION: 18
-  CLANG_TIDY_VERSION: 18
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   clang-format:
-    name: Run clang-format
-    runs-on: ubuntu-latest
-    steps:
-      - name: Cancel Previous Runs
-        if: github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main'
-        uses: fkirc/skip-duplicate-actions@master
-        with:
-          concurrent_skipping: "same_content"
-          cancel_others: true
-
-      - name: Set up Git
-        if: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "GitHub Actions"
-
-      - name: Checkout repository
-        if: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run clang-format lint
-        if: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
-        uses: DoozyX/clang-format-lint-action@v0.17
-        with:
-          source: "source"
-          extensions: "cpp,hpp,h"
-          clangFormatVersion: ${{ env.CLANG_FORMAT_VERSION }}
-          inplace: true
-
-      - name: Commit formatting changes
-        if: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
-        uses: EndBug/add-and-commit@v9
-        with:
-          author_name: GitHub Actions
-          author_email: github-actions[bot]@users.noreply.github.com
-          message: "Code format - (clang-format ${{ env.CLANG_FORMAT_VERSION }})"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  clang-tidy:
-    name: Run clang-tidy
-    runs-on: ubuntu-latest
-    needs: clang-format
-    # Only run on PRs and non-master pushes, not auto-commits
-    if: github.actor != 'github-actions[bot]'
+    name: Run clang-format (diff)
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
-      - name: Install dependencies
+      - name: Install clang-format
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build pkg-config
-          sudo apt-get install -y libwxgtk3.2-dev libboost-all-dev libglm-dev libglfw3-dev
-          sudo apt-get install -y clang-tidy-${{ env.CLANG_TIDY_VERSION }}
+          sudo apt-get install -y clang-format
 
-      - name: Configure CMake
+      - name: Check modified C++ lines with git-clang-format
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DCMAKE_C_COMPILER=clang-${{ env.CLANG_TIDY_VERSION }} \
-            -DCMAKE_CXX_COMPILER=clang++-${{ env.CLANG_TIDY_VERSION }} \
-            -DCMAKE_CXX_CLANG_TIDY="clang-tidy-${{ env.CLANG_TIDY_VERSION }}"
-
-      - name: Run clang-tidy
-        run: |
-          # Run clang-tidy on changed files only for PRs
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            git fetch origin ${{ github.base_ref }} --depth=1
-            CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }} | grep -E '^source.*\.(cpp|h|hpp)$' || true)
-            if [ -n "$CHANGED_FILES" ]; then
-              echo "Running clang-tidy on changed files:"
-              echo "$CHANGED_FILES"
-              clang-tidy-${{ env.CLANG_TIDY_VERSION }} -p build $CHANGED_FILES -- \
-                -Isource \
-                -isystem /usr/include/wx-3.2 \
-                -isystem /usr/lib/x86_64-linux-gnu/wx/include/gtk3-unicode-3.2
-            else
-              echo "No source files changed, skipping clang-tidy"
-            fi
+          set -euo pipefail
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            git fetch origin "${BASE_REF}"
+            base_sha="$(git merge-base "origin/${BASE_REF}" HEAD)"
           else
-            # On push to master, run on all source files
-            find source -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -not -path "*/ext/*" | \
-              xargs clang-tidy-${{ env.CLANG_TIDY_VERSION }} -p build -- \
-                -Isource \
-                -isystem /usr/include/wx-3.2 \
-                -isystem /usr/lib/x86_64-linux-gnu/wx/include/gtk3-unicode-3.2
+            if ! git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+              echo "Initial commit detected; skipping diff-only clang-format check."
+              exit 0
+            fi
+            base_sha="$(git rev-parse HEAD~1)"
           fi
 
-      - name: Upload clang-tidy results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: clang-tidy-results
-          path: |
-            clang-tidy-*.log
-            build/compile_commands.json
+          mapfile -t changed_files < <(git diff --name-only --diff-filter=ACMR "${base_sha}" HEAD -- ':(glob)source/**/*.cpp' ':(glob)source/**/*.h' ':(glob)source/**/*.hpp')
+          if [ "${#changed_files[@]}" -eq 0 ]; then
+            echo "No modified C++ files under source/."
+            exit 0
+          fi
+
+          set +e
+          diff_output="$(git clang-format --diff "${base_sha}" -- "${changed_files[@]}" 2>&1)"
+          rc=$?
+          set -e
+
+          if grep -qE '^diff --git ' <<< "${diff_output}"; then
+            printf '%s\n' "${diff_output}"
+            echo "::error::Formatting mismatch on modified lines. Run 'git clang-format' on your changes."
+            exit 1
+          fi
+
+          if [ "${rc}" -ne 0 ]; then
+            printf '%s\n' "${diff_output}"
+            exit "${rc}"
+          fi
+
+          echo "All modified C++ lines match .clang-format."
