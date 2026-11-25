@@ -5,6 +5,7 @@
 #include "app/main.h"
 
 #include "app/application.h"
+#include "app/managers/prepared_version_load.h"
 #include "app/managers/version_manager.h"
 #include "brushes/managers/brush_manager.h"
 #include "editor/action_queue.h"
@@ -12,6 +13,7 @@
 #include "editor/editor_factory.h"
 #include "editor/managers/editor_manager.h"
 #include "editor/persistence/map_load_decision.h"
+#include "editor/persistence/switch_client_preflight.h"
 #include "io/iomap_otbm.h"
 #include "live/live_client.h"
 #include "live/live_tab.h"
@@ -135,23 +137,54 @@ bool EditorManager::CloseLiveEditors(LiveSocket* sock) {
 
 bool EditorManager::CloseAllEditors() {
 	spdlog::info("EditorManager::CloseAllEditors - Closing all tabs");
+	if (!g_gui.tabbook) {
+		return true;
+	}
+	if (g_gui.root && !g_gui.root->DoQuerySaveTileset()) {
+		spdlog::info("EditorManager::CloseAllEditors - Cancelled by user");
+		return false;
+	}
+
+	std::vector<wxWindow*> map_tab_windows;
+	map_tab_windows.reserve(g_gui.tabbook->GetTabCount());
 	for (int i = 0; i < g_gui.tabbook->GetTabCount(); ++i) {
-		auto* mapTab = dynamic_cast<MapTab*>(g_gui.tabbook->GetTab(i));
-		if (mapTab) {
-			if (mapTab->IsUniqueReference() && mapTab->GetMap() && mapTab->GetMap()->hasChanged()) {
-				g_gui.tabbook->SetFocusedTab(i);
-                if (!mapTab->GetEditor() || !g_gui.root->DoQuerySave(*mapTab->GetEditor(), mapTab, false)) {
-                    spdlog::info("EditorManager::CloseAllEditors - Cancelled by user");
-					return false;
-                } else {
-                    g_palettes.RefreshPalettes();
-					g_gui.tabbook->DeleteTab(i--);
-                }
-            } else {
-				g_gui.tabbook->DeleteTab(i--);
+		if (auto* mapTab = dynamic_cast<MapTab*>(g_gui.tabbook->GetTab(i))) {
+			map_tab_windows.push_back(mapTab->GetWindow());
+		}
+	}
+
+	// Pass 1: Prompt once per unique open editor before deleting any tab.
+	std::set<Editor*> visited_editors;
+	for (wxWindow* tab_window : map_tab_windows) {
+		const int tab_idx = g_gui.tabbook->GetTabIndex(tab_window);
+		if (tab_idx == wxNOT_FOUND) {
+			continue;
+		}
+		auto* mapTab = dynamic_cast<MapTab*>(g_gui.tabbook->GetTab(tab_idx));
+		if (!mapTab) {
+			continue;
+		}
+		Editor* editor = mapTab->GetEditor();
+		if (!editor || !visited_editors.insert(editor).second) {
+			continue;
+		}
+		if (ShouldSave(*editor) || editor->live_manager.IsLive()) {
+			g_gui.tabbook->SetFocusedTab(tab_idx);
+			if (!g_gui.root || !g_gui.root->DoQuerySave(*editor, mapTab, false)) {
+				spdlog::info("EditorManager::CloseAllEditors - Cancelled by user");
+				return false;
 			}
 		}
 	}
+
+	// Pass 2: All prompts succeeded; remove every MapTab cleanly.
+	for (int i = g_gui.tabbook->GetTabCount() - 1; i >= 0; --i) {
+		if (dynamic_cast<MapTab*>(g_gui.tabbook->GetTab(i)) != nullptr) {
+			g_gui.tabbook->DeleteTab(i);
+		}
+	}
+
+	g_palettes.RefreshPalettes(nullptr, false);
 	if (g_gui.root) {
 		g_gui.root->UpdateMenubar();
 	}
@@ -212,20 +245,57 @@ int EditorManager::CountRealOpenMaps() const
 
 bool EditorManager::SwitchClientVersionForLoad(ClientVersion& target)
 {
-    if (!target.hasValidPaths() && !target.loadValidPaths()) {
+    wxString error;
+    if (!g_version.CheckModularClientData(target, error)) {
+        g_status.SetStatusText("Failed to switch client version.");
+        DialogUtil::PopupDialog(g_gui.root, "Cannot Switch Client", error, wxOK | wxICON_WARNING);
+        return false;
+    }
+
+    if (!target.hasConfiguredClientPath()) {
+        g_status.SetStatusText("Target client is not configured.");
+        DialogUtil::PopupDialog(
+            g_gui.root,
+            "Client Not Configured",
+            wxstr(std::format(
+                "Client {} folder is not configured.\n\nPlease configure it in File -> Preferences -> Client Version and try again.",
+                target.getName()
+            )),
+            wxOK | wxICON_WARNING
+        );
+        return false;
+    }
+
+    if (!target.hasValidPaths()) {
+        g_status.SetStatusText("Target client files are invalid.");
+        DialogUtil::PopupDialog(
+            g_gui.root,
+            "Invalid Client Files",
+            wxstr(std::format(
+                "Client {} files could not be validated at the configured folder.\n\nPlease check the path in File -> Preferences -> Client Version and try again.",
+                target.getName()
+            )),
+            wxOK | wxICON_WARNING
+        );
+        return false;
+    }
+
+    std::vector<std::string> warnings;
+    PreparedVersionLoad prepared;
+    if (!g_version.PrepareVersionLoad(target.getID(), prepared, error, warnings)) {
+        g_status.SetStatusText("Failed to switch client version.");
+        DialogUtil::PopupDialog(g_gui.root, "Error", error, wxOK | wxICON_ERROR);
+        return false;
+    }
+
+    if (!CloseAllEditors()) {
         g_status.SetStatusText("Map load cancelled.");
         return false;
     }
 
-    wxString error;
-    std::vector<std::string> warnings;
-    if (!CloseAllEditors()) {
-        return false;
-    }
-
-    if (!g_version.LoadVersion(target.getID(), error, warnings)) {
+    if (!g_version.CommitPreparedVersion(prepared, error, warnings)) {
         g_status.SetStatusText("Failed to load map.");
-        DialogUtil::PopupDialog("Error", error, wxOK);
+        DialogUtil::PopupDialog(g_gui.root, "Error", error, wxOK | wxICON_ERROR);
         return false;
     }
     DialogUtil::LoadWarningsDialog(g_gui.root, "Warnings", warnings);
@@ -460,7 +530,17 @@ bool EditorManager::LoadMap(const FileName& fileName, const MapLoadOptions& init
         }
 
         if (decision.resolution == MapLoadResolution::PromptMismatch) {
-            ClientMismatchDialog dlg(g_gui.root, *current, *target, ver, fileName.GetFullName().utf8_string(), CountRealOpenMaps());
+            wxString modular_error;
+            const bool has_modular_data = g_version.CheckModularClientData(*target, modular_error);
+            const bool has_configured_paths = target->hasConfiguredClientPath() && target->getClientPath().DirExists();
+            const SwitchPreconditionStatus switch_status = EvaluateSwitchPrecondition(SwitchPreconditionInput {
+                .is_same_client = current->getID() == target->getID(),
+                .has_modular_data = has_modular_data,
+                .has_configured_client_paths = has_configured_paths,
+            });
+            ClientMismatchDialog dlg(
+                g_gui.root, *current, *target, ver, fileName.GetFullName().utf8_string(), CountRealOpenMaps(), switch_status
+            );
             dlg.ShowModal();
 
             const ClientMismatchChoice choice = dlg.GetChoice();

@@ -20,7 +20,7 @@
 
 ClientMismatchDialog::ClientMismatchDialog(
     wxWindow* parent, const ClientVersion& current, const ClientVersion& target, const MapVersion& map_ver, std::string_view map_filename,
-    int real_open_map_count
+    int real_open_map_count, SwitchPreconditionStatus switch_status
 ) :
     wxDialog(parent, wxID_ANY, "Map Version Mismatch", wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE)
 {
@@ -31,7 +31,6 @@ ClientMismatchDialog::ClientMismatchDialog(
     const int gap_sm = Theme::Grid(1);
     const int gap_md = Theme::Grid(2);
     const int gap_lg = Theme::Grid(3);
-    const bool can_switch = current.getID() != target.getID();
 
     const ClientMismatchPresentation pres = BuildClientMismatchPresentation(
         ClientMismatchVersionSummary {
@@ -46,7 +45,7 @@ ClientMismatchDialog::ClientMismatchDialog(
             .otb_major = map_ver.items_major,
             .otb_minor = map_ver.client,
         },
-        map_filename, real_open_map_count, can_switch
+        map_filename, real_open_map_count, switch_status
     );
 
     wxBoxSizer* top_sizer = new wxBoxSizer(wxVERTICAL);
@@ -116,24 +115,33 @@ ClientMismatchDialog::ClientMismatchDialog(
     cards_grid->Add(map_card, wxSizerFlags(1).Expand());
     top_sizer->Add(cards_grid, wxSizerFlags().Expand().Border(wxALL, outer));
 
-    if (pres.show_tabs_warning) {
-        const ThemeRgb warn_rgb = PickAccessibleForeground(
-            ToThemeRgb(surface_bg), ToThemeRgb(Theme::Get(Theme::Role::Warning)), ToThemeRgb(Theme::Get(Theme::Role::Error))
+    if (pres.show_tabs_warning || pres.show_switch_unavailable_note) {
+        const bool is_warning = pres.show_tabs_warning;
+        const wxColour notice_fg = is_warning
+            ? [&]() {
+                  const ThemeRgb warn_rgb = PickAccessibleForeground(
+                      ToThemeRgb(surface_bg), ToThemeRgb(Theme::Get(Theme::Role::Warning)), ToThemeRgb(Theme::Get(Theme::Role::Error))
+                  );
+                  return wxColour(warn_rgb.r, warn_rgb.g, warn_rgb.b);
+              }()
+            : subtle_fg;
+
+        wxBoxSizer* notice_sizer = new wxBoxSizer(wxHORIZONTAL);
+        wxStaticBitmap* notice_icon = new wxStaticBitmap(
+            this, wxID_ANY,
+            IMAGE_MANAGER.GetBitmap(is_warning ? ICON_TRIANGLE_EXCLAMATION : ICON_INFO, FromDIP(wxSize(16, 16)))
         );
-        const wxColour warn_colour(warn_rgb.r, warn_rgb.g, warn_rgb.b);
+        notice_sizer->Add(notice_icon, wxSizerFlags().CenterVertical().Border(wxRIGHT, gap_sm));
 
-        wxBoxSizer* warn_sizer = new wxBoxSizer(wxHORIZONTAL);
-        wxStaticBitmap* warn_icon
-            = new wxStaticBitmap(this, wxID_ANY, IMAGE_MANAGER.GetBitmap(ICON_TRIANGLE_EXCLAMATION, FromDIP(wxSize(16, 16))));
-        warn_sizer->Add(warn_icon, wxSizerFlags().CenterVertical().Border(wxRIGHT, gap_sm));
+        const std::string& notice_message = is_warning ? pres.tabs_warning_text : pres.switch_unavailable_text;
+        wxStaticText* notice_text = new wxStaticText(this, wxID_ANY, wxstr(notice_message));
+        notice_text->SetFont(Theme::GetFont(9, false));
+        notice_text->SetForegroundColour(notice_fg);
+        notice_text->SetBackgroundColour(surface_bg);
+        notice_text->Wrap(FromDIP(410));
+        notice_sizer->Add(notice_text, wxSizerFlags(1).CenterVertical());
 
-        wxStaticText* warn_text = new wxStaticText(this, wxID_ANY, wxstr(pres.tabs_warning_text));
-        warn_text->SetFont(Theme::GetFont(9, false));
-        warn_text->SetForegroundColour(warn_colour);
-        warn_text->SetBackgroundColour(surface_bg);
-        warn_sizer->Add(warn_text, wxSizerFlags().CenterVertical());
-
-        top_sizer->Add(warn_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, outer));
+        top_sizer->Add(notice_sizer, wxSizerFlags().Expand().Border(wxLEFT | wxRIGHT | wxBOTTOM, outer));
     }
 
     top_sizer->Add(
@@ -145,12 +153,11 @@ ClientMismatchDialog::ClientMismatchDialog(
     wxButton* switch_btn = new wxButton(this, wxID_NO, "Switch Client", wxDefaultPosition, FromDIP(wxSize(-1, 30)));
     switch_btn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_ROTATE));
     switch_btn->SetFont(Theme::GetFont(9, false));
+    switch_btn->SetToolTip(wxstr(pres.switch_tooltip));
     if (pres.switch_enabled) {
-        switch_btn->SetToolTip(wxstr(std::format("Switch active client version to {} (closes all open map tabs).", target.getName())));
         ApplyThemeButtonStyle(switch_btn, Theme::Role::SecondaryButton, Theme::Role::Text);
     } else {
         switch_btn->Enable(false);
-        switch_btn->SetToolTip("The resolved target client is already active with incompatible item definitions.");
         ApplyThemeButtonStyle(switch_btn, Theme::Role::ButtonDisabled, Theme::Role::TextSubtle);
     }
 

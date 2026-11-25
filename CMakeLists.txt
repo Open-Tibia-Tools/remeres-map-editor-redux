@@ -352,3 +352,6 @@ rme_add_catch2_test(test_theme_contrast tests/test_theme_contrast.cpp)
 
 # --- Unit test for mismatch dialog presentation formatting ---
 rme_add_catch2_test(test_client_mismatch_presentation tests/test_client_mismatch_presentation.cpp)
+
+# --- Unit test for non-destructive switch client preflight evaluation ---
+rme_add_catch2_test(test_switch_client_preflight tests/test_switch_client_preflight.cpp)

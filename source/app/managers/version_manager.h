@@ -10,6 +10,7 @@
 #include "item_definitions/core/missing_item_report.h"
 
 struct MaterialManifestFiles;
+struct PreparedVersionLoad;
 
 class VersionManager {
 public:
@@ -18,6 +19,11 @@ public:
 
 	void UnloadVersion(bool full_clear = false);
 	bool LoadVersion(ClientVersionID ver, wxString& error, std::vector<std::string>& warnings, bool force = false);
+	[[nodiscard]] bool CheckModularClientData(const ClientVersion& client_version, wxString& error) const;
+	[[nodiscard]] bool PrepareVersionLoad(
+		ClientVersionID ver, PreparedVersionLoad& prepared, wxString& error, std::vector<std::string>& warnings
+	) const;
+	[[nodiscard]] bool CommitPreparedVersion(PreparedVersionLoad& prepared, wxString& error, std::vector<std::string>& warnings);
 
 	// The current version loaded (returns CLIENT_VERSION_NONE if no version is loaded)
 	const ClientVersion& GetCurrentVersion() const;
@@ -43,12 +49,10 @@ public:
 	}
 
 	[[nodiscard]] wxString GetModularDataPath() const;
+	[[nodiscard]] wxString GetModularDataPath(const ClientVersion& client_version) const;
 
 private:
-	bool LoadDataFiles(wxString& error, std::vector<std::string>& warnings);
 	void FailDataLoad();
-	bool LoadMaterialManifest(const FileName& materials_manifest, MaterialManifestFiles& manifest_files, wxString& error);
-	bool LoadCanonicalAssets(const wxString& modular_data_path, const MaterialManifestFiles& manifest_files, wxString& error, std::vector<std::string>& warnings);
 	void AppendMissingItemWarnings(std::vector<std::string>& warnings) const;
 	bool LoadCreatureFiles(const MaterialManifestFiles& manifest_files, wxString& error, std::vector<std::string>& warnings);
 	bool LoadModularMaterials(const FileName& materials_manifest, wxString& error, std::vector<std::string>& warnings);

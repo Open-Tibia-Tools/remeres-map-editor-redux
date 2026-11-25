@@ -1,6 +1,8 @@
 #ifndef RME_CLIENT_MISMATCH_PRESENTATION_H_
 #define RME_CLIENT_MISMATCH_PRESENTATION_H_
 
+#include "editor/persistence/switch_client_preflight.h"
+
 #include <cstdint>
 #include <format>
 #include <string>
@@ -25,7 +27,11 @@ struct ClientMismatchPresentation {
     bool show_tabs_warning = false;
     std::string tabs_warning_text;
 
+    bool show_switch_unavailable_note = false;
+    std::string switch_unavailable_text;
+
     bool switch_enabled = true;
+    std::string switch_tooltip;
     bool force_is_default = true;
 };
 
@@ -47,13 +53,37 @@ struct ClientMismatchPresentation {
     return std::format("{} \xC2\xB7 {}", FormatOtbmDisplay(otbm_id), FormatOtbDisplay(major, minor));
 }
 
+[[nodiscard]] inline std::string FormatSwitchUnavailableReason(SwitchPreconditionStatus status, std::string_view target_name)
+{
+    switch (status) {
+        case SwitchPreconditionStatus::ClientPathsNotConfigured:
+            return std::format(
+                "Client {} folder is not configured. Configure it in File -> Preferences -> Client Version to switch.", target_name
+            );
+        case SwitchPreconditionStatus::MissingModularData:
+            return std::format("Editor data files for client {} are missing or incomplete.", target_name);
+        case SwitchPreconditionStatus::SameClientConflict:
+            return "The resolved target client is already active with incompatible item definitions.";
+        case SwitchPreconditionStatus::Ready:
+            return {};
+    }
+    return {};
+}
+
 [[nodiscard]] inline ClientMismatchPresentation BuildClientMismatchPresentation(
     const ClientMismatchVersionSummary& loaded, const ClientMismatchVersionSummary& map, std::string_view map_filename,
-    int real_open_map_count, bool can_switch
+    int real_open_map_count, SwitchPreconditionStatus switch_status
 )
 {
     const std::string resolved_map_header = map_filename.empty() ? std::string("Opening Map") : std::string(map_filename);
-    const bool show_warning = can_switch && real_open_map_count > 0;
+    const bool switch_enabled = (switch_status == SwitchPreconditionStatus::Ready);
+    const bool show_warning = switch_enabled && real_open_map_count > 0;
+    const std::string unavailable_text = FormatSwitchUnavailableReason(switch_status, map.name);
+    const std::string switch_tooltip = switch_enabled
+        ? (real_open_map_count > 0
+               ? std::format("Switch active client version to {} (closes all open map tabs).", map.name)
+               : std::format("Switch active client version to {}.", map.name))
+        : unavailable_text;
 
     return ClientMismatchPresentation {
         .loaded_header = "LOADED CLIENT",
@@ -64,7 +94,10 @@ struct ClientMismatchPresentation {
         .map_meta = FormatMismatchVersionMeta(map.otbm_id, map.otb_major, map.otb_minor),
         .show_tabs_warning = show_warning,
         .tabs_warning_text = show_warning ? "Switching clients will close all map tabs." : "",
-        .switch_enabled = can_switch,
+        .show_switch_unavailable_note = !switch_enabled,
+        .switch_unavailable_text = unavailable_text,
+        .switch_enabled = switch_enabled,
+        .switch_tooltip = switch_tooltip,
         .force_is_default = true,
     };
 }

@@ -1,29 +1,30 @@
 # Map Version Mismatch Handling & Force Load
 
 ## 1. Pattern & Key Files
-- `editor/persistence/map_load_decision.h`: Stateless `IsClientCompatibleWithMap` and `DecideMapLoadAction` rules shared across loading and persistence.
-- `ui/dialogs/client_mismatch_presentation.h`: Stateless presentation builder formatting inline `OTBM X · OTB M.m` metadata (`\xC2\xB7`) and card labels.
-- `ui/dialogs/client_mismatch_dialog.{h,cpp}`: Minimal two-card comparison dialog (`Loaded Client` -> `<map_filename>`) with equal-width `Switch Client | Force Load | Cancel` footer.
-- `editor/managers/editor_manager.{h,cpp}`: Orchestration via `SwitchClientVersionForLoad`, `CountRealOpenMaps`, and deferred placeholder cleanup.
-- `tests/test_map_load_decision.cpp` & `tests/test_client_mismatch_presentation.cpp`: Catch2 unit test coverage.
+- `editor/persistence/map_load_decision.h` & `editor/persistence/switch_client_preflight.h`: Stateless load decision and `EvaluateSwitchPrecondition` rules.
+- `ui/dialogs/client_mismatch_presentation.h`: Stateless presentation builder formatting `OTBM X · OTB M.m` (`\xC2\xB7`), tooltips, and switch-unavailable notices.
+- `ui/dialogs/client_mismatch_dialog.{h,cpp}`: Two-card comparison dialog with `Switch Client | Force Load | Cancel` footer (never opens a folder picker).
+- `editor/managers/editor_manager.{h,cpp}`: `SwitchClientVersionForLoad`, `CountRealOpenMaps`, and non-destructive two-phase `CloseAllEditors`.
+- `tests/test_map_load_decision.cpp`, `tests/test_switch_client_preflight.cpp`, `tests/test_client_mismatch_presentation.cpp`: Catch2 coverage.
 
 ## 2. When to Use It
 Do:
-- Share `IsClientCompatibleWithMap` so pre-load decisions and `EditorPersistence::loadMap` agree on protocol + `items_major` checks.
-- Pass `MapVersion` and UTF-8 map filename (`fileName.GetFullName().utf8_string()`) into `ClientMismatchDialog` for inline OTBM/OTB display.
+- Evaluate `SwitchPreconditionStatus` via const `hasConfiguredClientPath() && getClientPath().DirExists()` and `CheckModularClientData` before showing `ClientMismatchDialog`.
+- Pass `MapVersion`, UTF-8 map filename, and `SwitchPreconditionStatus` into `ClientMismatchDialog`.
 Don't:
-- Don't mix wxWidgets UI into `map_load_decision.h` or `client_mismatch_presentation.h`, or use raw non-ASCII literals in C++ source (`CMakeLists.txt` does not pass `/utf-8` on MSVC).
+- Don't call `loadValidPaths()` during map open/mismatch handling, mix wxWidgets UI into presentation/preflight headers, or use raw non-ASCII literals in C++.
 
 ## 3. Minimal Usage
 ```cpp
-const auto decision = DecideMapLoadAction(decision_input);
-if (decision.resolution == MapLoadResolution::PromptMismatch) {
-	ClientMismatchDialog dlg(g_gui.root, *current, *target, ver, fileName.GetFullName().utf8_string(), CountRealOpenMaps());
-	dlg.ShowModal();
-}
+const auto status = EvaluateSwitchPrecondition({
+	.is_same_client = current->getID() == target->getID(),
+	.has_modular_data = g_version.CheckModularClientData(*target, err),
+	.has_configured_client_paths = target->hasConfiguredClientPath() && target->getClientPath().DirExists(),
+});
+ClientMismatchDialog dlg(g_gui.root, *current, *target, ver, filename, CountRealOpenMaps(), status);
 ```
 
 ## 4. Invariants & Pitfalls
-- **Re-read active client after modal**: Fetch `g_version.getLoadedVersion()` after `dlg.ShowModal()` before applying `ForceLoadActive`.
-- **Default button**: `Force Load` (`PrimaryButton`, `SetDefault`) is always the default primary button; `Switch Client` (`SecondaryButton`) still performs path validation inside `SwitchClientVersionForLoad` before closing open tabs.
-- **Save identity after Force Load**: Forced-load maps are intentionally saved with the active loaded client's `g_item_definitions` major/minor versions (`IOMapOTBM::saveMap`), without a separate conversion confirmation prompt.
+- **Const check before modal**: Never call non-const `hasValidPaths()` when constructing `ClientMismatchDialog` (it emits `wxLogError` dialogs).
+- **Default button**: `Force Load` (`PrimaryButton`, `SetDefault`) is always the default primary button; `Switch Client` is disabled when `status != Ready`.
+- **Save identity after Force Load**: Forced-load maps save with the active loaded client's `g_item_definitions` versions without extra prompts.

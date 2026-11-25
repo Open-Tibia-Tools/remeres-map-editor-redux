@@ -18,6 +18,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/app/settings.h
     ${CMAKE_CURRENT_LIST_DIR}/app/threads.h
     ${CMAKE_CURRENT_LIST_DIR}/app/updater.h
+    ${CMAKE_CURRENT_LIST_DIR}/app/managers/prepared_version_load.h
     ${CMAKE_CURRENT_LIST_DIR}/app/managers/version_manager.h
 
     ${CMAKE_CURRENT_LIST_DIR}/brushes/brush.h
@@ -78,6 +79,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_backup_service.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_load_options.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/map_load_decision.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/switch_client_preflight.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/minimap_exporter.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/persistence/minimap_exporter_internal.h
 
