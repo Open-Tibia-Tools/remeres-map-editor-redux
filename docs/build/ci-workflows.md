@@ -28,4 +28,4 @@
 
 - `Build Linux` and `Build Windows` job names must match the required status checks in `master` ruleset `12110183`—do not rename those job `name:` fields without updating the ruleset.
 - In `build.yml`, `release` uses `!cancelled()` in its `if:` condition because `needs: [build-linux, build-windows]` would otherwise skip `release` when `run_id` skips the build jobs.
-- `build-windows` sets up MSVC via `vswhere.exe` + `vcvars64.bat` and relies on preinstalled Ninja on `windows-2025` to eliminate Node 20 action dependencies.
+- `build-windows` sets up MSVC via `vswhere.exe` + `vcvars64.bat` (preserving `PATH` precedence by reversing `$addedPaths` into `GITHUB_PATH` and pinning `CC=cl`/`CXX=cl` + `-DCMAKE_{C,CXX}_COMPILER=cl`) and relies on preinstalled Ninja on `windows-2025` so CMake does not pick `Llvm/x64/bin/clang++.exe`.

@@ -224,14 +224,18 @@ jobs:
               $name = $matches[1]
               $value = $matches[2]
               if ($name -ieq 'PATH') {
-                $value -split ';' | Where-Object { $_ -and -not $beforePath.Contains($_) } | ForEach-Object {
-                  Add-Content -Path $env:GITHUB_PATH -Value $_
+                $addedPaths = @($value -split ';' | Where-Object { $_ -and -not $beforePath.Contains($_) })
+                [array]::Reverse($addedPaths)
+                foreach ($entry in $addedPaths) {
+                  Add-Content -Path $env:GITHUB_PATH -Value $entry
                 }
               } elseif ($name -inotmatch '^(PROMPT|__VSCMD_PREINIT_PATH)$' -and $value -notmatch '[\r\n]') {
                 Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
               }
             }
           }
+          Add-Content -Path $env:GITHUB_ENV -Value "CC=cl"
+          Add-Content -Path $env:GITHUB_ENV -Value "CXX=cl"
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
@@ -261,6 +265,8 @@ jobs:
         run: >-
           cmake -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER=cl
+          -DCMAKE_CXX_COMPILER=cl
           -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-windows
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
