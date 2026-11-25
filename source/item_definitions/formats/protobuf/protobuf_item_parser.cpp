@@ -227,9 +227,9 @@ namespace {
                 = static_cast<uint16_t>(std::min<uint32_t>(flags.write().max_text_length(), std::numeric_limits<uint16_t>::max()));
         }
         if (flags.has_write_once()) {
-            const auto max_length_once
-                = static_cast<uint16_t>(std::min<uint32_t>(flags.write_once().max_text_length_once(), std::numeric_limits<uint16_t>::max())
-                );
+            const auto max_length_once = static_cast<uint16_t>(
+                std::min<uint32_t>(flags.write_once().max_text_length_once(), std::numeric_limits<uint16_t>::max())
+            );
             fragment.max_text_len = std::max(fragment.max_text_len.value_or(uint16_t {0}), max_length_once);
         }
         if (flags.has_height()) {
@@ -293,10 +293,12 @@ namespace {
         }
         animation_info.frame_durations.reserve(animation.sprite_phase_size());
         for (const auto& phase : animation.sprite_phase()) {
-            animation_info.frame_durations.push_back(DatAnimationFrameDuration {
-                .minimum = phase.duration_min(),
-                .maximum = phase.duration_max(),
-            });
+            animation_info.frame_durations.push_back(
+                DatAnimationFrameDuration {
+                    .minimum = phase.duration_min(),
+                    .maximum = phase.duration_max(),
+                }
+            );
         }
         target = std::move(animation_info);
     }

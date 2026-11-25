@@ -302,9 +302,11 @@ namespace {
                 sprite_id = compact_id;
             }
             if (sprite_id >= MAX_SPRITES) {
-                warnings.push_back(std::format(
-                    "DAT catalog: sprite id {} exceeds MAX_SPRITES={} for client id {}.", sprite_id, MAX_SPRITES, entry.client_id
-                ));
+                warnings.push_back(
+                    std::format(
+                        "DAT catalog: sprite id {} exceeds MAX_SPRITES={} for client id {}.", sprite_id, MAX_SPRITES, entry.client_id
+                    )
+                );
                 return false;
             }
 
@@ -378,10 +380,12 @@ namespace {
         }
 
         if (width > MAX_SPRITE_PARTS || height > MAX_SPRITE_PARTS) {
-            warnings.push_back(std::format(
-                "DAT catalog: sprite group for client id {} has dimension(s) exceeding MAX_SPRITE_PARTS={}: width={}, height={}.",
-                entry.client_id, MAX_SPRITE_PARTS, width, height
-            ));
+            warnings.push_back(
+                std::format(
+                    "DAT catalog: sprite group for client id {} has dimension(s) exceeding MAX_SPRITE_PARTS={}: width={}, height={}.",
+                    entry.client_id, MAX_SPRITE_PARTS, width, height
+                )
+            );
             return false;
         }
 
@@ -389,10 +393,12 @@ namespace {
             * static_cast<uint64_t>(pattern_x) * static_cast<uint64_t>(pattern_y) * static_cast<uint64_t>(pattern_z)
             * static_cast<uint64_t>(frames);
         if (sprite_count_64 > static_cast<uint64_t>(MAX_SPRITES)) {
-            warnings.push_back(std::format(
-                "DAT catalog: sprite group for client id {} expands to {} sprites which exceeds MAX_SPRITES={}.", entry.client_id,
-                sprite_count_64, MAX_SPRITES
-            ));
+            warnings.push_back(
+                std::format(
+                    "DAT catalog: sprite group for client id {} expands to {} sprites which exceeds MAX_SPRITES={}.", entry.client_id,
+                    sprite_count_64, MAX_SPRITES
+                )
+            );
             return false;
         }
         const auto sprite_count = static_cast<uint32_t>(sprite_count_64);
