@@ -20,10 +20,6 @@ on:
         required: true
         type: string
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   review:
     # 1. Non-draft same-repo pull_request events
@@ -37,6 +33,9 @@ jobs:
        github.event.pull_request.draft == false &&
        github.event.pull_request.head.repo.full_name != github.repository) ||
       (github.event_name == 'workflow_dispatch')
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-26.04
     permissions:
       contents: read
