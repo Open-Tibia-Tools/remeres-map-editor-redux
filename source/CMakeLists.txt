@@ -641,6 +641,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/live/live_tab.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/basemap.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/map.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/map/missing_ground_chunk.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/map/missing_ground_tile.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/operations/map_processor.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/map_region.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/position_format.cpp

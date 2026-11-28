@@ -83,8 +83,10 @@ public:
 	[[nodiscard]] std::unordered_set<ChunkCoord, ChunkCoordHash> takeDirtyChunks() noexcept;
 
 	// Listener registration
-	struct LifetimeToken {};
-	using InvalidationListener = std::function<void(const SpatialChangeTracker&)>;
+    struct LifetimeToken {
+        SpatialChangeTracker* tracker = nullptr;
+    };
+    using InvalidationListener = std::function<void(const SpatialChangeTracker&)>;
 	using RegionInvalidationListener
 		= std::function<void(int32_t min_cx, int32_t min_cy, int32_t max_cx, int32_t max_cy, int32_t z, bool all_dirty)>;
 
@@ -94,7 +96,9 @@ public:
 	uint32_t addRegionListener(RegionInvalidationListener listener);
 	void removeRegionListener(uint32_t listener_id);
 
-	[[nodiscard]] std::weak_ptr<const LifetimeToken> getLifetimeToken() const noexcept {
+    // Non-owning observer handle: SpatialChangeTracker is the sole owner of lifetime_token_;
+    // shared_ptr is used only so observers can hold a std::weak_ptr to detect destruction or moves without UAF.
+    [[nodiscard]] std::weak_ptr<const LifetimeToken> getLifetimeToken() const noexcept {
 		return lifetime_token_;
 	}
 
@@ -117,7 +121,8 @@ private:
 	std::vector<ListenerEntry> listeners_;
 	std::vector<RegionListenerEntry> region_listeners_;
 	uint32_t next_listener_id_ = 1;
-	std::shared_ptr<LifetimeToken> lifetime_token_ = std::make_shared<LifetimeToken>();
+    // Solely owned by this tracker; shared_ptr exists solely so std::weak_ptr observers can detect destruction or moves.
+    std::shared_ptr<LifetimeToken> lifetime_token_ = std::make_shared<LifetimeToken>(LifetimeToken {this});
 };
 
 #endif

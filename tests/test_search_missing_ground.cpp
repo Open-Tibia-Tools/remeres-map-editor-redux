@@ -20,6 +20,25 @@
 #include <set>
 #include <string>
 
+namespace rme::rendering {
+
+    struct MissingGroundOverlayCacheTestAccess {
+        [[nodiscard]] static size_t cachedChunkCount(const MissingGroundOverlayCache& cache) noexcept
+        {
+            return cache.chunks_.size();
+        }
+
+        [[nodiscard]] static bool isChunkValid(const MissingGroundOverlayCache& cache, int32_t cx, int32_t cy, int32_t z) noexcept
+        {
+            const auto it = cache.chunks_.find(ChunkCoord {cx, cy, z});
+            return it != cache.chunks_.end() && it->second.is_valid;
+        }
+    };
+
+} // namespace rme::rendering
+
+using rme::rendering::MissingGroundOverlayCacheTestAccess;
+
 // These two symbols live in application.cpp, which is excluded from test links.
 Application& wxGetApp()
 {
@@ -633,7 +652,7 @@ TEST_CASE(
     std::vector<MissingGround::RoleFlags> scratch;
     ChunkTileMask mask;
     map.visitPopulatedChunks(0, 0, 4, 4, 7, [&](int cx, int cy) {
-        if (MissingGround::EvaluateChunk(map, cx, cy, 7, map.getWidth(), map.getHeight(), mask, scratch)) {
+        if (MissingGround::EvaluateChunk(map, cx, cy, 7, map.getWidth(), map.getHeight(), mask.words, scratch)) {
             mask.forEach([&](int tx, int ty) { chunk_positions.emplace((cx << 4) + tx, (cy << 4) + ty); });
         }
     });
@@ -642,7 +661,8 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "MissingGroundOverlayCache tracks SpatialChangeTracker safely, invalidates 3x3 chunk halos, handles disabling, and prunes",
+    "MissingGroundOverlayCache tracks SpatialChangeTracker safely, handles moves, invalidates 3x3 chunk halos, handles disabling, and "
+    "prunes",
     "[missing_ground][cache]"
 )
 {
@@ -660,6 +680,21 @@ TEST_CASE(
             REQUIRE(chunk.has_any);
             REQUIRE(chunk.mask.test(8, 8));
         } // temp_map + SpatialChangeTracker destroyed here; cache destructs next without crashing.
+    }
+
+    // 1b. Verify moving an attached SpatialChangeTracker updates the live tracker address safely without dangling detach
+    {
+        Map dummy_map;
+        SpatialChangeTracker tracker_a;
+        rme::rendering::MissingGroundOverlayCache cache;
+        cache.syncDirtyState(tracker_a, dummy_map, dummy_map.getWidth(), dummy_map.getHeight(), true);
+        (void)cache.getOrEvaluateChunk(0, 0, 7, dummy_map, dummy_map.getWidth(), dummy_map.getHeight());
+        REQUIRE(MissingGroundOverlayCacheTestAccess::isChunkValid(cache, 0, 0, 7));
+
+        SpatialChangeTracker tracker_b(std::move(tracker_a));
+        tracker_b.markTileDirty(16, 15, 7);
+        cache.syncDirtyState(tracker_b, dummy_map, dummy_map.getWidth(), dummy_map.getHeight(), true);
+        REQUIRE_FALSE(MissingGroundOverlayCacheTestAccess::isChunkValid(cache, 0, 0, 7));
     }
 
     // 2. Cross-chunk 3x3 halo invalidation, floor isolation, resize, disable clear, and far-floor pruning
@@ -693,8 +728,8 @@ TEST_CASE(
     map.getChangeTracker().markTileDirty(16, 15, 7);
 
     cache.syncDirtyState(map.getChangeTracker(), map, map.getWidth(), map.getHeight(), true);
-    REQUIRE_FALSE(cache.isChunkValid(0, 0, 7));
-    REQUIRE(cache.isChunkValid(0, 0, 6)); // Floor 6 must remain untouched
+    REQUIRE_FALSE(MissingGroundOverlayCacheTestAccess::isChunkValid(cache, 0, 0, 7));
+    REQUIRE(MissingGroundOverlayCacheTestAccess::isChunkValid(cache, 0, 0, 6)); // Floor 6 must remain untouched
 
     {
         const auto& c00_after = cache.getOrEvaluateChunk(0, 0, 7, map, map.getWidth(), map.getHeight());
@@ -705,8 +740,8 @@ TEST_CASE(
     // Map resize invalidates cached chunks
     map.setWidth(128);
     cache.syncDirtyState(map.getChangeTracker(), map, map.getWidth(), map.getHeight(), true);
-    REQUIRE_FALSE(cache.isChunkValid(0, 0, 7));
-    REQUIRE_FALSE(cache.isChunkValid(0, 0, 6));
+    REQUIRE_FALSE(MissingGroundOverlayCacheTestAccess::isChunkValid(cache, 0, 0, 7));
+    REQUIRE_FALSE(MissingGroundOverlayCacheTestAccess::isChunkValid(cache, 0, 0, 6));
     REQUIRE(cache.getOrEvaluateChunk(0, 0, 7, map, map.getWidth(), map.getHeight()).is_valid);
     REQUIRE(cache.getOrEvaluateChunk(0, 0, 6, map, map.getWidth(), map.getHeight()).is_valid);
     REQUIRE(cache.getOrEvaluateChunk(0, 0, 11, map, map.getWidth(), map.getHeight()).is_valid);
@@ -715,12 +750,12 @@ TEST_CASE(
     for (uint64_t f = 0; f <= rme::rendering::MissingGroundOverlayCache::PRUNE_INTERVAL_FRAMES; ++f) {
         cache.advanceFrame(7);
     }
-    REQUIRE_FALSE(cache.isChunkValid(0, 0, 11));
-    REQUIRE(cache.isChunkValid(0, 0, 6));
+    REQUIRE_FALSE(MissingGroundOverlayCacheTestAccess::isChunkValid(cache, 0, 0, 11));
+    REQUIRE(MissingGroundOverlayCacheTestAccess::isChunkValid(cache, 0, 0, 6));
 
     // Disabling overlay clears cached chunks and frees state
     cache.syncDirtyState(map.getChangeTracker(), map, map.getWidth(), map.getHeight(), false);
-    REQUIRE(cache.getCachedChunkCount() == 0);
+    REQUIRE(MissingGroundOverlayCacheTestAccess::cachedChunkCount(cache) == 0);
 }
 
 TEST_CASE(

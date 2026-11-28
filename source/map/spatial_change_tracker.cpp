@@ -6,7 +6,10 @@
 #include <algorithm>
 
 SpatialChangeTracker::~SpatialChangeTracker() {
-	lifetime_token_.reset();
+    if (lifetime_token_) {
+        lifetime_token_->tracker = nullptr;
+    }
+    lifetime_token_.reset();
 }
 
 SpatialChangeTracker::SpatialChangeTracker(SpatialChangeTracker&& other) noexcept :
@@ -17,14 +20,20 @@ SpatialChangeTracker::SpatialChangeTracker(SpatialChangeTracker&& other) noexcep
 	region_listeners_(std::move(other.region_listeners_)),
 	next_listener_id_(other.next_listener_id_),
 	lifetime_token_(std::move(other.lifetime_token_)) {
-	other.all_dirty_ = false;
+    if (lifetime_token_) {
+        lifetime_token_->tracker = this;
+    }
+    other.all_dirty_ = false;
 	other.listeners_.clear();
 	other.region_listeners_.clear();
 }
 
 SpatialChangeTracker& SpatialChangeTracker::operator=(SpatialChangeTracker&& other) noexcept {
 	if (this != &other) {
-		lifetime_token_.reset();
+        if (lifetime_token_) {
+            lifetime_token_->tracker = nullptr;
+        }
+        lifetime_token_.reset();
 		all_dirty_ = other.all_dirty_;
 		generation_ = other.generation_;
 		dirty_chunks_ = std::move(other.dirty_chunks_);
@@ -32,7 +41,10 @@ SpatialChangeTracker& SpatialChangeTracker::operator=(SpatialChangeTracker&& oth
 		region_listeners_ = std::move(other.region_listeners_);
 		next_listener_id_ = other.next_listener_id_;
 		lifetime_token_ = std::move(other.lifetime_token_);
-		other.all_dirty_ = false;
+        if (lifetime_token_) {
+            lifetime_token_->tracker = this;
+        }
+        other.all_dirty_ = false;
 		other.listeners_.clear();
 		other.region_listeners_.clear();
 	}

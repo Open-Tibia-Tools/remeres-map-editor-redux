@@ -7,12 +7,16 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 class BaseMap;
 
 namespace rme::rendering {
+
+    struct MissingGroundOverlayCacheTestAccess;
 
     struct CachedMissingGroundChunk {
         ChunkCoord coord {};
@@ -52,24 +56,15 @@ namespace rme::rendering {
         void invalidateAll() noexcept;
         void clear() noexcept;
 
-        [[nodiscard]] size_t getCachedChunkCount() const noexcept
-        {
-            return chunks_.size();
-        }
-
-        [[nodiscard]] bool isChunkValid(int32_t cx, int32_t cy, int32_t z) const noexcept
-        {
-            const auto it = chunks_.find(ChunkCoord {cx, cy, z});
-            return it != chunks_.end() && it->second.is_valid;
-        }
-
     private:
+        friend struct MissingGroundOverlayCacheTestAccess;
+
         struct DirtyRegion {
             int32_t min_cx = 0;
             int32_t min_cy = 0;
             int32_t max_cx = 0;
             int32_t max_cy = 0;
-            int32_t z = -1;
+            std::optional<int32_t> floor_z;
         };
 
         void attachTracker(SpatialChangeTracker& tracker);
@@ -81,13 +76,13 @@ namespace rme::rendering {
         std::unordered_map<ChunkCoord, CachedMissingGroundChunk, ChunkCoordHash> chunks_;
         std::vector<MissingGround::RoleFlags> scratch_roles_;
         std::vector<DirtyRegion> pending_dirty_regions_;
+        std::vector<std::pair<uint64_t, ChunkCoord>> eviction_candidates_;
 
-        SpatialChangeTracker* tracked_tracker_ = nullptr;
         std::weak_ptr<const SpatialChangeTracker::LifetimeToken> tracker_lifetime_;
         uint32_t listener_id_ = 0;
         const BaseMap* tracked_map_ = nullptr;
-        int tracked_map_width_ = -1;
-        int tracked_map_height_ = -1;
+        std::optional<int> tracked_map_width_;
+        std::optional<int> tracked_map_height_;
         uint64_t current_frame_ = 0;
         uint64_t last_prune_frame_ = 0;
         bool enabled_ = false;

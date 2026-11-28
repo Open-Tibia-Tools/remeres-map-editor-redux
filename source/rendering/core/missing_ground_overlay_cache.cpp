@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <utility>
 
 namespace rme::rendering {
 
@@ -17,11 +16,10 @@ namespace rme::rendering {
 
     void MissingGroundOverlayCache::attachTracker(SpatialChangeTracker& tracker)
     {
-        if (tracked_tracker_ == &tracker) {
+        if (const auto guard = tracker_lifetime_.lock(); guard && guard->tracker == &tracker) {
             return;
         }
         detachTracker();
-        tracked_tracker_ = &tracker;
         tracker_lifetime_ = tracker.getLifetimeToken();
         listener_id_
             = tracker.addRegionListener([this](int32_t min_cx, int32_t min_cy, int32_t max_cx, int32_t max_cy, int32_t z, bool all_dirty) {
@@ -34,7 +32,8 @@ namespace rme::rendering {
                       return;
                   }
                   if (!pending_all_dirty_) {
-                      pending_dirty_regions_.push_back(DirtyRegion {min_cx, min_cy, max_cx, max_cy, z});
+                      const std::optional<int32_t> floor_z = (z >= 0 && z < MAP_LAYERS) ? std::optional<int32_t> {z} : std::nullopt;
+                      pending_dirty_regions_.push_back(DirtyRegion {min_cx, min_cy, max_cx, max_cy, floor_z});
                   }
               });
         invalidateAll();
@@ -42,11 +41,10 @@ namespace rme::rendering {
 
     void MissingGroundOverlayCache::detachTracker() noexcept
     {
-        if (auto guard = tracker_lifetime_.lock(); guard && tracked_tracker_ != nullptr && listener_id_ != 0) {
-            tracked_tracker_->removeRegionListener(listener_id_);
+        if (const auto guard = tracker_lifetime_.lock(); guard && guard->tracker != nullptr && listener_id_ != 0) {
+            guard->tracker->removeRegionListener(listener_id_);
         }
         tracker_lifetime_.reset();
-        tracked_tracker_ = nullptr;
         listener_id_ = 0;
     }
 
@@ -76,7 +74,8 @@ namespace rme::rendering {
             return;
         }
 
-        const bool tracker_changed = (tracked_tracker_ != &tracker);
+        const auto current_guard = tracker_lifetime_.lock();
+        const bool tracker_changed = (!current_guard || current_guard->tracker != &tracker);
         const bool map_changed = (tracked_map_ != &map || tracked_map_width_ != map_width || tracked_map_height_ != map_height);
 
         if (tracker_changed) {
@@ -117,12 +116,12 @@ namespace rme::rendering {
 
         const uint64_t width = static_cast<uint64_t>(static_cast<int64_t>(max_cx) - min_cx + 1);
         const uint64_t height = static_cast<uint64_t>(static_cast<int64_t>(max_cy) - min_cy + 1);
-        const bool single_floor = (region.z >= 0 && region.z < MAP_LAYERS);
+        const bool single_floor = region.floor_z.has_value();
         const uint64_t floor_span = single_floor ? 1ull : static_cast<uint64_t>(MAP_LAYERS);
 
         if (width <= 128 && height <= 128 && (width * height * floor_span) <= chunks_.size()) {
-            const int32_t z_start = single_floor ? region.z : 0;
-            const int32_t z_end = single_floor ? region.z : (MAP_LAYERS - 1);
+            const int32_t z_start = single_floor ? *region.floor_z : 0;
+            const int32_t z_end = single_floor ? *region.floor_z : (MAP_LAYERS - 1);
             for (int32_t z = z_start; z <= z_end; ++z) {
                 for (int32_t cy = min_cy; cy <= max_cy; ++cy) {
                     for (int32_t cx = min_cx; cx <= max_cx; ++cx) {
@@ -136,7 +135,7 @@ namespace rme::rendering {
         }
 
         for (auto& [coord, chunk] : chunks_) {
-            if (single_floor && coord.z != region.z) {
+            if (single_floor && coord.z != *region.floor_z) {
                 continue;
             }
             if (coord.cx >= min_cx && coord.cx <= max_cx && coord.cy >= min_cy && coord.cy <= max_cy) {
@@ -156,7 +155,7 @@ namespace rme::rendering {
         }
         chunk.last_accessed_frame = current_frame_;
         if (!chunk.is_valid) {
-            chunk.has_any = MissingGround::EvaluateChunk(map, cx, cy, z, map_width, map_height, chunk.mask, scratch_roles_);
+            chunk.has_any = MissingGround::EvaluateChunk(map, cx, cy, z, map_width, map_height, chunk.mask.words, scratch_roles_);
             chunk.is_valid = true;
         }
         return chunk;
@@ -173,6 +172,10 @@ namespace rme::rendering {
     {
         chunks_.clear();
         scratch_roles_.clear();
+        eviction_candidates_.clear();
+        tracked_map_ = nullptr;
+        tracked_map_width_.reset();
+        tracked_map_height_.reset();
     }
 
     void MissingGroundOverlayCache::prune(int current_floor)
@@ -203,23 +206,26 @@ namespace rme::rendering {
             return;
         }
 
-        std::vector<std::pair<uint64_t, ChunkCoord>> candidates;
-        candidates.reserve(chunks_.size());
+        eviction_candidates_.clear();
+        if (eviction_candidates_.capacity() < chunks_.size()) {
+            eviction_candidates_.reserve(chunks_.size());
+        }
         for (const auto& [coord, chunk] : chunks_) {
             if (chunk.last_accessed_frame < current_frame_) {
-                candidates.emplace_back(chunk.last_accessed_frame, coord);
+                eviction_candidates_.emplace_back(chunk.last_accessed_frame, coord);
             }
         }
-        if (candidates.empty()) {
+        if (eviction_candidates_.empty()) {
             return;
         }
 
-        const size_t num_evict = std::min(count_to_remove, candidates.size());
-        std::partial_sort(candidates.begin(), candidates.begin() + num_evict, candidates.end(), [](const auto& a, const auto& b) {
-            return a.first < b.first;
-        });
+        const size_t num_evict = std::min(count_to_remove, eviction_candidates_.size());
+        std::partial_sort(
+            eviction_candidates_.begin(), eviction_candidates_.begin() + num_evict, eviction_candidates_.end(),
+            [](const auto& a, const auto& b) { return a.first < b.first; }
+        );
         for (size_t i = 0; i < num_evict; ++i) {
-            chunks_.erase(candidates[i].second);
+            chunks_.erase(eviction_candidates_[i].second);
         }
     }
 

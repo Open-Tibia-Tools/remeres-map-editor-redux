@@ -2,9 +2,9 @@
 
 ## 1. Pattern & Key Files
 - `source/map/missing_ground.h` — dependency-free `constexpr` classifier (`RoleFlags`, `MissingGroundReason`, `IsFlatBorder`, `EvaluateMissingGroundWithReason`, `EvaluateMissingGround`, `FormatReason`).
-- `source/map/missing_ground_tile.h` — single-lookup `ClassifyTile(const Tile*)` and fast `ClassifyNeighborRoles(const Tile*)` for grounded/perimeter neighbors.
-- `source/map/missing_ground_chunk.h` — pure `MissingGround::EvaluateChunk` producing a 16×16 `ChunkTileMask` over a reused 18×18 `RoleFlags` scratch buffer.
-- `source/rendering/core/missing_ground_overlay_cache.{h,cpp}` — per-chunk overlay cache observing `SpatialChangeTracker::RegionInvalidationListener` (`LifetimeToken`-guarded, `3×3` halo invalidation, LRU/far-floor prune) without touching `ChunkCacheManager` VBOs.
+- `source/map/missing_ground_tile.{h,cpp}` — single-lookup `ClassifyTile(const Tile*)` and fast `ClassifyNeighborRoles(const Tile*)` for grounded/perimeter neighbors.
+- `source/map/missing_ground_chunk.{h,cpp}` — pure `MissingGround::EvaluateChunk` filling 16×16 mask words over a reused 18×18 `RoleFlags` scratch buffer with zero `rendering/` header dependencies.
+- `source/rendering/core/missing_ground_overlay_cache.{h,cpp}` — per-chunk `ChunkTileMask` overlay cache observing `SpatialChangeTracker::RegionInvalidationListener` (`LifetimeToken`-guarded, `3×3` halo invalidation, LRU/far-floor prune) without touching `ChunkCacheManager` VBOs.
 - `source/rendering/drawers/overlays/zone_overlay_drawer.cpp` & `source/editor/operations/search_query.cpp` — cached overlay rendering and parallel map search sharing the exact same rules.
 
 ## 2. When to Use It
