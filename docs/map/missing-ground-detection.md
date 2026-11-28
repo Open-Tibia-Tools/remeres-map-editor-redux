@@ -16,8 +16,8 @@ Don't:
 
 ## 3. Minimal Usage
 ```cpp
-const uint16_t self = MissingGround::ClassifyTile(tile);
-if ((self & MissingGround::kHasGround) == 0u) {
+const MissingGround::RoleFlags self = MissingGround::ClassifyTile(tile);
+if (!MissingGround::HasRole(self, MissingGround::RoleFlags::HasGround)) {
     const auto reason = MissingGround::EvaluateMissingGroundWithReason(
         self, n, e, s, w, se, nw, ne, sw);
     if (reason != MissingGround::MissingGroundReason::None) {
@@ -27,6 +27,6 @@ if ((self & MissingGround::kHasGround) == 0u) {
 ```
 
 ## 4. Invariants & Pitfalls
-- Tiles with `ItemFlag::BlockPathfinder` (such as drop-off tile `459`/`469` or pitfalls/holes) still receive `kHasGround` on themselves but never set `kOpenFloor` for neighbours.
-- Unoccluded border-only tiles (`kBorderOnly`) and void-adjacent trim (`kIsTrim` with `voids > 0`) stay quiet unless occluded in 2.5D behind `E`/`S`/`SE` barriers (`OccludedBehindBarrier`).
-- `SearchEngine::FindMissingGrounds` must also scan upstream `{W, N, NW}` unallocated tiles next to any `kBarrier` tile so occluded empty voids with zero `Tile*` allocation are still caught.
+- Tiles with `ItemFlag::BlockPathfinder` (such as drop-off tile `459`/`469` or pitfalls/holes) still receive `RoleFlags::HasGround` on themselves but never set `RoleFlags::OpenFloor` for neighbours.
+- Unoccluded border-only tiles (`RoleFlags::None`) and void-adjacent trim (`RoleFlags::IsTrim` with `voids > 0`) stay quiet unless occluded in 2.5D behind `E`/`S`/`SE` barriers (`OccludedBehindBarrier`).
+- `SearchEngine::FindMissingGrounds` must also scan upstream `{W, N, NW}` unallocated tiles next to any `RoleFlags::Barrier` tile so occluded empty voids with zero `Tile*` allocation are still caught.

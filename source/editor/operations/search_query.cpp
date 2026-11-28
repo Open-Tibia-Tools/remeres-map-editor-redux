@@ -352,25 +352,26 @@ std::vector<SearchResultChildEntry> SearchEngine::FindMissingGrounds(const Map& 
         };
 
         auto evaluateCandidate
-            = [&](int cx, int cy, int cz, const Tile* ctile, uint16_t self_role, int base_x, int base_y, const Floor* floor) {
+            = [&](int cx, int cy, int cz, const Tile* ctile, MissingGround::RoleFlags self_role, int base_x, int base_y,
+                  const Floor* floor) {
                   if (on_selection && (ctile == nullptr || !ctile->isSelected())) {
                       return;
                   }
-                  const uint16_t n = MissingGround::ClassifyTile(lookupTile(cx, cy - 1, cz, base_x, base_y, floor));
-                  const uint16_t e = MissingGround::ClassifyTile(lookupTile(cx + 1, cy, cz, base_x, base_y, floor));
-                  const uint16_t s = MissingGround::ClassifyTile(lookupTile(cx, cy + 1, cz, base_x, base_y, floor));
-                  const uint16_t w = MissingGround::ClassifyTile(lookupTile(cx - 1, cy, cz, base_x, base_y, floor));
-                  const uint16_t se = MissingGround::ClassifyTile(lookupTile(cx + 1, cy + 1, cz, base_x, base_y, floor));
+                  const MissingGround::RoleFlags n = MissingGround::ClassifyTile(lookupTile(cx, cy - 1, cz, base_x, base_y, floor));
+                  const MissingGround::RoleFlags e = MissingGround::ClassifyTile(lookupTile(cx + 1, cy, cz, base_x, base_y, floor));
+                  const MissingGround::RoleFlags s = MissingGround::ClassifyTile(lookupTile(cx, cy + 1, cz, base_x, base_y, floor));
+                  const MissingGround::RoleFlags w = MissingGround::ClassifyTile(lookupTile(cx - 1, cy, cz, base_x, base_y, floor));
+                  const MissingGround::RoleFlags se = MissingGround::ClassifyTile(lookupTile(cx + 1, cy + 1, cz, base_x, base_y, floor));
 
-                  const uint16_t nw = (self_role & MissingGround::kHasWall) != 0u
+                  const MissingGround::RoleFlags nw = MissingGround::HasRole(self_role, MissingGround::RoleFlags::HasWall)
                       ? MissingGround::ClassifyTile(lookupTile(cx - 1, cy - 1, cz, base_x, base_y, floor))
-                      : MissingGround::kRoleNone;
-                  const uint16_t ne = (self_role & MissingGround::kHasWall) != 0u
+                      : MissingGround::RoleFlags::None;
+                  const MissingGround::RoleFlags ne = MissingGround::HasRole(self_role, MissingGround::RoleFlags::HasWall)
                       ? MissingGround::ClassifyTile(lookupTile(cx + 1, cy - 1, cz, base_x, base_y, floor))
-                      : MissingGround::kRoleNone;
-                  const uint16_t sw = (self_role & MissingGround::kHasWall) != 0u
+                      : MissingGround::RoleFlags::None;
+                  const MissingGround::RoleFlags sw = MissingGround::HasRole(self_role, MissingGround::RoleFlags::HasWall)
                       ? MissingGround::ClassifyTile(lookupTile(cx - 1, cy + 1, cz, base_x, base_y, floor))
-                      : MissingGround::kRoleNone;
+                      : MissingGround::RoleFlags::None;
 
                   const auto reason = MissingGround::EvaluateMissingGroundWithReason(self_role, n, e, s, w, se, nw, ne, sw);
                   if (reason == MissingGround::MissingGroundReason::None) {
@@ -461,12 +462,12 @@ std::vector<SearchResultChildEntry> SearchEngine::FindMissingGrounds(const Map& 
                             }
 
                             const Tile* tile = floor->locs[(lx << 2) + ly].get();
-                            const uint16_t self_role = MissingGround::ClassifyTile(tile);
-                            if ((self_role & MissingGround::kHasGround) == 0u) {
+                            const MissingGround::RoleFlags self_role = MissingGround::ClassifyTile(tile);
+                            if (!MissingGround::HasRole(self_role, MissingGround::RoleFlags::HasGround)) {
                                 evaluateCandidate(x, y, z, tile, self_role, base_x, base_y, floor);
                             }
 
-                            if (!on_selection && (self_role & MissingGround::kBarrier) != 0u) {
+                            if (!on_selection && MissingGround::HasRole(self_role, MissingGround::RoleFlags::Barrier)) {
                                 struct Offset {
                                     int dx;
                                     int dy;
@@ -479,7 +480,7 @@ std::vector<SearchResultChildEntry> SearchEngine::FindMissingGrounds(const Map& 
                                         continue;
                                     }
                                     if (lookupTile(ux, uy, z, base_x, base_y, floor) == nullptr) {
-                                        evaluateCandidate(ux, uy, z, nullptr, MissingGround::kRoleNone, base_x, base_y, floor);
+                                        evaluateCandidate(ux, uy, z, nullptr, MissingGround::RoleFlags::None, base_x, base_y, floor);
                                     }
                                 }
                             }

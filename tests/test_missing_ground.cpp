@@ -20,24 +20,24 @@ using rme::rendering::ZONE_FLAG_INDICATOR_MASK;
 
 namespace {
 
-    constexpr uint16_t kOpen = kHasGround | kOpenFloor;
-    constexpr uint16_t kWallTile = kHasWall | kBarrier;
-    constexpr uint16_t kHiddenGroundWall = kHasGround | kHasWall | kBarrier;
-    constexpr uint16_t kMountain = kBarrier;
-    constexpr uint16_t kTrimProp = kIsTrim;
-    constexpr uint16_t kBorderOnly = kRoleNone;
-    constexpr uint16_t kCarpet = kHasSoftContent;
-    constexpr uint16_t kStaticProp = kHasStaticContent;
-    constexpr uint16_t kSail = kHasGround; // Non-walkable pseudo-ground (4958 sail)
+    constexpr RoleFlags kOpen = RoleFlags::HasGround | RoleFlags::OpenFloor;
+    constexpr RoleFlags kWallTile = RoleFlags::HasWall | RoleFlags::Barrier;
+    constexpr RoleFlags kHiddenGroundWall = RoleFlags::HasGround | RoleFlags::HasWall | RoleFlags::Barrier;
+    constexpr RoleFlags kMountain = RoleFlags::Barrier;
+    constexpr RoleFlags kTrimProp = RoleFlags::IsTrim;
+    constexpr RoleFlags kBorderOnly = RoleFlags::None;
+    constexpr RoleFlags kCarpet = RoleFlags::HasSoftContent;
+    constexpr RoleFlags kStaticProp = RoleFlags::HasStaticContent;
+    constexpr RoleFlags kSail = RoleFlags::HasGround; // Non-walkable pseudo-ground (4958 sail)
 
     template <size_t Rows>
     struct RoleGrid {
         std::array<std::string_view, Rows> rows;
 
-        [[nodiscard]] uint16_t at(int x, int y) const
+        [[nodiscard]] RoleFlags at(int x, int y) const
         {
             if (y < 0 || y >= static_cast<int>(Rows) || x < 0 || x >= static_cast<int>(rows[y].size())) {
-                return kRoleNone;
+                return RoleFlags::None;
             }
             switch (rows[y][x]) {
                 case '#':
@@ -60,9 +60,9 @@ namespace {
                 case 'S':
                     return kSail;
                 case 'F':
-                    return kFunctional;
+                    return RoleFlags::Functional;
                 default:
-                    return kRoleNone;
+                    return RoleFlags::None;
             }
         }
 

@@ -807,18 +807,18 @@ void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
     const bool has_map_bounds = map_width > 0 && map_height > 0;
 
     SpatialHashGrid::CellCursor primary_cursor;
-    auto fetchRow = [&](int ry, std::vector<uint16_t>& row) {
+    auto fetchRow = [&](int ry, std::vector<MissingGround::RoleFlags>& row) {
         row.resize(row_width);
-        uint16_t* out = row.data();
+        MissingGround::RoleFlags* out = row.data();
         if (ry < 0 || (has_map_bounds && ry >= map_height)) {
-            std::fill(out, out + row_width, MissingGround::kRoleNone);
+            std::fill(out, out + row_width, MissingGround::RoleFlags::None);
             return;
         }
 
         int x = min_x;
         if (x < 0) {
             const int neg_end = std::min(max_x, -1);
-            std::fill(out, out + (neg_end - min_x + 1), MissingGround::kRoleNone);
+            std::fill(out, out + (neg_end - min_x + 1), MissingGround::RoleFlags::None);
             x = neg_end + 1;
         }
 
@@ -828,7 +828,7 @@ void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
             const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
             if (!floor) {
                 const int span_end = std::min(scan_max_x, x | primary_cursor.empty_span_mask);
-                std::fill(out + (x - min_x), out + (span_end - min_x + 1), MissingGround::kRoleNone);
+                std::fill(out + (x - min_x), out + (span_end - min_x + 1), MissingGround::RoleFlags::None);
                 x = span_end + 1;
                 continue;
             }
@@ -840,7 +840,7 @@ void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
         }
 
         if (x <= max_x) {
-            std::fill(out + (x - min_x), out + row_width, MissingGround::kRoleNone);
+            std::fill(out + (x - min_x), out + row_width, MissingGround::RoleFlags::None);
         }
     };
 
@@ -860,18 +860,18 @@ void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
 
         for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
             const int idx = x - min_x;
-            const uint16_t cell = missing_ground_row_curr_[idx];
-            if ((cell & MissingGround::kHasGround) != 0u) {
+            const MissingGround::RoleFlags cell = missing_ground_row_curr_[idx];
+            if (MissingGround::HasRole(cell, MissingGround::RoleFlags::HasGround)) {
                 continue;
             }
-            const uint16_t nw = missing_ground_row_prev_[idx - 1];
-            const uint16_t n = missing_ground_row_prev_[idx];
-            const uint16_t ne = missing_ground_row_prev_[idx + 1];
-            const uint16_t e = missing_ground_row_curr_[idx + 1];
-            const uint16_t sw = missing_ground_row_next_[idx - 1];
-            const uint16_t s = missing_ground_row_next_[idx];
-            const uint16_t w = missing_ground_row_curr_[idx - 1];
-            const uint16_t se = missing_ground_row_next_[idx + 1];
+            const MissingGround::RoleFlags nw = missing_ground_row_prev_[idx - 1];
+            const MissingGround::RoleFlags n = missing_ground_row_prev_[idx];
+            const MissingGround::RoleFlags ne = missing_ground_row_prev_[idx + 1];
+            const MissingGround::RoleFlags e = missing_ground_row_curr_[idx + 1];
+            const MissingGround::RoleFlags sw = missing_ground_row_next_[idx - 1];
+            const MissingGround::RoleFlags s = missing_ground_row_next_[idx];
+            const MissingGround::RoleFlags w = missing_ground_row_curr_[idx - 1];
+            const MissingGround::RoleFlags se = missing_ground_row_next_[idx + 1];
 
             if (!MissingGround::EvaluateMissingGround(cell, n, e, s, w, se, nw, ne, sw)) {
                 continue;

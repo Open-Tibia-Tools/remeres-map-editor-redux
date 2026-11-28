@@ -3,6 +3,12 @@
 
 #include "rendering/indicators/zone_cluster_finder.h"
 
+#include <cstdint>
+
+namespace MissingGround {
+    enum class RoleFlags : uint16_t;
+} // namespace MissingGround
+
 class SpriteBatch;
 struct RenderView;
 class Map;
@@ -175,9 +181,9 @@ private:
 
     std::vector<PendingHighlightQuad> highlight_quads_;
 
-    std::vector<uint16_t> missing_ground_row_prev_;
-    std::vector<uint16_t> missing_ground_row_curr_;
-    std::vector<uint16_t> missing_ground_row_next_;
+    std::vector<MissingGround::RoleFlags> missing_ground_row_prev_;
+    std::vector<MissingGround::RoleFlags> missing_ground_row_curr_;
+    std::vector<MissingGround::RoleFlags> missing_ground_row_next_;
 };
 
 } // namespace rme::rendering

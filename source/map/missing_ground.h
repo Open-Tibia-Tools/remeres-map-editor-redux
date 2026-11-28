@@ -13,17 +13,43 @@
 // 4. Interior walls, sealed pockets, and non-border static content surrounded by open floors.
 namespace MissingGround {
 
-    enum RoleFlags : uint16_t {
-        kRoleNone = 0,
-        kHasGround = 1u << 0,
-        kOpenFloor = 1u << 1,
-        kBarrier = 1u << 2,
-        kHasWall = 1u << 3,
-        kFunctional = 1u << 4,
-        kHasSoftContent = 1u << 5,
-        kHasStaticContent = 1u << 6,
-        kIsTrim = 1u << 7,
+    enum class RoleFlags : uint16_t {
+        None = 0,
+        HasGround = 1u << 0,
+        OpenFloor = 1u << 1,
+        Barrier = 1u << 2,
+        HasWall = 1u << 3,
+        Functional = 1u << 4,
+        HasSoftContent = 1u << 5,
+        HasStaticContent = 1u << 6,
+        IsTrim = 1u << 7,
     };
+
+    [[nodiscard]] constexpr RoleFlags operator|(RoleFlags a, RoleFlags b) noexcept
+    {
+        return static_cast<RoleFlags>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));
+    }
+
+    [[nodiscard]] constexpr RoleFlags operator&(RoleFlags a, RoleFlags b) noexcept
+    {
+        return static_cast<RoleFlags>(static_cast<uint16_t>(a) & static_cast<uint16_t>(b));
+    }
+
+    constexpr RoleFlags& operator|=(RoleFlags& a, RoleFlags b) noexcept
+    {
+        a = a | b;
+        return a;
+    }
+
+    [[nodiscard]] constexpr bool HasRole(RoleFlags mask, RoleFlags flag) noexcept
+    {
+        return (static_cast<uint16_t>(mask) & static_cast<uint16_t>(flag)) != 0u;
+    }
+
+    [[nodiscard]] constexpr bool HasAllRoles(RoleFlags mask, RoleFlags required) noexcept
+    {
+        return (mask & required) == required;
+    }
 
     enum class MissingGroundReason : uint8_t {
         None = 0,
@@ -46,37 +72,38 @@ namespace MissingGround {
     }
 
     [[nodiscard]] constexpr MissingGroundReason EvaluateMissingGroundWithReason(
-        uint16_t self, uint16_t n, uint16_t e, uint16_t s, uint16_t w, uint16_t se, uint16_t nw = kRoleNone, uint16_t ne = kRoleNone,
-        uint16_t sw = kRoleNone
+        RoleFlags self, RoleFlags n, RoleFlags e, RoleFlags s, RoleFlags w, RoleFlags se, RoleFlags nw = RoleFlags::None,
+        RoleFlags ne = RoleFlags::None, RoleFlags sw = RoleFlags::None
     ) noexcept
     {
-        if ((self & kHasGround) != 0u) {
+        if (HasRole(self, RoleFlags::HasGround)) {
             return MissingGroundReason::None;
         }
 
-        const auto countFlag = [&](uint16_t flag) noexcept -> int {
-            return static_cast<int>((n & flag) != 0u) + static_cast<int>((e & flag) != 0u) + static_cast<int>((s & flag) != 0u)
-                + static_cast<int>((w & flag) != 0u);
+        const auto countFlag = [&](RoleFlags flag) noexcept -> int {
+            return static_cast<int>(HasRole(n, flag)) + static_cast<int>(HasRole(e, flag)) + static_cast<int>(HasRole(s, flag))
+                + static_cast<int>(HasRole(w, flag));
         };
-        const auto isVoid = [](uint16_t nb) noexcept -> int { return static_cast<int>((nb & (kHasGround | kBarrier)) == 0u); };
+        const auto isVoid
+            = [](RoleFlags nb) noexcept -> int { return static_cast<int>(!HasRole(nb, RoleFlags::HasGround | RoleFlags::Barrier)); };
 
-        const int open_floors = countFlag(kOpenFloor);
-        const int any_grounds = countFlag(kHasGround);
+        const int open_floors = countFlag(RoleFlags::OpenFloor);
+        const int any_grounds = countFlag(RoleFlags::HasGround);
         const int voids = isVoid(n) + isVoid(e) + isVoid(s) + isVoid(w);
-        const bool opposite_open_floors
-            = ((n & kOpenFloor) != 0u && (s & kOpenFloor) != 0u) || ((e & kOpenFloor) != 0u && (w & kOpenFloor) != 0u);
-        const bool opposite_any_grounds
-            = ((n & kHasGround) != 0u && (s & kHasGround) != 0u) || ((e & kHasGround) != 0u && (w & kHasGround) != 0u);
-        const bool occluded_25d = ((e | s | se) & kBarrier) != 0u;
+        const bool opposite_open_floors = (HasRole(n, RoleFlags::OpenFloor) && HasRole(s, RoleFlags::OpenFloor))
+            || (HasRole(e, RoleFlags::OpenFloor) && HasRole(w, RoleFlags::OpenFloor));
+        const bool opposite_any_grounds = (HasRole(n, RoleFlags::HasGround) && HasRole(s, RoleFlags::HasGround))
+            || (HasRole(e, RoleFlags::HasGround) && HasRole(w, RoleFlags::HasGround));
+        const bool occluded_25d = HasRole(e | s | se, RoleFlags::Barrier);
 
         const bool not_void_edge = (voids == 0 && (open_floors >= 1 || any_grounds >= 2)) || opposite_open_floors || open_floors >= 3;
 
-        if ((self & kFunctional) != 0u && (not_void_edge || open_floors >= 2)) {
+        if (HasRole(self, RoleFlags::Functional) && (not_void_edge || open_floors >= 2)) {
             return MissingGroundReason::Functional;
         }
 
-        const bool is_unblocked_surface = (self & (kHasWall | kBarrier | kIsTrim)) == 0u;
-        if (is_unblocked_surface && (self & kHasSoftContent) != 0u && (not_void_edge || open_floors >= 2)) {
+        const bool is_unblocked_surface = !HasRole(self, RoleFlags::HasWall | RoleFlags::Barrier | RoleFlags::IsTrim);
+        if (is_unblocked_surface && HasRole(self, RoleFlags::HasSoftContent) && (not_void_edge || open_floors >= 2)) {
             return MissingGroundReason::MaskedByCarpetOrContent;
         }
 
@@ -84,22 +111,24 @@ namespace MissingGround {
             return MissingGroundReason::OccludedBehindBarrier;
         }
 
-        if ((self & kHasWall) != 0u) {
+        if (HasRole(self, RoleFlags::HasWall)) {
             if (opposite_open_floors || open_floors >= 3) {
                 return MissingGroundReason::InteriorWall;
             }
-            const bool horiz_seam = (((n & kOpenFloor) != 0u && (s & kHasWall) != 0u) || ((s & kOpenFloor) != 0u && (n & kHasWall) != 0u))
-                && (e & kHasWall) != 0u && (w & kHasWall) != 0u;
-            const bool vert_seam = (((e & kOpenFloor) != 0u && (w & kHasWall) != 0u) || ((w & kOpenFloor) != 0u && (e & kHasWall) != 0u))
-                && (n & kHasWall) != 0u && (s & kHasWall) != 0u;
+            const bool horiz_seam = ((HasRole(n, RoleFlags::OpenFloor) && HasRole(s, RoleFlags::HasWall))
+                                     || (HasRole(s, RoleFlags::OpenFloor) && HasRole(n, RoleFlags::HasWall)))
+                && HasRole(e, RoleFlags::HasWall) && HasRole(w, RoleFlags::HasWall);
+            const bool vert_seam = ((HasRole(e, RoleFlags::OpenFloor) && HasRole(w, RoleFlags::HasWall))
+                                    || (HasRole(w, RoleFlags::OpenFloor) && HasRole(e, RoleFlags::HasWall)))
+                && HasRole(n, RoleFlags::HasWall) && HasRole(s, RoleFlags::HasWall);
             if (open_floors == 1 && (horiz_seam || vert_seam)) {
                 return MissingGroundReason::None;
             }
-            const auto isGroundedWallCorner
-                = [](uint16_t wall_a, uint16_t wall_b, uint16_t ground_a, uint16_t ground_b, uint16_t diag) noexcept {
-                      return (wall_a & kBarrier) != 0u && (wall_b & kBarrier) != 0u && (ground_a & kHasGround) != 0u
-                          && (ground_b & kHasGround) != 0u && (diag & kHasGround) != 0u;
-                  };
+            const auto isGroundedWallCorner = [](RoleFlags wall_a, RoleFlags wall_b, RoleFlags ground_a, RoleFlags ground_b,
+                                                 RoleFlags diag) noexcept {
+                return HasRole(wall_a, RoleFlags::Barrier) && HasRole(wall_b, RoleFlags::Barrier) && HasRole(ground_a, RoleFlags::HasGround)
+                    && HasRole(ground_b, RoleFlags::HasGround) && HasRole(diag, RoleFlags::HasGround);
+            };
             const bool grounded_corner = isGroundedWallCorner(n, w, e, s, nw) || isGroundedWallCorner(n, e, w, s, ne)
                 || isGroundedWallCorner(s, w, n, e, sw) || isGroundedWallCorner(s, e, n, w, se);
             if (any_grounds >= 3 || (voids == 0 && (opposite_any_grounds || grounded_corner))) {
@@ -108,18 +137,18 @@ namespace MissingGround {
             return MissingGroundReason::None;
         }
 
-        if ((self & kBarrier) != 0u) {
-            const auto hasGroundedWall = [](uint16_t nb) noexcept { return (nb & (kHasWall | kHasGround)) == (kHasWall | kHasGround); };
-            const bool open_floor_opposite_grounded_wall = ((n & kOpenFloor) != 0u && hasGroundedWall(s))
-                || ((s & kOpenFloor) != 0u && hasGroundedWall(n)) || ((e & kOpenFloor) != 0u && hasGroundedWall(w))
-                || ((w & kOpenFloor) != 0u && hasGroundedWall(e));
+        if (HasRole(self, RoleFlags::Barrier)) {
+            const auto hasGroundedWall = [](RoleFlags nb) noexcept { return HasAllRoles(nb, RoleFlags::HasWall | RoleFlags::HasGround); };
+            const bool open_floor_opposite_grounded_wall = (HasRole(n, RoleFlags::OpenFloor) && hasGroundedWall(s))
+                || (HasRole(s, RoleFlags::OpenFloor) && hasGroundedWall(n)) || (HasRole(e, RoleFlags::OpenFloor) && hasGroundedWall(w))
+                || (HasRole(w, RoleFlags::OpenFloor) && hasGroundedWall(e));
             if (opposite_open_floors || open_floors >= 3 || any_grounds >= 3 || open_floor_opposite_grounded_wall) {
                 return MissingGroundReason::SurroundedInterior;
             }
             return MissingGroundReason::None;
         }
 
-        if ((self & kIsTrim) != 0u) {
+        if (HasRole(self, RoleFlags::IsTrim)) {
             if (voids == 0) {
                 if (open_floors >= 3) {
                     return MissingGroundReason::SurroundedInterior;
@@ -131,7 +160,7 @@ namespace MissingGround {
             return MissingGroundReason::None;
         }
 
-        if ((self & kHasStaticContent) != 0u) {
+        if (HasRole(self, RoleFlags::HasStaticContent)) {
             if (open_floors >= 3) {
                 return MissingGroundReason::SurroundedInterior;
             }
@@ -144,8 +173,8 @@ namespace MissingGround {
     }
 
     [[nodiscard]] constexpr bool EvaluateMissingGround(
-        uint16_t self, uint16_t n, uint16_t e, uint16_t s, uint16_t w, uint16_t se, uint16_t nw = kRoleNone, uint16_t ne = kRoleNone,
-        uint16_t sw = kRoleNone
+        RoleFlags self, RoleFlags n, RoleFlags e, RoleFlags s, RoleFlags w, RoleFlags se, RoleFlags nw = RoleFlags::None,
+        RoleFlags ne = RoleFlags::None, RoleFlags sw = RoleFlags::None
     ) noexcept
     {
         return EvaluateMissingGroundWithReason(self, n, e, s, w, se, nw, ne, sw) != MissingGroundReason::None;
