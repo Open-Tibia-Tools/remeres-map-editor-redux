@@ -17,15 +17,16 @@ class Creature;
 class Brush;
 
 enum class SearchCategory : uint32_t {
-	None        = 0,
-	UniqueID    = 1 << 0,
-	ActionID    = 1 << 1,
-	Container   = 1 << 2,
-	Writeable   = 1 << 3,
-	Teleport    = 1 << 4,
-	Creature    = 1 << 5, // Monsters & NPCs
-	Pickupable  = 1 << 6,
-	Everything  = UniqueID | ActionID | Container | Writeable | Teleport
+    None = 0,
+    UniqueID = 1 << 0,
+    ActionID = 1 << 1,
+    Container = 1 << 2,
+    Writeable = 1 << 3,
+    Teleport = 1 << 4,
+    Creature = 1 << 5, // Monsters & NPCs
+    Pickupable = 1 << 6,
+    MissingGround = 1 << 7,
+    Everything = UniqueID | ActionID | Container | Writeable | Teleport
 };
 
 inline SearchCategory operator|(SearchCategory a, SearchCategory b) {
@@ -41,14 +42,15 @@ inline bool HasCategory(SearchCategory mask, SearchCategory cat) {
 }
 
 enum class SearchResultKind : uint8_t {
-	GenericItem,
-	UniqueID,
-	ActionID,
-	Container,
-	Writeable,
-	Teleport,
-	Creature,
-	Pickupable
+    GenericItem,
+    UniqueID,
+    ActionID,
+    Container,
+    Writeable,
+    Teleport,
+    Creature,
+    Pickupable,
+    MissingGround
 };
 
 struct SearchContainedItem {
@@ -102,6 +104,7 @@ struct SearchQuery {
 class SearchEngine {
 public:
 	static std::vector<SearchResultGroup> Execute(Map& map, const SearchQuery& query);
+    [[nodiscard]] static std::vector<SearchResultChildEntry> FindMissingGrounds(const Map& map);
 };
 
 #endif // RME_EDITOR_OPERATIONS_SEARCH_QUERY_H_

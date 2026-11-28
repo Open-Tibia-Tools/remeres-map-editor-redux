@@ -255,18 +255,22 @@ private:
 				child.position.x, child.position.y, child.position.z)));
 		} else if (child.kind == SearchResultKind::Creature) {
 			SetToolTip(wxstr(std::format("{}{} | Pos: [{}, {}, {}]", child_prefix, child.subtitle, child.position.x, child.position.y, child.position.z)));
-		} else if (child.unique_id > 0 && child.action_id > 0) {
-			SetToolTip(wxstr(std::format("{}UID: {} | AID: {} | Pos: [{}, {}, {}]", child_prefix, child.unique_id, child.action_id, child.position.x, child.position.y, child.position.z)));
-		} else if (child.unique_id > 0) {
-			SetToolTip(wxstr(std::format("{}UID: {} | Pos: [{}, {}, {}]", child_prefix, child.unique_id, child.position.x, child.position.y, child.position.z)));
-		} else if (child.action_id > 0) {
-			SetToolTip(wxstr(std::format("{}AID: {} | Pos: [{}, {}, {}]", child_prefix, child.action_id, child.position.x, child.position.y, child.position.z)));
-		} else if (!child.text.empty()) {
-			SetToolTip(wxstr(std::format("{}\"{}\" | Pos: [{}, {}, {}]", child_prefix, child.text, child.position.x, child.position.y, child.position.z)));
-		} else {
-			SetToolTip(wxstr(std::format("{}Pos: [{}, {}, {}]", child_prefix, child.position.x, child.position.y, child.position.z)));
-		}
-	}
+        } else if (child.kind == SearchResultKind::MissingGround) {
+            SetToolTip(wxstr(
+                std::format("{}{} | Pos: [{}, {}, {}]", child_prefix, child.subtitle, child.position.x, child.position.y, child.position.z)
+            ));
+        } else if (child.unique_id > 0 && child.action_id > 0) {
+            SetToolTip(wxstr(std::format("{}UID: {} | AID: {} | Pos: [{}, {}, {}]", child_prefix, child.unique_id, child.action_id, child.position.x, child.position.y, child.position.z)));
+        } else if (child.unique_id > 0) {
+            SetToolTip(wxstr(std::format("{}UID: {} | Pos: [{}, {}, {}]", child_prefix, child.unique_id, child.position.x, child.position.y, child.position.z)));
+        } else if (child.action_id > 0) {
+            SetToolTip(wxstr(std::format("{}AID: {} | Pos: [{}, {}, {}]", child_prefix, child.action_id, child.position.x, child.position.y, child.position.z)));
+        } else if (!child.text.empty()) {
+            SetToolTip(wxstr(std::format("{}\"{}\" | Pos: [{}, {}, {}]", child_prefix, child.text, child.position.x, child.position.y, child.position.z)));
+        } else {
+            SetToolTip(wxstr(std::format("{}Pos: [{}, {}, {}]", child_prefix, child.position.x, child.position.y, child.position.z)));
+        }
+    }
 
 	void OnKeyDown(wxKeyEvent& event) {
 		event.Skip();

@@ -356,3 +356,8 @@ rme_add_catch2_test(test_blocking_overlay tests/test_blocking_overlay.cpp)
 
 # --- Unit test for the missing ground overlay rule ---
 rme_add_catch2_test(test_missing_ground tests/test_missing_ground.cpp)
+
+# --- Full-map tests for Search -> Find Missing Grounds ---
+rme_add_full_editor_test(test_search_missing_ground tests/test_search_missing_ground.cpp)
+target_link_libraries(test_search_missing_ground PRIVATE Catch2::Catch2WithMain)
+add_test(NAME test_search_missing_ground COMMAND test_search_missing_ground)
