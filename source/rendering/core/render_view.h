@@ -4,9 +4,10 @@
 class BaseMap;
 struct DrawingOptions;
 
-#include <glm/glm.hpp>
-#include "map/position.h"
 #include "app/definitions.h"
+#include "map/position.h"
+#include "rendering/core/viewport_tile_bounds.h"
+#include <glm/glm.hpp>
 #include <optional>
 
 struct ViewportParameters {
@@ -52,7 +53,9 @@ struct RenderView {
 	void Setup(const ViewportParameters& params, const DrawingOptions& options, const BaseMap* map = nullptr);
 	// Negative extra_margin_tiles values are clamped to zero.
 	[[nodiscard]] ViewBounds getBoundsForFloor(int map_z, int extra_margin_tiles = 0) const;
-	void SetupGL();
+    // Computes inclusive tile bounds visible on map_z in floor-local shifted screen space.
+    [[nodiscard]] ViewBounds ComputeFloorTileBounds(int map_z, int extra_margin_tiles = 1) const noexcept;
+    void SetupGL();
 	void ReleaseGL();
 	void Clear();
 
