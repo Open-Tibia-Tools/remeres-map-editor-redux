@@ -58,7 +58,7 @@ void main() {
  *        modularly injecting indicator, house, and zone shader procedures.
  */
 inline std::string GetSpriteBatchFragShader() {
-    return std::string(R"(#version 450 core
+	return std::string(R"(#version 450 core
 in vec2 vWorldPos;
 in vec2 vQuadCoord;
 in vec2 vQuadSize;
@@ -95,9 +95,7 @@ vec3 clampToSprite(vec3 uv, vec4 bounds) {
 	return vec3(clamp(uv.xy, min(lo, hi), max(lo, hi)), uv.z);
 }
 
-)") + std::string(HIGHLIGHT_ITEMS_SHADER_GLSL)
-        + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL)
-        + std::string(ZONE_SHADER_GLSL) + R"(
+)") + std::string(HIGHLIGHT_ITEMS_SHADER_GLSL) + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + std::string(ZONE_SHADER_GLSL) + R"(
 
 void main() {
     uint indicatorType = (vZoneFlags >> 25) & 0x1Fu;
@@ -156,14 +154,33 @@ void main() {
  * Keeps SpriteBatch decoupled from OTBM domain concepts (houses, spawns, zones).
  */
 inline void SetSpriteBatchOverlayUniforms(
-    ShaderProgram& shader, uint32_t current_house_id, bool show_houses, bool show_spawns, bool show_towns, bool show_waypoints,
-    bool show_tech_items, bool show_blocking, bool show_special_tiles, bool show_invalid_tiles, bool show_invalid_zones,
-    bool show_highlight_items, bool show_zone_borders, int house_active_blend_mode, int house_inactive_blend_mode,
-    const glm::vec4& zone_border_color, const glm::vec4& zone_pz_color, const glm::vec4& zone_nopvp_color,
-    const glm::vec4& zone_nologout_color, const glm::vec4& zone_pvp_color, const glm::vec4& zone_blocking_color,
-    const glm::vec4& zone_spawn_color, const glm::vec4& house_active_color, const glm::vec4& house_inactive_color,
-    bool extended_pathing_shader = true, int zone_blocking_blend_mode = 0, bool show_missing_ground = false
-)
+	ShaderProgram& shader,
+	uint32_t current_house_id,
+	bool show_houses,
+	bool show_spawns,
+	bool show_towns,
+	bool show_waypoints,
+	bool show_tech_items,
+	bool show_blocking,
+	bool show_special_tiles,
+	bool show_invalid_tiles,
+	bool show_invalid_zones,
+	bool show_highlight_items,
+	bool show_zone_borders,
+	int house_active_blend_mode,
+	int house_inactive_blend_mode,
+	const glm::vec4& zone_border_color,
+	const glm::vec4& zone_pz_color,
+	const glm::vec4& zone_nopvp_color,
+	const glm::vec4& zone_nologout_color,
+	const glm::vec4& zone_pvp_color,
+	const glm::vec4& zone_blocking_color,
+	const glm::vec4& zone_spawn_color,
+	const glm::vec4& house_active_color,
+	const glm::vec4& house_inactive_color,
+	bool extended_pathing_shader = true,
+	int zone_blocking_blend_mode = 0,
+	bool show_missing_ground = false)
 {
 	shader.Use();
 	shader.SetUint("uCurrentHouseId", current_house_id);
@@ -176,10 +193,10 @@ inline void SetSpriteBatchOverlayUniforms(
 	shader.SetInt("uShowSpecialTiles", show_special_tiles ? 1 : 0);
 	shader.SetInt("uShowInvalidTiles", show_invalid_tiles ? 1 : 0);
 	shader.SetInt("uShowInvalidZones", show_invalid_zones ? 1 : 0);
-    shader.SetInt("uShowMissingGround", show_missing_ground ? 1 : 0);
-    shader.SetInt("uShowHighlightItems", show_highlight_items ? 1 : 0);
+	shader.SetInt("uShowMissingGround", show_missing_ground ? 1 : 0);
+	shader.SetInt("uShowHighlightItems", show_highlight_items ? 1 : 0);
 
-    shader.SetInt("uShowZoneBorders", show_zone_borders ? 1 : 0);
+	shader.SetInt("uShowZoneBorders", show_zone_borders ? 1 : 0);
 	shader.SetInt("uHouseActiveBlendMode", house_active_blend_mode);
 	shader.SetInt("uHouseInactiveBlendMode", house_inactive_blend_mode);
 	shader.SetVec4("uZoneBorderColor", zone_border_color);

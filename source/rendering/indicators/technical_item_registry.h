@@ -19,26 +19,27 @@ namespace rme::rendering {
  * @brief Enum of all shader-rendered tile indicators.
  */
 enum class TileIndicatorType : uint8_t {
-    None = 0,
-    HouseEntry = 1, // "ENTRY" - Blue frame + wash
-    Spawn = 2, // "SPAWN" - Purple frame + wash
-    TownTemple = 3, // "TOWN"  - Gold frame + wash
-    Waypoint = 4, // "WAYPT" - Cyan frame + wash
-    TechInvisibleStair = 5, // "STAIR" - Yellow frame + wash
-    TechInvisibleWalkable = 6, // "WALK"  - Cyan frame + wash
-    TechInvisibleWall = 7, // "BLOCK" - Red frame + wash
-    TechPrimalLight = 8, // "LIGHT" - Sky blue frame + wash
-    InvalidGround = 9, // Flat red wash (Missing ground tile)
-    InvalidItem = 10, // Flat orange wash (Missing top item)
-    InvalidZone = 11, // Flat magenta wash (Invalid zone flags)
-    ZonePZ = 12, // "PZ"    - Protection Zone (Gold/Yellow)
-    ZoneNoPvP = 13, // "NOPVP" - No-PvP Zone (Green)
-    ZoneNoLogout = 14, // "NOLOG" - No-Logout Zone (Orange)
-    ZonePvP = 15, // "PVP"   - PvP Zone (Red)
-    House = 16, // "HOUSE" - House Tile (Amber)
-    GuildHall = 17, // "GUILD" - Guildhall Tile (Orange)
-    MissingGround = 18 // "NO GROUND" - Missing Ground Tile (Yellow)
+	None = 0,
+	HouseEntry = 1,          // "ENTRY" - Blue frame + wash
+	Spawn = 2,               // "SPAWN" - Purple frame + wash
+	TownTemple = 3,          // "TOWN"  - Gold frame + wash
+	Waypoint = 4,            // "WAYPT" - Cyan frame + wash
+	TechInvisibleStair = 5,  // "STAIR" - Yellow frame + wash
+	TechInvisibleWalkable = 6,// "WALK"  - Cyan frame + wash
+	TechInvisibleWall = 7,   // "BLOCK" - Red frame + wash
+	TechPrimalLight = 8,     // "LIGHT" - Sky blue frame + wash
+	InvalidGround = 9,       // Flat red wash (Missing ground tile)
+	InvalidItem = 10,        // Flat orange wash (Missing top item)
+	InvalidZone = 11,        // Flat magenta wash (Invalid zone flags)
+	ZonePZ = 12,             // "PZ"    - Protection Zone (Gold/Yellow)
+	ZoneNoPvP = 13,          // "NOPVP" - No-PvP Zone (Green)
+	ZoneNoLogout = 14,       // "NOLOG" - No-Logout Zone (Orange)
+	ZonePvP = 15,            // "PVP"   - PvP Zone (Red)
+	House = 16,              // "HOUSE" - House Tile (Amber)
+	GuildHall = 17,          // "GUILD" - Guildhall Tile (Orange)
+	MissingGround = 18       // "NO GROUND" - Missing Ground Tile (Yellow)
 };
+
 
 /**
  * @brief Separate Server and Client ID filters for technical items.
@@ -141,11 +142,11 @@ inline constexpr IndicatorBadgeStyle GetIndicatorBadgeStyle(TileIndicatorType ty
 			return { "house", "h", 89, 191, 13, 89, 191, 13, 128, 199, 240, 169, 27, 57, 4 };
 		case TileIndicatorType::GuildHall:
 			return { "guild", "g", 255, 122, 0, 255, 122, 0, 128, 255, 215, 166, 77, 37, 0 };
-        case TileIndicatorType::MissingGround:
-            return {"no ground", "ng", 255, 204, 0, 255, 204, 0, 128, 255, 235, 166, 77, 61, 0};
-        default:
-            return {"?", "?", 200, 200, 200, 100, 100, 100, 128, 240, 240, 240, 50, 50, 50};
-    }
+		case TileIndicatorType::MissingGround:
+			return { "no ground", "ng", 255, 204, 0, 255, 204, 0, 128, 255, 235, 166, 77, 61, 0 };
+		default:
+			return { "?", "?", 200, 200, 200, 100, 100, 100, 128, 240, 240, 240, 50, 50, 50 };
+	}
 }
 
 } // namespace rme::rendering

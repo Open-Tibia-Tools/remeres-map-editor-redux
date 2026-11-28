@@ -357,7 +357,9 @@ TEST_CASE("SearchEngine::Execute groups Missing Grounds per item, creature, spaw
 
     REQUIRE(groups[1].name == "Empty Tiles");
     REQUIRE(groups[1].id == 0);
+    REQUIRE(groups[1].use_missing_ground_badge);
     REQUIRE(groups[1].children.size() == 1);
+    REQUIRE(groups[1].children[0].use_missing_ground_badge);
 
     REQUIRE(groups[2].name == "Rat");
     REQUIRE(groups[2].is_creature);

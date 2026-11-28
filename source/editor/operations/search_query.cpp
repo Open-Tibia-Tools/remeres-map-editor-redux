@@ -280,12 +280,14 @@ void SortSearchGroups(std::vector<SearchResultGroup>& groups) {
 		} else if (entry.subtitle.starts_with("Spawn ")) {
 			if (spawn_group.name.empty()) {
 				spawn_group.name = "Spawns";
-			}
+                spawn_group.use_missing_ground_badge = true;
+            }
 			spawn_group.children.push_back(std::move(entry));
 		} else {
 			if (empty_group.name.empty()) {
 				empty_group.name = "Empty Tiles";
-			}
+                empty_group.use_missing_ground_badge = true;
+            }
 			empty_group.children.push_back(std::move(entry));
 		}
 	}
@@ -403,9 +405,11 @@ std::vector<SearchResultChildEntry> SearchEngine::FindMissingGrounds(const Map& 
                       child.group_name = creature_name;
                       child.subtitle = std::format("Creature: {} ({})", creature_name, reason_text);
                   } else if (ctile != nullptr && ctile->spawn != nullptr) {
+                      child.use_missing_ground_badge = true;
                       child.subtitle = std::format("Spawn ({})", reason_text);
                   }
                   if (child.subtitle.empty()) {
+                      child.use_missing_ground_badge = true;
                       child.subtitle = std::format("Empty tile ({})", reason_text);
                   }
                   local.push_back(std::move(child));

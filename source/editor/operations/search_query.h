@@ -73,6 +73,7 @@ struct SearchResultChildEntry {
 	std::string subtitle;
 	const Brush* brush = nullptr; // For creature brush rendering if creature
 	bool is_creature = false;
+    bool use_missing_ground_badge = false;
     std::string group_name; // Explicit grouping key (avoids parsing display subtitles)
 };
 
@@ -85,7 +86,8 @@ struct SearchResultGroup {
 	std::string id_str;
 	const Brush* brush = nullptr;
 	bool is_creature = false;
-	bool expanded = false;
+    bool use_missing_ground_badge = false;
+    bool expanded = false;
 	std::vector<SearchResultChildEntry> children;
 };
 

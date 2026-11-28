@@ -118,13 +118,12 @@ void SearchCardDrawer::DrawGroupHeader(
 	const wxRect icon_rect(icon_x, icon_y, icon_sz, icon_sz);
 
 	const int tex = GetTextureForGroup(vg, canvas, group);
-    const auto badge
-        = (group.id == 0 && !group.is_creature && !group.children.empty() && group.children[0].kind == SearchResultKind::MissingGround)
-        ? rme::rendering::TileIndicatorType::MissingGround
-        : rme::rendering::TileIndicatorType::None;
-    rme::ui::grid::DrawCellIcon(vg, icon_rect, tex, badge);
+	const auto badge = group.use_missing_ground_badge
+		? rme::rendering::TileIndicatorType::MissingGround
+		: rme::rendering::TileIndicatorType::None;
+	rme::ui::grid::DrawCellIcon(vg, icon_rect, tex, badge);
 
-    // 4. Group Name
+	// 4. Group Name
 	const float text_x = static_cast<float>(icon_x + icon_sz + dip_8);
 	const float badge_w = static_cast<float>(dip_80);
 	const float avail_w = std::max(20.0f, static_cast<float>(drawn.x + drawn.width) - text_x - badge_w);
@@ -192,11 +191,14 @@ void SearchCardDrawer::DrawAttributeTokens(
 			"Pickupable",
 			accent_wx
 		};
-    } else if (child.kind == SearchResultKind::MissingGround) {
-        tokens[token_count++] = {child.subtitle.empty() ? std::string_view("Missing Ground") : std::string_view(child.subtitle), accent_wx};
-    }
+	} else if (child.kind == SearchResultKind::MissingGround) {
+		tokens[token_count++] = {
+			child.subtitle.empty() ? std::string_view("Missing Ground") : std::string_view(child.subtitle),
+			accent_wx
+		};
+	}
 
-    if (child.unique_id > 0) {
+	if (child.unique_id > 0) {
 		auto res = std::format_to_n(buf_storage[token_count].data(), buf_storage[token_count].size() - 1,
 			"UID: {}", child.unique_id);
 		*res.out = '\0';
@@ -404,12 +406,12 @@ void SearchCardDrawer::DrawChildCard(
 			tex = canvas->GetOrCreateItemImage(child.item_id, child.subtype);
 		}
 	}
-    const auto child_badge = (child.kind == SearchResultKind::MissingGround && child.item_id == 0)
-        ? rme::rendering::TileIndicatorType::MissingGround
-        : rme::rendering::TileIndicatorType::None;
-    rme::ui::grid::DrawCellIcon(vg, slot_rect, tex, child_badge);
+	const auto child_badge = child.use_missing_ground_badge
+		? rme::rendering::TileIndicatorType::MissingGround
+		: rme::rendering::TileIndicatorType::None;
+	rme::ui::grid::DrawCellIcon(vg, slot_rect, tex, child_badge);
 
-    // 3. Text section next to 32x32 icon
+	// 3. Text section next to 32x32 icon
 	nvgSave(vg);
 	nvgScissor(vg, static_cast<float>(geo.content_x), static_cast<float>(drawn.y),
 		static_cast<float>(drawn.x + drawn.width - geo.content_x - dip_8), static_cast<float>(drawn.height));
