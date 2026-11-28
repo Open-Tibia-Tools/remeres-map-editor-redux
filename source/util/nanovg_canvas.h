@@ -7,6 +7,7 @@
 #include <list>
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 #include "rendering/core/graphics.h"
 
@@ -94,7 +95,7 @@ public:
 		return m_nvg.get();
 	}
 
-	int GetOrCreateItemImage(uint16_t itemId);
+	int GetOrCreateItemImage(uint16_t itemId, std::optional<uint16_t> subtype = std::nullopt);
 
 	/**
 	 * @brief Gets or creates a cached NanoVG image for a static asset.

@@ -1,4 +1,5 @@
 #include "ui/menubar/view_settings_handler.h"
+#include "editor/operations/magic_wand_plan.h"
 #include "rendering/core/floor_visibility_mode.h"
 #include "ui/main_menubar.h"
 #include "ui/gui.h"
@@ -48,6 +49,10 @@ void ViewSettingsHandler::LoadValues() {
 	menuBar->CheckItem(SELECT_METHOD_STANDARD, !pixel_perfect);
 	menuBar->CheckItem(SELECT_METHOD_PIXEL_PERFECT, pixel_perfect);
 
+	const MagicWand::SearchMode wand_mode = MagicWand::SanitizeSearchMode(g_settings.getInteger(Config::MAGIC_WAND_MODE));
+	menuBar->CheckItem(SELECT_MAGIC_WAND_VIEWPORT, wand_mode == MagicWand::SearchMode::Viewport);
+	menuBar->CheckItem(SELECT_MAGIC_WAND_NEIGHBOUR, wand_mode == MagicWand::SearchMode::Neighbour);
+
 	menuBar->CheckItem(AUTOMAGIC, g_settings.getBoolean(Config::USE_AUTOMAGIC));
 
 	const bool supports_zones = g_gui.IsEditorOpen() && g_gui.GetCurrentMap().supportsZones();
@@ -59,6 +64,7 @@ void ViewSettingsHandler::LoadValues() {
 	menuBar->CheckItem(SHOW_TECHNICAL_ITEMS, g_settings.getBoolean(Config::SHOW_TECHNICAL_ITEMS));
 	menuBar->CheckItem(SHOW_INVALID_TILES, g_settings.getBoolean(Config::SHOW_INVALID_TILES));
 	menuBar->CheckItem(SHOW_INVALID_ZONES, g_settings.getBoolean(Config::SHOW_INVALID_ZONES));
+	menuBar->CheckItem(SHOW_MISSING_GROUND, g_settings.getBoolean(Config::SHOW_MISSING_GROUND));
 	menuBar->CheckItem(SHOW_WAYPOINTS, g_settings.getBoolean(Config::SHOW_WAYPOINTS));
 	menuBar->CheckItem(SHOW_SCRIPT_MARKERS, g_settings.getBoolean(Config::SHOW_SCRIPT_MARKERS));
 	menuBar->CheckItem(SHOW_DEPOT_MARKERS, g_settings.getBoolean(Config::SHOW_DEPOT_MARKERS));
@@ -169,6 +175,7 @@ void ViewSettingsHandler::OnChangeViewSettings(wxCommandEvent& event) {
 	g_settings.setInteger(Config::SHOW_TOWNS, menuBar->IsItemChecked(SHOW_TOWNS));
 
 	g_settings.setInteger(Config::SHOW_INVALID_ZONES, menuBar->IsItemChecked(SHOW_INVALID_ZONES));
+	g_settings.setInteger(Config::SHOW_MISSING_GROUND, menuBar->IsItemChecked(SHOW_MISSING_GROUND));
 	g_settings.setInteger(Config::ALWAYS_SHOW_ZONES, menuBar->IsItemChecked(ALWAYS_SHOW_ZONES));
 
 	if (supports_zones) {
@@ -228,13 +235,7 @@ void ViewSettingsHandler::OnToolbars(wxCommandEvent& event) {
 
 void ViewSettingsHandler::OnToggleAutomagic(wxCommandEvent& WXUNUSED(event)) {
 	using namespace MenuBar;
-	g_settings.setInteger(Config::USE_AUTOMAGIC, menuBar->IsItemChecked(AUTOMAGIC));
-	g_settings.setInteger(Config::BORDER_IS_GROUND, menuBar->IsItemChecked(AUTOMAGIC));
-	if (g_settings.getInteger(Config::USE_AUTOMAGIC)) {
-		g_gui.SetStatusText("Automagic enabled.");
-	} else {
-		g_gui.SetStatusText("Automagic disabled.");
-	}
+	g_gui.SetAutoborderEnabled(menuBar->IsItemChecked(AUTOMAGIC));
 }
 
 void ViewSettingsHandler::OnSelectionTypeChange(wxCommandEvent& WXUNUSED(event)) {
@@ -255,4 +256,17 @@ void ViewSettingsHandler::OnSelectionMethodChange(wxCommandEvent& WXUNUSED(event
 	const bool pixel_perfect = menuBar->IsItemChecked(SELECT_METHOD_PIXEL_PERFECT);
 	g_settings.setInteger(Config::PIXEL_PERFECT_SELECTION, pixel_perfect ? 1 : 0);
 	g_gui.RefreshView();
+}
+
+void ViewSettingsHandler::OnMagicWandModeChange(wxCommandEvent& WXUNUSED(event)) {
+	using namespace MenuBar;
+	// The two items form their own radio group, so checking one unchecks the other; the
+	// checked one is the new wand mode.
+	if (menuBar->IsItemChecked(SELECT_MAGIC_WAND_NEIGHBOUR)) {
+		g_settings.setInteger(Config::MAGIC_WAND_MODE, static_cast<int>(MagicWand::SearchMode::Neighbour));
+		g_gui.SetStatusText("Magic wand: selects only the entities connected to the click.");
+	} else {
+		g_settings.setInteger(Config::MAGIC_WAND_MODE, static_cast<int>(MagicWand::SearchMode::Viewport));
+		g_gui.SetStatusText("Magic wand: selects everything that belongs to the entity in the visible area.");
+	}
 }

@@ -9,9 +9,12 @@
 #include <wx/stattext.h>
 #include <wx/button.h>
 
+#include "editor/operations/collection_save_plan.h"
+
 #include <string>
 #include <vector>
 #include <functional>
+#include <optional>
 
 namespace rme::ui {
 
@@ -22,24 +25,20 @@ public:
 		std::function<void()> onUndo;
 		std::function<void()> onRedo;
 		std::function<void()> onClearAll;
-		std::function<void(const std::string& paletteName, const std::string& name, bool isNew, bool append, bool includeItems, bool includeBrushes)> onSave;
+		std::function<void(const std::string& paletteName, const std::string& name, bool isNew, bool append, rme::collection::CollectionInclusionMode mode)> onSave;
 	};
 
 	CollectionOptionsPanel(wxWindow* parent, Callbacks callbacks);
 	~CollectionOptionsPanel() override = default;
 
-	void UpdateCounts(size_t itemCount, size_t brushCount);
+	// coveredItemCount: staged items covered by the staged brushes.
+	void UpdateCounts(size_t itemCount, size_t brushCount, size_t coveredItemCount);
 	void RefreshPalettes();
 	void RefreshExistingTilesets();
 	void EnableAccumulate(bool enable);
 	void UpdateUndoRedo(bool canUndo, bool canRedo);
 
-	[[nodiscard]] bool IsIncludeItems() const {
-		return m_includeItemsCheck->GetValue();
-	}
-	[[nodiscard]] bool IsIncludeBrushes() const {
-		return m_includeBrushesCheck->GetValue();
-	}
+	[[nodiscard]] std::optional<rme::collection::CollectionInclusionMode> GetInclusionMode() const;
 	[[nodiscard]] std::string GetTargetPaletteName() const;
 	[[nodiscard]] std::string GetTargetTilesetName() const;
 	[[nodiscard]] bool IsCreateNew() const {
@@ -54,12 +53,14 @@ private:
 	void OnModeChanged(wxCommandEvent& event);
 	void OnNameChanged(wxCommandEvent& event);
 	void OnExistingChanged(wxCommandEvent& event);
+	void UpdateInclusionControls();
 	void UpdateFilePreview();
 	std::string GenerateDefaultTilesetName() const;
 
 	Callbacks m_callbacks;
 	size_t m_itemCount = 0;
 	size_t m_brushCount = 0;
+	size_t m_coveredItemCount = 0;
 
 	wxChoice* m_paletteChoice = nullptr;
 	wxRadioButton* m_radioNew = nullptr;
@@ -67,7 +68,9 @@ private:
 	wxTextCtrl* m_nameInput = nullptr;
 	wxChoice* m_existingChoice = nullptr;
 	wxCheckBox* m_includeItemsCheck = nullptr;
+	wxCheckBox* m_onlyUncoveredCheck = nullptr;
 	wxCheckBox* m_includeBrushesCheck = nullptr;
+	wxStaticText* m_saveSummaryLabel = nullptr;
 	wxStaticText* m_filePathLabel = nullptr;
 	wxButton* m_accumulateBtn = nullptr;
 	wxButton* m_saveBtn = nullptr;

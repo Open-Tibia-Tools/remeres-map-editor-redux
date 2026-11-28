@@ -90,7 +90,8 @@ int random(int low, int high);
 std::wstring string2wstring(const std::string& utf8string);
 std::string wstring2string(const std::wstring& widestring);
 
-// Gets position values from ClipBoard
+// Reads one position from the clipboard in any Copy Position format (see map/position_format.h).
+// The map size bounds it: x < mapWidth, y < mapHeight, z <= MAP_MAX_LAYER.
 bool posFromClipboard(Position& position, const int mapWidth = MAP_MAX_WIDTH, const int mapHeight = MAP_MAX_HEIGHT);
 
 // Returns 'yes' if the defined value is true or 'no' if it is false.

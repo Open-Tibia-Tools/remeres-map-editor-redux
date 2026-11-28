@@ -149,6 +149,12 @@ public:
 		return false;
 	}
 
+	// Whether this brush participates in Autoborder (Automagic) toggling and preview.
+	// Separate from needBorders(), which controls area tile-collection in DrawingController.
+	virtual bool supportsAutoborder() const {
+		return needBorders();
+	}
+
 	virtual bool canDrag() const {
 		return false;
 	}
@@ -206,6 +212,13 @@ protected:
 	bool visible; // Visible in any palette?
 	bool usesCollection;
 };
+
+// Numeric sort key used by the palette "Sort by ID" and collection tileset ordering:
+// RAW item id, creature outfit id, brush look id, then the internal brush id.
+[[nodiscard]] uint32_t GetBrushSortID(const Brush* brush);
+
+// Numeric sort key of a creature type: outfit look type, then look item, else 0.
+[[nodiscard]] uint32_t GetCreatureSortID(const CreatureType& type);
 
 //=============================================================================
 // Terrain brush interface

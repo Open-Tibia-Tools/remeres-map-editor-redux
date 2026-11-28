@@ -1,10 +1,11 @@
 
-#include "app/main.h"
 #include "replace_tool_window.h"
+#include "app/main.h"
+#include "ui/controls/themed_button.h"
 #include "ui/dialog_util.h"
+#include "ui/theme.h"
 #include <format>
 #include "visual_similarity_service.h"
-#include "ui/theme.h"
 
 #include "editor/editor.h"
 #include "ui/gui.h"
@@ -376,16 +377,14 @@ void ReplaceToolWindow::InitLayout() {
 	m_executeBtn = new wxButton(this, wxID_ANY, "EXECUTE REPLACE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
 	m_executeBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLAY));
 	m_executeBtn->SetDefault();
-	m_executeBtn->SetBackgroundColour(Theme::Get(Theme::Role::Accent)); // Blue
-	m_executeBtn->SetForegroundColour(*wxWHITE);
-	m_executeBtn->SetFont(Theme::GetFont(10, true));
+    ApplyThemeButtonStyle(m_executeBtn, Theme::Role::Accent, Theme::Role::TextOnAccent);
+    m_executeBtn->SetFont(Theme::GetFont(10, true));
 	footerSizer->Add(m_executeBtn, wxSizerFlags(0).Center().Border(wxLEFT, padding));
 
 	wxButton* closeBtn = new wxButton(this, wxID_ANY, "CLOSE", wxDefaultPosition, FromDIP(wxSize(-1, 32)));
 	closeBtn->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_XMARK));
-	closeBtn->SetBackgroundColour(wxColour(120, 120, 120)); // Gray
-	closeBtn->SetForegroundColour(*wxWHITE);
-	closeBtn->SetFont(Theme::GetFont(10, true));
+    ApplyThemeButtonStyle(closeBtn, Theme::Role::SecondaryButton, Theme::Role::Text);
+    closeBtn->SetFont(Theme::GetFont(10, true));
 	footerSizer->Add(closeBtn, wxSizerFlags(0).Center().Border(wxLEFT, padding));
 
 	// ---------------------------------------------------------

@@ -62,6 +62,7 @@ struct DrawingOptions {
 	bool show_light_str;
 	bool show_tech_items;
 	bool show_invalid_tiles;
+	bool show_missing_ground;
 	bool show_invalid_zones;
 	bool show_waypoints;
 	uint8_t server_marker_kinds; // rme::srv::MarkerKindSet: the server marker kinds shown (sector maps)

@@ -2,21 +2,21 @@
 // This file is part of Remere's Map Editor
 //////////////////////////////////////////////////////////////////////
 
-#include "app/definitions.h"
 #include "rendering/core/game_sprite.h"
+#include "app/definitions.h"
 #include "rendering/core/graphics.h"
+#include "rendering/core/normal_image.h"
 #include "rendering/core/outfit_colorizer.h"
 #include "rendering/core/outfit_colors.h"
-#include "rendering/core/normal_image.h"
-#include "rendering/core/template_image.h"
 #include "rendering/core/sprite_decoder.h"
 #include "rendering/core/sprite_layout_calculator.h"
-#include <spdlog/spdlog.h>
-#include <atomic>
+#include "rendering/core/template_image.h"
 #include <algorithm>
+#include <atomic>
 #include <numeric>
 #include <ranges>
 #include <span>
+#include <spdlog/spdlog.h>
 
 GameSprite::GameSprite() :
 	id(0),
@@ -45,7 +45,7 @@ ImageDimensions GameSprite::GetSize() const {
 void GameSprite::invalidateMetricCaches() {
 	geometry_cache_dirty = true;
 	plain_layout_cache_count_ = 0;
-	outfit_layout_cache_count_ = 0;
+    outfit_layout_cache_count_ = 0;
 }
 
 void GameSprite::ColorizeTemplatePixels(uint8_t* dest, const uint8_t* mask, size_t pixelCount, int lookHead, int lookBody, int lookLegs, int lookFeet, bool destHasAlpha) {

@@ -133,6 +133,7 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	if (options.isChunkBakeDirty()) {
 		spdlog::info("[MapDrawer] options.isChunkBakeDirty() triggered chunk_cache_manager.invalidateAll()");
 		chunk_cache_manager.invalidateAll();
+		zone_overlay_drawer.invalidateMissingGroundCache();
 		InvalidateOverlays();
 		options.clearChunkBakeDirty();
 	}
@@ -149,6 +150,8 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 	chunk_cache_manager.advanceFrame(view.floor);
 	chunk_cache_manager.updateDirtyState(editor.map.getChangeTracker());
 	light_drawer.updateDirtyState(editor.map.getChangeTracker());
+	zone_overlay_drawer.advanceMissingGroundCacheFrame(view.floor);
+	zone_overlay_drawer.syncMissingGroundCache(editor.map.getChangeTracker(), editor.map, options.show_missing_ground);
 
 	creature_name_drawer.clear();
 	options.transient_selection_bounds = std::nullopt;
@@ -202,7 +205,8 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 		options.house_active_color,
 		options.house_inactive_color,
 		options.extended_pathing_shader,
-		options.zone_blocking_blend_mode
+		options.zone_blocking_blend_mode,
+		options.show_missing_ground && !options.ingame
 	);
 	primitive_renderer.setProjectionMatrix(view.projectionMatrix);
 
@@ -398,6 +402,10 @@ void MapDrawer::DrawDoorIndicators(NVGcontext* vg) {
 
 void MapDrawer::DrawUIOverlays(NVGcontext* vg) {
 	lua_overlay_drawer.DrawUI(vg, view, options);
+}
+
+void MapDrawer::DrawLassoOverlay(NVGcontext* vg, std::span<const LassoScreenPoint> points, std::span<const std::uint8_t> handle_vertices, LassoScreenPoint cursor, const LassoOverlayStyle& style) {
+	lasso_overlay_drawer.draw(vg, points, handle_vertices, cursor, style);
 }
 
 void MapDrawer::DrawCreatureNames(NVGcontext* vg) {

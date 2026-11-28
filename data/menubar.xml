@@ -65,7 +65,7 @@
 		<item name="Replace Items..." hotkey="Ctrl+Shift+F" action="REPLACE_ITEMS" help="Replaces all occurrences of one item with another."/>
 		<separator/>
 		<menu name="Border Options">
-			<item name="Border Automagic" hotkey="A" action="AUTOMAGIC" help="Turns on all automatic border functions."/>
+			<item name="Autoborder" hotkey="A" action="AUTOMAGIC" help="Turns on all automatic border functions."/>
 			<separator/>
 			<item name="Borderize Selection" hotkey="Ctrl+B" action="BORDERIZE_SELECTION" help="Creates automatic borders in the entire selected area."/>
 			<item name="Borderize Map" action="BORDERIZE_MAP" help="Reborders the entire map."/>
@@ -103,6 +103,7 @@
 		<item name="Find Teleports" action="SEARCH_ON_MAP_TELEPORT" help="Find all teleporters on map."/>
 		<item name="Find Creatures" action="SEARCH_ON_MAP_CREATURE" help="Find all creatures on map."/>
 		<item name="Find Pickupable Items" action="SEARCH_ON_MAP_PICKUPABLE" help="Find all pickupable items on map."/>
+		<item name="Find Missing Grounds" action="SEARCH_ON_MAP_MISSING_GROUND" help="Find tiles without ground enclosed by grounded neighbours on map."/>
 		<separator/>
 		<item name="Find Everything" action="SEARCH_ON_MAP_EVERYTHING" help="Find all items with unique ID, action ID, containers, writeables, or teleports on map."/>
 		<separator/>
@@ -146,6 +147,10 @@
 			<item name="Standard Selection" action="SELECT_METHOD_STANDARD" help="Select the top entity on the clicked tile."/>
 			<item name="Pixel Perfect Selection" action="SELECT_METHOD_PIXEL_PERFECT" help="Use sprite hit testing to select the exact item visible under the cursor."/>
 		</menu>
+		<menu name="Magic Wand Selection (Tab)">
+			<item name="Magic Wand (Viewport)" action="SELECT_MAGIC_WAND_VIEWPORT" help="Hold Tab and click an entity to select everything that belongs to it in the visible area, adjacent or not: every matching ground with its border pieces, wall, carpet, table, doodad, creature or item name. Ctrl adds to the selection. Works in drawing mode too; in selection mode Shift still drags a rectangle and Alt still draws a lasso."/>
+			<item name="Magic Wand (Neighbour)" action="SELECT_MAGIC_WAND_NEIGHBOUR" help="Hold Tab and click an entity to select only the part connected to it: the ground patch with the border pieces around it, the wall, carpet or table run, or the same-name items touching the click. Ctrl adds to the selection. Works in drawing mode too; in selection mode Shift still drags a rectangle and Alt still draws a lasso."/>
+		</menu>
 		<separator/>
 		<item name="Borderize Selection" action="BORDERIZE_SELECTION" help="Creates automatic borders in the entire selected area."/>
 		<item name="Randomize Selection" action="RANDOMIZE_SELECTION" help="Randomizes the ground tiles of the selected area."/>
@@ -181,6 +186,7 @@
 		<item name="Show Technical Items" hotkey="Shift+T" action="SHOW_TECHNICAL_ITEMS" help="Shows some of special items that are not visible in game."/>
 		<item name="Show Invalid Tiles" hotkey="" action="SHOW_INVALID_TILES" help="Show preserved invalid OTBM content as tile overlays."/>
 		<item name="Show Invalid Zones" hotkey="" action="SHOW_INVALID_ZONES" help="Show invalid tile flags and opaque OTBM tile fragments as magenta overlays."/>
+		<item name="Show Missing Ground" hotkey="" action="SHOW_MISSING_GROUND" help="Highlight hidden or structural missing-ground tiles."/>
 		<separator/>
 		<item name="Show creatures" hotkey="F" action="SHOW_CREATURES" help="Show creatures on the map."/>
 		<item name="Show spawns" hotkey="S" action="SHOW_SPAWNS" help="Show spawns on the map."/>

@@ -11,6 +11,7 @@
 
 #define NANOVG_GL3_IMPLEMENTATION
 #include "util/nvg_utils.h"
+#include "game/subtype_pattern.h"
 #include <nanovg_gl.h>
 #include "rendering/core/graphics.h"
 #include "ui/icons/sprite_icon_service.h"
@@ -191,8 +192,13 @@ void NanoVGCanvas::SetScrollPosition(int pos) {
 	Refresh();
 }
 
-int NanoVGCanvas::GetOrCreateItemImage(uint16_t itemId) {
-	int tex = GetCachedImage(itemId);
+int NanoVGCanvas::GetOrCreateItemImage(uint16_t itemId, std::optional<uint16_t> subtype) {
+	const auto slot = NvgUtils::GetCompositeSlot(itemId, subtype);
+	// m_imageCache is shared with outfit (lookType << 16), icon and sprite pointer keys.
+	// Tag item keys so their 26-bit range cannot overlap those spaces.
+	constexpr uint64_t kItemImageKeyTag = 1ULL << 62;
+	const uint64_t imageKey = kItemImageKeyTag | slot.CacheKey(itemId);
+	int tex = GetCachedImage(imageKey);
 	if (tex != 0) {
 		return (tex > 0) ? tex : 0;
 	}
@@ -202,11 +208,11 @@ int NanoVGCanvas::GetOrCreateItemImage(uint16_t itemId) {
 		return 0;
 	}
 
-	tex = NvgUtils::CreateItemTexture(vg, itemId);
+	tex = NvgUtils::CreateItemTexture(vg, itemId, subtype);
 	if (tex > 0) {
-		AddCachedImage(static_cast<uint64_t>(itemId), tex);
+		AddCachedImage(imageKey, tex);
 	} else {
-		AddCachedImage(static_cast<uint64_t>(itemId), -1);
+		AddCachedImage(imageKey, -1);
 	}
 	return (tex > 0) ? tex : 0;
 }
@@ -327,7 +333,7 @@ int NanoVGCanvas::CreateGameSpriteTexture(NVGcontext* vg, GameSprite* gs, uint64
 			is_stackable = g_item_definitions.get(*sid).hasFlag(ItemFlag::Stackable);
 		}
 	}
-	const int pattern_x = (is_stackable && gs->pattern_x >= 3) ? 2 : 0;
+	const int pattern_x = is_stackable ? SubtypePattern::RepresentativeIndex(gs->pattern_x) : 0;
 	const auto metrics = gs->getPlainLayoutMetrics(-1, pattern_x, 0, 0, 0);
 	int w = metrics.total_width;
 	int h = metrics.total_height;

@@ -22,7 +22,8 @@
 
 class PositionCtrl : public wxStaticBoxSizer {
 public:
-	PositionCtrl(wxWindow* parent, const wxString& label, int x, int y, int z, int maxx = MAP_MAX_WIDTH, int maxy = MAP_MAX_HEIGHT, int maxz = MAP_MAX_LAYER);
+	// X and Y accept tile indices of a map_width x map_height map: 0 .. size - 1.
+	PositionCtrl(wxWindow* parent, const wxString& label, int x, int y, int z, int map_width = MAP_MAX_WIDTH, int map_height = MAP_MAX_HEIGHT, int maxz = MAP_MAX_LAYER);
 	~PositionCtrl();
 
 	long GetX() const {
@@ -46,18 +47,14 @@ public:
 		z_field->SetIntValue(value);
 	}
 	void SetPosition(Position pos);
+    void CheckRange();
 
-	bool Enable(bool enable = true);
-
-	void OnClipboardText(wxClipboardTextEvent&);
+    bool Enable(bool enable = true);
 
 protected:
 	NumberTextCtrl* x_field;
 	NumberTextCtrl* y_field;
 	NumberTextCtrl* z_field;
-
-private:
-	int maxWidth, maxHeight;
 };
 
 #endif

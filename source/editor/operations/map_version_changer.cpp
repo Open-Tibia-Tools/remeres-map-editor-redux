@@ -85,7 +85,7 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 				target = ClientVersion::getBestMatch(new_ver.client);
 			}
 			if (!target || !g_version.LoadVersion(target->getID(), error, warnings)) {
-				DialogUtil::ListDialog(parent, "Warnings", warnings);
+				DialogUtil::LoadWarningsDialog(parent, "Warnings", warnings);
 				if (error.empty() && !target) {
 					error = "No compatible client version found for this protocol.";
 				}
@@ -94,6 +94,7 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 
 				return false;
 			}
+			DialogUtil::LoadWarningsDialog(parent, "Warnings", warnings);
 
 			// Remove all creatures that were present are present in the new version
 			std::erase_if(conversion_context.creature_types, [](const auto& pair) {
@@ -117,7 +118,7 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 				target = ClientVersion::getBestMatch(new_ver.client);
 			}
 			if (!target || !g_version.LoadVersion(target->getID(), error, warnings)) {
-				DialogUtil::ListDialog(parent, "Warnings", warnings);
+				DialogUtil::LoadWarningsDialog(parent, "Warnings", warnings);
 				if (error.empty() && !target) {
 					error = "No compatible client version found for this protocol.";
 				}
@@ -126,6 +127,7 @@ bool MapVersionChanger::changeMapVersion(wxWindow* parent, Editor& editor, MapVe
 
 				return false;
 			}
+			DialogUtil::LoadWarningsDialog(parent, "Warnings", warnings);
 			map.convert(new_ver, true);
 		}
 	} else {

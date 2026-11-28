@@ -1,39 +1,18 @@
 #include "app/preferences/general_page.h"
 
-#include <array>
-
 #include "app/main.h"
 #include "app/preferences/preferences_layout.h"
 #include "app/settings.h"
+#include "map/position_format.h"
 #include "ui/gui.h"
 
 namespace {
-constexpr std::array<const char*, 5> kPositionChoiceLabels = {
-	"Lua table",
-	"Compact JSON",
-	"CSV",
-	"Tuple",
-	"Constructor call",
-};
-
 int ClampPositionFormatSelection(int selection) {
-	return std::clamp(selection, 0, static_cast<int>(kPositionChoiceLabels.size()) - 1);
+	return static_cast<int>(PositionFormatFromSetting(selection));
 }
 
 wxString BuildPositionPreview(int selection) {
-	switch (ClampPositionFormatSelection(selection)) {
-		case 0:
-			return "{x = 512, y = 1024, z = 7}";
-		case 1:
-			return R"({"x":512,"y":1024,"z":7})";
-		case 2:
-			return "512, 1024, 7";
-		case 3:
-			return "(512, 1024, 7)";
-		case 4:
-		default:
-			return "Position(512, 1024, 7)";
-	}
+	return wxString::FromUTF8(FormatPosition(Position(512, 1024, 7), PositionFormatFromSetting(selection)));
 }
 }
 
@@ -82,6 +61,12 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Show palette editing tools for customizing tileset organization.",
 		g_settings.getBoolean(Config::SHOW_TILESET_EDITOR)
 	);
+	show_load_warnings_dialog_chkbox = PreferencesLayout::AddCheckBoxRow(
+		safety_section,
+		"Show load warnings in a dialog",
+		"When off, warnings from loading client data and maps are appended to load-warnings.log next to the editor executable (or in the user data directory if read-only) instead of blocking the load.",
+		g_settings.getBoolean(Config::SHOW_LOAD_WARNINGS_DIALOG)
+	);
 	page_sizer->Add(safety_section, wxSizerFlags().Expand().Border(wxALL, FromDIP(10)));
 
 	auto* performance_section = new PreferencesSectionPanel(
@@ -125,8 +110,8 @@ GeneralPage::GeneralPage(wxWindow* parent) : ScrollablePreferencesPage(parent) {
 		"Choose how copied map positions should be written when you paste them into scripts, notes, or chat."
 	);
 	position_format_choice = new wxChoice(clipboard_section, wxID_ANY);
-	for (const auto* label : kPositionChoiceLabels) {
-		position_format_choice->Append(wxString::FromUTF8(label));
+	for (const PositionFormatInfo& info : kPositionFormats) {
+		position_format_choice->Append(wxString::FromUTF8(info.label));
 	}
 	position_format_choice->SetSelection(ClampPositionFormatSelection(g_settings.getInteger(Config::COPY_POSITION_FORMAT)));
 	PreferencesLayout::AddControlRow(
@@ -162,6 +147,7 @@ void GeneralPage::Apply() {
 	g_settings.setInteger(Config::ALWAYS_MAKE_BACKUP, always_make_backup_chkbox->GetValue());
 	g_settings.setInteger(Config::USE_UPDATER, update_check_on_startup_chkbox->GetValue());
 	g_settings.setInteger(Config::ONLY_ONE_INSTANCE, only_one_instance_chkbox->GetValue());
+	g_settings.setInteger(Config::SHOW_LOAD_WARNINGS_DIALOG, show_load_warnings_dialog_chkbox->GetValue());
 	g_settings.setInteger(Config::UNDO_SIZE, undo_size_spin->GetValue());
 	g_settings.setInteger(Config::UNDO_MEM_SIZE, undo_mem_size_spin->GetValue());
 	g_settings.setInteger(Config::WORKER_THREADS, worker_threads_spin->GetValue());

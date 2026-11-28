@@ -4,6 +4,7 @@
 #include "app/main.h"
 #include "palette/palette_common.h"
 
+#include <cstdint>
 #include <string_view>
 #include <vector>
 #include <wx/wx.h>
@@ -18,7 +19,7 @@ class wxSpinCtrl;
 class ToolOptionsSurface : public wxPanel {
 public:
 	ToolOptionsSurface(wxWindow* parent);
-	~ToolOptionsSurface() override = default;
+	~ToolOptionsSurface() override;
 
 	void SetActiveBrush(Brush* brush);
 	void UpdateBrushSize(BrushShape shape, int size);
@@ -53,7 +54,7 @@ private:
 	[[nodiscard]] bool HasBrushSizeControls() const;
 	[[nodiscard]] bool HasThicknessControl() const;
 	[[nodiscard]] bool HasRandomizeDoodadsControl() const;
-	[[nodiscard]] bool HasPreviewBorderControl() const;
+	[[nodiscard]] bool HasAutoborderControls() const;
 	[[nodiscard]] bool HasDrawOnFloorBelowControl() const;
 	[[nodiscard]] bool HasLockDoorsControl() const;
 	[[nodiscard]] bool HasSpawnControls() const;
@@ -69,6 +70,7 @@ private:
 	void OnSizeYChanged(wxCommandEvent& event);
 	void OnExactToggled(wxCommandEvent& event);
 	void OnAspectToggled(wxCommandEvent& event);
+	void OnEnableAutoborderToggled(wxCommandEvent& event);
 	void OnPreviewBorderToggled(wxCommandEvent& event);
 	void OnDrawOnFloorBelowToggled(wxCommandEvent& event);
 	void OnDrawOnFloorBelowConfigClicked(wxCommandEvent& event);
@@ -82,6 +84,7 @@ private:
 
 	Brush* active_brush = nullptr;
 	bool mutating_ui = false;
+	uint64_t settings_observer_id = 0;
 
 	wxBoxSizer* main_sizer = nullptr;
 	wxStaticBoxSizer* main_tools_sizer = nullptr;
@@ -100,6 +103,7 @@ private:
 	wxStaticText* size_y_value = nullptr;
 	wxBitmapToggleButton* exact_button = nullptr;
 	wxBitmapToggleButton* aspect_button = nullptr;
+	wxCheckBox* enable_autoborder_checkbox = nullptr;
 	wxCheckBox* preview_border_checkbox = nullptr;
 	wxPanel* draw_below_panel = nullptr;
 	wxCheckBox* draw_on_floor_below_checkbox = nullptr;

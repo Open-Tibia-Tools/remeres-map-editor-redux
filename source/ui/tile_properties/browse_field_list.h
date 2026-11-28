@@ -29,8 +29,13 @@ public:
 	void OnClickUp(wxCommandEvent& event);
 	void OnClickDown(wxCommandEvent& event);
 	void OnClickDelete(wxCommandEvent& event);
+	void OnContextMenu(wxContextMenuEvent& event);
+	void UpdateButtons(int selection);
 
 protected:
+	// Reports the list row to the owner and makes it the editor selection (left click and context menu).
+	void ApplyListSelection();
+
 	TilePropertiesListBox* item_list;
 	wxButton* btn_up;
 	wxButton* btn_down;

@@ -1,13 +1,16 @@
 #include "item_definitions/formats/protobuf/protobuf_item_parser.h"
+#include "item_definitions/formats/protobuf/protobuf_shift_bounds.h"
 
 #include "appearances.pb.h"
 #include "app/client_version.h"
 #include "app/definitions.h"
 #include "util/json.h"
 
-#include <fstream>
 #include <format>
+#include <fstream>
 #include <limits>
+#include <spdlog/spdlog.h>
+#include <string_view>
 
 namespace {
 	using namespace canary::protobuf::appearances;
@@ -27,6 +30,15 @@ namespace {
 			}
 		}
 		return fallback;
+	}
+
+	const FrameGroup* selectWalkingFrameGroup(const Appearance& appearance, const FrameGroup* standing_group) {
+		for (const auto& frame_group : appearance.frame_group()) {
+			if (&frame_group != standing_group && frame_group.has_sprite_info() && frame_group.fixed_frame_group() == FIXED_FRAME_GROUP_OUTFIT_MOVING) {
+				return &frame_group;
+			}
+		}
+		return nullptr;
 	}
 
 	std::string buildPassiveMetadataJson(const AppearanceFlags& flags) {
@@ -132,189 +144,248 @@ namespace {
 		return metadata.empty() ? std::string {} : metadata.dump();
 	}
 
-	void applyCommonFlags(const AppearanceFlags& flags, DatCatalogEntry& entry) {
-		auto& fragment = entry.item_fragment;
-		fragment.flags = flagMask(ItemFlag::Replaceable);
-		if (!flags.unmove()) {
-			fragment.flags |= flagMask(ItemFlag::Moveable);
-		}
+    uint16_t clampShiftAxis(uint32_t value, uint32_t client_id, std::string_view axis)
+    {
+        const ProtobufShiftClampResult clamped = ClampProtobufShiftToUint16(value);
+        if (clamped.clamped) {
+            spdlog::warn(
+                "Protobuf item {} shift.{} ({}) exceeds uint16_t max {}; clamping to {}", client_id, axis, value,
+                std::numeric_limits<uint16_t>::max(), clamped.value
+            );
+        }
+        return clamped.value;
+    }
 
-		if (flags.clip() || flags.top() || flags.bottom()) {
-			fragment.flags |= flagMask(ItemFlag::AlwaysOnBottom);
-		}
-		if (flags.clip()) {
-			fragment.always_on_top_order = 1;
-		} else if (flags.bottom()) {
-			fragment.always_on_top_order = 2;
-		} else if (flags.top()) {
-			fragment.always_on_top_order = 3;
-		}
+    void applyShiftFlags(const AppearanceFlags& flags, DatCatalogEntry& entry)
+    {
+        if (!flags.has_shift()) {
+            return;
+        }
+        entry.drawoffset_x = clampShiftAxis(flags.shift().x(), entry.client_id, "x");
+        entry.drawoffset_y = clampShiftAxis(flags.shift().y(), entry.client_id, "y");
+    }
 
-		if (flags.container()) {
-			fragment.group = ITEM_GROUP_CONTAINER;
-			fragment.type = ITEM_TYPE_CONTAINER;
-		} else if (flags.liquidcontainer()) {
-			fragment.group = ITEM_GROUP_FLUID;
-		} else if (flags.liquidpool()) {
-			fragment.group = ITEM_GROUP_SPLASH;
-		} else if (flags.has_bank()) {
-			fragment.group = ITEM_GROUP_GROUND;
-		}
+    void applyCommonFlags(const AppearanceFlags& flags, DatCatalogEntry& entry)
+    {
+        auto& fragment = entry.item_fragment;
+        fragment.flags = flagMask(ItemFlag::Replaceable);
+        if (!flags.unmove()) {
+            fragment.flags |= flagMask(ItemFlag::Moveable);
+        }
 
-		if (flags.unpass()) {
-			fragment.flags |= flagMask(ItemFlag::Unpassable);
-		}
-		if (flags.unsight()) {
-			fragment.flags |= flagMask(ItemFlag::BlockMissiles);
-		}
-		if (flags.avoid()) {
-			fragment.flags |= flagMask(ItemFlag::BlockPathfinder);
-		}
-		if (flags.take()) {
-			fragment.flags |= flagMask(ItemFlag::Pickupable);
-		}
-		if (flags.hang()) {
-			fragment.flags |= flagMask(ItemFlag::IsHangable);
-		}
-		if (flags.rotate()) {
-			fragment.flags |= flagMask(ItemFlag::Rotatable);
-		}
-		if (flags.ignore_look()) {
-			fragment.flags |= flagMask(ItemFlag::IgnoreLook);
-		}
-		if (flags.cumulative()) {
-			fragment.flags |= flagMask(ItemFlag::Stackable);
-		}
-		if (flags.has_write() || flags.has_write_once()) {
-			fragment.flags |= flagMask(ItemFlag::CanReadText) | flagMask(ItemFlag::CanWriteText);
-		}
-		if (flags.has_write()) {
-			fragment.max_text_len = static_cast<uint16_t>(std::min<uint32_t>(flags.write().max_text_length(), std::numeric_limits<uint16_t>::max()));
-		}
-		if (flags.has_write_once()) {
-			const auto max_length_once = static_cast<uint16_t>(std::min<uint32_t>(flags.write_once().max_text_length_once(), std::numeric_limits<uint16_t>::max()));
-			fragment.max_text_len = std::max(fragment.max_text_len.value_or(uint16_t { 0 }), max_length_once);
-		}
-		if (flags.has_height()) {
-			fragment.flags |= flagMask(ItemFlag::HasElevation);
-		}
-		if (flags.has_hook()) {
-			if (flags.hook().direction() == HOOK_TYPE_SOUTH) {
-				fragment.flags |= flagMask(ItemFlag::HookSouth);
-			} else if (flags.hook().direction() == HOOK_TYPE_EAST) {
-				fragment.flags |= flagMask(ItemFlag::HookEast);
-			}
-		}
-		if (flags.has_clothes()) {
-			fragment.slot_position = static_cast<uint16_t>(std::min<uint32_t>(flags.clothes().slot(), std::numeric_limits<uint16_t>::max()));
-		}
+        if (flags.clip() || flags.top() || flags.bottom()) {
+            fragment.flags |= flagMask(ItemFlag::AlwaysOnBottom);
+        }
+        if (flags.clip()) {
+            fragment.always_on_top_order = 1;
+        } else if (flags.bottom()) {
+            fragment.always_on_top_order = 2;
+        } else if (flags.top()) {
+            fragment.always_on_top_order = 3;
+        }
 
-		setMappedFlag(fragment.flags, flags.forceuse(), ItemFlag::ForceUse);
-		setMappedFlag(fragment.flags, flags.multiuse(), ItemFlag::MultiUse);
-		setMappedFlag(fragment.flags, flags.usable(), ItemFlag::Usable);
-		setMappedFlag(fragment.flags, flags.no_movement_animation(), ItemFlag::NoMoveAnimation);
-		setMappedFlag(fragment.flags, flags.animate_always(), ItemFlag::AnimateAlways);
-		setMappedFlag(fragment.flags, flags.dont_hide(), ItemFlag::DontHide);
-		setMappedFlag(fragment.flags, flags.translucent(), ItemFlag::Translucent);
-		setMappedFlag(fragment.flags, flags.wrap(), ItemFlag::Wrappable);
-		setMappedFlag(fragment.flags, flags.unwrap(), ItemFlag::Unwrappable);
-		setMappedFlag(fragment.flags, flags.topeffect(), ItemFlag::TopEffect);
-		setMappedFlag(fragment.flags, flags.corpse() || flags.player_corpse(), ItemFlag::Corpse);
-		setMappedFlag(fragment.flags, flags.ammo(), ItemFlag::Ammo);
-		setMappedFlag(fragment.flags, flags.reportable(), ItemFlag::Reportable);
+        if (flags.container()) {
+            fragment.group = ITEM_GROUP_CONTAINER;
+            fragment.type = ITEM_TYPE_CONTAINER;
+        } else if (flags.liquidcontainer()) {
+            fragment.group = ITEM_GROUP_FLUID;
+        } else if (flags.liquidpool()) {
+            fragment.group = ITEM_GROUP_SPLASH;
+        } else if (flags.has_bank()) {
+            fragment.group = ITEM_GROUP_GROUND;
+        }
 
-		entry.draw_height = flags.has_height() ? static_cast<uint16_t>(flags.height().elevation()) : 0;
-		entry.minimap_color = flags.has_automap() ? static_cast<uint16_t>(flags.automap().color()) : 0;
-		if (flags.has_shift()) {
-			entry.drawoffset_x = static_cast<uint16_t>(flags.shift().x());
-			entry.drawoffset_y = static_cast<uint16_t>(flags.shift().y());
-		}
-		if (flags.has_light()) {
-			entry.has_light = true;
-			entry.light.intensity = static_cast<uint8_t>(std::min<uint32_t>(flags.light().brightness(), 255));
-			entry.light.color = static_cast<uint8_t>(std::min<uint32_t>(flags.light().color(), 255));
-		}
+        if (flags.unpass()) {
+            fragment.flags |= flagMask(ItemFlag::Unpassable);
+        }
+        if (flags.unsight()) {
+            fragment.flags |= flagMask(ItemFlag::BlockMissiles);
+        }
+        if (flags.avoid()) {
+            fragment.flags |= flagMask(ItemFlag::BlockPathfinder);
+        }
+        if (flags.take()) {
+            fragment.flags |= flagMask(ItemFlag::Pickupable);
+        }
+        if (flags.hang()) {
+            fragment.flags |= flagMask(ItemFlag::IsHangable);
+        }
+        if (flags.rotate()) {
+            fragment.flags |= flagMask(ItemFlag::Rotatable);
+        }
+        if (flags.ignore_look()) {
+            fragment.flags |= flagMask(ItemFlag::IgnoreLook);
+        }
+        if (flags.cumulative()) {
+            fragment.flags |= flagMask(ItemFlag::Stackable);
+        }
+        if (flags.has_write() || flags.has_write_once()) {
+            fragment.flags |= flagMask(ItemFlag::CanReadText) | flagMask(ItemFlag::CanWriteText);
+        }
+        if (flags.has_write()) {
+            fragment.max_text_len
+                = static_cast<uint16_t>(std::min<uint32_t>(flags.write().max_text_length(), std::numeric_limits<uint16_t>::max()));
+        }
+        if (flags.has_write_once()) {
+            const auto max_length_once = static_cast<uint16_t>(
+                std::min<uint32_t>(flags.write_once().max_text_length_once(), std::numeric_limits<uint16_t>::max())
+            );
+            fragment.max_text_len = std::max(fragment.max_text_len.value_or(uint16_t {0}), max_length_once);
+        }
+        if (flags.has_height()) {
+            fragment.flags |= flagMask(ItemFlag::HasElevation);
+        }
+        if (flags.has_hook()) {
+            if (flags.hook().direction() == HOOK_TYPE_SOUTH) {
+                fragment.flags |= flagMask(ItemFlag::HookSouth);
+            } else if (flags.hook().direction() == HOOK_TYPE_EAST) {
+                fragment.flags |= flagMask(ItemFlag::HookEast);
+            }
+        }
+        if (flags.has_clothes()) {
+            fragment.slot_position
+                = static_cast<uint16_t>(std::min<uint32_t>(flags.clothes().slot(), std::numeric_limits<uint16_t>::max()));
+        }
 
-		fragment.passive_metadata_json = buildPassiveMetadataJson(flags);
-	}
+        setMappedFlag(fragment.flags, flags.forceuse(), ItemFlag::ForceUse);
+        setMappedFlag(fragment.flags, flags.multiuse(), ItemFlag::MultiUse);
+        setMappedFlag(fragment.flags, flags.usable(), ItemFlag::Usable);
+        setMappedFlag(fragment.flags, flags.no_movement_animation(), ItemFlag::NoMoveAnimation);
+        setMappedFlag(fragment.flags, flags.animate_always(), ItemFlag::AnimateAlways);
+        setMappedFlag(fragment.flags, flags.dont_hide(), ItemFlag::DontHide);
+        setMappedFlag(fragment.flags, flags.translucent(), ItemFlag::Translucent);
+        setMappedFlag(fragment.flags, flags.wrap(), ItemFlag::Wrappable);
+        setMappedFlag(fragment.flags, flags.unwrap(), ItemFlag::Unwrappable);
+        setMappedFlag(fragment.flags, flags.topeffect(), ItemFlag::TopEffect);
+        setMappedFlag(fragment.flags, flags.corpse() || flags.player_corpse(), ItemFlag::Corpse);
+        setMappedFlag(fragment.flags, flags.ammo(), ItemFlag::Ammo);
+        setMappedFlag(fragment.flags, flags.reportable(), ItemFlag::Reportable);
 
-	void applyAnimation(const SpriteAnimation& animation, DatCatalogEntry& entry) {
-		if (animation.sprite_phase_size() == 0) {
-			return;
-		}
+        entry.draw_height = flags.has_height() ? static_cast<uint16_t>(flags.height().elevation()) : 0;
+        entry.minimap_color = flags.has_automap() ? static_cast<uint16_t>(flags.automap().color()) : 0;
+        applyShiftFlags(flags, entry);
+        if (flags.has_light()) {
+            entry.has_light = true;
+            entry.light.intensity = static_cast<uint8_t>(std::min<uint32_t>(flags.light().brightness(), 255));
+            entry.light.color = static_cast<uint8_t>(std::min<uint32_t>(flags.light().color(), 255));
+        }
 
-		DatAnimationInfo animation_info;
-		animation_info.asynchronous = !animation.synchronized();
-		if (animation.has_loop_type() && animation.loop_type() == ANIMATION_LOOP_TYPE_PINGPONG) {
-			animation_info.loop_count = -1;
-		} else {
-			animation_info.loop_count = static_cast<int>(animation.loop_count());
-		}
-		if (animation.random_start_phase()) {
-			animation_info.start_frame = 255;
-		} else {
-			animation_info.start_frame = static_cast<int16_t>(animation.default_start_phase());
-		}
-		animation_info.frame_durations.reserve(animation.sprite_phase_size());
-		for (const auto& phase : animation.sprite_phase()) {
-			animation_info.frame_durations.push_back(DatAnimationFrameDuration {
-				.minimum = phase.duration_min(),
-				.maximum = phase.duration_max(),
-			});
-		}
-		entry.animation = std::move(animation_info);
-	}
+        fragment.passive_metadata_json = buildPassiveMetadataJson(flags);
+    }
 
-	bool fillEntry(const Appearance& appearance, uint32_t client_id, DatCatalogEntry& entry, DatCatalog& catalog, bool apply_item_flags) {
-		entry = {};
-		entry.client_id = client_id;
-		entry.item_fragment.client_id = static_cast<ClientItemId>(client_id);
-		entry.width = 1;
-		entry.height = 1;
-		entry.pattern_x = 1;
-		entry.pattern_y = 1;
-		entry.pattern_z = 1;
-		entry.layers = 1;
-		entry.frames = 1;
+    void applyAnimation(const SpriteAnimation& animation, std::optional<DatAnimationInfo>& target)
+    {
+        if (animation.sprite_phase_size() == 0) {
+            return;
+        }
 
-		const FrameGroup* frame_group = selectFrameGroup(appearance);
-		if (!frame_group || !frame_group->has_sprite_info()) {
-			return false;
-		}
+        DatAnimationInfo animation_info;
+        animation_info.asynchronous = !animation.synchronized();
+        if (animation.has_loop_type() && animation.loop_type() == ANIMATION_LOOP_TYPE_PINGPONG) {
+            animation_info.loop_count = -1;
+        } else {
+            animation_info.loop_count = static_cast<int>(animation.loop_count());
+        }
+        if (animation.random_start_phase()) {
+            animation_info.start_frame = 255;
+        } else {
+            animation_info.start_frame = static_cast<int16_t>(animation.default_start_phase());
+        }
+        animation_info.frame_durations.reserve(animation.sprite_phase_size());
+        for (const auto& phase : animation.sprite_phase()) {
+            animation_info.frame_durations.push_back(
+                DatAnimationFrameDuration {
+                    .minimum = phase.duration_min(),
+                    .maximum = phase.duration_max(),
+                }
+            );
+        }
+        target = std::move(animation_info);
+    }
 
-		const auto& sprite_info = frame_group->sprite_info();
-		entry.pattern_x = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_width()));
-		entry.pattern_y = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_height()));
-		entry.pattern_z = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_depth()));
-		entry.layers = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.layers()));
-		entry.frames = static_cast<uint8_t>(std::max<int>(1, sprite_info.animation().sprite_phase_size()));
-		entry.numsprites = static_cast<uint32_t>(sprite_info.sprite_id_size());
-		entry.sprite_ids.assign(sprite_info.sprite_id().begin(), sprite_info.sprite_id().end());
-		for (uint32_t sprite_id : entry.sprite_ids) {
-			catalog.max_sprite_id = std::max(catalog.max_sprite_id, sprite_id);
-		}
+    void fillWalkingGroup(const FrameGroup& frame_group, DatCatalogEntry& entry, DatCatalog& catalog)
+    {
+        const auto& sprite_info = frame_group.sprite_info();
+        if (sprite_info.sprite_id_size() == 0) {
+            return;
+        }
 
-		if (sprite_info.has_animation()) {
-			applyAnimation(sprite_info.animation(), entry);
-		}
+        DatFrameGroup group;
+        group.width = 1;
+        group.height = 1;
+        group.pattern_x = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_width()));
+        group.pattern_y = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_height()));
+        group.pattern_z = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_depth()));
+        group.layers = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.layers()));
+        group.frames = static_cast<uint8_t>(std::max<int>(1, sprite_info.animation().sprite_phase_size()));
+        group.numsprites = static_cast<uint32_t>(sprite_info.sprite_id_size());
+        group.sprite_ids.assign(sprite_info.sprite_id().begin(), sprite_info.sprite_id().end());
+        for (uint32_t sprite_id : group.sprite_ids) {
+            catalog.max_sprite_id = std::max(catalog.max_sprite_id, sprite_id);
+        }
+        if (sprite_info.has_animation()) {
+            applyAnimation(sprite_info.animation(), group.animation);
+        }
+        entry.walking_group = std::move(group);
+    }
 
-		if (appearance.has_flags()) {
-			if (appearance.flags().has_shift()) {
-				entry.drawoffset_x = static_cast<uint16_t>(appearance.flags().shift().x());
-				entry.drawoffset_y = static_cast<uint16_t>(appearance.flags().shift().y());
-			}
-		}
+    bool fillEntry(
+        const Appearance& appearance, uint32_t client_id, DatCatalogEntry& entry, DatCatalog& catalog, bool apply_item_flags,
+        bool load_walking_group
+    )
+    {
+        entry = {};
+        entry.client_id = client_id;
+        entry.item_fragment.client_id = static_cast<ClientItemId>(client_id);
+        entry.width = 1;
+        entry.height = 1;
+        entry.pattern_x = 1;
+        entry.pattern_y = 1;
+        entry.pattern_z = 1;
+        entry.layers = 1;
+        entry.frames = 1;
 
-		if (appearance.has_flags() && apply_item_flags) {
-			applyCommonFlags(appearance.flags(), entry);
-			if (appearance.flags().show_off_socket()) {
-				entry.item_fragment.type = ITEM_TYPE_PODIUM;
-				entry.item_fragment.group = ITEM_GROUP_PODIUM;
-			}
-		}
+        const FrameGroup* frame_group = selectFrameGroup(appearance);
+        if (!frame_group || !frame_group->has_sprite_info()) {
+            return false;
+        }
 
-		return entry.numsprites > 0;
-	}
+        const auto& sprite_info = frame_group->sprite_info();
+        entry.pattern_x = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_width()));
+        entry.pattern_y = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_height()));
+        entry.pattern_z = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.pattern_depth()));
+        entry.layers = static_cast<uint8_t>(std::max<uint32_t>(1, sprite_info.layers()));
+        entry.frames = static_cast<uint8_t>(std::max<int>(1, sprite_info.animation().sprite_phase_size()));
+        entry.numsprites = static_cast<uint32_t>(sprite_info.sprite_id_size());
+        entry.sprite_ids.assign(sprite_info.sprite_id().begin(), sprite_info.sprite_id().end());
+        for (uint32_t sprite_id : entry.sprite_ids) {
+            catalog.max_sprite_id = std::max(catalog.max_sprite_id, sprite_id);
+        }
+
+        if (sprite_info.has_animation()) {
+            applyAnimation(sprite_info.animation(), entry.animation);
+        }
+
+        if (load_walking_group) {
+            if (const FrameGroup* walking_group = selectWalkingFrameGroup(appearance, frame_group)) {
+                fillWalkingGroup(*walking_group, entry, catalog);
+            }
+        }
+
+        if (appearance.has_flags()) {
+            if (apply_item_flags) {
+                applyCommonFlags(appearance.flags(), entry);
+                if (appearance.flags().show_off_socket()) {
+                    entry.item_fragment.type = ITEM_TYPE_PODIUM;
+                    entry.item_fragment.group = ITEM_GROUP_PODIUM;
+                }
+            } else {
+                applyShiftFlags(appearance.flags(), entry);
+            }
+        }
+
+        return entry.numsprites > 0;
+    }
 }
 
 void ProtobufItemParser::appendFragments(const DatCatalog& catalog, ItemDefinitionFragments& fragments) {
@@ -400,7 +471,7 @@ bool ProtobufItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatC
 		}
 
 		auto& entry = catalog.entries[object.id()];
-		if (!fillEntry(object, object.id(), entry, catalog, true)) {
+		if (!fillEntry(object, object.id(), entry, catalog, true, false)) {
 			entry = {};
 			warnings.push_back(std::format("Skipping protobuf object appearance {} because it has no sprite data.", object.id()));
 		}
@@ -414,7 +485,7 @@ bool ProtobufItemParser::parseCatalog(const ItemDefinitionLoadInput& input, DatC
 
 		const uint32_t client_id = item_count + outfit.id();
 		auto& entry = catalog.entries[client_id];
-		if (!fillEntry(outfit, client_id, entry, catalog, false)) {
+		if (!fillEntry(outfit, client_id, entry, catalog, false, true)) {
 			entry = {};
 			warnings.push_back(std::format("Skipping protobuf outfit appearance {} because it has no sprite data.", outfit.id()));
 		}

@@ -10,6 +10,7 @@
 
 #include <memory>
 
+class ClientVersion;
 class Map;
 class Editor;
 class EditorTab;
@@ -26,10 +27,10 @@ public:
 	int GetTabCount() const;
 	bool IsAnyEditorOpen() const;
 	bool IsEditorOpen() const;
-	void CloseCurrentEditor();
+    void CloseTab(int idx);
+    void CloseCurrentEditor();
 	Editor* GetCurrentEditor();
 	MapTab* GetCurrentMapTab() const;
-	void CycleTab(bool forward = true);
 	bool CloseLiveEditors(LiveSocket* sock);
 	bool CloseAllEditors();
 	void NewMapView();
@@ -38,7 +39,9 @@ public:
 	Map& GetCurrentMap();
 	int GetOpenMapCount();
 	bool ShouldSave();
-	bool SaveCurrentMap(FileName filename, bool showdialog);
+    bool ShouldSave(const Editor& editor) const;
+    bool SaveMap(Editor& editor, MapTab* mapTab, FileName filename, bool showdialog);
+    bool SaveCurrentMap(FileName filename, bool showdialog);
 	bool NewMap();
 	// An empty sector map (see IOMapSec), with the client that reads objects.srv
 	bool NewSectorMap();
@@ -66,6 +69,8 @@ private:
 	MapTab* ShowNewMap(std::unique_ptr<Editor> editor);
 	// Save As for a sector map: picks the folder the sector files go into.
 	void SaveSectorMapAs();
+    int CountRealOpenMaps() const;
+    bool SwitchClientVersionForLoad(ClientVersion& target);
 };
 
 extern EditorManager g_editors;

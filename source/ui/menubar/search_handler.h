@@ -37,8 +37,9 @@ public:
 	void OnSearchForPickupableOnMap(wxCommandEvent& event);
 	// Quest, key and door level numbers of sector maps
 	void OnSearchForServerNumberOnMap(wxCommandEvent& event);
+    void OnSearchForMissingGroundOnMap(wxCommandEvent& event);
 
-	// Selection searches
+    // Selection searches
 	void OnSearchForStuffOnSelection(wxCommandEvent& event);
 	void OnSearchForUniqueOnSelection(wxCommandEvent& event);
 	void OnSearchForActionOnSelection(wxCommandEvent& event);

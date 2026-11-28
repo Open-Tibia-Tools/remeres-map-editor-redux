@@ -5,27 +5,49 @@
 
 namespace rme::rendering::shaders {
 
-/**
- * @brief GLSL module providing full 32x32 square tile indicators with pixel typography.
- *
- * Supports:
- * - entry   (House entry point: Bright Pure Green)
- * - spawn   (Spawn center: Bright Pure Magenta)
- * - town    (Town temple: Bright Gold/Amber)
- * - waypt   (Waypoint: Vivid Bright Blue)
- * - stair   (Technical invisible stairs: Bright Pure Yellow)
- * - walk    (Technical invisible walkable: Bright Pure Cyan)
- * - block   (Technical invisible wall: Bright Pure Red)
- * - light   (Technical primal light source: Bright Sky Blue)
- * - invalid (Missing ground: Bright Pure Red)
- * - invalid (Missing top item: Bright Pure Orange)
- * - invalid (Invalid zone flags: Bright Pure Magenta)
- */
-inline constexpr std::string_view INDICATOR_SHADER_GLSL = R"(
+    /**
+     * @brief GLSL module providing full 32x32 square tile indicators with pixel typography.
+     *
+     * Supports:
+     * - entry   (House entry point: Bright Pure Green)
+     * - spawn   (Spawn center: Bright Pure Magenta)
+     * - town    (Town temple: Bright Gold/Amber)
+     * - waypt   (Waypoint: Vivid Bright Blue)
+     * - stair   (Technical invisible stairs: Bright Pure Yellow)
+     * - walk    (Technical invisible walkable: Bright Pure Cyan)
+     * - block   (Technical invisible wall: Bright Pure Red)
+     * - light   (Technical primal light source: Bright Sky Blue)
+     * - invalid (Missing ground: Bright Pure Red)
+     * - invalid (Missing top item: Bright Pure Orange)
+     * - invalid (Invalid zone flags: Bright Pure Magenta)
+     * - no ground (Missing ground overlay: Yellow #FFCC00)
+     */
+    inline constexpr std::string_view INDICATOR_SHADER_GLSL = R"(
+void sampleIndicatorBand(int lx, int ly, int rowBase, uint mask[7], inout bool isText, inout bool isOutline) {
+    int row = ly - rowBase;
+    if (row >= 0 && row < 7) {
+        if (((mask[row] >> lx) & 1u) != 0u) {
+            isText = true;
+            return;
+        }
+    }
+    for (int dy = -1; dy <= 1; ++dy) {
+        int r = row + dy;
+        if (r >= 0 && r < 7) {
+            uint m = mask[r];
+            if (((m >> (lx - 1)) & 7u) != 0u) {
+                isOutline = true;
+                return;
+            }
+        }
+    }
+}
+
 bool evaluateTileIndicator(vec2 quadCoord, uint indicatorType,
                            int showHouses, int showSpawns, int showTowns,
                            int showWaypoints, int showTechItems,
                            int showInvalidTiles, int showInvalidZones,
+                           int showMissingGround,
                            vec4 tint,
                            out vec4 outColor) {
     if (indicatorType == 0u) {
@@ -39,6 +61,10 @@ bool evaluateTileIndicator(vec2 quadCoord, uint indicatorType,
 
     vec4 zWash;
     uint inMask[7];
+    int rowBase1 = 12;
+    bool hasSecondLine = false;
+    uint inMask2[7] = uint[7](0u, 0u, 0u, 0u, 0u, 0u, 0u);
+    int rowBase2 = 0;
 
     if (indicatorType == 1u) {
         // House Entry ("entry") - Bright Pure Green #00FF00
@@ -95,6 +121,15 @@ bool evaluateTileIndicator(vec2 quadCoord, uint indicatorType,
         if (showInvalidZones == 0) discard;
         zWash  = vec4(1.00, 0.00, 1.00, 0.50);
         inMask = uint[7](0x02280020u, 0x02080000u, 0x0329A9A0u, 0x02AA2AA0u, 0x02AB2AA0u, 0x02AAAAA0u, 0x032B12A0u);
+    } else if (indicatorType == 18u) {
+        // Missing Ground ("no ground") - Yellow #FFCC00
+        if (showMissingGround == 0) discard;
+        zWash         = vec4(1.00, 0.80, 0.00, 0.50);
+        inMask        = uint[7](0x00000000u, 0x00000000u, 0x00023000u, 0x00055000u, 0x00055000u, 0x00055000u, 0x00025000u);
+        rowBase1      = 8;
+        hasSecondLine = true;
+        inMask2       = uint[7](0x04000000u, 0x04000000u, 0x06352660u, 0x05555550u, 0x05555150u, 0x05555160u, 0x06562130u);
+        rowBase2      = 16;
     } else {
         return false;
     }
@@ -117,12 +152,13 @@ bool evaluateTileIndicator(vec2 quadCoord, uint indicatorType,
         return true;
     }
 
-    // 3. Text (white font) with 1px black outline (ly in 11..19)
-    if (ly >= 11 && ly <= 19 && lx >= 2 && lx <= 29) {
-        int row = ly - 12;
+    // 3. Text (white font) with 1px black outline
+    if (lx >= 2 && lx <= 29 && ly >= 2 && ly <= 29) {
         bool isText = false;
-        if (row >= 0 && row < 7) {
-            isText = ((inMask[row] >> lx) & 1u) != 0u;
+        bool isOutline = false;
+        sampleIndicatorBand(lx, ly, rowBase1, inMask, isText, isOutline);
+        if (hasSecondLine) {
+            sampleIndicatorBand(lx, ly, rowBase2, inMask2, isText, isOutline);
         }
 
         if (isText) {
@@ -130,19 +166,6 @@ bool evaluateTileIndicator(vec2 quadCoord, uint indicatorType,
             outColor.rgb *= tint.rgb;
             outColor.a *= tint.a;
             return true;
-        }
-
-        // 8-way dilation around white font for black outline
-        bool isOutline = false;
-        for (int dy = -1; dy <= 1; ++dy) {
-            int r = row + dy;
-            if (r >= 0 && r < 7) {
-                uint m = inMask[r];
-                if (((m >> (lx - 1)) & 7u) != 0u) {
-                    isOutline = true;
-                    break;
-                }
-            }
         }
 
         if (isOutline) {

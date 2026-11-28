@@ -58,6 +58,7 @@ namespace MenuBar {
 		SEARCH_ON_MAP_TELEPORT,
 		SEARCH_ON_MAP_CREATURE,
 		SEARCH_ON_MAP_PICKUPABLE,
+		SEARCH_ON_MAP_MISSING_GROUND,
 		SEARCH_ON_SELECTION_EVERYTHING,
 		SEARCH_ON_SELECTION_UNIQUE,
 		SEARCH_ON_SELECTION_ACTION,
@@ -75,6 +76,8 @@ namespace MenuBar {
 		SELECT_MODE_VISIBLE,
 		SELECT_METHOD_STANDARD,
 		SELECT_METHOD_PIXEL_PERFECT,
+		SELECT_MAGIC_WAND_VIEWPORT,
+		SELECT_MAGIC_WAND_NEIGHBOUR,
 		AUTOMAGIC,
 		BORDERIZE_SELECTION,
 		BORDERIZE_MAP,
@@ -124,6 +127,7 @@ namespace MenuBar {
 		SHOW_TECHNICAL_ITEMS,
 		SHOW_INVALID_TILES,
 		SHOW_INVALID_ZONES,
+		SHOW_MISSING_GROUND,
 		SHOW_WAYPOINTS,
 		SHOW_SCRIPT_MARKERS,
 		SHOW_DEPOT_MARKERS,
@@ -255,6 +259,7 @@ public:
 	void OnSearchForTeleportOnMap(wxCommandEvent& event);
 	void OnSearchForCreatureOnMap(wxCommandEvent& event);
 	void OnSearchForPickupableOnMap(wxCommandEvent& event);
+	void OnSearchForMissingGroundOnMap(wxCommandEvent& event);
 	void OnSearchForStuffOnSelection(wxCommandEvent& event);
 	void OnSearchForUniqueOnSelection(wxCommandEvent& event);
 	void OnSearchForActionOnSelection(wxCommandEvent& event);
@@ -269,6 +274,7 @@ public:
 
 	void OnSelectionTypeChange(wxCommandEvent& event);
 	void OnSelectionMethodChange(wxCommandEvent& event);
+	void OnMagicWandModeChange(wxCommandEvent& event);
 
 	void OnCopy(wxCommandEvent& event);
 	void OnCut(wxCommandEvent& event);

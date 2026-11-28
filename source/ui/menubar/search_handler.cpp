@@ -165,6 +165,11 @@ void SearchHandler::OnSearchForServerNumberOnMap(wxCommandEvent& WXUNUSED(event)
 	SearchResults::ExecuteAndShow(&g_gui.GetCurrentMap(), std::move(query));
 }
 
+void SearchHandler::OnSearchForMissingGroundOnMap(wxCommandEvent& WXUNUSED(event))
+{
+    DispatchSearch(SearchCategory::MissingGround, false, "Find Missing Grounds (Map)");
+}
+
 // Selection searches
 void SearchHandler::OnSearchForStuffOnSelection(wxCommandEvent& WXUNUSED(event)) {
 	DispatchSearch(SearchCategory::Everything, true, "Find Everything (Selection)");

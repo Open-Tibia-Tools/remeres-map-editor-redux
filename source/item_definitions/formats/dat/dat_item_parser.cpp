@@ -192,227 +192,258 @@ namespace {
 			}
 			case DatFlagDisplacement:
 				if (format >= DAT_FORMAT_755) {
-					return file.getU16(entry.drawoffset_x) && file.getU16(entry.drawoffset_y);
-				}
-				entry.drawoffset_x = 8;
-				entry.drawoffset_y = 8;
-				return true;
-			case DatFlagElevation:
-				fragment.flags |= flagMask(ItemFlag::HasElevation);
-				return file.getU16(entry.draw_height);
-			case DatFlagMinimapColor:
-				return file.getU16(entry.minimap_color);
-			case DatFlagMarket: {
-				if (!file.skip(6)) {
-					return false;
-				}
-				std::string market_name;
-				if (!file.getString(market_name)) {
-					return false;
-				}
-				return file.skip(4);
-			}
-			case DatFlagWings:
-				return file.skip(16);
-			default:
-				error = wxString::FromUTF8(std::format("DAT catalog: unknown flag {} after {}.", static_cast<int>(flag), static_cast<int>(previous_flag)));
-				return false;
-		}
-	}
+                    return file.getU16(entry.drawoffset_x) && file.getU16(entry.drawoffset_y);
+                }
+                entry.drawoffset_x = 8;
+                entry.drawoffset_y = 8;
+                return true;
+            case DatFlagElevation:
+                fragment.flags |= flagMask(ItemFlag::HasElevation);
+                return file.getU16(entry.draw_height);
+            case DatFlagMinimapColor:
+                return file.getU16(entry.minimap_color);
+            case DatFlagMarket: {
+                if (!file.skip(6)) {
+                    return false;
+                }
+                std::string market_name;
+                if (!file.getString(market_name)) {
+                    return false;
+                }
+                return file.skip(4);
+            }
+            case DatFlagWings:
+                return file.skip(16);
+            default:
+                error = wxString::FromUTF8(
+                    std::format("DAT catalog: unknown flag {} after {}.", static_cast<int>(flag), static_cast<int>(previous_flag))
+                );
+                return false;
+        }
+    }
 
-	bool readFlags(DatFormat format, FileReadHandle& file, DatCatalogEntry& entry, wxString& error, std::vector<std::string>& warnings) {
-		uint8_t flag = 0xFF;
-		uint8_t previous_flag = 0xFF;
+    bool readFlags(DatFormat format, FileReadHandle& file, DatCatalogEntry& entry, wxString& error, std::vector<std::string>& warnings)
+    {
+        uint8_t flag = 0xFF;
+        uint8_t previous_flag = 0xFF;
 
-		entry.item_fragment.flags = flagMask(ItemFlag::Moveable) | flagMask(ItemFlag::Replaceable);
+        entry.item_fragment.flags = flagMask(ItemFlag::Moveable) | flagMask(ItemFlag::Replaceable);
 
-		for (int count = 0; count < static_cast<int>(DatFlagLast); ++count) {
-			previous_flag = flag;
-			if (!file.getU8(flag)) {
-				return false;
-			}
-			if (flag == DatFlagLast) {
-				return true;
-			}
+        for (int count = 0; count < static_cast<int>(DatFlagLast); ++count) {
+            previous_flag = flag;
+            if (!file.getU8(flag)) {
+                return false;
+            }
+            if (flag == DatFlagLast) {
+                return true;
+            }
 
-			flag = remapFlag(flag, format);
-			if (!readFlagPayload(format, file, entry, flag, previous_flag, error, warnings)) {
-				return false;
-			}
-		}
+            flag = remapFlag(flag, format);
+            if (!readFlagPayload(format, file, entry, flag, previous_flag, error, warnings)) {
+                return false;
+            }
+        }
 
-		warnings.push_back(std::format("DAT catalog: flag list exceeded limit for client id {}.", entry.client_id));
-		return true;
-	}
+        warnings.push_back(std::format("DAT catalog: flag list exceeded limit for client id {}.", entry.client_id));
+        return true;
+    }
 
-	bool readFrameMetadata(const DatCatalog& catalog, FileReadHandle& file, DatCatalogEntry& entry, uint8_t frames, uint32_t group_index) {
-		if (frames <= 1) {
-			return true;
-		}
+    bool readFrameMetadata(const DatCatalog& catalog, FileReadHandle& file, DatFrameGroup& group, uint8_t frames)
+    {
+        if (frames <= 1) {
+            return true;
+        }
 
-		auto animation = DatAnimationInfo {};
-		if (catalog.has_frame_durations) {
-			uint8_t animation_mode = 0;
-			int8_t start = 0;
-			if (!file.getByte(animation_mode) || !file.get32(animation.loop_count) || !file.getSByte(start)) {
-				return false;
-			}
-			// In Tibia DAT format (ObjectBuilder / OTClient metadata standard):
-			// animationMode 0 = Asynchronous (per-tile independent phase / random timing, e.g. torches, fire fields)
-			// animationMode 1 = Synchronous (global clock synchronized across map, e.g. sea shore water waves, fluids)
-			animation.asynchronous = (animation_mode == 0);
-			animation.start_frame = static_cast<int16_t>(start);
-			animation.frame_durations.reserve(frames);
-			for (uint8_t frame_index = 0; frame_index < frames; ++frame_index) {
-				DatAnimationFrameDuration duration;
-				if (!file.getU32(duration.minimum) || !file.getU32(duration.maximum)) {
-					return false;
-				}
-				if (group_index == 0) {
-					animation.frame_durations.push_back(duration);
-				}
-			}
-		}
+        auto animation = DatAnimationInfo {};
+        if (catalog.has_frame_durations) {
+            uint8_t animation_mode = 0;
+            int8_t start = 0;
+            if (!file.getByte(animation_mode) || !file.get32(animation.loop_count) || !file.getSByte(start)) {
+                return false;
+            }
+            // In Tibia DAT format (ObjectBuilder / OTClient metadata standard):
+            // animationMode 0 = Asynchronous (per-tile independent phase / random timing, e.g. torches, fire fields)
+            // animationMode 1 = Synchronous (global clock synchronized across map, e.g. sea shore water waves, fluids)
+            animation.asynchronous = (animation_mode == 0);
+            animation.start_frame = static_cast<int16_t>(start);
+            animation.frame_durations.reserve(frames);
+            for (uint8_t frame_index = 0; frame_index < frames; ++frame_index) {
+                DatAnimationFrameDuration duration;
+                if (!file.getU32(duration.minimum) || !file.getU32(duration.maximum)) {
+                    return false;
+                }
+                animation.frame_durations.push_back(duration);
+            }
+        }
 
-		if (group_index == 0) {
-			entry.animation = std::move(animation);
-		}
-		return true;
-	}
+        group.animation = std::move(animation);
+        return true;
+    }
 
-	bool readSpriteIds(DatCatalog& catalog, FileReadHandle& file, DatCatalogEntry& entry, uint32_t sprite_count, uint32_t group_index, std::vector<std::string>& warnings) {
-		if (group_index == 0) {
-			entry.sprite_ids.clear();
-			entry.sprite_ids.reserve(sprite_count);
-		}
+    bool readSpriteIds(
+        const DatCatalog& catalog, FileReadHandle& file, const DatCatalogEntry& entry, DatFrameGroup& group, uint32_t sprite_count,
+        std::vector<std::string>& warnings
+    )
+    {
+        group.sprite_ids.clear();
+        group.sprite_ids.reserve(sprite_count);
 
-		for (uint32_t sprite_index = 0; sprite_index < sprite_count; ++sprite_index) {
-			uint32_t sprite_id = 0;
-			if (catalog.is_extended) {
-				if (!file.getU32(sprite_id)) {
-					return false;
-				}
-			} else {
-				uint16_t compact_id = 0;
-				if (!file.getU16(compact_id)) {
-					return false;
-				}
-				sprite_id = compact_id;
-			}
-			if (sprite_id >= MAX_SPRITES) {
-				warnings.push_back(std::format(
-					"DAT catalog: sprite id {} exceeds MAX_SPRITES={} for client id {}.",
-					sprite_id,
-					MAX_SPRITES,
-					entry.client_id));
-				return false;
-			}
+        for (uint32_t sprite_index = 0; sprite_index < sprite_count; ++sprite_index) {
+            uint32_t sprite_id = 0;
+            if (catalog.is_extended) {
+                if (!file.getU32(sprite_id)) {
+                    return false;
+                }
+            } else {
+                uint16_t compact_id = 0;
+                if (!file.getU16(compact_id)) {
+                    return false;
+                }
+                sprite_id = compact_id;
+            }
+            if (sprite_id >= MAX_SPRITES) {
+                warnings.push_back(
+                    std::format(
+                        "DAT catalog: sprite id {} exceeds MAX_SPRITES={} for client id {}.", sprite_id, MAX_SPRITES, entry.client_id
+                    )
+                );
+                return false;
+            }
 
-			if (group_index != 0) {
-				continue;
-			}
+            group.sprite_ids.push_back(sprite_id);
+        }
+        return true;
+    }
 
-			entry.sprite_ids.push_back(sprite_id);
-			catalog.max_sprite_id = std::max(catalog.max_sprite_id, sprite_id);
-		}
-		return true;
-	}
+    bool readSpriteGroup(
+        DatCatalog& catalog, FileReadHandle& file, DatCatalogEntry& entry, uint32_t group_index, std::vector<std::string>& warnings
+    )
+    {
+        uint8_t group_type = DAT_FRAME_GROUP_IDLE;
+        if (catalog.has_frame_groups && entry.client_id > catalog.item_count && !file.getU8(group_type)) {
+            return false;
+        }
 
-	bool readSpriteGroup(DatCatalog& catalog, FileReadHandle& file, DatCatalogEntry& entry, uint32_t group_index, std::vector<std::string>& warnings) {
-		if (catalog.has_frame_groups && entry.client_id > catalog.item_count && !file.skip(1)) {
-			return false;
-		}
+        uint8_t width = 0;
+        uint8_t height = 0;
+        uint8_t layers = 0;
+        uint8_t pattern_x = 0;
+        uint8_t pattern_y = 0;
+        uint8_t pattern_z = 0;
+        uint8_t frames = 0;
 
-		uint8_t width = 0;
-		uint8_t height = 0;
-		uint8_t layers = 0;
-		uint8_t pattern_x = 0;
-		uint8_t pattern_y = 0;
-		uint8_t pattern_z = 0;
-		uint8_t frames = 0;
+        if (!file.getByte(width) || !file.getByte(height)) {
+            return false;
+        }
+        if ((width > 1 || height > 1) && !file.skip(1)) {
+            return false;
+        }
+        if (!file.getU8(layers) || !file.getU8(pattern_x) || !file.getU8(pattern_y)) {
+            return false;
+        }
+        if (catalog.format <= DAT_FORMAT_74) {
+            pattern_z = 1;
+        } else if (!file.getU8(pattern_z)) {
+            return false;
+        }
+        if (!file.getU8(frames)) {
+            return false;
+        }
 
-		if (!file.getByte(width) || !file.getByte(height)) {
-			return false;
-		}
-		if ((width > 1 || height > 1) && !file.skip(1)) {
-			return false;
-		}
-		if (!file.getU8(layers) || !file.getU8(pattern_x) || !file.getU8(pattern_y)) {
-			return false;
-		}
-		if (catalog.format <= DAT_FORMAT_74) {
-			pattern_z = 1;
-		} else if (!file.getU8(pattern_z)) {
-			return false;
-		}
-		if (!file.getU8(frames)) {
-			return false;
-		}
+        DatFrameGroup group;
+        if (!readFrameMetadata(catalog, file, group, frames)) {
+            return false;
+        }
 
-		if (!readFrameMetadata(catalog, file, entry, frames, group_index)) {
-			return false;
-		}
+        if (width == 0 || height == 0 || layers == 0 || pattern_x == 0 || pattern_y == 0 || pattern_z == 0 || frames == 0) {
+            std::string zero_dimensions;
+            const auto append_zero_dimension = [&](bool is_zero, const char* name) {
+                if (!is_zero) {
+                    return;
+                }
+                if (!zero_dimensions.empty()) {
+                    zero_dimensions += ", ";
+                }
+                zero_dimensions += name;
+            };
+            append_zero_dimension(width == 0, "width");
+            append_zero_dimension(height == 0, "height");
+            append_zero_dimension(layers == 0, "layers");
+            append_zero_dimension(pattern_x == 0, "pattern_x");
+            append_zero_dimension(pattern_y == 0, "pattern_y");
+            append_zero_dimension(pattern_z == 0, "pattern_z");
+            append_zero_dimension(frames == 0, "frames");
+            warnings.push_back(
+                std::format("DAT catalog: sprite group for client id {} has zero dimension(s): {}.", entry.client_id, zero_dimensions)
+            );
+            return false;
+        }
 
-		if (width == 0 || height == 0 || layers == 0 || pattern_x == 0 || pattern_y == 0 || pattern_z == 0 || frames == 0) {
-			std::string zero_dimensions;
-			const auto append_zero_dimension = [&](bool is_zero, const char* name) {
-				if (!is_zero) {
-					return;
-				}
-				if (!zero_dimensions.empty()) {
-					zero_dimensions += ", ";
-				}
-				zero_dimensions += name;
-			};
-			append_zero_dimension(width == 0, "width");
-			append_zero_dimension(height == 0, "height");
-			append_zero_dimension(layers == 0, "layers");
-			append_zero_dimension(pattern_x == 0, "pattern_x");
-			append_zero_dimension(pattern_y == 0, "pattern_y");
-			append_zero_dimension(pattern_z == 0, "pattern_z");
-			append_zero_dimension(frames == 0, "frames");
-			warnings.push_back(std::format(
-				"DAT catalog: sprite group for client id {} has zero dimension(s): {}.",
-				entry.client_id,
-				zero_dimensions));
-			return false;
-		}
+        if (width > MAX_SPRITE_PARTS || height > MAX_SPRITE_PARTS) {
+            warnings.push_back(
+                std::format(
+                    "DAT catalog: sprite group for client id {} has dimension(s) exceeding MAX_SPRITE_PARTS={}: width={}, height={}.",
+                    entry.client_id, MAX_SPRITE_PARTS, width, height
+                )
+            );
+            return false;
+        }
 
-		if (width > MAX_SPRITE_PARTS || height > MAX_SPRITE_PARTS) {
-			warnings.push_back(std::format(
-				"DAT catalog: sprite group for client id {} has dimension(s) exceeding MAX_SPRITE_PARTS={}: width={}, height={}.",
-				entry.client_id,
-				MAX_SPRITE_PARTS,
-				width,
-				height));
-			return false;
-		}
+        const uint64_t sprite_count_64 = static_cast<uint64_t>(width) * static_cast<uint64_t>(height) * static_cast<uint64_t>(layers)
+            * static_cast<uint64_t>(pattern_x) * static_cast<uint64_t>(pattern_y) * static_cast<uint64_t>(pattern_z)
+            * static_cast<uint64_t>(frames);
+        if (sprite_count_64 > static_cast<uint64_t>(MAX_SPRITES)) {
+            warnings.push_back(
+                std::format(
+                    "DAT catalog: sprite group for client id {} expands to {} sprites which exceeds MAX_SPRITES={}.", entry.client_id,
+                    sprite_count_64, MAX_SPRITES
+                )
+            );
+            return false;
+        }
+        const auto sprite_count = static_cast<uint32_t>(sprite_count_64);
 
-		const uint64_t sprite_count_64 = static_cast<uint64_t>(width) * static_cast<uint64_t>(height) * static_cast<uint64_t>(layers) *
-			static_cast<uint64_t>(pattern_x) * static_cast<uint64_t>(pattern_y) * static_cast<uint64_t>(pattern_z) * static_cast<uint64_t>(frames);
-		if (sprite_count_64 > static_cast<uint64_t>(MAX_SPRITES)) {
-			warnings.push_back(std::format(
-				"DAT catalog: sprite group for client id {} expands to {} sprites which exceeds MAX_SPRITES={}.",
-				entry.client_id,
-				sprite_count_64,
-				MAX_SPRITES));
-			return false;
-		}
-		const auto sprite_count = static_cast<uint32_t>(sprite_count_64);
+        if (!readSpriteIds(catalog, file, entry, group, sprite_count, warnings)) {
+            return false;
+        }
 
-		if (group_index == 0) {
-			entry.width = width;
-			entry.height = height;
-			entry.layers = layers;
-			entry.pattern_x = pattern_x;
-			entry.pattern_y = pattern_y;
-			entry.pattern_z = pattern_z;
-			entry.frames = frames;
-			entry.numsprites = sprite_count;
-		}
+        const bool is_standing_group = group_index == 0;
+        const bool is_walking_group = group_index != 0 && group_type == DAT_FRAME_GROUP_MOVING && !entry.walking_group;
+        if (!is_standing_group && !is_walking_group) {
+            return true;
+        }
 
-		return readSpriteIds(catalog, file, entry, sprite_count, group_index, warnings);
-	}
+        for (const uint32_t sprite_id : group.sprite_ids) {
+            catalog.max_sprite_id = std::max(catalog.max_sprite_id, sprite_id);
+        }
+
+        if (is_walking_group) {
+            group.width = width;
+            group.height = height;
+            group.layers = layers;
+            group.pattern_x = pattern_x;
+            group.pattern_y = pattern_y;
+            group.pattern_z = pattern_z;
+            group.frames = frames;
+            group.numsprites = sprite_count;
+            entry.walking_group = std::move(group);
+            return true;
+        }
+
+        entry.width = width;
+        entry.height = height;
+        entry.layers = layers;
+        entry.pattern_x = pattern_x;
+        entry.pattern_y = pattern_y;
+        entry.pattern_z = pattern_z;
+        entry.frames = frames;
+        entry.numsprites = sprite_count;
+        entry.sprite_ids = std::move(group.sprite_ids);
+        if (group.animation) {
+            entry.animation = std::move(group.animation);
+        }
+        return true;
+    }
 }
 
 void DatItemParser::appendFragments(const DatCatalog& catalog, ItemDefinitionFragments& fragments) {
