@@ -131,7 +131,7 @@ Check `BUILDING.md` for complete step-by-step instructions.
 ### Still being worked on:
 - Unified properties and browser window.
 - Right-click WYSIWYG editor for palettes, tilesets, brushes, and borders.
-- CipSoft file format support (items.srv, map.sec).
+- Original server file format support (objects.srv, .sec maps).
 - Custom autoborder rule editor.
 - Tool option buttons refinements.
 

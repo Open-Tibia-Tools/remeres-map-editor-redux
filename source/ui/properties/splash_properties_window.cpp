@@ -25,23 +25,24 @@ SplashPropertiesWindow::SplashPropertiesWindow(wxWindow* parent, const Map* map,
 	Bind(wxEVT_BUTTON, &SplashPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
 
 	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
-	wxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Splash Properties");
+	wxStaticBoxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Splash Properties");
+	wxWindow* static_box = boxsizer->GetStaticBox();
 
 	wxFlexGridSizer* subsizer = new wxFlexGridSizer(2, 10, 10);
 	subsizer->AddGrowableCol(1);
 
 	if (item->getClientID() != 0 && item->getClientID() != item->getID()) {
-		subsizer->Add(new wxStaticText(this, wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
+		subsizer->Add(new wxStaticText(static_box, wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
 	} else {
-		subsizer->Add(new wxStaticText(this, wxID_ANY, std::format("ID: {}", item->getID())));
+		subsizer->Add(new wxStaticText(static_box, wxID_ANY, std::format("ID: {}", item->getID())));
 	}
-	subsizer->Add(new wxStaticText(this, wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
+	subsizer->Add(new wxStaticText(static_box, wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
 
 
-	subsizer->Add(new wxStaticText(this, wxID_ANY, "Type"));
+	subsizer->Add(new wxStaticText(static_box, wxID_ANY, "Type"));
 
 	// Splash types
-	splash_type_field = new wxChoice(this, wxID_ANY);
+	splash_type_field = new wxChoice(static_box, wxID_ANY);
 	if (edit_item->isFluidContainer()) {
 		splash_type_field->Append(wxstr(Item::LiquidID2Name(LIQUID_NONE)), reinterpret_cast<void*>(static_cast<intptr_t>(LIQUID_NONE)));
 	}
@@ -70,12 +71,12 @@ SplashPropertiesWindow::SplashPropertiesWindow(wxWindow* parent, const Map* map,
 
 	subsizer->Add(splash_type_field, wxSizerFlags(1).Expand());
 
-	subsizer->Add(new wxStaticText(this, wxID_ANY, "Action ID"));
-	action_id_field = new wxSpinCtrl(this, wxID_ANY, std::to_string(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
+	subsizer->Add(new wxStaticText(static_box, wxID_ANY, "Action ID"));
+	action_id_field = new wxSpinCtrl(static_box, wxID_ANY, std::to_string(edit_item->getActionID()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getActionID());
 	subsizer->Add(action_id_field, wxSizerFlags(1).Expand());
 
-	subsizer->Add(new wxStaticText(this, wxID_ANY, "Unique ID"));
-	unique_id_field = new wxSpinCtrl(this, wxID_ANY, std::to_string(edit_item->getUniqueID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
+	subsizer->Add(new wxStaticText(static_box, wxID_ANY, "Unique ID"));
+	unique_id_field = new wxSpinCtrl(static_box, wxID_ANY, std::to_string(edit_item->getUniqueID()), wxDefaultPosition, FromDIP(wxSize(-1, 20)), wxSP_ARROW_KEYS, 0, 0xFFFF, edit_item->getUniqueID());
 	subsizer->Add(unique_id_field, wxSizerFlags(1).Expand());
 
 	boxsizer->Add(subsizer, wxSizerFlags(1).Expand());

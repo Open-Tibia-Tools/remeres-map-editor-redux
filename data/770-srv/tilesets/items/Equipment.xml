@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Equipment">
+    <item id="3011" />
+    <item id="3022" />
+    <item id="3059" />
+    <item id="3079" />
+    <item id="3101" />
+    <item id="3210" />
+    <item id="3229" />
+    <item id="3230" />
+    <item id="3246" />
+    <item fromid="3351" toid="3402" />
+    <item fromid="3409" toid="3442" />
+    <item fromid="3549" toid="3555" />
+    <item fromid="3557" toid="3559" />
+    <item fromid="3561" toid="3576" />
+    <item fromid="3403" toid="3408" />
+    <item fromid="3443" toid="3445" />
+    <item id="3556" />
+    <item id="3560" />
+</tileset>

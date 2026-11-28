@@ -55,8 +55,8 @@ struct TownItem {
 
 class TownPalettePanel::TownCanvas final : public NanoVGCanvas {
 public:
-	explicit TownCanvas(TownPalettePanel* owner) :
-		NanoVGCanvas(owner, wxID_ANY, wxVSCROLL | wxWANTS_CHARS),
+	explicit TownCanvas(TownPalettePanel* owner, wxWindow* parent = nullptr) :
+		NanoVGCanvas(parent ? parent : owner, wxID_ANY, wxVSCROLL | wxWANTS_CHARS),
 		m_owner(owner) {
 		SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 
@@ -393,6 +393,7 @@ TownPalettePanel::TownPalettePanel(wxWindow* parent, wxWindowID id) :
 	PalettePanel(parent, id) {
 	auto* root_sizer = new wxBoxSizer(wxVERTICAL);
 	auto* box_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Towns");
+	wxWindow* static_box = box_sizer->GetStaticBox();
 
 	// 1. TilesetGridToolbar (Filter & Sort)
 	TilesetGridToolbar::Actions actions;
@@ -409,35 +410,35 @@ TownPalettePanel::TownPalettePanel(wxWindow* parent, wxWindowID id) :
 		if (canvas_) canvas_->SetFilter("");
 	};
 
-	toolbar_ = new TilesetGridToolbar(this, std::move(actions), TilesetGridToolbar::Part_Sort | TilesetGridToolbar::Part_Search);
+	toolbar_ = new TilesetGridToolbar(static_box, std::move(actions), TilesetGridToolbar::Part_Sort | TilesetGridToolbar::Part_Search);
 	box_sizer->Add(toolbar_, 0, wxEXPAND | wxBOTTOM, FromDIP(2));
 
 	// 2. Modern Town Card Canvas
-	canvas_ = new TownCanvas(this);
+	canvas_ = new TownCanvas(this, static_box);
 	box_sizer->Add(canvas_, 1, wxEXPAND | wxBOTTOM, FromDIP(4));
 
 	// 3. Action Button Bar (2x2 Grid)
 	auto* button_grid = new wxGridSizer(2, 2, FromDIP(4), FromDIP(4));
 
-	add_button_ = new wxButton(this, wxID_ANY, "Add", wxDefaultPosition, wxDefaultSize);
+	add_button_ = new wxButton(static_box, wxID_ANY, "Add", wxDefaultPosition, wxDefaultSize);
 	add_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	add_button_->SetFont(Theme::GetFont(9, false));
 	add_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickAddTown(); });
 	button_grid->Add(add_button_, 1, wxEXPAND);
 
-	edit_button_ = new wxButton(this, wxID_ANY, "Edit", wxDefaultPosition, wxDefaultSize);
+	edit_button_ = new wxButton(static_box, wxID_ANY, "Edit", wxDefaultPosition, wxDefaultSize);
 	edit_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 	edit_button_->SetFont(Theme::GetFont(9, false));
 	edit_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickEditTown(); });
 	button_grid->Add(edit_button_, 1, wxEXPAND);
 
-	remove_button_ = new wxButton(this, wxID_ANY, "Remove", wxDefaultPosition, wxSize(FromDIP(60), -1));
+	remove_button_ = new wxButton(static_box, wxID_ANY, "Remove", wxDefaultPosition, wxSize(FromDIP(60), -1));
 	remove_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	remove_button_->SetFont(Theme::GetFont(9, false));
 	remove_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickRemoveTown(); });
 	button_grid->Add(remove_button_, 1, wxEXPAND);
 
-	change_temple_button_ = new wxButton(this, wxID_ANY, "Set Temple", wxDefaultPosition, wxDefaultSize);
+	change_temple_button_ = new wxButton(static_box, wxID_ANY, "Set Temple", wxDefaultPosition, wxDefaultSize);
 	change_temple_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_CROSSHAIRS));
 	change_temple_button_->SetFont(Theme::GetFont(9, false));
 	change_temple_button_->SetToolTip("Click on map to place temple position for selected town");

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Bridges">
+    <item id="1771" />
+    <item fromid="2253" toid="2262" />
+    <item fromid="2265" toid="2288" />
+</tileset>

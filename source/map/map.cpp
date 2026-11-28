@@ -19,9 +19,12 @@
 
 #include "ui/gui.h" // loadbar
 
+#include "game/srv_markers.h"
+#include "io/iomap_sec.h"
 #include "map/map.h"
 #include "map/map_converter.h"
 #include "map/map_spawn_manager.h"
+#include "util/file_system.h"
 
 #include <sstream>
 #include <algorithm>
@@ -89,21 +92,38 @@ bool Map::open(const std::string& file) {
 	generation = g_nextMapGeneration.fetch_add(1, std::memory_order_relaxed);
 	tilecount = 0;
 
-	IOMapOTBM maploader(getVersion());
+	const FileName identifier = wxstr(file);
+	const bool sector_map = IOMapSec::isSectorMap(identifier);
+	std::unique_ptr<IOMap> maploader;
+	if (sector_map) {
+		maploader = std::make_unique<IOMapSec>();
+	} else {
+		maploader = std::make_unique<IOMapOTBM>(getVersion());
+	}
 
-	bool success = maploader.loadMap(*this, wxstr(file));
+	bool success = maploader->loadMap(*this, identifier);
 
-	mapVersion = maploader.version;
+	mapVersion = maploader->version;
 
-	warnings = maploader.getWarnings();
+	warnings = maploader->getWarnings();
 
 	if (!success) {
-		error = maploader.getError();
+		error = maploader->getError();
 		return false;
 	}
 
 	has_changed = false;
 	change_tracker.markAllDirty();
+
+	if (sector_map) {
+		// A sector map's file is its folder: saving writes the sector files
+		// back there (EditorPersistence::saveSectorMap).
+		const std::filesystem::path folder = IOMapSec::sectorFolder(identifier);
+		filename = FileSystem::PathToUtf8(folder);
+		name = FileSystem::PathToUtf8(folder.filename());
+		unnamed = false;
+		return true;
+	}
 
 	wxFileName fn = wxstr(file);
 	filename = fn.GetFullPath().ToStdString();

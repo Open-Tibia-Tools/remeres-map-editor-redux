@@ -18,6 +18,8 @@ public:
 
 protected:
 	wxSpinCtrl* count_field;
+	wxSpinCtrl* amount_field = nullptr; // sector map monster homes only
+	wxSpinCtrl* radius_field = nullptr; // sector map monster and NPC homes only
 	wxChoice* direction_field;
 };
 

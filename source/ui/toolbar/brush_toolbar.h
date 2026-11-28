@@ -26,7 +26,10 @@ public:
 	static const wxString PANE_NAME;
 
 private:
+	void AddTools(bool sector_map);
+
 	wxAuiToolBar* toolbar;
+	bool sector_tools_shown = false;
 };
 
 #endif

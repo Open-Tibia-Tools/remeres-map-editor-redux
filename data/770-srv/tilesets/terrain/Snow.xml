@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Snow">
+    <brush name="sea" />
+    <brush name="walkable sea" />
+    <brush name="snow" />
+    <brush name="ice" />
+    <brush name="ramp" />
+    <brush name="mountain" />
+    <brush name="mountain ground" />
+    <brush name="mountain top ground" />
+    <brush name="rocky ground" />
+    <brush name="dirt" />
+    <brush name="ice closed stone pile" />
+    <brush name="hole in the ice" />
+    <item id="611" />
+</tileset>

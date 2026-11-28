@@ -278,7 +278,7 @@ std::shared_ptr<std::vector<uint8_t>> SpriteArchive::decodeSheetPixels(const std
 		++position;
 	}
 	if (position >= buffer.size()) {
-		spdlog::error("SpriteArchive: protobuf sprite sheet {} is missing the CipSoft header", path);
+		spdlog::error("SpriteArchive: protobuf sprite sheet {} is missing its header", path);
 		return nullptr;
 	}
 

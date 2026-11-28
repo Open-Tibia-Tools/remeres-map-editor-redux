@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Decorations">
+    <item fromid="2386" toid="2401" />
+    <item id="2632" />
+    <item id="2635" />
+    <item id="2638" />
+    <item id="2639" />
+    <item id="2640" />
+    <item id="2641" />
+    <item id="2644" />
+    <item id="2647" />
+    <item id="2650" />
+    <item id="2653" />
+    <item id="2656" />
+    <item id="2659" />
+    <item id="2664" />
+    <item id="2667" />
+    <item id="2668" />
+    <item id="2905" />
+    <item id="2906" />
+    <item id="2932" />
+    <item id="2933" />
+    <item id="2974" />
+    <item id="2977" />
+    <item id="2978" />
+    <item id="2980" />
+    <item id="2981" />
+    <item id="2983" />
+    <item id="2984" />
+    <item id="2985" />
+    <item id="2988" />
+    <item fromid="2989" toid="2996" />
+    <item id="3209" />
+    <item id="3213" />
+    <item id="3242" />
+    <item id="3254" />
+    <item id="3001" />
+    <item id="3002" />
+    <item id="5080" />
+</tileset>

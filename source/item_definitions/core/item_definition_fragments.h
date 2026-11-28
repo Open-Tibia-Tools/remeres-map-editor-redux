@@ -108,6 +108,7 @@ struct ItemDefinitionVersionInfo {
 
 struct ItemDefinitionFragments {
 	std::unordered_map<ClientItemId, DatItemFragment> dat;
+	// Server item table, read from items.otb or objects.srv
 	std::unordered_map<ServerItemId, OtbItemFragment> otb;
 	std::unordered_map<ServerItemId, XmlItemFragment> xml;
 	ItemDefinitionVersionInfo version;
@@ -117,6 +118,7 @@ struct ItemDefinitionLoadInput {
 	ItemDefinitionMode mode = ItemDefinitionMode::DatOtb;
 	wxFileName dat_path;
 	wxFileName otb_path;
+	wxFileName srv_path; // objects.srv, for ItemDefinitionMode::DatSrv
 	wxFileName xml_path;
 	std::vector<wxFileName> xml_paths;
 	ClientVersion* client_version = nullptr;

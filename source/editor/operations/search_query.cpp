@@ -4,6 +4,7 @@
 #include "game/creature.h"
 #include "game/item.h"
 #include "game/items.h"
+#include "game/srv_markers.h"
 #include "map/map.h"
 #include "map/map_region.h"
 #include "map/missing_ground.h"
@@ -27,6 +28,84 @@
 
 namespace {
 
+SearchResultGroup& ItemGroup(std::unordered_map<uint32_t, SearchResultGroup>& group_map, const Item* item) {
+	const uint16_t item_id = item->getID();
+	auto& group = group_map[item_id];
+	if (group.id == 0) {
+		group.id = item_id;
+		group.client_id = item->getClientID();
+		// The group header shows the first instance. Each child keeps its own subtype.
+		group.subtype = item->getSubtype();
+		group.name = std::string(item->getName());
+		if (group.name.empty()) {
+			group.name = std::format("Item #{}", item_id);
+		}
+		group.is_creature = false;
+	}
+	return group;
+}
+
+// An item with one of the filter's server attributes, e.g. "Quest Chest: 64".
+void ExtractServerNumber(
+	Tile* tile,
+	Item* item,
+	const ServerNumberFilter& filter,
+	std::unordered_map<uint32_t, SearchResultGroup>& group_map,
+	const Container* parent_container
+) {
+	const int32_t* value = nullptr;
+	const auto matched = std::ranges::find_if(filter.attributes, [&](rme::srv::ItemAttribute attribute) {
+		value = item->getIntegerAttribute(rme::srv::key(attribute));
+		return value != nullptr;
+	});
+	if (matched == filter.attributes.end()) {
+		return;
+	}
+
+	SearchResultChildEntry child;
+	child.position = tile->getPosition();
+	child.formatted_pos = std::format("Position: [{}, {}, {}]", child.position.x, child.position.y, child.position.z);
+	child.kind = SearchResultKind::ServerNumber;
+	child.item_id = item->getID();
+	child.subtitle = std::format("{}: {}", rme::srv::info(*matched).label, *value);
+	if (parent_container != nullptr) {
+		child.subtitle += std::format(", inside {}", parent_container->getName().empty() ? "container" : parent_container->getName());
+	}
+	ItemGroup(group_map, item).children.push_back(std::move(child));
+}
+
+// The tiles whose moveuse.dat rules set or test a quest value.
+std::optional<SearchResultGroup> ScriptGroup(const Map& map, const ServerNumberFilter& filter) {
+	if (!filter.include_scripts || !map.server_markers) {
+		return std::nullopt;
+	}
+	SearchResultGroup group;
+	group.name = "Scripts (moveuse.dat)";
+	for (const rme::srv::Marker& marker : map.server_markers->all()) {
+		// One entry per quest the tile's rules use, so filtering by "Quest 64" finds it.
+		for (auto it = marker.quests.begin(); it != marker.quests.end(); ++it) {
+			const auto same_quest = [&](const rme::srv::QuestReference& reference) { return reference.quest == it->quest; };
+			if (std::ranges::any_of(marker.quests.begin(), it, same_quest)) {
+				continue;
+			}
+			const auto count = std::ranges::count_if(marker.quests, same_quest);
+			SearchResultChildEntry child;
+			child.position = marker.position;
+			child.formatted_pos = std::format("Position: [{}, {}, {}]", child.position.x, child.position.y, child.position.z);
+			child.kind = SearchResultKind::ServerNumber;
+			child.subtitle = std::format("Quest {}: {}", it->quest, it->text);
+			if (count > 1) {
+				child.subtitle += std::format(" (+{} more rules)", count - 1);
+			}
+			group.children.push_back(std::move(child));
+		}
+	}
+	if (group.children.empty()) {
+		return std::nullopt;
+	}
+	return group;
+}
+
 void ExtractItem(
 	Tile* tile,
 	Item* item,
@@ -35,6 +114,11 @@ void ExtractItem(
 	const Container* parent_container
 ) {
 	if (!tile || !item) {
+		return;
+	}
+
+	if (query.server_number) {
+		ExtractServerNumber(tile, item, *query.server_number, group_map, parent_container);
 		return;
 	}
 
@@ -154,19 +238,7 @@ void ExtractItem(
 	}
 
 	const uint16_t subtype = item->getSubtype();
-
-	auto& group = group_map[item_id];
-	if (group.id == 0) {
-		group.id = item_id;
-		group.client_id = item->getClientID();
-		// The group header shows the first instance. Each child keeps its own subtype.
-		group.subtype = subtype;
-		group.name = std::string(item->getName());
-		if (group.name.empty()) {
-			group.name = std::format("Item #{}", item_id);
-		}
-		group.is_creature = false;
-	}
+	auto& group = ItemGroup(group_map, item);
 
 	SearchResultChildEntry child;
 	child.position = tile->getPosition();
@@ -576,7 +648,7 @@ std::vector<SearchResultGroup> SearchEngine::Execute(Map& map, const SearchQuery
     const bool has_item_filter = (query.specific_item_id > 0) || (!query.item_id_set.empty());
     const uint32_t item_category_mask = static_cast<uint32_t>(query.categories) & ~static_cast<uint32_t>(SearchCategory::Creature)
         & ~static_cast<uint32_t>(SearchCategory::MissingGround);
-    const bool search_items = (item_category_mask != 0u) || has_item_filter;
+    const bool search_items = (item_category_mask != 0u) || has_item_filter || query.server_number.has_value();
 
     if (!search_creatures && !search_items) {
         finishProgress();
@@ -739,6 +811,12 @@ std::vector<SearchResultGroup> SearchEngine::Execute(Map& map, const SearchQuery
 
 	append_and_normalize(master_item_groups);
 	append_and_normalize(master_creature_groups);
+	if (query.server_number && !query.on_selection) {
+		if (auto scripts = ScriptGroup(map, *query.server_number)) {
+			std::unordered_map<uint32_t, SearchResultGroup> script_groups { { 0, std::move(*scripts) } };
+			append_and_normalize(script_groups);
+		}
+	}
     for (auto& g : missing_groups) {
         g.expanded = false;
         result.push_back(std::move(g));

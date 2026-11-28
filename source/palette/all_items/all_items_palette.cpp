@@ -85,7 +85,7 @@ AllItemsPalette::AllItemsPalette(wxWindow* parent, wxWindowID id) :
 	};
 	actions.filter_focus_lost = []() {};
 
-	toolbar = new TilesetGridToolbar(this, std::move(actions), TilesetGridToolbar::Part_Standard);
+	toolbar = new TilesetGridToolbar(box_sizer->GetStaticBox(), std::move(actions), TilesetGridToolbar::Part_Standard);
 	toolbar->SetState(show_labels, tile_size, has_sort, sort_key, sort_dir, false, is_list_mode);
 	toolbar->SetIndicatorState(indicator_dogear);
 	toolbar->SetGridSpacing(grid_spacing);
@@ -136,7 +136,7 @@ void AllItemsPalette::InvalidateContents() {
 void AllItemsPalette::LoadCurrentContents() {
 	EnsureBrushesLoaded();
 	if (!grid) {
-		grid = new VirtualBrushGrid(this, &tileset_def, tile_size);
+		grid = new VirtualBrushGrid(box_sizer->GetStaticBox(), &tileset_def, tile_size);
 		if (is_list_mode) {
 			grid->SetDisplayMode(TilesetDisplayMode::List);
 		}

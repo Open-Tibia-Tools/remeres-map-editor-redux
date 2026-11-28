@@ -33,6 +33,10 @@
 class MapConverter;
 class MapSpawnManager;
 
+namespace rme::srv {
+	class ServerMarkers;
+}
+
 class Map : public BaseMap {
 public:
 	struct Zone {
@@ -254,6 +258,10 @@ protected:
 
 public:
 	Waypoints waypoints;
+
+	// Tiles that the server files around a sector map refer to (scripts,
+	// depots, raids, start positions); null for other maps. Read-only.
+	std::unique_ptr<rme::srv::ServerMarkers> server_markers;
 
 private:
 	uint64_t generation;

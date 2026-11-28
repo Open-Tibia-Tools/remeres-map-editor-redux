@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Wall Decorations">
+    <item id="2596" />
+    <item id="2599" />
+    <item id="2600" />
+    <item id="2601" />
+    <item id="2603" />
+    <item id="2604" />
+    <item fromid="2612" toid="2631" />
+    <item id="2633" />
+    <item id="2634" />
+    <item id="2636" />
+    <item id="2637" />
+    <item id="2642" />
+    <item id="2643" />
+    <item id="2645" />
+    <item id="2646" />
+    <item id="2648" />
+    <item id="2649" />
+    <item id="2651" />
+    <item id="2652" />
+    <item id="2654" />
+    <item id="2655" />
+    <item id="2657" />
+    <item id="2658" />
+    <item fromid="2660" toid="2663" />
+    <item id="2665" />
+    <item id="2666" />
+    <item fromid="2669" toid="2686" />
+    <item fromid="2907" toid="2910" />
+    <item fromid="2928" toid="2931" />
+    <item fromid="2936" toid="2939" />
+    <item fromid="2687" toid="2692" />
+    <item fromid="2745" toid="2752" />
+    <item fromid="2769" toid="2770" />
+    <item fromid="2940" toid="2947" />
+    <item fromid="5015" toid="5020" />
+    <item fromid="5057" toid="5060" />
+</tileset>

@@ -18,13 +18,14 @@ SpawnPropertiesWindow::SpawnPropertiesWindow(wxWindow* win_parent, const Map* ma
 	Bind(wxEVT_BUTTON, &SpawnPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
 
 	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
-	wxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Spawn Properties");
+	wxStaticBoxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Spawn Properties");
+	wxWindow* static_box = boxsizer->GetStaticBox();
 
 	wxFlexGridSizer* subsizer = new wxFlexGridSizer(2, 10, 10);
 	subsizer->AddGrowableCol(1);
 
-	subsizer->Add(new wxStaticText(this, wxID_ANY, "Spawn size"));
-	count_field = new wxSpinCtrl(this, wxID_ANY, std::to_string(edit_spawn->getSize()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, g_settings.getInteger(Config::MAX_SPAWN_RADIUS), edit_spawn->getSize());
+	subsizer->Add(new wxStaticText(static_box, wxID_ANY, "Spawn size"));
+	count_field = new wxSpinCtrl(static_box, wxID_ANY, std::to_string(edit_spawn->getSize()), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, g_settings.getInteger(Config::MAX_SPAWN_RADIUS), edit_spawn->getSize());
 	count_field->SetToolTip("Radius of the spawn area");
 	subsizer->Add(count_field, wxSizerFlags(1).Expand());
 

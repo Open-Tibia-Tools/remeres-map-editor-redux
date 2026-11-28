@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Sea">
+    <brush name="sea" />
+    <brush name="walkable sea" />
+    <brush name="drawbridge" />
+    <brush name="ship cabin wall" />
+    <brush name="ship railing" />
+    <brush name="rudder of the boat" />
+    <brush name="steering wheel" />
+    <brush name="fishing boat" />
+    <brush name="big transport ship" />
+    <brush name="big ship (alt)" />
+</tileset>

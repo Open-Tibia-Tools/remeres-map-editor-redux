@@ -8,6 +8,8 @@
 #include "app/main.h"
 #include "editor/persistence/map_load_options.h"
 
+#include <memory>
+
 class ClientVersion;
 class Map;
 class Editor;
@@ -41,6 +43,8 @@ public:
     bool SaveMap(Editor& editor, MapTab* mapTab, FileName filename, bool showdialog);
     bool SaveCurrentMap(FileName filename, bool showdialog);
 	bool NewMap();
+	// An empty sector map (see IOMapSec), with the client that reads objects.srv
+	bool NewSectorMap();
 	void OpenMap();
 	void SaveMap();
 	void SaveMapAs();
@@ -61,6 +65,10 @@ public:
 	bool DoRedo();
 
 private:
+	// Shows a newly created empty map in a tab of its own.
+	MapTab* ShowNewMap(std::unique_ptr<Editor> editor);
+	// Save As for a sector map: picks the folder the sector files go into.
+	void SaveSectorMapAs();
     int CountRealOpenMaps() const;
     bool SwitchClientVersionForLoad(ClientVersion& target);
 };

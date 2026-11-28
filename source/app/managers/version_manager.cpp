@@ -119,6 +119,13 @@ wxString VersionManager::GetModularDataPath() const {
 }
 
 bool VersionManager::CheckModularClientData(const ClientVersion& client_version, wxString& error) const {
+	const ItemDefinitionMode mode = client_version.getItemDefinitionMode();
+	if (mode == ItemDefinitionMode::DatSrv) {
+		// Items come from Tibia.dat and the server's objects.srv; the modular
+		// data directory (materials.xml for brushes/palettes) is optional.
+		return true;
+	}
+
 	const wxString modular_data_path = GetModularDataPath(client_version);
 	if (modular_data_path.empty() || !wxFileName(modular_data_path).DirExists()) {
 		error = "Missing modular client data directory: " + modular_data_path;
@@ -128,12 +135,6 @@ bool VersionManager::CheckModularClientData(const ClientVersion& client_version,
 	const FileName materials_manifest(modular_data_path + "materials.xml");
 	if (!materials_manifest.FileExists()) {
 		error = "Missing materials.xml in modular client data directory: " + modular_data_path;
-		return false;
-	}
-
-	const ItemDefinitionMode mode = client_version.getItemDefinitionMode();
-	if (mode == ItemDefinitionMode::DatSrv) {
-		error = wxstr(std::format("Client {} uses unsupported DatSrv item definition mode.", client_version.getName()));
 		return false;
 	}
 
@@ -172,20 +173,28 @@ bool VersionManager::PrepareVersionLoad(
 	} scoped_load_bar;
 
 	const wxString modular_data_path = GetModularDataPath(*target_version);
-	const FileName materials_manifest(modular_data_path + "materials.xml");
+	const ItemDefinitionMode mode = target_version->getItemDefinitionMode();
 
 	MaterialManifestFiles manifest_files;
-	if (!LoadMaterialManifestFiles(materials_manifest, manifest_files, error)) {
-		return false;
-	}
-
 	AssetLoadRequest asset_request;
-	asset_request.mode = target_version->getItemDefinitionMode();
+	asset_request.mode = mode;
 	asset_request.client_version = target_version;
 	asset_request.dat_path = target_version->getMetadataPath();
 	asset_request.spr_path = target_version->getSpritesPath();
-	asset_request.otb_path = wxFileName(modular_data_path + "items.otb");
-	asset_request.xml_paths.assign(manifest_files.items.begin(), manifest_files.items.end());
+
+	if (mode == ItemDefinitionMode::DatSrv) {
+		// Items come from Tibia.dat and the server's objects.srv only. The data
+		// directory is optional and adds brushes, borders, tilesets and palettes
+		// keyed by objects.srv type ids; creatures come from the server's mon/npc files.
+		asset_request.srv_path = target_version->getObjectsPath();
+	} else {
+		const FileName materials_manifest(modular_data_path + "materials.xml");
+		if (!LoadMaterialManifestFiles(materials_manifest, manifest_files, error)) {
+			return false;
+		}
+		asset_request.otb_path = wxFileName(modular_data_path + "items.otb");
+		asset_request.xml_paths.assign(manifest_files.items.begin(), manifest_files.items.end());
+	}
 
 	AssetBundle bundle;
 	AssetBundleLoader bundle_loader;
@@ -198,7 +207,7 @@ bool VersionManager::PrepareVersionLoad(
 	prepared.modular_data_path = modular_data_path;
 	prepared.manifest_files = std::move(manifest_files);
 	prepared.bundle = std::move(bundle);
-	prepared.has_otb = (asset_request.mode != ItemDefinitionMode::DatOnly && asset_request.mode != ItemDefinitionMode::ProtobufOnly);
+	prepared.has_otb = (mode != ItemDefinitionMode::DatOnly && mode != ItemDefinitionMode::ProtobufOnly && mode != ItemDefinitionMode::DatSrv);
 	return true;
 }
 
@@ -237,13 +246,19 @@ bool VersionManager::CommitPreparedVersion(PreparedVersionLoad& prepared, wxStri
 		AppendMissingItemWarnings(warnings);
 	}
 
-	if (!LoadCreatureFiles(prepared.manifest_files, error, warnings)) {
-		return false;
-	}
-
 	const FileName materials_manifest(prepared.modular_data_path + "materials.xml");
-	if (!LoadModularMaterials(materials_manifest, error, warnings)) {
-		return false;
+	if (getLoadedVersion()->getItemDefinitionMode() == ItemDefinitionMode::DatSrv) {
+		if (materials_manifest.FileExists() && !LoadModularMaterials(materials_manifest, error, warnings)) {
+			return false;
+		}
+	} else {
+		if (!LoadCreatureFiles(prepared.manifest_files, error, warnings)) {
+			return false;
+		}
+
+		if (!LoadModularMaterials(materials_manifest, error, warnings)) {
+			return false;
+		}
 	}
 
 	g_loading.SetLoadDone(70, "Finishing...");

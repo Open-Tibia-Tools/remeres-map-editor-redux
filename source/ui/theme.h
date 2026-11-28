@@ -55,6 +55,8 @@ public:
 		TooltipBorderText,
 		TooltipBorderHouse,
 		TooltipBorderZone,
+		TooltipBorderTown,
+		TooltipBorderServer,
 
 		// Tooltip Window Chrome & Bevels
 		TooltipWindowBg,
@@ -69,6 +71,14 @@ public:
 		TooltipTextWellBg,
 		TooltipTitleText,
 		TooltipSubtitleText,
+
+		// Server markers on sector maps (see game/srv_markers.h): tile frame, badge and tooltip border
+		ServerMarkerStart,
+		ServerMarkerDepot,
+		ServerMarkerRaid,
+		ServerMarkerScript,
+		// The radius of a sector map monster or NPC home
+		HomeRadius,
 
 		// Brush Category Colors
 		BrushCategoryGround,

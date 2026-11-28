@@ -188,6 +188,14 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 
 	PreferencesLayout::AddControlRow(
 		zone_section,
+		"Refresh Tiles",
+		"Color, opacity, and blend mode for the stripes on Refresh tiles.",
+		create_color_opacity_control(zone_section, zone_refresh_color_pick, zone_refresh_opacity_spin, zone_refresh_blend_choice,
+			Config::ZONE_REFRESH_COLOR_R, Config::ZONE_REFRESH_COLOR_G, Config::ZONE_REFRESH_COLOR_B, Config::ZONE_REFRESH_COLOR_A, Config::ZONE_REFRESH_BLEND_MODE)
+	);
+
+	PreferencesLayout::AddControlRow(
+		zone_section,
 		"Blocking / Pathing",
 		"Color, opacity, and blend mode for unwalkable and blocking collision tiles.",
 		create_color_opacity_control(zone_section, zone_blocking_color_pick, zone_blocking_opacity_spin, zone_blocking_blend_choice,
@@ -240,6 +248,10 @@ GraphicsPage::GraphicsPage(wxWindow* parent) : ScrollablePreferencesPage(parent)
 		zone_pvp_color_pick->SetColour(wxColour(245, 26, 51));
 		zone_pvp_opacity_spin->SetValue(48);
 		zone_pvp_blend_choice->SetSelection(0);
+
+		zone_refresh_color_pick->SetColour(wxColour(0, 200, 200));
+		zone_refresh_opacity_spin->SetValue(55);
+		zone_refresh_blend_choice->SetSelection(0);
 
 		zone_blocking_color_pick->SetColour(wxColour(0, 0, 0));
 		zone_blocking_opacity_spin->SetValue(35);
@@ -450,6 +462,7 @@ void GraphicsPage::Apply() {
 	save_color_opacity_mode(zone_nopvp_color_pick, zone_nopvp_opacity_spin, zone_nopvp_blend_choice, Config::ZONE_NOPVP_COLOR_R, Config::ZONE_NOPVP_COLOR_G, Config::ZONE_NOPVP_COLOR_B, Config::ZONE_NOPVP_COLOR_A, Config::ZONE_NOPVP_BLEND_MODE);
 	save_color_opacity_mode(zone_nologout_color_pick, zone_nologout_opacity_spin, zone_nologout_blend_choice, Config::ZONE_NOLOGOUT_COLOR_R, Config::ZONE_NOLOGOUT_COLOR_G, Config::ZONE_NOLOGOUT_COLOR_B, Config::ZONE_NOLOGOUT_COLOR_A, Config::ZONE_NOLOGOUT_BLEND_MODE);
 	save_color_opacity_mode(zone_pvp_color_pick, zone_pvp_opacity_spin, zone_pvp_blend_choice, Config::ZONE_PVP_COLOR_R, Config::ZONE_PVP_COLOR_G, Config::ZONE_PVP_COLOR_B, Config::ZONE_PVP_COLOR_A, Config::ZONE_PVP_BLEND_MODE);
+	save_color_opacity_mode(zone_refresh_color_pick, zone_refresh_opacity_spin, zone_refresh_blend_choice, Config::ZONE_REFRESH_COLOR_R, Config::ZONE_REFRESH_COLOR_G, Config::ZONE_REFRESH_COLOR_B, Config::ZONE_REFRESH_COLOR_A, Config::ZONE_REFRESH_BLEND_MODE);
 	save_color_opacity_mode(zone_blocking_color_pick, zone_blocking_opacity_spin, zone_blocking_blend_choice, Config::ZONE_BLOCKING_COLOR_R, Config::ZONE_BLOCKING_COLOR_G, Config::ZONE_BLOCKING_COLOR_B, Config::ZONE_BLOCKING_COLOR_A, Config::ZONE_BLOCKING_BLEND_MODE);
 	save_color_opacity_mode(zone_spawn_color_pick, zone_spawn_opacity_spin, zone_spawn_blend_choice, Config::ZONE_SPAWN_COLOR_R, Config::ZONE_SPAWN_COLOR_G, Config::ZONE_SPAWN_COLOR_B, Config::ZONE_SPAWN_COLOR_A, Config::ZONE_SPAWN_BLEND_MODE);
 	save_color_opacity_mode(house_active_color_pick, house_active_opacity_spin, house_active_blend_choice, Config::HOUSE_ACTIVE_COLOR_R, Config::HOUSE_ACTIVE_COLOR_G, Config::HOUSE_ACTIVE_COLOR_B, Config::HOUSE_ACTIVE_COLOR_A, Config::HOUSE_ACTIVE_BLEND_MODE);

@@ -26,21 +26,22 @@ DepotPropertiesWindow::DepotPropertiesWindow(wxWindow* parent, const Map* map, c
 	Bind(wxEVT_BUTTON, &DepotPropertiesWindow::OnClickCancel, this, wxID_CANCEL);
 
 	wxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
-	wxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Depot Properties");
+	wxStaticBoxSizer* boxsizer = new wxStaticBoxSizer(wxVERTICAL, this, "Depot Properties");
+	wxWindow* static_box = boxsizer->GetStaticBox();
 	wxFlexGridSizer* subsizer = new wxFlexGridSizer(2, 10, 10);
 
 	subsizer->AddGrowableCol(1);
 	if (item->getClientID() != 0 && item->getClientID() != item->getID()) {
-		subsizer->Add(new wxStaticText(this, wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
+		subsizer->Add(new wxStaticText(static_box, wxID_ANY, std::format("SID: {}   CID: {}", item->getID(), item->getClientID())));
 	} else {
-		subsizer->Add(new wxStaticText(this, wxID_ANY, std::format("ID: {}", item->getID())));
+		subsizer->Add(new wxStaticText(static_box, wxID_ANY, std::format("ID: {}", item->getID())));
 	}
-	subsizer->Add(new wxStaticText(this, wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
+	subsizer->Add(new wxStaticText(static_box, wxID_ANY, "\"" + wxstr(item->getName()) + "\""));
 
 
 	const Towns& towns = map->towns;
-	subsizer->Add(new wxStaticText(this, wxID_ANY, "Depot ID"));
-	depot_id_field = new wxChoice(this, wxID_ANY);
+	subsizer->Add(new wxStaticText(static_box, wxID_ANY, "Depot ID"));
+	depot_id_field = new wxChoice(static_box, wxID_ANY);
 	int to_select_index = 0;
 	if (towns.count() > 0) {
 		bool found = false;

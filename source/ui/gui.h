@@ -332,6 +332,7 @@ public:
 	bool SaveCurrentMap(FileName filename, bool showdialog);
 	bool SaveCurrentMap(bool showdialog = true);
 	bool NewMap();
+	bool NewSectorMap();
 	void OpenMap();
 	void SaveMap();
 	void SaveMapAs();

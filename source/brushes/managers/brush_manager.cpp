@@ -58,6 +58,7 @@ BrushManager::BrushManager() :
 	rook_brush(nullptr),
 	nolog_brush(nullptr),
 	pvp_brush(nullptr),
+	refresh_brush(nullptr),
 	zone_brush(nullptr),
 	temple_brush(nullptr),
 
@@ -177,6 +178,7 @@ void BrushManager::Clear() {
 	rook_brush = nullptr;
 	nolog_brush = nullptr;
 	pvp_brush = nullptr;
+	refresh_brush = nullptr;
 	zone_brush = nullptr;
 	temple_brush = nullptr;
 }

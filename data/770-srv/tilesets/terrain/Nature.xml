@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Nature">
+    <brush name="sea" />
+    <brush name="walkable sea" />
+    <brush name="swamp" />
+    <brush name="dark swamp" />
+    <brush name="tar pit" />
+    <brush name="mountain" />
+    <brush name="mountain ground" />
+    <brush name="mountain top ground" />
+    <brush name="rocky ground" />
+    <brush name="white gravel" />
+    <brush name="jungle grass" />
+    <brush name="grass" />
+    <brush name="grass closed stone pile" />
+    <brush name="grass pitfall" />
+    <brush name="grass pitfall (always open)" />
+    <brush name="jungle dirt" />
+    <brush name="dirt" />
+    <brush name="light dirt" />
+    <brush name="snow" />
+    <brush name="ice" />
+    <brush name="dry earth" />
+    <brush name="sand" />
+    <brush name="sand closed stone pile" />
+    <brush name="ramp" />
+    <brush name="bamboo ramp" />
+</tileset>

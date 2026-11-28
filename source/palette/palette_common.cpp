@@ -76,7 +76,8 @@ void PalettePanel::LoadAllContents() {
 }
 
 void PalettePanel::AddToolPanel(PalettePanel* panel) {
-	wxSizer* sp_sizer = new wxStaticBoxSizer(wxVERTICAL, this, panel->GetName());
+	wxStaticBoxSizer* sp_sizer = new wxStaticBoxSizer(wxVERTICAL, this, panel->GetName());
+	panel->Reparent(sp_sizer->GetStaticBox());
 	sp_sizer->Add(panel, wxSizerFlags().Expand());
 	GetSizer()->Add(sp_sizer, wxSizerFlags().Expand());
 

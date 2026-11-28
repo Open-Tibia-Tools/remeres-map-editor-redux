@@ -66,8 +66,8 @@ struct HouseItem {
 
 class HousePalette::HouseCanvas final : public NanoVGCanvas {
 public:
-	explicit HouseCanvas(HousePalette* owner) :
-		NanoVGCanvas(owner, wxID_ANY, wxVSCROLL | wxWANTS_CHARS),
+	explicit HouseCanvas(HousePalette* owner, wxWindow* parent = nullptr) :
+		NanoVGCanvas(parent ? parent : owner, wxID_ANY, wxVSCROLL | wxWANTS_CHARS),
 		m_owner(owner) {
 		SetBackgroundColour(Theme::Get(Theme::Role::Surface));
 
@@ -457,9 +457,10 @@ HousePalette::HousePalette(wxWindow* parent, wxWindowID id) :
 	PalettePanel(parent, id) {
 	auto* root_sizer = new wxBoxSizer(wxVERTICAL);
 	auto* box_sizer = new wxStaticBoxSizer(wxVERTICAL, this, "Houses");
+	wxWindow* static_box = box_sizer->GetStaticBox();
 
 	// 1. Town filter dropdown
-	town_choice_ = new wxChoice(this, wxID_ANY);
+	town_choice_ = new wxChoice(static_box, wxID_ANY);
 	town_choice_->Bind(wxEVT_CHOICE, &HousePalette::OnTownFilterChange, this);
 	box_sizer->Add(town_choice_, 0, wxEXPAND | wxBOTTOM, FromDIP(4));
 
@@ -478,30 +479,30 @@ HousePalette::HousePalette(wxWindow* parent, wxWindowID id) :
 		if (canvas_) canvas_->SetFilter("");
 	};
 
-	toolbar_ = new TilesetGridToolbar(this, std::move(actions), TilesetGridToolbar::Part_Sort | TilesetGridToolbar::Part_Search);
+	toolbar_ = new TilesetGridToolbar(static_box, std::move(actions), TilesetGridToolbar::Part_Sort | TilesetGridToolbar::Part_Search);
 	box_sizer->Add(toolbar_, 0, wxEXPAND | wxBOTTOM, FromDIP(2));
 
 	// 3. Modern House Card Canvas
-	canvas_ = new HouseCanvas(this);
+	canvas_ = new HouseCanvas(this, static_box);
 	box_sizer->Add(canvas_, 1, wxEXPAND | wxBOTTOM, FromDIP(4));
 
 	// 4. Action buttons (Add, Edit, Remove)
 	auto* action_sizer = new wxBoxSizer(wxHORIZONTAL);
 	const int dip_2 = FromDIP(2);
 
-	add_button_ = new wxButton(this, wxID_ANY, "Add", wxDefaultPosition, wxSize(FromDIP(50), -1));
+	add_button_ = new wxButton(static_box, wxID_ANY, "Add", wxDefaultPosition, wxSize(FromDIP(50), -1));
 	add_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PLUS));
 	add_button_->SetFont(Theme::GetFont(9, false));
 	add_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickAddHouse(); });
 	action_sizer->Add(add_button_, 1, wxEXPAND | wxRIGHT, dip_2);
 
-	edit_button_ = new wxButton(this, wxID_ANY, "Edit", wxDefaultPosition, wxSize(FromDIP(50), -1));
+	edit_button_ = new wxButton(static_box, wxID_ANY, "Edit", wxDefaultPosition, wxSize(FromDIP(50), -1));
 	edit_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PEN));
 	edit_button_->SetFont(Theme::GetFont(9, false));
 	edit_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickEditHouse(); });
 	action_sizer->Add(edit_button_, 1, wxEXPAND | wxRIGHT, dip_2);
 
-	remove_button_ = new wxButton(this, wxID_ANY, "Remove", wxDefaultPosition, wxSize(FromDIP(60), -1));
+	remove_button_ = new wxButton(static_box, wxID_ANY, "Remove", wxDefaultPosition, wxSize(FromDIP(60), -1));
 	remove_button_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_MINUS));
 	remove_button_->SetFont(Theme::GetFont(9, false));
 	remove_button_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnClickRemoveHouse(); });
@@ -511,13 +512,13 @@ HousePalette::HousePalette(wxWindow* parent, wxWindowID id) :
 
 	// 5. Brush toggles (House tiles, Select Exit)
 	auto* brush_sizer = new wxBoxSizer(wxHORIZONTAL);
-	house_brush_toggle_ = new wxToggleButton(this, wxID_ANY, "House tiles");
+	house_brush_toggle_ = new wxToggleButton(static_box, wxID_ANY, "House tiles");
 	house_brush_toggle_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_PAINTBRUSH));
 	house_brush_toggle_->SetFont(Theme::GetFont(9, false));
 	house_brush_toggle_->Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent&) { SelectHouseBrush(); });
 	brush_sizer->Add(house_brush_toggle_, 1, wxEXPAND | wxRIGHT, dip_2);
 
-	exit_brush_toggle_ = new wxToggleButton(this, wxID_ANY, "Select exit");
+	exit_brush_toggle_ = new wxToggleButton(static_box, wxID_ANY, "Select exit");
 	exit_brush_toggle_->SetBitmap(IMAGE_MANAGER.GetBitmapBundle(ICON_DOOR_OPEN));
 	exit_brush_toggle_->SetFont(Theme::GetFont(9, false));
 	exit_brush_toggle_->Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent&) { SelectExitBrush(); });

@@ -14,6 +14,7 @@ public:
 	~FileMenuHandler();
 
 	void OnNew(wxCommandEvent& event);
+	void OnNewSectorMap(wxCommandEvent& event);
 	void OnOpen(wxCommandEvent& event);
 	void OnSave(wxCommandEvent& event);
 	void OnSaveAs(wxCommandEvent& event);

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Quest Assets">
+    <item id="3204" />
+    <item id="3205" />
+    <item id="3206" />
+    <item id="3207" />
+    <item id="3208" />
+    <item id="3212" />
+    <item fromid="3214" toid="3228" />
+    <item fromid="3231" toid="3241" />
+    <item id="3243" />
+    <item id="3247" />
+    <item id="3248" />
+    <item id="3250" />
+    <item id="3251" />
+    <item id="3252" />
+    <item fromid="3255" toid="3263" />
+    <item id="4827" />
+    <item id="4828" />
+    <item id="4829" />
+    <item id="4831" />
+    <item id="4832" />
+    <item id="4834" />
+    <item id="4835" />
+    <item id="4836" />
+    <item id="4837" />
+    <item id="4838" />
+    <item fromid="4840" toid="4853" />
+    <item fromid="4863" toid="4872" />
+    <item id="4994" />
+    <item id="4995" />
+    <item id="4996" />
+    <item id="5089" />
+</tileset>

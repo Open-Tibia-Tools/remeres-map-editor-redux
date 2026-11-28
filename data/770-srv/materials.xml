@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<materials>
+    <borders>
+        <include folder="borders/" />
+    </borders>
+    <brushes>
+        <include folder="brushes/" />
+    </brushes>
+    <creatures>
+        <include folder="creatures/" />
+    </creatures>
+    <items>
+        <include folder="items/" />
+    </items>
+    <tilesets>
+        <include folder="tilesets/" subfolders="true" />
+    </tilesets>
+    <palettes>
+        <include file="palettes.xml" />
+    </palettes>
+</materials>

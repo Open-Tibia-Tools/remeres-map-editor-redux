@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Forest">
+    <brush name="sea" />
+    <brush name="walkable sea" />
+    <brush name="swamp" />
+    <brush name="grass" />
+    <brush name="grass closed stone pile" />
+    <brush name="grass pitfall" />
+    <brush name="grass pitfall (always open)" />
+    <brush name="dirt" />
+    <brush name="drawbridge" />
+    <brush name="mountain rocks" />
+    <brush name="small mountain rocks" />
+    <brush name="very small rocks" />
+    <item id="1791" />
+    <item id="1840" />
+    <brush name="large mossy rocks" />
+    <brush name="small mossy rocks" />
+    <brush name="limestone rocks" />
+    <brush name="waterfall" />
+    <brush name="common forest trees" />
+    <brush name="thick forest trees" />
+    <brush name="colorful forest trees" />
+    <item id="3699" />
+    <brush name="forest bushes" />
+    <item id="3613" />
+    <item id="3616" />
+    <brush name="dead trees" />
+    <brush name="dead trees 2" />
+    <brush name="swamp grass" />
+    <brush name="swamp plants" />
+    <item id="3697" />
+    <item id="3698" />
+    <brush name="brown mushroom small" />
+    <brush name="small mushroom" />
+    <item fromid="3723" toid="3732" />
+    <item id="2742" />
+    <item id="2743" />
+    <item id="2744" />
+    <item fromid="1996" toid="2001" />
+</tileset>

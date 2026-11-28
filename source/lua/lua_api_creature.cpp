@@ -44,6 +44,11 @@ namespace LuaAPI {
 			"isNpc", sol::property([](Creature* c) -> bool {
 				return c && c->isNpc();
 			}),
+			// How many monsters a sector map's monster home keeps alive. Read-only:
+			// a Creature does not know its tile, so a setter could not record undo.
+			"amount", sol::property([](Creature* c) -> int {
+				return c ? c->getAmount() : 1;
+			}),
 
 			// Properties (read/write)
 			"spawnTime", sol::property([](Creature* c) -> int { return c ? c->getSpawnTime() : 0; }, [](Creature* c, int time) {

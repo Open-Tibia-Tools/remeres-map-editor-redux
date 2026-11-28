@@ -87,10 +87,9 @@ bool ItemDefinitionResolver::resolve(const ItemDefinitionLoadInput& input, const
 		case ItemDefinitionMode::ProtobufOnly:
 			return resolveDatOnly(input, fragments, rows, error, warnings, missingReport);
 
-		// items.srv
+		// objects.srv fills the server item table the same way items.otb does
 		case ItemDefinitionMode::DatSrv:
-			error = "Selected item definition mode is not implemented yet.";
-			return false;
+			return resolveDatOtb(input, fragments, rows, error, warnings, missingReport);
 	}
 	error = "Unknown item definition mode.";
 	return false;

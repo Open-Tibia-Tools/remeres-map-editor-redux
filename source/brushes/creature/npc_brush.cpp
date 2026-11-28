@@ -12,6 +12,7 @@
 #include "map/basemap.h"
 #include "map/map.h"
 #include "game/spawn.h"
+#include "ui/properties/srv_attribute_fields.h"
 
 NpcBrush::NpcBrush(CreatureType* type) :
 	CreatureBrush(type) {
@@ -20,7 +21,8 @@ NpcBrush::NpcBrush(CreatureType* type) :
 bool NpcBrush::canDraw(BaseMap* map, const Position& position) const {
 	Tile* tile = map->getTile(position);
 	if (creature_type && tile && !tile->isBlocking()) {
-		if (tile->getLocation()->getSpawnCount() != 0 || g_settings.getInteger(Config::AUTO_CREATE_SPAWN)) {
+		// A sector map NPC has its home in its npc/*.npc file and needs no spawn.
+		if (rme::srv::isSrvClient() || tile->getLocation()->getSpawnCount() != 0 || g_settings.getInteger(Config::AUTO_CREATE_SPAWN)) {
 			// NPCs can be placed in protection zones as well as outside
 			return true;
 		}
@@ -39,7 +41,7 @@ void NpcBrush::draw_creature(BaseMap* map, Tile* tile) {
 
 	const bool is_otbm5 = map && map->supportsZones();
 
-	if (tile->spawn == nullptr && tile->getLocation()->getSpawnCount() == 0) {
+	if (!rme::srv::isSrvClient() && tile->spawn == nullptr && tile->getLocation()->getSpawnCount() == 0) {
 		tile->spawn = std::make_unique<Spawn>(1);
 	}
 	if (is_otbm5) {

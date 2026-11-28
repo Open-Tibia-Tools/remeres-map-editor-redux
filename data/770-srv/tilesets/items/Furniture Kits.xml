@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Furniture Kits">
+    <item fromid="2775" toid="2812" />
+    <item fromid="5086" toid="5088" />
+</tileset>

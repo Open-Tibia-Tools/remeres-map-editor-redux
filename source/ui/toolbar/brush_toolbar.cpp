@@ -11,19 +11,33 @@
 #include "brushes/flag/flag_brush.h"
 #include "brushes/door/door_brush.h"
 #include "brushes/border/optional_border_brush.h"
+#include "ui/properties/srv_attribute_fields.h"
 #include "util/image_manager.h"
 
 const wxString BrushToolBar::PANE_NAME = "brush_toolbar";
 
 BrushToolBar::BrushToolBar(wxWindow* parent) {
 	wxSize icon_size = parent->FromDIP(wxSize(16, 16));
+	toolbar = new wxAuiToolBar(parent, TOOLBAR_BRUSHES, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE);
+	toolbar->SetToolBitmapSize(icon_size);
+	AddTools(false);
 
+	toolbar->Bind(wxEVT_TOOL, &BrushToolBar::OnToolbarClick, this);
+}
+
+BrushToolBar::~BrushToolBar() {
+	toolbar->Unbind(wxEVT_TOOL, &BrushToolBar::OnToolbarClick, this);
+}
+
+// Sector maps have Refresh tiles but no PvP or No-PvP zones; other maps the other way round.
+void BrushToolBar::AddTools(bool sector_map) {
 	wxBitmapBundle border_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_OPTIONAL_BORDER_SMALL);
 	wxBitmapBundle eraser_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_ERASER_SMALL);
 	wxBitmapBundle pz_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_PROTECTION_ZONE_SMALL);
 	wxBitmapBundle nopvp_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_NO_PVP_ZONE_SMALL);
 	wxBitmapBundle nologout_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_NO_LOGOUT_ZONE_SMALL);
 	wxBitmapBundle pvp_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_PVP_ZONE_SMALL);
+	wxBitmapBundle refresh_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_REFRESH_ZONE_SMALL);
 	wxBitmapBundle normal_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_DOOR_NORMAL_SMALL);
 	wxBitmapBundle locked_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_DOOR_LOCKED_SMALL);
 	wxBitmapBundle magic_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_DOOR_MAGIC_SMALL);
@@ -34,15 +48,20 @@ BrushToolBar::BrushToolBar(wxWindow* parent) {
 	wxBitmapBundle hatch_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_WINDOW_HATCH_SMALL);
 	wxBitmapBundle window_bitmap = IMAGE_MANAGER.GetBitmapBundle(IMAGE_WINDOW_NORMAL_SMALL);
 
-	toolbar = new wxAuiToolBar(parent, TOOLBAR_BRUSHES, wxDefaultPosition, wxDefaultSize, wxAUI_TB_DEFAULT_STYLE);
-	toolbar->SetToolBitmapSize(icon_size);
 	toolbar->AddTool(PALETTE_TERRAIN_OPTIONAL_BORDER_TOOL, wxEmptyString, border_bitmap, wxNullBitmap, wxITEM_CHECK, "Border (Add borders to ground)", "Add automatic borders to ground tiles", nullptr);
 	toolbar->AddTool(PALETTE_TERRAIN_ERASER, wxEmptyString, eraser_bitmap, wxNullBitmap, wxITEM_CHECK, "Eraser (Clear tile content)", "Clear content from tiles", nullptr);
 	toolbar->AddSeparator();
 	toolbar->AddTool(PALETTE_TERRAIN_PZ_TOOL, wxEmptyString, pz_bitmap, wxNullBitmap, wxITEM_CHECK, "Protected Zone (Non-combat area)", "Mark area as Protected Zone (Non-combat)", nullptr);
-	toolbar->AddTool(PALETTE_TERRAIN_NOPVP_TOOL, wxEmptyString, nopvp_bitmap, wxNullBitmap, wxITEM_CHECK, "No PvP Zone (Non-PvP area)", "Mark area as No PvP Zone", nullptr);
+	if (!sector_map) {
+		toolbar->AddTool(PALETTE_TERRAIN_NOPVP_TOOL, wxEmptyString, nopvp_bitmap, wxNullBitmap, wxITEM_CHECK, "No PvP Zone (Non-PvP area)", "Mark area as No PvP Zone", nullptr);
+	}
 	toolbar->AddTool(PALETTE_TERRAIN_NOLOGOUT_TOOL, wxEmptyString, nologout_bitmap, wxNullBitmap, wxITEM_CHECK, "No Logout Zone (Prevents logout)", "Mark area as No Logout Zone", nullptr);
-	toolbar->AddTool(PALETTE_TERRAIN_PVPZONE_TOOL, wxEmptyString, pvp_bitmap, wxNullBitmap, wxITEM_CHECK, "PvP Zone (Combat area)", "Mark area as PvP Zone", nullptr);
+	if (!sector_map) {
+		toolbar->AddTool(PALETTE_TERRAIN_PVPZONE_TOOL, wxEmptyString, pvp_bitmap, wxNullBitmap, wxITEM_CHECK, "PvP Zone (Combat area)", "Mark area as PvP Zone", nullptr);
+	}
+	if (sector_map) {
+		toolbar->AddTool(PALETTE_TERRAIN_REFRESH_TOOL, wxEmptyString, refresh_bitmap, wxNullBitmap, wxITEM_CHECK, "Refresh Zone (Server restores items)", "Mark area as Refresh Zone", nullptr);
+	}
 	toolbar->AddSeparator();
 
 	toolbar->AddTool(PALETTE_TERRAIN_NORMAL_DOOR, wxEmptyString, normal_bitmap, wxNullBitmap, wxITEM_CHECK, "Normal Door", "Place normal door", nullptr);
@@ -55,15 +74,21 @@ BrushToolBar::BrushToolBar(wxWindow* parent) {
 	toolbar->AddTool(PALETTE_TERRAIN_HATCH_DOOR, wxEmptyString, hatch_bitmap, wxNullBitmap, wxITEM_CHECK, "Hatch Window", "Place hatch window", nullptr);
 	toolbar->AddTool(PALETTE_TERRAIN_WINDOW_DOOR, wxEmptyString, window_bitmap, wxNullBitmap, wxITEM_CHECK, "Window", "Place window", nullptr);
 	toolbar->Realize();
-
-	toolbar->Bind(wxEVT_TOOL, &BrushToolBar::OnToolbarClick, this);
-}
-
-BrushToolBar::~BrushToolBar() {
-	toolbar->Unbind(wxEVT_TOOL, &BrushToolBar::OnToolbarClick, this);
+	sector_tools_shown = sector_map;
 }
 
 void BrushToolBar::Update() {
+	if (const bool sector_map = rme::srv::isSrvClient(); sector_map != sector_tools_shown) {
+		toolbar->ClearTools();
+		AddTools(sector_map);
+		if (wxAuiManager* manager = g_gui.GetAuiManager()) {
+			if (wxAuiPaneInfo& pane = manager->GetPane(toolbar); pane.IsOk()) {
+				pane.BestSize(toolbar->GetBestSize());
+				manager->Update();
+			}
+		}
+	}
+
 	Editor* editor = g_gui.GetCurrentEditor();
 	bool has_map = editor != nullptr;
 
@@ -78,6 +103,7 @@ void BrushToolBar::Update() {
 	updateTool(PALETTE_TERRAIN_NOPVP_TOOL, "No PvP Zone (Non-PvP area)");
 	updateTool(PALETTE_TERRAIN_NOLOGOUT_TOOL, "No Logout Zone (Prevents logout)");
 	updateTool(PALETTE_TERRAIN_PVPZONE_TOOL, "PvP Zone (Combat area)");
+	updateTool(PALETTE_TERRAIN_REFRESH_TOOL, "Refresh Zone (Server restores items)");
 	updateTool(PALETTE_TERRAIN_NORMAL_DOOR, "Normal Door");
 	updateTool(PALETTE_TERRAIN_LOCKED_DOOR, "Locked Door");
 	updateTool(PALETTE_TERRAIN_MAGIC_DOOR, "Magic Door");
@@ -95,6 +121,7 @@ void BrushToolBar::Update() {
 		toolbar->ToggleTool(PALETTE_TERRAIN_NOPVP_TOOL, brush == g_brush_manager.rook_brush);
 		toolbar->ToggleTool(PALETTE_TERRAIN_NOLOGOUT_TOOL, brush == g_brush_manager.nolog_brush);
 		toolbar->ToggleTool(PALETTE_TERRAIN_PVPZONE_TOOL, brush == g_brush_manager.pvp_brush);
+		toolbar->ToggleTool(PALETTE_TERRAIN_REFRESH_TOOL, brush == g_brush_manager.refresh_brush);
 		toolbar->ToggleTool(PALETTE_TERRAIN_NORMAL_DOOR, brush == g_brush_manager.normal_door_brush);
 		toolbar->ToggleTool(PALETTE_TERRAIN_LOCKED_DOOR, brush == g_brush_manager.locked_door_brush);
 		toolbar->ToggleTool(PALETTE_TERRAIN_MAGIC_DOOR, brush == g_brush_manager.magic_door_brush);
@@ -111,6 +138,7 @@ void BrushToolBar::Update() {
 		toolbar->ToggleTool(PALETTE_TERRAIN_NOPVP_TOOL, false);
 		toolbar->ToggleTool(PALETTE_TERRAIN_NOLOGOUT_TOOL, false);
 		toolbar->ToggleTool(PALETTE_TERRAIN_PVPZONE_TOOL, false);
+		toolbar->ToggleTool(PALETTE_TERRAIN_REFRESH_TOOL, false);
 		toolbar->ToggleTool(PALETTE_TERRAIN_NORMAL_DOOR, false);
 		toolbar->ToggleTool(PALETTE_TERRAIN_LOCKED_DOOR, false);
 		toolbar->ToggleTool(PALETTE_TERRAIN_MAGIC_DOOR, false);
@@ -147,6 +175,9 @@ void BrushToolBar::OnToolbarClick(wxCommandEvent& event) {
 			break;
 		case PALETTE_TERRAIN_PVPZONE_TOOL:
 			g_gui.SelectBrush(g_brush_manager.pvp_brush);
+			break;
+		case PALETTE_TERRAIN_REFRESH_TOOL:
+			g_gui.SelectBrush(g_brush_manager.refresh_brush);
 			break;
 		case PALETTE_TERRAIN_NORMAL_DOOR:
 			g_gui.SelectBrush(g_brush_manager.normal_door_brush);

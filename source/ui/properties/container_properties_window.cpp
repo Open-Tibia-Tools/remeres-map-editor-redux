@@ -63,6 +63,8 @@ ContainerPropertiesWindow::ContainerPropertiesWindow(wxWindow* win_parent, const
 	unique_id_field->SetToolTip("Unique ID (0-65535). Must be unique on the map.");
 	subsizer->Add(unique_id_field, wxSizerFlags(1).Expand());
 
+	srv_fields.create(subsizer, boxsizer->GetStaticBox(), *edit_item);
+
 	boxsizer->Add(subsizer, wxSizerFlags(0).Expand());
 
 	// Now we add the subitems!
@@ -113,6 +115,7 @@ void ContainerPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 
 	edit_item->setUniqueID(new_uid);
 	edit_item->setActionID(new_aid);
+	srv_fields.apply(*edit_item);
 	m_committed = true;
 	backup_contents.clear();
 	EndModal(1);

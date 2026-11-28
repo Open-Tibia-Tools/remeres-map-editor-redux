@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Signs and Flags">
+    <item fromid="2012" toid="2024" />
+    <item id="2597" />
+    <item id="2602" />
+    <item fromid="2606" toid="2611" />
+    <item id="4989" />
+    <item id="4990" />
+</tileset>

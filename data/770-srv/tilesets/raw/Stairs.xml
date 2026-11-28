@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Stairs">
+    <item id="293" />
+    <item id="294" />
+    <item id="369" />
+    <item id="370" />
+    <item id="385" />
+    <item id="386" />
+    <item id="387" />
+    <item id="394" />
+    <item id="411" />
+    <item id="412" />
+    <item id="413" />
+    <item id="414" />
+    <item id="421" />
+    <item id="428" />
+    <item id="432" />
+    <item id="433" />
+    <item id="434" />
+    <item id="435" />
+    <item id="437" />
+    <item id="438" />
+    <item id="469" />
+    <item id="475" />
+    <item id="476" />
+    <item id="593" />
+    <item id="594" />
+    <item id="595" />
+    <item id="601" />
+    <item id="600" />
+    <item fromid="604" toid="610" />
+    <item id="1156" />
+    <item fromid="1947" toid="1967" />
+    <item fromid="2191" toid="2198" />
+    <item fromid="482" toid="485" />
+    <item id="566" />
+    <item id="567" />
+    <item id="1066" />
+    <item id="1067" />
+    <item id="1080" />
+    <item fromid="1968" toid="1978" />
+    <item fromid="4823" toid="4826" />
+    <item id="5022" />
+    <item id="5023" />
+</tileset>

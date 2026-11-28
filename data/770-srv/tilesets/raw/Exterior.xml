@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Exterior">
+    <item fromid="1922" toid="1946" />
+    <item fromid="1979" toid="1989" />
+    <item fromid="1992" toid="2003" />
+    <item fromid="2108" toid="2115" />
+    <item fromid="2370" toid="2373" />
+    <item fromid="2474" toid="2477" />
+    <item fromid="2693" toid="2701" />
+    <item id="3064" />
+    <item id="3132" />
+    <item id="3133" />
+    <item id="3134" />
+    <item id="3458" />
+    <item fromid="3488" toid="3491" />
+    <item fromid="3515" toid="3532" />
+    <item fromid="4304" toid="4309" />
+    <item fromid="2004" toid="2011" />
+    <item id="2116" />
+    <item id="5024" />
+    <item fromid="2299" toid="2301" />
+    <item fromid="2511" toid="2518" />
+    <item fromid="2738" toid="2744" />
+    <item fromid="2753" toid="2768" />
+    <item fromid="3493" toid="3496" />
+    <item id="2117" />
+    <item id="4873" />
+    <item fromid="5025" toid="5044" />
+    <item fromid="5074" toid="5079" />
+</tileset>

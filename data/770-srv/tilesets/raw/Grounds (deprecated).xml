@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Grounds (deprecated)">
+    <item id="102" />
+    <item id="105" />
+    <item id="107" />
+    <item fromid="618" toid="620" />
+    <item fromid="731" toid="734" />
+    <item fromid="747" toid="758" />
+    <item id="865" />
+    <item fromid="1038" toid="1053" />
+    <item fromid="4411" toid="4444" />
+    <item fromid="4556" toid="4558" />
+    <item fromid="4745" toid="4748" />
+</tileset>

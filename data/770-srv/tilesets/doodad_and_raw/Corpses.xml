@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Corpses">
+    <item fromid="3987" toid="4238" />
+    <item fromid="4240" toid="4303" />
+    <item fromid="4311" toid="4317" />
+    <item id="4239" />
+    <item id="4310" />
+    <item fromid="4318" toid="4392" />
+    <item fromid="4991" toid="4993" />
+    <item id="5013" />
+</tileset>

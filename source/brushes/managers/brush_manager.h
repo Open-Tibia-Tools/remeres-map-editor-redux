@@ -150,6 +150,7 @@ public:
 	FlagBrush* rook_brush;
 	FlagBrush* nolog_brush;
 	FlagBrush* pvp_brush;
+	FlagBrush* refresh_brush;
 	ZoneBrush* zone_brush;
 	TownTempleBrush* temple_brush;
 

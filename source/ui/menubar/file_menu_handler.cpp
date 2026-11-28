@@ -30,6 +30,10 @@ void FileMenuHandler::OnNew(wxCommandEvent& WXUNUSED(event)) {
 	g_gui.NewMap();
 }
 
+void FileMenuHandler::OnNewSectorMap(wxCommandEvent& WXUNUSED(event)) {
+	g_gui.NewSectorMap();
+}
+
 void FileMenuHandler::OnOpen(wxCommandEvent& WXUNUSED(event)) {
 	g_gui.OpenMap();
 }

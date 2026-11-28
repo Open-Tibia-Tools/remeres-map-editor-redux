@@ -67,6 +67,7 @@ ItemPropertiesWindow::ItemPropertiesWindow(wxWindow* win_parent, const Map* map,
 	createClassificationFields(subsizer, static_box);
 	createDoorFields(subsizer, static_box);
 	createTeleportFields(subsizer, static_box);
+	srv_fields.create(subsizer, static_box, *edit_item);
 
 	boxsizer->Add(subsizer, wxSizerFlags(1).Expand());
 	topsizer->Add(boxsizer, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT, 20));
@@ -231,6 +232,7 @@ void ItemPropertiesWindow::OnClickOK(wxCommandEvent& WXUNUSED(event)) {
 		if (teleport) {
 			PropertyApplier::applyTeleportProperties(teleport, new_dest);
 		}
+		srv_fields.apply(*edit_item);
 	}
 	EndModal(1);
 }

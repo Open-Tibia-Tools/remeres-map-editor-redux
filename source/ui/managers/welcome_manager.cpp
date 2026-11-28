@@ -44,6 +44,8 @@ void WelcomeManager::OnWelcomeDialogClosed(wxCloseEvent& event) {
 void WelcomeManager::OnWelcomeDialogAction(wxCommandEvent& event) {
 	if (event.GetId() == wxID_NEW) {
 		g_gui.NewMap();
+	} else if (event.GetId() == WELCOME_NEW_SECTOR_MAP) {
+		g_gui.NewSectorMap();
 	} else if (event.GetId() == wxID_OPEN) {
 		if (welcomeDialog != nullptr) {
 			if (auto load_request = welcomeDialog->ConsumePendingLoadRequest()) {

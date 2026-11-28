@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Blank">
+    <item fromid="371" toid="372" />
+    <item id="395" />
+    <item fromid="426" toid="427" />
+    <item id="451" />
+    <item fromid="465" toid="468" />
+    <item fromid="471" toid="474" />
+    <item id="614" />
+    <item fromid="616" toid="617" />
+    <item id="621" />
+    <item id="1099" />
+    <item fromid="1990" toid="1991" />
+    <item id="2139" />
+    <item fromid="2141" toid="2143" />
+    <item fromid="2149" toid="2151" />
+    <item id="2186" />
+    <item id="2217" />
+    <item id="2470" />
+    <item id="2479" />
+    <item fromid="2543" toid="2571" />
+    <item id="2774" />
+    <item fromid="3610" toid="3612" />
+    <item id="4393" />
+    <item fromid="4615" toid="4620" />
+    <item id="4830" />
+    <item id="4833" />
+</tileset>

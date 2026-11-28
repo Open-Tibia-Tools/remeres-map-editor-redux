@@ -300,6 +300,7 @@ Represents an item on a tile or in a container.
 *   `spawnTime`: Time in seconds.
 *   `direction`: Enum (`Direction.NORTH`, `Direction.EAST`, etc.).
 *   `isNpc`: Boolean.
+*   `amount`: How many monsters a sector map's monster home keeps alive (read-only).
 
 **Spawn**
 *   `radius` (or `size`): The spawn radius/size (1-50).

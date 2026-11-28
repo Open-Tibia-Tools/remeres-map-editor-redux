@@ -73,6 +73,10 @@ void PreviewDrawer::draw(SpriteBatch& sprite_batch, bool is_pasting, BaseMap* se
 						tile_zone_flags |= rme::rendering::ZONE_FLAG_PVPZONE;
 						if (options.zone_pvp_blend_mode == 1) tile_zone_flags |= rme::rendering::ZONE_FLAG_MULTIPLICATIVE;
 					}
+					if ((tile->getMapFlags() & TILESTATE_REFRESH) != 0) {
+						tile_zone_flags |= rme::rendering::ZONE_FLAG_REFRESH;
+						if (options.zone_refresh_blend_mode == 1) tile_zone_flags |= rme::rendering::ZONE_FLAG_MULTIPLICATIVE;
+					}
 				}
 				if (options.show_blocking && rme::rendering::IsTilePathBlocking(tile)) {
 					tile_zone_flags |= rme::rendering::ZONE_FLAG_BLOCKING;

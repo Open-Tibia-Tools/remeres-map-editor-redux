@@ -6,6 +6,7 @@
 #include "editor/editor.h"
 #include "map/map.h"
 #include "io/iomap_otbm.h"
+#include "io/iomap_sec.h"
 #include "util/file_system.h"
 #include <ctime>
 #include <fstream>
@@ -45,7 +46,9 @@ bool MapBackupService::CreateSnapshot(
 	const std::string time_str = GenerateTimestampString(true);
 
 	FileName target_file;
-	if (editor.map.hasFile()) {
+	// A sector map's file is its folder; its OTBM snapshot goes to the local
+	// data folder like an unsaved map's, not into the server's data folder.
+	if (editor.map.hasFile() && !IOMapSec::isSectorTarget(wxstr(editor.map.getFilename()))) {
 		FileName src(wxstr(editor.map.getFilename()));
 		target_file = src;
 		target_file.SetName(src.GetName() + "_" + operation_tag + "_" + time_str);

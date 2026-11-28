@@ -72,8 +72,12 @@ void ClientVersion::loadVersions() {
 
 				ClientVersion* version = get(name);
 				if (version) {
-					// ONLY override the user-specific path
+					// ONLY override the user-specific paths
 					version->setClientPath(FileName(client_path));
+					const std::string objects_path = (*client)["objectsPath"].value_or("");
+					if (!objects_path.empty()) {
+						version->setObjectsPath(wxFileName(wxstr(objects_path)));
+					}
 
 					bool isDefault = (*client)["default"].value_or(false);
 					if (isDefault) {
@@ -307,7 +311,7 @@ bool ClientVersion::saveVersions() {
 		// (Moved to config_obj below)
 		db_clients_array.push_back(std::move(db_obj));
 
-		// User config object (ONLY path)
+		// User config object (ONLY paths)
 		toml::table config_obj;
 		config_obj.insert_or_assign("name", version->name);
 		wxFileName cp = version->getClientPath();
@@ -316,6 +320,10 @@ bool ClientVersion::saveVersions() {
 			config_obj.insert_or_assign("clientPath", nstr(cp.GetFullPath()));
 		} else {
 			config_obj.insert_or_assign("clientPath", "");
+		}
+		const wxFileName objects_path = version->getObjectsPath();
+		if (!objects_path.GetFullPath().IsEmpty()) {
+			config_obj.insert_or_assign("objectsPath", nstr(objects_path.GetFullPath()));
 		}
 		config_obj.insert_or_assign("default", version.get() == latest_version);
 		config_clients_array.push_back(std::move(config_obj));

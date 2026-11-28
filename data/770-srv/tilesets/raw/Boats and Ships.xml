@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tileset name="Boats and Ships">
+    <item fromid="1748" toid="1754" />
+    <item fromid="1755" toid="1769" />
+    <item id="4945" />
+    <item id="1770" />
+    <item fromid="4881" toid="4910" />
+    <item id="4913" />
+    <item id="5006" />
+    <item id="4914" />
+    <item id="4912" />
+    <item id="5007" />
+    <item id="4911" />
+    <item fromid="4917" toid="4944" />
+    <item fromid="4946" toid="4988" />
+    <item fromid="4997" toid="5005" />
+    <item fromid="4915" toid="4916" />
+    <item fromid="5082" toid="5085" />
+</tileset>

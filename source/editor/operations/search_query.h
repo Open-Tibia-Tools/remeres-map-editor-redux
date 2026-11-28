@@ -1,10 +1,12 @@
 #ifndef RME_EDITOR_OPERATIONS_SEARCH_QUERY_H_
 #define RME_EDITOR_OPERATIONS_SEARCH_QUERY_H_
 
+#include "game/srv_item_attributes.h"
 #include "map/position.h"
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -42,15 +44,16 @@ inline bool HasCategory(SearchCategory mask, SearchCategory cat) {
 }
 
 enum class SearchResultKind : uint8_t {
-    GenericItem,
-    UniqueID,
-    ActionID,
-    Container,
-    Writeable,
-    Teleport,
-    Creature,
-    Pickupable,
-    MissingGround
+	GenericItem,
+	UniqueID,
+	ActionID,
+	Container,
+	Writeable,
+	Teleport,
+	Creature,
+	Pickupable,
+	ServerNumber, // matched a ServerNumberFilter; the subtitle says how
+	MissingGround
 };
 
 struct SearchContainedItem {
@@ -91,6 +94,14 @@ struct SearchResultGroup {
 	std::vector<SearchResultChildEntry> children;
 };
 
+// Items that have one of these server attributes (sector maps), e.g. every
+// quest chest, key and level door, and with `include_scripts` the
+// moveuse.dat rules that set or test a quest value.
+struct ServerNumberFilter {
+	std::vector<rme::srv::ItemAttribute> attributes;
+	bool include_scripts = false;
+};
+
 struct SearchQuery {
 	SearchCategory categories = SearchCategory::None;
 	bool on_selection = false;
@@ -99,6 +110,7 @@ struct SearchQuery {
 	std::unordered_set<uint16_t> item_id_set;
 	const Brush* specific_creature_brush = nullptr;
 	std::vector<const Brush*> creature_brushes;
+	std::optional<ServerNumberFilter> server_number;
 	std::string filter_text;
 	std::string query_title;
 	std::function<void(float, std::string_view)> progress_callback = nullptr;
