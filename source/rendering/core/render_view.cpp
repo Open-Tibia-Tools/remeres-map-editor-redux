@@ -79,11 +79,9 @@ ViewBounds RenderView::getBoundsForFloor(int map_z, int extra_margin_tiles) cons
 
 ViewBounds RenderView::ComputeFloorTileBounds(int map_z, int extra_margin_tiles) const noexcept
 {
-    const int offset = (map_z <= GROUND_LAYER) ? (GROUND_LAYER - map_z) * TILE_SIZE : TILE_SIZE * (floor - map_z);
-    const int base_screen_x = -view_scroll_x - offset;
-    const int base_screen_y = -view_scroll_y - offset;
-    const ViewportTileBounds bounds
-        = ComputeViewportTileBounds(base_screen_x, base_screen_y, logical_width, logical_height, TILE_SIZE, extra_margin_tiles);
+    const ViewportTileBounds bounds = ComputeFloorViewportTileBounds(
+        map_z, view_scroll_x, view_scroll_y, floor, logical_width, logical_height, GROUND_LAYER, TILE_SIZE, extra_margin_tiles
+    );
     return ViewBounds {
         .start_x = bounds.start_x,
         .start_y = bounds.start_y,

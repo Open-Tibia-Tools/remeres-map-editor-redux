@@ -359,25 +359,30 @@ TEST_CASE("Proposal 1 catches hidden occluded holes, carpet/content traps, inter
     REQUIRE(fully_enclosed_trim.eval(1, 1) == MissingGroundReason::SurroundedInterior);
 }
 
-TEST_CASE("ComputeViewportTileBounds handles upper-floor shifts at 100% and 800% zoom", "[missing_ground]")
+TEST_CASE("ComputeFloorViewportTileBounds handles upper and underground floor shifts at 100% and 800% zoom", "[missing_ground]")
 {
-    constexpr int floor_offset = (7 - 2) * 32;
-    constexpr int view_scroll_x = 100 * 32 - floor_offset - 80;
-    constexpr int view_scroll_y = 100 * 32 - floor_offset - 45;
-    const ViewportTileBounds zoomed_upper
-        = ComputeViewportTileBounds(-view_scroll_x - floor_offset, -view_scroll_y - floor_offset, 160.0f, 90.0f, 32, 1);
-    REQUIRE(zoomed_upper.start_x <= 100);
-    REQUIRE(zoomed_upper.end_x >= 100);
-    REQUIRE(zoomed_upper.start_y <= 100);
-    REQUIRE(zoomed_upper.end_y >= 100);
+    // Center tile (100, 100) on upper floor z = 2 (floor shift = 160px) at 800% zoom (160x90 logical).
+    const ViewportTileBounds zoomed_upper = ComputeFloorViewportTileBounds(2, 2976, 3011, 2, 160.0f, 90.0f, 7, 32, 1);
+    REQUIRE(zoomed_upper.start_x == 97);
+    REQUIRE(zoomed_upper.end_x == 104);
+    REQUIRE(zoomed_upper.start_y == 98);
+    REQUIRE(zoomed_upper.end_y == 102);
 
-    const ViewportTileBounds normal_ground = ComputeViewportTileBounds(-(100 * 32 - 640), -(100 * 32 - 360), 1280.0f, 720.0f, 32, 1);
-    REQUIRE(normal_ground.start_x <= 100);
-    REQUIRE(normal_ground.end_x >= 100);
-    REQUIRE(normal_ground.start_y <= 100);
-    REQUIRE(normal_ground.end_y >= 100);
+    // Same upper floor z = 2 at 100% zoom (1280x720 logical).
+    const ViewportTileBounds normal_upper = ComputeFloorViewportTileBounds(2, 2416, 2696, 2, 1280.0f, 720.0f, 7, 32, 1);
+    REQUIRE(normal_upper.start_x == 79);
+    REQUIRE(normal_upper.end_x == 121);
+    REQUIRE(normal_upper.start_y == 88);
+    REQUIRE(normal_upper.end_y == 112);
 
-    const ViewportTileBounds empty_view = ComputeViewportTileBounds(0, 0, 0.0f, 90.0f);
+    // Underground floor z = 9 viewed from camera z = 8 (offset = -32px).
+    const ViewportTileBounds underground = ComputeFloorViewportTileBounds(9, 2608, 2888, 8, 1280.0f, 720.0f, 7, 32, 1);
+    REQUIRE(underground.start_x == 79);
+    REQUIRE(underground.end_x == 121);
+    REQUIRE(underground.start_y == 88);
+    REQUIRE(underground.end_y == 112);
+
+    const ViewportTileBounds empty_view = ComputeFloorViewportTileBounds(7, 0, 0, 7, 0.0f, 90.0f);
     REQUIRE(empty_view.end_x < empty_view.start_x);
     REQUIRE(empty_view.end_y < empty_view.start_y);
 }

@@ -195,22 +195,19 @@ TEST_CASE("FindMissingGrounds ignores unoccluded empty voids, exterior ledges, b
     REQUIRE(SearchEngine::FindMissingGrounds(map).empty());
 }
 
-TEST_CASE("FindMissingGrounds detects 2.5D occluded empty tiles across unallocated Floor boundaries", "[search][missing_ground]")
+TEST_CASE("FindMissingGrounds detects 2.5D occluded unallocated tiles across cell boundaries and deduplicates", "[search][missing_ground]")
 {
     ScopedItemDefinitions defs;
     Map map;
     map.setWidth(128);
     map.setHeight(128);
 
-    // Corridor along x=19..21, y=15..17:
-    // (20, 15) has NO Tile* allocated at all (empty slot sitting at Floor edge x=20 & x=19 boundary / unallocated Floor if on x=63)
-    // Put occluded corridor across node/cell boundary at x=63, y=15:
-    // W=(62,15) open ground, E=(64,15) open ground (different cell!), S=(63,16) mountain wall barrier,
-    // and (63,15) itself is completely unallocated (tile == nullptr)!
+    // W=(62,15) allocates the 4x4 node/floor shared with unallocated slot (63,15) (tile == nullptr),
+    // E=(64,15) crosses into a separate GridCell, and S=(63,16) + SE=(64,16) barriers must deduplicate.
     PutGround(map, 62, 15, 7);
     PutGround(map, 64, 15, 7);
     PutItem(map, 63, 16, 7, kMountainBorderId);
-    PutItem(map, 64, 16, 7, kMountainBorderId); // also SE relative to (63, 15) -> must deduplicate cleanly!
+    PutItem(map, 64, 16, 7, kMountainBorderId);
 
     const auto results = SearchEngine::FindMissingGrounds(map);
     REQUIRE(results.size() == 1);
@@ -455,14 +452,19 @@ TEST_CASE("FindMissingGrounds excludes BlockPathfinder ground from open-floor ne
     ScopedItemDefinitions defs;
     Map map;
 
-    // Cliff corner border at (10, 10): N & W are normal open floors, E is a void border, S is a BlockPathfinder ground (459/469).
+    // (10, 10) has N open ground, E mountain barrier, W void, and S BlockPathfinder ground -> quiet.
+    // Replacing S with normal ground creates opposite N/S open floors behind the E barrier -> occluded result.
     PutGround(map, 10, 9, 7);
-    PutGround(map, 9, 10, 7);
-    PutItem(map, 10, 10, 7, kXmlBorderId);
-    PutItem(map, 11, 10, 7, kXmlBorderId);
+    PutItem(map, 11, 10, 7, kMountainBorderId);
     PutGround(map, 10, 11, 7, kPathAvoidGroundId);
 
     REQUIRE(SearchEngine::FindMissingGrounds(map).empty());
+
+    PutGround(map, 10, 11, 7, kGroundId);
+    const auto results = SearchEngine::FindMissingGrounds(map);
+    REQUIRE(results.size() == 1);
+    REQUIRE(results[0].position == Position(10, 10, 7));
+    REQUIRE(results[0].subtitle == "Empty tile (occluded behind wall/mountain)");
 }
 
 TEST_CASE("FindMissingGrounds catches wall corner separating grounded room from outer ground", "[search][missing_ground]")

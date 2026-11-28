@@ -54,4 +54,18 @@ struct ViewportTileBounds {
     return bounds;
 }
 
+/**
+ * @brief Computes inclusive visible tile bounds for map_z from viewport scroll and camera floor.
+ */
+[[nodiscard]] inline ViewportTileBounds ComputeFloorViewportTileBounds(
+    int map_z, int view_scroll_x, int view_scroll_y, int camera_floor, float logical_width, float logical_height, int ground_layer = 7,
+    int tile_size = 32, int extra_margin_tiles = 1
+) noexcept
+{
+    const int offset = (map_z <= ground_layer) ? (ground_layer - map_z) * tile_size : (camera_floor - map_z) * tile_size;
+    return ComputeViewportTileBounds(
+        -view_scroll_x - offset, -view_scroll_y - offset, logical_width, logical_height, tile_size, extra_margin_tiles
+    );
+}
+
 #endif // RME_RENDERING_CORE_VIEWPORT_TILE_BOUNDS_H_
