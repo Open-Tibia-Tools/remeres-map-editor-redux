@@ -148,6 +148,11 @@ void SearchHandler::OnSearchForPickupableOnMap(wxCommandEvent& WXUNUSED(event)) 
 	DispatchSearch(SearchCategory::Pickupable, false, "Find Pickupable (Map)");
 }
 
+void SearchHandler::OnSearchForMissingGroundOnMap(wxCommandEvent& WXUNUSED(event))
+{
+    DispatchSearch(SearchCategory::MissingGround, false, "Find Missing Grounds (Map)");
+}
+
 // Selection searches
 void SearchHandler::OnSearchForStuffOnSelection(wxCommandEvent& WXUNUSED(event)) {
 	DispatchSearch(SearchCategory::Everything, true, "Find Everything (Selection)");

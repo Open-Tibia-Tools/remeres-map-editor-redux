@@ -345,6 +345,7 @@ void GUI::ReleaseAllChunkCaches() {
 			if (auto* canvas = tab->GetCanvas()) {
 				if (canvas->drawer) {
 					canvas->drawer->getChunkCacheManager().invalidateAll();
+					canvas->drawer->InvalidateMissingGroundCache();
 				}
 			}
 		}

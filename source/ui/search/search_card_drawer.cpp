@@ -118,7 +118,10 @@ void SearchCardDrawer::DrawGroupHeader(
 	const wxRect icon_rect(icon_x, icon_y, icon_sz, icon_sz);
 
 	const int tex = GetTextureForGroup(vg, canvas, group);
-	rme::ui::grid::DrawCellIcon(vg, icon_rect, tex, rme::rendering::TileIndicatorType::None);
+	const auto badge = group.use_missing_ground_badge
+		? rme::rendering::TileIndicatorType::MissingGround
+		: rme::rendering::TileIndicatorType::None;
+	rme::ui::grid::DrawCellIcon(vg, icon_rect, tex, badge);
 
 	// 4. Group Name
 	const float text_x = static_cast<float>(icon_x + icon_sz + dip_8);
@@ -186,6 +189,11 @@ void SearchCardDrawer::DrawAttributeTokens(
 	} else if (child.kind == SearchResultKind::Pickupable) {
 		tokens[token_count++] = {
 			"Pickupable",
+			accent_wx
+		};
+	} else if (child.kind == SearchResultKind::MissingGround) {
+		tokens[token_count++] = {
+			child.subtitle.empty() ? std::string_view("Missing Ground") : std::string_view(child.subtitle),
 			accent_wx
 		};
 	}
@@ -398,7 +406,10 @@ void SearchCardDrawer::DrawChildCard(
 			tex = canvas->GetOrCreateItemImage(child.item_id, child.subtype);
 		}
 	}
-	rme::ui::grid::DrawCellIcon(vg, slot_rect, tex, rme::rendering::TileIndicatorType::None);
+	const auto child_badge = child.use_missing_ground_badge
+		? rme::rendering::TileIndicatorType::MissingGround
+		: rme::rendering::TileIndicatorType::None;
+	rme::ui::grid::DrawCellIcon(vg, slot_rect, tex, child_badge);
 
 	// 3. Text section next to 32x32 icon
 	nvgSave(vg);

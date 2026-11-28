@@ -17,15 +17,16 @@ class Creature;
 class Brush;
 
 enum class SearchCategory : uint32_t {
-	None        = 0,
-	UniqueID    = 1 << 0,
-	ActionID    = 1 << 1,
-	Container   = 1 << 2,
-	Writeable   = 1 << 3,
-	Teleport    = 1 << 4,
-	Creature    = 1 << 5, // Monsters & NPCs
-	Pickupable  = 1 << 6,
-	Everything  = UniqueID | ActionID | Container | Writeable | Teleport
+    None = 0,
+    UniqueID = 1 << 0,
+    ActionID = 1 << 1,
+    Container = 1 << 2,
+    Writeable = 1 << 3,
+    Teleport = 1 << 4,
+    Creature = 1 << 5, // Monsters & NPCs
+    Pickupable = 1 << 6,
+    MissingGround = 1 << 7,
+    Everything = UniqueID | ActionID | Container | Writeable | Teleport
 };
 
 inline SearchCategory operator|(SearchCategory a, SearchCategory b) {
@@ -41,14 +42,15 @@ inline bool HasCategory(SearchCategory mask, SearchCategory cat) {
 }
 
 enum class SearchResultKind : uint8_t {
-	GenericItem,
-	UniqueID,
-	ActionID,
-	Container,
-	Writeable,
-	Teleport,
-	Creature,
-	Pickupable
+    GenericItem,
+    UniqueID,
+    ActionID,
+    Container,
+    Writeable,
+    Teleport,
+    Creature,
+    Pickupable,
+    MissingGround
 };
 
 struct SearchContainedItem {
@@ -71,6 +73,8 @@ struct SearchResultChildEntry {
 	std::string subtitle;
 	const Brush* brush = nullptr; // For creature brush rendering if creature
 	bool is_creature = false;
+    bool use_missing_ground_badge = false;
+    std::string group_name; // Explicit grouping key (avoids parsing display subtitles)
 };
 
 struct SearchResultGroup {
@@ -82,7 +86,8 @@ struct SearchResultGroup {
 	std::string id_str;
 	const Brush* brush = nullptr;
 	bool is_creature = false;
-	bool expanded = false;
+    bool use_missing_ground_badge = false;
+    bool expanded = false;
 	std::vector<SearchResultChildEntry> children;
 };
 
@@ -101,7 +106,15 @@ struct SearchQuery {
 
 class SearchEngine {
 public:
-	static std::vector<SearchResultGroup> Execute(Map& map, const SearchQuery& query);
+    /**
+     * Executes the query across the map (or current selection when query.on_selection is true).
+     * SearchCategory::MissingGround honors on_selection and combines its groups with any other
+     * requested categories or explicit item/creature filters.
+     */
+    static std::vector<SearchResultGroup> Execute(Map& map, const SearchQuery& query);
+
+    /** Scans tiles without ground that violate MissingGround rules, optionally limited to selected tiles. */
+    [[nodiscard]] static std::vector<SearchResultChildEntry> FindMissingGrounds(const Map& map, bool on_selection = false);
 };
 
 #endif // RME_EDITOR_OPERATIONS_SEARCH_QUERY_H_

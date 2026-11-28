@@ -56,6 +56,7 @@ namespace MenuBar {
 		SEARCH_ON_MAP_TELEPORT,
 		SEARCH_ON_MAP_CREATURE,
 		SEARCH_ON_MAP_PICKUPABLE,
+		SEARCH_ON_MAP_MISSING_GROUND,
 		SEARCH_ON_SELECTION_EVERYTHING,
 		SEARCH_ON_SELECTION_UNIQUE,
 		SEARCH_ON_SELECTION_ACTION,
@@ -124,6 +125,7 @@ namespace MenuBar {
 		SHOW_TECHNICAL_ITEMS,
 		SHOW_INVALID_TILES,
 		SHOW_INVALID_ZONES,
+		SHOW_MISSING_GROUND,
 		SHOW_WAYPOINTS,
 		SHOW_GRID,
 		SHOW_EXTRA,
@@ -249,6 +251,7 @@ public:
 	void OnSearchForTeleportOnMap(wxCommandEvent& event);
 	void OnSearchForCreatureOnMap(wxCommandEvent& event);
 	void OnSearchForPickupableOnMap(wxCommandEvent& event);
+	void OnSearchForMissingGroundOnMap(wxCommandEvent& event);
 	void OnSearchForStuffOnSelection(wxCommandEvent& event);
 	void OnSearchForUniqueOnSelection(wxCommandEvent& event);
 	void OnSearchForActionOnSelection(wxCommandEvent& event);

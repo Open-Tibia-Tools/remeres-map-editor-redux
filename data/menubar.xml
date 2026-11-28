@@ -102,6 +102,7 @@
 		<item name="Find Teleports" action="SEARCH_ON_MAP_TELEPORT" help="Find all teleporters on map."/>
 		<item name="Find Creatures" action="SEARCH_ON_MAP_CREATURE" help="Find all creatures on map."/>
 		<item name="Find Pickupable Items" action="SEARCH_ON_MAP_PICKUPABLE" help="Find all pickupable items on map."/>
+		<item name="Find Missing Grounds" action="SEARCH_ON_MAP_MISSING_GROUND" help="Find tiles without ground enclosed by grounded neighbours on map."/>
 		<separator/>
 		<item name="Find Everything" action="SEARCH_ON_MAP_EVERYTHING" help="Find all items with unique ID, action ID, containers, writeables, or teleports on map."/>
 	</menu>
@@ -182,6 +183,7 @@
 		<item name="Show Technical Items" hotkey="Shift+T" action="SHOW_TECHNICAL_ITEMS" help="Shows some of special items that are not visible in game."/>
 		<item name="Show Invalid Tiles" hotkey="" action="SHOW_INVALID_TILES" help="Show preserved invalid OTBM content as tile overlays."/>
 		<item name="Show Invalid Zones" hotkey="" action="SHOW_INVALID_ZONES" help="Show invalid tile flags and opaque OTBM tile fragments as magenta overlays."/>
+		<item name="Show Missing Ground" hotkey="" action="SHOW_MISSING_GROUND" help="Highlight hidden or structural missing-ground tiles."/>
 		<separator/>
 		<item name="Show creatures" hotkey="F" action="SHOW_CREATURES" help="Show creatures on the map."/>
 		<item name="Show spawns" hotkey="S" action="SHOW_SPAWNS" help="Show spawns on the map."/>

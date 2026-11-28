@@ -35,8 +35,9 @@ public:
 	void OnSearchForTeleportOnMap(wxCommandEvent& event);
 	void OnSearchForCreatureOnMap(wxCommandEvent& event);
 	void OnSearchForPickupableOnMap(wxCommandEvent& event);
+    void OnSearchForMissingGroundOnMap(wxCommandEvent& event);
 
-	// Selection searches
+    // Selection searches
 	void OnSearchForStuffOnSelection(wxCommandEvent& event);
 	void OnSearchForUniqueOnSelection(wxCommandEvent& event);
 	void OnSearchForActionOnSelection(wxCommandEvent& event);

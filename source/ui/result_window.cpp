@@ -255,6 +255,8 @@ private:
 				child.position.x, child.position.y, child.position.z)));
 		} else if (child.kind == SearchResultKind::Creature) {
 			SetToolTip(wxstr(std::format("{}{} | Pos: [{}, {}, {}]", child_prefix, child.subtitle, child.position.x, child.position.y, child.position.z)));
+		} else if (child.kind == SearchResultKind::MissingGround) {
+			SetToolTip(wxstr(std::format("{}{} | Pos: [{}, {}, {}]", child_prefix, child.subtitle, child.position.x, child.position.y, child.position.z)));
 		} else if (child.unique_id > 0 && child.action_id > 0) {
 			SetToolTip(wxstr(std::format("{}UID: {} | AID: {} | Pos: [{}, {}, {}]", child_prefix, child.unique_id, child.action_id, child.position.x, child.position.y, child.position.z)));
 		} else if (child.unique_id > 0) {

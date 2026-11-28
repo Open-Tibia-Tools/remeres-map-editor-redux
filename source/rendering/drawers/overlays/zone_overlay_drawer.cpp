@@ -776,6 +776,73 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 	}
 }
 
+void ZoneOverlayDrawer::syncMissingGroundCache(SpatialChangeTracker& tracker, const Map& map, bool overlay_enabled)
+{
+    missing_ground_cache_.syncDirtyState(tracker, map, map.getWidth(), map.getHeight(), overlay_enabled);
+}
+
+void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
+                                               int z,
+                                               const RenderView& view,
+                                               const Map& map,
+                                               const DrawingOptions& options,
+                                               const AtlasManager& atlas) {
+    if (options.ingame || options.show_as_minimap || options.show_only_colors || !options.show_missing_ground || view.zoom > kZoomLODCutoff
+        || z < 0 || z >= MAP_LAYERS) {
+        return;
+    }
+
+    const AtlasRegion* white_pixel = atlas.getWhitePixel();
+    if (!white_pixel) {
+        return;
+    }
+
+    const ViewBounds bounds = view.ComputeFloorTileBounds(z, 1);
+    const int map_width = map.getWidth();
+    const int map_height = map.getHeight();
+    const int min_x = std::max(0, bounds.start_x);
+    const int min_y = std::max(0, bounds.start_y);
+    const int max_x = (map_width > 0) ? std::min(bounds.end_x, map_width - 1) : bounds.end_x;
+    const int max_y = (map_height > 0) ? std::min(bounds.end_y, map_height - 1) : bounds.end_y;
+    if (max_x < min_x || max_y < min_y) {
+        return;
+    }
+
+    const int min_cx = min_x >> 4;
+    const int max_cx = max_x >> 4;
+    const int min_cy = min_y >> 4;
+    const int max_cy = max_y >> 4;
+
+    const int offset = (z <= GROUND_LAYER) ? (GROUND_LAYER - z) * TILE_SIZE : TILE_SIZE * (view.floor - z);
+    const int base_screen_x = -view.view_scroll_x - offset;
+    const int base_screen_y = -view.view_scroll_y - offset;
+    const uint32_t missing_ground_flag = MakeIndicatorZoneFlag(TechnicalItemRegistry::GetIndicatorId(TileIndicatorType::MissingGround));
+    bool blend_configured = false;
+
+    map.visitPopulatedChunks(min_cx, min_cy, max_cx, max_cy, z, [&](int cx, int cy) {
+        const CachedMissingGroundChunk& chunk = missing_ground_cache_.getOrEvaluateChunk(cx, cy, z, map, map_width, map_height);
+        if (!chunk.has_any) {
+            return;
+        }
+        if (!blend_configured) {
+            sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+            blend_configured = true;
+        }
+        const int chunk_base_x = cx << 4;
+        const int chunk_base_y = cy << 4;
+        chunk.mask.forEach([&](int tx, int ty) {
+            const int wx = chunk_base_x + tx;
+            const int wy = chunk_base_y + ty;
+            if (wx < min_x || wx > max_x || wy < min_y || wy > max_y) {
+                return;
+            }
+            const float draw_x = static_cast<float>(wx * TILE_SIZE + base_screen_x);
+            const float draw_y = static_cast<float>(wy * TILE_SIZE + base_screen_y);
+            sprite_batch.draw(draw_x, draw_y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, missing_ground_flag);
+        });
+    });
+}
+
 void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
                                         int z,
                                         const RenderView& view,

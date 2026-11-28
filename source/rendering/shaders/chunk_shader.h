@@ -69,7 +69,7 @@ void main() {
  *        modularly injecting indicator, house, and zone shader procedures.
  */
 inline std::string GetChunkFragShader() {
-	return std::string(R"(#version 430 core
+    return std::string(R"(#version 430 core
 flat in float vFlags;
 flat in float vHouseId;
 in vec2 vWorldPos;
@@ -102,7 +102,8 @@ vec3 clampToSprite(vec3 uv, vec4 bounds) {
 	return vec3(clamp(uv.xy, min(lo, hi), max(lo, hi)), uv.z);
 }
 
-)") + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + R"(
+)") + std::string(INDICATOR_SHADER_GLSL)
+        + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + R"(
 
 void main() {
 	int flagBits = int(vFlags + 0.5);
@@ -112,6 +113,7 @@ void main() {
 		                          uShowHouses, 0, uShowTowns,
 		                          uShowWaypoints, uShowTechItems,
 		                          uShowInvalidTiles, uShowInvalidZones,
+		                          0,
 		                          vColor, FragColor)) {
 			return;
 		}

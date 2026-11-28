@@ -372,6 +372,7 @@ void Settings::IO(IOMode mode) {
 	Bool(SHOW_INVALID_TILES, true);
 	Bool(SHOW_WAYPOINTS, true);
 	Bool(SHOW_INVALID_ZONES, true);
+	Bool(SHOW_MISSING_GROUND, false);
 	Bool(SHOW_GRID, false);
 	Bool(SHOW_EXTRA, true);
 	Bool(SHOW_SHADE, true);

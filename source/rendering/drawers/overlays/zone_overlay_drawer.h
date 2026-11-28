@@ -1,7 +1,10 @@
 #ifndef RME_RENDERING_DRAWERS_OVERLAYS_ZONE_OVERLAY_DRAWER_H_
 #define RME_RENDERING_DRAWERS_OVERLAYS_ZONE_OVERLAY_DRAWER_H_
 
+#include "rendering/core/missing_ground_overlay_cache.h"
 #include "rendering/indicators/zone_cluster_finder.h"
+
+#include <cstdint>
 
 class SpriteBatch;
 struct RenderView;
@@ -85,7 +88,30 @@ public:
 	                             const DrawingOptions& options,
 	                             const AtlasManager& atlas);
 
-	void drawFloorBadges(SpriteBatch& sprite_batch,
+    void advanceMissingGroundCacheFrame(int current_floor)
+    {
+        missing_ground_cache_.advanceFrame(current_floor);
+    }
+
+    void syncMissingGroundCache(SpatialChangeTracker& tracker, const Map& map, bool overlay_enabled);
+
+    void invalidateMissingGroundCache() noexcept
+    {
+        missing_ground_cache_.invalidateAll();
+    }
+
+    void clearMissingGroundCache() noexcept
+    {
+        missing_ground_cache_.clear();
+    }
+
+    // "Show missing ground": renders yellow "no ground" kitchen-tile indicators using per-chunk cached bitmasks.
+    // Skipped during paste preview, minimap modes, and beyond kZoomLODCutoff.
+    void drawFloorMissingGround(
+        SpriteBatch& sprite_batch, int z, const RenderView& view, const Map& map, const DrawingOptions& options, const AtlasManager& atlas
+    );
+
+    void drawFloorBadges(SpriteBatch& sprite_batch,
 	                     int z,
 	                     const RenderView& view,
 	                     const Map& map,
@@ -168,6 +194,8 @@ private:
     std::vector<ZoneRowCell> zone_row_next_;
 
     std::vector<PendingHighlightQuad> highlight_quads_;
+
+    MissingGroundOverlayCache missing_ground_cache_;
 };
 
 } // namespace rme::rendering

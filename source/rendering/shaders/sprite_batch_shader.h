@@ -81,6 +81,7 @@ uniform int uShowBlocking;
 uniform int uShowSpecialTiles;
 uniform int uShowInvalidTiles;
 uniform int uShowInvalidZones;
+uniform int uShowMissingGround;
 uniform int uExtendedPathingShader;
 uniform int uBlockingBlendMode;
 
@@ -97,18 +98,19 @@ vec3 clampToSprite(vec3 uv, vec4 bounds) {
 )") + std::string(HIGHLIGHT_ITEMS_SHADER_GLSL) + std::string(INDICATOR_SHADER_GLSL) + std::string(HOUSE_SHADER_GLSL) + std::string(PATHING_SHADER_GLSL) + std::string(ZONE_SHADER_GLSL) + R"(
 
 void main() {
-    uint indicatorType = (vZoneFlags >> 25) & 0xFu;
+    uint indicatorType = (vZoneFlags >> 25) & 0x1Fu;
     if (indicatorType != 0u) {
         if (evaluateTileIndicator(vQuadCoord, indicatorType,
                                   uShowHouses, uShowSpawns, uShowTowns,
                                   uShowWaypoints, uShowTechItems,
                                   uShowInvalidTiles, uShowInvalidZones,
+                                  uShowMissingGround,
                                   Tint, FragColor)) {
             return;
         }
     }
 
-    uint overlayFlags = (vZoneFlags & ~((0xFu << 25) | (1u << 24) | (1u << 23) | (1u << 19)));
+    uint overlayFlags = (vZoneFlags & ~((0x1Fu << 25) | (1u << 24) | (1u << 23) | (1u << 19)));
     if (overlayFlags != 0u) {
         vec4 highlightColor;
         if (evaluateHighlightItems(vZoneFlags, highlightColor)) {
@@ -177,7 +179,8 @@ inline void SetSpriteBatchOverlayUniforms(
 	const glm::vec4& house_active_color,
 	const glm::vec4& house_inactive_color,
 	bool extended_pathing_shader = true,
-	int zone_blocking_blend_mode = 0)
+	int zone_blocking_blend_mode = 0,
+	bool show_missing_ground = false)
 {
 	shader.Use();
 	shader.SetUint("uCurrentHouseId", current_house_id);
@@ -190,6 +193,7 @@ inline void SetSpriteBatchOverlayUniforms(
 	shader.SetInt("uShowSpecialTiles", show_special_tiles ? 1 : 0);
 	shader.SetInt("uShowInvalidTiles", show_invalid_tiles ? 1 : 0);
 	shader.SetInt("uShowInvalidZones", show_invalid_zones ? 1 : 0);
+	shader.SetInt("uShowMissingGround", show_missing_ground ? 1 : 0);
 	shader.SetInt("uShowHighlightItems", show_highlight_items ? 1 : 0);
 
 	shader.SetInt("uShowZoneBorders", show_zone_borders ? 1 : 0);

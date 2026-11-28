@@ -158,6 +158,9 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/live/live_socket.h
     ${CMAKE_CURRENT_LIST_DIR}/live/live_tab.h
     ${CMAKE_CURRENT_LIST_DIR}/map/basemap.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/missing_ground.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/missing_ground_chunk.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/missing_ground_tile.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_storage_format.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_allocator.h
@@ -221,6 +224,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_palette.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_gatherer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_cache.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/missing_ground_overlay_cache.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/minimap_colors.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/multi_draw_indirect_renderer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colorizer.h
@@ -232,6 +236,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_interaction_state.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_timer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_view.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/viewport_tile_bounds.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/ring_buffer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shader_program.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shared_geometry.h
@@ -636,6 +641,8 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/live/live_tab.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/basemap.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/map.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/map/missing_ground_chunk.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/map/missing_ground_tile.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/operations/map_processor.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/map_region.cpp
     ${CMAKE_CURRENT_LIST_DIR}/map/position_format.cpp
@@ -689,6 +696,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_buffer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_gatherer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/light_cache.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/missing_ground_overlay_cache.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/hardware_profile.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/multi_draw_indirect_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/outfit_colorizer.cpp

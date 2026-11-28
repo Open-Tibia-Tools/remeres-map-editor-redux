@@ -347,6 +347,10 @@ void MainMenuBar::OnSearchForPickupableOnMap(wxCommandEvent& event) {
 	searchHandler->OnSearchForPickupableOnMap(event);
 }
 
+void MainMenuBar::OnSearchForMissingGroundOnMap(wxCommandEvent& event) {
+	searchHandler->OnSearchForMissingGroundOnMap(event);
+}
+
 void MainMenuBar::OnSearchForStuffOnSelection(wxCommandEvent& event) {
 	searchHandler->OnSearchForStuffOnSelection(event);
 }

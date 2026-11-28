@@ -1,18 +1,25 @@
 #include "editor/operations/search_query.h"
-#include "map/map.h"
-#include "map/tile.h"
-#include "map/map_region.h"
-#include "map/spatial_hash_grid.h"
-#include "game/item.h"
+#include "brushes/creature/creature_brush.h"
 #include "game/complexitem.h"
 #include "game/creature.h"
+#include "game/item.h"
 #include "game/items.h"
-#include "brushes/creature/creature_brush.h"
+#include "map/map.h"
+#include "map/map_region.h"
+#include "map/missing_ground.h"
+#include "map/missing_ground_tile.h"
+#include "map/spatial_hash_grid.h"
+#include "map/tile.h"
 #include "ui/gui.h"
+#include "util/common.h"
+#include "item_definitions/core/item_definition_store.h"
 
 #include <algorithm>
+#include <array>
+#include <cctype>
 #include <format>
 #include <future>
+#include <optional>
 #include <ranges>
 #include <string_view>
 #include <thread>
@@ -224,34 +231,363 @@ void ExtractCreature(
 	group.children.push_back(std::move(child));
 }
 
+void NormalizeGroupMetadata(SearchResultGroup& group) {
+	group.id_str = std::to_string(group.id);
+	group.lowercase_name.clear();
+	group.lowercase_name.reserve(group.name.size());
+	for (char ch : group.name) {
+		group.lowercase_name.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+	}
+}
+
+void SortSearchGroups(std::vector<SearchResultGroup>& groups) {
+	std::sort(groups.begin(), groups.end(), [](const auto& a, const auto& b) {
+		if (a.children.size() != b.children.size()) {
+			return a.children.size() > b.children.size();
+		}
+		return a.name < b.name;
+	});
+}
+
+[[nodiscard]] std::vector<SearchResultGroup> BuildMissingGroundGroups(std::vector<SearchResultChildEntry> entries) {
+	std::unordered_map<uint32_t, SearchResultGroup> item_groups;
+	std::unordered_map<std::string, SearchResultGroup> creature_groups;
+	SearchResultGroup spawn_group;
+	SearchResultGroup empty_group;
+
+	for (auto& entry : entries) {
+		if (entry.is_creature) {
+            const std::string creature_name = entry.group_name.empty() ? "Unknown Creature" : entry.group_name;
+            auto& group = creature_groups[creature_name];
+			if (group.name.empty()) {
+				group.name = creature_name;
+				group.brush = entry.brush;
+				group.is_creature = true;
+				group.id = entry.item_id;
+			}
+			group.children.push_back(std::move(entry));
+		} else if (entry.item_id > 0) {
+			auto& group = item_groups[entry.item_id];
+			if (group.id == 0) {
+				const auto def = g_item_definitions.get(entry.item_id);
+				group.id = entry.item_id;
+				group.client_id = def ? def.clientId() : 0;
+				group.subtype = entry.subtype;
+				group.name = (def && !def.name().empty()) ? std::string(def.name()) : std::format("Item #{}", entry.item_id);
+				group.is_creature = false;
+			}
+			group.children.push_back(std::move(entry));
+		} else if (entry.subtitle.starts_with("Spawn ")) {
+			if (spawn_group.name.empty()) {
+				spawn_group.name = "Spawns";
+                spawn_group.use_missing_ground_badge = true;
+            }
+			spawn_group.children.push_back(std::move(entry));
+		} else {
+			if (empty_group.name.empty()) {
+				empty_group.name = "Empty Tiles";
+                empty_group.use_missing_ground_badge = true;
+            }
+			empty_group.children.push_back(std::move(entry));
+		}
+	}
+
+	std::vector<SearchResultGroup> groups;
+	groups.reserve(item_groups.size() + creature_groups.size() + 2);
+	auto pushGroup = [&](SearchResultGroup& group) {
+		NormalizeGroupMetadata(group);
+		groups.push_back(std::move(group));
+	};
+	for (auto& [id, group] : item_groups) {
+		pushGroup(group);
+	}
+	for (auto& [name, group] : creature_groups) {
+		pushGroup(group);
+	}
+	if (!spawn_group.children.empty()) {
+		pushGroup(spawn_group);
+	}
+	if (!empty_group.children.empty()) {
+		pushGroup(empty_group);
+	}
+
+	SortSearchGroups(groups);
+	if (groups.size() == 1) {
+		groups.front().expanded = true;
+	}
+	return groups;
+}
+
 } // namespace
+
+std::vector<SearchResultChildEntry> SearchEngine::FindMissingGrounds(const Map& map, bool on_selection)
+{
+    const auto cells = map.getGrid().getSortedCells();
+    if (cells.empty()) {
+        return {};
+    }
+
+    const int map_width = map.getWidth();
+    const int map_height = map.getHeight();
+    const bool has_map_bounds = map_width > 0 && map_height > 0;
+
+    const size_t total_cells = cells.size();
+    const unsigned int hardware_threads = std::thread::hardware_concurrency();
+    const unsigned int num_threads
+        = std::max(1u, std::min(hardware_threads > 0 ? hardware_threads : 4u, static_cast<unsigned int>(total_cells)));
+    const size_t chunk_size = (total_cells + num_threads - 1) / num_threads;
+
+    auto process_cell_range = [&](size_t start_idx, size_t end_idx) -> std::vector<SearchResultChildEntry> {
+        std::vector<SearchResultChildEntry> local;
+        SpatialHashGrid::CellCursor neighbour_cursor;
+
+        auto lookupTile = [&](int nx_pos, int ny_pos, int z, int base_x, int base_y, const Floor* floor) -> const Tile* {
+            if (nx_pos < 0 || ny_pos < 0 || (has_map_bounds && (nx_pos >= map_width || ny_pos >= map_height))) {
+                return nullptr;
+            }
+            const int local_x = nx_pos - base_x;
+            const int local_y = ny_pos - base_y;
+            if (local_x >= 0 && local_x < 4 && local_y >= 0 && local_y < 4) {
+                return floor->locs[(local_x << 2) + local_y].get();
+            }
+            return map.getTile(nx_pos, ny_pos, z, neighbour_cursor);
+        };
+
+        auto evaluateCandidate
+            = [&](int cx, int cy, int cz, const Tile* ctile, MissingGround::RoleFlags self_role, int base_x, int base_y,
+                  const Floor* floor) {
+                  if (on_selection && (ctile == nullptr || !ctile->isSelected())) {
+                      return;
+                  }
+                  const MissingGround::RoleFlags n
+                      = MissingGround::ClassifyNeighborRoles(lookupTile(cx, cy - 1, cz, base_x, base_y, floor));
+                  const MissingGround::RoleFlags e
+                      = MissingGround::ClassifyNeighborRoles(lookupTile(cx + 1, cy, cz, base_x, base_y, floor));
+                  const MissingGround::RoleFlags s
+                      = MissingGround::ClassifyNeighborRoles(lookupTile(cx, cy + 1, cz, base_x, base_y, floor));
+                  const MissingGround::RoleFlags w
+                      = MissingGround::ClassifyNeighborRoles(lookupTile(cx - 1, cy, cz, base_x, base_y, floor));
+                  const MissingGround::RoleFlags se
+                      = MissingGround::ClassifyNeighborRoles(lookupTile(cx + 1, cy + 1, cz, base_x, base_y, floor));
+
+                  const MissingGround::RoleFlags nw = MissingGround::HasRole(self_role, MissingGround::RoleFlags::HasWall)
+                      ? MissingGround::ClassifyNeighborRoles(lookupTile(cx - 1, cy - 1, cz, base_x, base_y, floor))
+                      : MissingGround::RoleFlags::None;
+                  const MissingGround::RoleFlags ne = MissingGround::HasRole(self_role, MissingGround::RoleFlags::HasWall)
+                      ? MissingGround::ClassifyNeighborRoles(lookupTile(cx + 1, cy - 1, cz, base_x, base_y, floor))
+                      : MissingGround::RoleFlags::None;
+                  const MissingGround::RoleFlags sw = MissingGround::HasRole(self_role, MissingGround::RoleFlags::HasWall)
+                      ? MissingGround::ClassifyNeighborRoles(lookupTile(cx - 1, cy + 1, cz, base_x, base_y, floor))
+                      : MissingGround::RoleFlags::None;
+
+                  const auto reason = MissingGround::EvaluateMissingGroundWithReason(self_role, n, e, s, w, se, nw, ne, sw);
+                  if (reason == MissingGround::MissingGroundReason::None) {
+                      return;
+                  }
+
+                  const std::string_view reason_text = MissingGround::FormatReason(reason);
+                  SearchResultChildEntry child;
+                  child.position = Position(cx, cy, cz);
+                  child.formatted_pos = std::format("Position: [{}, {}, {}]", cx, cy, cz);
+                  child.kind = SearchResultKind::MissingGround;
+                  if (ctile != nullptr && !ctile->items.empty()) {
+                      const Item* top_item = ctile->items.back().get();
+                      if (top_item) {
+                          child.item_id = top_item->getID();
+                          child.subtype = top_item->getSubtype();
+                          const std::string item_name
+                              = top_item->getName().empty() ? std::format("Item #{}", child.item_id) : std::string(top_item->getName());
+                          child.subtitle = std::format("{} ({})", item_name, reason_text);
+                      }
+                  } else if (ctile != nullptr && ctile->creature != nullptr) {
+                      const auto* creature = ctile->creature.get();
+                      const auto* brush = static_cast<const Brush*>(creature->getBrush());
+                      const std::string creature_name
+                          = creature->getName().empty() ? (brush ? brush->getName() : "Unknown Creature") : creature->getName();
+                      child.is_creature = true;
+                      child.brush = brush;
+                      child.item_id = creature->getLookType().lookType;
+                      child.group_name = creature_name;
+                      child.subtitle = std::format("Creature: {} ({})", creature_name, reason_text);
+                  } else if (ctile != nullptr && ctile->spawn != nullptr) {
+                      child.use_missing_ground_badge = true;
+                      child.subtitle = std::format("Spawn ({})", reason_text);
+                  }
+                  if (child.subtitle.empty()) {
+                      child.use_missing_ground_badge = true;
+                      child.subtitle = std::format("Empty tile ({})", reason_text);
+                  }
+                  local.push_back(std::move(child));
+              };
+
+        for (size_t c = start_idx; c < end_idx; ++c) {
+            const SpatialHashGrid::SortedGridCell& cell_entry = cells[c];
+            const SpatialHashGrid::GridCell* cell = cell_entry.cell;
+            if (!cell) {
+                continue;
+            }
+
+            const int cell_x = cell_entry.cx * SpatialHashGrid::CELL_SIZE;
+            const int cell_y = cell_entry.cy * SpatialHashGrid::CELL_SIZE;
+            if (cell_x + SpatialHashGrid::CELL_SIZE <= 0 || cell_y + SpatialHashGrid::CELL_SIZE <= 0) {
+                continue;
+            }
+            if (has_map_bounds && (cell_x >= map_width || cell_y >= map_height)) {
+                continue;
+            }
+
+            for (int node_idx = 0; node_idx < SpatialHashGrid::NODES_IN_CELL; ++node_idx) {
+                const MapNode* node = cell->nodes[node_idx].get();
+                if (!node) {
+                    continue;
+                }
+
+                const int n_col = node_idx % SpatialHashGrid::NODES_PER_CELL;
+                const int n_row = node_idx / SpatialHashGrid::NODES_PER_CELL;
+                const int base_x = cell_x + (n_col << SpatialHashGrid::NODE_SHIFT);
+                const int base_y = cell_y + (n_row << SpatialHashGrid::NODE_SHIFT);
+                if (base_x + 4 <= 0 || base_y + 4 <= 0) {
+                    continue;
+                }
+                if (has_map_bounds && (base_x >= map_width || base_y >= map_height)) {
+                    continue;
+                }
+
+                for (int z = 0; z <= MAP_MAX_LAYER; ++z) {
+                    const Floor* floor = node->getFloor(static_cast<uint32_t>(z));
+                    if (!floor) {
+                        continue;
+                    }
+
+                    for (int lx = 0; lx < 4; ++lx) {
+                        const int x = base_x + lx;
+                        if (x < 0 || (has_map_bounds && x >= map_width)) {
+                            continue;
+                        }
+                        for (int ly = 0; ly < 4; ++ly) {
+                            const int y = base_y + ly;
+                            if (y < 0 || (has_map_bounds && y >= map_height)) {
+                                continue;
+                            }
+
+                            const Tile* tile = floor->locs[(lx << 2) + ly].get();
+                            const MissingGround::RoleFlags self_role = (tile != nullptr && tile->ground != nullptr)
+                                ? MissingGround::ClassifyNeighborRoles(tile)
+                                : MissingGround::ClassifyTile(tile);
+                            if (!MissingGround::HasRole(self_role, MissingGround::RoleFlags::HasGround)) {
+                                evaluateCandidate(x, y, z, tile, self_role, base_x, base_y, floor);
+                            }
+
+                            if (!on_selection && MissingGround::HasRole(self_role, MissingGround::RoleFlags::Barrier)) {
+                                struct Offset {
+                                    int dx;
+                                    int dy;
+                                };
+                                constexpr std::array<Offset, 3> kUpstreamOffsets {{{-1, 0}, {0, -1}, {-1, -1}}};
+                                for (const auto& [dx, dy] : kUpstreamOffsets) {
+                                    const int ux = x + dx;
+                                    const int uy = y + dy;
+                                    if (ux < 0 || uy < 0 || (has_map_bounds && (ux >= map_width || uy >= map_height))) {
+                                        continue;
+                                    }
+                                    if (lookupTile(ux, uy, z, base_x, base_y, floor) == nullptr) {
+                                        evaluateCandidate(ux, uy, z, nullptr, MissingGround::RoleFlags::None, base_x, base_y, floor);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return local;
+    };
+
+    std::vector<std::future<std::vector<SearchResultChildEntry>>> futures;
+    futures.reserve(num_threads);
+    for (unsigned int t = 0; t < num_threads; ++t) {
+        const size_t start_idx = t * chunk_size;
+        const size_t end_idx = std::min(start_idx + chunk_size, total_cells);
+        if (start_idx >= end_idx) {
+            break;
+        }
+        futures.push_back(std::async(std::launch::async, [=, &process_cell_range]() { return process_cell_range(start_idx, end_idx); }));
+    }
+
+    std::vector<SearchResultChildEntry> all_entries;
+    for (auto& fut : futures) {
+        auto chunk = fut.get();
+        all_entries.insert(all_entries.end(), std::make_move_iterator(chunk.begin()), std::make_move_iterator(chunk.end()));
+    }
+
+    std::sort(all_entries.begin(), all_entries.end(), [](const SearchResultChildEntry& a, const SearchResultChildEntry& b) {
+        if (a.position.z != b.position.z) {
+            return a.position.z < b.position.z;
+        }
+        if (a.position.y != b.position.y) {
+            return a.position.y < b.position.y;
+        }
+        return a.position.x < b.position.x;
+    });
+    all_entries.erase(
+        std::unique(
+            all_entries.begin(), all_entries.end(),
+            [](const SearchResultChildEntry& a, const SearchResultChildEntry& b) { return a.position == b.position; }
+        ),
+        all_entries.end()
+    );
+
+    return all_entries;
+}
 
 std::vector<SearchResultGroup> SearchEngine::Execute(Map& map, const SearchQuery& query) {
 	const std::string bar_label = query.query_title.empty()
 		? (query.on_selection ? "Searching on selected area..." : "Searching on map...")
 		: query.query_title;
 
-	if (query.progress_callback) {
+    std::optional<ScopedLoadingBar> loading_bar;
+    if (query.progress_callback) {
 		query.progress_callback(0.0f, bar_label);
 	} else {
-		g_gui.CreateLoadBar(bar_label);
-	}
+        loading_bar.emplace(wxstr(bar_label));
+    }
 
-	const bool has_creature_filter = (query.specific_creature_brush != nullptr) || (!query.creature_brushes.empty());
-	const bool search_creatures = HasCategory(query.categories, SearchCategory::Creature) || has_creature_filter;
+    auto finishProgress = [&]() {
+        if (query.progress_callback) {
+            query.progress_callback(1.0f, "");
+        } else {
+            loading_bar.reset();
+        }
+    };
 
-	const bool has_item_filter = (query.specific_item_id > 0) || (!query.item_id_set.empty());
-	const bool search_items = (query.categories != SearchCategory::None && query.categories != SearchCategory::Creature) || has_item_filter;
+    const bool search_missing_ground = HasCategory(query.categories, SearchCategory::MissingGround);
+    std::vector<SearchResultGroup> missing_groups;
+    if (search_missing_ground) {
+        auto entries = FindMissingGrounds(map, query.on_selection);
+        if (!entries.empty()) {
+            missing_groups = BuildMissingGroundGroups(std::move(entries));
+        }
+    }
 
-	auto cells = map.getGrid().getSortedCells();
+    const bool has_creature_filter = (query.specific_creature_brush != nullptr) || (!query.creature_brushes.empty());
+    const bool search_creatures = HasCategory(query.categories, SearchCategory::Creature) || has_creature_filter;
+
+    const bool has_item_filter = (query.specific_item_id > 0) || (!query.item_id_set.empty());
+    const uint32_t item_category_mask = static_cast<uint32_t>(query.categories) & ~static_cast<uint32_t>(SearchCategory::Creature)
+        & ~static_cast<uint32_t>(SearchCategory::MissingGround);
+    const bool search_items = (item_category_mask != 0u) || has_item_filter;
+
+    if (!search_creatures && !search_items) {
+        finishProgress();
+        return missing_groups;
+    }
+
+    auto cells = map.getGrid().getSortedCells();
 	if (cells.empty()) {
-		if (query.progress_callback) {
-			query.progress_callback(1.0f, "");
-		} else {
-			g_gui.DestroyLoadBar();
-		}
-		return {};
-	}
+        finishProgress();
+        return missing_groups;
+    }
 
 	struct WorkerResult {
 		std::unordered_map<uint32_t, SearchResultGroup> item_groups;
@@ -390,37 +726,31 @@ std::vector<SearchResultGroup> SearchEngine::Execute(Map& map, const SearchQuery
 		}
 	}
 
-	if (query.progress_callback) {
-		query.progress_callback(1.0f, "");
-	} else {
-		g_gui.DestroyLoadBar();
-	}
+    // Merge all groups into a single list before signalling completion.
+    std::vector<SearchResultGroup> result;
+    result.reserve(master_item_groups.size() + master_creature_groups.size() + missing_groups.size());
 
-	// Merge all groups into a single list
-	std::vector<SearchResultGroup> result;
-	result.reserve(master_item_groups.size() + master_creature_groups.size());
-
-	auto append_and_normalize = [&](auto& map) {
+    auto append_and_normalize = [&](auto& map) {
 		for (auto& [key, g] : map) {
-			g.id_str = std::to_string(g.id);
-			g.lowercase_name.reserve(g.name.size());
-			for (char ch : g.name) {
-				g.lowercase_name.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
-			}
+			NormalizeGroupMetadata(g);
 			result.push_back(std::move(g));
 		}
 	};
 
 	append_and_normalize(master_item_groups);
 	append_and_normalize(master_creature_groups);
+    for (auto& g : missing_groups) {
+        g.expanded = false;
+        result.push_back(std::move(g));
+    }
 
-	// Default sort: highest match count first, then alphabetical name
-	std::sort(result.begin(), result.end(), [](const auto& a, const auto& b) {
-		if (a.children.size() != b.children.size()) {
-			return a.children.size() > b.children.size();
-		}
-		return a.name < b.name;
-	});
+    // Default sort: highest match count first, then alphabetical name
+	SortSearchGroups(result);
+    if (search_missing_ground && result.size() == 1) {
+        result.front().expanded = true;
+    }
 
-	return result;
+    finishProgress();
+
+    return result;
 }

@@ -168,6 +168,10 @@ public:
 		overlay_cache.invalidate();
 	}
 
+	void InvalidateMissingGroundCache() noexcept {
+		zone_overlay_drawer.invalidateMissingGroundCache();
+	}
+
 private:
 	struct OverlayCacheState {
 		int floor = -1;

@@ -77,6 +77,19 @@ ViewBounds RenderView::getBoundsForFloor(int map_z, int extra_margin_tiles) cons
 	};
 }
 
+ViewBounds RenderView::ComputeFloorTileBounds(int map_z, int extra_margin_tiles) const noexcept
+{
+    const ViewportTileBounds bounds = ComputeFloorViewportTileBounds(
+        map_z, view_scroll_x, view_scroll_y, floor, logical_width, logical_height, GROUND_LAYER, TILE_SIZE, extra_margin_tiles
+    );
+    return ViewBounds {
+        .start_x = bounds.start_x,
+        .start_y = bounds.start_y,
+        .end_x = bounds.end_x,
+        .end_y = bounds.end_y,
+    };
+}
+
 int RenderView::getFloorAdjustment() const {
 	if (floor > GROUND_LAYER) { // Underground
 		return 0; // No adjustment
