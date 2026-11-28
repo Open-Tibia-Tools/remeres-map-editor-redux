@@ -159,6 +159,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/live/live_tab.h
     ${CMAKE_CURRENT_LIST_DIR}/map/basemap.h
     ${CMAKE_CURRENT_LIST_DIR}/map/missing_ground.h
+    ${CMAKE_CURRENT_LIST_DIR}/map/missing_ground_tile.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_storage_format.h
     ${CMAKE_CURRENT_LIST_DIR}/map/map_allocator.h
@@ -233,6 +234,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_interaction_state.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_timer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/render_view.h
+    ${CMAKE_CURRENT_LIST_DIR}/rendering/core/viewport_tile_bounds.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/ring_buffer.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shader_program.h
     ${CMAKE_CURRENT_LIST_DIR}/rendering/core/shared_geometry.h

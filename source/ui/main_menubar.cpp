@@ -347,6 +347,11 @@ void MainMenuBar::OnSearchForPickupableOnMap(wxCommandEvent& event) {
 	searchHandler->OnSearchForPickupableOnMap(event);
 }
 
+void MainMenuBar::OnSearchForMissingGroundOnMap(wxCommandEvent& event)
+{
+    searchHandler->OnSearchForMissingGroundOnMap(event);
+}
+
 void MainMenuBar::OnSearchForStuffOnSelection(wxCommandEvent& event) {
 	searchHandler->OnSearchForStuffOnSelection(event);
 }
@@ -399,8 +404,9 @@ void MainMenuBar::OnSelectionMethodChange(wxCommandEvent& event) {
 	viewSettingsHandler->OnSelectionMethodChange(event);
 }
 
-void MainMenuBar::OnMagicWandModeChange(wxCommandEvent& event) {
-	viewSettingsHandler->OnMagicWandModeChange(event);
+void MainMenuBar::OnMagicWandModeChange(wxCommandEvent& event)
+{
+    viewSettingsHandler->OnMagicWandModeChange(event);
 }
 
 void MainMenuBar::OnCopy(wxCommandEvent& WXUNUSED(event)) {

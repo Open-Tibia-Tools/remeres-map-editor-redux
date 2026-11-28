@@ -6,6 +6,7 @@
 #include "map/basemap.h"
 #include "map/map.h"
 #include "map/missing_ground.h"
+#include "map/missing_ground_tile.h"
 #include "map/tile.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/core/drawing_options.h"
@@ -777,66 +778,126 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 	}
 }
 
-namespace {
-	// Translucent amber, distinct from the red/orange invalid-tile and magenta invalid-zone markers.
-	constexpr float kMissingGroundTint[4] = { 1.0f, 0.8f, 0.0f, 0.45f };
-} // namespace
-
 void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
                                                int z,
                                                const RenderView& view,
                                                const Map& map,
                                                const DrawingOptions& options,
                                                const AtlasManager& atlas) {
-	if (options.ingame || !options.show_missing_ground || view.zoom > kZoomLODCutoff) {
-		return;
-	}
+    if (options.ingame || options.show_as_minimap || options.show_only_colors
+        || (!options.show_missing_ground && !options.show_missing_ground_raw) || view.zoom > kZoomLODCutoff) {
+        return;
+    }
 
-	const AtlasRegion* white_pixel = atlas.getWhitePixel();
-	if (!white_pixel) {
-		return;
-	}
+    const AtlasRegion* white_pixel = atlas.getWhitePixel();
+    if (!white_pixel) {
+        return;
+    }
 
-	const ViewBounds bounds = view.getBoundsForFloor(z);
-	const int offset = (z <= GROUND_LAYER)
-		? (GROUND_LAYER - z) * TILE_SIZE
-		: TILE_SIZE * (view.floor - z);
-	const int base_screen_x = -view.view_scroll_x - offset;
-	const int base_screen_y = -view.view_scroll_y - offset;
+    const ViewBounds bounds = view.ComputeFloorTileBounds(z, 1);
+    if (bounds.end_x < bounds.start_x || bounds.end_y < bounds.start_y) {
+        return;
+    }
 
-	const auto has_ground = [&map, z](int x, int y) {
-		if (x < 0 || y < 0) {
-			return false;
-		}
-		const Tile* tile = map.getTile(x, y, z);
-		return tile && tile->ground;
-	};
+    const int min_x = bounds.start_x - 1;
+    const int max_x = bounds.end_x + 1;
+    const int row_width = max_x - min_x + 1;
+    const int map_width = map.getWidth();
+    const int map_height = map.getHeight();
+    const bool has_map_bounds = map_width > 0 && map_height > 0;
 
-	SpatialHashGrid::CellCursor cursor;
-	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
-		const float draw_y = static_cast<float>(y * TILE_SIZE + base_screen_y);
-		const int ly = y & 3;
-		for (int x = bounds.start_x; x <= bounds.end_x;) {
-			const Floor* floor = map.getFloor(x, y, z, cursor);
-			if (!floor) {
-				x = std::min(bounds.end_x, x | cursor.empty_span_mask) + 1;
-				continue;
-			}
-			const int node_end = std::min(bounds.end_x, x | 3);
-			for (; x <= node_end; ++x) {
-				const Tile* tile = floor->locs[((x & 3) << 2) + ly].get();
-				// Cheap reject before the neighbour lookups.
-				if (!tile || tile->ground || tile->items.empty()) {
-					continue;
-				}
-				if (!MissingGround::IsHole(!tile->items.empty(), tile->ground != nullptr, MissingGround::CountGroundedNeighbours(x, y, has_ground))) {
-					continue;
-				}
-				const float draw_x = static_cast<float>(x * TILE_SIZE + base_screen_x);
-				sprite_batch.draw(draw_x, draw_y, 32.0f, 32.0f, *white_pixel, kMissingGroundTint[0], kMissingGroundTint[1], kMissingGroundTint[2], kMissingGroundTint[3]);
-			}
-		}
-	}
+    SpatialHashGrid::CellCursor primary_cursor;
+    auto fetchRow = [&](int ry, std::vector<uint16_t>& row) {
+        row.resize(row_width);
+        uint16_t* out = row.data();
+        if (ry < 0 || (has_map_bounds && ry >= map_height)) {
+            std::fill(out, out + row_width, MissingGround::kRoleNone);
+            return;
+        }
+
+        int x = min_x;
+        if (x < 0) {
+            const int neg_end = std::min(max_x, -1);
+            std::fill(out, out + (neg_end - min_x + 1), MissingGround::kRoleNone);
+            x = neg_end + 1;
+        }
+
+        const int scan_max_x = has_map_bounds ? std::min(max_x, map_width - 1) : max_x;
+        const int ly = ry & 3;
+        while (x <= scan_max_x) {
+            const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
+            if (!floor) {
+                const int span_end = std::min(scan_max_x, x | primary_cursor.empty_span_mask);
+                std::fill(out + (x - min_x), out + (span_end - min_x + 1), MissingGround::kRoleNone);
+                x = span_end + 1;
+                continue;
+            }
+            const int node_end = std::min(scan_max_x, x | 3);
+            for (; x <= node_end; ++x) {
+                const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
+                out[x - min_x] = MissingGround::ClassifyTile(t);
+            }
+        }
+
+        if (x <= max_x) {
+            std::fill(out + (x - min_x), out + row_width, MissingGround::kRoleNone);
+        }
+    };
+
+    fetchRow(bounds.start_y - 1, missing_ground_row_prev_);
+    fetchRow(bounds.start_y, missing_ground_row_curr_);
+
+    const int offset = (z <= GROUND_LAYER) ? (GROUND_LAYER - z) * TILE_SIZE : TILE_SIZE * (view.floor - z);
+    const int base_screen_x = -view.view_scroll_x - offset;
+    const int base_screen_y = -view.view_scroll_y - offset;
+    const uint32_t missing_ground_flag = MakeIndicatorZoneFlag(TechnicalItemRegistry::GetIndicatorId(TileIndicatorType::MissingGround));
+    const uint32_t missing_ground_raw_flag
+        = MakeIndicatorZoneFlag(TechnicalItemRegistry::GetIndicatorId(TileIndicatorType::MissingGroundRaw));
+    const uint32_t missing_ground_both_flag
+        = MakeIndicatorZoneFlag(TechnicalItemRegistry::GetIndicatorId(TileIndicatorType::MissingGroundBoth));
+
+    sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+
+    for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
+        fetchRow(y + 1, missing_ground_row_next_);
+        const float draw_y = static_cast<float>(y * TILE_SIZE + base_screen_y);
+
+        for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
+            const int idx = x - min_x;
+            const uint16_t cell = missing_ground_row_curr_[idx];
+            if ((cell & MissingGround::kHasGround) != 0u) {
+                continue;
+            }
+            const uint16_t nw = missing_ground_row_prev_[idx - 1];
+            const uint16_t n = missing_ground_row_prev_[idx];
+            const uint16_t ne = missing_ground_row_prev_[idx + 1];
+            const uint16_t e = missing_ground_row_curr_[idx + 1];
+            const uint16_t sw = missing_ground_row_next_[idx - 1];
+            const uint16_t s = missing_ground_row_next_[idx];
+            const uint16_t w = missing_ground_row_curr_[idx - 1];
+            const uint16_t se = missing_ground_row_next_[idx + 1];
+
+            const bool rule_match
+                = options.show_missing_ground && MissingGround::EvaluateMissingGround(cell, n, e, s, w, se, nw, ne, sw);
+            const bool raw_match = options.show_missing_ground_raw && MissingGround::EvaluateMissingGroundRaw(cell);
+            uint32_t indicator_flag = 0;
+            if (rule_match && raw_match) {
+                indicator_flag = missing_ground_both_flag;
+            } else if (rule_match) {
+                indicator_flag = missing_ground_flag;
+            } else if (raw_match) {
+                indicator_flag = missing_ground_raw_flag;
+            } else {
+                continue;
+            }
+
+            const float draw_x = static_cast<float>(x * TILE_SIZE + base_screen_x);
+            sprite_batch.draw(draw_x, draw_y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, indicator_flag);
+        }
+
+        std::swap(missing_ground_row_prev_, missing_ground_row_curr_);
+        std::swap(missing_ground_row_curr_, missing_ground_row_next_);
+    }
 }
 
 void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,

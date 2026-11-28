@@ -85,16 +85,13 @@ public:
 	                             const DrawingOptions& options,
 	                             const AtlasManager& atlas);
 
-	// "Show missing ground": tints holes in grounded areas (see map/missing_ground.h). Only the
-	// map itself is checked, not the paste preview.
-	void drawFloorMissingGround(SpriteBatch& sprite_batch,
-	                            int z,
-	                            const RenderView& view,
-	                            const Map& map,
-	                            const DrawingOptions& options,
-	                            const AtlasManager& atlas);
+    // "Show missing ground": renders yellow "no ground" kitchen-tile indicators using specific domain rules
+    // (or violet "raw ground" indicators in Raw debug mode). Skipped during paste preview and minimap modes.
+    void drawFloorMissingGround(
+        SpriteBatch& sprite_batch, int z, const RenderView& view, const Map& map, const DrawingOptions& options, const AtlasManager& atlas
+    );
 
-	void drawFloorBadges(SpriteBatch& sprite_batch,
+    void drawFloorBadges(SpriteBatch& sprite_batch,
 	                     int z,
 	                     const RenderView& view,
 	                     const Map& map,
@@ -177,6 +174,10 @@ private:
     std::vector<ZoneRowCell> zone_row_next_;
 
     std::vector<PendingHighlightQuad> highlight_quads_;
+
+    std::vector<uint16_t> missing_ground_row_prev_;
+    std::vector<uint16_t> missing_ground_row_curr_;
+    std::vector<uint16_t> missing_ground_row_next_;
 };
 
 } // namespace rme::rendering

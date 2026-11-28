@@ -63,7 +63,8 @@ struct DrawingOptions {
 	bool show_tech_items;
 	bool show_invalid_tiles;
 	bool show_missing_ground;
-	bool show_invalid_zones;
+    bool show_missing_ground_raw;
+    bool show_invalid_zones;
 	bool show_waypoints;
 	bool ingame;
 	bool is_drawing_mode;

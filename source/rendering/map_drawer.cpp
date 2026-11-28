@@ -174,37 +174,19 @@ void MapDrawer::Draw(const InteractionRenderState& interaction) {
 
 	// Begin Batches
 	sprite_batch.begin(view.projectionMatrix, *atlas);
-	rme::rendering::shaders::SetSpriteBatchOverlayUniforms(
-		*sprite_batch.getShader(),
-		static_cast<uint32_t>(options.current_house_id),
-		options.show_houses,
-		options.show_spawns,
-		options.show_towns,
-		options.show_waypoints,
-		options.show_tech_items && !options.ingame,
-		options.show_blocking,
-		options.show_special_tiles,
-		options.show_invalid_tiles && !options.ingame,
-		options.show_invalid_zones && !options.ingame,
-		options.highlight_items && !options.ingame,
-		options.show_zone_borders,
-		options.house_active_blend_mode,
-		options.house_inactive_blend_mode,
-		options.zone_border_color,
-		options.zone_pz_color,
-		options.zone_nopvp_color,
-		options.zone_nologout_color,
-		options.zone_pvp_color,
-		options.zone_blocking_color,
-		options.zone_spawn_color,
-		options.house_active_color,
-		options.house_inactive_color,
-		options.extended_pathing_shader,
-		options.zone_blocking_blend_mode
-	);
-	primitive_renderer.setProjectionMatrix(view.projectionMatrix);
+    rme::rendering::shaders::SetSpriteBatchOverlayUniforms(
+        *sprite_batch.getShader(), static_cast<uint32_t>(options.current_house_id), options.show_houses, options.show_spawns,
+        options.show_towns, options.show_waypoints, options.show_tech_items && !options.ingame, options.show_blocking,
+        options.show_special_tiles, options.show_invalid_tiles && !options.ingame, options.show_invalid_zones && !options.ingame,
+        options.highlight_items && !options.ingame, options.show_zone_borders, options.house_active_blend_mode,
+        options.house_inactive_blend_mode, options.zone_border_color, options.zone_pz_color, options.zone_nopvp_color,
+        options.zone_nologout_color, options.zone_pvp_color, options.zone_blocking_color, options.zone_spawn_color,
+        options.house_active_color, options.house_inactive_color, options.extended_pathing_shader, options.zone_blocking_blend_mode,
+        options.ingame ? 0 : ((options.show_missing_ground ? 1 : 0) | (options.show_missing_ground_raw ? 2 : 0))
+    );
+    primitive_renderer.setProjectionMatrix(view.projectionMatrix);
 
-	DrawBackground();
+    DrawBackground();
 
 	// Save original view bounds before DrawMap modifies them per-floor
 	const ViewBounds original_bounds { view.start_x, view.start_y, view.end_x, view.end_y };
@@ -396,8 +378,12 @@ void MapDrawer::DrawUIOverlays(NVGcontext* vg) {
 	lua_overlay_drawer.DrawUI(vg, view, options);
 }
 
-void MapDrawer::DrawLassoOverlay(NVGcontext* vg, std::span<const LassoScreenPoint> points, std::span<const std::uint8_t> handle_vertices, LassoScreenPoint cursor, const LassoOverlayStyle& style) {
-	lasso_overlay_drawer.draw(vg, points, handle_vertices, cursor, style);
+void MapDrawer::DrawLassoOverlay(
+    NVGcontext* vg, std::span<const LassoScreenPoint> points, std::span<const std::uint8_t> handle_vertices, LassoScreenPoint cursor,
+    const LassoOverlayStyle& style
+)
+{
+    lasso_overlay_drawer.draw(vg, points, handle_vertices, cursor, style);
 }
 
 void MapDrawer::DrawCreatureNames(NVGcontext* vg) {
