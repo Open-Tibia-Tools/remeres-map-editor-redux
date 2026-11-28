@@ -15,6 +15,10 @@ class MainToolBar;
 class MapTab;
 class wxActivityIndicator;
 
+namespace AiControl {
+	class Controller;
+}
+
 class MainFrame : public wxFrame {
 public:
 	MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
@@ -41,6 +45,10 @@ public:
 		return menu_bar.get();
 	}
 
+	AiControl::Controller& GetAiControl() const {
+		return *ai_control;
+	}
+
 	void OnUpdateMenus(wxCommandEvent& event);
 	void UpdateFloorMenu();
 	void StartBusyAnimation();
@@ -61,6 +69,7 @@ public:
 protected:
 	std::unique_ptr<MainMenuBar> menu_bar;
 	std::unique_ptr<MainToolBar> tool_bar;
+	std::unique_ptr<AiControl::Controller> ai_control;
 	wxActivityIndicator* m_activity_indicator = nullptr;
 	// Throttles the idle pass that re-evaluates the menu bar and toolbar.
 	std::chrono::steady_clock::time_point last_ui_update_ {};

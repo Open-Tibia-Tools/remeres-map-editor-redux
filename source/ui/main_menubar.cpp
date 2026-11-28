@@ -63,6 +63,8 @@
 #include "editor/operations/search_operations.h"
 #include "editor/operations/clean_operations.h"
 
+#include "ai/ai_control_controller.h"
+
 MainMenuBar::MainMenuBar(MainFrame* frame) :
 	frame(frame) {
 	using namespace MenuBar;
@@ -546,6 +548,11 @@ void MainMenuBar::OnTakeScreenshot(wxCommandEvent& WXUNUSED(event)) {
 	g_gui.GetCurrentMapTab()->GetView()->GetCanvas()->TakeScreenshot(
 		path, wxstr(g_settings.getString(Config::SCREENSHOT_FORMAT))
 	);
+}
+
+void MainMenuBar::OnToggleAiControlApi(wxCommandEvent& WXUNUSED(event)) {
+	frame->GetAiControl().Toggle();
+	CheckItem(MenuBar::AI_CONTROL_API, frame->GetAiControl().IsRunning());
 }
 
 void MainMenuBar::OnZoomIn(wxCommandEvent& event) {

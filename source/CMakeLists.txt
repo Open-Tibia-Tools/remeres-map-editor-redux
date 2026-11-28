@@ -1,4 +1,8 @@
 set(rme_H
+    ${CMAKE_CURRENT_LIST_DIR}/ai/ai_control_contract.h
+    ${CMAKE_CURRENT_LIST_DIR}/ai/ai_control_controller.h
+    ${CMAKE_CURRENT_LIST_DIR}/ai/ai_control_http_server.h
+    ${CMAKE_CURRENT_LIST_DIR}/ai/ai_control_service.h
     ${CMAKE_CURRENT_LIST_DIR}/app/application.h
     ${CMAKE_CURRENT_LIST_DIR}/app/client_asset_detector.h
     ${CMAKE_CURRENT_LIST_DIR}/app/client_version.h
@@ -69,6 +73,7 @@ set(rme_H
     ${CMAKE_CURRENT_LIST_DIR}/util/image_manager.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor_factory.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/copy_operations.h
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/brush_fill_operations.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/draw_operations.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/selection_operations.h
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/map_version_changer.h
@@ -502,6 +507,10 @@ set(rme_H
 )
 
 set(rme_SRC
+    ${CMAKE_CURRENT_LIST_DIR}/ai/ai_control_contract.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ai/ai_control_controller.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ai/ai_control_http_server.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ai/ai_control_service.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/application.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/client_asset_detector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/app/client_version.cpp
@@ -567,6 +576,7 @@ set(rme_SRC
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/editor_factory.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/copy_operations.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/editor/operations/brush_fill_operations.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/draw_operations.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/selection_operations.cpp
     ${CMAKE_CURRENT_LIST_DIR}/editor/operations/magic_wand.cpp

@@ -8,6 +8,8 @@
 #include "app/preferences.h"
 #include "ui/managers/recent_files_manager.h"
 #include "util/image_manager.h"
+#include "ui/main_frame.h"
+#include "ai/ai_control_controller.h"
 
 void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<std::string, std::unique_ptr<MenuBar::Action>>& actions) {
 	using namespace MenuBar;
@@ -159,6 +161,7 @@ void MenuBarActionManager::RegisterActions(MainMenuBar* mb, std::unordered_map<s
 	MAKE_ACTION_ICON(SELECT_HOUSE, wxITEM_NORMAL, ICON_HOUSE, OnSelectHousePalette);
 	MAKE_ACTION_ICON(SELECT_WAYPOINT, wxITEM_NORMAL, ICON_FLAG, OnSelectWaypointPalette);
 	MAKE_ACTION_ICON(TAKE_SCREENSHOT, wxITEM_NORMAL, ICON_CAMERA, OnTakeScreenshot);
+	MAKE_ACTION_ICON(AI_CONTROL_API, wxITEM_CHECK, ICON_ROBOT, OnToggleAiControlApi);
 
 	MAKE_ACTION_ICON(LIVE_START, wxITEM_NORMAL, ICON_SIGNAL, OnStartLive);
 	MAKE_ACTION_ICON(LIVE_JOIN, wxITEM_NORMAL, ICON_NETWORK_WIRED, OnJoinLive);
@@ -322,5 +325,6 @@ void MenuBarActionManager::UpdateState(MainMenuBar* mb) {
 	mb->EnableItem(SCRIPTS_OPEN_FOLDER, loaded);
 	mb->EnableItem(SCRIPTS_RELOAD, loaded);
 
+	mb->CheckItem(AI_CONTROL_API, mb->frame->GetAiControl().IsRunning());
 	mb->UpdateFloorMenu();
 }

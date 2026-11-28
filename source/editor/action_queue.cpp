@@ -81,6 +81,10 @@ void ActionQueue::resetTimer() {
 	if (!actions.empty()) {
 		actions.back()->resetTimer();
 	}
+	// After an undo the next batch drops the redo branch and would stack onto the entry before it.
+	if (current > 0 && current <= actions.size()) {
+		actions[current - 1]->resetTimer();
+	}
 }
 
 void ActionQueue::addBatch(std::unique_ptr<BatchAction> batch, int stacking_delay) {
@@ -125,6 +129,7 @@ void ActionQueue::addBatch(std::unique_ptr<BatchAction> batch, int stacking_dela
 			BatchAction* lastAction = actions.back().get();
 			if (lastAction->getType() == batch->getType() && g_settings.getInteger(Config::GROUP_ACTIONS) && time(nullptr) - stacking_delay < lastAction->timestamp) {
 				lastAction->merge(batch.get());
+				++merged_count;
 				lastAction->timestamp = time(nullptr);
 				memory_size -= lastAction->memsize();
 				memory_size += lastAction->memsize(true);
@@ -135,6 +140,7 @@ void ActionQueue::addBatch(std::unique_ptr<BatchAction> batch, int stacking_dela
 		batch->timestamp = time(nullptr);
 		actions.push_back(std::move(batch));
 		current++;
+		++pushed_count;
 	} while (false);
 	g_luaScripts.emit("actionChange");
 }
