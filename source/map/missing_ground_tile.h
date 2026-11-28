@@ -119,6 +119,8 @@ namespace MissingGround {
                 } else {
                     mask |= RoleFlags::HasStaticContent;
                 }
+            } else if (is_flat_border && !is_border && !is_optional_border && !is_wall && !is_functional_item && !is_soft_item) {
+                mask |= RoleFlags::IsBottomClip;
             }
         }
 

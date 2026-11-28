@@ -30,5 +30,6 @@ map.visitPopulatedChunks(min_cx, min_cy, max_cx, max_cy, z, [&](int cx, int cy) 
 
 ## 4. Invariants & Pitfalls
 - Tiles with `ItemFlag::BlockPathfinder` (e.g. `459`/`469`) set `RoleFlags::HasGround` on themselves but never `RoleFlags::OpenFloor` for neighbours.
-- Unoccluded border-only tiles (`RoleFlags::None`) and void-adjacent trim stay quiet unless occluded in 2.5D behind `E`/`S`/`SE` barriers (`OccludedBehindBarrier`).
+- Unoccluded XML border-only tiles (`IsBorder` / `IsOptionalBorder` -> `RoleFlags::None`) and void-adjacent trim stay quiet unless occluded in 2.5D behind `E`/`S`/`SE` barriers (`OccludedBehindBarrier`).
+- Non-blocking `AlwaysOnBottom` (`topOrder == 1`) items absent from `IsBorder`/`IsCarpet` brushes (such as older carpets in 10.98 `brushes.xml`) receive `RoleFlags::IsBottomClip`: quiet on exterior void edges, flagged (`MaskedByCarpetOrContent`) when enclosed (`not_void_edge`).
 - `FindMissingGrounds` must also scan `{W, N, NW}` unallocated tiles next to `RoleFlags::Barrier` tiles so occluded empty voids with zero `Tile*` are caught; chunk evaluation may skip empty 16×16 chunks (`visitPopulatedChunks`) because every coordinate in an empty chunk has `>=2` empty cardinal neighbours (`voids >= 2`).

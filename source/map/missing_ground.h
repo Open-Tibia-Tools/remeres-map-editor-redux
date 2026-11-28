@@ -23,6 +23,7 @@ namespace MissingGround {
         HasSoftContent = 1u << 5,
         HasStaticContent = 1u << 6,
         IsTrim = 1u << 7,
+        IsBottomClip = 1u << 8,
     };
 
     [[nodiscard]] constexpr RoleFlags operator|(RoleFlags a, RoleFlags b) noexcept
@@ -103,7 +104,9 @@ namespace MissingGround {
         }
 
         const bool is_unblocked_surface = !HasRole(self, RoleFlags::HasWall | RoleFlags::Barrier | RoleFlags::IsTrim);
-        if (is_unblocked_surface && HasRole(self, RoleFlags::HasSoftContent) && (not_void_edge || open_floors >= 2)) {
+        if (is_unblocked_surface
+            && ((HasRole(self, RoleFlags::HasSoftContent) && (not_void_edge || open_floors >= 2))
+                || (HasRole(self, RoleFlags::IsBottomClip) && not_void_edge))) {
             return MissingGroundReason::MaskedByCarpetOrContent;
         }
 

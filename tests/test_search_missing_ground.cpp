@@ -722,3 +722,31 @@ TEST_CASE(
     cache.syncDirtyState(map.getChangeTracker(), map, map.getWidth(), map.getHeight(), false);
     REQUIRE(cache.getCachedChunkCount() == 0);
 }
+
+TEST_CASE(
+    "Bottom-clip carpet without IsCarpet XML catches interior missing ground while exterior void edge stays quiet",
+    "[search][missing_ground]"
+)
+{
+    ScopedItemDefinitions defs;
+    Map map;
+    map.setWidth(128);
+    map.setHeight(128);
+
+    // Exterior clip border next to single ground neighbor stays quiet
+    PutGround(map, 10, 9, 7);
+    PutItem(map, 10, 10, 7, kClientClipBorderId);
+
+    // Unregistered bottom-clip carpet (e.g. 1798 in 10.98 where IsCarpet is omitted from brushes.xml) surrounded by walkable floors
+    PutItem(map, 30, 30, 7, kClientClipBorderId);
+    SurroundWithGround(map, 30, 30, 7);
+
+    const auto results = SearchEngine::FindMissingGrounds(map);
+    REQUIRE(results.size() == 1);
+    REQUIRE(results[0].position == Position(30, 30, 7));
+    REQUIRE(results[0].subtitle == "unlisted clip border (masked by carpet/content)");
+
+    // ClassifyTile marks kClientClipBorderId with IsBottomClip while ClassifyNeighborRoles stays strictly parity-safe.
+    REQUIRE(MissingGround::HasRole(MissingGround::ClassifyTile(map.getTile(30, 30, 7)), MissingGround::RoleFlags::IsBottomClip));
+    REQUIRE(MissingGround::ClassifyNeighborRoles(map.getTile(30, 30, 7)) == MissingGround::RoleFlags::None);
+}

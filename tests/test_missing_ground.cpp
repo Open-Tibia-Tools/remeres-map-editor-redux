@@ -28,6 +28,7 @@ namespace {
     constexpr RoleFlags kBorderOnly = RoleFlags::None;
     constexpr RoleFlags kCarpet = RoleFlags::HasSoftContent;
     constexpr RoleFlags kStaticProp = RoleFlags::HasStaticContent;
+    constexpr RoleFlags kBottomClip = RoleFlags::IsBottomClip;
     constexpr RoleFlags kSail = RoleFlags::HasGround; // Non-walkable pseudo-ground (4958 sail)
 
     template <size_t Rows>
@@ -53,6 +54,8 @@ namespace {
                 case 'b':
                 case 'B':
                     return kBorderOnly;
+                case 'K':
+                    return kBottomClip;
                 case 'C':
                     return kCarpet;
                 case 'O':
@@ -357,6 +360,29 @@ TEST_CASE("Proposal 1 catches hidden occluded holes, carpet/content traps, inter
         "###",
     }};
     REQUIRE(fully_enclosed_trim.eval(1, 1) == MissingGroundReason::SurroundedInterior);
+
+    // Unregistered AlwaysOnBottom+topOrder=1 item (e.g. carpet without IsCarpet XML in 10.98) stays quiet on exterior void
+    // edges/corners, but catches interior holes between opposite/enclosed walkable floors.
+    const RoleGrid<3> clip_exterior_edge {{
+        "#..",
+        "K..",
+        "...",
+    }};
+    REQUIRE(clip_exterior_edge.eval(0, 1) == MissingGroundReason::None);
+
+    const RoleGrid<3> clip_exterior_corner {{
+        ".#.",
+        "#K.",
+        "...",
+    }};
+    REQUIRE(clip_exterior_corner.eval(1, 1) == MissingGroundReason::None);
+
+    const RoleGrid<3> clip_interior_corridor {{
+        "...",
+        "#K#",
+        "...",
+    }};
+    REQUIRE(clip_interior_corridor.eval(1, 1) == MissingGroundReason::MaskedByCarpetOrContent);
 }
 
 TEST_CASE("ComputeFloorViewportTileBounds handles upper and underground floor shifts at 100% and 800% zoom", "[missing_ground]")
