@@ -19,6 +19,7 @@
 #define RME_CLIPBOARD_HANDLER_H_
 
 class Editor;
+class Position;
 class Selection;
 
 // Static helper class for clipboard operations
@@ -27,7 +28,7 @@ public:
 	// Map tile/item clipboard operations
 	static void copy(Editor& editor, int floor);
 	static void cut(Editor& editor, int floor);
-	static void paste();
+	static void paste(Editor& editor, const Position& position);
 	static void doDelete(Editor& editor);
 
 	// Text clipboard operations

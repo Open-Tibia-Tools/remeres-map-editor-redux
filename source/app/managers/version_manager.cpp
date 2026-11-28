@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "app/main.h"
+#include "app/managers/prepared_version_load.h"
 #include "app/managers/version_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -72,42 +73,24 @@ VersionManager::~VersionManager() {
 }
 
 bool VersionManager::LoadVersion(ClientVersionID version, wxString& error, std::vector<std::string>& warnings, bool force) {
-	if (ClientVersion::get(version) == nullptr) {
+	ClientVersion* target = ClientVersion::get(version);
+	if (target == nullptr) {
 		error = "Unsupported client version! (8)";
 		return false;
 	}
 
 	if (version != loaded_version || force) {
-		if (getLoadedVersion() != nullptr) {
-			// There is another version loaded right now, save window layout
-			g_gui.SavePerspective();
+		if (!target->hasValidPaths() && !target->loadValidPaths()) {
+			error = "Couldn't load relevant asset files";
+			return false;
 		}
 
-		// Disable all rendering so the data is not accessed while reloading
-		UnnamedRenderingLock();
-		g_gui.DestroyPalettes();
-		g_gui.DestroyMinimap();
-
-		// Destroy the previous version
-		UnloadVersion();
-
-		loaded_version = version;
-		if (!getLoadedVersion()->hasValidPaths()) {
-			if (!getLoadedVersion()->loadValidPaths()) {
-				error = "Couldn't load relevant asset files";
-				loaded_version = CLIENT_VERSION_NONE;
-				return false;
-			}
+		PreparedVersionLoad prepared;
+		if (!PrepareVersionLoad(version, prepared, error, warnings)) {
+			return false;
 		}
 
-		bool ret = LoadDataFiles(error, warnings);
-		if (ret) {
-			g_gui.LoadPerspective();
-		} else {
-			loaded_version = CLIENT_VERSION_NONE;
-		}
-
-		return ret;
+		return CommitPreparedVersion(prepared, error, warnings);
 	}
 	return true;
 }
@@ -124,35 +107,141 @@ const ClientVersion& VersionManager::GetCurrentVersion() const {
 	return *getLoadedVersion();
 }
 
-bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& warnings) {
-	g_gui.gfx.client_version = getLoadedVersion();
+wxString VersionManager::GetModularDataPath(const ClientVersion& client_version) const {
+	return FileSystem::GetDataDirectory() + wxstr(client_version.getDataDirectory()) + FileName::GetPathSeparator();
+}
 
-	// OTFI loading removed. Metadata and sprite files are configured via clients.toml or defaults in ClientVersion.
+wxString VersionManager::GetModularDataPath() const {
+	if (!getLoadedVersion()) {
+		return wxEmptyString;
+	}
+	return GetModularDataPath(*getLoadedVersion());
+}
 
-	g_loading.CreateLoadBar("Loading asset files");
-	g_loading.SetLoadDone(0, "Loading canonical asset bundle...");
-
-	const wxString modular_data_path = GetModularDataPath();
-	if (!wxFileName(modular_data_path).DirExists()) {
+bool VersionManager::CheckModularClientData(const ClientVersion& client_version, wxString& error) const {
+	const wxString modular_data_path = GetModularDataPath(client_version);
+	if (modular_data_path.empty() || !wxFileName(modular_data_path).DirExists()) {
 		error = "Missing modular client data directory: " + modular_data_path;
-		FailDataLoad();
 		return false;
 	}
 
 	const FileName materials_manifest(modular_data_path + "materials.xml");
+	if (!materials_manifest.FileExists()) {
+		error = "Missing materials.xml in modular client data directory: " + modular_data_path;
+		return false;
+	}
+
+	const ItemDefinitionMode mode = client_version.getItemDefinitionMode();
+	if (mode == ItemDefinitionMode::DatSrv) {
+		error = wxstr(std::format("Client {} uses unsupported DatSrv item definition mode.", client_version.getName()));
+		return false;
+	}
+
+	if (mode == ItemDefinitionMode::DatOtb || mode == ItemDefinitionMode::ProtobufOtb) {
+		const FileName otb_file(modular_data_path + "items.otb");
+		if (!otb_file.FileExists()) {
+			error = "Missing items.otb in modular client data directory: " + modular_data_path;
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool VersionManager::PrepareVersionLoad(
+	ClientVersionID version, PreparedVersionLoad& prepared, wxString& error, std::vector<std::string>& warnings
+) const {
+	ClientVersion* target_version = ClientVersion::get(version);
+	if (target_version == nullptr) {
+		error = "Unsupported client version! (8)";
+		return false;
+	}
+
+	if (!CheckModularClientData(*target_version, error)) {
+		return false;
+	}
+
+	struct ScopedLoadBar {
+		ScopedLoadBar() {
+			g_loading.CreateLoadBar("Loading asset files");
+			g_loading.SetLoadDone(0, "Loading canonical asset bundle...");
+		}
+		~ScopedLoadBar() {
+			g_loading.DestroyLoadBar();
+		}
+	} scoped_load_bar;
+
+	const wxString modular_data_path = GetModularDataPath(*target_version);
+	const FileName materials_manifest(modular_data_path + "materials.xml");
+
 	MaterialManifestFiles manifest_files;
-	if (!LoadMaterialManifest(materials_manifest, manifest_files, error)) {
+	if (!LoadMaterialManifestFiles(materials_manifest, manifest_files, error)) {
 		return false;
 	}
 
-	if (!LoadCanonicalAssets(modular_data_path, manifest_files, error, warnings)) {
+	AssetLoadRequest asset_request;
+	asset_request.mode = target_version->getItemDefinitionMode();
+	asset_request.client_version = target_version;
+	asset_request.dat_path = target_version->getMetadataPath();
+	asset_request.spr_path = target_version->getSpritesPath();
+	asset_request.otb_path = wxFileName(modular_data_path + "items.otb");
+	asset_request.xml_paths.assign(manifest_files.items.begin(), manifest_files.items.end());
+
+	AssetBundle bundle;
+	AssetBundleLoader bundle_loader;
+	if (!bundle_loader.load(asset_request, bundle, error, warnings)) {
+		error = "Couldn't load canonical asset bundle: " + error;
 		return false;
 	}
 
-	if (!LoadCreatureFiles(manifest_files, error, warnings)) {
+	prepared.version = version;
+	prepared.modular_data_path = modular_data_path;
+	prepared.manifest_files = std::move(manifest_files);
+	prepared.bundle = std::move(bundle);
+	prepared.has_otb = (asset_request.mode != ItemDefinitionMode::DatOnly && asset_request.mode != ItemDefinitionMode::ProtobufOnly);
+	return true;
+}
+
+bool VersionManager::CommitPreparedVersion(PreparedVersionLoad& prepared, wxString& error, std::vector<std::string>& warnings) {
+	if (ClientVersion::get(prepared.version) == nullptr) {
+		error = "Unsupported client version! (8)";
 		return false;
 	}
 
+	if (getLoadedVersion() != nullptr) {
+		// Save active window layout before unloading previous client palettes.
+		g_gui.SavePerspective();
+	}
+
+	UnnamedRenderingLock();
+	g_gui.DestroyPalettes();
+	g_gui.DestroyMinimap();
+	UnloadVersion();
+
+	loaded_version = prepared.version;
+	g_gui.gfx.client_version = getLoadedVersion();
+	last_load_has_otb = prepared.has_otb;
+
+	g_loading.CreateLoadBar("Loading asset files");
+	g_loading.SetLoadDone(20, "Installing graphics...");
+
+	AssetBundleLoader bundle_loader;
+	if (!bundle_loader.install(prepared.bundle, g_gui.gfx, g_item_definitions, error, warnings)) {
+		error = "Couldn't install canonical asset bundle: " + error;
+		FailDataLoad();
+		return false;
+	}
+
+	last_missing_items = std::move(prepared.bundle.missing_items);
+	if (g_settings.getBoolean(Config::SHOW_MISSING_ITEMS_WARNING)) {
+		AppendMissingItemWarnings(warnings);
+	}
+
+	if (!LoadCreatureFiles(prepared.manifest_files, error, warnings)) {
+		return false;
+	}
+
+	const FileName materials_manifest(prepared.modular_data_path + "materials.xml");
 	if (!LoadModularMaterials(materials_manifest, error, warnings)) {
 		return false;
 	}
@@ -167,66 +256,16 @@ bool VersionManager::LoadDataFiles(wxString& error, std::vector<std::string>& wa
 	g_palettes.ReloadDynamicPalettes();
 
 	g_loading.DestroyLoadBar();
+	g_gui.LoadPerspective();
 	return true;
-}
-
-wxString VersionManager::GetModularDataPath() const {
-	if (!getLoadedVersion()) {
-		return wxEmptyString;
-	}
-	return FileSystem::GetDataDirectory() + wxstr(getLoadedVersion()->getDataDirectory()) + FileName::GetPathSeparator();
 }
 
 void VersionManager::FailDataLoad() {
 	last_missing_items = {};
 	last_load_has_otb = false;
+	g_gui.gfx.client_version = nullptr;
 	g_loading.DestroyLoadBar();
 	UnloadVersion();
-}
-
-bool VersionManager::LoadMaterialManifest(const FileName& materials_manifest, MaterialManifestFiles& manifest_files, wxString& error) {
-	if (LoadMaterialManifestFiles(materials_manifest, manifest_files, error)) {
-		return true;
-	}
-	FailDataLoad();
-	return false;
-}
-
-bool VersionManager::LoadCanonicalAssets(const wxString& modular_data_path, const MaterialManifestFiles& manifest_files, wxString& error, std::vector<std::string>& warnings) {
-	AssetLoadRequest asset_request;
-	asset_request.mode = getLoadedVersion()->getItemDefinitionMode();
-	asset_request.client_version = getLoadedVersion();
-	asset_request.dat_path = getLoadedVersion()->getMetadataPath();
-	asset_request.spr_path = getLoadedVersion()->getSpritesPath();
-	asset_request.otb_path = wxFileName(modular_data_path + "items.otb");
-	asset_request.xml_paths.assign(manifest_files.items.begin(), manifest_files.items.end());
-
-	// Track whether this mode uses OTB
-	last_load_has_otb = (asset_request.mode != ItemDefinitionMode::DatOnly && asset_request.mode != ItemDefinitionMode::ProtobufOnly);
-
-	AssetBundle bundle;
-	AssetBundleLoader bundle_loader;
-	if (!bundle_loader.load(asset_request, bundle, error, warnings)) {
-		error = "Couldn't load canonical asset bundle: " + error;
-		FailDataLoad();
-		return false;
-	}
-
-	g_loading.SetLoadDone(20, "Installing graphics...");
-	if (!bundle_loader.install(bundle, g_gui.gfx, g_item_definitions, error, warnings)) {
-		error = "Couldn't install canonical asset bundle: " + error;
-		FailDataLoad();
-		return false;
-	}
-
-	// Store the missing items report for later dialog display (always collected regardless of warning setting)
-	last_missing_items = std::move(bundle.missing_items);
-
-	// Only add detailed missing items to warnings list if the user has enabled this option
-	if (g_settings.getBoolean(Config::SHOW_MISSING_ITEMS_WARNING)) {
-		AppendMissingItemWarnings(warnings);
-	}
-	return true;
 }
 
 void VersionManager::AppendMissingItemWarnings(std::vector<std::string>& warnings) const {

@@ -28,6 +28,7 @@
 #include "rendering/utilities/pattern_calculator.h"
 #include "rendering/core/sprite_preloader.h"
 #include "rendering/core/render_depth.h"
+#include "rendering/core/item_render_rules.h"
 
 #include <algorithm>
 
@@ -218,13 +219,14 @@ void TileRenderer::RenderStaticItems(SpriteBatch& sprite_batch, const TileLocati
 			continue;
 		}
 
-		rme::rendering::RenderSublayer sublayer = rme::rendering::RenderSublayer::CommonItem;
-		if (item->isAlwaysOnBottom()) {
-			sublayer = rme::rendering::RenderSublayer::BottomItem;
-		} else if (it && it.hasFlag(ItemFlag::TopEffect)) {
-			sublayer = rme::rendering::RenderSublayer::TopItem;
-		}
-		const float item_depth = rme::rendering::calculateTileDepth(position.x, position.y, sublayer, elevation_step);
+		rme::rendering::RenderSublayer sublayer = rme::rendering::ResolveItemSublayer(
+			item->isAlwaysOnBottom(),
+			it && it.hasFlag(ItemFlag::TopEffect)
+		);
+		const int common_layer = sublayer == rme::rendering::RenderSublayer::CommonItem
+			? rme::rendering::CommonItemElevationStep(elevation_step)
+			: 0;
+		const float item_depth = rme::rendering::calculateTileDepth(position.x, position.y, sublayer, common_layer);
 		if (sublayer == rme::rendering::RenderSublayer::CommonItem) {
 			elevation_step++;
 		}
@@ -313,13 +315,14 @@ void TileRenderer::RenderAnimatedItems(SpriteBatch& sprite_batch, const TileLoca
 			continue;
 		}
 
-		rme::rendering::RenderSublayer sublayer = rme::rendering::RenderSublayer::CommonItem;
-		if (item->isAlwaysOnBottom()) {
-			sublayer = rme::rendering::RenderSublayer::BottomItem;
-		} else if (it && it.hasFlag(ItemFlag::TopEffect)) {
-			sublayer = rme::rendering::RenderSublayer::TopItem;
-		}
-		const float item_depth = rme::rendering::calculateTileDepth(position.x, position.y, sublayer, anim_elevation_step);
+		rme::rendering::RenderSublayer sublayer = rme::rendering::ResolveItemSublayer(
+			item->isAlwaysOnBottom(),
+			it && it.hasFlag(ItemFlag::TopEffect)
+		);
+		const int common_layer = sublayer == rme::rendering::RenderSublayer::CommonItem
+			? rme::rendering::CommonItemElevationStep(anim_elevation_step)
+			: 0;
+		const float item_depth = rme::rendering::calculateTileDepth(position.x, position.y, sublayer, common_layer);
 		if (sublayer == rme::rendering::RenderSublayer::CommonItem) {
 			anim_elevation_step++;
 		}
@@ -524,7 +527,7 @@ void TileRenderer::RenderLightStrength(SpriteBatch& sprite_batch, const Tile& ti
 		item_drawer->DrawLightStrength(sprite_batch, sprite_drawer, *tile.ground, draw_x, draw_y, &ctx.atlas, depth);
 	}
 	for (const auto& item : tile.items) {
-		if (!ctx.options.show_items && item && item->isPickupable()) {
+		if (!item || (!ctx.options.show_items && item->isPickupable())) {
 			continue;
 		}
 		item_drawer->DrawLightStrength(sprite_batch, sprite_drawer, *item, draw_x, draw_y, &ctx.atlas, depth);

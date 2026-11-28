@@ -329,7 +329,7 @@ void BrushOverlayDrawer::draw(
 
 					float w = last_click_end_sx - last_click_start_sx;
 					float h = last_click_end_sy - last_click_start_sy;
-					bool autoborder_active = cfg.getInteger(Config::USE_AUTOMAGIC) && brush->needBorders();
+					bool autoborder_active = cfg.getInteger(Config::USE_AUTOMAGIC) && brush->supportsAutoborder();
 
 					if (cursor_blend_mode == 1) {
 						sprite_batch.setBlendFunc(GL_DST_COLOR, GL_ZERO, atlas);

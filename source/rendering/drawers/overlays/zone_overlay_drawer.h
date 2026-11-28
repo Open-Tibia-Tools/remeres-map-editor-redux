@@ -9,7 +9,6 @@ class Map;
 class BaseMap;
 struct DrawingOptions;
 class AtlasManager;
-class Tile;
 
 namespace rme::rendering {
 
@@ -159,25 +158,25 @@ private:
 	std::vector<PendingSpawnQuad> spawn_borders_;
 	std::vector<PendingSpawnQuad> spawn_badges_;
 
-	std::vector<uint8_t> blocking_row_prev_;
-	std::vector<uint8_t> blocking_row_curr_;
-	std::vector<uint8_t> blocking_row_next_;
-	std::vector<PendingBorderQuad> blocking_border_quads_;
+    std::vector<uint8_t> blocking_row_prev_;
+    std::vector<uint8_t> blocking_row_curr_;
+    std::vector<uint8_t> blocking_row_next_;
+    std::vector<PendingBorderQuad> blocking_border_quads_;
 
-	std::vector<uint32_t> house_row_prev_;
-	std::vector<uint32_t> house_row_curr_;
-	std::vector<uint32_t> house_row_next_;
-	std::vector<PendingBorderQuad> house_border_quads_;
+    std::vector<uint32_t> house_row_prev_;
+    std::vector<uint32_t> house_row_curr_;
+    std::vector<uint32_t> house_row_next_;
+    std::vector<PendingBorderQuad> house_border_quads_;
 
-	struct ZoneRowCell {
-		uint16_t primary = 0;
-		uint16_t secondary = 0;
-	};
-	std::vector<ZoneRowCell> zone_row_prev_;
-	std::vector<ZoneRowCell> zone_row_curr_;
-	std::vector<ZoneRowCell> zone_row_next_;
+    struct ZoneRowCell {
+        uint16_t primary = 0;
+        uint16_t secondary = 0;
+    };
+    std::vector<ZoneRowCell> zone_row_prev_;
+    std::vector<ZoneRowCell> zone_row_curr_;
+    std::vector<ZoneRowCell> zone_row_next_;
 
-	std::vector<PendingHighlightQuad> highlight_quads_;
+    std::vector<PendingHighlightQuad> highlight_quads_;
 };
 
 } // namespace rme::rendering

@@ -53,6 +53,7 @@ void GotoPositionDialog::OnClickCancel(wxCommandEvent&) {
 }
 
 void GotoPositionDialog::OnClickOK(wxCommandEvent&) {
-	g_gui.SetScreenCenterPosition(posctrl->GetPosition());
-	EndModal(1);
+    posctrl->CheckRange();
+    g_gui.SetScreenCenterPosition(posctrl->GetPosition());
+    EndModal(1);
 }

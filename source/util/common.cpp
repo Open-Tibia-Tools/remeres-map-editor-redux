@@ -18,12 +18,12 @@
 #include "app/main.h"
 
 #include "util/common.h"
+#include "map/position_format.h"
 #include "math.h"
 
 #include <cstdio>
 #include <format>
 #include <random>
-#include <regex>
 #include <algorithm>
 #include <array>
 
@@ -178,31 +178,13 @@ bool posFromClipboard(Position& position, const int mapWidth /* = MAP_MAX_WIDTH 
 	wxTextDataObject data;
 	wxTheClipboard->GetData(data);
 
-	std::string input = data.GetText().ToStdString();
-	if (input.empty()) {
+	const std::string input = data.GetText().utf8_string();
+	const std::optional<Position> pasted = ParsePosition(input, PositionBounds { mapWidth, mapHeight });
+	if (!pasted) {
 		return false;
 	}
-
-	bool done = false;
-	std::smatch matches;
-	static const std::regex expression = std::regex(R"(.*?(\d+).*?(\d+).*?(\d+).*?)", std::regex_constants::ECMAScript);
-	if (std::regex_match(input, matches, expression)) {
-		try {
-			const int tmpX = std::stoi(matches.str(1));
-			const int tmpY = std::stoi(matches.str(2));
-			const int tmpZ = std::stoi(matches.str(3));
-
-			const Position pastedPos = Position(tmpX, tmpY, tmpZ);
-			if (pastedPos.isValid() && tmpX <= mapWidth && tmpY <= mapHeight) {
-				position.x = tmpX;
-				position.y = tmpY;
-				position.z = tmpZ;
-				done = true;
-			}
-		} catch (const std::out_of_range&) { }
-	}
-
-	return done;
+	position = *pasted;
+	return true;
 }
 
 wxString b2yn(bool value) {

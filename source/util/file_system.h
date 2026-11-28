@@ -7,6 +7,7 @@
 
 #include <filesystem>
 #include <string>
+#include <vector>
 #include <wx/wx.h>
 
 class FileSystem {
@@ -22,6 +23,7 @@ public:
 
 	[[nodiscard]] static std::filesystem::path GetConfigSavePath();
 	[[nodiscard]] static std::filesystem::path GetConfigFilePath();
+	[[nodiscard]] static std::vector<std::filesystem::path> GetLoadWarningsLogPaths();
 	[[nodiscard]] static std::string PathToUtf8(const std::filesystem::path& path);
 
 private:

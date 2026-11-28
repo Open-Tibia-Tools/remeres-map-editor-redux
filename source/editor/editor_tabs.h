@@ -35,7 +35,6 @@ public:
 	int GetTabCount();
 	int GetTabIndex(wxWindow* tab);
 	int GetSelection();
-	void CycleTab(bool forward = true);
 	wxWindow* GetCurrentPage();
 	EditorTab* GetCurrentTab();
 	EditorTab* GetTab(int idx);
@@ -49,8 +48,7 @@ public:
 
 protected:
 	EditorTab* GetInternalTab(int idx);
-	wxAuiNotebook* notebook;
-	std::map<wxWindow*, EditorTab*> conv;
+    wxAuiNotebook* notebook;
 };
 
 class EditorTab {

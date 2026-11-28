@@ -4,19 +4,20 @@
 
 #include "app/main.h"
 
-#include "ui/dialog_util.h"
-#include "util/file_system.h"
-#include "editor/persistence/editor_persistence.h"
-#include "editor/persistence/map_backup_service.h"
-#include "editor/editor.h"
+#include "app/managers/version_manager.h"
+#include "app/settings.h"
 #include "editor/action.h"
 #include "editor/action_queue.h"
+#include "editor/editor.h"
+#include "editor/persistence/editor_persistence.h"
+#include "editor/persistence/map_backup_service.h"
+#include "editor/persistence/map_load_decision.h"
 #include "editor/selection.h"
-#include "map/map.h"
 #include "io/iomap.h"
-#include "app/settings.h"
-#include "app/managers/version_manager.h"
+#include "map/map.h"
+#include "ui/dialog_util.h"
 #include "ui/gui.h"
+#include "util/file_system.h"
 #include "lua/lua_script_manager.h"
 
 #include <fstream>
@@ -33,11 +34,14 @@ void EditorPersistence::loadMap(Editor& editor, const FileName& fn, const MapLoa
 	}
 
 	const auto loaded_major = static_cast<uint32_t>(g_version.GetCurrentVersion().getOTBVersion().format_version);
-	const bool mismatch = (g_version.GetCurrentVersion().getProtocolID() != ver.client) ||
-		(ver.items_major != 0 && loaded_major != 0 && loaded_major != ver.items_major);
-	if (mismatch && !load_options.force_client_mismatch) {
-		throw std::runtime_error(std::format("Client version mismatch. Expected protocol {} (OTB major {}) but got protocol {} (OTB major {})", ver.client, ver.items_major, g_version.GetCurrentVersion().getProtocolID(), loaded_major));
-	}
+    const int loaded_protocol = g_version.GetCurrentVersion().getProtocolID();
+    const bool mismatch = !IsClientCompatibleWithMap(loaded_protocol, loaded_major, ver.client, ver.items_major);
+    if (mismatch && !load_options.force_client_mismatch) {
+        throw std::runtime_error(std::format(
+            "Client version mismatch. Expected protocol {} (OTB major {}) but got protocol {} (OTB major {})", ver.client, ver.items_major,
+            loaded_protocol, loaded_major
+        ));
+    }
 
 	// Report the file being opened and its size up front; the loader then
 	// reports its own stages (decompression, tile blocks, node types).
@@ -547,7 +551,7 @@ bool EditorPersistence::importMap(Editor& editor, FileName filename, int import_
 		DialogUtil::PopupDialog("Error", "Error loading map!\n" + imported_map.getError(), wxOK | wxICON_INFORMATION);
 		return false;
 	}
-	DialogUtil::ListDialog("Warning", imported_map.getWarnings());
+	DialogUtil::LoadWarningsDialog(g_gui.root, "Warning", imported_map.getWarnings());
 
 	Position offset(import_x_offset, import_y_offset, 0);
 

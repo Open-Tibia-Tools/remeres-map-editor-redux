@@ -222,8 +222,8 @@ wxColour Theme::GetLight(Role role) {
 		case Role::CardBaseHover:
 			return wxColour(245, 245, 245);
 		case Role::CardBorder:
-			return wxColour(200, 200, 200);
-		case Role::PanelBackground:
+            return wxColour(168, 174, 184);
+        case Role::PanelBackground:
 			return wxColour(248, 249, 251);
 		case Role::RaisedSurface:
 			return *wxWHITE;
@@ -236,10 +236,10 @@ wxColour Theme::GetLight(Role role) {
 		case Role::PrimaryButtonHover:
 			return wxColour(32, 90, 164);
 		case Role::SecondaryButton:
-			return wxColour(236, 239, 244);
-		case Role::SecondaryButtonHover:
-			return wxColour(225, 229, 235);
-		case Role::ButtonDisabled:
+            return wxColour(224, 228, 236);
+        case Role::SecondaryButtonHover:
+            return wxColour(209, 215, 226);
+        case Role::ButtonDisabled:
 			return wxColour(229, 232, 236);
 		// Tooltip colors (readable on light background)
 		case Role::TooltipBg:

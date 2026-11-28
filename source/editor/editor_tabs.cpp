@@ -17,10 +17,12 @@
 
 #include "app/main.h"
 
-#include "editor/editor_tabs.h"
 #include "editor/editor.h"
+#include "editor/editor_tabs.h"
 #include "editor/managers/editor_manager.h"
+#include "editor/tab_close_decision.h"
 #include "live/live_tab.h"
+#include "rendering/ui/map_display.h"
 #include "ui/managers/status_manager.h"
 
 EditorTab::EditorTab() {
@@ -47,55 +49,55 @@ MapTabbook::~MapTabbook() {
 	;
 }
 
-void MapTabbook::CycleTab(bool forward) {
-	if (!notebook) {
-		return;
-	}
-
-	int32_t pageCount = notebook->GetPageCount();
-	int32_t currentSelection = notebook->GetSelection();
-
-	int32_t selection;
-	if (forward) {
-		selection = (currentSelection + 1) % pageCount;
-	} else {
-		selection = (currentSelection - 1 + pageCount) % pageCount;
-	}
-	notebook->SetSelection(selection);
-}
-
 void MapTabbook::OnNotebookPageClose(wxAuiNotebookEvent& evt) {
-	EditorTab* editorTab = GetTab(evt.GetInt());
+    const int tab_idx = evt.GetSelection();
+    EditorTab* editorTab = GetTab(tab_idx);
 
-	MapTab* mapTab = dynamic_cast<MapTab*>(editorTab);
-	if (mapTab && mapTab->IsUniqueReference() && mapTab->GetMap()) {
-		bool needRefresh = true;
-		if (mapTab->GetMap()->hasChanged()) {
-			SetFocusedTab(evt.GetInt());
-			if (!g_gui.root->DoQuerySave(false)) {
-				needRefresh = false;
-				evt.Veto();
-			}
-		}
+    MapTab* mapTab = dynamic_cast<MapTab*>(editorTab);
+    LiveLogTab* liveTab = dynamic_cast<LiveLogTab*>(editorTab);
 
-		if (needRefresh) {
-			g_gui.RefreshPalettes(nullptr, false);
-			g_gui.UpdateMenus();
+    TabCloseKind kind = TabCloseKind::Other;
+    if (mapTab && mapTab->GetMap()) {
+        kind = mapTab->IsUniqueReference() ? TabCloseKind::UniqueMap : TabCloseKind::SharedMapView;
+    } else if (liveTab) {
+        kind = TabCloseKind::LiveLog;
+    }
 
-			// Take the deletion over from wxAuiNotebook (which would otherwise
-			// free the whole map right after this handler returns, with no
-			// feedback) so the Closing progress bar can cover it.
-			evt.Veto();
-			SetFocusedTab(evt.GetInt());
-			g_editors.CloseCurrentEditor();
-		}
-		return;
-	}
+    const TabCloseDecision decision = DecideTabCloseAction(TabCloseDecisionInput {
+        .tab_index = tab_idx,
+        .tab_count = GetTabCount(),
+        .kind = kind,
+        .map_has_changed = mapTab && mapTab->GetMap() && mapTab->GetMap()->hasChanged(),
+        .live_connected = liveTab && liveTab->IsConnected(),
+    });
 
-	LiveLogTab* lt = dynamic_cast<LiveLogTab*>(editorTab);
-	if (lt && lt->IsConnected()) {
-		evt.Veto();
-	}
+    switch (decision.action) {
+        case TabCloseAction::Ignore:
+        case TabCloseAction::VetoAndLeaveOpen:
+            evt.Veto();
+            return;
+        case TabCloseAction::AllowNativeClose:
+            return;
+        case TabCloseAction::CloseThroughManager: {
+            wxWindow* const tab_window = mapTab->GetWindow();
+            if (decision.prompt_save) {
+                if (!g_gui.root || !mapTab->GetEditor() || !g_gui.root->DoQuerySave(*mapTab->GetEditor(), mapTab, false)) {
+                    evt.Veto();
+                    return;
+                }
+            }
+
+            // Take the deletion over from wxAuiNotebook (which would otherwise
+            // free the whole map right after this handler returns, with no
+            // feedback) so CloseTab can show the Closing progress bar.
+            evt.Veto();
+            const int resolved_idx = GetTabIndex(tab_window);
+            if (resolved_idx != wxNOT_FOUND) {
+                g_editors.CloseTab(resolved_idx);
+            }
+            return;
+        }
+    }
 }
 
 void MapTabbook::OnNotebookPageClosed(wxAuiNotebookEvent& evt) {
@@ -132,6 +134,10 @@ void MapTabbook::OnNotebookPageChanged(wxAuiNotebookEvent& evt) {
 	}
 
 	if (oldMapTab) {
+		// A lasso drawn in the old tab must never be applied after the switch.
+		if (MapCanvas* old_canvas = oldMapTab->GetCanvas()) {
+			old_canvas->CancelLasso();
+		}
 		oldMapTab->VisibilityCheck();
 	}
 	if (newMapTab) {
@@ -146,24 +152,36 @@ void MapTabbook::OnAllowNotebookDND(wxAuiNotebookEvent& evt) {
 // Wrappers
 
 void MapTabbook::AddTab(EditorTab* tab, bool select) {
-	tab->GetWindow()->Reparent(notebook);
-	notebook->AddPage(tab->GetWindow(), tab->GetTitle(), select);
-	conv[tab->GetWindow()] = tab;
+    if (!tab || !notebook) {
+        return;
+    }
+    wxWindow* window = tab->GetWindow();
+    if (!window) {
+        return;
+    }
+    window->Reparent(notebook);
+    notebook->AddPage(window, tab->GetTitle(), select);
 }
 
 void MapTabbook::SetFocusedTab(int idx) {
-	notebook->SetSelection(idx);
+    if (notebook && idx >= 0 && idx < GetTabCount()) {
+        notebook->SetSelection(idx);
+    }
 }
 
 EditorTab* MapTabbook::GetInternalTab(int idx) {
-	return conv[notebook->GetPage(idx)];
+    if (!notebook || idx < 0 || idx >= GetTabCount()) {
+        return nullptr;
+    }
+    return dynamic_cast<EditorTab*>(notebook->GetPage(idx));
 }
 
 EditorTab* MapTabbook::GetCurrentTab() {
-	if (GetTabCount() == 0 || GetSelection() == -1) {
-		return nullptr;
-	}
-	return dynamic_cast<EditorTab*>(GetInternalTab(GetSelection()));
+    const int sel = GetSelection();
+    if (sel < 0 || sel >= GetTabCount()) {
+        return nullptr;
+    }
+    return GetInternalTab(sel);
 }
 
 EditorTab* MapTabbook::GetTab(int idx) {
@@ -171,10 +189,8 @@ EditorTab* MapTabbook::GetTab(int idx) {
 }
 
 wxWindow* MapTabbook::GetCurrentPage() {
-	if (GetTabCount() == 0) {
-		return nullptr;
-	}
-	return GetCurrentTab()->GetWindow();
+    EditorTab* tab = GetCurrentTab();
+    return tab ? tab->GetWindow() : nullptr;
 }
 
 void MapTabbook::OnSwitchEditorMode(EditorMode mode) {
@@ -187,15 +203,15 @@ void MapTabbook::OnSwitchEditorMode(EditorMode mode) {
 }
 
 void MapTabbook::SetTabLabel(int idx, wxString label) {
-	if (notebook) {
-		notebook->SetPageText(idx, label);
-	}
+    if (notebook && idx >= 0 && idx < GetTabCount()) {
+        notebook->SetPageText(idx, label);
+    }
 }
 
 void MapTabbook::DeleteTab(int idx) {
-	if (notebook) {
-		notebook->DeletePage(idx);
-	}
+    if (notebook && idx >= 0 && idx < GetTabCount()) {
+        notebook->DeletePage(idx);
+    }
 }
 
 int MapTabbook::GetTabCount() {
@@ -206,15 +222,15 @@ int MapTabbook::GetTabCount() {
 }
 
 int MapTabbook::GetTabIndex(wxWindow* w) {
-	if (notebook) {
-		return notebook->GetPageIndex(w);
-	}
-	return 0;
+    if (notebook && w) {
+        return notebook->GetPageIndex(w);
+    }
+    return wxNOT_FOUND;
 }
 
 int MapTabbook::GetSelection() {
 	if (notebook) {
 		return notebook->GetSelection();
 	}
-	return 0;
+    return wxNOT_FOUND;
 }

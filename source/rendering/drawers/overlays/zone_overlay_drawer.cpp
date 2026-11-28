@@ -1,25 +1,27 @@
 #include "rendering/drawers/overlays/zone_overlay_drawer.h"
-#include "rendering/core/sprite_batch.h"
-#include "rendering/core/render_view.h"
-#include "rendering/core/drawing_options.h"
-#include "rendering/core/atlas_manager.h"
-#include "rendering/indicators/zone_flags.h"
-#include "rendering/indicators/zone_colors.h"
-#include "rendering/indicators/technical_item_registry.h"
-#include "rendering/core/render_depth.h"
-#include "util/phase_profiler.h"
-#include "map/map.h"
-#include "map/basemap.h"
-#include "map/tile.h"
+#include "app/settings.h"
 #include "game/item.h"
 #include "game/spawn.h"
 #include "game/waypoints.h"
-#include "app/settings.h"
+#include "map/basemap.h"
+#include "map/map.h"
 #include "map/missing_ground.h"
+#include "map/tile.h"
+#include "rendering/core/atlas_manager.h"
+#include "rendering/core/drawing_options.h"
+#include "rendering/core/render_depth.h"
+#include "rendering/core/render_view.h"
+#include "rendering/core/sprite_batch.h"
+#include "rendering/drawers/overlays/blocking_overlay_rules.h"
+#include "rendering/indicators/technical_item_registry.h"
+#include "rendering/indicators/zone_colors.h"
+#include "rendering/indicators/zone_flags.h"
+#include "util/phase_profiler.h"
 #include <algorithm>
 #include <cmath>
-#include <vector>
 #include <limits>
+#include <span>
+#include <vector>
 
 namespace rme::rendering {
 
@@ -374,106 +376,97 @@ void ZoneOverlayDrawer::drawFloorBlocking(SpriteBatch& sprite_batch,
 	const ViewBounds bounds = view.getBoundsForFloor(z);
 	const float floor_alpha = 1.0f;
 
-	const int min_x = bounds.start_x - 1;
-	const int max_x = bounds.end_x + 1;
-	const int row_width = max_x - min_x + 1;
-	const size_t visible_tiles_estimate = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
+    const int min_x = bounds.start_x - 1;
+    const int max_x = bounds.end_x + 1;
+    const int row_width = max_x - min_x + 1;
+    const size_t visible_tiles_estimate
+        = static_cast<size_t>(std::max(0, (bounds.end_x - bounds.start_x + 1) * (bounds.end_y - bounds.start_y + 1)));
 
-	blocking_border_quads_.clear();
-	blocking_border_quads_.reserve(visible_tiles_estimate);
+    blocking_border_quads_.clear();
+    blocking_border_quads_.reserve(visible_tiles_estimate);
 
-	SpatialHashGrid::CellCursor secondary_cursor;
-	SpatialHashGrid::CellCursor primary_cursor;
-	auto fetchRow = [&](int ry, std::vector<uint8_t>& row) {
-		row.resize(row_width);
-		uint8_t* out = row.data();
-		if (secondary_map) {
-			for (int x = min_x; x <= max_x; ++x) {
-				const Tile* t = secondary_map->getTile(x, ry, z, secondary_cursor);
-				if (!t) {
-					t = map.getTile(x, ry, z, primary_cursor);
-				}
-				out[x - min_x] = (t && IsTilePathBlocking(t)) ? 1 : 0;
-			}
-			return;
-		}
-		const int ly = ry & 3;
-		for (int x = min_x; x <= max_x;) {
-			const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
-			if (!floor) {
-				const int span_end = std::min(max_x, x | primary_cursor.empty_span_mask);
-				std::fill(out + (x - min_x), out + (span_end - min_x + 1), uint8_t { 0 });
-				x = span_end + 1;
-				continue;
-			}
-			const int node_end = std::min(max_x, x | 3);
-			for (; x <= node_end; ++x) {
-				const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
-				out[x - min_x] = (t && IsTilePathBlocking(t)) ? 1 : 0;
-			}
-		}
-	};
+    SpatialHashGrid::CellCursor secondary_cursor;
+    SpatialHashGrid::CellCursor primary_cursor;
+    auto fetchRow = [&](int ry, std::vector<uint8_t>& row) {
+        row.resize(row_width);
+        const std::span<uint8_t> row_span(row);
+        if (secondary_map) {
+            for (int x = min_x; x <= max_x; ++x) {
+                const Tile* t = secondary_map->getTile(x, ry, z, secondary_cursor);
+                if (!t) {
+                    t = map.getTile(x, ry, z, primary_cursor);
+                }
+                row_span[static_cast<size_t>(x - min_x)] = (t && IsTilePathBlocking(t)) ? 1 : 0;
+            }
+            return;
+        }
+        const int ly = ry & 3;
+        for (int x = min_x; x <= max_x;) {
+            const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
+            if (!floor) {
+                const int span_end = std::min(max_x, x | primary_cursor.empty_span_mask);
+                FillBlockingSpan(row_span, min_x, x, span_end, uint8_t {0});
+                x = span_end + 1;
+                continue;
+            }
+            const int node_end = std::min(max_x, x | 3);
+            for (; x <= node_end; ++x) {
+                const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
+                row_span[static_cast<size_t>(x - min_x)] = (t && IsTilePathBlocking(t)) ? 1 : 0;
+            }
+        }
+    };
 
-	fetchRow(bounds.start_y - 1, blocking_row_prev_);
-	fetchRow(bounds.start_y, blocking_row_curr_);
+    fetchRow(bounds.start_y - 1, blocking_row_prev_);
+    fetchRow(bounds.start_y, blocking_row_curr_);
 
-	const int offset = (z <= GROUND_LAYER)
-		? (GROUND_LAYER - z) * TILE_SIZE
-		: TILE_SIZE * (view.floor - z);
-	const int base_screen_x = -view.view_scroll_x - offset;
-	const int base_screen_y = -view.view_scroll_y - offset;
+    const int offset = (z <= GROUND_LAYER) ? (GROUND_LAYER - z) * TILE_SIZE : TILE_SIZE * (view.floor - z);
+    const int base_screen_x = -view.view_scroll_x - offset;
+    const int base_screen_y = -view.view_scroll_y - offset;
 
-	for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
-		fetchRow(y + 1, blocking_row_next_);
-		const float fy = static_cast<float>(y * TILE_SIZE + base_screen_y);
+    for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
+        fetchRow(y + 1, blocking_row_next_);
+        const float fy = static_cast<float>(y * TILE_SIZE + base_screen_y);
 
-		for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
-			const int idx = x - min_x;
-			if (!blocking_row_curr_[idx]) {
-				continue;
-			}
+        for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
+            const int idx = x - min_x;
+            if (!blocking_row_curr_[idx]) {
+                continue;
+            }
 
-			uint32_t tile_zone_flags = ZONE_FLAG_BLOCKING;
-			if (options.zone_blocking_blend_mode == 1) {
-				tile_zone_flags |= ZONE_FLAG_MULTIPLICATIVE;
-			}
-			const bool bN = !blocking_row_prev_[idx];
-			const bool bS = !blocking_row_next_[idx];
-			const bool bW = !blocking_row_curr_[idx - 1];
-			const bool bE = !blocking_row_curr_[idx + 1];
+            const BlockingNeighbors neighbors {
+                .north = !blocking_row_prev_[idx],
+                .south = !blocking_row_next_[idx],
+                .west = !blocking_row_curr_[idx - 1],
+                .east = !blocking_row_curr_[idx + 1],
+            };
+            const uint32_t border_flags = ComputeBlockingBorderFlags(neighbors);
+            const uint32_t tile_zone_flags = ComputeBlockingTileRenderFlags(border_flags, options.zone_blocking_blend_mode);
 
-			if (bN) tile_zone_flags |= ZONE_FLAG_BLOCK_BORDER_N;
-			if (bS) tile_zone_flags |= ZONE_FLAG_BLOCK_BORDER_S;
-			if (bW) tile_zone_flags |= ZONE_FLAG_BLOCK_BORDER_W;
-			if (bE) tile_zone_flags |= ZONE_FLAG_BLOCK_BORDER_E;
+            const float fx = static_cast<float>(x * TILE_SIZE + base_screen_x);
+            const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
 
-			const float fx = static_cast<float>(x * TILE_SIZE + base_screen_x);
-			const float depth = calculateTileDepth(x, y, RenderSublayer::GroundOverlay);
+            sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha, 0.0f, tile_zone_flags, depth);
 
-			sprite_batch.draw(fx, fy, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-			                  0.0f, tile_zone_flags, depth);
+            if (options.show_zone_borders && border_flags != 0) {
+                blocking_border_quads_.push_back({fx, fy, MakeBlockingBorderPassFlags(tile_zone_flags), depth});
+            }
+        }
 
-			if (options.show_zone_borders && (bN || bS || bW || bE)) {
-				uint32_t border_flags = (tile_zone_flags & ~ZONE_FLAG_MULTIPLICATIVE) | ZONE_FLAG_BORDER_PASS;
-				blocking_border_quads_.push_back({ fx, fy, border_flags, depth });
-			}
-		}
+        std::swap(blocking_row_prev_, blocking_row_curr_);
+        std::swap(blocking_row_curr_, blocking_row_next_);
+    }
 
-		std::swap(blocking_row_prev_, blocking_row_curr_);
-		std::swap(blocking_row_curr_, blocking_row_next_);
-	}
+    if (options.zone_blocking_blend_mode == 1) {
+        sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+    }
 
-	if (options.zone_blocking_blend_mode == 1) {
-		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
-	}
-
-	if (!blocking_border_quads_.empty()) {
-		sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
-		for (const auto& q : blocking_border_quads_) {
-			sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha,
-			                  0.0f, q.flags, q.depth);
-		}
-	}
+    if (!blocking_border_quads_.empty()) {
+        sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+        for (const auto& q : blocking_border_quads_) {
+            sprite_batch.draw(q.x, q.y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, floor_alpha, 0.0f, q.flags, q.depth);
+        }
+    }
 }
 
 void ZoneOverlayDrawer::drawFloorHouses(SpriteBatch& sprite_batch,

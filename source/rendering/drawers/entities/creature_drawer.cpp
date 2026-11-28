@@ -10,6 +10,7 @@
 #include "rendering/core/game_sprite.h"
 #include "rendering/core/graphics.h"
 #include "rendering/core/sprite_animation.h"
+#include "rendering/core/walk_animation.h"
 #include "rendering/core/light_buffer.h"
 #include "rendering/core/render_view.h"
 #include "rendering/core/render_frame_context.h"
@@ -126,6 +127,13 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 			return;
 		}
 
+		// A walking outfit is drawn from its walking frame group when the client has one.
+		const bool walking = WalkAnimation::IsWalking(options.walkProgress);
+		GameSprite* const walking_spr = walking ? spr->getWalkingGroup() : nullptr;
+		if (walking_spr) {
+			spr = walking_spr;
+		}
+
 		if (options.light_buffer && options.view && spr->hasLight()) {
 			registerCreatureSpriteLight(*options.light_buffer, *options.view, *spr, screenx, screeny, spr->getLight(), false);
 		}
@@ -133,8 +141,8 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		// Resolve animation frame for creature
 		const long elapsed_time = options.ctx ? options.ctx->elapsed_time : 0;
 		int resolvedFrame = 0;
-		if (options.animationPhase > 0) {
-			resolvedFrame = options.animationPhase % std::max<int>(1, spr->frames);
+		if (walking) {
+			resolvedFrame = WalkAnimation::Frame(spr->frames, options.walkProgress, walking_spr != nullptr);
 		} else if (spr->isAnimated() && !options.preview_local_player) {
 			resolvedFrame = spr->getAnimationFrame(elapsed_time);
 		}
@@ -145,6 +153,10 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 		GameSprite* mountSpr = nullptr;
 		if (drawOutfit->lookMount != 0) {
 			if ((mountSpr = gfx.getCreatureSprite(drawOutfit->lookMount))) {
+				GameSprite* const walking_mount = walking ? mountSpr->getWalkingGroup() : nullptr;
+				if (walking_mount) {
+					mountSpr = walking_mount;
+				}
 				// Generate mount colors and metrics once so rendering and light placement stay aligned.
 				Outfit mountOutfit;
 				mountOutfit.lookType = drawOutfit->lookMount;
@@ -159,8 +171,8 @@ void CreatureDrawer::BlitCreature(SpriteBatch& sprite_batch, SpriteDrawer* sprit
 				bool has_mount_metrics = false;
 
 				int mount_frame = 0;
-				if (options.animationPhase > 0) {
-					mount_frame = options.animationPhase % std::max<int>(1, mountSpr->frames);
+				if (walking) {
+					mount_frame = WalkAnimation::Frame(mountSpr->frames, options.walkProgress, walking_mount != nullptr);
 				} else if (mountSpr->isAnimated()) {
 					mount_frame = mountSpr->getAnimationFrame(elapsed_time);
 				}
