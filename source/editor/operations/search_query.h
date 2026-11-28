@@ -73,6 +73,7 @@ struct SearchResultChildEntry {
 	std::string subtitle;
 	const Brush* brush = nullptr; // For creature brush rendering if creature
 	bool is_creature = false;
+    std::string group_name; // Explicit grouping key (avoids parsing display subtitles)
 };
 
 struct SearchResultGroup {
@@ -103,8 +104,15 @@ struct SearchQuery {
 
 class SearchEngine {
 public:
-	static std::vector<SearchResultGroup> Execute(Map& map, const SearchQuery& query);
-    [[nodiscard]] static std::vector<SearchResultChildEntry> FindMissingGrounds(const Map& map);
+    /**
+     * Executes the query across the map (or current selection when query.on_selection is true).
+     * SearchCategory::MissingGround honors on_selection and combines its groups with any other
+     * requested categories or explicit item/creature filters.
+     */
+    static std::vector<SearchResultGroup> Execute(Map& map, const SearchQuery& query);
+
+    /** Scans tiles without ground that violate MissingGround rules, optionally limited to selected tiles. */
+    [[nodiscard]] static std::vector<SearchResultChildEntry> FindMissingGrounds(const Map& map, bool on_selection = false);
 };
 
 #endif // RME_EDITOR_OPERATIONS_SEARCH_QUERY_H_

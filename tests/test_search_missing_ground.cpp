@@ -371,6 +371,85 @@ TEST_CASE("SearchEngine::Execute groups Missing Grounds per item, creature, spaw
     REQUIRE(groups[3].children.size() == 1);
 }
 
+TEST_CASE(
+    "SearchEngine::Execute groups creatures with parentheses cleanly, builds groups before 1.0f, and honors selection and combined "
+    "categories",
+    "[search][missing_ground]"
+)
+{
+    ScopedItemDefinitions defs;
+    Map map;
+
+    Tile* rat_cave = map.createTile(10, 10, 7);
+    REQUIRE(rat_cave != nullptr);
+    rat_cave->creature = std::make_unique<Creature>("Rat (Cave)");
+    PutGround(map, 9, 10, 7);
+    PutGround(map, 11, 10, 7);
+
+    Tile* rat_plain = map.createTile(20, 10, 7);
+    REQUIRE(rat_plain != nullptr);
+    rat_plain->creature = std::make_unique<Creature>("Rat");
+    PutGround(map, 19, 10, 7);
+    PutGround(map, 21, 10, 7);
+
+    // Selected ungrounded carpet at (30, 10) plus unselected ungrounded carpet at (40, 10)
+    Tile* selected_carpet = map.createTile(30, 10, 7);
+    REQUIRE(selected_carpet != nullptr);
+    selected_carpet->addItem(Item::Create(kCarpetId));
+    selected_carpet->select();
+    SurroundWithGround(map, 30, 10, 7);
+
+    PutItem(map, 40, 10, 7, kCarpetId);
+    SurroundWithGround(map, 40, 10, 7);
+
+    // Verify creature names with " (" remain separate groups and groups are built before 1.0f callback.
+    {
+        SearchQuery query;
+        query.categories = SearchCategory::MissingGround;
+        query.progress_callback = [](float progress, std::string_view) {
+            if (progress >= 1.0f) {
+                g_item_definitions.clear();
+            }
+        };
+
+        const auto groups = SearchEngine::Execute(map, query);
+        REQUIRE(groups.size() == 3);
+        REQUIRE(groups[0].id == kCarpetId);
+        REQUIRE(groups[0].name == "red carpet");
+        REQUIRE(groups[0].children.size() == 2);
+        REQUIRE(groups[1].name == "Rat");
+        REQUIRE(groups[1].is_creature);
+        REQUIRE(groups[1].children.size() == 1);
+        REQUIRE(groups[2].name == "Rat (Cave)");
+        REQUIRE(groups[2].is_creature);
+        REQUIRE(groups[2].children.size() == 1);
+    }
+
+    // Re-seed definitions after completion callback cleared them; verify on_selection + combined categories.
+    ScopedItemDefinitions reseeded;
+    Tile* selected_uid = map.createTile(50, 10, 7);
+    REQUIRE(selected_uid != nullptr);
+    selected_uid->addItem(Item::Create(kGroundId));
+    auto uid_item = Item::Create(kStaticOrnamentId);
+    uid_item->setUniqueID(4242);
+    selected_uid->addItem(std::move(uid_item));
+    selected_uid->select();
+
+    SearchQuery combined_query;
+    combined_query.categories = SearchCategory::MissingGround | SearchCategory::UniqueID;
+    combined_query.on_selection = true;
+    combined_query.progress_callback = [](float, std::string_view) { };
+
+    const auto combined = SearchEngine::Execute(map, combined_query);
+    REQUIRE(combined.size() == 2);
+    REQUIRE(combined[0].id == kStaticOrnamentId);
+    REQUIRE(combined[0].children.size() == 1);
+    REQUIRE(combined[0].children[0].position == Position(50, 10, 7));
+    REQUIRE(combined[1].id == kCarpetId);
+    REQUIRE(combined[1].children.size() == 1);
+    REQUIRE(combined[1].children[0].position == Position(30, 10, 7));
+}
+
 TEST_CASE("FindMissingGrounds excludes BlockPathfinder ground from open-floor neighbour count", "[search][missing_ground]")
 {
     ScopedItemDefinitions defs;

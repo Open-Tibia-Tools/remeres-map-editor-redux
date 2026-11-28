@@ -4,7 +4,6 @@
 #include "game/creature.h"
 #include "game/item.h"
 #include "game/items.h"
-#include "item_definitions/core/item_definition_store.h"
 #include "map/map.h"
 #include "map/map_region.h"
 #include "map/missing_ground.h"
@@ -12,11 +11,15 @@
 #include "map/spatial_hash_grid.h"
 #include "map/tile.h"
 #include "ui/gui.h"
+#include "util/common.h"
+#include "item_definitions/core/item_definition_store.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <format>
 #include <future>
+#include <optional>
 #include <ranges>
 #include <string_view>
 #include <thread>
@@ -254,16 +257,8 @@ void SortSearchGroups(std::vector<SearchResultGroup>& groups) {
 
 	for (auto& entry : entries) {
 		if (entry.is_creature) {
-			constexpr std::string_view kCreaturePrefix = "Creature: ";
-			std::string creature_name = "Unknown Creature";
-			if (entry.subtitle.starts_with(kCreaturePrefix)) {
-				const size_t name_start = kCreaturePrefix.size();
-				const size_t reason_sep = entry.subtitle.find(" (", name_start);
-				if (reason_sep != std::string::npos && reason_sep > name_start) {
-					creature_name = entry.subtitle.substr(name_start, reason_sep - name_start);
-				}
-			}
-			auto& group = creature_groups[creature_name];
+            const std::string creature_name = entry.group_name.empty() ? "Unknown Creature" : entry.group_name;
+            auto& group = creature_groups[creature_name];
 			if (group.name.empty()) {
 				group.name = creature_name;
 				group.brush = entry.brush;
@@ -323,7 +318,7 @@ void SortSearchGroups(std::vector<SearchResultGroup>& groups) {
 
 } // namespace
 
-std::vector<SearchResultChildEntry> SearchEngine::FindMissingGrounds(const Map& map)
+std::vector<SearchResultChildEntry> SearchEngine::FindMissingGrounds(const Map& map, bool on_selection)
 {
     const auto cells = map.getGrid().getSortedCells();
     if (cells.empty()) {
@@ -358,6 +353,9 @@ std::vector<SearchResultChildEntry> SearchEngine::FindMissingGrounds(const Map& 
 
         auto evaluateCandidate
             = [&](int cx, int cy, int cz, const Tile* ctile, uint16_t self_role, int base_x, int base_y, const Floor* floor) {
+                  if (on_selection && (ctile == nullptr || !ctile->isSelected())) {
+                      return;
+                  }
                   const uint16_t n = MissingGround::ClassifyTile(lookupTile(cx, cy - 1, cz, base_x, base_y, floor));
                   const uint16_t e = MissingGround::ClassifyTile(lookupTile(cx + 1, cy, cz, base_x, base_y, floor));
                   const uint16_t s = MissingGround::ClassifyTile(lookupTile(cx, cy + 1, cz, base_x, base_y, floor));
@@ -401,6 +399,7 @@ std::vector<SearchResultChildEntry> SearchEngine::FindMissingGrounds(const Map& 
                       child.is_creature = true;
                       child.brush = brush;
                       child.item_id = creature->getLookType().lookType;
+                      child.group_name = creature_name;
                       child.subtitle = std::format("Creature: {} ({})", creature_name, reason_text);
                   } else if (ctile != nullptr && ctile->spawn != nullptr) {
                       child.subtitle = std::format("Spawn ({})", reason_text);
@@ -467,11 +466,15 @@ std::vector<SearchResultChildEntry> SearchEngine::FindMissingGrounds(const Map& 
                                 evaluateCandidate(x, y, z, tile, self_role, base_x, base_y, floor);
                             }
 
-                            if ((self_role & MissingGround::kBarrier) != 0u) {
-                                constexpr int kUpstreamOffsets[3][2] = {{-1, 0}, {0, -1}, {-1, -1}};
-                                for (const auto& offset : kUpstreamOffsets) {
-                                    const int ux = x + offset[0];
-                                    const int uy = y + offset[1];
+                            if (!on_selection && (self_role & MissingGround::kBarrier) != 0u) {
+                                struct Offset {
+                                    int dx;
+                                    int dy;
+                                };
+                                constexpr std::array<Offset, 3> kUpstreamOffsets {{{-1, 0}, {0, -1}, {-1, -1}}};
+                                for (const auto& [dx, dy] : kUpstreamOffsets) {
+                                    const int ux = x + dx;
+                                    const int uy = y + dy;
                                     if (ux < 0 || uy < 0 || (has_map_bounds && (ux >= map_width || uy >= map_height))) {
                                         continue;
                                     }
@@ -531,40 +534,48 @@ std::vector<SearchResultGroup> SearchEngine::Execute(Map& map, const SearchQuery
 		? (query.on_selection ? "Searching on selected area..." : "Searching on map...")
 		: query.query_title;
 
-	if (query.progress_callback) {
+    std::optional<ScopedLoadingBar> loading_bar;
+    if (query.progress_callback) {
 		query.progress_callback(0.0f, bar_label);
 	} else {
-		g_gui.CreateLoadBar(bar_label);
-	}
+        loading_bar.emplace(wxstr(bar_label));
+    }
 
-    if (HasCategory(query.categories, SearchCategory::MissingGround)) {
-        auto entries = FindMissingGrounds(map);
+    auto finishProgress = [&]() {
         if (query.progress_callback) {
             query.progress_callback(1.0f, "");
         } else {
-            g_gui.DestroyLoadBar();
+            loading_bar.reset();
         }
-        if (entries.empty()) {
-            return {};
+    };
+
+    const bool search_missing_ground = HasCategory(query.categories, SearchCategory::MissingGround);
+    std::vector<SearchResultGroup> missing_groups;
+    if (search_missing_ground) {
+        auto entries = FindMissingGrounds(map, query.on_selection);
+        if (!entries.empty()) {
+            missing_groups = BuildMissingGroundGroups(std::move(entries));
         }
-        return BuildMissingGroundGroups(std::move(entries));
     }
 
     const bool has_creature_filter = (query.specific_creature_brush != nullptr) || (!query.creature_brushes.empty());
     const bool search_creatures = HasCategory(query.categories, SearchCategory::Creature) || has_creature_filter;
 
     const bool has_item_filter = (query.specific_item_id > 0) || (!query.item_id_set.empty());
-    const bool search_items = (query.categories != SearchCategory::None && query.categories != SearchCategory::Creature) || has_item_filter;
+    const uint32_t item_category_mask = static_cast<uint32_t>(query.categories) & ~static_cast<uint32_t>(SearchCategory::Creature)
+        & ~static_cast<uint32_t>(SearchCategory::MissingGround);
+    const bool search_items = (item_category_mask != 0u) || has_item_filter;
+
+    if (!search_creatures && !search_items) {
+        finishProgress();
+        return missing_groups;
+    }
 
     auto cells = map.getGrid().getSortedCells();
 	if (cells.empty()) {
-		if (query.progress_callback) {
-			query.progress_callback(1.0f, "");
-		} else {
-			g_gui.DestroyLoadBar();
-		}
-		return {};
-	}
+        finishProgress();
+        return missing_groups;
+    }
 
 	struct WorkerResult {
 		std::unordered_map<uint32_t, SearchResultGroup> item_groups;
@@ -703,17 +714,11 @@ std::vector<SearchResultGroup> SearchEngine::Execute(Map& map, const SearchQuery
 		}
 	}
 
-	if (query.progress_callback) {
-		query.progress_callback(1.0f, "");
-	} else {
-		g_gui.DestroyLoadBar();
-	}
+    // Merge all groups into a single list before signalling completion.
+    std::vector<SearchResultGroup> result;
+    result.reserve(master_item_groups.size() + master_creature_groups.size() + missing_groups.size());
 
-	// Merge all groups into a single list
-	std::vector<SearchResultGroup> result;
-	result.reserve(master_item_groups.size() + master_creature_groups.size());
-
-	auto append_and_normalize = [&](auto& map) {
+    auto append_and_normalize = [&](auto& map) {
 		for (auto& [key, g] : map) {
 			NormalizeGroupMetadata(g);
 			result.push_back(std::move(g));
@@ -722,9 +727,18 @@ std::vector<SearchResultGroup> SearchEngine::Execute(Map& map, const SearchQuery
 
 	append_and_normalize(master_item_groups);
 	append_and_normalize(master_creature_groups);
+    for (auto& g : missing_groups) {
+        g.expanded = false;
+        result.push_back(std::move(g));
+    }
 
-	// Default sort: highest match count first, then alphabetical name
+    // Default sort: highest match count first, then alphabetical name
 	SortSearchGroups(result);
+    if (search_missing_ground && result.size() == 1) {
+        result.front().expanded = true;
+    }
 
-	return result;
+    finishProgress();
+
+    return result;
 }
