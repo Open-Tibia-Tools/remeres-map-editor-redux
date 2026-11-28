@@ -184,6 +184,7 @@ namespace MenuBar {
 		SCRIPTS_MANAGER,
 		SCRIPTS_OPEN_FOLDER,
 		SCRIPTS_RELOAD,
+		AI_CONTROL_API,
 	};
 }
 
@@ -309,6 +310,7 @@ public:
 	void OnZoomNormal(wxCommandEvent& event);
 
 	void OnTakeScreenshot(wxCommandEvent& event);
+	void OnToggleAiControlApi(wxCommandEvent& event);
 
 	void OnChangeViewSettings(wxCommandEvent& event);
 	void OnChangeFloor(wxCommandEvent& event);

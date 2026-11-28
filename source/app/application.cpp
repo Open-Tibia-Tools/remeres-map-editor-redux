@@ -39,6 +39,7 @@
 #include "rendering/ui/minimap_window.h"
 #include "ui/about_window.h"
 #include "ui/main_menubar.h"
+#include "ai/ai_control_controller.h"
 #include "app/updater.h"
 #include <wx/stattext.h>
 #include <wx/slider.h>
@@ -340,6 +341,12 @@ void Application::OnEventLoopEnter(wxEventLoopBase* loop) {
 		return;
 	}
 	m_startup = false;
+
+	// Automated tools start the local AI Control API without clicking the menu.
+	wxString ai_control_autostart;
+	if (wxGetEnv("RME_AI_CONTROL_AUTOSTART", &ai_control_autostart) && ai_control_autostart == "1") {
+		g_gui.root->GetAiControl().Start(AiControl::StartMode::Unattended);
+	}
 
 	// Don't try to create a map if we didn't load the client map.
 	if (ClientVersion::getLatestVersion() == nullptr) {

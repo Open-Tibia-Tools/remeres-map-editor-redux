@@ -21,9 +21,12 @@
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <memory>
+#include <optional>
+#include <string>
 
 class MapCanvas;
 class ScreenshotSaver;
+struct PositionRect;
 
 class ScreenshotController {
 public:
@@ -31,10 +34,17 @@ public:
 	~ScreenshotController();
 
 	void TakeScreenshot(const wxFileName& path, const wxString& format);
+	// Renders the inclusive tile region of `floor` at 100% zoom, one viewport at a time, into a
+	// PNG at `path`. The view's floor, zoom and scroll are restored afterwards. Returns an error
+	// message on failure.
+	[[nodiscard]] std::optional<std::string> ExportRegion(const wxString& path, const PositionRect& region, int floor);
 	bool IsCapturing() const;
 	uint8_t* GetBuffer();
 
 private:
+	// Captures one frame, re-rendering a bounded number of times while sprites are still loading.
+	void CaptureSettledFrame(int width, int height);
+
 	MapCanvas* canvas;
 	std::unique_ptr<ScreenshotSaver> screenshot_saver;
 };

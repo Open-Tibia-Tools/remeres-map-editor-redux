@@ -136,23 +136,36 @@ void DoodadPreviewManager::FillBuffer() {
 			++object_count;
 		}
 	} else {
-		if (brush->getTotalVariants() > 0) {
-			const auto variant = brush->getVariant(variation);
-			if (variant.composite) {
-				for (const auto& composite : *variant.composite) {
-					Position pos = center_pos + composite.first;
-					const auto& items = composite.second;
-					Tile* tile = doodad_buffer_map->createTile(pos.x, pos.y, pos.z);
-					for (const auto& item : items) {
-						if (item) {
-							tile->addItem(item->deepCopy());
-						}
-					}
+		AddSingleTileVariant(*doodad_buffer_map, *brush, variation);
+	}
+}
+
+void DoodadPreviewManager::FillSingleTile(BaseMap& buffer, DoodadBrush& brush, int variation) {
+	buffer.clear();
+	if (!brush.isEmpty(variation)) {
+		AddSingleTileVariant(buffer, brush, variation);
+	}
+}
+
+void DoodadPreviewManager::AddSingleTileVariant(BaseMap& buffer, DoodadBrush& brush, int variation) {
+	if (brush.getTotalVariants() <= 0) {
+		return;
+	}
+	const Position center_pos(0x8000, 0x8000, 0x8);
+	const auto variant = brush.getVariant(variation);
+	if (variant.composite) {
+		for (const auto& composite : *variant.composite) {
+			Position pos = center_pos + composite.first;
+			const auto& items = composite.second;
+			Tile* tile = buffer.createTile(pos.x, pos.y, pos.z);
+			for (const auto& item : items) {
+				if (item) {
+					tile->addItem(item->deepCopy());
 				}
-			} else if (variant.single_item) {
-				Tile* tile = doodad_buffer_map->createTile(center_pos.x, center_pos.y, center_pos.z);
-				tile->addItem(variant.single_item->deepCopy());
 			}
 		}
+	} else if (variant.single_item) {
+		Tile* tile = buffer.createTile(center_pos.x, center_pos.y, center_pos.z);
+		tile->addItem(variant.single_item->deepCopy());
 	}
 }

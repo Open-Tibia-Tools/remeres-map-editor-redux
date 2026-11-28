@@ -73,7 +73,8 @@ wxString ScreenshotSaver::SaveCapture(const wxFileName& suggestedInfo, const wxS
 
 void ScreenshotSaver::PrepareCapture(int width, int height) {
 	Cleanup();
-	buffer = new uint8_t[3 * width * height];
+	// Zeroed, so a frame the renderer did not write comes out black instead of stale memory.
+	buffer = new uint8_t[3 * width * height]();
 }
 
 void ScreenshotSaver::Cleanup() {

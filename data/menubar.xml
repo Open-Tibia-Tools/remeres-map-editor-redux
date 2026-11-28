@@ -85,6 +85,7 @@
 		<item name="New View" hotkey="Ctrl+Shift+N" action="NEW_VIEW" help="Creates a new view of the current map."/>
 		<item name="Enter Fullscreen" hotkey="F11" action="TOGGLE_FULLSCREEN" help="Changes between fullscreen mode and windowed mode."/>
 		<item name="Take Screenshot" hotkey="F10" action="TAKE_SCREENSHOT" help="Saves the current view to the disk."/>
+		<item name="Local AI Control API" action="AI_CONTROL_API" help="Let local AI tools inspect and edit the open map through http://127.0.0.1:17310 (or RME_AI_CONTROL_PORT)."/>
 		<separator/>
 		<menu name="Zoom">
 			<item name="Zoom In" hotkey="Ctrl++" action="ZOOM_IN" help="Increase the zoom."/>

@@ -76,6 +76,7 @@ function(rme_link_nanosvg target)
 	endif()
 endfunction()
 find_package(Catch2 3 CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # nanovg: try vcpkg/Conan first, fallback to ext/nanovg
 find_package(nanovg CONFIG QUIET)
@@ -361,3 +362,7 @@ rme_add_catch2_test(test_missing_ground tests/test_missing_ground.cpp)
 rme_add_full_editor_test(test_search_missing_ground tests/test_search_missing_ground.cpp)
 target_link_libraries(test_search_missing_ground PRIVATE Catch2::Catch2WithMain)
 add_test(NAME test_search_missing_ground COMMAND test_search_missing_ground)
+
+# --- Unit test for the AI Control API contract (HTTP policy, routes, busy gate, request parsing) ---
+rme_add_catch2_test(test_ai_control_contract tests/test_ai_control_contract.cpp source/ai/ai_control_contract.cpp)
+target_link_libraries(test_ai_control_contract PRIVATE nlohmann_json::nlohmann_json)

@@ -18,6 +18,7 @@
 #ifndef RME_EDITOR_ACTION_QUEUE_H
 #define RME_EDITOR_ACTION_QUEUE_H
 
+#include <cstdint>
 #include <deque>
 #include <string>
 #include <vector>
@@ -63,9 +64,21 @@ public:
 	}
 	std::string getActionName(size_t index) const;
 
+	// Monotonic counts of batches stored as a new entry and of batches merged into the previous
+	// entry. Unlike indexes they survive the oldest entries being dropped, so a caller can tell
+	// exactly how many entries its own changes added.
+	uint64_t getPushedCount() const {
+		return pushed_count;
+	}
+	uint64_t getMergedCount() const {
+		return merged_count;
+	}
+
 protected:
 	size_t current;
 	size_t memory_size;
+	uint64_t pushed_count = 0;
+	uint64_t merged_count = 0;
 	Editor& editor;
 	ActionList actions;
 };

@@ -8,6 +8,8 @@
 #include "ui/main_frame.h"
 #include "ui/managers/status_manager.h"
 
+#include "ai/ai_control_controller.h"
+
 #include "ui/dialog_util.h"
 #include "app/application.h"
 #include "util/file_system.h"
@@ -41,7 +43,8 @@
 #include <spdlog/spdlog.h>
 
 MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size) :
-	wxFrame((wxFrame*)nullptr, -1, title, pos, size, wxDEFAULT_FRAME_STYLE) {
+	wxFrame((wxFrame*)nullptr, -1, title, pos, size, wxDEFAULT_FRAME_STYLE),
+	ai_control(std::make_unique<AiControl::Controller>()) {
 	// Receive idle events
 	SetExtraStyle(wxWS_EX_PROCESS_IDLE);
 
@@ -196,6 +199,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 }
 
 MainFrame::~MainFrame() {
+	ai_control.reset();
 	menu_bar.reset();
 	tool_bar.reset();
 }
