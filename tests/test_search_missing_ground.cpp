@@ -5,13 +5,19 @@
 #include "game/item.h"
 #include "game/spawn.h"
 #include "map/map.h"
+#include "map/missing_ground.h"
+#include "map/missing_ground_chunk.h"
+#include "map/missing_ground_tile.h"
 #include "map/tile.h"
+#include "rendering/core/missing_ground_overlay_cache.h"
 #include "item_definitions/core/item_definition_store.h"
 #include "item_definitions/core/item_definition_types.h"
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <memory>
+#include <set>
 #include <string>
 
 // These two symbols live in application.cpp, which is excluded from test links.
@@ -28,6 +34,7 @@ namespace {
     constexpr uint16_t kGroundId = 100;
     constexpr uint16_t kBlockingGroundId = 101; // e.g. 4958 ship sail (ground group, unpassable)
     constexpr uint16_t kPathAvoidGroundId = 102; // e.g. 459/469 invisible stair ground (BlockPathfinder)
+    constexpr uint16_t kTrashGroundId = 103; // lava/trash-holder ground
     constexpr uint16_t kXmlBorderId = 200;
     constexpr uint16_t kClientClipBorderId = 201; // AlwaysOnBottom + topOrder==1 without IsBorder
     constexpr uint16_t kOptionalBorderId = 202;
@@ -36,6 +43,10 @@ namespace {
     constexpr uint16_t kTrimLedgeId = 205; // 10344/9647-style: Unpassable, !IsWall, !BlockMissiles
     constexpr uint16_t kCarpetId = 206; // IsCarpet
     constexpr uint16_t kStaticOrnamentId = 207; // 6763/6410-style: stackOrder=3, !Unpassable, !Moveable
+    constexpr uint16_t kTableId = 208; // IsTable
+    constexpr uint16_t kDoorId = 209; // ITEM_TYPE_DOOR without IsWall
+    constexpr uint16_t kTeleportId = 210; // ITEM_TYPE_TELEPORT
+    constexpr uint16_t kFloorChangeId = 211; // ItemFlag::FloorChange
 
     class ScopedItemDefinitions {
     public:
@@ -45,6 +56,7 @@ namespace {
             Define(kGroundId, "grass", ITEM_GROUP_GROUND);
             Define(kBlockingGroundId, "ship sail", ITEM_GROUP_GROUND, flagMask(ItemFlag::Unpassable));
             Define(kPathAvoidGroundId, "void stair", ITEM_GROUP_GROUND, flagMask(ItemFlag::BlockPathfinder));
+            Define(kTrashGroundId, "trash lava", ITEM_GROUP_GROUND, 0, 0, ITEM_TYPE_TRASHHOLDER);
             Define(kXmlBorderId, "grass border", ITEM_GROUP_NONE, flagMask(ItemFlag::IsBorder));
             Define(kClientClipBorderId, "unlisted clip border", ITEM_GROUP_NONE, flagMask(ItemFlag::AlwaysOnBottom), 1);
             Define(kOptionalBorderId, "optional border", ITEM_GROUP_NONE, flagMask(ItemFlag::IsOptionalBorder));
@@ -61,19 +73,26 @@ namespace {
             Define(kTrimLedgeId, "stone ledge", ITEM_GROUP_NONE, flagMask(ItemFlag::Unpassable), 0);
             Define(kCarpetId, "red carpet", ITEM_GROUP_NONE, flagMask(ItemFlag::IsCarpet) | flagMask(ItemFlag::AlwaysOnBottom), 1);
             Define(kStaticOrnamentId, "ice ornament", ITEM_GROUP_NONE, 0, 3);
+            Define(kTableId, "wooden table", ITEM_GROUP_NONE, flagMask(ItemFlag::IsTable) | flagMask(ItemFlag::Unpassable), 2);
+            Define(kDoorId, "wooden door", ITEM_GROUP_NONE, flagMask(ItemFlag::Unpassable), 2, ITEM_TYPE_DOOR);
+            Define(kTeleportId, "magic forcefield", ITEM_GROUP_NONE, 0, 2, ITEM_TYPE_TELEPORT);
+            Define(kFloorChangeId, "rope spot", ITEM_GROUP_NONE, flagMask(ItemFlag::FloorChange), 0);
         }
         ~ScopedItemDefinitions()
         {
             g_item_definitions.clear();
         }
 
-        static void Define(uint16_t id, std::string name, ItemGroup_t group, uint64_t flags = 0, int always_on_top_order = 0)
+        static void Define(
+            uint16_t id, std::string name, ItemGroup_t group, uint64_t flags = 0, int always_on_top_order = 0,
+            ItemTypes_t type = ITEM_TYPE_NONE
+        )
         {
             ResolvedItemDefinitionRow row;
             row.server_id = id;
             row.client_id = id;
             row.group = group;
-            row.type = ITEM_TYPE_NONE;
+            row.type = type;
             row.flags = flags;
             row.always_on_top_order = always_on_top_order;
             row.name = std::move(name);
@@ -528,4 +547,178 @@ TEST_CASE("FindMissingGrounds keeps wooden trim along an ungrounded shaft consis
     PutItem(map, 10, 11, 7, kTrimLedgeId);
 
     REQUIRE(SearchEngine::FindMissingGrounds(map).empty());
+}
+
+TEST_CASE("ClassifyNeighborRoles matches ClassifyTile neighbor bits across ground and item variants", "[missing_ground][cache]")
+{
+    ScopedItemDefinitions defs;
+    constexpr MissingGround::RoleFlags kNeighborMask = MissingGround::RoleFlags::HasGround | MissingGround::RoleFlags::OpenFloor
+        | MissingGround::RoleFlags::Barrier | MissingGround::RoleFlags::HasWall;
+
+    REQUIRE(MissingGround::ClassifyNeighborRoles(nullptr) == MissingGround::RoleFlags::None);
+
+    Map map;
+    auto checkNeighborParity = [&](int x, int y) {
+        const Tile* t = map.getTile(x, y, 7);
+        REQUIRE(MissingGround::ClassifyNeighborRoles(t) == (MissingGround::ClassifyTile(t) & kNeighborMask));
+    };
+
+    // Open floor, blocking ground, BlockPathfinder ground, TrashHolder ground
+    PutGround(map, 1, 1, 7, kGroundId);
+    PutGround(map, 2, 1, 7, kBlockingGroundId);
+    PutGround(map, 3, 1, 7, kPathAvoidGroundId);
+    PutGround(map, 4, 1, 7, kTrashGroundId);
+    for (int x = 1; x <= 4; ++x) {
+        checkNeighborParity(x, 1);
+    }
+
+    // Grounded wall, grounded mountain barrier, grounded clip border + ornaments + trim
+    PutGround(map, 5, 1, 7, kGroundId);
+    PutItem(map, 5, 1, 7, kWallId);
+    PutGround(map, 6, 1, 7, kGroundId);
+    PutItem(map, 6, 1, 7, kMountainBorderId);
+    PutGround(map, 7, 1, 7, kGroundId);
+    PutItem(map, 7, 1, 7, kClientClipBorderId);
+    PutItem(map, 7, 1, 7, kStaticOrnamentId);
+    PutItem(map, 7, 1, 7, kTrimLedgeId);
+    checkNeighborParity(5, 1);
+    checkNeighborParity(6, 1);
+    checkNeighborParity(7, 1);
+    REQUIRE(MissingGround::HasRole(MissingGround::ClassifyNeighborRoles(map.getTile(7, 1, 7)), MissingGround::RoleFlags::OpenFloor));
+
+    // Ungrounded functional/soft items (Door, Teleport, FloorChange, Table)
+    PutItem(map, 8, 1, 7, kDoorId);
+    PutItem(map, 9, 1, 7, kTeleportId);
+    PutItem(map, 10, 1, 7, kFloorChangeId);
+    PutItem(map, 11, 1, 7, kTableId);
+    for (int x = 8; x <= 11; ++x) {
+        checkNeighborParity(x, 1);
+    }
+    REQUIRE(MissingGround::HasRole(MissingGround::ClassifyTile(map.getTile(8, 1, 7)), MissingGround::RoleFlags::Functional));
+    REQUIRE(MissingGround::HasRole(MissingGround::ClassifyTile(map.getTile(9, 1, 7)), MissingGround::RoleFlags::Functional));
+    REQUIRE(MissingGround::HasRole(MissingGround::ClassifyTile(map.getTile(10, 1, 7)), MissingGround::RoleFlags::Functional));
+    REQUIRE(MissingGround::HasRole(MissingGround::ClassifyTile(map.getTile(11, 1, 7)), MissingGround::RoleFlags::HasSoftContent));
+}
+
+TEST_CASE(
+    "MissingGround::EvaluateChunk matches SearchEngine::FindMissingGrounds across chunk borders and map bounds", "[missing_ground][cache]"
+)
+{
+    ScopedItemDefinitions defs;
+    Map map;
+    map.setWidth(64);
+    map.setHeight(64);
+
+    // 1. Cross-chunk OccludedBehindBarrier empty void at (15, 15) inside chunk (0,0) with barrier at (16, 15) in chunk (1,0)
+    PutGround(map, 15, 14, 7);
+    PutGround(map, 15, 16, 7);
+    PutItem(map, 16, 15, 7, kMountainBorderId);
+
+    // 2. Wall near right map edge (63, 10): W and N grounded (non-opposite), E (64, 10) is out-of-bounds ground -> must be ignored.
+    PutGround(map, 62, 10, 7);
+    PutGround(map, 63, 9, 7);
+    PutItem(map, 63, 10, 7, kWallId);
+    PutGround(map, 64, 10, 7);
+
+    // Build expected set from FindMissingGrounds
+    const auto search_results = SearchEngine::FindMissingGrounds(map);
+    std::set<std::pair<int, int>> expected_positions;
+    for (const auto& entry : search_results) {
+        expected_positions.emplace(entry.position.x, entry.position.y);
+    }
+    REQUIRE(expected_positions.count({15, 15}) == 1);
+    REQUIRE(expected_positions.count({63, 10}) == 0);
+
+    std::set<std::pair<int, int>> chunk_positions;
+    std::vector<MissingGround::RoleFlags> scratch;
+    ChunkTileMask mask;
+    map.visitPopulatedChunks(0, 0, 4, 4, 7, [&](int cx, int cy) {
+        if (MissingGround::EvaluateChunk(map, cx, cy, 7, map.getWidth(), map.getHeight(), mask, scratch)) {
+            mask.forEach([&](int tx, int ty) { chunk_positions.emplace((cx << 4) + tx, (cy << 4) + ty); });
+        }
+    });
+
+    REQUIRE(chunk_positions == expected_positions);
+}
+
+TEST_CASE(
+    "MissingGroundOverlayCache tracks SpatialChangeTracker safely, invalidates 3x3 chunk halos, handles disabling, and prunes",
+    "[missing_ground][cache]"
+)
+{
+    ScopedItemDefinitions defs;
+
+    // 1. Verify safe destruction if SpatialChangeTracker dies BEFORE MissingGroundOverlayCache (no UAF)
+    {
+        rme::rendering::MissingGroundOverlayCache cache;
+        {
+            auto temp_map = std::make_unique<Map>();
+            PutItem(*temp_map, 8, 8, 7, kCarpetId);
+            SurroundWithGround(*temp_map, 8, 8, 7);
+            cache.syncDirtyState(temp_map->getChangeTracker(), *temp_map, temp_map->getWidth(), temp_map->getHeight(), true);
+            const auto& chunk = cache.getOrEvaluateChunk(0, 0, 7, *temp_map, temp_map->getWidth(), temp_map->getHeight());
+            REQUIRE(chunk.has_any);
+            REQUIRE(chunk.mask.test(8, 8));
+        } // temp_map + SpatialChangeTracker destroyed here; cache destructs next without crashing.
+    }
+
+    // 2. Cross-chunk 3x3 halo invalidation, floor isolation, resize, disable clear, and far-floor pruning
+    Map map;
+    map.setWidth(64);
+    map.setHeight(64);
+    PutItem(map, 15, 15, 7, kCarpetId);
+    SurroundWithGround(map, 15, 15, 7);
+    PutGround(map, 5, 5, 6);
+    PutGround(map, 5, 5, 11);
+
+    rme::rendering::MissingGroundOverlayCache cache;
+    cache.advanceFrame(7);
+    cache.syncDirtyState(map.getChangeTracker(), map, map.getWidth(), map.getHeight(), true);
+    {
+        const auto& c00 = cache.getOrEvaluateChunk(0, 0, 7, map, map.getWidth(), map.getHeight());
+        REQUIRE(c00.is_valid);
+        REQUIRE(c00.has_any);
+        REQUIRE(c00.mask.test(15, 15));
+    }
+    REQUIRE(cache.getOrEvaluateChunk(0, 0, 6, map, map.getWidth(), map.getHeight()).is_valid);
+    REQUIRE(cache.getOrEvaluateChunk(0, 0, 11, map, map.getWidth(), map.getHeight()).is_valid);
+
+    // Edit neighbor (16, 15, 7) in chunk (1, 0), NOT (0, 0), so only 3x3 halo propagation invalidates (0, 0, 7).
+    Tile* east_neighbor = map.getTile(16, 15, 7);
+    REQUIRE(east_neighbor != nullptr);
+    east_neighbor->ground.reset();
+    // Removing N/S too would drop open floors below 2; leave only N ground so (15,15) stops triggering.
+    map.getTile(15, 16, 7)->ground.reset();
+    map.getTile(14, 15, 7)->ground.reset();
+    map.getChangeTracker().markTileDirty(16, 15, 7);
+
+    cache.syncDirtyState(map.getChangeTracker(), map, map.getWidth(), map.getHeight(), true);
+    REQUIRE_FALSE(cache.isChunkValid(0, 0, 7));
+    REQUIRE(cache.isChunkValid(0, 0, 6)); // Floor 6 must remain untouched
+
+    {
+        const auto& c00_after = cache.getOrEvaluateChunk(0, 0, 7, map, map.getWidth(), map.getHeight());
+        REQUIRE(c00_after.is_valid);
+        REQUIRE_FALSE(c00_after.has_any);
+    }
+
+    // Map resize invalidates cached chunks
+    map.setWidth(128);
+    cache.syncDirtyState(map.getChangeTracker(), map, map.getWidth(), map.getHeight(), true);
+    REQUIRE_FALSE(cache.isChunkValid(0, 0, 7));
+    REQUIRE_FALSE(cache.isChunkValid(0, 0, 6));
+    REQUIRE(cache.getOrEvaluateChunk(0, 0, 7, map, map.getWidth(), map.getHeight()).is_valid);
+    REQUIRE(cache.getOrEvaluateChunk(0, 0, 6, map, map.getWidth(), map.getHeight()).is_valid);
+    REQUIRE(cache.getOrEvaluateChunk(0, 0, 11, map, map.getWidth(), map.getHeight()).is_valid);
+
+    // Far-floor prune removes empty far floor z=11 while retaining surface floor z=6
+    for (uint64_t f = 0; f <= rme::rendering::MissingGroundOverlayCache::PRUNE_INTERVAL_FRAMES; ++f) {
+        cache.advanceFrame(7);
+    }
+    REQUIRE_FALSE(cache.isChunkValid(0, 0, 11));
+    REQUIRE(cache.isChunkValid(0, 0, 6));
+
+    // Disabling overlay clears cached chunks and frees state
+    cache.syncDirtyState(map.getChangeTracker(), map, map.getWidth(), map.getHeight(), false);
+    REQUIRE(cache.getCachedChunkCount() == 0);
 }

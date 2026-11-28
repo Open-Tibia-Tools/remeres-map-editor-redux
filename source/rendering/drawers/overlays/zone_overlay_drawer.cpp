@@ -5,8 +5,6 @@
 #include "game/waypoints.h"
 #include "map/basemap.h"
 #include "map/map.h"
-#include "map/missing_ground.h"
-#include "map/missing_ground_tile.h"
 #include "map/tile.h"
 #include "rendering/core/atlas_manager.h"
 #include "rendering/core/drawing_options.h"
@@ -778,14 +776,19 @@ void ZoneOverlayDrawer::drawFloorHighlightItems(SpriteBatch& sprite_batch,
 	}
 }
 
+void ZoneOverlayDrawer::syncMissingGroundCache(SpatialChangeTracker& tracker, const Map& map, bool overlay_enabled)
+{
+    missing_ground_cache_.syncDirtyState(tracker, map, map.getWidth(), map.getHeight(), overlay_enabled);
+}
+
 void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
                                                int z,
                                                const RenderView& view,
                                                const Map& map,
                                                const DrawingOptions& options,
                                                const AtlasManager& atlas) {
-    if (options.ingame || options.show_as_minimap || options.show_only_colors || !options.show_missing_ground
-        || view.zoom > kZoomLODCutoff) {
+    if (options.ingame || options.show_as_minimap || options.show_only_colors || !options.show_missing_ground || view.zoom > kZoomLODCutoff
+        || z < 0 || z >= MAP_LAYERS) {
         return;
     }
 
@@ -795,95 +798,49 @@ void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
     }
 
     const ViewBounds bounds = view.ComputeFloorTileBounds(z, 1);
-    if (bounds.end_x < bounds.start_x || bounds.end_y < bounds.start_y) {
+    const int map_width = map.getWidth();
+    const int map_height = map.getHeight();
+    const int min_x = std::max(0, bounds.start_x);
+    const int min_y = std::max(0, bounds.start_y);
+    const int max_x = (map_width > 0) ? std::min(bounds.end_x, map_width - 1) : bounds.end_x;
+    const int max_y = (map_height > 0) ? std::min(bounds.end_y, map_height - 1) : bounds.end_y;
+    if (max_x < min_x || max_y < min_y) {
         return;
     }
 
-    const int min_x = bounds.start_x - 1;
-    const int max_x = bounds.end_x + 1;
-    const int row_width = max_x - min_x + 1;
-    const int map_width = map.getWidth();
-    const int map_height = map.getHeight();
-    const bool has_map_bounds = map_width > 0 && map_height > 0;
-
-    SpatialHashGrid::CellCursor primary_cursor;
-    auto fetchRow = [&](int ry, std::vector<MissingGround::RoleFlags>& row) {
-        row.resize(row_width);
-        MissingGround::RoleFlags* out = row.data();
-        if (ry < 0 || (has_map_bounds && ry >= map_height)) {
-            std::fill(out, out + row_width, MissingGround::RoleFlags::None);
-            return;
-        }
-
-        int x = min_x;
-        if (x < 0) {
-            const int neg_end = std::min(max_x, -1);
-            std::fill(out, out + (neg_end - min_x + 1), MissingGround::RoleFlags::None);
-            x = neg_end + 1;
-        }
-
-        const int scan_max_x = has_map_bounds ? std::min(max_x, map_width - 1) : max_x;
-        const int ly = ry & 3;
-        while (x <= scan_max_x) {
-            const Floor* floor = map.getFloor(x, ry, z, primary_cursor);
-            if (!floor) {
-                const int span_end = std::min(scan_max_x, x | primary_cursor.empty_span_mask);
-                std::fill(out + (x - min_x), out + (span_end - min_x + 1), MissingGround::RoleFlags::None);
-                x = span_end + 1;
-                continue;
-            }
-            const int node_end = std::min(scan_max_x, x | 3);
-            for (; x <= node_end; ++x) {
-                const Tile* t = floor->locs[((x & 3) << 2) + ly].get();
-                out[x - min_x] = MissingGround::ClassifyTile(t);
-            }
-        }
-
-        if (x <= max_x) {
-            std::fill(out + (x - min_x), out + row_width, MissingGround::RoleFlags::None);
-        }
-    };
-
-    fetchRow(bounds.start_y - 1, missing_ground_row_prev_);
-    fetchRow(bounds.start_y, missing_ground_row_curr_);
+    const int min_cx = min_x >> 4;
+    const int max_cx = max_x >> 4;
+    const int min_cy = min_y >> 4;
+    const int max_cy = max_y >> 4;
 
     const int offset = (z <= GROUND_LAYER) ? (GROUND_LAYER - z) * TILE_SIZE : TILE_SIZE * (view.floor - z);
     const int base_screen_x = -view.view_scroll_x - offset;
     const int base_screen_y = -view.view_scroll_y - offset;
     const uint32_t missing_ground_flag = MakeIndicatorZoneFlag(TechnicalItemRegistry::GetIndicatorId(TileIndicatorType::MissingGround));
+    bool blend_configured = false;
 
-    sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
-
-    for (int y = bounds.start_y; y <= bounds.end_y; ++y) {
-        fetchRow(y + 1, missing_ground_row_next_);
-        const float draw_y = static_cast<float>(y * TILE_SIZE + base_screen_y);
-
-        for (int x = bounds.start_x; x <= bounds.end_x; ++x) {
-            const int idx = x - min_x;
-            const MissingGround::RoleFlags cell = missing_ground_row_curr_[idx];
-            if (MissingGround::HasRole(cell, MissingGround::RoleFlags::HasGround)) {
-                continue;
-            }
-            const MissingGround::RoleFlags nw = missing_ground_row_prev_[idx - 1];
-            const MissingGround::RoleFlags n = missing_ground_row_prev_[idx];
-            const MissingGround::RoleFlags ne = missing_ground_row_prev_[idx + 1];
-            const MissingGround::RoleFlags e = missing_ground_row_curr_[idx + 1];
-            const MissingGround::RoleFlags sw = missing_ground_row_next_[idx - 1];
-            const MissingGround::RoleFlags s = missing_ground_row_next_[idx];
-            const MissingGround::RoleFlags w = missing_ground_row_curr_[idx - 1];
-            const MissingGround::RoleFlags se = missing_ground_row_next_[idx + 1];
-
-            if (!MissingGround::EvaluateMissingGround(cell, n, e, s, w, se, nw, ne, sw)) {
-                continue;
-            }
-
-            const float draw_x = static_cast<float>(x * TILE_SIZE + base_screen_x);
-            sprite_batch.draw(draw_x, draw_y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, missing_ground_flag);
+    map.visitPopulatedChunks(min_cx, min_cy, max_cx, max_cy, z, [&](int cx, int cy) {
+        const CachedMissingGroundChunk& chunk = missing_ground_cache_.getOrEvaluateChunk(cx, cy, z, map, map_width, map_height);
+        if (!chunk.has_any) {
+            return;
         }
-
-        std::swap(missing_ground_row_prev_, missing_ground_row_curr_);
-        std::swap(missing_ground_row_curr_, missing_ground_row_next_);
-    }
+        if (!blend_configured) {
+            sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
+            blend_configured = true;
+        }
+        const int chunk_base_x = cx << 4;
+        const int chunk_base_y = cy << 4;
+        chunk.mask.forEach([&](int tx, int ty) {
+            const int wx = chunk_base_x + tx;
+            const int wy = chunk_base_y + ty;
+            if (wx < min_x || wx > max_x || wy < min_y || wy > max_y) {
+                return;
+            }
+            const float draw_x = static_cast<float>(wx * TILE_SIZE + base_screen_x);
+            const float draw_y = static_cast<float>(wy * TILE_SIZE + base_screen_y);
+            sprite_batch.draw(draw_x, draw_y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, missing_ground_flag);
+        });
+    });
 }
 
 void ZoneOverlayDrawer::drawFloorBadges(SpriteBatch& sprite_batch,
