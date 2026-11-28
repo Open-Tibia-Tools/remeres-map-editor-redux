@@ -21,8 +21,7 @@ void DrawingOptions::SetDefault() {
 	show_tech_items = true;
 	show_invalid_tiles = true;
 	show_missing_ground = false;
-    show_missing_ground_raw = false;
-    show_invalid_zones = true;
+	show_invalid_zones = true;
 	show_waypoints = true;
 	ingame = false;
 	is_drawing_mode = false;
@@ -99,8 +98,7 @@ void DrawingOptions::SetIngame() {
 	show_tech_items = false;
 	show_invalid_tiles = false;
 	show_missing_ground = false;
-    show_missing_ground_raw = false;
-    show_invalid_zones = false;
+	show_invalid_zones = false;
 	show_waypoints = false;
 	ingame = true;
 	dragging = false;
@@ -183,8 +181,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	const bool new_show_tech_items = settings.getBoolean(Config::SHOW_TECHNICAL_ITEMS);
 	const bool new_show_invalid_tiles = settings.getBoolean(Config::SHOW_INVALID_TILES);
 	const bool new_show_missing_ground = settings.getBoolean(Config::SHOW_MISSING_GROUND);
-    const bool new_show_missing_ground_raw = settings.getBoolean(Config::SHOW_MISSING_GROUND_RAW);
-    const bool new_show_invalid_zones = settings.getBoolean(Config::SHOW_INVALID_ZONES);
+	const bool new_show_invalid_zones = settings.getBoolean(Config::SHOW_INVALID_ZONES);
 	const bool new_show_waypoints = settings.getBoolean(Config::SHOW_WAYPOINTS);
 	const int new_show_grid = settings.getInteger(Config::SHOW_GRID);
 	const bool new_ingame = !settings.getBoolean(Config::SHOW_EXTRA);
@@ -280,8 +277,7 @@ void DrawingOptions::Update(const Settings& settings, const BrushManager& brush_
 	show_tech_items = new_show_tech_items;
 	show_invalid_tiles = new_show_invalid_tiles;
 	show_missing_ground = new_show_missing_ground;
-    show_missing_ground_raw = new_show_missing_ground_raw;
-    show_invalid_zones = new_show_invalid_zones;
+	show_invalid_zones = new_show_invalid_zones;
 	show_waypoints = new_show_waypoints;
 	show_grid = new_show_grid;
 	ingame = new_ingame;

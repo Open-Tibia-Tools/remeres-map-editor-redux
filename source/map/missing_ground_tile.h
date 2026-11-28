@@ -30,7 +30,6 @@ namespace MissingGround {
             if (!item) {
                 continue;
             }
-            mask |= kHasRawItems;
 
             const auto def = item->getDefinition();
             const bool is_blocking = item->isBlocking();

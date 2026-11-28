@@ -126,7 +126,6 @@ namespace MenuBar {
         SHOW_INVALID_TILES,
         SHOW_INVALID_ZONES,
         SHOW_MISSING_GROUND,
-        SHOW_MISSING_GROUND_RAW,
         SHOW_WAYPOINTS,
         SHOW_GRID,
         SHOW_EXTRA,

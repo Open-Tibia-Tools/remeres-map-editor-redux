@@ -37,9 +37,7 @@ enum class TileIndicatorType : uint8_t {
     ZonePvP = 15, // "PVP"   - PvP Zone (Red)
     House = 16, // "HOUSE" - House Tile (Amber)
     GuildHall = 17, // "GUILD" - Guildhall Tile (Orange)
-    MissingGround = 18, // "NO GROUND" - Missing Ground Tile (Yellow)
-    MissingGroundRaw = 19, // "RAW GROUND" - Debug Raw Any-Item Missing Ground Tile (Violet)
-    MissingGroundBoth = 20 // "NO / RAW" - Split Yellow/Violet when both rule & raw match
+    MissingGround = 18 // "NO GROUND" - Missing Ground Tile (Yellow)
 };
 
 /**
@@ -145,10 +143,6 @@ inline constexpr IndicatorBadgeStyle GetIndicatorBadgeStyle(TileIndicatorType ty
 			return { "guild", "g", 255, 122, 0, 255, 122, 0, 128, 255, 215, 166, 77, 37, 0 };
         case TileIndicatorType::MissingGround:
             return {"no ground", "ng", 255, 204, 0, 255, 204, 0, 128, 255, 235, 166, 77, 61, 0};
-        case TileIndicatorType::MissingGroundRaw:
-            return {"raw ground", "rg", 166, 77, 255, 166, 77, 255, 128, 215, 175, 255, 50, 23, 77};
-        case TileIndicatorType::MissingGroundBoth:
-            return {"no + raw", "nr", 255, 204, 0, 255, 204, 0, 128, 255, 235, 166, 77, 61, 0};
         default:
             return {"?", "?", 200, 200, 200, 100, 100, 100, 128, 240, 240, 240, 50, 50, 50};
     }

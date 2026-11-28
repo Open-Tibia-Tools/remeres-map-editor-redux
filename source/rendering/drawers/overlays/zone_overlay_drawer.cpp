@@ -784,8 +784,8 @@ void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
                                                const Map& map,
                                                const DrawingOptions& options,
                                                const AtlasManager& atlas) {
-    if (options.ingame || options.show_as_minimap || options.show_only_colors
-        || (!options.show_missing_ground && !options.show_missing_ground_raw) || view.zoom > kZoomLODCutoff) {
+    if (options.ingame || options.show_as_minimap || options.show_only_colors || !options.show_missing_ground
+        || view.zoom > kZoomLODCutoff) {
         return;
     }
 
@@ -851,10 +851,6 @@ void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
     const int base_screen_x = -view.view_scroll_x - offset;
     const int base_screen_y = -view.view_scroll_y - offset;
     const uint32_t missing_ground_flag = MakeIndicatorZoneFlag(TechnicalItemRegistry::GetIndicatorId(TileIndicatorType::MissingGround));
-    const uint32_t missing_ground_raw_flag
-        = MakeIndicatorZoneFlag(TechnicalItemRegistry::GetIndicatorId(TileIndicatorType::MissingGroundRaw));
-    const uint32_t missing_ground_both_flag
-        = MakeIndicatorZoneFlag(TechnicalItemRegistry::GetIndicatorId(TileIndicatorType::MissingGroundBoth));
 
     sprite_batch.setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, atlas);
 
@@ -877,22 +873,12 @@ void ZoneOverlayDrawer::drawFloorMissingGround(SpriteBatch& sprite_batch,
             const uint16_t w = missing_ground_row_curr_[idx - 1];
             const uint16_t se = missing_ground_row_next_[idx + 1];
 
-            const bool rule_match
-                = options.show_missing_ground && MissingGround::EvaluateMissingGround(cell, n, e, s, w, se, nw, ne, sw);
-            const bool raw_match = options.show_missing_ground_raw && MissingGround::EvaluateMissingGroundRaw(cell);
-            uint32_t indicator_flag = 0;
-            if (rule_match && raw_match) {
-                indicator_flag = missing_ground_both_flag;
-            } else if (rule_match) {
-                indicator_flag = missing_ground_flag;
-            } else if (raw_match) {
-                indicator_flag = missing_ground_raw_flag;
-            } else {
+            if (!MissingGround::EvaluateMissingGround(cell, n, e, s, w, se, nw, ne, sw)) {
                 continue;
             }
 
             const float draw_x = static_cast<float>(x * TILE_SIZE + base_screen_x);
-            sprite_batch.draw(draw_x, draw_y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, indicator_flag);
+            sprite_batch.draw(draw_x, draw_y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, missing_ground_flag);
         }
 
         std::swap(missing_ground_row_prev_, missing_ground_row_curr_);

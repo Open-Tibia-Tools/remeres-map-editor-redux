@@ -21,13 +21,13 @@ using rme::rendering::ZONE_FLAG_INDICATOR_MASK;
 namespace {
 
     constexpr uint16_t kOpen = kHasGround | kOpenFloor;
-    constexpr uint16_t kWallTile = kHasRawItems | kHasWall | kBarrier;
-    constexpr uint16_t kHiddenGroundWall = kHasGround | kHasRawItems | kHasWall | kBarrier;
-    constexpr uint16_t kMountain = kHasRawItems | kBarrier;
-    constexpr uint16_t kTrimProp = kHasRawItems | kIsTrim;
-    constexpr uint16_t kBorderOnly = kHasRawItems;
-    constexpr uint16_t kCarpet = kHasRawItems | kHasSoftContent;
-    constexpr uint16_t kStaticProp = kHasRawItems | kHasStaticContent;
+    constexpr uint16_t kWallTile = kHasWall | kBarrier;
+    constexpr uint16_t kHiddenGroundWall = kHasGround | kHasWall | kBarrier;
+    constexpr uint16_t kMountain = kBarrier;
+    constexpr uint16_t kTrimProp = kIsTrim;
+    constexpr uint16_t kBorderOnly = kRoleNone;
+    constexpr uint16_t kCarpet = kHasSoftContent;
+    constexpr uint16_t kStaticProp = kHasStaticContent;
     constexpr uint16_t kSail = kHasGround; // Non-walkable pseudo-ground (4958 sail)
 
     template <size_t Rows>
@@ -60,7 +60,7 @@ namespace {
                 case 'S':
                     return kSail;
                 case 'F':
-                    return kFunctional | kHasRawItems;
+                    return kFunctional;
                 default:
                     return kRoleNone;
             }
@@ -185,7 +185,7 @@ TEST_CASE("Proposal 1 rejects exterior architecture false positives", "[missing_
         "###",
     }};
     REQUIRE(outer_wall_elbow.eval(1, 1) == MissingGroundReason::None);
-    // Intentional 1x1 and 1x2 cave holes ringed solely by borders stay quiet (still caught by Raw debug view)
+    // Intentional 1x1 and 1x2 cave holes ringed solely by borders stay quiet.
     const RoleGrid<4> bordered_cave_holes {{
         "####",
         "#B##",
@@ -359,16 +359,6 @@ TEST_CASE("Proposal 1 catches hidden occluded holes, carpet/content traps, inter
     REQUIRE(fully_enclosed_trim.eval(1, 1) == MissingGroundReason::SurroundedInterior);
 }
 
-TEST_CASE("EvaluateMissingGroundRaw flags every ungrounded tile with any item regardless of neighbours", "[missing_ground]")
-{
-    REQUIRE(EvaluateMissingGroundRaw(kTrimProp));
-    REQUIRE(EvaluateMissingGroundRaw(kBorderOnly));
-    REQUIRE(EvaluateMissingGroundRaw(kWallTile));
-    REQUIRE_FALSE(EvaluateMissingGroundRaw(kRoleNone));
-    REQUIRE_FALSE(EvaluateMissingGroundRaw(kOpen));
-    REQUIRE_FALSE(EvaluateMissingGroundRaw(kHasGround | kHasRawItems));
-}
-
 TEST_CASE("ComputeViewportTileBounds handles upper-floor shifts at 100% and 800% zoom", "[missing_ground]")
 {
     constexpr int floor_offset = (7 - 2) * 32;
@@ -392,26 +382,16 @@ TEST_CASE("ComputeViewportTileBounds handles upper-floor shifts at 100% and 800%
     REQUIRE(empty_view.end_y < empty_view.start_y);
 }
 
-TEST_CASE("missing ground and raw debug indicators occupy 5-bit zone_flags slots cleanly", "[missing_ground]")
+TEST_CASE("missing ground indicator occupies a 5-bit zone_flags slot cleanly", "[missing_ground]")
 {
     const uint8_t rule_id = TechnicalItemRegistry::GetIndicatorId(TileIndicatorType::MissingGround);
-    const uint8_t raw_id = TechnicalItemRegistry::GetIndicatorId(TileIndicatorType::MissingGroundRaw);
-    const uint8_t both_id = TechnicalItemRegistry::GetIndicatorId(TileIndicatorType::MissingGroundBoth);
     REQUIRE(rule_id == 18);
-    REQUIRE(raw_id == 19);
-    REQUIRE(both_id == 20);
 
-    for (const uint8_t id : {rule_id, raw_id, both_id}) {
-        const uint32_t packed = MakeIndicatorZoneFlag(id);
-        REQUIRE((packed & ~ZONE_FLAG_INDICATOR_MASK) == 0u);
-        REQUIRE((packed & (ZONE_FLAG_BLOCKING | ZONE_FLAG_HOUSE_GROUND)) == 0u);
-        REQUIRE(GetIndicatorTypeFromZoneFlags(packed) == id);
-    }
+    const uint32_t packed = MakeIndicatorZoneFlag(rule_id);
+    REQUIRE((packed & ~ZONE_FLAG_INDICATOR_MASK) == 0u);
+    REQUIRE((packed & (ZONE_FLAG_BLOCKING | ZONE_FLAG_HOUSE_GROUND)) == 0u);
+    REQUIRE(GetIndicatorTypeFromZoneFlags(packed) == rule_id);
 
     const auto rule_style = GetIndicatorBadgeStyle(TileIndicatorType::MissingGround);
     REQUIRE(std::string_view(rule_style.text) == "no ground");
-    const auto raw_style = GetIndicatorBadgeStyle(TileIndicatorType::MissingGroundRaw);
-    REQUIRE(std::string_view(raw_style.text) == "raw ground");
-    const auto both_style = GetIndicatorBadgeStyle(TileIndicatorType::MissingGroundBoth);
-    REQUIRE(std::string_view(both_style.text) == "no + raw");
 }

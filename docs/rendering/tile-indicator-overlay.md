@@ -27,7 +27,7 @@ sprite_batch.draw(draw_x, draw_y, 32.0f, 32.0f, *white_pixel, 1.0f, 1.0f, 1.0f, 
 
 ## 4. Invariants & Pitfalls
 - `SpriteBatch` indicator IDs occupy bits `25..29` (`0x1Fu`); bits `0..24` belong to zone/blocking/house flags, and `30..31` remain free.
-- `ChunkShader` extracts only 4 bits (`1..11`); overlay-only IDs (`>= 12`, including `MissingGround = 18`, `MissingGroundRaw = 19`, and dual split `MissingGroundBoth = 20`) must pass `0` for their visibility uniform in `chunk_shader.h`.
-- `uShowMissingGround` packs a 2-bit mask (`1` = `Show Missing Ground` rules, `2` = `Show Missing Ground (Raw: Any Items)` debug mode, `3` = dual split `"no" / "raw"`) so all three indicators stay shader-gated without extra uniforms.
+- `ChunkShader` extracts only 4 bits (`1..11`); overlay-only IDs (`>= 12`, including `MissingGround = 18`) must pass `0` for their visibility uniform in `chunk_shader.h`.
+- `uShowMissingGround` gates `TileIndicatorType::MissingGround` (`0` = hidden, `1` = visible) in `indicator_shader.h`.
 - Keep `evaluateTileIndicator` parameter lists in sync across both `chunk_shader.h` and `sprite_batch_shader.h`.
 - Upper-floor (`z < GROUND_LAYER`) `SpriteBatch` overlays emitting vertices at `x * TILE_SIZE + base_screen_x` must iterate `view.ComputeFloorTileBounds(z)` instead of `view.getBoundsForFloor(z)` so zoomed-in viewports do not clip tiles when `Show all Floors` is off.

@@ -184,7 +184,6 @@
 		<item name="Show Invalid Tiles" hotkey="" action="SHOW_INVALID_TILES" help="Show preserved invalid OTBM content as tile overlays."/>
 		<item name="Show Invalid Zones" hotkey="" action="SHOW_INVALID_ZONES" help="Show invalid tile flags and opaque OTBM tile fragments as magenta overlays."/>
 		<item name="Show Missing Ground" hotkey="" action="SHOW_MISSING_GROUND" help="Highlight hidden or structural missing-ground tiles."/>
-		<item name="Show Missing Ground (Raw: Any Items)" hotkey="" action="SHOW_MISSING_GROUND_RAW" help="Debug overlay: highlight every tile with any item and no ground."/>
 		<separator/>
 		<item name="Show creatures" hotkey="F" action="SHOW_CREATURES" help="Show creatures on the map."/>
 		<item name="Show spawns" hotkey="S" action="SHOW_SPAWNS" help="Show spawns on the map."/>

@@ -85,8 +85,8 @@ public:
 	                             const DrawingOptions& options,
 	                             const AtlasManager& atlas);
 
-    // "Show missing ground": renders yellow "no ground" kitchen-tile indicators using specific domain rules
-    // (or violet "raw ground" indicators in Raw debug mode). Skipped during paste preview and minimap modes.
+    // "Show missing ground": renders yellow "no ground" kitchen-tile indicators using specific domain rules.
+    // Skipped during paste preview and minimap modes.
     void drawFloorMissingGround(
         SpriteBatch& sprite_batch, int z, const RenderView& view, const Map& map, const DrawingOptions& options, const AtlasManager& atlas
     );

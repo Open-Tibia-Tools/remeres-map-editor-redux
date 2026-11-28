@@ -21,8 +21,6 @@ namespace rme::rendering::shaders {
      * - invalid (Missing top item: Bright Pure Orange)
      * - invalid (Invalid zone flags: Bright Pure Magenta)
      * - no ground (Missing ground overlay: Yellow #FFCC00)
-     * - raw ground (Debug raw missing ground overlay: Violet #A64DFF)
-     * - no + raw (Dual split Yellow/Violet overlay when both rules match)
      */
     inline constexpr std::string_view INDICATOR_SHADER_GLSL = R"(
 void sampleIndicatorBand(int lx, int ly, int rowBase, uint mask[7], inout bool isText, inout bool isOutline) {
@@ -125,31 +123,13 @@ bool evaluateTileIndicator(vec2 quadCoord, uint indicatorType,
         inMask = uint[7](0x02280020u, 0x02080000u, 0x0329A9A0u, 0x02AA2AA0u, 0x02AB2AA0u, 0x02AAAAA0u, 0x032B12A0u);
     } else if (indicatorType == 18u) {
         // Missing Ground ("no ground") - Yellow #FFCC00
-        if ((showMissingGround & 1) == 0) discard;
+        if (showMissingGround == 0) discard;
         zWash         = vec4(1.00, 0.80, 0.00, 0.50);
         inMask        = uint[7](0x00000000u, 0x00000000u, 0x00023000u, 0x00055000u, 0x00055000u, 0x00055000u, 0x00025000u);
         rowBase1      = 8;
         hasSecondLine = true;
         inMask2       = uint[7](0x04000000u, 0x04000000u, 0x06352660u, 0x05555550u, 0x05555150u, 0x05555160u, 0x06562130u);
         rowBase2      = 16;
-    } else if (indicatorType == 19u) {
-        // Raw Missing Ground ("raw" / "ground") - Violet #A64DFF
-        if ((showMissingGround & 2) == 0) discard;
-        zWash         = vec4(0.65, 0.30, 1.00, 0.50);
-        inMask        = uint[7](0x00000000u, 0x00000000u, 0x00226C00u, 0x00228A00u, 0x002AC200u, 0x002AA200u, 0x0014C200u);
-        rowBase1      = 8;
-        hasSecondLine = true;
-        inMask2       = uint[7](0x04000000u, 0x04000000u, 0x06352660u, 0x05555550u, 0x05555150u, 0x05555160u, 0x06562130u);
-        rowBase2      = 16;
-    } else if (indicatorType == 20u) {
-        // Dual Missing Ground + Raw ("no" Yellow top / "raw" Violet bottom)
-        if ((showMissingGround & 3) != 3) discard;
-        zWash         = (ly < 16) ? vec4(1.00, 0.80, 0.00, 0.55) : vec4(0.65, 0.30, 1.00, 0.55);
-        inMask        = uint[7](0x00000000u, 0x00000000u, 0x00023000u, 0x00055000u, 0x00055000u, 0x00055000u, 0x00025000u);
-        rowBase1      = 4;
-        hasSecondLine = true;
-        inMask2       = uint[7](0x00000000u, 0x00000000u, 0x00226C00u, 0x00228A00u, 0x002AC200u, 0x002AA200u, 0x0014C200u);
-        rowBase2      = 18;
     } else {
         return false;
     }

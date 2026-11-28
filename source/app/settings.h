@@ -326,7 +326,6 @@ namespace Config {
         PALETTE_ACTIVE_PAGE,
         SHOW_LOAD_WARNINGS_DIALOG,
         SHOW_MISSING_GROUND,
-        SHOW_MISSING_GROUND_RAW,
 
         LAST,
     };

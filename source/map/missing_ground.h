@@ -19,11 +19,10 @@ namespace MissingGround {
         kOpenFloor = 1u << 1,
         kBarrier = 1u << 2,
         kHasWall = 1u << 3,
-        kHasRawItems = 1u << 4,
-        kFunctional = 1u << 5,
-        kHasSoftContent = 1u << 6,
-        kHasStaticContent = 1u << 7,
-        kIsTrim = 1u << 8,
+        kFunctional = 1u << 4,
+        kHasSoftContent = 1u << 5,
+        kHasStaticContent = 1u << 6,
+        kIsTrim = 1u << 7,
     };
 
     enum class MissingGroundReason : uint8_t {
@@ -150,11 +149,6 @@ namespace MissingGround {
     ) noexcept
     {
         return EvaluateMissingGroundWithReason(self, n, e, s, w, se, nw, ne, sw) != MissingGroundReason::None;
-    }
-
-    [[nodiscard]] constexpr bool EvaluateMissingGroundRaw(uint16_t self) noexcept
-    {
-        return (self & kHasGround) == 0u && (self & kHasRawItems) != 0u;
     }
 
     [[nodiscard]] constexpr std::string_view FormatReason(MissingGroundReason reason) noexcept
